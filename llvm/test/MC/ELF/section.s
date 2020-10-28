@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S - | FileCheck %s
 // RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - |  FileCheck %s --check-prefix=ASM
 
 // Test that these names are accepted.

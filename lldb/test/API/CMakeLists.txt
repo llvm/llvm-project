@@ -13,10 +13,10 @@ function(add_python_test_target name test_script args comment)
   add_dependencies(${name} lldb-test-deps)
 endfunction()
 
-# The default architecture with which to compile test executables is the default LLVM target
-# architecture, which itself defaults to the host architecture.
-string(TOLOWER "${LLVM_TARGET_ARCH}" LLDB_DEFAULT_TEST_ARCH)
-if( LLDB_DEFAULT_TEST_ARCH STREQUAL "host" )
+# The default architecture with which to compile test executables is the
+# default LLVM target architecture, which itself defaults to the host
+# architecture.
+if(NOT LLDB_DEFAULT_TEST_ARCH)
   string(REGEX MATCH "^[^-]*" LLDB_DEFAULT_TEST_ARCH ${LLVM_HOST_TRIPLE})
 endif ()
 

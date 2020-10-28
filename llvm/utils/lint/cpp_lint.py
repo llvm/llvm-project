@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Checks C++ files to make sure they conform to LLVM standards, as specified in
 # http://llvm.org/docs/CodingStandards.html .

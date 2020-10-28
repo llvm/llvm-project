@@ -105,7 +105,7 @@ let Command = "breakpoint dummy" in {
 
 let Command = "breakpoint set" in {
   def breakpoint_set_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
-    Completion<"Module">, Groups<[1,2,3,4,5,6,7,8,9,11]>, // *not* in group 10
+    Completion<"Module">, Groups<[1,2,3,4,5,6,7,8,9,11,12]>, // *not* in group 10
     Desc<"Set the breakpoint only in this shared library.  Can repeat this "
     "option multiple times to specify multiple shared libraries.">;
   def breakpoint_set_hardware : Option<"hardware", "H">,
@@ -186,21 +186,24 @@ let Command = "breakpoint set" in {
     "expression (note: currently only implemented for setting breakpoints on "
     "identifiers). If not set the target.language setting is used.">;
   def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
-    Arg<"Boolean">, Groups<[1,3,4,5,6,7,8]>,
+    Arg<"Boolean">, Groups<[1,3,4,5,6,7,8,12]>,
     Desc<"sKip the prologue if the breakpoint is at the beginning of a "
     "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
     Arg<"BreakpointName">,
     Desc<"Adds this to the list of names for this breakpoint.">;
   def breakpoint_set_address_slide : Option<"address-slide", "R">,
-    Arg<"Address">, Groups<[1,3,4,5,6,7,8]>,
+    Arg<"Address">, Groups<[1,3,4,5,6,7,8,12]>,
     Desc<"Add the specified offset to whatever address(es) the breakpoint "
     "resolves to. At present this applies the offset directly as given, and "
     "doesn't try to align it to instruction boundaries.">;
   def breakpoint_set_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
-    Groups<[1, 9]>, Arg<"Boolean">,
+    Groups<[1,9,12]>, Arg<"Boolean">,
     Desc<"Move breakpoints to nearest code. If not set the "
     "target.move-to-nearest-codesetting is used.">;
+  def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
+    Required, Completion<"SourceFile">, 
+    Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;  
   /* Don't add this option till it actually does something useful...
   def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
     Arg<"TypeName">, Desc<"The breakpoint will only stop if an "
@@ -729,7 +732,7 @@ let Command = "source info" in {
 let Command = "source list" in {
   def source_list_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of source lines to display.">;
-  def source_list_shlib : Option<"shlib", "s">, Groups<[1,2]>, Arg<"ShlibName">,
+  def source_list_shlib : Option<"shlib", "s">, Groups<[1,2,5]>, Arg<"ShlibName">,
     Completion<"Module">,
     Desc<"Look up the source file in the given shared library.">;
   def source_list_show_breakpoints : Option<"show-breakpoints", "b">,
@@ -747,6 +750,10 @@ let Command = "source list" in {
     " information for the corresponding file and line.">;
   def source_list_reverse : Option<"reverse", "r">, Group<4>, Desc<"Reverse the"
     " listing to look backwards from the last displayed block of source.">;
+  def source_list_file_colon_line : Option<"joint-specifier", "y">, Group<5>,
+    Arg<"FileLineColumn">, Completion<"SourceFile">, 
+    Desc<"A specifier in the form filename:line[:column] from which to display"
+         " source.">;
 }
 
 let Command = "target dependents" in {

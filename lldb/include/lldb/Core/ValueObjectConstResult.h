@@ -62,7 +62,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const Status &error);
 
-  uint64_t GetByteSize() override;
+  llvm::Optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override;
 
@@ -113,7 +113,7 @@ protected:
   CompilerType GetCompilerTypeImpl() override;
 
   ConstString m_type_name;
-  uint64_t m_byte_size;
+  llvm::Optional<uint64_t> m_byte_size;
 
   ValueObjectConstResultImpl m_impl;
 

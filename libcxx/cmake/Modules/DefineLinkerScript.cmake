@@ -31,13 +31,17 @@ function(define_linker_script target)
   set(link_libraries)
   if (interface_libs)
     foreach(lib IN LISTS interface_libs)
-      if (TARGET "${lib}" OR
-          (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
-          (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
-        list(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
-      else()
-        list(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}${lib}")
+      if ("${lib}" STREQUAL "cxx-headers")
+        continue()
       endif()
+      # If ${lib} is not a target, we use a dummy target which we know will
+      # have an OUTPUT_NAME property so that CMake doesn't fail when evaluating
+      # the non-selected branch of the `IF`. It doesn't matter what it evaluates
+      # to because it's not selected, but it must not cause an error.
+      # See https://gitlab.kitware.com/cmake/cmake/-/issues/21045.
+      set(output_name_tgt "$<IF:$<TARGET_EXISTS:${lib}>,${lib},${target}>")
+      set(libname "$<IF:$<TARGET_EXISTS:${lib}>,$<TARGET_PROPERTY:${output_name_tgt},OUTPUT_NAME>,${lib}>")
+      list(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}${libname}")
     endforeach()
   endif()
   string(REPLACE ";" " " link_libraries "${link_libraries}")

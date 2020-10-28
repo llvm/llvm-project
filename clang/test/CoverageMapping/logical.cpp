@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name logical.cpp %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.cpp
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name logical.cpp %t.stripped.cpp | FileCheck %s
 
 int main() {                        // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+15]]:2 = #0
   bool bt = true;

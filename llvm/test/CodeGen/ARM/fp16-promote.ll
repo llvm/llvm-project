@@ -424,7 +424,7 @@ declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 ; CHECK-FP16: vsqrt.f32
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP-LIBCALL: vsqrt.f32
+; CHECK-LIBCALL-VFP: vsqrt.f32
 ; CHECK-NOVFP: bl sqrtf
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_sqrt(half* %p) #0 {
@@ -700,18 +700,44 @@ define void @test_maximum(half* %p) #0 {
 }
 
 ; CHECK-FP16-LABEL: test_copysign:
-; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: vbsl
-; CHECK-FP16: vcvtb.f16.f32
+; CHECK-FP16:         ldrh r2, [r0]
+; CHECK-FP16-NEXT:    vmov.i32 d16, #0x80000000
+; CHECK-FP16-NEXT:    ldrh r1, [r1]
+; CHECK-FP16-NEXT:    vmov s0, r2
+; CHECK-FP16-NEXT:    vmov s2, r1
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FP16-NEXT:    vbit d0, d1, d16
+; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-FP16-NEXT:    vmov r1, s0
+; CHECK-FP16-NEXT:    strh r1, [r0]
+; CHECK-FP16-NEXT:    bx lr
+
 ; CHECK-LIBCALL-LABEL: test_copysign:
+; CHECK-LIBCALL-VFP:         .fnstart
+; CHECK-LIBCALL-VFP-NEXT:    .save {r4, r5, r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    push {r4, r5, r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    .vsave {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    vpush {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    mov r5, r0
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
+; CHECK-LIBCALL-VFP-NEXT:    mov r4, r1
 ; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL-VFP:         ldrh r1, [r4]
+; CHECK-LIBCALL-VFP-NEXT:    vmov s18, r0
+; CHECK-LIBCALL-VFP-NEXT:    vmov.i32 d8, #0x80000000
+; CHECK-LIBCALL-VFP-NEXT:    mov r0, r1
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP-LIBCALL: vbsl
+; CHECK-LIBCALL-VFP:         vmov s0, r0
+; CHECK-LIBCALL-VFP-NEXT:    vbif d0, d9, d8
+; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
+; CHECK-LIBCALL: bl __aeabi_f2h
+; CHECK-LIBCALL-VFP:         strh r0, [r5]
+; CHECK-LIBCALL-VFP-NEXT:    vpop {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    pop {r4, r5, r11, pc}
 ; CHECK-NOVFP: and
 ; CHECK-NOVFP: bic
 ; CHECK-NOVFP: orr
-; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_copysign(half* %p, half* %q) #0 {
   %a = load half, half* %p, align 2
   %b = load half, half* %q, align 2
@@ -820,7 +846,7 @@ define void @test_round(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP-LIBCALL: vmla.f32
+; CHECK-LIBCALL-VFP: vmla.f32
 ; CHECK-NOVFP: bl __aeabi_fmul
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {

@@ -40,6 +40,14 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
   AArch64_MC::initLLVMToCVRegMapping(this);
 }
 
+static bool hasSVEArgsOrReturn(const MachineFunction *MF) {
+  const Function &F = MF->getFunction();
+  return isa<ScalableVectorType>(F.getReturnType()) ||
+         any_of(F.args(), [](const Argument &Arg) {
+           return isa<ScalableVectorType>(Arg.getType());
+         });
+}
+
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
@@ -75,6 +83,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     // This is for OSes other than Windows; Windows is a separate case further
     // above.
     return CSR_AArch64_AAPCS_X18_SaveList;
+  if (hasSVEArgsOrReturn(MF))
+    return CSR_AArch64_SVE_AAPCS_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
 }
 
@@ -343,6 +353,15 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   if (MFI.hasVarSizedObjects() || MF.hasEHFunclets()) {
     if (needsStackRealignment(MF))
       return true;
+
+    if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
+      const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+      // Frames that have variable sized objects and scalable SVE objects,
+      // should always use a basepointer.
+      if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
+        return true;
+    }
+
     // Conservatively estimate whether the negative offset from the frame
     // pointer will be sufficient to reach. If a function has a smallish
     // frame, it's less likely to have lots of spills and callee saved
@@ -379,8 +398,15 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   // (closer to SP).
   //
   // The beginning works most reliably if we have a frame pointer.
+  // In the presence of any non-constant space between FP and locals,
+  // (e.g. in case of stack realignment or a scalable SVE area), it is
+  // better to use SP or BP.
   const AArch64FrameLowering &TFI = *getFrameLowering(MF);
-  return TFI.hasFP(MF);
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
+          AFI->hasCalculatedStackSizeSVE()) &&
+         "Expected SVE area to be calculated by this point");
+  return TFI.hasFP(MF) && !needsStackRealignment(MF) && !AFI->getStackSizeSVE();
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(

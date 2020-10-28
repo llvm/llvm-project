@@ -392,6 +392,12 @@ define noundef i32 @f66(i32 noundef %a)
   ret i32 %a
 }
 
+; CHECK: define void @f67(i32* byref(i32) %a)
+define void @f67(i32* byref(i32) %a)
+{
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }

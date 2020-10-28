@@ -216,13 +216,6 @@ struct Write : public Effect::Base<Write> {};
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
-// SideEffect Interfaces
-//===----------------------------------------------------------------------===//
-
-/// Include the definitions of the side effect interfaces.
-#include "mlir/Interfaces/SideEffectInterfaces.h.inc"
-
-//===----------------------------------------------------------------------===//
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
@@ -236,5 +229,12 @@ bool isOpTriviallyDead(Operation *op);
 bool wouldOpBeTriviallyDead(Operation *op);
 
 } // end namespace mlir
+
+//===----------------------------------------------------------------------===//
+// SideEffect Interfaces
+//===----------------------------------------------------------------------===//
+
+/// Include the definitions of the side effect interfaces.
+#include "mlir/Interfaces/SideEffectInterfaces.h.inc"
 
 #endif // MLIR_INTERFACES_SIDEEFFECTS_H

@@ -515,6 +515,8 @@ public:
   sampleprof_error merge(const FunctionSamples &Other, uint64_t Weight = 1) {
     sampleprof_error Result = sampleprof_error::success;
     Name = Other.getName();
+    if (!GUIDToFuncNameMap)
+      GUIDToFuncNameMap = Other.GUIDToFuncNameMap;
     MergeResult(Result, addTotalSamples(Other.getTotalSamples(), Weight));
     MergeResult(Result, addHeadSamples(Other.getHeadSamples(), Weight));
     for (const auto &I : Other.getBodySamples()) {

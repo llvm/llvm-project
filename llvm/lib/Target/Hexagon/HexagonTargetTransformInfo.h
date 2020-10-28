@@ -146,8 +146,9 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-            TTI::TargetCostKind CostKind,
-            const Instruction *I = nullptr);
+                            TTI::CastContextHint CCH,
+                            TTI::TargetCostKind CostKind,
+                            const Instruction *I = nullptr);
   unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
   unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {

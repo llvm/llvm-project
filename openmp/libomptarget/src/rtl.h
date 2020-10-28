@@ -52,7 +52,7 @@ struct RTLInfoTy {
                                             int32_t, uint64_t,
                                             __tgt_async_info *);
   typedef int64_t(init_requires_ty)(int64_t);
-  typedef int64_t(synchronize_ty)(int64_t, __tgt_async_info *);
+  typedef int64_t(synchronize_ty)(int32_t, __tgt_async_info *);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,

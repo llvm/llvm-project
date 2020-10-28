@@ -183,14 +183,18 @@ namespace opts {
                           cl::aliasopt(ProgramHeaders));
 
   // --string-dump, -p
-  cl::list<std::string> StringDump("string-dump", cl::desc("<number|name>"),
-                                   cl::ZeroOrMore);
+  cl::list<std::string> StringDump(
+      "string-dump", cl::value_desc("number|name"),
+      cl::desc("Display the specified section(s) as a list of strings"),
+      cl::ZeroOrMore);
   cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
                             cl::aliasopt(StringDump), cl::Prefix);
 
   // --hex-dump, -x
-  cl::list<std::string> HexDump("hex-dump", cl::desc("<number|name>"),
-                                cl::ZeroOrMore);
+  cl::list<std::string>
+      HexDump("hex-dump", cl::value_desc("number|name"),
+              cl::desc("Display the specified section(s) as hexadecimal bytes"),
+              cl::ZeroOrMore);
   cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
                          cl::aliasopt(HexDump), cl::Prefix);
 
@@ -690,6 +694,11 @@ int main(int argc, const char *argv[]) {
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM Object Reader\n");
 
+  // Default to print error if no filename is specified.
+  if (opts::InputFilenames.empty()) {
+    error("no input files specified");
+  }
+
   if (opts::All) {
     opts::FileHeaders = true;
     opts::ProgramHeaders = true;
@@ -713,10 +722,6 @@ int main(int argc, const char *argv[]) {
     opts::ProgramHeaders = true;
     opts::SectionHeaders = true;
   }
-
-  // Default to stdin if no filename is specified.
-  if (opts::InputFilenames.empty())
-    opts::InputFilenames.push_back("-");
 
   ScopedPrinter Writer(fouts());
   for (const std::string &I : opts::InputFilenames)

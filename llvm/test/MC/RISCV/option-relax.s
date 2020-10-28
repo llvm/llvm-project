@@ -1,12 +1,12 @@
 # RUN: llvm-mc -triple riscv32 < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=CHECK-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
 # RUN: llvm-mc -triple riscv64 < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=CHECK-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
 # Check .option relax causes R_RISCV_RELAX to be emitted, and .option
 # norelax suppresses it. Also check that if .option relax was enabled

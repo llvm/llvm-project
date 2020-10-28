@@ -194,41 +194,25 @@ public:
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
     assert(IsSorted());
 #endif
-    // Can't combine if ranges if we have zero or one range
-    if (m_entries.size() > 1) {
-      // The list should be sorted prior to calling this function
-      typename Collection::iterator pos;
-      typename Collection::iterator end;
-      typename Collection::iterator prev;
-      bool can_combine = false;
-      // First we determine if we can combine any of the Entry objects so we
-      // don't end up allocating and making a new collection for no reason
-      for (pos = m_entries.begin(), end = m_entries.end(), prev = end;
-           pos != end; prev = pos++) {
-        if (prev != end && prev->DoesAdjoinOrIntersect(*pos)) {
-          can_combine = true;
-          break;
-        }
-      }
+    auto first_intersect = std::adjacent_find(
+        m_entries.begin(), m_entries.end(), [](const Entry &a, const Entry &b) {
+          return a.DoesAdjoinOrIntersect(b);
+        });
+    if (first_intersect == m_entries.end())
+      return;
 
-      // We we can combine at least one entry, then we make a new collection
-      // and populate it accordingly, and then swap it into place.
-      if (can_combine) {
-        Collection minimal_ranges;
-        for (pos = m_entries.begin(), end = m_entries.end(), prev = end;
-             pos != end; prev = pos++) {
-          if (prev != end && prev->DoesAdjoinOrIntersect(*pos))
-            minimal_ranges.back().SetRangeEnd(
-                std::max<BaseType>(prev->GetRangeEnd(), pos->GetRangeEnd()));
-          else
-            minimal_ranges.push_back(*pos);
-        }
-        // Use the swap technique in case our new vector is much smaller. We
-        // must swap when using the STL because std::vector objects never
-        // release or reduce the memory once it has been allocated/reserved.
-        m_entries.swap(minimal_ranges);
-      }
+    // We we can combine at least one entry, then we make a new collection and
+    // populate it accordingly, and then swap it into place.
+    auto pos = std::next(first_intersect);
+    Collection minimal_ranges(m_entries.begin(), pos);
+    for (; pos != m_entries.end(); ++pos) {
+      Entry &back = minimal_ranges.back();
+      if (back.DoesAdjoinOrIntersect(*pos))
+        back.SetRangeEnd(std::max(back.GetRangeEnd(), pos->GetRangeEnd()));
+      else
+        minimal_ranges.push_back(*pos);
     }
+    m_entries.swap(minimal_ranges);
   }
 
   BaseType GetMinRangeBase(BaseType fail_value) const {
@@ -352,6 +336,10 @@ public:
     }
     return nullptr;
   }
+
+  using const_iterator = typename Collection::const_iterator;
+  const_iterator begin() const { return m_entries.begin(); }
+  const_iterator end() const { return m_entries.end(); }
 
 protected:
   void CombinePrevAndNext(typename Collection::iterator pos) {

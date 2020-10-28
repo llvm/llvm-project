@@ -175,11 +175,11 @@ static int isVariantApplicableInContextHelper(
     LLVM_DEBUG({
       if (MK == MK_ALL)
         dbgs() << "[" << DEBUG_TYPE << "] Property "
-               << getOpenMPContextTraitPropertyName(Property)
+               << getOpenMPContextTraitPropertyName(Property, "")
                << " was not in the OpenMP context but match kind is all.\n";
       if (MK == MK_NONE)
         dbgs() << "[" << DEBUG_TYPE << "] Property "
-               << getOpenMPContextTraitPropertyName(Property)
+               << getOpenMPContextTraitPropertyName(Property, "")
                << " was in the OpenMP context but match kind is none.\n";
     });
     return false;
@@ -198,6 +198,14 @@ static int isVariantApplicableInContextHelper(
       continue;
 
     bool IsActiveTrait = Ctx.ActiveTraits.test(unsigned(Property));
+
+    // We overwrite the isa trait as it is actually up to the OMPContext hook to
+    // check the raw string(s).
+    if (Property == TraitProperty::device_isa___ANY)
+      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
+        return Ctx.matchesISATrait(RawString);
+      });
+
     Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
     if (Result.hasValue())
       return Result.getValue();
@@ -225,7 +233,7 @@ static int isVariantApplicableInContextHelper(
 
       if (!FoundInOrder) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "
-                          << getOpenMPContextTraitPropertyName(Property)
+                          << getOpenMPContextTraitPropertyName(Property, "")
                           << " was not nested properly.\n");
         return false;
       }
@@ -425,8 +433,12 @@ StringRef llvm::omp::getOpenMPContextTraitSelectorName(TraitSelector Kind) {
   llvm_unreachable("Unknown trait selector!");
 }
 
-TraitProperty llvm::omp::getOpenMPContextTraitPropertyKind(TraitSet Set,
-                                                           StringRef S) {
+TraitProperty llvm::omp::getOpenMPContextTraitPropertyKind(
+    TraitSet Set, TraitSelector Selector, StringRef S) {
+  // Special handling for `device={isa(...)}` as we accept anything here. It is
+  // up to the target to decide if the feature is available.
+  if (Set == TraitSet::device && Selector == TraitSelector::device_isa)
+    return TraitProperty::device_isa___ANY;
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   if (Set == TraitSet::TraitSetEnum && Str == S)                               \
     return TraitProperty::Enum;
@@ -444,7 +456,10 @@ llvm::omp::getOpenMPContextTraitPropertyForSelector(TraitSelector Selector) {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
       .Default(TraitProperty::invalid);
 }
-StringRef llvm::omp::getOpenMPContextTraitPropertyName(TraitProperty Kind) {
+StringRef llvm::omp::getOpenMPContextTraitPropertyName(TraitProperty Kind,
+                                                       StringRef RawString) {
+  if (Kind == TraitProperty::device_isa___ANY)
+    return RawString;
   switch (Kind) {
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   case TraitProperty::Enum:                                                    \

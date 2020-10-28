@@ -668,9 +668,10 @@ static bool
 testArchExtDependency(const char *ArchExt,
                       const std::initializer_list<const char *> &Expected) {
   std::vector<StringRef> Features;
+  unsigned FPUID;
 
   if (!ARM::appendArchExtFeatures("", ARM::ArchKind::ARMV8_1MMainline, ArchExt,
-                                  Features))
+                                  Features, FPUID))
     return false;
 
   return llvm::all_of(Expected, [&](StringRef Ext) {

@@ -14,17 +14,12 @@
 #ifndef MLIR_DIALECT_AFFINE_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_AFFINE_TRANSFORMS_PASSES_H
 
-#include "mlir/Support/LLVM.h"
-#include <functional>
+#include "mlir/Pass/Pass.h"
 #include <limits>
 
 namespace mlir {
 
 class AffineForOp;
-class FuncOp;
-class ModuleOp;
-class Pass;
-template <typename T> class OperationPass;
 
 /// Creates a simplification pass for affine structures (maps and sets). In
 /// addition, this pass also normalizes memrefs to have the trivial (identity)
@@ -78,6 +73,14 @@ std::unique_ptr<OperationPass<FuncOp>>
 createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize);
 /// Overload relying on pass options for initialization.
 std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass();
+
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Affine/Passes.h.inc"
 
 } // end namespace mlir
 

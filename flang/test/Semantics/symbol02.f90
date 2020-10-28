@@ -44,7 +44,7 @@ contains
    !REF: /m/x
    z = x
    !REF: /m/s/s2/z
-   !REF: /m/s/y
+   !DEF: /m/s/s2/y HostAssoc TYPE(t)
    z = y
    !REF: /m/s/s
    call s

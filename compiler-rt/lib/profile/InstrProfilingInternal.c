@@ -6,6 +6,9 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+// Note: This is linked into the Darwin kernel, and must remain compatible
+// with freestanding compilation. See `darwin_add_builtin_libraries`.
+
 #if !defined(__Fuchsia__)
 
 #include "InstrProfilingInternal.h"

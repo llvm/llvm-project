@@ -231,12 +231,12 @@ define void @f7_nested_conds(i32* %a, i32 %b) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i32 [[A_V]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       false:
-; CHECK-NEXT:    br i1 true, label [[TRUE_2:%.*]], label [[TRUE]]
+; CHECK-NEXT:    br label [[TRUE_2:%.*]]
 ; CHECK:       true.2:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       true:
-; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[A]]
+; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

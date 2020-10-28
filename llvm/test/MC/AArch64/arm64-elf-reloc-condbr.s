@@ -1,8 +1,8 @@
 // RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck -check-prefix=OBJ %s
+// RUN:   llvm-readobj -r - | FileCheck -check-prefix=OBJ %s
 // RUN: llvm-mc -target-abi=ilp32 -triple=arm64-none-linux-gnu -filetype=obj \
 // RUN:   %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck -check-prefix=OBJ-ILP32 %s
+// RUN:   llvm-readobj -r - | FileCheck -check-prefix=OBJ-ILP32 %s
 
         b.eq somewhere
 

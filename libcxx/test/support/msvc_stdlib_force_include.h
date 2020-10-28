@@ -65,9 +65,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 // MSVC doesn't have __int128_t.
 #define _LIBCPP_HAS_NO_INT128
 
-// MSVC has quick_exit() and at_quick_exit().
-#define _LIBCPP_HAS_QUICK_EXIT
-
 #ifndef _LIBCXX_IN_DEVCRT
     // atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
     #define _ENABLE_ATOMIC_ALIGNMENT_FIX

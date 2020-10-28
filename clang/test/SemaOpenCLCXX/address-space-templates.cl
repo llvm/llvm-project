@@ -22,10 +22,28 @@ void foo3() {
   __private T ii; // expected-error{{conflicting address space qualifiers are provided between types '__private T' and '__global int'}}
 }
 
+template <class _Tp> struct remove_reference         { typedef _Tp type; };
+template <class _Tp> struct remove_reference<_Tp &>  { typedef _Tp type; };
+template <class _Tp> struct as_pointer {
+    typedef typename remove_reference<_Tp>::type* type;
+};
+
+struct rep {
+  // CHECK |-CXXConstructorDecl {{.*}} rep 'void (const __generic rep &__private) __generic'
+  template<class U, class = typename as_pointer<U>::type>
+  rep(U&& v) {}
+};
+
+struct rep_outer : private rep {
+  rep_outer()
+    : rep(0) {}
+};
+
 void bar() {
   S<const __global int> sintgl; // expected-note{{in instantiation of template class 'S<const __global int>' requested here}}
 
   foo1<__local int>(1); // expected-error{{no matching function for call to 'foo1'}}
   foo2<__global int>(0);
   foo3<__global int>(); // expected-note{{in instantiation of function template specialization 'foo3<__global int>' requested here}}
+  rep_outer r;
 }

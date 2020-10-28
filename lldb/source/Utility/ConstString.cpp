@@ -308,7 +308,7 @@ void ConstString::SetString(const llvm::StringRef &s) {
 }
 
 void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,
-                                                   ConstString mangled) {
+                                                  ConstString mangled) {
   m_string = StringPool().GetConstCStringAndSetMangledCounterPart(
       demangled, mangled.m_string);
 }

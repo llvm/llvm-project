@@ -46,12 +46,9 @@ std::unique_ptr<mlir::Pass> createMemToRegPass();
 bool canLegallyInline(mlir::Operation *op, mlir::Region *reg,
                       mlir::BlockAndValueMapping &map);
 
-inline void registerOptTransformPasses() {
-using mlir::Pass;
 // declarative passes
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
-}
 
 } // namespace fir
 

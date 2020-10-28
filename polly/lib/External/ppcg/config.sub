@@ -160,9 +160,6 @@ case $os in
 		os=
 		basic_machine=$1
 		;;
-	-bluegene*)
-		os=-cnk
-		;;
 	-sim | -cisco | -oki | -wec | -winbond)
 		os=
 		basic_machine=$1
@@ -523,10 +520,6 @@ case $basic_machine in
 	blackfin-*)
 		basic_machine=bfin-`echo $basic_machine | sed 's/^[^-]*-//'`
 		os=-linux
-		;;
-	bluegene*)
-		basic_machine=powerpc-ibm
-		os=-cnk
 		;;
 	c54x-*)
 		basic_machine=tic54x-`echo $basic_machine | sed 's/^[^-]*-//'`
@@ -1344,7 +1337,7 @@ case $os in
 	# Each alternative MUST END IN A *, to match a version number.
 	# -sysv* is not here because it comes later, after sysvr4.
 	-gnu* | -bsd* | -mach* | -minix* | -genix* | -ultrix* | -irix* \
-	      | -*vms* | -sco* | -esix* | -isc* | -aix* | -cnk* | -sunos | -sunos[34]*\
+	      | -*vms* | -sco* | -esix* | -isc* | -aix* | -sunos | -sunos[34]*\
 	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -auroraux* | -solaris* \
 	      | -sym* | -kopensolaris* \
 	      | -amigaos* | -amigados* | -msdos* | -newsos* | -unicos* | -aof* \
@@ -1709,7 +1702,7 @@ case $basic_machine in
 			-sunos*)
 				vendor=sun
 				;;
-			-cnk*|-aix*)
+			-aix*)
 				vendor=ibm
 				;;
 			-beos*)

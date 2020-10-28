@@ -861,6 +861,21 @@ bool raw_fd_ostream::has_colors() const {
   return sys::Process::FileDescriptorHasColors(FD);
 }
 
+Expected<sys::fs::FileLocker> raw_fd_ostream::lock() {
+  std::error_code EC = sys::fs::lockFile(FD);
+  if (!EC)
+    return sys::fs::FileLocker(FD);
+  return errorCodeToError(EC);
+}
+
+Expected<sys::fs::FileLocker>
+raw_fd_ostream::tryLockFor(std::chrono::milliseconds Timeout) {
+  std::error_code EC = sys::fs::tryLockFile(FD, Timeout);
+  if (!EC)
+    return sys::fs::FileLocker(FD);
+  return errorCodeToError(EC);
+}
+
 void raw_fd_ostream::anchor() {}
 
 //===----------------------------------------------------------------------===//

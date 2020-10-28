@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-version=50 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt45,lt50,lt51 -fopenmp-version=40 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge45,lt50,lt51 -fopenmp-version=45 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp-version=50 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,ge51 -fopenmp-version=51 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -DCCODE -verify=expected,le45 -fopenmp -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge45,ge50,lt51 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -DCCODE -verify=expected,ge45,ge50,lt51 -fopenmp -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized
 #ifdef CCODE
 void foo(int arg) {
   const int n = 0;
@@ -44,9 +45,12 @@ struct SA {
     {}
     #pragma omp target teams map(arg[2:2],a,d) // expected-error {{subscripted value is not an array or pointer}}
     {}
-    #pragma omp target teams map(arg,a*2) // le50-error {{expected addressable lvalue in 'map' clause}} le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+    // ge50-error@+2 {{expected addressable lvalue in 'map' clause}}
+    // lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+    #pragma omp target teams map(arg,a*2)
     {}
-    #pragma omp target teams map(arg,(c+1)[2]) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+    // lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+    #pragma omp target teams map(arg,(c+1)[2])
     {}
     #pragma omp target teams map(arg,a[:2],d) // expected-error {{subscripted value is not an array or pointer}}
     {}
@@ -252,7 +256,9 @@ void SAclient(int arg) {
   {}
   #pragma omp target teams map(r.S.Arr[:12])
   {}
-  #pragma omp target teams map(r.S.foo()[:12]) // le50-error {{expected addressable lvalue in 'map' clause}} le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  // ge50-error@+2 {{expected addressable lvalue in 'map' clause}}
+  // lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+  #pragma omp target teams map(r.S.foo()[:12])
   {}
   #pragma omp target teams map(r.C, r.D)
   {}
@@ -286,7 +292,8 @@ void SAclient(int arg) {
   {}
   #pragma omp target teams map(r.S.Ptr[:])  // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   {}
-  #pragma omp target teams map((p+1)->A) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  // lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+  #pragma omp target teams map((p+1)->A)
   {}
   #pragma omp target teams map(u.B)  // expected-error {{mapping of union members is not allowed}}
   {}
@@ -416,7 +423,9 @@ T tmain(T argc) {
   foo();
 #pragma omp target teams map(T) // expected-error {{'T' does not refer to a value}}
   foo();
-#pragma omp target teams map(I) // le50-error 2 {{expected addressable lvalue in 'map' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+// ge50-error@+2 2 {{expected addressable lvalue in 'map' clause}}
+// lt50-error@+1 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(I)
   foo();
 #pragma omp target teams map(S2::S2s)
   foo();
@@ -434,7 +443,9 @@ T tmain(T argc) {
   foo();
 
 #pragma omp target data map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
-#pragma omp target data map(tofrom: argc > 0 ? x : y) // le50-error 2 {{expected addressable lvalue in 'map' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+// ge50-error@+2 2 {{expected addressable lvalue in 'map' clause}}
+// lt50-error@+1 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target data map(tofrom: argc > 0 ? x : y)
 
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
@@ -468,7 +479,10 @@ T tmain(T argc) {
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
+// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// expected-error@+1 {{missing map type}}
+#pragma omp target data map(tofrom, always: x)
 #pragma omp target data map(always, tofrom: always, tofrom, x)
 #pragma omp target teams map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
@@ -488,7 +502,10 @@ int main(int argc, char **argv) {
   int y;
   int to, tofrom, always;
   const int (&l)[5] = da;
-#pragma omp target data map // expected-error {{expected '(' after 'map'}} le45-error {{expected at least one 'map' or 'use_device_ptr' clause for '#pragma omp target data'}} le50-error {{expected at least one 'map', 'use_device_ptr', or 'use_device_addr' clause for '#pragma omp target data'}}
+// expected-error@+3 {{expected '(' after 'map'}}
+// ge50-error@+2 {{expected at least one 'map', 'use_device_ptr', or 'use_device_addr' clause for '#pragma omp target data'}}
+// lt50-error@+1 {{expected at least one 'map' or 'use_device_ptr' clause for '#pragma omp target data'}}
+#pragma omp target data map
 #pragma omp target data map( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
 #pragma omp target data map() // expected-error {{expected expression}}
 #pragma omp target data map(alloc) // expected-error {{use of undeclared identifier 'alloc'}}
@@ -509,7 +526,9 @@ int main(int argc, char **argv) {
   foo();
 
 #pragma omp target data map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
-#pragma omp target data map(tofrom: argc > 0 ? argv[1] : argv[2]) // le50-error {{expected addressable lvalue in 'map' clause}} le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// ge50-error@+2 {{expected addressable lvalue in 'map' clause}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target data map(tofrom: argc > 0 ? argv[1] : argv[2])
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
@@ -543,15 +562,22 @@ int main(int argc, char **argv) {
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
+// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// expected-error@+1 {{missing map type}}
+#pragma omp target data map(tofrom, always: x)
 #pragma omp target data map(always, tofrom: always, tofrom, x)
 #pragma omp target teams map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
 
-#pragma omp target teams private(j) map(j) // le45-error {{private variable cannot be in a map clause in '#pragma omp target teams' directive}}  le45-note {{defined as private}}
+// lt50-error@+2 {{private variable cannot be in a map clause in '#pragma omp target teams' directive}}
+// lt50-note@+1 {{defined as private}}
+#pragma omp target teams private(j) map(j)
   {}
 
-#pragma omp target teams firstprivate(j) map(j) // le45-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams' directive}} le45-note {{defined as firstprivate}}
+// lt50-error@+2 {{firstprivate variable cannot be in a map clause in '#pragma omp target teams' directive}}
+// lt50-note@+1 {{defined as firstprivate}}
+#pragma omp target teams firstprivate(j) map(j)
   {}
 
 #pragma omp target teams map(m)
@@ -559,21 +585,29 @@ int main(int argc, char **argv) {
 
   int **BB, *offset, *a;
 
-#pragma omp target teams map(**(BB+*offset)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(**(BB+*offset))
   {}
-#pragma omp target teams map(**(BB+y)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(**(BB+y))
   {}
-#pragma omp target teams map(*(a+*offset)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(*(a+*offset))
   {}
-#pragma omp target teams map(**(*offset+BB)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(**(*offset+BB))
   {}
-#pragma omp target teams map(**(y+BB)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(**(y+BB))
   {}
-#pragma omp target teams map(*(*offset+a)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(*(*offset+a))
   {}
-#pragma omp target teams map(**(*offset+BB+*a)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(**(*offset+BB+*a))
   {}
-#pragma omp target teams map(**(*(*(&offset))+BB+*a)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+// lt50-error@+1 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target teams map(**(*(*(&offset))+BB+*a))
   {}
 #pragma omp target teams map(*(a+(a))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
   {}

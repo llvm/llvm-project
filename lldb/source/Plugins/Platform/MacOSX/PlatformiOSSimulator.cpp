@@ -76,6 +76,7 @@ PlatformSP PlatformiOSSimulator::CreateInstance(bool force,
   bool create = force;
   if (!create && arch && arch->IsValid()) {
     switch (arch->GetMachine()) {
+    case llvm::Triple::aarch64:
     case llvm::Triple::x86_64:
     case llvm::Triple::x86: {
       const llvm::Triple &triple = arch->GetTriple();
@@ -148,7 +149,25 @@ const char *PlatformiOSSimulator::GetDescriptionStatic() {
 /// Default Constructor
 PlatformiOSSimulator::PlatformiOSSimulator()
     : PlatformAppleSimulator(
-          CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone) {}
+          CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone) {
+#ifdef __APPLE__
+#if __arm64__
+  static const llvm::StringRef supported_triples[] = {
+      "arm64e-apple-ios-simulator",
+      "arm64-apple-ios-simulator",
+      "x86_64-apple-ios-simulator",
+      "x86_64h-apple-ios-simulator",
+  };
+#else
+  static const llvm::StringRef supported_triples[] = {
+      "x86_64h-apple-ios-simulator",
+      "x86_64-apple-ios-simulator",
+      "i386-apple-ios-simulator",
+  };
+#endif
+  m_supported_triples = supported_triples;
+#endif
+}
 
 /// Destructor.
 ///
@@ -328,43 +347,3 @@ PlatformiOSSimulator::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   return process_infos.size();
 }
 
-bool PlatformiOSSimulator::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                           ArchSpec &arch) {
-  static const ArchSpec platform_arch(
-      HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
-  static const ArchSpec platform_arch64(
-      HostInfo::GetArchitecture(HostInfo::eArchKind64));
-
-  if (idx == 0) {
-    arch = platform_arch;
-    if (arch.IsValid()) {
-      arch.GetTriple().setOS(llvm::Triple::IOS);
-      arch.GetTriple().setEnvironment(llvm::Triple::Simulator);
-      return true;
-    }
-  } else {
-    if (platform_arch.IsExactMatch(platform_arch64)) {
-      // This macosx platform supports both 32 and 64 bit.
-      if (idx == 1) {
-        // 32/64: return "x86_64-apple-macosx" for architecture 1
-        arch = platform_arch64;
-        return true;
-      } else if (idx == 2 || idx == 3) {
-        arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-        if (arch.IsValid()) {
-          if (idx == 2)
-            arch.GetTriple().setOS(llvm::Triple::IOS);
-          // 32/64: return "i386-apple-ios" for architecture 2 32/64: return
-          // "i386-apple-macosx" for architecture 3
-          return true;
-        }
-      }
-    } else if (idx == 1) {
-      // This macosx platform supports only 32 bit, so return the *-apple-
-      // macosx version
-      arch = platform_arch;
-      return true;
-    }
-  }
-  return false;
-}

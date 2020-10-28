@@ -37,6 +37,7 @@ write_cmake_config("lit_common_configured") {
     "LLVM_LIBCXX_USED=0",
 
     "GOLD_EXECUTABLE=ld",
+    "GNU_LD_EXECUTABLE=ld",
     "COMPILER_RT_RESOLVED_TEST_COMPILER=" +
         rebase_path("$root_build_dir/bin/clang"),
     "COMPILER_RT_TEST_COMPILER_ID=Clang",
@@ -85,8 +86,8 @@ write_cmake_config("lit_common_configured") {
   }
 
   if (llvm_enable_zlib) {
-    values += [ "HAVE_LIBZ=1" ]
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
-    values += [ "HAVE_LIBZ=0" ]
+    values += [ "LLVM_ENABLE_ZLIB=0" ]
   }
 }

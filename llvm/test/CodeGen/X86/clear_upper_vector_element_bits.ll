@@ -696,7 +696,7 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; SSE2-LABEL: _clearupper16xi8b:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm1, %r10
 ; SSE2-NEXT:    movq %r10, %r8
 ; SSE2-NEXT:    shrq $56, %r8
@@ -878,7 +878,7 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; SSE2-LABEL: _clearupper32xi8b:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm2, %r10
 ; SSE2-NEXT:    movq %r10, %r8
 ; SSE2-NEXT:    shrq $56, %r8

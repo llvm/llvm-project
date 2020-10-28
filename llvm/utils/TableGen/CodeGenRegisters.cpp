@@ -743,6 +743,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
+  if (TypeList.empty())
+    PrintFatalError(R->getLoc(), "RegTypes list must not be empty!");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
     Record *Type = TypeList[i];
     if (!Type->isSubClassOf("ValueType"))
@@ -751,7 +753,6 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
                           "' does not derive from the ValueType class!");
     VTs.push_back(getValueTypeByHwMode(Type, RegBank.getHwModes()));
   }
-  assert(!VTs.empty() && "RegisterClass must contain at least one ValueType!");
 
   // Allocation order 0 is the full set. AltOrders provides others.
   const SetTheory::RecVec *Elements = RegBank.getSets().expand(R);

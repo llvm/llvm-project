@@ -632,6 +632,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       break;
     case SHT_SYMTAB:
     case SHT_STRTAB:
+    case SHT_REL:
+    case SHT_RELA:
     case SHT_NULL:
       break;
     default:
@@ -639,11 +641,21 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     }
   }
 
-  // This block handles SHF_LINK_ORDER.
+  // We have a second loop. It is used to:
+  // 1) handle SHF_LINK_ORDER sections.
+  // 2) create SHT_REL[A] sections. In some cases the section header index of a
+  //    relocation section may be smaller than that of the relocated section. In
+  //    such cases, the relocation section would attempt to reference a target
+  //    section that has not yet been created. For simplicity, delay creation of
+  //    relocation sections until now.
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
+
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
+      this->sections[i] = createInputSection(sec);
+
     if (!(sec.sh_flags & SHF_LINK_ORDER))
       continue;
 
@@ -914,20 +926,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
       this->sections[sec.sh_info] = target;
     }
 
-    // This section contains relocation information.
-    // If -r is given, we do not interpret or apply relocation
-    // but just copy relocation sections to output.
-    if (config->relocatable) {
-      InputSection *relocSec = make<InputSection>(*this, sec, name);
-      // We want to add a dependency to target, similar like we do for
-      // -emit-relocs below. This is useful for the case when linker script
-      // contains the "/DISCARD/". It is perhaps uncommon to use a script with
-      // -r, but we faced it in the Linux kernel and have to handle such case
-      // and not to crash.
-      target->dependentSections.push_back(relocSec);
-      return relocSec;
-    }
-
     if (target->firstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
@@ -945,17 +943,17 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
     }
     assert(isUInt<31>(target->numRelocations));
 
-    // Relocation sections processed by the linker are usually removed
-    // from the output, so returning `nullptr` for the normal case.
-    // However, if -emit-relocs is given, we need to leave them in the output.
-    // (Some post link analysis tools need this information.)
-    if (config->emitRelocs) {
-      InputSection *relocSec = make<InputSection>(*this, sec, name);
-      // We will not emit relocation section if target was discarded.
-      target->dependentSections.push_back(relocSec);
-      return relocSec;
-    }
-    return nullptr;
+    // Relocation sections are usually removed from the output, so return
+    // `nullptr` for the normal case. However, if -r or --emit-relocs is
+    // specified, we need to copy them to the output. (Some post link analysis
+    // tools specify --emit-relocs to obtain the information.)
+    if (!config->relocatable && !config->emitRelocs)
+      return nullptr;
+    InputSection *relocSec = make<InputSection>(*this, sec, name);
+    // If the relocated section is discarded (due to /DISCARD/ or
+    // --gc-sections), the relocation section should be discarded as well.
+    target->dependentSections.push_back(relocSec);
+    return relocSec;
   }
   }
 

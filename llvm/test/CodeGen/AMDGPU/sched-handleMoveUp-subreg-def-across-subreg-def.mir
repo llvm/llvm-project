@@ -64,7 +64,7 @@ body:             |
   ; CHECK:   [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_SUB_U32_e32_]], [[DEF]].sub0, implicit $exec
   ; CHECK:   [[V_SUB_U32_e32_1:%[0-9]+]]:vgpr_32 = V_SUB_U32_e32 [[V_MUL_LO_U32_1]], [[V_MUL_LO_U32_]], implicit $exec
   ; CHECK:   [[DEF]].sub0:vreg_64 = V_ADD_U32_e32 [[V_SUB_U32_e32_1]], [[V_ADD_U32_e32_1]], implicit $exec
-  ; CHECK:   undef %38.sub0:vreg_64, %39:sreg_64_xexec = V_ADD_I32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[DEF]].sub0, 0, implicit $exec
+  ; CHECK:   undef %38.sub0:vreg_64, %39:sreg_64_xexec = V_ADD_CO_U32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[DEF]].sub0, 0, implicit $exec
   ; CHECK:   undef %40.sub1:vreg_64, dead %41:sreg_64_xexec = V_ADDC_U32_e64 [[COPY1]], [[DEF]].sub1, %39, 0, implicit $exec
   ; CHECK:   undef %42.sub0:sgpr_64 = V_READFIRSTLANE_B32 %38.sub0, implicit $exec
   ; CHECK:   %42.sub1:sgpr_64 = V_READFIRSTLANE_B32 %40.sub1, implicit $exec
@@ -118,7 +118,7 @@ body:             |
     %37:vgpr_32 = COPY %3.sub1
     undef %8.sub0:vreg_64 = V_ADD_U32_e32 %36, %35, implicit $exec
     %8.sub1:vreg_64 = COPY %6
-    undef %38.sub0:vreg_64, %39:sreg_64_xexec = V_ADD_I32_e64 %3.sub0, %8.sub0, 0, implicit $exec
+    undef %38.sub0:vreg_64, %39:sreg_64_xexec = V_ADD_CO_U32_e64 %3.sub0, %8.sub0, 0, implicit $exec
     undef %40.sub1:vreg_64, dead %41:sreg_64_xexec = V_ADDC_U32_e64 %37, %8.sub1, %39, 0, implicit $exec
     undef %42.sub0:sgpr_64 = V_READFIRSTLANE_B32 %38.sub0, implicit $exec
     %42.sub1:sgpr_64 = V_READFIRSTLANE_B32 %40.sub1, implicit $exec

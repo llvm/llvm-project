@@ -41,6 +41,7 @@ do_lld="yes"
 do_lldb="no"
 do_polly="yes"
 do_mlir="yes"
+do_flang="no"
 BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
@@ -172,6 +173,9 @@ while [ $# -gt 0 ]; do
         -no-mlir )
             do_mlir="no"
             ;;
+        -flang )
+            do_flang="yes"
+            ;;
         -help | --help | -h | --h | -\? )
             usage
             exit 0
@@ -260,6 +264,9 @@ if [ $do_polly = "yes" ]; then
 fi
 if [ $do_mlir = "yes" ]; then
   projects="$projects mlir"
+fi
+if [ $do_flang = "yes" ]; then
+  projects="$projects flang"
 fi
 
 # Go to the build directory (may be different from CWD)
@@ -495,12 +502,18 @@ fi
 # Setup the test-suite.  Do this early so we can catch failures before
 # we do the full 3 stage build.
 if [ $do_test_suite = "yes" ]; then
+  venv=virtualenv
+  if ! type -P 'virtualenv' > /dev/null 2>&1 ; then
+    check_program_exists 'python3'
+    venv="python3 -m venv"
+  fi
+
   SandboxDir="$BuildDir/sandbox"
   Lit=$SandboxDir/bin/lit
   TestSuiteBuildDir="$BuildDir/test-suite-build"
   TestSuiteSrcDir="$BuildDir/llvm-test-suite"
 
-  virtualenv $SandboxDir
+  ${venv} $SandboxDir
   $SandboxDir/bin/python $BuildDir/llvm-project/llvm/utils/lit/setup.py install
   mkdir -p $TestSuiteBuildDir
 fi

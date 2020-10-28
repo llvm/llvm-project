@@ -67,8 +67,7 @@ body: |
     ; SI: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[COPY]]
     ; SI: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FABS]](s64), [[C2]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[COPY]], [[FADD1]]
-    ; SI: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[COPY]]
-    ; SI: $vgpr0_vgpr1 = COPY [[FRINT]](s64)
+    ; SI: $vgpr0_vgpr1 = COPY [[SELECT]](s64)
     ; CI-LABEL: name: test_frint_s64
     ; CI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CI: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[COPY]]
@@ -140,7 +139,6 @@ body: |
     ; SI: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[UV]]
     ; SI: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FABS]](s64), [[C2]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[UV]], [[FADD1]]
-    ; SI: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[UV]]
     ; SI: [[AND1:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[C]]
     ; SI: [[OR1:%[0-9]+]]:_(s64) = G_OR [[C1]], [[AND1]]
     ; SI: [[FADD2:%[0-9]+]]:_(s64) = G_FADD [[UV1]], [[OR1]]
@@ -148,9 +146,8 @@ body: |
     ; SI: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[FADD2]], [[FNEG1]]
     ; SI: [[FABS1:%[0-9]+]]:_(s64) = G_FABS [[UV1]]
     ; SI: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FABS1]](s64), [[C2]]
-    ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[UV1]], [[FADD3]]
-    ; SI: [[FRINT1:%[0-9]+]]:_(s64) = G_FRINT [[UV1]]
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FRINT]](s64), [[FRINT1]](s64)
+    ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[UV1]], [[FADD3]]
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT]](s64), [[SELECT1]](s64)
     ; SI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; CI-LABEL: name: test_frint_v2s64
     ; CI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3

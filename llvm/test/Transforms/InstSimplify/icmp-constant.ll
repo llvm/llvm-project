@@ -19,6 +19,14 @@ define <2 x i1> @tautological_ule_vec(<2 x i8> %x) {
   ret <2 x i1> %cmp
 }
 
+define <2 x i1> @tautological_ule_vec_partial_undef(<2 x i8> %x) {
+; CHECK-LABEL: @tautological_ule_vec_partial_undef(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %cmp = icmp ule <2 x i8> %x, <i8 255, i8 undef>
+  ret <2 x i1> %cmp
+}
+
 define i1 @tautological_ugt(i8 %x) {
 ; CHECK-LABEL: @tautological_ugt(
 ; CHECK-NEXT:    ret i1 false
@@ -32,6 +40,14 @@ define <2 x i1> @tautological_ugt_vec(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cmp = icmp ugt <2 x i8> %x, <i8 255, i8 255>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @tautological_ugt_vec_partial_undef(<2 x i8> %x) {
+; CHECK-LABEL: @tautological_ugt_vec_partial_undef(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %cmp = icmp ugt <2 x i8> %x, <i8 undef, i8 255>
   ret <2 x i1> %cmp
 }
 
@@ -54,6 +70,15 @@ define <2 x i1> @urem3_vec(<2 x i32> %X) {
   ret <2 x i1> %B
 }
 
+define <2 x i1> @urem3_vec_partial_undef(<2 x i32> %X) {
+; CHECK-LABEL: @urem3_vec_partial_undef(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %A = urem <2 x i32> %X, <i32 10, i32 10>
+  %B = icmp ult <2 x i32> %A, <i32 undef, i32 15>
+  ret <2 x i1> %B
+}
+
 ;'srem x, C2' produces (-|C2|, |C2|)
 define i1 @srem1(i32 %X) {
 ; CHECK-LABEL: @srem1(
@@ -70,6 +95,15 @@ define <2 x i1> @srem1_vec(<2 x i32> %X) {
 ;
   %A = srem <2 x i32> %X, <i32 -5, i32 -5>
   %B = icmp sgt <2 x i32> %A, <i32 5, i32 5>
+  ret <2 x i1> %B
+}
+
+define <2 x i1> @srem1_vec_partial_undef(<2 x i32> %X) {
+; CHECK-LABEL: @srem1_vec_partial_undef(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %A = srem <2 x i32> %X, <i32 -5, i32 -5>
+  %B = icmp sgt <2 x i32> %A, <i32 5, i32 undef>
   ret <2 x i1> %B
 }
 
@@ -166,6 +200,15 @@ define <2 x i1> @shl5_vec(<2 x i32> %X) {
 ;
   %sub = shl nuw <2 x i32> <i32 4, i32 4>, %X
   %cmp = icmp ugt <2 x i32> %sub, <i32 3, i32 3>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @shl5_vec_partial_undef(<2 x i32> %X) {
+; CHECK-LABEL: @shl5_vec_partial_undef(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %sub = shl nuw <2 x i32> <i32 4, i32 4>, %X
+  %cmp = icmp ugt <2 x i32> %sub, <i32 undef, i32 3>
   ret <2 x i1> %cmp
 }
 
@@ -375,6 +418,15 @@ define <2 x i1> @or1_vec(<2 x i32> %X) {
 ;
   %A = or <2 x i32> %X, <i32 62, i32 62>
   %B = icmp ult <2 x i32> %A, <i32 50, i32 50>
+  ret <2 x i1> %B
+}
+
+define <2 x i1> @or1_vec_partial_undef(<2 x i32> %X) {
+; CHECK-LABEL: @or1_vec_partial_undef(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %A = or <2 x i32> %X, <i32 62, i32 62>
+  %B = icmp ult <2 x i32> %A, <i32 undef, i32 50>
   ret <2 x i1> %B
 }
 

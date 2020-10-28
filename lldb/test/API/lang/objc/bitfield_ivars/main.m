@@ -34,10 +34,31 @@
 
 @end
 
+@interface HasBitfield2 : NSObject {
+@public
+  unsigned int x;
+
+  unsigned field1 : 15;
+  unsigned field2 : 4;
+  unsigned field3 : 4;
+}
+@end
+
+@implementation HasBitfield2
+- (id)init {
+  return (self = [super init]);
+}
+@end
+
 int main(int argc, const char * argv[]) {
     ContainsAHasBitfield *chb = [[ContainsAHasBitfield alloc] init];
-    printf("%d\n", chb->hb->field2); //% self.expect("expression -- chb->hb->field1", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["= 0"])
-                                     //% self.expect("expression -- chb->hb->field2", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["= 1"]) # this must happen second
-    return 0;
+    HasBitfield2 *hb2 = [[HasBitfield2 alloc] init];
+
+    hb2->x = 100;
+    hb2->field1 = 10;
+    hb2->field2 = 3;
+    hb2->field3 = 4;
+
+    return 0; // break here
 }
 

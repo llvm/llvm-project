@@ -52,13 +52,14 @@ def _executeScriptInternal(test, commands):
     res = ('', '', 127, None)
   return res
 
-def _makeConfigTest(config):
+def _makeConfigTest(config, testPrefix=''):
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')
   execRoot = os.path.join(config.test_exec_root, '__config_exec__')
   suite = lit.Test.TestSuite('__config__', sourceRoot, execRoot, config)
   if not os.path.exists(sourceRoot):
     os.makedirs(sourceRoot)
-  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp')
+  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp',
+                                    prefix=testPrefix)
   tmp.close()
   pathInSuite = [os.path.relpath(tmp.name, sourceRoot)]
   class TestWrapper(lit.Test.Test):
@@ -82,7 +83,7 @@ def sourceBuilds(config, source):
     _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
-def programOutput(config, program, args=[]):
+def programOutput(config, program, args=[], testPrefix=''):
   """
   Compiles a program for the test target, run it on the test target and return
   the output.
@@ -91,7 +92,7 @@ def programOutput(config, program, args=[]):
   execution of the program is done through the %{exec} substitution, which means
   that the program may be run on a remote host depending on what %{exec} does.
   """
-  with _makeConfigTest(config) as test:
+  with _makeConfigTest(config, testPrefix=testPrefix) as test:
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
     try:
@@ -142,7 +143,8 @@ def hasLocale(config, locale):
       else                                      return 1;
     }
   """
-  return programOutput(config, program, args=[pipes.quote(locale)]) != None
+  return programOutput(config, program, args=[pipes.quote(locale)],
+                       testPrefix="check_locale_" + locale) is not None
 
 def compilerMacros(config, flags=''):
   """
@@ -227,6 +229,19 @@ class Feature(object):
     """
     return self._isSupported(config)
 
+  def getName(self, config):
+    """
+    Return the name of the feature.
+
+    It is an error to call `f.getName(cfg)` if the feature `f` is not supported.
+    """
+    assert self.isSupported(config), \
+      "Trying to get the name of a feature that is not supported in the given configuration"
+    name = self._name(config) if callable(self._name) else self._name
+    if not isinstance(name, str):
+      raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
+    return name
+
   def enableIn(self, config):
     """
     Enable a feature in a TestingConfig.
@@ -249,11 +264,7 @@ class Feature(object):
     if self._linkFlag:
       linkFlag = self._linkFlag(config) if callable(self._linkFlag) else self._linkFlag
       config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
-
-    name = self._name(config) if callable(self._name) else self._name
-    if not isinstance(name, str):
-      raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
-    config.available_features.add(name)
+    config.available_features.add(self.getName(config))
 
 
 def _str_to_bool(s):

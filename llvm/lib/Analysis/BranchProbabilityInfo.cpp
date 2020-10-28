@@ -148,6 +148,105 @@ static const uint32_t IH_TAKEN_WEIGHT = 1024 * 1024 - 1;
 /// instruction. This is essentially never taken.
 static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 
+BranchProbabilityInfo::SccInfo::SccInfo(const Function &F) {
+  // Record SCC numbers of blocks in the CFG to identify irreducible loops.
+  // FIXME: We could only calculate this if the CFG is known to be irreducible
+  // (perhaps cache this info in LoopInfo if we can easily calculate it there?).
+  int SccNum = 0;
+  for (scc_iterator<const Function *> It = scc_begin(&F); !It.isAtEnd();
+       ++It, ++SccNum) {
+    // Ignore single-block SCCs since they either aren't loops or LoopInfo will
+    // catch them.
+    const std::vector<const BasicBlock *> &Scc = *It;
+    if (Scc.size() == 1)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "BPI: SCC " << SccNum << ":");
+    for (const auto *BB : Scc) {
+      LLVM_DEBUG(dbgs() << " " << BB->getName());
+      SccNums[BB] = SccNum;
+      calculateSccBlockType(BB, SccNum);
+    }
+    LLVM_DEBUG(dbgs() << "\n");
+  }
+}
+
+int BranchProbabilityInfo::SccInfo::getSCCNum(const BasicBlock *BB) const {
+  auto SccIt = SccNums.find(BB);
+  if (SccIt == SccNums.end())
+    return -1;
+  return SccIt->second;
+}
+
+void BranchProbabilityInfo::SccInfo::getSccEnterBlocks(
+    int SccNum, SmallVectorImpl<BasicBlock *> &Enters) const {
+
+  for (auto MapIt : SccBlocks[SccNum]) {
+    const auto *BB = MapIt.first;
+    if (isSCCHeader(BB, SccNum))
+      for (const auto *Pred : predecessors(BB))
+        if (getSCCNum(Pred) != SccNum)
+          Enters.push_back(const_cast<BasicBlock *>(BB));
+  }
+}
+
+void BranchProbabilityInfo::SccInfo::getSccExitBlocks(
+    int SccNum, SmallVectorImpl<BasicBlock *> &Exits) const {
+  for (auto MapIt : SccBlocks[SccNum]) {
+    const auto *BB = MapIt.first;
+    if (isSCCExitingBlock(BB, SccNum))
+      for (const auto *Succ : successors(BB))
+        if (getSCCNum(Succ) != SccNum)
+          Exits.push_back(const_cast<BasicBlock *>(BB));
+  }
+}
+
+uint32_t BranchProbabilityInfo::SccInfo::getSccBlockType(const BasicBlock *BB,
+                                                         int SccNum) const {
+  assert(getSCCNum(BB) == SccNum);
+
+  assert(SccBlocks.size() > static_cast<unsigned>(SccNum) && "Unknown SCC");
+  const auto &SccBlockTypes = SccBlocks[SccNum];
+
+  auto It = SccBlockTypes.find(BB);
+  if (It != SccBlockTypes.end()) {
+    return It->second;
+  }
+  return Inner;
+}
+
+void BranchProbabilityInfo::SccInfo::calculateSccBlockType(const BasicBlock *BB,
+                                                           int SccNum) {
+  assert(getSCCNum(BB) == SccNum);
+  uint32_t BlockType = Inner;
+
+  if (llvm::any_of(make_range(pred_begin(BB), pred_end(BB)),
+                   [&](const BasicBlock *Pred) {
+        // Consider any block that is an entry point to the SCC as
+        // a header.
+        return getSCCNum(Pred) != SccNum;
+      }))
+    BlockType |= Header;
+
+  if (llvm::any_of(
+          make_range(succ_begin(BB), succ_end(BB)),
+          [&](const BasicBlock *Succ) { return getSCCNum(Succ) != SccNum; }))
+    BlockType |= Exiting;
+
+  // Lazily compute the set of headers for a given SCC and cache the results
+  // in the SccHeaderMap.
+  if (SccBlocks.size() <= static_cast<unsigned>(SccNum))
+    SccBlocks.resize(SccNum + 1);
+  auto &SccBlockTypes = SccBlocks[SccNum];
+
+  if (BlockType != Inner) {
+    bool IsInserted;
+    std::tie(std::ignore, IsInserted) =
+        SccBlockTypes.insert(std::make_pair(BB, BlockType));
+    assert(IsInserted && "Duplicated block in SCC");
+  }
+}
+
 static void UpdatePDTWorklist(const BasicBlock *BB, PostDominatorTree *PDT,
                               SmallVectorImpl<const BasicBlock *> &WorkList,
                               SmallPtrSetImpl<const BasicBlock *> &TargetSet) {
@@ -511,38 +610,6 @@ bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
   return true;
 }
 
-static int getSCCNum(const BasicBlock *BB,
-                     const BranchProbabilityInfo::SccInfo &SccI) {
-  auto SccIt = SccI.SccNums.find(BB);
-  if (SccIt == SccI.SccNums.end())
-    return -1;
-  return SccIt->second;
-}
-
-// Consider any block that is an entry point to the SCC as a header.
-static bool isSCCHeader(const BasicBlock *BB, int SccNum,
-                        BranchProbabilityInfo::SccInfo &SccI) {
-  assert(getSCCNum(BB, SccI) == SccNum);
-
-  // Lazily compute the set of headers for a given SCC and cache the results
-  // in the SccHeaderMap.
-  if (SccI.SccHeaders.size() <= static_cast<unsigned>(SccNum))
-    SccI.SccHeaders.resize(SccNum + 1);
-  auto &HeaderMap = SccI.SccHeaders[SccNum];
-  bool Inserted;
-  BranchProbabilityInfo::SccHeaderMap::iterator HeaderMapIt;
-  std::tie(HeaderMapIt, Inserted) = HeaderMap.insert(std::make_pair(BB, false));
-  if (Inserted) {
-    bool IsHeader = llvm::any_of(make_range(pred_begin(BB), pred_end(BB)),
-                                 [&](const BasicBlock *Pred) {
-                                   return getSCCNum(Pred, SccI) != SccNum;
-                                 });
-    HeaderMapIt->second = IsHeader;
-    return IsHeader;
-  } else
-    return HeaderMapIt->second;
-}
-
 // Compute the unlikely successors to the block BB in the loop L, specifically
 // those that are unlikely because this is a loop, and add them to the
 // UnlikelyBlocks set.
@@ -653,12 +720,11 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
 // Calculate Edge Weights using "Loop Branch Heuristics". Predict backedges
 // as taken, exiting edges as not-taken.
 bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
-                                                     const LoopInfo &LI,
-                                                     SccInfo &SccI) {
+                                                     const LoopInfo &LI) {
   int SccNum;
   Loop *L = LI.getLoopFor(BB);
   if (!L) {
-    SccNum = getSCCNum(BB, SccI);
+    SccNum = SccI->getSCCNum(BB);
     if (SccNum < 0)
       return false;
   }
@@ -685,9 +751,9 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
       else
         InEdges.push_back(I.getSuccessorIndex());
     } else {
-      if (getSCCNum(*I, SccI) != SccNum)
+      if (SccI->getSCCNum(*I) != SccNum)
         ExitingEdges.push_back(I.getSuccessorIndex());
-      else if (isSCCHeader(*I, SccNum, SccI))
+      else if (SccI->isSCCHeader(*I, SccNum))
         BackEdges.push_back(I.getSuccessorIndex());
       else
         InEdges.push_back(I.getSuccessorIndex());
@@ -1072,26 +1138,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
   assert(PostDominatedByUnreachable.empty());
   assert(PostDominatedByColdCall.empty());
 
-  // Record SCC numbers of blocks in the CFG to identify irreducible loops.
-  // FIXME: We could only calculate this if the CFG is known to be irreducible
-  // (perhaps cache this info in LoopInfo if we can easily calculate it there?).
-  int SccNum = 0;
-  SccInfo SccI;
-  for (scc_iterator<const Function *> It = scc_begin(&F); !It.isAtEnd();
-       ++It, ++SccNum) {
-    // Ignore single-block SCCs since they either aren't loops or LoopInfo will
-    // catch them.
-    const std::vector<const BasicBlock *> &Scc = *It;
-    if (Scc.size() == 1)
-      continue;
-
-    LLVM_DEBUG(dbgs() << "BPI: SCC " << SccNum << ":");
-    for (auto *BB : Scc) {
-      LLVM_DEBUG(dbgs() << " " << BB->getName());
-      SccI.SccNums[BB] = SccNum;
-    }
-    LLVM_DEBUG(dbgs() << "\n");
-  }
+  SccI = std::make_unique<SccInfo>(F);
 
   std::unique_ptr<PostDominatorTree> PDTPtr;
 
@@ -1119,7 +1166,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
       continue;
     if (calcColdCallHeuristics(BB))
       continue;
-    if (calcLoopBranchHeuristics(BB, LI, SccI))
+    if (calcLoopBranchHeuristics(BB, LI))
       continue;
     if (calcPointerHeuristics(BB))
       continue;
@@ -1131,6 +1178,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
 
   PostDominatedByUnreachable.clear();
   PostDominatedByColdCall.clear();
+  SccI.reset();
 
   if (PrintBranchProb &&
       (PrintBranchProbFuncName.empty() ||

@@ -619,7 +619,7 @@ unsigned SSANameState::getBlockID(Block *block) {
 
 void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   assert(!region.empty() && "cannot shadow arguments of an empty region");
-  assert(region.front().getNumArguments() == namesToUse.size() &&
+  assert(region.getNumArguments() == namesToUse.size() &&
          "incorrect number of names passed in");
   assert(region.getParentOp()->isKnownIsolatedFromAbove() &&
          "only KnownIsolatedFromAbove ops can shadow names");
@@ -629,7 +629,7 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
     auto nameToUse = namesToUse[i];
     if (nameToUse == nullptr)
       continue;
-    auto nameToReplace = region.front().getArgument(i);
+    auto nameToReplace = region.getArgument(i);
 
     nameStr.clear();
     llvm::raw_svector_ostream nameStream(nameStr);

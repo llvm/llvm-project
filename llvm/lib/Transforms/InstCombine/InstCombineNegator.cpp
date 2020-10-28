@@ -42,6 +42,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -430,7 +431,7 @@ LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
 }
 
 LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
-                                      InstCombiner &IC) {
+                                      InstCombinerImpl &IC) {
   ++NegatorTotalNegationsAttempted;
   LLVM_DEBUG(dbgs() << "Negator: attempting to sink negation into " << *Root
                     << "\n");

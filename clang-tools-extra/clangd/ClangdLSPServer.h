@@ -87,6 +87,8 @@ private:
   // otherwise.
   void onDocumentSymbol(const DocumentSymbolParams &,
                         Callback<llvm::json::Value>);
+  void onFoldingRange(const FoldingRangeParams &,
+                      Callback<std::vector<FoldingRange>>);
   void onCodeAction(const CodeActionParams &, Callback<llvm::json::Value>);
   void onCompletion(const CompletionParams &, Callback<CompletionList>);
   void onSignatureHelp(const TextDocumentPositionParams &,

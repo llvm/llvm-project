@@ -50,6 +50,14 @@
 
 	vbsl	d18, d17, d16
 	vbsl	q8, q10, q9
+	vbit	d18, d17, d16
+	vbit	q8, q10, q9
+	vbif	d18, d17, d16
+	vbif	q8, q10, q9
 
 @ CHECK: vbsl	d18, d17, d16           @ encoding: [0x51,0xff,0xb0,0x21]
 @ CHECK: vbsl	q8, q10, q9             @ encoding: [0x54,0xff,0xf2,0x01]
+@ CHECK: vbit	d18, d17, d16           @ encoding: [0x61,0xff,0xb0,0x21]
+@ CHECK: vbit	q8, q10, q9             @ encoding: [0x64,0xff,0xf2,0x01]
+@ CHECK: vbif	d18, d17, d16           @ encoding: [0x71,0xff,0xb0,0x21]
+@ CHECK: vbif	q8, q10, q9             @ encoding: [0x74,0xff,0xf2,0x01]

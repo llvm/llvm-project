@@ -629,8 +629,7 @@ Status ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
   return WillLaunchOrAttach();
 }
 
-Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
-                                         llvm::StringRef remote_url) {
+Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   Status error(WillLaunchOrAttach());
 
@@ -3205,14 +3204,8 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
       break;
 
     case BreakpointSite::eExternal: {
-      GDBStoppointType stoppoint_type;
-      if (bp_site->IsHardware())
-        stoppoint_type = eBreakpointHardware;
-      else
-        stoppoint_type = eBreakpointSoftware;
-
-      if (m_gdb_comm.SendGDBStoppointTypePacket(stoppoint_type, false, addr,
-                                                bp_op_size))
+      if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false,
+                                                addr, bp_op_size))
         error.SetErrorToGenericError();
     } break;
     }

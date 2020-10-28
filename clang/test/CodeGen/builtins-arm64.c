@@ -68,7 +68,7 @@ int32_t jcvt(double v) {
 __typeof__(__builtin_arm_rsr("1:2:3:4:5")) rsr(void);
 
 uint32_t rsr() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
   // CHECK-NEXT: trunc i64 [[V0]] to i32
   return __builtin_arm_rsr("1:2:3:4:5");
 }
@@ -76,12 +76,12 @@ uint32_t rsr() {
 __typeof__(__builtin_arm_rsr64("1:2:3:4:5")) rsr64(void);
 
 uint64_t rsr64(void) {
-  // CHECK: call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
   return __builtin_arm_rsr64("1:2:3:4:5");
 }
 
 void *rsrp() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
   // CHECK-NEXT: inttoptr i64 [[V0]] to i8*
   return __builtin_arm_rsrp("1:2:3:4:5");
 }

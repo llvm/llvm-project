@@ -418,7 +418,7 @@ public:
                       bool UseDependencies);
 
   /// Returns the checks that generateChecks created.
-  const SmallVector<RuntimePointerCheck, 4> &getChecks() const {
+  const SmallVectorImpl<RuntimePointerCheck> &getChecks() const {
     return Checks;
   }
 

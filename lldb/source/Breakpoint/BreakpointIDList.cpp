@@ -220,10 +220,10 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
         ((start_loc_id != LLDB_INVALID_BREAK_ID) &&
          (end_loc_id == LLDB_INVALID_BREAK_ID))) {
       new_args.Clear();
-      result.AppendErrorWithFormat("Invalid breakpoint id range:  Either "
-                                   "both ends of range must specify"
-                                   " a breakpoint location, or neither can "
-                                   "specify a breakpoint location.\n");
+      result.AppendError("Invalid breakpoint id range:  Either "
+                         "both ends of range must specify"
+                         " a breakpoint location, or neither can "
+                         "specify a breakpoint location.");
       result.SetStatus(eReturnStatusFailed);
       return;
     }

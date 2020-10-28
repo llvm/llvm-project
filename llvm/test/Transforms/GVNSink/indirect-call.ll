@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn-sink -simplifycfg -simplifycfg-sink-common=false -S | FileCheck %s
+; RUN: opt < %s -gvn-sink -simplifycfg -hoist-common-insts=true -simplifycfg-sink-common=false -S | FileCheck %s
 
 declare i8 @ext(i1)
 

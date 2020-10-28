@@ -155,9 +155,6 @@ public:
   /// Whether timestamps are included in this module file.
   bool HasTimestamps = false;
 
-  /// Whether the PCH has a corresponding object file.
-  bool PCHHasObjectFile = false;
-
   /// Whether the top-level module has been read from the AST file.
   bool DidReadTopLevelSubmodule = false;
 

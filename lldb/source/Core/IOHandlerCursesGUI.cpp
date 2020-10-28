@@ -1189,9 +1189,7 @@ public:
 
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.IOHandler.curses.Application"));
-    ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
     ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
-    ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
     debugger.EnableForwardEvents(listener_sp);
 
     bool update = true;
@@ -1289,6 +1287,10 @@ public:
           update = true;
           break;
         case eKeyNotHandled:
+          if (ch == 12) { // Ctrl+L, force full redraw
+            redrawwin(m_window_sp->get());
+            update = true;
+          }
           break;
         case eQuitApplication:
           done = true;
@@ -2831,7 +2833,8 @@ public:
 
     eMenuID_Process,
     eMenuID_ProcessAttach,
-    eMenuID_ProcessDetach,
+    eMenuID_ProcessDetachResume,
+    eMenuID_ProcessDetachSuspended,
     eMenuID_ProcessLaunch,
     eMenuID_ProcessContinue,
     eMenuID_ProcessHalt,
@@ -2976,13 +2979,15 @@ public:
     }
       return MenuActionResult::Handled;
 
-    case eMenuID_ProcessDetach: {
+    case eMenuID_ProcessDetachResume:
+    case eMenuID_ProcessDetachSuspended: {
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
       if (exe_ctx.HasProcessScope()) {
         Process *process = exe_ctx.GetProcessPtr();
         if (process && process->IsAlive())
-          process->Detach(false);
+          process->Detach(menu.GetIdentifier() ==
+                          eMenuID_ProcessDetachSuspended);
       }
     }
       return MenuActionResult::Handled;
@@ -3235,15 +3240,15 @@ public:
         {KEY_NPAGE, "Page down"},
         {'b', "Set breakpoint on selected source/disassembly line"},
         {'c', "Continue process"},
-        {'d', "Detach and resume process"},
         {'D', "Detach with process suspended"},
         {'h', "Show help dialog"},
-        {'k', "Kill process"},
         {'n', "Step over (source line)"},
         {'N', "Step over (single instruction)"},
-        {'o', "Step out"},
+        {'f', "Step out (finish)"},
         {'s', "Step in (source line)"},
         {'S', "Step in (single instruction)"},
+        {'u', "Frame up"},
+        {'d', "Frame down"},
         {',', "Page up"},
         {'.', "Page down"},
         {'\0', nullptr}};
@@ -3800,24 +3805,13 @@ public:
       }
       return eKeyHandled;
 
-    case 'd': // 'd' == detach and let run
     case 'D': // 'D' == detach and keep stopped
     {
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
       if (exe_ctx.HasProcessScope())
-        exe_ctx.GetProcessRef().Detach(c == 'D');
+        exe_ctx.GetProcessRef().Detach(true);
     }
-      return eKeyHandled;
-
-    case 'k':
-      // 'k' == kill
-      {
-        ExecutionContext exe_ctx =
-            m_debugger.GetCommandInterpreter().GetExecutionContext();
-        if (exe_ctx.HasProcessScope())
-          exe_ctx.GetProcessRef().Destroy(false);
-      }
       return eKeyHandled;
 
     case 'c':
@@ -3830,8 +3824,8 @@ public:
       }
       return eKeyHandled;
 
-    case 'o':
-      // 'o' == step out
+    case 'f':
+      // 'f' == step out (finish)
       {
         ExecutionContext exe_ctx =
             m_debugger.GetCommandInterpreter().GetExecutionContext();
@@ -3864,6 +3858,26 @@ public:
           StateIsStoppedState(exe_ctx.GetProcessRef().GetState(), true)) {
         bool source_step = (c == 's');
         exe_ctx.GetThreadRef().StepIn(source_step);
+      }
+    }
+      return eKeyHandled;
+
+    case 'u': // 'u' == frame up
+    case 'd': // 'd' == frame down
+    {
+      ExecutionContext exe_ctx =
+          m_debugger.GetCommandInterpreter().GetExecutionContext();
+      if (exe_ctx.HasThreadScope()) {
+        Thread *thread = exe_ctx.GetThreadPtr();
+        uint32_t frame_idx = thread->GetSelectedFrameIndex();
+        if (frame_idx == UINT32_MAX)
+          frame_idx = 0;
+        if (c == 'u' && frame_idx + 1 < thread->GetStackFrameCount())
+          ++frame_idx;
+        else if (c == 'd' && frame_idx > 0)
+          --frame_idx;
+        if (thread->SetSelectedFrameByIndex(frame_idx, true))
+          exe_ctx.SetFrameSP(thread->GetSelectedFrame());
       }
     }
       return eKeyHandled;
@@ -3939,8 +3953,12 @@ void IOHandlerCursesGUI::Activate() {
                                     ApplicationDelegate::eMenuID_Process));
     process_menu_sp->AddSubmenu(MenuSP(new Menu(
         "Attach", nullptr, 'a', ApplicationDelegate::eMenuID_ProcessAttach)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Detach", nullptr, 'd', ApplicationDelegate::eMenuID_ProcessDetach)));
+    process_menu_sp->AddSubmenu(
+        MenuSP(new Menu("Detach and resume", nullptr, 'd',
+                        ApplicationDelegate::eMenuID_ProcessDetachResume)));
+    process_menu_sp->AddSubmenu(
+        MenuSP(new Menu("Detach suspended", nullptr, 's',
+                        ApplicationDelegate::eMenuID_ProcessDetachSuspended)));
     process_menu_sp->AddSubmenu(MenuSP(new Menu(
         "Launch", nullptr, 'l', ApplicationDelegate::eMenuID_ProcessLaunch)));
     process_menu_sp->AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));

@@ -43,11 +43,6 @@ cl::opt<bool> PGSOColdCodeOnlyForPartialSamplePGO(
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code under partial-profile sample PGO."));
 
-cl::opt<bool> PGSOIRPassOrTestOnly(
-    "pgso-ir-pass-or-test-only", cl::Hidden, cl::init(false),
-    cl::desc("Apply the profile guided size optimizations only"
-             "to the IR passes or tests."));
-
 cl::opt<bool> ForcePGSO(
     "force-pgso", cl::Hidden, cl::init(false),
     cl::desc("Force the (profiled-guided) size optimizations. "));

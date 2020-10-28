@@ -14,7 +14,7 @@ define void @a(<2 x float>* %a, <2 x i32>* %b) {
 ; CHECK-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; CHECK-NEXT:    addps %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl (%esp), %edx

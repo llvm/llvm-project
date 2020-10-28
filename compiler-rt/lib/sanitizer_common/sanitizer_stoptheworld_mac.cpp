@@ -31,15 +31,15 @@ class SuspendedThreadsListMac : public SuspendedThreadsList {
  public:
   SuspendedThreadsListMac() : threads_(1024) {}
 
-  tid_t GetThreadID(uptr index) const;
+  tid_t GetThreadID(uptr index) const override;
   thread_t GetThread(uptr index) const;
-  uptr ThreadCount() const;
+  uptr ThreadCount() const override;
   bool ContainsThread(thread_t thread) const;
   void Append(thread_t thread);
 
   PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
-                                          uptr *sp) const;
-  uptr RegisterCount() const;
+                                          uptr *sp) const override;
+  uptr RegisterCount() const override;
 
  private:
   InternalMmapVector<SuspendedThreadInfo> threads_;

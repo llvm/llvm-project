@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-pc-linux-gnu %s -filetype=obj -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-linux-gnu %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s
 
 // Test that we can use .cfi_startproc without a global symbol.
 

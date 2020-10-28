@@ -333,6 +333,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Scope &scope) {
   return os;
 }
 
+bool Scope::IsStmtFunction() const {
+  return symbol_ && symbol_->test(Symbol::Flag::StmtFunction);
+}
+
 bool Scope::IsParameterizedDerivedType() const {
   if (!IsDerivedType()) {
     return false;

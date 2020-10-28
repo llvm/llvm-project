@@ -23,12 +23,9 @@ def main():
     parser.add_argument('--execdir', type=str, required=True)
     parser.add_argument('--codesign_identity', type=str, required=False, default=None)
     parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
-    (args, remaining) = parser.parse_known_args(sys.argv[1:])
-
-    if len(remaining) < 2:
-        sys.stderr.write('Missing actual commands to run')
-        exit(1)
-    commandLine = remaining[1:] # Skip the '--'
+    parser.add_argument("command", nargs=argparse.ONE_OR_MORE)
+    args = parser.parse_args()
+    commandLine = args.command
 
     # Do any necessary codesigning.
     if args.codesign_identity:

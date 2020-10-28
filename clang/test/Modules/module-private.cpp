@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_left -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_right -emit-module %S/Inputs/module.map
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -I %S/Inputs %s -verify
+// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_left -emit-module %S/Inputs/module.map
+// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -fmodule-name=module_private_right -emit-module %S/Inputs/module.map
+// RUN: %clang_cc1 -std=c++17 -fmodules -fimplicit-module-maps -x objective-c++ -fmodules-cache-path=%t -I %S/Inputs %s -verify
 // FIXME: When we have a syntax for modules in C++, use that.
 
 @import module_private_left;
@@ -79,10 +79,14 @@ __module_private__ struct public_class<T *> { }; // expected-error{{partial spec
 void local_var_private(__module_private__ int param) { // expected-error{{parameter 'param' cannot be declared __module_private__}}
   __module_private__ struct Local { int x, y; } local; //expected-error{{local variable 'local' cannot be declared __module_private__}}
 
+  __module_private__ auto [x, y] = local; // expected-error {{local variable '[x, y]' cannot be declared __module_private__}}
+
   __module_private__ struct OtherLocal { int x; }; // expected-error{{local struct cannot be declared __module_private__}}
 
   typedef __module_private__ int local_typedef; // expected-error{{typedef 'local_typedef' cannot be declared __module_private__}}
 }
+
+void param_private(__module_private__ int) {} // expected-error {{parameter '' cannot be declared __module_private}}
 
 // Check struct size
 struct LikeVisibleStruct {

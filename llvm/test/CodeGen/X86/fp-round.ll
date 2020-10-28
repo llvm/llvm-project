@@ -77,7 +77,7 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
 ; SSE2-NEXT:    subq $56, %rsp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 64
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
@@ -90,7 +90,7 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -174,7 +174,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; SSE2-NEXT:    .cfi_def_cfa_offset 80
 ; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
@@ -187,7 +187,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -195,7 +195,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; SSE2-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
@@ -208,7 +208,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -326,7 +326,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps %xmm1, (%rsp) ## 16-byte Spill
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
@@ -339,7 +339,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -347,7 +347,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
@@ -360,7 +360,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -368,7 +368,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
@@ -381,7 +381,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps (%rsp), %xmm1 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -389,7 +389,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; SSE2-NEXT:    movaps %xmm1, (%rsp) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
@@ -402,7 +402,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 ## 16-byte Reload
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]

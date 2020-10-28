@@ -334,7 +334,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
     mapper.map(regionArg, operand);
   }
 
-  // Ensure that the resultant values of the call, match the callable.
+  // Ensure that the resultant values of the call match the callable.
   castBuilder.setInsertionPointAfter(call);
   for (unsigned i = 0, e = callResults.size(); i != e; ++i) {
     Value callResult = callResults[i];

@@ -101,16 +101,17 @@ def SPV_CooperativeMatrixLoadNVOp : SPV_Op<"CooperativeMatrixLoadNV", []> {
 
     ``` {.ebnf}
     cooperative-matrixload-op ::= ssa-id `=` `spv.CooperativeMatrixLoadNV`
-                              storage-class ssa-use `,` ssa-use `,` ssa-use
+                              ssa-use `,` ssa-use `,` ssa-use
                               (`[` memory-access `]`)? ` : `
+                              pointer-type `as`
                               cooperative-matrix-type
     ```
 
     For example:
 
     ```
-    %0 = spv.CooperativeMatrixLoadNV "StorageBuffer" %ptr, %stride, %colMajor
-         : !spv.coopmatrix<i32, Workgroup, 16, 8>
+    %0 = spv.CooperativeMatrixLoadNV %ptr, %stride, %colMajor
+         : !spv.ptr<i32, StorageBuffer> as !spv.coopmatrix<i32, Workgroup, 16, 8>
     ```
   }];
 
@@ -243,16 +244,17 @@ def SPV_CooperativeMatrixStoreNVOp : SPV_Op<"CooperativeMatrixStoreNV", []> {
 
     ``` {.ebnf}
     coop-matrix-store-op ::= `spv.CooperativeMatrixStoreNV `
-                              storage-class ssa-use `, ` ssa-use `, `
                               ssa-use `, ` ssa-use `, `
-                  (`[` memory-access `]`)? `:` spirv-element-type
+                              ssa-use `, ` ssa-use `, `
+                              (`[` memory-access `]`)? `:`
+                              pointer-type `,` spirv-element-type
     ```
 
     For example:
 
     ```
-      spv.CooperativeMatrixStoreNV "StorageBuffer" %arg0, %arg2, %arg1, %arg3 :
-        !spv.coopmatrix<Workgroup, i32, 16, 8>
+      spv.CooperativeMatrixStoreNV %arg0, %arg2, %arg1, %arg3 :
+        !spv.ptr<i32, StorageBuffer>, !spv.coopmatrix<Workgroup, i32, 16, 8>
     ```
   }];
 

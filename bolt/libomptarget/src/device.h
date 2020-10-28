@@ -177,8 +177,9 @@ struct DeviceTy {
   uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-      bool &IsNew, bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount = true,
-      bool HasCloseModifier = false);
+                         bool &IsNew, bool &IsHostPtr, bool IsImplicit,
+                         bool UpdateRefCount, bool HasCloseModifier,
+                         bool HasPresentModifier);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
       bool UpdateRefCount, bool &IsHostPtr);
@@ -191,26 +192,40 @@ struct DeviceTy {
   int32_t initOnce();
   __tgt_target_table *load_binary(void *Img);
 
+  // device memory allocation/deallocation routines
+  /// Allocates \p Size bytes on the device and returns the address/nullptr when
+  /// succeeds/fails. \p HstPtr is an address of the host data which the
+  /// allocated target data will be associated with. If it is unknown, the
+  /// default value of \p HstPtr is nullptr. Note: this function doesn't do
+  /// pointer association. Actually, all the __tgt_rtl_data_alloc
+  /// implementations ignore \p HstPtr.
+  void *allocData(int64_t Size, void *HstPtr = nullptr);
+  /// Deallocates memory which \p TgtPtrBegin points at and returns
+  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
+  int32_t deleteData(void *TgtPtrBegin);
+
   // Data transfer. When AsyncInfoPtr is nullptr, the transfer will be
   // synchronous.
   // Copy data from host to device
-  int32_t data_submit(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                      __tgt_async_info *AsyncInfoPtr);
+  int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                     __tgt_async_info *AsyncInfoPtr);
   // Copy data from device back to host
-  int32_t data_retrieve(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
-                        __tgt_async_info *AsyncInfoPtr);
+  int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                       __tgt_async_info *AsyncInfoPtr);
   // Copy data from current device to destination device directly
   int32_t data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
                         int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
-  int32_t run_region(void *TgtEntryPtr, void **TgtVarsPtr,
-                     ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                     __tgt_async_info *AsyncInfoPtr);
-  int32_t run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
-                          ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                          int32_t NumTeams, int32_t ThreadLimit,
-                          uint64_t LoopTripCount,
-                          __tgt_async_info *AsyncInfoPtr);
+  int32_t runRegion(void *TgtEntryPtr, void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
+                    int32_t TgtVarsSize, __tgt_async_info *AsyncInfoPtr);
+  int32_t runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
+                        ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                        int32_t NumTeams, int32_t ThreadLimit,
+                        uint64_t LoopTripCount, __tgt_async_info *AsyncInfoPtr);
+
+  /// Synchronize device/queue/event based on \p AsyncInfoPtr and return
+  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
+  int32_t synchronize(__tgt_async_info *AsyncInfoPtr);
 
 private:
   // Call to RTL

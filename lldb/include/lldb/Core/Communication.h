@@ -285,7 +285,7 @@ public:
   ///
   void SynchronizeWithReadThread();
 
-  static const char *ConnectionStatusAsCString(lldb::ConnectionStatus status);
+  static std::string ConnectionStatusAsString(lldb::ConnectionStatus status);
 
   bool GetCloseOnEOF() const { return m_close_on_eof; }
 

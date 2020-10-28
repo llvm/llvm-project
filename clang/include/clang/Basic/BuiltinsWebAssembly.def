@@ -169,14 +169,5 @@ TARGET_BUILTIN(__builtin_wasm_narrow_u_i8x16_i16x8, "V16cV8sV8s", "nc", "simd128
 TARGET_BUILTIN(__builtin_wasm_narrow_s_i16x8_i32x4, "V8sV4iV4i", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_narrow_u_i16x8_i32x4, "V8sV4iV4i", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_widen_low_s_i16x8_i8x16, "V8sV16c", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_high_s_i16x8_i8x16, "V8sV16c", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_low_u_i16x8_i8x16, "V8sV16c", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_high_u_i16x8_i8x16, "V8sV16c", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_low_s_i32x4_i16x8, "V4iV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_high_s_i32x4_i16x8, "V4iV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_low_u_i32x4_i16x8, "V4iV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_widen_high_u_i32x4_i16x8, "V4iV8s", "nc", "simd128")
-
 #undef BUILTIN
 #undef TARGET_BUILTIN

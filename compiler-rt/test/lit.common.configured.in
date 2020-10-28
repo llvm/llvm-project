@@ -19,6 +19,7 @@ set_default("compiler_rt_obj_root", "@COMPILER_RT_BINARY_DIR@")
 set_default("enable_per_target_runtime_dir", @LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_PYBOOL@)
 set_default("llvm_tools_dir", "@LLVM_TOOLS_DIR@")
 set_default("llvm_shlib_dir", "@LLVM_LIBRARY_OUTPUT_INTDIR@")
+set_default("gnu_ld_executable", "@GNU_LD_EXECUTABLE@")
 set_default("gold_executable", "@GOLD_EXECUTABLE@")
 set_default("clang", "@COMPILER_RT_RESOLVED_TEST_COMPILER@")
 set_default("compiler_id", "@COMPILER_RT_TEST_COMPILER_ID@")
@@ -56,7 +57,7 @@ elif config.android:
 else:
   set_default("target_suffix", "-%s" % config.target_arch)
 
-set_default("have_zlib", "@HAVE_LIBZ@")
+set_default("have_zlib", "@LLVM_ENABLE_ZLIB@")
 set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
 
 # LLVM tools dir can be passed in lit parameters, so try to

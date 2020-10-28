@@ -11,6 +11,9 @@
 
   define void @store_zero_s64_gpr(i64* %addr) { ret void }
   define void @store_zero_s32_gpr(i32* %addr) { ret void }
+  define void @store_zero_s16(i32* %addr) { ret void }
+  define void @store_zero_s8(i32* %addr) { ret void }
+  define void @store_zero_look_through_cst(i32* %addr) { ret void }
 
   define void @store_fi_s64_gpr() {
     %ptr0 = alloca i64
@@ -174,6 +177,53 @@ body:             |
     %1(s32) = G_CONSTANT i32 0
     G_STORE  %1, %0 :: (store 4 into %ir.addr)
 
+...
+
+---
+name:            store_zero_s16
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_zero_s16
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRHHui $wzr, [[COPY]], 0 :: (store 2)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s16) = G_CONSTANT i16 0
+    G_STORE %1(s16), %0(p0) :: (store 2)
+
+...
+
+---
+name:            store_zero_s8
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_zero_s8
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRBBui $wzr, [[COPY]], 0 :: (store 1)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s8) = G_CONSTANT i8 0
+    G_STORE %1(s8), %0(p0) :: (store 1)
+...
+
+---
+name:            store_zero_look_through_cst
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_zero_look_through_cst
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: STRXui $xzr, [[COPY]], 0 :: (store 8 into %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s32) = G_CONSTANT i32 0
+    %2:gpr(s64) = G_ZEXT %1
+    G_STORE  %2, %0 :: (store 8 into %ir.addr)
 ...
 
 ---

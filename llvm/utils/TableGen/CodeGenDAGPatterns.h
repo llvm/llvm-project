@@ -14,7 +14,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 
-#include "CodeGenHwModes.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "SDNodeProperties.h"
@@ -42,7 +41,6 @@ class SDNodeInfo;
 class TreePattern;
 class TreePatternNode;
 class CodeGenDAGPatterns;
-class ComplexPattern;
 
 /// Shared pointer for TreePatternNode.
 using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
@@ -190,7 +188,7 @@ private:
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  std::vector<unsigned> AddrSpaces;
+  SmallVector<unsigned, 16> AddrSpaces;
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;

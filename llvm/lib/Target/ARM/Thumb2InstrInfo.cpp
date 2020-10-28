@@ -12,6 +12,7 @@
 
 #include "Thumb2InstrInfo.h"
 #include "ARMMachineFunctionInfo.h"
+#include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -37,6 +38,11 @@ static cl::opt<bool>
 OldT2IfCvt("old-thumb2-ifcvt", cl::Hidden,
            cl::desc("Use old-style Thumb2 if-conversion heuristics"),
            cl::init(false));
+
+static cl::opt<bool>
+PreferNoCSEL("prefer-no-csel", cl::Hidden,
+             cl::desc("Prefer predicated Move to CSEL"),
+             cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI) {}
@@ -116,6 +122,31 @@ Thumb2InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
 
   Register PredReg;
   return getITInstrPredicate(*MBBI, PredReg) == ARMCC::AL;
+}
+
+MachineInstr *
+Thumb2InstrInfo::optimizeSelect(MachineInstr &MI,
+                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
+                                bool PreferFalse) const {
+  // Try to use the base optimizeSelect, which uses canFoldIntoMOVCC to fold the
+  // MOVCC into another instruction. If that fails on 8.1-M fall back to using a
+  // CSEL.
+  MachineInstr *RV = ARMBaseInstrInfo::optimizeSelect(MI, SeenMIs, PreferFalse);
+  if (!RV && getSubtarget().hasV8_1MMainlineOps() && !PreferNoCSEL) {
+    Register DestReg = MI.getOperand(0).getReg();
+
+    if (!DestReg.isVirtual())
+      return nullptr;
+
+    MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                        get(ARM::t2CSEL), DestReg)
+                                    .add(MI.getOperand(2))
+                                    .add(MI.getOperand(1))
+                                    .add(MI.getOperand(3));
+    SeenMIs.insert(NewMI);
+    return NewMI;
+  }
+  return RV;
 }
 
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,

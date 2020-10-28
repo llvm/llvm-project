@@ -43,7 +43,14 @@ public:
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 private:
   void emitPrefixedInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
+  void emitGOTToPCRelReloc(const MCInst &Inst);
+  void emitGOTToPCRelLabel(const MCInst &Inst);
 };
+
+// Check if the instruction Inst is part of a pair of instructions that make up
+// a link time GOT PC Rel optimization.
+Optional<bool> isPartOfGOTToPCRelPair(const MCInst &Inst,
+                                      const MCSubtargetInfo &STI);
 
 MCELFStreamer *createPPCELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> MAB,

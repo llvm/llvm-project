@@ -175,7 +175,7 @@ void AssumptionCache::transferAffectedValuesInCache(Value *OV, Value *NV) {
     return;
 
   for (auto &A : AVI->second)
-    if (std::find(NAVV.begin(), NAVV.end(), A) == NAVV.end())
+    if (!llvm::is_contained(NAVV, A))
       NAVV.push_back(A);
   AffectedValues.erase(OV);
 }

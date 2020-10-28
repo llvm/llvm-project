@@ -779,29 +779,9 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
     if (isa<UndefValue>(V1)) return V1;
     return V2;
   }
-
+  if (isa<UndefValue>(V1)) return V2;
+  if (isa<UndefValue>(V2)) return V1;
   if (V1 == V2) return V1;
-
-  // If the true or false value is undef, we can fold to the other value as
-  // long as the other value isn't poison.
-  auto NotPoison = [](Constant *C) {
-    // TODO: We can analyze ConstExpr by opcode to determine if there is any
-    //       possibility of poison.
-    if (isa<ConstantExpr>(C))
-      return false;
-
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
-        isa<ConstantPointerNull>(C) || isa<Function>(C))
-      return true;
-
-    if (C->getType()->isVectorTy())
-      return !C->containsUndefElement() && !C->containsConstantExpression();
-
-    // TODO: Recursively analyze aggregates or other constants.
-    return false;
-  };
-  if (isa<UndefValue>(V1) && NotPoison(V2)) return V2;
-  if (isa<UndefValue>(V2) && NotPoison(V1)) return V1;
 
   if (ConstantExpr *TrueVal = dyn_cast<ConstantExpr>(V1)) {
     if (TrueVal->getOpcode() == Instruction::Select)

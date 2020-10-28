@@ -243,7 +243,7 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   %13:vgpr_32, dead %17:sreg_64_xexec = V_ADD_I32_e64 [[COPY6]], [[COPY8]], 0, implicit $exec
+  ; CHECK:   %13:vgpr_32, dead %17:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY6]], [[COPY8]], 0, implicit $exec
   ; CHECK:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[REG_SEQUENCE1]], %13, [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into custom "TargetCustom7" + 4096, align 1, addrspace 4)
   ; CHECK:   S_ENDPGM 0
   %voffset.add = add i32 %voffset, 4096
@@ -272,7 +272,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY7]], %subreg.sub3
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   %15:vgpr_32, dead %35:sreg_64_xexec = V_ADD_I32_e64 [[COPY8]], [[COPY10]], 0, implicit $exec
+  ; CHECK:   %15:vgpr_32, dead %35:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY8]], [[COPY10]], 0, implicit $exec
   ; CHECK:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK:   [[COPY12:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec

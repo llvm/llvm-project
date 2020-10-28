@@ -35,6 +35,7 @@ add_lldb_library(lldbInterpreter
   OptionValueChar.cpp
   OptionValueDictionary.cpp
   OptionValueEnumeration.cpp
+  OptionValueFileColonLine.cpp
   OptionValueFileSpec.cpp
   OptionValueFileSpecList.cpp
   OptionValueFormat.cpp

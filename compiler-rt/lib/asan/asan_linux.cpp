@@ -87,25 +87,12 @@ void *AsanDoesNotSupportStaticLinkage() {
   return &_DYNAMIC;  // defined in link.h
 }
 
-static void UnmapFromTo(uptr from, uptr to) {
-  CHECK(to >= from);
-  if (to == from) return;
-  uptr res = internal_munmap(reinterpret_cast<void *>(from), to - from);
-  if (UNLIKELY(internal_iserror(res))) {
-    Report(
-        "ERROR: AddresSanitizer failed to unmap 0x%zx (%zd) bytes at address "
-        "%p\n",
-        to - from, to - from, from);
-    CHECK("unable to unmap" && 0);
-  }
-}
-
 #if ASAN_PREMAP_SHADOW
-uptr FindPremappedShadowStart() {
+uptr FindPremappedShadowStart(uptr shadow_size_bytes) {
   uptr granularity = GetMmapGranularity();
   uptr shadow_start = reinterpret_cast<uptr>(&__asan_shadow);
   uptr premap_shadow_size = PremapShadowSize();
-  uptr shadow_size = RoundUpTo(kHighShadowEnd, granularity);
+  uptr shadow_size = RoundUpTo(shadow_size_bytes, granularity);
   // We may have mapped too much. Release extra memory.
   UnmapFromTo(shadow_start + shadow_size, shadow_start + premap_shadow_size);
   return shadow_start;
@@ -113,29 +100,24 @@ uptr FindPremappedShadowStart() {
 #endif
 
 uptr FindDynamicShadowStart() {
+  uptr shadow_size_bytes = MemToShadowSize(kHighMemEnd);
 #if ASAN_PREMAP_SHADOW
   if (!PremapShadowFailed())
-    return FindPremappedShadowStart();
+    return FindPremappedShadowStart(shadow_size_bytes);
 #endif
 
-  uptr granularity = GetMmapGranularity();
-  uptr alignment = granularity * 8;
-  uptr left_padding = granularity;
-  uptr shadow_size = RoundUpTo(kHighShadowEnd, granularity);
-  uptr map_size = shadow_size + left_padding + alignment;
-
-  uptr map_start = (uptr)MmapNoAccess(map_size);
-  CHECK_NE(map_start, ~(uptr)0);
-
-  uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
-  UnmapFromTo(map_start, shadow_start - left_padding);
-  UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
-
-  return shadow_start;
+  return MapDynamicShadow(shadow_size_bytes, SHADOW_SCALE,
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();
+}
+
+void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  // Since asan's mapping is compacting, the shadow chunk may be
+  // not page-aligned, so we only flush the page-aligned portion.
+  ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
 }
 
 #if SANITIZER_ANDROID

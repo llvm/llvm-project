@@ -1356,14 +1356,14 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       // Check we can actually get a thread
       if (exe_ctx.GetThreadPtr() == nullptr) {
         error.SetErrorToGenericError();
-        error.SetErrorStringWithFormat("unable to acquire thread");
+        error.SetErrorString("unable to acquire thread");
         return false;
       }
 
       // Make sure we have a valid process
       if (!exe_ctx.GetProcessPtr()) {
         error.SetErrorToGenericError();
-        error.SetErrorStringWithFormat("unable to get the process");
+        error.SetErrorString("unable to get the process");
         return false;
       }
 
@@ -1404,7 +1404,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       static lldb_private::ABI::CallArgument rawArgs[16];
       if (numArgs >= 16) {
         error.SetErrorToGenericError();
-        error.SetErrorStringWithFormat("function takes too many arguments");
+        error.SetErrorString("function takes too many arguments");
         return false;
       }
 
@@ -1490,7 +1490,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       // Check that the thread plan completed successfully
       if (res != lldb::ExpressionResults::eExpressionCompleted) {
         error.SetErrorToGenericError();
-        error.SetErrorStringWithFormat("ThreadPlanCallFunctionUsingABI failed");
+        error.SetErrorString("ThreadPlanCallFunctionUsingABI failed");
         return false;
       }
 
@@ -1511,7 +1511,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         // Check if the return value is valid
         if (vobj == nullptr || !retVal) {
           error.SetErrorToGenericError();
-          error.SetErrorStringWithFormat("unable to get the return value");
+          error.SetErrorString("unable to get the return value");
           return false;
         }
 

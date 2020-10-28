@@ -229,4 +229,20 @@ struct S {
 // CHECK: br label %
 // CHECK: ret i32 0
 
+class St {
+public:
+  operator int();
+  St &operator+=(int);
+};
+
+// CHECK-LABEL: taskloop_with_class
+void taskloop_with_class() {
+  St s1;
+  // CHECK: [[TD:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID:%.+]], i32 1, i64 88, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, [[TD_TYPE:%.+]]*)* @{{.+}} to i32 (i32, i8*)*))
+  // CHECK: call void @__kmpc_taskloop(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[TD]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 1, i32 0, i64 0, i8* bitcast (void ([[TD_TYPE]]*, [[TD_TYPE]]*, i32)* @{{.+}} to i8*))
+#pragma omp taskloop
+  for (St s = St(); s < s1; s += 1) {
+  }
+}
+
 #endif

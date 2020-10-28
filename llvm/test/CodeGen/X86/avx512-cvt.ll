@@ -217,7 +217,7 @@ define <4 x i64> @f64to4sl(<4 x double> %a) {
 define <4 x i64> @f32to4sl(<4 x float> %a) {
 ; NODQ-LABEL: f32to4sl:
 ; NODQ:       # %bb.0:
-; NODQ-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; NODQ-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; NODQ-NEXT:    vcvttss2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm1
 ; NODQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]

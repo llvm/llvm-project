@@ -27,6 +27,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     See [Symbols and SymbolTables](SymbolsAndSymbolTables.md) for more details
     and constraints on `Symbol` operations.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",

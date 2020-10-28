@@ -26,19 +26,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   )
 
-# In a standard Clang+LLVM build, we need to generate intrinsics before
-# building codegen. In a standalone build, LLVM is already built and we don't
-# need this dependency. Furthermore, LLVM doesn't export it so we can't have
-# this dependency.
-set(codegen_deps intrinsics_gen)
-if (CLANG_BUILT_STANDALONE)
-  set(codegen_deps)
-endif()
-
-if (MSVC)
-  set_source_files_properties(CodeGenModule.cpp PROPERTIES COMPILE_FLAGS /bigobj)
-endif()
-
 add_clang_library(clangCodeGen
   BackendUtil.cpp
   CGAtomic.cpp
@@ -71,6 +58,7 @@ add_clang_library(clangCodeGen
   CGObjCRuntime.cpp
   CGOpenCLRuntime.cpp
   CGOpenMPRuntime.cpp
+  CGOpenMPRuntimeGPU.cpp
   CGOpenMPRuntimeNVPTX.cpp
   CGRecordLayoutBuilder.cpp
   CGStmt.cpp
@@ -98,7 +86,7 @@ add_clang_library(clangCodeGen
   VarBypassDetector.cpp
 
   DEPENDS
-  ${codegen_deps}
+  intrinsics_gen
 
   LINK_LIBS
   clangAnalysis

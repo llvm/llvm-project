@@ -132,6 +132,15 @@ struct TypeUniquer {
         },
         kind, std::forward<Args>(args)...);
   }
+
+  /// Change the mutable component of the given type instance in the provided
+  /// context.
+  template <typename ImplType, typename... Args>
+  static LogicalResult mutate(MLIRContext *ctx, ImplType *impl,
+                              Args &&...args) {
+    assert(impl && "cannot mutate null type");
+    return ctx->getTypeUniquer().mutate(impl, std::forward<Args>(args)...);
+  }
 };
 } // namespace detail
 

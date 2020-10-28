@@ -162,8 +162,8 @@ bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B,
 
 bool ProvenanceAnalysis::related(const Value *A, const Value *B,
                                  const DataLayout &DL) {
-  A = GetUnderlyingObjCPtrCached(A, DL, UnderlyingObjCPtrCache);
-  B = GetUnderlyingObjCPtrCached(B, DL, UnderlyingObjCPtrCache);
+  A = GetUnderlyingObjCPtrCached(A, UnderlyingObjCPtrCache);
+  B = GetUnderlyingObjCPtrCached(B, UnderlyingObjCPtrCache);
 
   // Quick check.
   if (A == B)

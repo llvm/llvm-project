@@ -13,7 +13,7 @@ public:
   virtual ~B();
 };
 
-B::~B() {
+B::~B() { extern void mayThrow(); mayThrow();
 }
 
 struct C {

@@ -288,6 +288,8 @@ private:
                                           const MachineInstr &UseI,
                                           unsigned UseIdx);
   bool hasImplicitOverlap(const MachineInstr &MI, const MachineOperand &Use);
+  bool hasOverlappingMultipleDef(const MachineInstr &MI,
+                                 const MachineOperand &MODef, Register Def);
 
   /// Candidates for deletion.
   SmallSetVector<MachineInstr *, 8> MaybeDeadCopies;
@@ -457,6 +459,21 @@ bool MachineCopyPropagation::hasImplicitOverlap(const MachineInstr &MI,
     if (&MIUse != &Use && MIUse.isReg() && MIUse.isImplicit() &&
         MIUse.isUse() && TRI->regsOverlap(Use.getReg(), MIUse.getReg()))
       return true;
+
+  return false;
+}
+
+/// For an MI that has multiple definitions, check whether \p MI has
+/// a definition that overlaps with another of its definitions.
+/// For example, on ARM: umull   r9, r9, lr, r0
+/// The umull instruction is unpredictable unless RdHi and RdLo are different.
+bool MachineCopyPropagation::hasOverlappingMultipleDef(
+    const MachineInstr &MI, const MachineOperand &MODef, Register Def) {
+  for (const MachineOperand &MIDef : MI.defs()) {
+    if ((&MIDef != &MODef) && MIDef.isReg() &&
+        TRI->regsOverlap(Def, MIDef.getReg()))
+      return true;
+  }
 
   return false;
 }
@@ -784,6 +801,9 @@ void MachineCopyPropagation::propagateDefs(MachineInstr &MI) {
       continue;
 
     if (hasImplicitOverlap(MI, MODef))
+      continue;
+
+    if (hasOverlappingMultipleDef(MI, MODef, Def))
       continue;
 
     LLVM_DEBUG(dbgs() << "MCP: Replacing " << printReg(MODef.getReg(), TRI)

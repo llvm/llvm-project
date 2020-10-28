@@ -78,3 +78,8 @@ at s1e1wp, x2
 dc cvap, x7
 // CHECK: error: DC CVAP requires ccpp
 // CHECK-NEXT: dc cvap, x7
+
+.arch_extension norcpc
+ldapr x0, [x1]
+// CHECK: error: instruction requires: rcpc
+// CHECK-NEXT: ldapr x0, [x1]

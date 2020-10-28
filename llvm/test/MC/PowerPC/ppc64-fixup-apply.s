@@ -1,8 +1,8 @@
 
 # RUN: llvm-mc -triple powerpc64-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -S --sd | FileCheck -check-prefix=CHECK -check-prefix=CHECK-BE %s
+# RUN: llvm-readobj -S --sd - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-BE %s
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -S --sd | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LE %s
+# RUN: llvm-readobj -S --sd - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LE %s
 
 # This checks that fixups that can be resolved within the same
 # object file are applied correctly.

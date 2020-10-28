@@ -70,6 +70,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoAVX512DQ();
   setLegalizerInfoAVX512BW();
 
+  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
+    .scalarize(0)
+    .minScalar(0, LLT::scalar(32))
+    .libcall();
+
   setLegalizeScalarToDifferentSizeStrategy(G_PHI, 0, widen_1);
   for (unsigned BinOp : {G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     setLegalizeScalarToDifferentSizeStrategy(BinOp, 0, widen_1);

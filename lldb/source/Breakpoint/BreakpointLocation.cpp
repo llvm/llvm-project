@@ -31,11 +31,10 @@ using namespace lldb_private;
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
                                        bool hardware, bool check_for_resolver)
-    : StoppointLocation(loc_id, addr.GetOpcodeLoadAddress(&owner.GetTarget()),
-                        hardware),
-      m_being_created(true), m_should_resolve_indirect_functions(false),
+    : m_being_created(true), m_should_resolve_indirect_functions(false),
       m_is_reexported(false), m_is_indirect(false), m_address(addr),
-      m_owner(owner), m_options_up(), m_bp_site_sp(), m_condition_mutex() {
+      m_owner(owner), m_options_up(), m_bp_site_sp(), m_condition_mutex(),
+      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
   if (check_for_resolver) {
     Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
@@ -332,7 +331,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   return ret;
 }
 
-uint32_t BreakpointLocation::GetIgnoreCount() {
+uint32_t BreakpointLocation::GetIgnoreCount() const {
   return GetOptionsSpecifyingKind(BreakpointOptions::eIgnoreCount)
       ->GetIgnoreCount();
 }
@@ -417,16 +416,16 @@ bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context) {
 void BreakpointLocation::BumpHitCount() {
   if (IsEnabled()) {
     // Step our hit count, and also step the hit count of the owner.
-    IncrementHitCount();
-    m_owner.IncrementHitCount();
+    m_hit_counter.Increment();
+    m_owner.m_hit_counter.Increment();
   }
 }
 
 void BreakpointLocation::UndoBumpHitCount() {
   if (IsEnabled()) {
     // Step our hit count, and also step the hit count of the owner.
-    DecrementHitCount();
-    m_owner.DecrementHitCount();
+    m_hit_counter.Decrement();
+    m_owner.m_hit_counter.Decrement();
   }
 }
 
@@ -593,12 +592,15 @@ void BreakpointLocation::GetDescription(Stream *s,
     }
   }
 
+  bool is_resolved = IsResolved();
+  bool is_hardware = is_resolved && m_bp_site_sp->IsHardware();
+
   if (level == lldb::eDescriptionLevelVerbose) {
     s->EOL();
     s->Indent();
-    s->Printf("resolved = %s\n", IsResolved() ? "true" : "false");
+    s->Printf("resolved = %s\n", is_resolved ? "true" : "false");
     s->Indent();
-    s->Printf("hardware = %s\n", IsHardware() ? "true" : "false");
+    s->Printf("hardware = %s\n", is_hardware ? "true" : "false");
     s->Indent();
     s->Printf("hit count = %-4u\n", GetHitCount());
 
@@ -609,8 +611,8 @@ void BreakpointLocation::GetDescription(Stream *s,
     }
     s->IndentLess();
   } else if (level != eDescriptionLevelInitial) {
-    s->Printf(", %sresolved, %shit count = %u ", (IsResolved() ? "" : "un"),
-              (IsHardware() ? "hardware, " : ""), GetHitCount());
+    s->Printf(", %sresolved, %shit count = %u ", (is_resolved ? "" : "un"),
+              (is_hardware ? "hardware, " : ""), GetHitCount());
     if (m_options_up) {
       m_options_up->GetDescription(s, level);
     }
@@ -620,6 +622,11 @@ void BreakpointLocation::GetDescription(Stream *s,
 void BreakpointLocation::Dump(Stream *s) const {
   if (s == nullptr)
     return;
+
+  bool is_resolved = IsResolved();
+  bool is_hardware = is_resolved && m_bp_site_sp->IsHardware();
+  auto hardware_index = is_resolved ?
+      m_bp_site_sp->GetHardwareIndex() : LLDB_INVALID_INDEX32;
 
   lldb::tid_t tid = GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
       ->GetThreadSpecNoCreate()->GetTID();
@@ -631,8 +638,7 @@ void BreakpointLocation::Dump(Stream *s) const {
             (m_options_up ? m_options_up->IsEnabled() : m_owner.IsEnabled())
                 ? "enabled "
                 : "disabled",
-            IsHardware() ? "hardware" : "software", GetHardwareIndex(),
-            GetHitCount(),
+            is_hardware ? "hardware" : "software", hardware_index, GetHitCount(),
             GetOptionsSpecifyingKind(BreakpointOptions::eIgnoreCount)
                 ->GetIgnoreCount());
 }

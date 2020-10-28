@@ -51,6 +51,8 @@ struct TestClangConfig {
     return Language == Lang_CXX17 || Language == Lang_CXX20;
   }
 
+  bool isCXX20OrLater() const { return Language == Lang_CXX20; }
+
   bool supportsCXXDynamicExceptionSpecification() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14;

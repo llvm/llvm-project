@@ -69,7 +69,7 @@
 #error Unknown compiler
 #endif
 
-#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD) && !KMP_OS_CNK
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD)
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -338,10 +338,16 @@ extern "C" {
 #define KMP_ALIAS(alias_of) __attribute__((alias(alias_of)))
 #endif
 
-#if KMP_HAVE_WEAK_ATTRIBUTE
-#define KMP_WEAK_ATTRIBUTE __attribute__((weak))
+#if KMP_HAVE_WEAK_ATTRIBUTE && !KMP_DYNAMIC_LIB
+#define KMP_WEAK_ATTRIBUTE_EXTERNAL __attribute__((weak))
 #else
-#define KMP_WEAK_ATTRIBUTE /* Nothing */
+#define KMP_WEAK_ATTRIBUTE_EXTERNAL /* Nothing */
+#endif
+
+#if KMP_HAVE_WEAK_ATTRIBUTE
+#define KMP_WEAK_ATTRIBUTE_INTERNAL __attribute__((weak))
+#else
+#define KMP_WEAK_ATTRIBUTE_INTERNAL /* Nothing */
 #endif
 
 // Define KMP_VERSION_SYMBOL and KMP_EXPAND_NAME

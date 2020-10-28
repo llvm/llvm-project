@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -scalar-evolution 2>&1 | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 2>&1 | FileCheck %s
 
 ; CHECK: Loop %bb: backedge-taken count is ((999 + (-1 * %x)) /u 3)
 ; CHECK: Loop %bb: max backedge-taken count is 334

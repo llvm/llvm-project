@@ -205,14 +205,14 @@ struct ValueDFS_Compare {
     // numbering will say the placed predicaeinfos should go first (IE
     // LN_beginning), so we won't be in this function. For assumes, we will end
     // up here, beause we need to order the def we will place relative to the
-    // assume.  So for the purpose of ordering, we pretend the def is the assume
-    // because that is where we will insert the info.
+    // assume.  So for the purpose of ordering, we pretend the def is right
+    // after the assume, because that is where we will insert the info.
     if (!VD.U) {
       assert(VD.PInfo &&
              "No def, no use, and no predicateinfo should not occur");
       assert(isa<PredicateAssume>(VD.PInfo) &&
              "Middle of block should only occur for assumes");
-      return cast<PredicateAssume>(VD.PInfo)->AssumeInst;
+      return cast<PredicateAssume>(VD.PInfo)->AssumeInst->getNextNode();
     }
     return nullptr;
   }
@@ -621,7 +621,9 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       auto *PAssume = dyn_cast<PredicateAssume>(ValInfo);
       assert(PAssume &&
              "Should not have gotten here without it being an assume");
-      IRBuilder<> B(PAssume->AssumeInst);
+      // Insert the predicate directly after the assume. While it also holds
+      // directly before it, assume(i1 true) is not a useful fact.
+      IRBuilder<> B(PAssume->AssumeInst->getNextNode());
       Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
       if (IF->users().empty())
         PI.CreatedDeclarations.insert(IF);
@@ -820,6 +822,56 @@ PredicateInfo::~PredicateInfo() {
   }
 }
 
+Optional<PredicateConstraint> PredicateBase::getConstraint() const {
+  switch (Type) {
+  case PT_Assume:
+  case PT_Branch: {
+    bool TrueEdge = true;
+    if (auto *PBranch = dyn_cast<PredicateBranch>(this))
+      TrueEdge = PBranch->TrueEdge;
+
+    if (Condition == RenamedOp) {
+      return {{CmpInst::ICMP_EQ,
+               TrueEdge ? ConstantInt::getTrue(Condition->getType())
+                        : ConstantInt::getFalse(Condition->getType())}};
+    }
+
+    CmpInst *Cmp = dyn_cast<CmpInst>(Condition);
+    if (!Cmp) {
+      // TODO: Make this an assertion once RenamedOp is fully accurate.
+      return None;
+    }
+
+    CmpInst::Predicate Pred;
+    Value *OtherOp;
+    if (Cmp->getOperand(0) == RenamedOp) {
+      Pred = Cmp->getPredicate();
+      OtherOp = Cmp->getOperand(1);
+    } else if (Cmp->getOperand(1) == RenamedOp) {
+      Pred = Cmp->getSwappedPredicate();
+      OtherOp = Cmp->getOperand(0);
+    } else {
+      // TODO: Make this an assertion once RenamedOp is fully accurate.
+      return None;
+    }
+
+    // Invert predicate along false edge.
+    if (!TrueEdge)
+      Pred = CmpInst::getInversePredicate(Pred);
+
+    return {{Pred, OtherOp}};
+  }
+  case PT_Switch:
+    if (Condition != RenamedOp) {
+      // TODO: Make this an assertion once RenamedOp is fully accurate.
+      return None;
+    }
+
+    return {{CmpInst::ICMP_EQ, cast<PredicateSwitch>(this)->CaseValue}};
+  }
+  llvm_unreachable("Unknown predicate type");
+}
+
 void PredicateInfo::verifyPredicateInfo() const {}
 
 char PredicateInfoPrinterLegacyPass::ID = 0;
@@ -883,11 +935,11 @@ class PredicateInfoAnnotatedWriter : public AssemblyAnnotationWriter {
 public:
   PredicateInfoAnnotatedWriter(const PredicateInfo *M) : PredInfo(M) {}
 
-  virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
-                                        formatted_raw_ostream &OS) {}
+  void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                formatted_raw_ostream &OS) override {}
 
-  virtual void emitInstructionAnnot(const Instruction *I,
-                                    formatted_raw_ostream &OS) {
+  void emitInstructionAnnot(const Instruction *I,
+                            formatted_raw_ostream &OS) override {
     if (const auto *PI = PredInfo->getPredicateInfoFor(I)) {
       OS << "; Has predicate info\n";
       if (const auto *PB = dyn_cast<PredicateBranch>(PI)) {

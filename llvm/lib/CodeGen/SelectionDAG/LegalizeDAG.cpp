@@ -1411,6 +1411,12 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
   SmallVector<SDValue, 8> Stores;
   unsigned TypeByteSize = MemVT.getSizeInBits() / 8;
   assert(TypeByteSize > 0 && "Vector element type too small for stack store!");
+
+  // If the destination vector element type of a BUILD_VECTOR is narrower than
+  // the source element type, only store the bits necessary.
+  bool Truncate = isa<BuildVectorSDNode>(Node) &&
+                  MemVT.bitsLT(Node->getOperand(0).getValueType());
+
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
     // Ignore undef elements.
@@ -1420,9 +1426,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
     SDValue Idx = DAG.getMemBasePlusOffset(FIPtr, Offset, dl);
 
-    // If the destination vector element type is narrower than the source
-    // element type, only store the bits necessary.
-    if (MemVT.bitsLT(Node->getOperand(i).getValueType()))
+    if (Truncate)
       Stores.push_back(DAG.getTruncStore(DAG.getEntryNode(), dl,
                                          Node->getOperand(i), Idx,
                                          PtrInfo.getWithOffset(Offset), MemVT));
@@ -3315,7 +3319,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Check to see if this FP immediate is already legal.
     // If this is a legal constant, turn it into a TargetConstantFP node.
     if (!TLI.isFPImmLegal(CFP->getValueAPF(), Node->getValueType(0),
-                          DAG.getMachineFunction().getFunction().hasOptSize()))
+                          DAG.shouldOptForSize()))
       Results.push_back(ExpandConstantFP(CFP, true));
     break;
   }
@@ -3899,6 +3903,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
           == TargetLowering::Legal)
         return true;
       break;
+    case ISD::STRICT_FSUB: {
+      if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                         Node->getValueType(0))
+          == TargetLowering::Legal)
+        return true;
+
+      EVT VT = Node->getValueType(0);
+      const SDNodeFlags Flags = Node->getFlags();
+      SDValue Neg = DAG.getNode(ISD::FNEG, dl, VT, Node->getOperand(2), Flags);
+      SDValue Fadd = DAG.getNode(ISD::STRICT_FADD, dl, Node->getVTList(),
+                                 {Node->getOperand(0), Node->getOperand(1), Neg},
+                         Flags);
+
+      Results.push_back(Fadd);
+      Results.push_back(Fadd.getValue(1));
+      break;
+    }
     case ISD::STRICT_LRINT:
     case ISD::STRICT_LLRINT:
     case ISD::STRICT_LROUND:

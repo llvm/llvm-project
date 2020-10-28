@@ -62,8 +62,8 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
     StopReason reason = stop_info_sp->GetStopReason();
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-    LLDB_LOGF(log, "Step over breakpoint stopped for reason: %s.",
-              Thread::StopReasonAsCString(reason));
+    LLDB_LOG(log, "Step over breakpoint stopped for reason: {0}.",
+             Thread::StopReasonAsString(reason));
 
     switch (reason) {
       case eStopReasonTrace:

@@ -12,10 +12,17 @@ add_mlir_unittest(MLIRTableGenTests
   EnumsGenTest.cpp
   StructsGenTest.cpp
   FormatTest.cpp
+  OpBuildGen.cpp
 )
 
 add_dependencies(MLIRTableGenTests MLIRTableGenEnumsIncGen)
 add_dependencies(MLIRTableGenTests MLIRTableGenStructAttrIncGen)
+add_dependencies(MLIRTableGenTests MLIRTestDialect)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../test/lib/Dialect/Test)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../../test/lib/Dialect/Test)
 
 target_link_libraries(MLIRTableGenTests
-  PRIVATE MLIRTableGen MLIRIR)
+  PRIVATE MLIRTableGen MLIRIR
+  PUBLIC MLIRTestDialect
+)

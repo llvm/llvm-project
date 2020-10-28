@@ -66,6 +66,12 @@ template <class Allocator> struct TSDRegistryExT {
     Mutex.unlock();
   }
 
+  bool setOption(Option O, UNUSED sptr Value) {
+    if (O == Option::MaxTSDsCount)
+      return false;
+    return true;
+  }
+
 private:
   void initOnceMaybe(Allocator *Instance) {
     ScopedLock L(Mutex);

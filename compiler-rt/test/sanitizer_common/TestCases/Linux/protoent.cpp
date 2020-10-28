@@ -1,10 +1,16 @@
-// RUN: %clangxx -std=c++11 -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -std=c++11 -O0 -g %s -o %t
+// RUN: %clangxx -fno-sanitize=all -std=c++11 -O0 -g %s -o %t.nosan
+// RUN: diff <(%run %t 2>&1) <(%run %t.nosan 2>&1)
 // REQUIRES: !android
 
 #include <assert.h>
 #include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
+#include <string>
+
+std::string any_name;
+int total_count;
 
 void print_protoent(protoent *curr_entry) {
   fprintf(stderr, "%s (%d)\n", curr_entry->p_name, curr_entry->p_proto);
@@ -21,6 +27,8 @@ void print_all_protoent() {
   protoent *curr_entry;
 
   while (getprotoent_r(&entry, buf, sizeof(buf), &curr_entry) != ENOENT && curr_entry) {
+    ++total_count;
+    any_name = curr_entry->p_name;
     print_protoent(curr_entry);
   }
 }
@@ -46,24 +54,16 @@ void print_protoent_by_num(int num) {
 }
 
 int main() {
-  // CHECK: All protoent
-  // CHECK: ip (0)
-  // CHECK-NEXT: alias IP
-  // CHECK: ipv6 (41)
-  // CHECK-NEXT: alias IPv6
   fprintf(stderr, "All protoent\n");
   print_all_protoent();
 
-  // CHECK: Protoent by name
-  // CHECK-NEXT: ipv6 (41)
-  // CHECK-NEXT: alias IPv6
-  fprintf(stderr, "Protoent by name\n");
-  print_protoent_by_name("ipv6");
+  if (!total_count)
+    return 0;
 
-  // CHECK: Protoent by num
-  // CHECK-NEXT: udp (17)
-  // CHECK-NEXT: alias UDP
+  fprintf(stderr, "Protoent by name\n");
+  print_protoent_by_name(any_name.c_str());
+
   fprintf(stderr, "Protoent by num\n");
-  print_protoent_by_num(17);
+  print_protoent_by_num(total_count / 2);
   return 0;
 }

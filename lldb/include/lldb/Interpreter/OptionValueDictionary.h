@@ -35,10 +35,9 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  bool Clear() override {
+  void Clear() override {
     m_values.clear();
     m_value_was_set = false;
-    return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;

@@ -1453,7 +1453,8 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
       // Barrier - report frame end (only if active_level == 1)
       if ((__itt_frame_submit_v3_ptr || KMP_ITT_DEBUG) &&
           __kmp_forkjoin_frames_mode &&
-          this_thr->th.th_teams_microtask == NULL &&
+          (this_thr->th.th_teams_microtask == NULL || // either not in teams
+           this_thr->th.th_teams_size.nteams == 1) && // or inside single team
           team->t.t_active_level == 1) {
         ident_t *loc = __kmp_threads[gtid]->th.th_ident;
         kmp_uint64 cur_time = __itt_get_timestamp();
@@ -1839,7 +1840,9 @@ void __kmp_join_barrier(int gtid) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     // Join barrier - report frame end
     if ((__itt_frame_submit_v3_ptr || KMP_ITT_DEBUG) &&
-        __kmp_forkjoin_frames_mode && this_thr->th.th_teams_microtask == NULL &&
+        __kmp_forkjoin_frames_mode &&
+        (this_thr->th.th_teams_microtask == NULL || // either not in teams
+         this_thr->th.th_teams_size.nteams == 1) && // or inside single team
         team->t.t_active_level == 1) {
       kmp_uint64 cur_time = __itt_get_timestamp();
       ident_t *loc = team->t.t_ident;

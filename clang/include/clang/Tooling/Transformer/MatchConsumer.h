@@ -99,11 +99,5 @@ llvm::Expected<T> MatchComputation<T>::eval(
   return Output;
 }
 } // namespace transformer
-
-namespace tooling {
-// DEPRECATED: Temporary alias supporting client migration to the `transformer`
-// namespace.
-using transformer::ifBound;
-} // namespace tooling
 } // namespace clang
 #endif // LLVM_CLANG_TOOLING_TRANSFORMER_MATCH_CONSUMER_H_

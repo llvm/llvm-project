@@ -8,7 +8,8 @@ include Makefile.rules
 
 build-libindirect: indirect.c
 	$(MAKE) -f $(MAKEFILE_RULES) \
-		DYLIB_C_SOURCES=indirect.c DYLIB_NAME=indirect DYLIB_ONLY=YES
+		DYLIB_C_SOURCES=indirect.c DYLIB_NAME=indirect DYLIB_ONLY=YES \
+		LD_EXTRAS="-Wl,-image_base,0x200000000"
 
 build-libreepxoprt: reexport.c
 	$(MAKE) -f $(MAKEFILE_RULES) \

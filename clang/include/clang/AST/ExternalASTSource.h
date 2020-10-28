@@ -161,10 +161,6 @@ public:
   /// Retrieve the module that corresponds to the given module ID.
   virtual Module *getModule(unsigned ID) { return nullptr; }
 
-  /// Determine whether D comes from a PCH which was built with a corresponding
-  /// object file.
-  virtual bool DeclIsFromPCHWithObjectFile(const Decl *D) { return false; }
-
   /// Return a descriptor for the corresponding module, if one exists.
   virtual llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
 

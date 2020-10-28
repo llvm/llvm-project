@@ -298,15 +298,11 @@ void OverlayCDB::setCompileCommand(
 }
 
 llvm::Optional<ProjectInfo> OverlayCDB::getProjectInfo(PathRef File) const {
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    auto It = Commands.find(removeDots(File));
-    if (It != Commands.end())
-      return ProjectInfo{};
-  }
+  // It wouldn't make much sense to treat files with overridden commands
+  // specially when we can't do the same for the (unknown) local headers they
+  // include or changing behavior mid-air after receiving an override.
   if (Base)
     return Base->getProjectInfo(File);
-
   return llvm::None;
 }
 } // namespace clangd

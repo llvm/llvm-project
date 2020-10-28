@@ -341,7 +341,7 @@ define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
 ; ALL-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; ALL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,1,2,0]
+; ALL-NEXT:    vbroadcastss %xmm1, %xmm1
 ; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq

@@ -1239,7 +1239,8 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   Value *NewValueInsert =
       insertMaskedValue(Builder, LoadedTryStore, CI->getNewValOperand(), PMV);
   Value *StoreSuccess =
-      TLI->emitStoreConditional(Builder, NewValueInsert, Addr, MemOpOrder);
+      TLI->emitStoreConditional(Builder, NewValueInsert, PMV.AlignedAddr,
+                                MemOpOrder);
   StoreSuccess = Builder.CreateICmpEQ(
       StoreSuccess, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "success");
   BasicBlock *RetryBB = HasReleasedLoadBB ? ReleasedLoadBB : StartBB;

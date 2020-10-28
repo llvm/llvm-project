@@ -1081,9 +1081,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         tmpDir = tmpDir.replace('\\', '/')
         tmpBase = tmpBase.replace('\\', '/')
 
-    # We use #_MARKER_# to hide %% while we do the other substitutions.
     substitutions = []
-    substitutions.extend([('%%', '#_MARKER_#')])
     substitutions.extend(test.config.substitutions)
     tmpName = tmpBase + '.tmp'
     baseName = os.path.basename(tmpBase)
@@ -1093,8 +1091,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
                           ('%{pathsep}', os.pathsep),
                           ('%t', tmpName),
                           ('%basename_t', baseName),
-                          ('%T', tmpDir),
-                          ('#_MARKER_#', '%')])
+                          ('%T', tmpDir)])
 
     # "%/[STpst]" should be normalized.
     substitutions.extend([
@@ -1159,6 +1156,14 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
     `recursion_limit` times, it is an error. If the `recursion_limit` is
     `None` (the default), no recursive substitution is performed at all.
     """
+
+    # We use #_MARKER_# to hide %% while we do the other substitutions.
+    def escape(ln):
+        return _caching_re_compile('%%').sub('#_MARKER_#', ln)
+
+    def unescape(ln):
+        return _caching_re_compile('#_MARKER_#').sub('%', ln)
+
     def processLine(ln):
         # Apply substitutions
         for a,b in substitutions:
@@ -1171,7 +1176,7 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
             # short-lived, since the set of substitutions is fairly small, and
             # since thrashing has such bad consequences, not bounding the cache
             # seems reasonable.
-            ln = _caching_re_compile(a).sub(b, ln)
+            ln = _caching_re_compile(a).sub(str(b), escape(ln))
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
@@ -1193,10 +1198,9 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
 
         return processed
 
-    # Note Python 3 map() gives an iterator rather than a list so explicitly
-    # convert to list before returning.
     process = processLine if recursion_limit is None else processLineToFixedPoint
-    return list(map(process, script))
+    
+    return [unescape(process(ln)) for ln in script]
 
 
 class ParserKind(object):

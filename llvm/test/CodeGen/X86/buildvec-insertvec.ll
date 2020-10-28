@@ -792,9 +792,9 @@ define i32 @PR46586(i8* %p, <4 x i32> %v) {
 ; SSE2-NEXT:    movzbl 3(%rdi), %eax
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pinsrw $6, %eax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx

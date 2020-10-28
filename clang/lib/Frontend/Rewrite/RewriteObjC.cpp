@@ -2027,8 +2027,9 @@ RewriteObjC::SynthesizeCallToFunctionDecl(FunctionDecl *FD,
 
   const auto *FT = msgSendType->castAs<FunctionType>();
 
-  CallExpr *Exp = CallExpr::Create(
-      *Context, ICE, Args, FT->getCallResultType(*Context), VK_RValue, EndLoc);
+  CallExpr *Exp =
+      CallExpr::Create(*Context, ICE, Args, FT->getCallResultType(*Context),
+                       VK_RValue, EndLoc, FPOptionsOverride());
   return Exp;
 }
 
@@ -2614,8 +2615,9 @@ CallExpr *RewriteObjC::SynthMsgSendStretCallExpr(FunctionDecl *MsgSendStretFlavo
   ParenExpr *PE = new (Context) ParenExpr(SourceLocation(), SourceLocation(), cast);
 
   const auto *FT = msgSendType->castAs<FunctionType>();
-  CallExpr *STCE = CallExpr::Create(*Context, PE, MsgExprs, FT->getReturnType(),
-                                    VK_RValue, SourceLocation());
+  CallExpr *STCE =
+      CallExpr::Create(*Context, PE, MsgExprs, FT->getReturnType(), VK_RValue,
+                       SourceLocation(), FPOptionsOverride());
   return STCE;
 }
 
@@ -2707,8 +2709,9 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       DeclRefExpr *DRE = new (Context)
           DeclRefExpr(*Context, SuperConstructorFunctionDecl, false, superType,
                       VK_LValue, SourceLocation());
-      SuperRep = CallExpr::Create(*Context, DRE, InitExprs, superType,
-                                  VK_LValue, SourceLocation());
+      SuperRep =
+          CallExpr::Create(*Context, DRE, InitExprs, superType, VK_LValue,
+                           SourceLocation(), FPOptionsOverride());
       // The code for super is a little tricky to prevent collision with
       // the structure definition in the header. The rewriter has it's own
       // internal definition (__rw_objc_super) that is uses. This is why
@@ -2802,8 +2805,9 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       DeclRefExpr *DRE = new (Context)
           DeclRefExpr(*Context, SuperConstructorFunctionDecl, false, superType,
                       VK_LValue, SourceLocation());
-      SuperRep = CallExpr::Create(*Context, DRE, InitExprs, superType,
-                                  VK_LValue, SourceLocation());
+      SuperRep =
+          CallExpr::Create(*Context, DRE, InitExprs, superType, VK_LValue,
+                           SourceLocation(), FPOptionsOverride());
       // The code for super is a little tricky to prevent collision with
       // the structure definition in the header. The rewriter has it's own
       // internal definition (__rw_objc_super) that is uses. This is why
@@ -2968,7 +2972,7 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
 
   const auto *FT = msgSendType->castAs<FunctionType>();
   CallExpr *CE = CallExpr::Create(*Context, PE, MsgExprs, FT->getReturnType(),
-                                  VK_RValue, EndLoc);
+                                  VK_RValue, EndLoc, FPOptionsOverride());
   Stmt *ReplacingStmt = CE;
   if (MsgSendStretFlavor) {
     // We have the method which returns a struct/union. Must also generate
@@ -3817,8 +3821,9 @@ Stmt *RewriteObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp) {
        E = Exp->arg_end(); I != E; ++I) {
     BlkExprs.push_back(*I);
   }
-  CallExpr *CE = CallExpr::Create(*Context, PE, BlkExprs, Exp->getType(),
-                                  VK_RValue, SourceLocation());
+  CallExpr *CE =
+      CallExpr::Create(*Context, PE, BlkExprs, Exp->getType(), VK_RValue,
+                       SourceLocation(), FPOptionsOverride());
   return CE;
 }
 
@@ -4530,7 +4535,7 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
     InitExprs.push_back(FlagExp);
   }
   NewRep = CallExpr::Create(*Context, DRE, InitExprs, FType, VK_LValue,
-                            SourceLocation());
+                            SourceLocation(), FPOptionsOverride());
   NewRep = UnaryOperator::Create(
       const_cast<ASTContext &>(*Context), NewRep, UO_AddrOf,
       Context->getPointerType(NewRep->getType()), VK_RValue, OK_Ordinary,

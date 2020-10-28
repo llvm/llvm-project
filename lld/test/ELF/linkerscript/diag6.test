@@ -4,4 +4,4 @@
 
 SECTIONS /*
 
-CHECK: error: unclosed comment in a linker script
+CHECK: error: {{.*}}diag6.test:1: unclosed comment in a linker script

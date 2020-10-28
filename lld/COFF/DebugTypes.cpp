@@ -377,7 +377,8 @@ static PrecompSource *findObjByName(StringRef fileNameOnly) {
   return nullptr;
 }
 
-Expected<const CVIndexMap *> findPrecompMap(ObjFile *file, PrecompRecord &pr) {
+static Expected<const CVIndexMap *> findPrecompMap(ObjFile *file,
+                                                   PrecompRecord &pr) {
   // Cross-compile warning: given that Clang doesn't generate LF_PRECOMP
   // records, we assume the OBJ comes from a Windows build of cl.exe. Thusly,
   // the paths embedded in the OBJs are in the Windows format.

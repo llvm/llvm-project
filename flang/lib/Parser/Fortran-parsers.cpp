@@ -1173,7 +1173,9 @@ constexpr auto ignore_tkr{
                              defaulted(parenthesized(some("tkr"_ch))), name))};
 TYPE_PARSER(
     beginDirective >> sourced(construct<CompilerDirective>(ignore_tkr) ||
-                          construct<CompilerDirective>("DIR$" >> many(name))) /
+                          construct<CompilerDirective>("DIR$" >>
+                              many(construct<CompilerDirective::NameValue>(
+                                  name, maybe("=" >> digitString64))))) /
         endDirective)
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(construct<BasedPointerStmt>(

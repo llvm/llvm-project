@@ -22,9 +22,12 @@ add_llvm_component_library(LLVMOrcJIT
   OrcV2CBindings.cpp
   OrcMCJITReplacement.cpp
   RTDyldObjectLinkingLayer.cpp
-  ThreadSafeModule.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
+  TargetProcessControl.cpp
+  ThreadSafeModule.cpp
+  TPCDynamicLibrarySearchGenerator.cpp
+  TPCIndirectionUtils.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 

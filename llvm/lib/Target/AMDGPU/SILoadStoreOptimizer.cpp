@@ -1667,7 +1667,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   Register DestSub0 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   Register DestSub1 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   MachineInstr *LoHalf =
-    BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_I32_e64), DestSub0)
+    BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_CO_U32_e64), DestSub0)
       .addReg(CarryReg, RegState::Define)
       .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
       .add(OffsetLo)
@@ -1730,7 +1730,7 @@ SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
 // Expecting base computation as:
 //   %OFFSET0:sgpr_32 = S_MOV_B32 8000
 //   %LO:vgpr_32, %c:sreg_64_xexec =
-//       V_ADD_I32_e64 %BASE_LO:vgpr_32, %103:sgpr_32,
+//       V_ADD_CO_U32_e64 %BASE_LO:vgpr_32, %103:sgpr_32,
 //   %HI:vgpr_32, = V_ADDC_U32_e64 %BASE_HI:vgpr_32, 0, killed %c:sreg_64_xexec
 //   %Base:vreg_64 =
 //       REG_SEQUENCE %LO:vgpr_32, %subreg.sub0, %HI:vgpr_32, %subreg.sub1
@@ -1752,7 +1752,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());
   MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());
 
-  if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_I32_e64 ||
+  if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_CO_U32_e64 ||
       !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)
     return;
 

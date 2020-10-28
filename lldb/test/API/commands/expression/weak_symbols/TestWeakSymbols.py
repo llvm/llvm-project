@@ -48,10 +48,6 @@ class TestWeakSymbolsInExpressions(TestBase):
 
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetWorkingDirectory(self.getBuildDir())
-        # We have to point to the hidden directory to pick up the
-        # version of the dylib without the weak symbols:
-        env_expr = self.platformContext.shlib_environment_var + "=" + hidden_dir
-        launch_info.SetEnvironmentEntries([env_expr], True)
 
         (self.target, _, thread, _) = lldbutil.run_to_source_breakpoint(
                                               self, "Set a breakpoint here",

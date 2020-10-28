@@ -408,21 +408,6 @@
 // PPC64LE:#define __ppc64__ 1
 // PPC64LE:#define __ppc__ 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu a2q -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCA2Q %s
-//
-// PPCA2Q:#define _ARCH_A2 1
-// PPCA2Q:#define _ARCH_A2Q 1
-// PPCA2Q:#define _ARCH_PPC 1
-// PPCA2Q:#define _ARCH_PPC64 1
-// PPCA2Q:#define _ARCH_QP 1
-//
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-bgq-linux -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCBGQ %s
-//
-// PPCBGQ:#define __THW_BLUEGENE__ 1
-// PPCBGQ:#define __TOS_BGQ__ 1
-// PPCBGQ:#define __bg__ 1
-// PPCBGQ:#define __bgq__ 1
-//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu 630 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC630 %s
 //
 // PPC630:#define _ARCH_630 1
@@ -1069,7 +1054,6 @@
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=powerpc64-unknown-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=powerpc64-unknown-linux-gnu -target-abi elfv1 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-ELFv1 %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=powerpc64-unknown-linux-gnu -target-abi elfv1-qpx < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=powerpc64-unknown-linux-gnu -target-abi elfv2 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-ELFv2 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=powerpc64le-unknown-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-ELFv2 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=powerpc64le-unknown-linux-gnu -target-abi elfv1 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-ELFv1 %s

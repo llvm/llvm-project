@@ -79,9 +79,8 @@ static QualType getUnqualifiedType(const Expr &E) {
 }
 
 static APValue getConstantExprValue(const ASTContext &Ctx, const Expr &E) {
-  llvm::APSInt IntegerConstant;
-  if (E.isIntegerConstantExpr(IntegerConstant, Ctx))
-    return APValue(IntegerConstant);
+  if (auto IntegerConstant = E.getIntegerConstantExpr(Ctx))
+    return APValue(*IntegerConstant);
   APValue Constant;
   if (Ctx.getLangOpts().CPlusPlus && E.isCXX11ConstantExpr(Ctx, &Constant))
     return Constant;

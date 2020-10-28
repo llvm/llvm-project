@@ -243,6 +243,18 @@ AffineMap mlir::makePermutationMap(
   return ::makePermutationMap(indices, enclosingLoopToVectorDim);
 }
 
+AffineMap mlir::getTransferMinorIdentityMap(MemRefType memRefType,
+                                            VectorType vectorType) {
+  int64_t elementVectorRank = 0;
+  VectorType elementVectorType =
+      memRefType.getElementType().dyn_cast<VectorType>();
+  if (elementVectorType)
+    elementVectorRank += elementVectorType.getRank();
+  return AffineMap::getMinorIdentityMap(
+      memRefType.getRank(), vectorType.getRank() - elementVectorRank,
+      memRefType.getContext());
+}
+
 bool matcher::operatesOnSuperVectorsOf(Operation &op,
                                        VectorType subVectorType) {
   // First, extract the vector type and distinguish between:
@@ -257,11 +269,8 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   bool mustDivide = false;
   (void)mustDivide;
   VectorType superVectorType;
-  if (auto read = dyn_cast<vector::TransferReadOp>(op)) {
-    superVectorType = read.getVectorType();
-    mustDivide = true;
-  } else if (auto write = dyn_cast<vector::TransferWriteOp>(op)) {
-    superVectorType = write.getVectorType();
+  if (auto transfer = dyn_cast<VectorTransferOpInterface>(op)) {
+    superVectorType = transfer.getVectorType();
     mustDivide = true;
   } else if (op.getNumResults() == 0) {
     if (!isa<ReturnOp>(op)) {

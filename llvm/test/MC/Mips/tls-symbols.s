@@ -1,6 +1,6 @@
 # RUN: llvm-mc -arch=mips < %s -position-independent -filetype=obj \
-# RUN:   | llvm-readelf -s | FileCheck %s
-# RUN: llvm-mc -arch=mips < %s -filetype=obj | llvm-readelf -s | FileCheck %s
+# RUN:   | llvm-readelf -s - | FileCheck %s
+# RUN: llvm-mc -arch=mips < %s -filetype=obj | llvm-readelf -s - | FileCheck %s
 
 # Test that TLS relocations cause symbols to be marked as TLS symbols.
 

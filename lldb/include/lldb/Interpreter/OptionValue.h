@@ -31,6 +31,7 @@ public:
     eTypeChar,
     eTypeDictionary,
     eTypeEnum,
+    eTypeFileLineColumn,
     eTypeFileSpec,
     eTypeFileSpecList,
     eTypeFormat,
@@ -84,7 +85,7 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
-  virtual bool Clear() = 0;
+  virtual void Clear() = 0;
 
   virtual lldb::OptionValueSP DeepCopy() const = 0;
 
@@ -135,6 +136,8 @@ public:
       return eTypeDictionary;
     case 1u << eTypeEnum:
       return eTypeEnum;
+    case 1u << eTypeFileLineColumn:
+      return eTypeFileLineColumn;
     case 1u << eTypeFileSpec:
       return eTypeFileSpec;
     case 1u << eTypeFileSpecList:

@@ -42,7 +42,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
@@ -539,8 +539,10 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   if (VK == VK_RValue && !E->isRValue()) {
     switch (Kind) {
     default:
-      llvm_unreachable("can't implicitly cast lvalue to rvalue with this cast "
-                       "kind");
+      llvm_unreachable(("can't implicitly cast lvalue to rvalue with this cast "
+                        "kind: " +
+                        std::string(CastExpr::getCastKindName(Kind)))
+                           .c_str());
     case CK_Dependent:
     case CK_LValueToRValue:
     case CK_ArrayToPointerDecay:
@@ -1195,7 +1197,7 @@ void Sema::ActOnEndOfTranslationUnit() {
         if (DiagD->isReferenced()) {
           if (isa<CXXMethodDecl>(DiagD))
             Diag(DiagD->getLocation(), diag::warn_unneeded_member_function)
-                  << DiagD->getDeclName();
+                << DiagD;
           else {
             if (FD->getStorageClass() == SC_Static &&
                 !FD->isInlineSpecified() &&
@@ -1203,20 +1205,20 @@ void Sema::ActOnEndOfTranslationUnit() {
                    SourceMgr.getExpansionLoc(FD->getLocation())))
               Diag(DiagD->getLocation(),
                    diag::warn_unneeded_static_internal_decl)
-                  << DiagD->getDeclName();
+                  << DiagD;
             else
               Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-                   << /*function*/0 << DiagD->getDeclName();
+                  << /*function*/ 0 << DiagD;
           }
         } else {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
-              << /*function*/0 << DiagD->getDeclName();
+                << /*function*/ 0 << DiagD;
           else
-            Diag(DiagD->getLocation(),
-                 isa<CXXMethodDecl>(DiagD) ? diag::warn_unused_member_function
+            Diag(DiagD->getLocation(), isa<CXXMethodDecl>(DiagD)
+                                           ? diag::warn_unused_member_function
                                            : diag::warn_unused_function)
-              << DiagD->getDeclName();
+                << DiagD;
         }
       } else {
         const VarDecl *DiagD = cast<VarDecl>(*I)->getDefinition();
@@ -1224,20 +1226,19 @@ void Sema::ActOnEndOfTranslationUnit() {
           DiagD = cast<VarDecl>(*I);
         if (DiagD->isReferenced()) {
           Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-                << /*variable*/1 << DiagD->getDeclName();
+              << /*variable*/ 1 << DiagD;
         } else if (DiagD->getType().isConstQualified()) {
           const SourceManager &SM = SourceMgr;
           if (SM.getMainFileID() != SM.getFileID(DiagD->getLocation()) ||
               !PP.getLangOpts().IsHeaderFile)
             Diag(DiagD->getLocation(), diag::warn_unused_const_variable)
-                << DiagD->getDeclName();
+                << DiagD;
         } else {
           if (DiagD->getDescribedVarTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
-              << /*variable*/1 << DiagD->getDeclName();
+                << /*variable*/ 1 << DiagD;
           else
-            Diag(DiagD->getLocation(), diag::warn_unused_variable)
-              << DiagD->getDeclName();
+            Diag(DiagD->getLocation(), diag::warn_unused_variable) << DiagD;
         }
       }
     }
@@ -1490,7 +1491,7 @@ public:
   typedef UsedDeclVisitor<DeferredDiagnosticsEmitter> Inherited;
 
   // Whether the function is already in the current use-path.
-  llvm::SmallSet<CanonicalDeclPtr<Decl>, 4> InUsePath;
+  llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> InUsePath;
 
   // The current use-path.
   llvm::SmallVector<CanonicalDeclPtr<FunctionDecl>, 4> UsePath;
@@ -1499,7 +1500,7 @@ public:
   // case not in OpenMP device context. Done[1] is for the case in OpenMP
   // device context. We need two sets because diagnostics emission may be
   // different depending on whether it is in OpenMP device context.
-  llvm::SmallSet<CanonicalDeclPtr<Decl>, 4> DoneMap[2];
+  llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> DoneMap[2];
 
   // Emission state of the root node of the current use graph.
   bool ShouldEmitRootNode;

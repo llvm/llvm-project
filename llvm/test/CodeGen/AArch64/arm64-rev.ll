@@ -426,11 +426,10 @@ define <16 x i8> @test_vrev32Q8(<16 x i8>* %A) nounwind {
 ; CHECK-NEXT:    rev32.16b v0, v0
 ; CHECK-NEXT:    ret
 ;
-; FALLBACK-LABEL: test_vrev32Q8:
-; FALLBACK:       // %bb.0:
-; FALLBACK-NEXT:    ldr q0, [x0]
-; FALLBACK-NEXT:    rev32.16b v0, v0
-; FALLBACK-NEXT:    ret
+; GISEL-LABEL: test_vrev32Q8:
+; GISEL:       // %bb.0:
+; GISEL:         tbl.16b v0, { v0, v1 }, v2
+; GISEL:         ret
 	%tmp1 = load <16 x i8>, <16 x i8>* %A
 	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
 	ret <16 x i8> %tmp2
@@ -443,11 +442,10 @@ define <8 x i16> @test_vrev32Q16(<8 x i16>* %A) nounwind {
 ; CHECK-NEXT:    rev32.8h v0, v0
 ; CHECK-NEXT:    ret
 ;
-; FALLBACK-LABEL: test_vrev32Q16:
-; FALLBACK:       // %bb.0:
-; FALLBACK-NEXT:    ldr q0, [x0]
-; FALLBACK-NEXT:    rev32.8h v0, v0
-; FALLBACK-NEXT:    ret
+; GISEL-LABEL: test_vrev32Q16:
+; GISEL:       // %bb.0:
+; GISEL:         tbl.16b v0, { v0, v1 }, v2
+; GISEL:         ret
 	%tmp1 = load <8 x i16>, <8 x i16>* %A
 	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 	ret <8 x i16> %tmp2
@@ -477,11 +475,10 @@ define <16 x i8> @test_vrev16Q8(<16 x i8>* %A) nounwind {
 ; CHECK-NEXT:    rev16.16b v0, v0
 ; CHECK-NEXT:    ret
 ;
-; FALLBACK-LABEL: test_vrev16Q8:
-; FALLBACK:       // %bb.0:
-; FALLBACK-NEXT:    ldr q0, [x0]
-; FALLBACK-NEXT:    rev16.16b v0, v0
-; FALLBACK-NEXT:    ret
+; GISEL-LABEL: test_vrev16Q8:
+; GISEL:       // %bb.0:
+; GISEL:         tbl.16b v0, { v0, v1 }, v2
+; GISEL:         ret
 	%tmp1 = load <16 x i8>, <16 x i8>* %A
 	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 	ret <16 x i8> %tmp2
@@ -513,11 +510,10 @@ define <8 x i16> @test_vrev32Q16_undef(<8 x i16>* %A) nounwind {
 ; CHECK-NEXT:    rev32.8h v0, v0
 ; CHECK-NEXT:    ret
 ;
-; FALLBACK-LABEL: test_vrev32Q16_undef:
-; FALLBACK:       // %bb.0:
-; FALLBACK-NEXT:    ldr q0, [x0]
-; FALLBACK-NEXT:    rev32.8h v0, v0
-; FALLBACK-NEXT:    ret
+; GISEL-LABEL: test_vrev32Q16_undef:
+; GISEL:       // %bb.0:
+; GISEL:         tbl.16b v0, { v0, v1 }, v2
+; GISEL:         ret
 	%tmp1 = load <8 x i16>, <8 x i16>* %A
 	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 5, i32 4, i32 7, i32 undef>
 	ret <8 x i16> %tmp2

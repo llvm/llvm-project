@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux %s               -o - | \
 ; RUN:   FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=aarch64-linux %s -filetype=obj -o - |  \
-; RUN:   llvm-readelf --notes | FileCheck %s --check-prefix=OBJ
+; RUN:   llvm-readelf --notes - | FileCheck %s --check-prefix=OBJ
 @x = common dso_local global i32 0, align 4
 
 attributes #0 = { "branch-target-enforcement" }

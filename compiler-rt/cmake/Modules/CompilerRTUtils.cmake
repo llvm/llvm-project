@@ -332,33 +332,30 @@ macro(construct_compiler_rt_default_triple)
   endif()
 endmacro()
 
-# Filter out generic versions of routines that are re-implemented in
-# architecture specific manner.  This prevents multiple definitions of the
-# same symbols, making the symbol selection non-deterministic.
-function(filter_builtin_sources output_var exclude_or_include excluded_list)
-  if(exclude_or_include STREQUAL "EXCLUDE")
-    set(filter_action GREATER)
-    set(filter_value -1)
-  elseif(exclude_or_include STREQUAL "INCLUDE")
-    set(filter_action LESS)
-    set(filter_value 0)
-  else()
-    message(FATAL_ERROR "filter_builtin_sources called without EXCLUDE|INCLUDE")
-  endif()
-
-  set(intermediate ${ARGN})
-  foreach (_file ${intermediate})
-    get_filename_component(_name_we ${_file} NAME_WE)
-    list(FIND ${excluded_list} ${_name_we} _found)
-    if(_found ${filter_action} ${filter_value})
-      list(REMOVE_ITEM intermediate ${_file})
-    elseif(${_file} MATCHES ".*/.*\\.S" OR ${_file} MATCHES ".*/.*\\.c")
+# Filter out generic versions of routines that are re-implemented in an
+# architecture specific manner. This prevents multiple definitions of the same
+# symbols, making the symbol selection non-deterministic.
+#
+# We follow the convention that a source file that exists in a sub-directory
+# (e.g. `ppc/divtc3.c`) is architecture-specific and that if a generic
+# implementation exists it will be a top-level source file with the same name
+# modulo the file extension (e.g. `divtc3.c`).
+function(filter_builtin_sources inout_var name)
+  set(intermediate ${${inout_var}})
+  foreach(_file ${intermediate})
+    get_filename_component(_file_dir ${_file} DIRECTORY)
+    if (NOT "${_file_dir}" STREQUAL "")
+      # Architecture specific file. If a generic version exists, print a notice
+      # and ensure that it is removed from the file list.
       get_filename_component(_name ${_file} NAME)
-      string(REPLACE ".S" ".c" _cname "${_name}")
-      list(REMOVE_ITEM intermediate ${_cname})
-    endif ()
-  endforeach ()
-  set(${output_var} ${intermediate} PARENT_SCOPE)
+      string(REGEX REPLACE "\\.S$" ".c" _cname "${_name}")
+      if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_cname}")
+        message(STATUS "For ${name} builtins preferring ${_file} to ${_cname}")
+        list(REMOVE_ITEM intermediate ${_cname})
+      endif()
+    endif()
+  endforeach()
+  set(${inout_var} ${intermediate} PARENT_SCOPE)
 endfunction()
 
 function(get_compiler_rt_target arch variable)

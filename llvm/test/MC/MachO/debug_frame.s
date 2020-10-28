@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin %s -filetype=obj -o - | llvm-readobj -S --sd -r | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin %s -filetype=obj -o - | llvm-readobj -S --sd -r - | FileCheck %s
 
 // Make sure MC can handle file level .cfi_startproc and .cfi_endproc that creates
 // an empty frame.

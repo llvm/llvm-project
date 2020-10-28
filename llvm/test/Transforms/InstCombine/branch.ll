@@ -32,7 +32,6 @@ patatino:
   ret i32 %x
 }
 
-; TODO: Simplify this to "ret cond".
 define i1 @test01(i1 %cond) {
 ; CHECK-LABEL: @test01(
 ; CHECK-NEXT:  entry:
@@ -42,15 +41,13 @@ define i1 @test01(i1 %cond) {
 ; CHECK:       if.false.1:
 ; CHECK-NEXT:    br label [[MERGE_1]]
 ; CHECK:       merge.1:
-; CHECK-NEXT:    [[MERGE_COND_1:%.*]] = phi i1 [ true, [[IF_TRUE_1]] ], [ false, [[IF_FALSE_1]] ]
-; CHECK-NEXT:    br i1 [[MERGE_COND_1]], label [[IF_TRUE_2:%.*]], label [[IF_FALSE_2:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE_2:%.*]], label [[IF_FALSE_2:%.*]]
 ; CHECK:       if.true.2:
 ; CHECK-NEXT:    br label [[MERGE_2:%.*]]
 ; CHECK:       if.false.2:
 ; CHECK-NEXT:    br label [[MERGE_2]]
 ; CHECK:       merge.2:
-; CHECK-NEXT:    [[MERGE_COND_2:%.*]] = phi i1 [ true, [[IF_TRUE_2]] ], [ false, [[IF_FALSE_2]] ]
-; CHECK-NEXT:    ret i1 [[MERGE_COND_2]]
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
 entry:
   br i1 %cond, label %if.true.1, label %if.false.1
@@ -76,7 +73,6 @@ merge.2:
   ret i1 %merge.cond.2
 }
 
-; TODO: Simplify this to "ret %cond".
 define i1 @test02(i1 %cond) {
 ; CHECK-LABEL: @test02(
 ; CHECK-NEXT:  entry:
@@ -86,15 +82,13 @@ define i1 @test02(i1 %cond) {
 ; CHECK:       if.false.1:
 ; CHECK-NEXT:    br label [[MERGE_1]]
 ; CHECK:       merge.1:
-; CHECK-NEXT:    [[MERGE_COND_1:%.*]] = phi i1 [ false, [[IF_TRUE_1]] ], [ true, [[IF_FALSE_1]] ]
-; CHECK-NEXT:    br i1 [[MERGE_COND_1]], label [[IF_TRUE_2:%.*]], label [[IF_FALSE_2:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_FALSE_2:%.*]], label [[IF_TRUE_2:%.*]]
 ; CHECK:       if.true.2:
 ; CHECK-NEXT:    br label [[MERGE_2:%.*]]
 ; CHECK:       if.false.2:
 ; CHECK-NEXT:    br label [[MERGE_2]]
 ; CHECK:       merge.2:
-; CHECK-NEXT:    [[MERGE_COND_2:%.*]] = phi i1 [ false, [[IF_TRUE_2]] ], [ true, [[IF_FALSE_2]] ]
-; CHECK-NEXT:    ret i1 [[MERGE_COND_2]]
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
 entry:
   br i1 %cond, label %if.true.1, label %if.false.1

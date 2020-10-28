@@ -27,9 +27,7 @@ SystemRuntime *SystemRuntime::FindPlugin(Process *process) {
   return nullptr;
 }
 
-// SystemRuntime constructor
-SystemRuntime::SystemRuntime(Process *process)
-    : m_process(process), m_types() {}
+SystemRuntime::SystemRuntime(Process *process) : Runtime(process), m_types() {}
 
 SystemRuntime::~SystemRuntime() = default;
 
@@ -39,7 +37,7 @@ void SystemRuntime::DidLaunch() {}
 
 void SystemRuntime::Detach() {}
 
-void SystemRuntime::ModulesDidLoad(ModuleList &module_list) {}
+void SystemRuntime::ModulesDidLoad(const ModuleList &module_list) {}
 
 const std::vector<ConstString> &SystemRuntime::GetExtendedBacktraceTypes() {
   return m_types;

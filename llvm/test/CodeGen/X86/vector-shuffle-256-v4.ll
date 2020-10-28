@@ -592,12 +592,12 @@ define <4 x double> @shuffle_v4f64_22uu(<4 x double> %a, <4 x double> %b) {
 ;
 ; AVX2-LABEL: shuffle_v4f64_22uu:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v4f64_22uu:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,3]
+; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 2, i32 2, i32 undef, i32 undef>
   ret <4 x double> %shuffle
@@ -1143,7 +1143,7 @@ define <4 x i64> @shuffle_v4i64_1251(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: shuffle_v4i64_1251:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[1,1,1,1]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,2,2,1]
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
 ; AVX2-NEXT:    retq
@@ -1369,12 +1369,12 @@ define <4 x i64> @shuffle_v4i64_22uu(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: shuffle_v4i64_22uu:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v4i64_22uu:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,3]
+; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 2, i32 2, i32 undef, i32 undef>
   ret <4 x i64> %shuffle
@@ -1766,12 +1766,24 @@ define <4 x i64> @shuffle_v4i64_1z2z(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x double> @add_v4f64_0246_1357(<4 x double> %a, <4 x double> %b) {
-; ALL-LABEL: add_v4f64_0246_1357:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX1-LABEL: add_v4f64_0246_1357:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: add_v4f64_0246_1357:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: add_v4f64_0246_1357:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX512VL-NEXT:    retq
 entry:
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %shuffle1 = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -1780,12 +1792,24 @@ entry:
 }
 
 define <4 x double> @add_v4f64_4602_5713(<4 x double> %a, <4 x double> %b) {
-; ALL-LABEL: add_v4f64_4602_5713:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3],ymm0[2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; ALL-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX1-LABEL: add_v4f64_4602_5713:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3],ymm0[2,3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: add_v4f64_4602_5713:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,0,2]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: add_v4f64_4602_5713:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,0,2]
+; AVX512VL-NEXT:    retq
 entry:
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 4, i32 6, i32 0, i32 2>
   %shuffle1 = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 5, i32 7, i32 1, i32 3>

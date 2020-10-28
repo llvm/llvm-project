@@ -241,8 +241,6 @@ public:
     Options.SupportsDebugEntryValues = Enable;
   }
 
-  bool shouldPrintMachineCode() const { return Options.PrintMachineCode; }
-
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
   /// Return true if unique basic block section names must be generated.
@@ -271,6 +269,11 @@ public:
   /// Get the list of functions and basic block ids that need unique sections.
   const MemoryBuffer *getBBSectionsFuncListBuf() const {
     return Options.BBSectionsFuncListBuf.get();
+  }
+
+  /// Returns true if a cast between SrcAS and DestAS is a noop.
+  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+    return false;
   }
 
   /// Get a \c TargetIRAnalysis appropriate for the target.

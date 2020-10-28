@@ -1,4 +1,5 @@
-; RUN: opt < %s -asan -asan-module -asan-use-after-return -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return -S | FileCheck %s
 
 ; Source (-O0 -fsanitize=address -fsanitize-address-use-after-scope):
 ;; struct S { int x, y; };

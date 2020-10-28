@@ -3,12 +3,19 @@
 // RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCH %s
 
 // Build PCH with object file, then use it.
-// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
-// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -building-pch-with-obj -o - %s | FileCheck -check-prefix=OBJ %s
-// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -building-pch-with-obj -o - %s | FileCheck -check-prefix=OBJ %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ -check-prefix=PCHWITHOBJ-O1 %s
 
 // Check for vars separately to avoid having to reorder the check statements.
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJVARS %s
+
+// Test the PCHWITHOBJ at -O0 where available_externally definitions are not
+// provided:
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ -check-prefix=PCHWITHOBJ-O0 %s
 // RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJVARS %s
+
 
 #ifndef IN_HEADER
 #define IN_HEADER
@@ -23,7 +30,8 @@ inline void __declspec(dllexport) foo() {}
 inline void __declspec(dllexport) baz() {}
 // OBJ: define weak_odr dso_local dllexport void @"?baz@@YAXXZ"
 // PCH: define weak_odr dso_local dllexport void @"?baz@@YAXXZ"
-// PCHWITHOBJ: define weak_odr dso_local dllexport void @"?baz@@YAXXZ"
+// PCHWITHOBJ-O1: define available_externally dso_local void @"?baz@@YAXXZ"
+// PCHWITHOBJ-O0-NOT: define {{.*}}"?baz@@YAXXZ"
 
 
 struct __declspec(dllexport) S {

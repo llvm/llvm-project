@@ -1244,6 +1244,136 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+declare i64 @llvm.abs.i64 (i64, i1) nounwind readnone
+
+define void @abs_i64(i32 %n, i64* noalias %y, i64* noalias %x) nounwind uwtable {
+;CHECK-LABEL: @abs_i64(
+;CHECK: llvm.abs.v4i64(<4 x i64> [[WIDE_LOADX:%.*]], i1 true)
+;CHECK: ret void
+entry:
+  %cmp9 = icmp sgt i32 %n, 0
+  br i1 %cmp9, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i64, i64* %y, i64 %indvars.iv
+  %0 = load i64, i64* %arrayidx, align 8
+  %call = tail call i64 @llvm.abs.i64(i64 %0, i1 true) nounwind readnone
+  %arrayidx4 = getelementptr inbounds i64, i64* %x, i64 %indvars.iv
+  store i64 %call, i64* %arrayidx4, align 8
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i32 @llvm.smin.i32 (i32, i32)
+
+define void @smin_i32(i32 %n, i32* noalias %x, i32* noalias %y) {
+; CHECK-LABEL: @smin_i32(
+; CHECK:         call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[WIDE_LOADX:%.*]], <4 x i32> [[WIDE_LOADY:%.*]])
+; CHECK:         ret void
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %loop, label %end
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %xi = getelementptr inbounds i32, i32* %x, i32 %iv
+  %yi = getelementptr inbounds i32, i32* %y, i32 %iv
+  %xld = load i32, i32* %xi, align 4
+  %yld = load i32, i32* %yi, align 4
+  %call = tail call i32 @llvm.smin.i32(i32 %xld, i32 %yld)
+  store i32 %call, i32* %xi, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %end, label %loop
+
+end:
+  ret void
+}
+
+declare i32 @llvm.smax.i32 (i32, i32)
+
+define void @smax_i32(i32 %n, i32* noalias %x, i32* noalias %y) {
+; CHECK-LABEL: @smax_i32(
+; CHECK:         call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[WIDE_LOADX:%.*]], <4 x i32> [[WIDE_LOADY:%.*]])
+; CHECK:         ret void
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %loop, label %end
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %xi = getelementptr inbounds i32, i32* %x, i32 %iv
+  %yi = getelementptr inbounds i32, i32* %y, i32 %iv
+  %xld = load i32, i32* %xi, align 4
+  %yld = load i32, i32* %yi, align 4
+  %call = tail call i32 @llvm.smax.i32(i32 %xld, i32 %yld)
+  store i32 %call, i32* %xi, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %end, label %loop
+
+end:
+  ret void
+}
+
+declare i32 @llvm.umin.i32 (i32, i32)
+
+define void @umin_i32(i32 %n, i32* noalias %x, i32* noalias %y) {
+; CHECK-LABEL: @umin_i32(
+; CHECK:         call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[WIDE_LOADX:%.*]], <4 x i32> [[WIDE_LOADY:%.*]])
+; CHECK:         ret void
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %loop, label %end
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %xi = getelementptr inbounds i32, i32* %x, i32 %iv
+  %yi = getelementptr inbounds i32, i32* %y, i32 %iv
+  %xld = load i32, i32* %xi, align 4
+  %yld = load i32, i32* %yi, align 4
+  %call = tail call i32 @llvm.umin.i32(i32 %xld, i32 %yld)
+  store i32 %call, i32* %xi, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %end, label %loop
+
+end:
+  ret void
+}
+
+declare i32 @llvm.umax.i32 (i32, i32)
+
+define void @umax_i32(i32 %n, i32* noalias %x, i32* noalias %y) {
+; CHECK-LABEL: @umax_i32(
+; CHECK:         call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[WIDE_LOADX:%.*]], <4 x i32> [[WIDE_LOADY:%.*]])
+; CHECK:         ret void
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %loop, label %end
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %xi = getelementptr inbounds i32, i32* %x, i32 %iv
+  %yi = getelementptr inbounds i32, i32* %y, i32 %iv
+  %xld = load i32, i32* %xi, align 4
+  %yld = load i32, i32* %yi, align 4
+  %call = tail call i32 @llvm.umax.i32(i32 %xld, i32 %yld)
+  store i32 %call, i32* %xi, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %end, label %loop
+
+end:
+  ret void
+}
+
 declare i32 @llvm.fshl.i32 (i32, i32, i32)
 
 define void @fshl_i32(i32 %n, i32* noalias %x, i32* noalias %y, i32 %shAmt) {

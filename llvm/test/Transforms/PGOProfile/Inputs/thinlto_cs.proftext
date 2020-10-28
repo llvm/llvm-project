@@ -10,7 +10,7 @@ cond.llvm.11253644763537639171
 
 foo
 # Func Hash:
-29212902728
+1720106746050921044
 # Num Counters:
 2
 # Counter Values:
@@ -19,7 +19,7 @@ foo
 
 bar
 # Func Hash:
-1152921534274394772
+1299757151682747028
 # Num Counters:
 2
 # Counter Values:
@@ -45,7 +45,7 @@ main
 
 main
 # Func Hash:
-12884901887
+1895182923573755903
 # Num Counters:
 1
 # Counter Values:
@@ -53,7 +53,7 @@ main
 
 cspgo.c:foo
 # Func Hash:
-1152921563228422740
+1720106746050921044
 # Num Counters:
 4
 # Counter Values:

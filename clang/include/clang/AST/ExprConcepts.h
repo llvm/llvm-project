@@ -126,7 +126,11 @@ public:
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
-    return ArgsAsWritten->RAngleLoc;
+    // If the ConceptSpecializationExpr is the ImmediatelyDeclaredConstraint
+    // of a TypeConstraint written syntactically as a constrained-parameter,
+    // there may not be a template argument list.
+    return ArgsAsWritten->RAngleLoc.isValid() ? ArgsAsWritten->RAngleLoc
+                                              : ConceptName.getEndLoc();
   }
 
   // Iterators

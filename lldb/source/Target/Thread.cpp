@@ -1661,7 +1661,7 @@ Thread::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
   return GetStackFrameList()->GetStackFrameSPForStackFramePtr(stack_frame_ptr);
 }
 
-const char *Thread::StopReasonAsCString(lldb::StopReason reason) {
+std::string Thread::StopReasonAsString(lldb::StopReason reason) {
   switch (reason) {
   case eStopReasonInvalid:
     return "invalid";
@@ -1687,13 +1687,10 @@ const char *Thread::StopReasonAsCString(lldb::StopReason reason) {
     return "instrumentation break";
   }
 
-  static char unknown_state_string[64];
-  snprintf(unknown_state_string, sizeof(unknown_state_string),
-           "StopReason = %i", reason);
-  return unknown_state_string;
+  return "StopReason = " + std::to_string(reason);
 }
 
-const char *Thread::RunModeAsCString(lldb::RunMode mode) {
+std::string Thread::RunModeAsString(lldb::RunMode mode) {
   switch (mode) {
   case eOnlyThisThread:
     return "only this thread";
@@ -1703,10 +1700,7 @@ const char *Thread::RunModeAsCString(lldb::RunMode mode) {
     return "only during stepping";
   }
 
-  static char unknown_state_string[64];
-  snprintf(unknown_state_string, sizeof(unknown_state_string), "RunMode = %i",
-           mode);
-  return unknown_state_string;
+  return "RunMode = " + std::to_string(mode);
 }
 
 size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,

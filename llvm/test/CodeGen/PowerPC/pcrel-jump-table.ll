@@ -1,10 +1,18 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-R
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-use-absolute-jumptables \
+; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s \
-; RUN:   --check-prefix=CHECK-A
+; RUN:   --check-prefix=CHECK-A-LE
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   --check-prefix=CHECK-R
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables \
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   --check-prefix=CHECK-A-BE
+
 
 ; This test checks for getting relative and absolute jump table base address
 ; using PC Relative addressing.
@@ -18,13 +26,21 @@ define dso_local signext i32 @jumptable(i32 signext %param) {
 ; CHECK-R-NEXT:    add r4, r4, r5
 ; CHECK-R-NEXT:    mtctr r4
 ; CHECK-R-NEXT:    bctr
-; CHECK-A-LABEL: jumptable:
-; CHECK-A:       # %bb.1: # %entry
-; CHECK-A-NEXT:    rldic r4, r4
-; CHECK-A-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
-; CHECK-A-NEXT:    ldx r4, r4, r5
-; CHECK-A-NEXT:    mtctr r4
-; CHECK-A-NEXT:    bctr
+; CHECK-A-LE-LABEL: jumptable:
+; CHECK-A-LE:       # %bb.1: # %entry
+; CHECK-A-LE-NEXT:    rldic r4, r4
+; CHECK-A-LE-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
+; CHECK-A-LE-NEXT:    ldx r4, r4, r5
+; CHECK-A-LE-NEXT:    mtctr r4
+; CHECK-A-LE-NEXT:    bctr
+; CHECK-A-BE-LABEL: jumptable:
+; CHECK-A-BE:       # %bb.1: # %entry
+; CHECK-A-BE-NEXT:    rldic r4, r4
+; CHECK-A-BE-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
+; CHECK-A-BE-NEXT:    lwax r4, r4, r5
+; CHECK-A-BE-NEXT:    mtctr r4
+; CHECK-A-BE-NEXT:    bctr
+
 
 entry:
   switch i32 %param, label %sw.default [

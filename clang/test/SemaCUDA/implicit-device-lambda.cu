@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -fcuda-is-device -verify -fsyntax-only -verify-ignore-unexpected=warning -verify-ignore-unexpected=note %s
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -verify-ignore-unexpected=warning -verify-ignore-unexpected=note %s
+// RUN: %clang_cc1 -std=c++11 -fcuda-is-device -verify=dev,expected -fsyntax-only \
+// RUN:   -verify-ignore-unexpected=warning -verify-ignore-unexpected=note %s
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only \
+// RUN:   -verify-ignore-unexpected=warning -verify-ignore-unexpected=note %s
 
 #include "Inputs/cuda.h"
 
@@ -102,5 +104,5 @@ __device__ void foo() {
     void foo() {}
   };
   X x;
-  x.foo(); // expected-error {{reference to __host__ function 'foo' in __device__ function}}
+  x.foo(); // dev-error {{reference to __host__ function 'foo' in __device__ function}}
 }

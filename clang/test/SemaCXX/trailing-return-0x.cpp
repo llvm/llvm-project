@@ -104,3 +104,10 @@ namespace PR16273 {
   };
 }
 
+namespace PR46637 {
+  using A = auto () -> auto; // expected-error {{'auto' not allowed in function return type}}
+  using B = auto (*)() -> auto; // expected-error {{'auto' not allowed in function return type}}
+  template<auto (*)() -> auto> struct X {}; // expected-error {{'auto' not allowed in function return type}}
+  template<typename T> struct Y { T x; };
+  Y<auto() -> auto> y; // expected-error {{'auto' not allowed in function return type}}
+}

@@ -119,13 +119,22 @@ std::unique_ptr<ProfileSummary> InstrProfSummaryBuilder::getSummary() {
 }
 
 void InstrProfSummaryBuilder::addEntryCount(uint64_t Count) {
-  addCount(Count);
   NumFunctions++;
+
+  // Skip invalid count.
+  if (Count == (uint64_t)-1)
+    return;
+
+  addCount(Count);
   if (Count > MaxFunctionCount)
     MaxFunctionCount = Count;
 }
 
 void InstrProfSummaryBuilder::addInternalCount(uint64_t Count) {
+  // Skip invalid count.
+  if (Count == (uint64_t)-1)
+    return;
+
   addCount(Count);
   if (Count > MaxInternalBlockCount)
     MaxInternalBlockCount = Count;

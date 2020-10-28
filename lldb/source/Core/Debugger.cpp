@@ -666,9 +666,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_forward_listener_sp(), m_clear_once() {
-  char instance_cstr[256];
-  snprintf(instance_cstr, sizeof(instance_cstr), "debugger_%d", (int)GetID());
-  m_instance_name.SetCString(instance_cstr);
+  m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
   if (log_callback)
     m_log_callback_stream_sp =
         std::make_shared<StreamCallback>(log_callback, baton);

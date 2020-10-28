@@ -92,16 +92,18 @@ void RedundantStringCStrCheck::registerMatchers(
                         callee(memberExpr().bind("member")),
                         callee(cxxMethodDecl(hasAnyName("c_str", "data"))))
           .bind("call");
-
+  const auto HasRValueTempParent =
+      hasParent(materializeTemporaryExpr(unless(isBoundToLValue())));
   // Detect redundant 'c_str()' calls through a string constructor.
   // If CxxConstructExpr is the part of some CallExpr we need to
   // check that matched ParamDecl of the ancestor CallExpr is not rvalue.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               cxxConstructExpr(StringConstructorExpr,
-                                hasArgument(0, StringCStrCallExpr),
-                                unless(hasParent(materializeTemporaryExpr(
-                                    unless(isBoundToLValue())))))),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxConstructExpr(
+              StringConstructorExpr, hasArgument(0, StringCStrCallExpr),
+              unless(anyOf(HasRValueTempParent, hasParent(cxxBindTemporaryExpr(
+                                                    HasRValueTempParent)))))),
       this);
 
   // Detect: 's == str.c_str()'  ->  's == str'

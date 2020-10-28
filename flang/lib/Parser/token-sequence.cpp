@@ -56,6 +56,31 @@ std::size_t TokenSequence::SkipBlanks(std::size_t at) const {
   return tokens; // even if at > tokens
 }
 
+// C-style /*comments*/ are removed from preprocessing directive
+// token sequences by the prescanner, but not C++ or Fortran
+// free-form line-ending comments (//...  and !...) because
+// ignoring them is directive-specific.
+bool TokenSequence::IsAnythingLeft(std::size_t at) const {
+  std::size_t tokens{start_.size()};
+  for (; at < tokens; ++at) {
+    auto tok{TokenAt(at)};
+    const char *end{tok.end()};
+    for (const char *p{tok.begin()}; p < end; ++p) {
+      switch (*p) {
+      case '/':
+        return p + 1 >= end || p[1] != '/';
+      case '!':
+        return false;
+      case ' ':
+        break;
+      default:
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void TokenSequence::RemoveLastToken() {
   CHECK(!start_.empty());
   CHECK(nextStart_ > start_.back());

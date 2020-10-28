@@ -26,7 +26,11 @@ class LLDB_API SBCommandInterpreterRunOptions {
 
 public:
   SBCommandInterpreterRunOptions();
+  SBCommandInterpreterRunOptions(const SBCommandInterpreterRunOptions &rhs);
   ~SBCommandInterpreterRunOptions();
+
+  SBCommandInterpreterRunOptions &
+  operator=(const SBCommandInterpreterRunOptions &rhs);
 
   bool GetStopOnContinue() const;
 

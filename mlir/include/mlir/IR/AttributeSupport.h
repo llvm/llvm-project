@@ -139,6 +139,13 @@ public:
         kind, std::forward<Args>(args)...);
   }
 
+  template <typename ImplType, typename... Args>
+  static LogicalResult mutate(MLIRContext *ctx, ImplType *impl,
+                              Args &&...args) {
+    assert(impl && "cannot mutate null attribute");
+    return ctx->getAttributeUniquer().mutate(impl, std::forward<Args>(args)...);
+  }
+
 private:
   /// Initialize the given attribute storage instance.
   static void initializeAttributeStorage(AttributeStorage *storage,

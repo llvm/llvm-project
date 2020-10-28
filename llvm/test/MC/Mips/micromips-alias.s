@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux -mcpu=mips32 %s -o - \
-# RUN:   | llvm-readobj --symbols | FileCheck %s
+# RUN:   | llvm-readobj --symbols - | FileCheck %s
 
 # Symbol bar must be marked as micromips.
 # CHECK: Name: bar

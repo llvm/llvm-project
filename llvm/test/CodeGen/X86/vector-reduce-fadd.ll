@@ -15,7 +15,7 @@ define float @test_v2f32(float %a0, <2 x float> %a1) {
 ; SSE2-LABEL: test_v2f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -48,12 +48,12 @@ define float @test_v4f32(float %a0, <4 x float> %a1) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -65,7 +65,7 @@ define float @test_v4f32(float %a0, <4 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm2
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -76,7 +76,7 @@ define float @test_v4f32(float %a0, <4 x float> %a1) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -87,7 +87,7 @@ define float @test_v4f32(float %a0, <4 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %a0, <4 x float> %a1)
@@ -99,21 +99,21 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm3
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm3, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -125,7 +125,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm3
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm3, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
@@ -133,7 +133,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -144,7 +144,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -152,7 +152,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -164,7 +164,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -172,7 +172,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -185,39 +185,39 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm5
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm5, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm5
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm5, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    movaps %xmm3, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm3, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    addss %xmm4, %xmm0
 ; SSE2-NEXT:    movaps %xmm4, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm4[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm4[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm4, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm4[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm4, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -229,7 +229,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm5
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm5, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
@@ -237,7 +237,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm3[1,1,3,3]
@@ -245,7 +245,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm3, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    addss %xmm4, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm4[1,1,3,3]
@@ -253,7 +253,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; SSE41-NEXT:    movaps %xmm4, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm4[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -264,7 +264,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX-NEXT:    vaddss %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -272,14 +272,14 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX-NEXT:    vaddss %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm2[1,0]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm2[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm2[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vextractf128 $1, %ymm2, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -287,7 +287,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -299,7 +299,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
@@ -307,7 +307,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm3, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm2
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
@@ -315,7 +315,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm3, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm1
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -323,7 +323,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -340,7 +340,7 @@ define float @test_v2f32_zero(<2 x float> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    addss %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -377,12 +377,12 @@ define float @test_v4f32_zero(<4 x float> %a0) {
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    addss %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm2, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -395,7 +395,7 @@ define float @test_v4f32_zero(<4 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm0, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE41-NEXT:    addss %xmm2, %xmm1
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -407,7 +407,7 @@ define float @test_v4f32_zero(<4 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -419,7 +419,7 @@ define float @test_v4f32_zero(<4 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.0, <4 x float> %a0)
@@ -432,21 +432,21 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    addss %xmm0, %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss %xmm2, %xmm3
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm3, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -459,7 +459,7 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm0, %xmm2
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; SSE41-NEXT:    addss %xmm3, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -467,7 +467,7 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm2
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -479,7 +479,7 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm1
@@ -487,7 +487,7 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -500,7 +500,7 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm1
@@ -508,7 +508,7 @@ define float @test_v8f32_zero(<8 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -522,39 +522,39 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; SSE2-NEXT:    xorps %xmm4, %xmm4
 ; SSE2-NEXT:    addss %xmm0, %xmm4
 ; SSE2-NEXT:    movaps %xmm0, %xmm5
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss %xmm4, %xmm5
 ; SSE2-NEXT:    movaps %xmm0, %xmm4
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm5, %xmm4
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm4, %xmm0
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm4
-; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm4, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm4
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm4, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    movaps %xmm3, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm3, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -567,7 +567,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm0, %xmm4
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
 ; SSE41-NEXT:    addss %xmm5, %xmm4
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm4, %xmm0
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
@@ -575,7 +575,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm4
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm4, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
@@ -583,7 +583,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm3[1,1,3,3]
@@ -591,7 +591,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm3, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -603,7 +603,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm0, %xmm2, %xmm2
@@ -611,14 +611,14 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -626,7 +626,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -639,7 +639,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
@@ -647,7 +647,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
@@ -655,7 +655,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm1
@@ -663,7 +663,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -678,7 +678,7 @@ define float @test_v16f32_zero(<16 x float> %a0) {
 define float @test_v2f32_undef(<2 x float> %a0) {
 ; SSE2-LABEL: test_v2f32_undef:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    addss {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -707,12 +707,12 @@ define float @test_v4f32_undef(<4 x float> %a0) {
 ; SSE2-LABEL: test_v4f32_undef:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -723,7 +723,7 @@ define float @test_v4f32_undef(<4 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm0, %xmm2
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -733,7 +733,7 @@ define float @test_v4f32_undef(<4 x float> %a0) {
 ; AVX-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -743,7 +743,7 @@ define float @test_v4f32_undef(<4 x float> %a0) {
 ; AVX512-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float undef, <4 x float> %a0)
@@ -754,21 +754,21 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; SSE2-LABEL: test_v8f32_undef:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss {{.*}}(%rip), %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm3
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm2, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -779,7 +779,7 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm0, %xmm3
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
 ; SSE41-NEXT:    addss %xmm2, %xmm3
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -787,7 +787,7 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm2
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -797,7 +797,7 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; AVX-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm1
@@ -805,7 +805,7 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -816,7 +816,7 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; AVX512-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm1
@@ -824,7 +824,7 @@ define float @test_v8f32_undef(<8 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -836,39 +836,39 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; SSE2-LABEL: test_v16f32_undef:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss {{.*}}(%rip), %xmm4
 ; SSE2-NEXT:    movaps %xmm0, %xmm5
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm4, %xmm5
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm5, %xmm0
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm4
-; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm4, %xmm0
 ; SSE2-NEXT:    movaps %xmm1, %xmm4
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm4, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm2[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    movaps %xmm3, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm3, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE2-NEXT:    addss %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -879,7 +879,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm0, %xmm5
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm0[1]
 ; SSE41-NEXT:    addss %xmm4, %xmm5
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm5, %xmm0
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
@@ -887,7 +887,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm1, %xmm4
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm1[1]
 ; SSE41-NEXT:    addss %xmm4, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm2[1,1,3,3]
@@ -895,7 +895,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm2, %xmm0
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm3[1,1,3,3]
@@ -903,7 +903,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; SSE41-NEXT:    movaps %xmm3, %xmm1
 ; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE41-NEXT:    addss %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -913,7 +913,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX-NEXT:    vaddss {{.*}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm0, %xmm2, %xmm2
@@ -921,14 +921,14 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -936,7 +936,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -947,7 +947,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
@@ -955,7 +955,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
@@ -963,7 +963,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm1
@@ -971,7 +971,7 @@ define float @test_v16f32_undef(<16 x float> %a0) {
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

@@ -1486,6 +1486,432 @@ define amdgpu_kernel void @dyn_alloca_kernarg_i32(i32 %n) {
   ret void
 }
 
+; Byref pointers should only be treated as offsets from kernarg
+define amdgpu_kernel void @byref_constant_i8_arg(i32 addrspace(1)* nocapture %out, i8 addrspace(4)* byref(i8) %in.byref) {
+; HSA-LABEL: @byref_constant_i8_arg(
+; HSA-NEXT:    [[BYREF_CONSTANT_I8_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I8_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I8_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[IN:%.*]] = load i8, i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]], align 1
+; HSA-NEXT:    [[EXT:%.*]] = zext i8 [[IN]] to i32
+; HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_constant_i8_arg(
+; MESA-NEXT:    [[BYREF_CONSTANT_I8_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I8_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I8_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[IN:%.*]] = load i8, i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]], align 1
+; MESA-NEXT:    [[EXT:%.*]] = zext i8 [[IN]] to i32
+; MESA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i8, i8 addrspace(4)* %in.byref
+  %ext = zext i8 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_i16_arg(i32 addrspace(1)* nocapture %out, i16 addrspace(4)* byref(i16) %in.byref) {
+; HSA-LABEL: @byref_constant_i16_arg(
+; HSA-NEXT:    [[BYREF_CONSTANT_I16_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I16_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I16_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i16 addrspace(4)*
+; HSA-NEXT:    [[IN:%.*]] = load i16, i16 addrspace(4)* [[TMP1]], align 2
+; HSA-NEXT:    [[EXT:%.*]] = zext i16 [[IN]] to i32
+; HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_constant_i16_arg(
+; MESA-NEXT:    [[BYREF_CONSTANT_I16_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I16_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I16_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i16 addrspace(4)*
+; MESA-NEXT:    [[IN:%.*]] = load i16, i16 addrspace(4)* [[TMP1]], align 2
+; MESA-NEXT:    [[EXT:%.*]] = zext i16 [[IN]] to i32
+; MESA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i16, i16 addrspace(4)* %in.byref
+  %ext = zext i16 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) %in.byref, i32 %after.offset) {
+; HSA-LABEL: @byref_constant_i32_arg(
+; HSA-NEXT:    [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 12
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; HSA-NEXT:    store volatile i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_constant_i32_arg(
+; MESA-NEXT:    [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(52) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 48
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; MESA-NEXT:    store volatile i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_v4i32_arg(<4 x i32> addrspace(1)* nocapture %out, <4 x i32> addrspace(4)* byref(<4 x i32>) %in.byref, i32 %after.offset) {
+; HSA-LABEL: @byref_constant_v4i32_arg(
+; HSA-NEXT:    [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(36) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to <4 x i32> addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load <4 x i32> addrspace(1)*, <4 x i32> addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT]], i64 32
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[TMP1]], align 16
+; HSA-NEXT:    store volatile <4 x i32> [[IN]], <4 x i32> addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    [[OUT_CAST:%.*]] = bitcast <4 x i32> addrspace(1)* [[OUT_LOAD]] to i32 addrspace(1)*
+; HSA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_CAST]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_constant_v4i32_arg(
+; MESA-NEXT:    [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(72) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to <4 x i32> addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load <4 x i32> addrspace(1)*, <4 x i32> addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_V4I32_ARG_KERNARG_SEGMENT]], i64 68
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[TMP1]], align 16
+; MESA-NEXT:    store volatile <4 x i32> [[IN]], <4 x i32> addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    [[OUT_CAST:%.*]] = bitcast <4 x i32> addrspace(1)* [[OUT_LOAD]] to i32 addrspace(1)*
+; MESA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_CAST]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load <4 x i32>, <4 x i32> addrspace(4)* %in.byref
+  store volatile <4 x i32> %in, <4 x i32> addrspace(1)* %out, align 4
+  %out.cast = bitcast <4 x i32> addrspace(1)* %out to i32 addrspace(1)*
+  store volatile i32 %after.offset, i32 addrspace(1)* %out.cast, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_align_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) align(256) %in.byref, i32 %after.offset) {
+; HSA-LABEL: @byref_align_constant_i32_arg(
+; HSA-NEXT:    [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 256 dereferenceable(264) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 256
+; HSA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 260
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; HSA-NEXT:    store volatile i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_align_constant_i32_arg(
+; MESA-NEXT:    [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 256 dereferenceable(300) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 292
+; MESA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_ALIGN_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 296
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 8, !invariant.load !0
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; MESA-NEXT:    store volatile i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(i32 addrspace(1)* nocapture %out, i8, <16 x i32> addrspace(4)* byref(<16 x i32>) %in.byref, i32 %after.offset) {
+; HSA-LABEL: @byref_natural_align_constant_v16i32_arg(
+; HSA-NEXT:    [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 64 dereferenceable(132) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT]], i64 64
+; HSA-NEXT:    [[TMP2:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to <16 x i32> addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT]], i64 128
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN:%.*]] = load <16 x i32>, <16 x i32> addrspace(4)* [[TMP2]], align 64
+; HSA-NEXT:    [[CAST_OUT:%.*]] = bitcast i32 addrspace(1)* [[OUT_LOAD]] to <16 x i32> addrspace(1)*
+; HSA-NEXT:    store volatile <16 x i32> [[IN]], <16 x i32> addrspace(1)* [[CAST_OUT]], align 4
+; HSA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_natural_align_constant_v16i32_arg(
+; MESA-NEXT:    [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 64 dereferenceable(168) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT]], i64 100
+; MESA-NEXT:    [[TMP2:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to <16 x i32> addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_NATURAL_ALIGN_CONSTANT_V16I32_ARG_KERNARG_SEGMENT]], i64 164
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN:%.*]] = load <16 x i32>, <16 x i32> addrspace(4)* [[TMP2]], align 64
+; MESA-NEXT:    [[CAST_OUT:%.*]] = bitcast i32 addrspace(1)* [[OUT_LOAD]] to <16 x i32> addrspace(1)*
+; MESA-NEXT:    store volatile <16 x i32> [[IN]], <16 x i32> addrspace(1)* [[CAST_OUT]], align 4
+; MESA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load <16 x i32>, <16 x i32> addrspace(4)* %in.byref
+  %cast.out = bitcast i32 addrspace(1)* %out to <16 x i32> addrspace(1)*
+  store volatile <16 x i32> %in, <16 x i32> addrspace(1)* %cast.out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; Also accept byref kernel arguments with other global address spaces.
+define amdgpu_kernel void @byref_global_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* byref(i32) %in.byref) {
+; HSA-LABEL: @byref_global_i32_arg(
+; HSA-NEXT:    [[BYREF_GLOBAL_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_GLOBAL_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_GLOBAL_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(1)*
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(1)* [[TMP1]], align 4
+; HSA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_global_i32_arg(
+; MESA-NEXT:    [[BYREF_GLOBAL_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_GLOBAL_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_GLOBAL_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(1)*
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(1)* [[TMP1]], align 4
+; MESA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(1)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_flat_i32_arg(i32 addrspace(1)* nocapture %out, i32* byref(i32) %in.byref) {
+; HSA-LABEL: @byref_flat_i32_arg(
+; HSA-NEXT:    [[BYREF_FLAT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_FLAT_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_FLAT_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32*
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32* [[TMP1]], align 4
+; HSA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_flat_i32_arg(
+; MESA-NEXT:    [[BYREF_FLAT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_FLAT_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_FLAT_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32*
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32* [[TMP1]], align 4
+; MESA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_32bit_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(6)* byref(i32) %in.byref) {
+; HSA-LABEL: @byref_constant_32bit_i32_arg(
+; HSA-NEXT:    [[BYREF_CONSTANT_32BIT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_32BIT_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_32BIT_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(6)*
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(6)* [[TMP1]], align 4
+; HSA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_constant_32bit_i32_arg(
+; MESA-NEXT:    [[BYREF_CONSTANT_32BIT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_32BIT_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_32BIT_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(6)*
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(6)* [[TMP1]], align 4
+; MESA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(6)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_unknown_as_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(999)* byref(i32) %in.byref) {
+; HSA-LABEL: @byref_unknown_as_i32_arg(
+; HSA-NEXT:    [[BYREF_UNKNOWN_AS_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_UNKNOWN_AS_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_UNKNOWN_AS_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(999)*
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(999)* [[TMP1]], align 4
+; HSA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_unknown_as_i32_arg(
+; MESA-NEXT:    [[BYREF_UNKNOWN_AS_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_UNKNOWN_AS_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_UNKNOWN_AS_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(999)*
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(999)* [[TMP1]], align 4
+; MESA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(999)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; Invalid, but should not crash.
+define amdgpu_kernel void @byref_local_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(3)* byref(i32) %in.byref) {
+; HSA-LABEL: @byref_local_i32_arg(
+; HSA-NEXT:    [[BYREF_LOCAL_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(12) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_LOCAL_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_LOCAL_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(3)*
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(3)* [[TMP1]], align 4
+; HSA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_local_i32_arg(
+; MESA-NEXT:    [[BYREF_LOCAL_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(48) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_LOCAL_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_LOCAL_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(3)*
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(3)* [[TMP1]], align 4
+; MESA-NEXT:    store i32 [[IN]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(3)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @multi_byref_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) %in0.byref, i32 addrspace(4)* byref(i32) %in1.byref, i32 %after.offset) {
+; HSA-LABEL: @multi_byref_constant_i32_arg(
+; HSA-NEXT:    [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(20) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN0_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN0_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[IN1_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 12
+; HSA-NEXT:    [[TMP2:%.*]] = bitcast i8 addrspace(4)* [[IN1_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[IN0:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; HSA-NEXT:    [[IN1:%.*]] = load i32, i32 addrspace(4)* [[TMP2]], align 4
+; HSA-NEXT:    store volatile i32 [[IN0]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    store volatile i32 [[IN1]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @multi_byref_constant_i32_arg(
+; MESA-NEXT:    [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(56) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[OUT_KERNARG_OFFSET]] to i32 addrspace(1)* addrspace(4)*
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[OUT_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN0_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN0_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[IN1_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 48
+; MESA-NEXT:    [[TMP2:%.*]] = bitcast i8 addrspace(4)* [[IN1_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[MULTI_BYREF_CONSTANT_I32_ARG_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[AFTER_OFFSET_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[AFTER_OFFSET_LOAD:%.*]] = load i32, i32 addrspace(4)* [[AFTER_OFFSET_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[IN0:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; MESA-NEXT:    [[IN1:%.*]] = load i32, i32 addrspace(4)* [[TMP2]], align 4
+; MESA-NEXT:    store volatile i32 [[IN0]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    store volatile i32 [[IN1]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    store volatile i32 [[AFTER_OFFSET_LOAD]], i32 addrspace(1)* [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %in0 = load i32, i32 addrspace(4)* %in0.byref
+  %in1 = load i32, i32 addrspace(4)* %in1.byref
+  store volatile i32 %in0, i32 addrspace(1)* %out, align 4
+  store volatile i32 %in1, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_i32_arg_offset0(i32 addrspace(4)* byref(i32) %in.byref) {
+; HSA-LABEL: @byref_constant_i32_arg_offset0(
+; HSA-NEXT:    [[BYREF_CONSTANT_I32_ARG_OFFSET0_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(4) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_OFFSET0_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; HSA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; HSA-NEXT:    store i32 [[IN]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @byref_constant_i32_arg_offset0(
+; MESA-NEXT:    [[BYREF_CONSTANT_I32_ARG_OFFSET0_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[IN_BYREF_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[BYREF_CONSTANT_I32_ARG_OFFSET0_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[IN_BYREF_BYVAL_KERNARG_OFFSET]] to i32 addrspace(4)*
+; MESA-NEXT:    [[IN:%.*]] = load i32, i32 addrspace(4)* [[TMP1]], align 4
+; MESA-NEXT:    store i32 [[IN]], i32 addrspace(1)* undef, align 4
+; MESA-NEXT:    ret void
+;
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store i32 %in, i32 addrspace(1)* undef, align 4
+  ret void
+}
+
 attributes #0 = { nounwind "target-cpu"="kaveri" }
 attributes #1 = { nounwind "target-cpu"="kaveri" "amdgpu-implicitarg-num-bytes"="40" }
 attributes #2 = { nounwind "target-cpu"="tahiti" }

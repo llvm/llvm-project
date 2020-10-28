@@ -45,10 +45,19 @@ class OpBuilder;
 /// operations that are dominated by the former; similarly, `postDomInstFilter`
 /// restricts replacement to only those operations that are postdominated by it.
 ///
+/// 'allowNonDereferencingOps', if set, allows replacement of non-dereferencing
+/// uses of a memref without any requirement for access index rewrites. The
+/// default value of this flag variable is false.
+///
+/// 'replaceInDeallocOp', if set, lets DeallocOp, a non-dereferencing user, to
+/// also be a candidate for replacement. The default value of this flag is
+/// false.
+///
 /// Returns true on success and false if the replacement is not possible,
-/// whenever a memref is used as an operand in a non-dereferencing context,
-/// except for dealloc's on the memref which are left untouched. See comments at
-/// function definition for an example.
+/// whenever a memref is used as an operand in a non-dereferencing context and
+/// 'allowNonDereferencingOps' is false, except for dealloc's on the memref
+/// which are left untouched. See comments at function definition for an
+/// example.
 //
 //  Ex: to replace load %A[%i, %j] with load %Abuf[%t mod 2, %ii - %i, %j]:
 //  The SSA value corresponding to '%t mod 2' should be in 'extraIndices', and
@@ -57,27 +66,37 @@ class OpBuilder;
 //  extra operands, note that 'indexRemap' would just be applied to existing
 //  indices (%i, %j).
 //  TODO: allow extraIndices to be added at any position.
-LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
-                                       ArrayRef<Value> extraIndices = {},
-                                       AffineMap indexRemap = AffineMap(),
-                                       ArrayRef<Value> extraOperands = {},
-                                       ArrayRef<Value> symbolOperands = {},
-                                       Operation *domInstFilter = nullptr,
-                                       Operation *postDomInstFilter = nullptr);
+LogicalResult replaceAllMemRefUsesWith(
+    Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices = {},
+    AffineMap indexRemap = AffineMap(), ArrayRef<Value> extraOperands = {},
+    ArrayRef<Value> symbolOperands = {}, Operation *domInstFilter = nullptr,
+    Operation *postDomInstFilter = nullptr,
+    bool allowNonDereferencingOps = false, bool replaceInDeallocOp = false);
 
 /// Performs the same replacement as the other version above but only for the
-/// dereferencing uses of `oldMemRef` in `op`.
+/// dereferencing uses of `oldMemRef` in `op`, except in cases where
+/// 'allowNonDereferencingOps' is set to true where we replace the
+/// non-dereferencing uses as well.
 LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
                                        Operation *op,
                                        ArrayRef<Value> extraIndices = {},
                                        AffineMap indexRemap = AffineMap(),
                                        ArrayRef<Value> extraOperands = {},
-                                       ArrayRef<Value> symbolOperands = {});
+                                       ArrayRef<Value> symbolOperands = {},
+                                       bool allowNonDereferencingOps = false);
 
 /// Rewrites the memref defined by this alloc op to have an identity layout map
 /// and updates all its indexing uses. Returns failure if any of its uses
 /// escape (while leaving the IR in a valid state).
 LogicalResult normalizeMemRef(AllocOp op);
+
+/// Uses the old memref type map layout and computes the new memref type to have
+/// a new shape and a layout map, where the old layout map has been normalized
+/// to an identity layout map. It returns the old memref in case no
+/// normalization was needed or a failure occurs while transforming the old map
+/// layout to an identity layout map.
+MemRefType normalizeMemRefType(MemRefType memrefType, OpBuilder builder,
+                               unsigned numSymbolicOperands);
 
 /// Creates and inserts into 'builder' a new AffineApplyOp, with the number of
 /// its results equal to the number of operands, as a composition

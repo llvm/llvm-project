@@ -171,6 +171,12 @@ void CSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     return;
   }
 
+  // If the region does not have dominanceInfo, then skip it.
+  // TODO: Regions without SSA dominance should define a different
+  // traversal order which is appropriate and can be used here.
+  if (!domInfo.hasDominanceInfo(&region))
+    return;
+
   // Note, deque is being used here because there was significant performance
   // gains over vector when the container becomes very large due to the
   // specific access patterns. If/when these performance issues are no

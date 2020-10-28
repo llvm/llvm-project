@@ -16,10 +16,22 @@ union cpsr {
     uint32_t value;
 };
 
-extern __attribute__((pcs("aapcs")))
-uint32_t call_apsr_f(float a, float b, __attribute__((pcs("aapcs"))) void (*fn)(float, float));
+__attribute__((noinline, pcs("aapcs"))) static uint32_t call_apsr_f(float a, float b,
+                                                                    __attribute__((pcs("aapcs"))) void (*fn)(float, float)) {
+  uint32_t result;
+  fn(a, b);
+  asm volatile("mrs %0, apsr"
+               : "=r"(result));
+  return result;
+}
 
-extern __attribute__((pcs("aapcs")))
-uint32_t call_apsr_d(double a, double b, __attribute__((pcs("aapcs"))) void (*fn)(double, double));
+__attribute__((noinline, pcs("aapcs"))) static uint32_t call_apsr_d(double a, double b,
+                                                                    __attribute__((pcs("aapcs"))) void (*fn)(double, double)) {
+  uint32_t result;
+  fn(a, b);
+  asm volatile("mrs %0, apsr"
+               : "=r"(result));
+  return result;
+}
 
 #endif // CALL_APSR_H

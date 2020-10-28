@@ -17,22 +17,46 @@ define float @pr26491(<4 x float> %a0) {
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSSE3-LABEL: pr26491:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSSE3-NEXT:    addps %xmm0, %xmm1
-; SSSE3-NEXT:    movaps %xmm1, %xmm0
-; SSSE3-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; SSSE3-NEXT:    addss %xmm1, %xmm0
-; SSSE3-NEXT:    retq
+; SSSE3-SLOW-LABEL: pr26491:
+; SSSE3-SLOW:       # %bb.0:
+; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
+; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    retq
 ;
-; AVX-LABEL: pr26491:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; SSSE3-FAST-LABEL: pr26491:
+; SSSE3-FAST:       # %bb.0:
+; SSSE3-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSSE3-FAST-NEXT:    movaps %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; SSSE3-FAST-NEXT:    addss %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    retq
+;
+; AVX1-SLOW-LABEL: pr26491:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX1-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-SLOW-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: pr26491:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX1-FAST-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    retq
+;
+; AVX2-LABEL: pr26491:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
   %1 = shufflevector <4 x float> %a0, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
   %2 = fadd <4 x float> %1, %a0
   %3 = extractelement <4 x float> %2, i32 2

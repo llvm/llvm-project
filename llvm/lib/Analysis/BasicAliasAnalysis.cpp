@@ -91,7 +91,7 @@ STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
 const unsigned MaxNumPhiBBsValueReachabilityCheck = 20;
 
 // The max limit of the search depth in DecomposeGEPExpression() and
-// GetUnderlyingObject(), both functions need to use the same search
+// getUnderlyingObject(), both functions need to use the same search
 // depth otherwise the algorithm in aliasGEP will assert.
 static const unsigned MaxLookupSearchDepth = 6;
 
@@ -456,8 +456,8 @@ static unsigned getMaxPointerSize(const DataLayout &DL) {
 /// such, the gep cannot necessarily be reconstructed from its decomposed form.
 ///
 /// When DataLayout is around, this function is capable of analyzing everything
-/// that GetUnderlyingObject can look through. To be able to do that
-/// GetUnderlyingObject and DecomposeGEPExpression must use the same search
+/// that getUnderlyingObject can look through. To be able to do that
+/// getUnderlyingObject and DecomposeGEPExpression must use the same search
 /// depth (MaxLookupSearchDepth). When DataLayout not is around, it just looks
 /// through pointer casts.
 bool BasicAAResult::DecomposeGEPExpression(const Value *V,
@@ -661,7 +661,7 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   SmallVector<const Value *, 16> Worklist;
   Worklist.push_back(Loc.Ptr);
   do {
-    const Value *V = GetUnderlyingObject(Worklist.pop_back_val(), DL);
+    const Value *V = getUnderlyingObject(Worklist.pop_back_val());
     if (!Visited.insert(V).second) {
       Visited.clear();
       return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
@@ -875,7 +875,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   assert(notDifferentParent(Call, Loc.Ptr) &&
          "AliasAnalysis query involving multiple functions!");
 
-  const Value *Object = GetUnderlyingObject(Loc.Ptr, DL);
+  const Value *Object = getUnderlyingObject(Loc.Ptr);
 
   // Calls marked 'tail' cannot read or write allocas from the current frame
   // because the current frame might be destroyed by the time they run. However,
@@ -1309,7 +1309,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
 /// another pointer.
 ///
 /// We know that V1 is a GEP, but we don't know anything about V2.
-/// UnderlyingV1 is GetUnderlyingObject(GEP1, DL), UnderlyingV2 is the same for
+/// UnderlyingV1 is getUnderlyingObject(GEP1), UnderlyingV2 is the same for
 /// V2.
 AliasResult BasicAAResult::aliasGEP(
     const GEPOperator *GEP1, LocationSize V1Size, const AAMDNodes &V1AAInfo,
@@ -1338,7 +1338,7 @@ AliasResult BasicAAResult::aliasGEP(
 
   assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
          "DecomposeGEPExpression returned a result different from "
-         "GetUnderlyingObject");
+         "getUnderlyingObject");
 
   // If the GEP's offset relative to its base is such that the base would
   // fall below the start of the object underlying V2, then the GEP and V2
@@ -1648,8 +1648,32 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     }
 
   SmallVector<Value *, 4> V1Srcs;
+  // For a recursive phi, that recurses through a contant gep, we can perform
+  // aliasing calculations using the other phi operands with an unknown size to
+  // specify that an unknown number of elements after the initial value are
+  // potentially accessed.
   bool isRecursive = false;
-  if (PV)  {
+  auto CheckForRecPhi = [&](Value *PV) {
+    if (!EnableRecPhiAnalysis)
+      return false;
+    if (GEPOperator *PVGEP = dyn_cast<GEPOperator>(PV)) {
+      // Check whether the incoming value is a GEP that advances the pointer
+      // result of this PHI node (e.g. in a loop). If this is the case, we
+      // would recurse and always get a MayAlias. Handle this case specially
+      // below. We need to ensure that the phi is inbounds and has a constant
+      // positive operand so that we can check for alias with the initial value
+      // and an unknown but positive size.
+      if (PVGEP->getPointerOperand() == PN && PVGEP->isInBounds() &&
+          PVGEP->getNumIndices() == 1 && isa<ConstantInt>(PVGEP->idx_begin()) &&
+          !cast<ConstantInt>(PVGEP->idx_begin())->isNegative()) {
+        isRecursive = true;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (PV) {
     // If we have PhiValues then use it to get the underlying phi values.
     const PhiValues::ValueSet &PhiValueSet = PV->getValuesForPhi(PN);
     // If we have more phi values than the search depth then return MayAlias
@@ -1660,19 +1684,8 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       return MayAlias;
     // Add the values to V1Srcs
     for (Value *PV1 : PhiValueSet) {
-      if (EnableRecPhiAnalysis) {
-        if (GEPOperator *PV1GEP = dyn_cast<GEPOperator>(PV1)) {
-          // Check whether the incoming value is a GEP that advances the pointer
-          // result of this PHI node (e.g. in a loop). If this is the case, we
-          // would recurse and always get a MayAlias. Handle this case specially
-          // below.
-          if (PV1GEP->getPointerOperand() == PN && PV1GEP->getNumIndices() == 1 &&
-              isa<ConstantInt>(PV1GEP->idx_begin())) {
-            isRecursive = true;
-            continue;
-          }
-        }
-      }
+      if (CheckForRecPhi(PV1))
+        continue;
       V1Srcs.push_back(PV1);
     }
   } else {
@@ -1687,18 +1700,8 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
         // and 'n' are the number of PHI sources.
         return MayAlias;
 
-      if (EnableRecPhiAnalysis)
-        if (GEPOperator *PV1GEP = dyn_cast<GEPOperator>(PV1)) {
-          // Check whether the incoming value is a GEP that advances the pointer
-          // result of this PHI node (e.g. in a loop). If this is the case, we
-          // would recurse and always get a MayAlias. Handle this case specially
-          // below.
-          if (PV1GEP->getPointerOperand() == PN && PV1GEP->getNumIndices() == 1 &&
-              isa<ConstantInt>(PV1GEP->idx_begin())) {
-            isRecursive = true;
-            continue;
-          }
-        }
+      if (CheckForRecPhi(PV1))
+        continue;
 
       if (UniqueSrc.insert(PV1).second)
         V1Srcs.push_back(PV1);
@@ -1779,10 +1782,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
   // Figure out what objects these things are pointing to if we can.
   if (O1 == nullptr)
-    O1 = GetUnderlyingObject(V1, DL, MaxLookupSearchDepth);
+    O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
 
   if (O2 == nullptr)
-    O2 = GetUnderlyingObject(V2, DL, MaxLookupSearchDepth);
+    O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
 
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.

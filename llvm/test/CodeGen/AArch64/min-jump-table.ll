@@ -1,7 +1,7 @@
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=0 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK0  < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=2 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK2  < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=4 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=8 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
+; RUN: llc %s -O2 -print-after-isel -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=0 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK0  < %t
+; RUN: llc %s -O2 -print-after-isel -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=2 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK2  < %t
+; RUN: llc %s -O2 -print-after-isel -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=4 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
+; RUN: llc %s -O2 -print-after-isel -mtriple=aarch64-linux-gnu -jump-table-density=40 -min-jump-table-entries=8 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
 
 declare void @ext(i32, i32)
 

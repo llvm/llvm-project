@@ -5,6 +5,7 @@ add_mlir_library(MLIRTestIR
   TestMatchers.cpp
   TestSideEffects.cpp
   TestSymbolUses.cpp
+  TestTypes.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

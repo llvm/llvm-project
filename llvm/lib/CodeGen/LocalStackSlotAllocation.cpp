@@ -220,6 +220,8 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
         continue;
       if (StackProtectorFI == (int)i)
         continue;
+      if (!TFI.isStackIdSafeForLocalArea(MFI.getStackID(i)))
+        continue;
 
       switch (MFI.getObjectSSPLayout(i)) {
       case MachineFrameInfo::SSPLK_None:
@@ -253,6 +255,8 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
     if (MFI.getStackProtectorIndex() == (int)i)
       continue;
     if (ProtectedObjs.count(i))
+      continue;
+    if (!TFI.isStackIdSafeForLocalArea(MFI.getStackID(i)))
       continue;
 
     AdjustStackOffset(MFI, i, Offset, StackGrowsDown, MaxAlign);

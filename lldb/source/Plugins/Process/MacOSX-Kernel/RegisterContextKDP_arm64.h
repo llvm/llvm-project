@@ -21,21 +21,21 @@ public:
   virtual ~RegisterContextKDP_arm64();
 
 protected:
-  virtual int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr);
+  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override;
 
-  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu);
+  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override;
 
-  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc);
+  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override;
 
-  int DoReadDBG(lldb::tid_t tid, int flavor, DBG &dbg);
+  int DoReadDBG(lldb::tid_t tid, int flavor, DBG &dbg) override;
 
-  int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr);
+  int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override;
 
-  int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu);
+  int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu) override;
 
-  int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc);
+  int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc) override;
 
-  int DoWriteDBG(lldb::tid_t tid, int flavor, const DBG &dbg);
+  int DoWriteDBG(lldb::tid_t tid, int flavor, const DBG &dbg) override;
 
   ThreadKDP &m_kdp_thread;
 };

@@ -1,10 +1,10 @@
 ;; RUN: llc -mtriple=aarch64-none-linux-gnu -filetype=obj %s -o - | \
-;; RUN:   llvm-readobj -h -r | FileCheck -check-prefix=OBJ %s
+;; RUN:   llvm-readobj -h -r - | FileCheck -check-prefix=OBJ %s
 
 ; Also take it on a round-trip through llvm-mc to stretch assembly-parsing's legs:
 ;; RUN: llc -mtriple=aarch64-none-linux-gnu %s -o - | \
 ;; RUN:     llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o - | \
-;; RUN:     llvm-readobj -h -r | FileCheck -check-prefix=OBJ %s
+;; RUN:     llvm-readobj -h -r - | FileCheck -check-prefix=OBJ %s
 
 @var8 = global i8 0
 @var16 = global i16 0

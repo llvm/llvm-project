@@ -10,7 +10,7 @@ func @dim(%arg : tensor<1x?xf32>) {
 
 func @rank(f32) {
 ^bb(%0: f32):
-  "std.rank"(%0): (f32)->index // expected-error {{'std.rank' op operand #0 must be tensor of any type values}}
+  "std.rank"(%0): (f32)->index // expected-error {{'std.rank' op operand #0 must be any tensor or memref type}}
   return
 }
 

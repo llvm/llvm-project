@@ -8,7 +8,7 @@ endif()
 #===============================================================================
 # Setup Project
 #===============================================================================
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 3.13.4)
 
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
@@ -32,7 +32,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 11.0.0git)
+  set(PACKAGE_VERSION 12.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -407,13 +407,9 @@ endif ()
 # Configure System
 #===============================================================================
 
-set(LIBCXX_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
-
-string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
-       ${PACKAGE_VERSION})
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
@@ -429,6 +425,7 @@ elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
 else()
   set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXX_HEADER_DIR  ${CMAKE_BINARY_DIR})
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
 endif()
 
@@ -522,12 +519,17 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Require C++14 for all targets. C++14 is needed to ensure constant
-  # initialization for certain globals (ex global memory resources).
+  # Require C++17 for all targets. C++17 is needed to use aligned allocation
+  # in the dylib.
   set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
+
+  # When building the dylib, don't warn for unavailable aligned allocation
+  # functions based on the deployment target -- they are always available
+  # because they are provided by the dylib itself.
+  target_add_compile_flags_if_supported(${target} PRIVATE -faligned-allocation)
 
   # On all systems the system c++ standard library headers need to be excluded.
   # MSVC only has -X, which disables all default includes; including the crt.
@@ -581,6 +583,7 @@ function(cxx_add_warning_flags target)
     target_add_compile_flags_if_supported(${target} PRIVATE
       -Wno-user-defined-literals
       -Wno-covered-switch-default
+      -Wno-suggest-override
       -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
     )
     if (LIBCXX_TARGETING_CLANG_CL)
@@ -605,7 +608,8 @@ function(cxx_add_warning_flags target)
     target_add_compile_flags_if_supported(${target} PRIVATE
       -Wno-literal-suffix
       -Wno-c++14-compat
-      -Wno-noexcept-type)
+      -Wno-noexcept-type
+      -Wno-suggest-override)
   endif()
   if (LIBCXX_ENABLE_WERROR)
     target_add_compile_flags_if_supported(${target} PRIVATE -Werror)
@@ -638,7 +642,6 @@ endfunction()
 # RTTI flags ==================================================================
 function(cxx_add_rtti_flags target)
   if (NOT LIBCXX_ENABLE_RTTI)
-    target_compile_definitions(${target} PUBLIC -D_LIBCPP_NO_RTTI)
     target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
     target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
   endif()
@@ -874,22 +877,11 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
-# We generate a __config_site header (see libcxx/include/CMakeLists.txt) and
-# we make sure to include it when building the library.
-function(cxx_add_config_site target)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(${target} PUBLIC /FI "${LIBCXX_BINARY_DIR}/__config_site")
-  else()
-    target_compile_options(${target} PUBLIC -include "${LIBCXX_BINARY_DIR}/__config_site")
-  endif()
-endfunction()
-
 # Setup all common build flags =================================================
 function(cxx_add_common_build_flags target)
   cxx_add_basic_build_flags(${target})
   cxx_add_warning_flags(${target})
   cxx_add_windows_flags(${target})
-  cxx_add_config_site(${target})
   cxx_add_exception_flags(${target})
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
@@ -899,7 +891,6 @@ endfunction()
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================
-include_directories(include)
 add_subdirectory(include)
 add_subdirectory(src)
 

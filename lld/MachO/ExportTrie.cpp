@@ -59,6 +59,10 @@ struct Edge {
 
 struct ExportInfo {
   uint64_t address;
+  uint8_t flags;
+  explicit ExportInfo(const Symbol &sym)
+      : address(sym.getVA()),
+        flags(sym.isWeakDef() ? EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION : 0) {}
   // TODO: Add proper support for re-exports & stub-and-resolver flags.
 };
 
@@ -83,9 +87,8 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
   // node.
   size_t nodeSize;
   if (info) {
-    uint64_t flags = 0;
     uint32_t terminalSize =
-        getULEB128Size(flags) + getULEB128Size(info->address);
+        getULEB128Size(info->flags) + getULEB128Size(info->address);
     // Overall node size so far is the uleb128 size of the length of the symbol
     // info + the symbol info itself.
     nodeSize = terminalSize + getULEB128Size(terminalSize);
@@ -110,11 +113,10 @@ void TrieNode::writeTo(uint8_t *buf) const {
   buf += offset;
   if (info) {
     // TrieNodes with Symbol info: size, flags address
-    uint64_t flags = 0; // TODO: emit proper flags
     uint32_t terminalSize =
-        getULEB128Size(flags) + getULEB128Size(info->address);
+        getULEB128Size(info->flags) + getULEB128Size(info->address);
     buf += encodeULEB128(terminalSize, buf);
-    buf += encodeULEB128(flags, buf);
+    buf += encodeULEB128(info->flags, buf);
     buf += encodeULEB128(info->address, buf);
   } else {
     // TrieNode with no Symbol info.
@@ -194,7 +196,7 @@ tailcall:
 
   if (isTerminal) {
     assert(j - i == 1); // no duplicate symbols
-    node->info = {pivotSymbol->getVA()};
+    node->info = ExportInfo(*pivotSymbol);
   } else {
     // This is the tail-call-optimized version of the following:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);

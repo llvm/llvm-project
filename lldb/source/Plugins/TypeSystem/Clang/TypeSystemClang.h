@@ -689,7 +689,8 @@ public:
                     uint32_t opaque_payload);
 
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                   uint64_t *stride) override;
+                                   uint64_t *stride,
+                                   ExecutionContextScope *exe_scope) override;
 
   CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
                             uint64_t size) override;

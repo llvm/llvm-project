@@ -290,7 +290,7 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
-    ; GFX6: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX6: $m0 = S_MOV_B32 -1
     ; GFX6: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 %2, 0, 0, implicit $m0, implicit $exec :: (load seq_cst 4, addrspace 3)
     ; GFX6: $vgpr0 = COPY [[DS_READ_B32_]]

@@ -1,9 +1,10 @@
 // Check -B driver option.
-//
+
+/// Target triple prefix is not detected for -B.
 // RUN: %clang %s -### -o %t.o -target i386-unknown-linux \
 // RUN:     -B %S/Inputs/B_opt_tree/dir1 -fuse-ld=ld 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-B-OPT-TRIPLE %s
-// CHECK-B-OPT-TRIPLE: "{{.*}}/Inputs/B_opt_tree/dir1{{/|\\\\}}i386-unknown-linux-ld"
+// CHECK-B-OPT-TRIPLE-NOT: "{{.*}}/Inputs/B_opt_tree/dir1{{/|\\\\}}i386-unknown-linux-ld"
 //
 // RUN: %clang %s -### -o %t.o -target i386-unknown-linux \
 // RUN:     -B %S/Inputs/B_opt_tree/dir2 -fuse-ld=ld 2>&1 \

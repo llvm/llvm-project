@@ -199,9 +199,8 @@ bool Communication::StartReadThread(Status *error_ptr) {
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
            "{0} Communication::StartReadThread ()", this);
 
-  char thread_name[1024];
-  snprintf(thread_name, sizeof(thread_name), "<lldb.comm.%s>",
-           GetBroadcasterName().AsCString());
+  const std::string thread_name =
+      llvm::formatv("<lldb.comm.{0}>", GetBroadcasterName());
 
   m_read_thread_enabled = true;
   m_read_thread_did_exit = false;
@@ -340,7 +339,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
       }
       if (error.Fail())
         LLDB_LOG(log, "error: {0}, status = {1}", error,
-                 Communication::ConnectionStatusAsCString(status));
+                 Communication::ConnectionStatusAsString(status));
       break;
     case eConnectionStatusInterrupted: // Synchronization signal from
                                        // SynchronizeWithReadThread()
@@ -356,7 +355,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
     case eConnectionStatusTimedOut: // Request timed out
       if (error.Fail())
         LLDB_LOG(log, "error: {0}, status = {1}", error,
-                 Communication::ConnectionStatusAsCString(status));
+                 Communication::ConnectionStatusAsString(status));
       break;
     }
   }
@@ -417,8 +416,8 @@ void Communication::SetConnection(std::unique_ptr<Connection> connection) {
   m_connection_sp = std::move(connection);
 }
 
-const char *
-Communication::ConnectionStatusAsCString(lldb::ConnectionStatus status) {
+std::string
+Communication::ConnectionStatusAsString(lldb::ConnectionStatus status) {
   switch (status) {
   case eConnectionStatusSuccess:
     return "success";
@@ -436,8 +435,5 @@ Communication::ConnectionStatusAsCString(lldb::ConnectionStatus status) {
     return "interrupted";
   }
 
-  static char unknown_state_string[64];
-  snprintf(unknown_state_string, sizeof(unknown_state_string),
-           "ConnectionStatus = %i", status);
-  return unknown_state_string;
+  return "@" + std::to_string(status);
 }

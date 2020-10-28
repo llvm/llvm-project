@@ -39,10 +39,6 @@ struct FileCheckRequest {
   bool VerboseVerbose = false;
 };
 
-//===----------------------------------------------------------------------===//
-// Summary of a FileCheck diagnostic.
-//===----------------------------------------------------------------------===//
-
 namespace Check {
 
 enum FileCheckKind {
@@ -86,6 +82,7 @@ public:
 };
 } // namespace Check
 
+/// Summary of a FileCheck diagnostic.
 struct FileCheckDiag {
   /// What is the FileCheck directive for this diagnostic?
   Check::FileCheckType CheckTy;
@@ -131,8 +128,12 @@ struct FileCheckDiag {
   unsigned InputStartCol;
   unsigned InputEndLine;
   unsigned InputEndCol;
+  /// A note to replace the one normally indicated by MatchTy, or the empty
+  /// string if none.
+  std::string Note;
   FileCheckDiag(const SourceMgr &SM, const Check::FileCheckType &CheckTy,
-                SMLoc CheckLoc, MatchType MatchTy, SMRange InputRange);
+                SMLoc CheckLoc, MatchType MatchTy, SMRange InputRange,
+                StringRef Note = "");
 };
 
 class FileCheckPatternContext;

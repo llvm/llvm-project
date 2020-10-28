@@ -16,12 +16,6 @@ v_cvt_f64_i32 v[0:1], src_lds_direct
 v_cvt_f64_i32_e64 v[0:1], src_lds_direct
 // GFX9: v_cvt_f64_i32_e64 v[0:1], src_lds_direct ; encoding: [0x00,0x00,0x44,0xd1,0xfe,0x00,0x00,0x00]
 
-v_mov_fed_b32 v0, src_lds_direct
-// GFX9: v_mov_fed_b32_e32 v0, src_lds_direct ; encoding: [0xfe,0x12,0x00,0x7e]
-
-v_mov_fed_b32_e64 v0, src_lds_direct
-// GFX9: v_mov_fed_b32_e64 v0, src_lds_direct ; encoding: [0x00,0x00,0x49,0xd1,0xfe,0x00,0x00,0x00]
-
 v_fract_f32 v0, src_lds_direct
 // GFX9: v_fract_f32_e32 v0, src_lds_direct ; encoding: [0xfe,0x36,0x00,0x7e]
 

@@ -407,7 +407,7 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   }
 }
 
-static void RegisterObjCExceptionRecognizer();
+static void RegisterObjCExceptionRecognizer(Process *process);
 
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
                                        const ModuleSP &objc_module_sp)
@@ -429,7 +429,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   m_has_object_getClass =
       (objc_module_sp->FindFirstSymbolWithNameAndType(
            g_gdb_object_getClass, eSymbolTypeCode) != nullptr);
-  RegisterObjCExceptionRecognizer();
+  RegisterObjCExceptionRecognizer(process);
 }
 
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
@@ -2711,16 +2711,14 @@ class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
   };
 };
 
-static void RegisterObjCExceptionRecognizer() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    FileSpec module;
-    ConstString function;
-    std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
-    std::vector<ConstString> symbols = {function};
-    StackFrameRecognizerManager::AddRecognizer(
-        StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-        module.GetFilename(), symbols,
-        /*first_instruction_only*/ true);
-  });
+static void RegisterObjCExceptionRecognizer(Process *process) {
+  FileSpec module;
+  ConstString function;
+  std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
+  std::vector<ConstString> symbols = {function};
+
+  process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+      StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
+      module.GetFilename(), symbols,
+      /*first_instruction_only*/ true);
 }

@@ -399,6 +399,10 @@ ljmp *0xbadeface
 lcall *(%rax)
 ljmpl *(%rax)
 
+// CHECK: ljmpl *%cs:305419896
+// CHECK:  encoding: [0x2e,0xff,0x2c,0x25,0x78,0x56,0x34,0x12]
+ljmp %cs:*0x12345678
+
 // rdar://8444631
 // CHECK: enter	$31438, $0
 // CHECK: encoding: [0xc8,0xce,0x7a,0x00]

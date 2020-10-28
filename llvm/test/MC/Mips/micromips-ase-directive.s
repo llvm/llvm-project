@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=mips-unknown-linux -filetype=obj %s -o - | \
-# RUN:   llvm-readobj -A | \
+# RUN:   llvm-readobj -A - | \
 # RUN:   FileCheck --check-prefix=ASE-MICROMIPS %s
 
 	.set	micromips

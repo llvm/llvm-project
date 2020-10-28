@@ -65,7 +65,7 @@ define linkonce_odr void @_ZN1SC2Ev(%struct.S*) unnamed_addr align 2 {
 }
 
 define internal %struct.Foo* @_ZL3foov() {
-  ret %struct.Foo* null
+  ret %struct.Foo* getelementptr (%struct.Foo, %struct.Foo *null, i32 1)
 }
 
 define linkonce_odr void @_ZN1QC2Ev(%struct.Q*) unnamed_addr align 2 {
@@ -73,7 +73,7 @@ define linkonce_odr void @_ZN1QC2Ev(%struct.Q*) unnamed_addr align 2 {
   store %struct.Q* %0, %struct.Q** %2, align 8
   %3 = load %struct.Q*, %struct.Q** %2, align 8
   %4 = getelementptr inbounds %struct.Q, %struct.Q* %3, i32 0, i32 0
-  %5 = call i32 bitcast (i32 (i32)* @_ZL3baz3Foo to i32 (%struct.Foo*)*)(%struct.Foo* null)
+  %5 = call i32 bitcast (i32 (i32)* @_ZL3baz3Foo to i32 (%struct.Foo*)*)(%struct.Foo* getelementptr (%struct.Foo, %struct.Foo *null, i32 1))
   store i32 %5, i32* %4, align 4
   ret void
 }

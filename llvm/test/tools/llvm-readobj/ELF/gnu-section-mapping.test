@@ -14,11 +14,11 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-  Entry:   0x12345678
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  Machine:    EM_X86_64
+  EPhEntSize: [[PHENTSIZE=56]]
 Sections:
   - Name:    .foo.begin
     Type:    SHT_PROGBITS
@@ -74,3 +74,12 @@ ProgramHeaders:
 # NO-SECHDRS-NEXT:   00 {{$}}
 # NO-SECHDRS-NEXT:   01 {{$}}
 # NO-SECHDRS-NOT: {{.}}
+
+## Check we report a warning when we are unable to read program headers.
+# RUN: yaml2obj %s -DPHENTSIZE=1 -o %t64-err1.elf
+# RUN: llvm-readelf --section-mapping %t64-err1.elf 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64-err1.elf --check-prefix=PHENTSIZE
+
+# PHENTSIZE:      Section to Segment mapping:
+# PHENTSIZE-NEXT:  Segment Sections...
+# PHENTSIZE-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1

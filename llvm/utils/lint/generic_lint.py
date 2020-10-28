@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Checks files to make sure they conform to LLVM standards which can be applied
 # to any programming language: at present, line length and trailing whitespace.

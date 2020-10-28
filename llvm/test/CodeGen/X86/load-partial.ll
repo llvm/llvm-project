@@ -349,7 +349,7 @@ define void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
 ; SSE2-LABEL: PR43227:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
@@ -362,7 +362,7 @@ define void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
 ; SSSE3-LABEL: PR43227:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSSE3-NEXT:    xorps %xmm1, %xmm1
 ; SSSE3-NEXT:    xorps %xmm2, %xmm2
 ; SSSE3-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
@@ -375,7 +375,7 @@ define void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
 ; SSE41-LABEL: PR43227:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; SSE41-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -387,7 +387,7 @@ define void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
 ; AVX-LABEL: PR43227:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero

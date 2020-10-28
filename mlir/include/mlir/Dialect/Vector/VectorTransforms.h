@@ -127,12 +127,18 @@ class ContractionOpToMatmulOpLowering
     : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using FilterConstraintType =
+      std::function<LogicalResult(vector::ContractionOp op)>;
+
+  static LogicalResult defaultFilter(vector::ContractionOp op) {
+    return success();
+  }
 
   ContractionOpToMatmulOpLowering(
       vector::VectorTransformsOptions vectorTransformsOptions,
-      MLIRContext *context)
+      MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions) {}
+        vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
   LogicalResult match(vector::ContractionOp op) const override;
   void rewrite(vector::ContractionOp op,
@@ -141,6 +147,7 @@ public:
 private:
   /// Options to control the vector patterns.
   vector::VectorTransformsOptions vectorTransformsOptions;
+  FilterConstraintType filter;
 };
 
 /// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
@@ -162,11 +169,18 @@ class ContractionOpToOuterProductOpLowering
     : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using FilterConstraintType =
+      std::function<LogicalResult(vector::ContractionOp op)>;
+
+  static LogicalResult defaultFilter(vector::ContractionOp op) {
+    return success();
+  }
+
   ContractionOpToOuterProductOpLowering(
       vector::VectorTransformsOptions vectorTransformsOptions,
-      MLIRContext *context)
+      MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions) {}
+        vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
   LogicalResult match(vector::ContractionOp op) const override;
   void rewrite(vector::ContractionOp op,
@@ -175,6 +189,7 @@ public:
 private:
   /// Options to control the vector patterns.
   vector::VectorTransformsOptions vectorTransformsOptions;
+  FilterConstraintType filter;
 };
 
 /// Progressive lowering of ContractionOp.
@@ -194,11 +209,18 @@ private:
 class ContractionOpLowering : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using FilterConstraintType =
+      std::function<LogicalResult(vector::ContractionOp op)>;
+
+  static LogicalResult defaultFilter(vector::ContractionOp op) {
+    return success();
+  }
 
   ContractionOpLowering(vector::VectorTransformsOptions vectorTransformsOptions,
-                        MLIRContext *context)
+                        MLIRContext *context,
+                        FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformsOptions(vectorTransformsOptions) {}
+        vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
@@ -206,6 +228,7 @@ public:
 private:
   /// Options to control the vector patterns.
   vector::VectorTransformsOptions vectorTransformsOptions;
+  FilterConstraintType filter;
   // Lower one parallel dimension.
   Value lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
                       int64_t rhsIndex, PatternRewriter &rewriter) const;

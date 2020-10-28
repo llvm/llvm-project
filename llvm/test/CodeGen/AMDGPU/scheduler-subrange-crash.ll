@@ -25,31 +25,31 @@ main_body:
   %array_vector10 = insertelement <4 x float> %array_vector9, float 0.000000e+00, i32 2
   %array_vector11 = insertelement <4 x float> %array_vector10, float undef, i32 3
   %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> undef, i32 undef, i32 4864, i32 0)
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp3, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 36, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> undef, i32 36, i32 %arg, i32 68, i32 3)
   %bc = bitcast <4 x float> %array_vector3 to <4 x i32>
   %tmp4 = extractelement <4 x i32> %bc, i32 undef
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp4, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 48, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp4, <4 x i32> undef, i32 48, i32 %arg, i32 68, i32 3)
   %bc49 = bitcast <4 x float> %array_vector11 to <4 x i32>
   %tmp5 = extractelement <4 x i32> %bc49, i32 undef
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp5, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 72, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp5, <4 x i32> undef, i32 72, i32 %arg, i32 68, i32 3)
   %array_vector21 = insertelement <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, float %tmp, i32 1
   %array_vector22 = insertelement <4 x float> %array_vector21, float undef, i32 2
   %array_vector23 = insertelement <4 x float> %array_vector22, float undef, i32 3
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 28, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 28, i32 %arg, i32 68, i32 3)
   %bc52 = bitcast <4 x float> %array_vector23 to <4 x i32>
   %tmp6 = extractelement <4 x i32> %bc52, i32 undef
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp6, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 64, i32 4, i32 4, i1 1, i1 1)
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 20, i32 4, i32 4, i1 1, i1 1)
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 56, i32 4, i32 4, i1 1, i1 1)
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 92, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp6, <4 x i32> undef, i32 64, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 20, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 56, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 92, i32 %arg, i32 68, i32 3)
   ret void
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32) #2
-declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1) #3
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #1
+declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) #2
+declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #3
 
 attributes #0 = { nounwind "target-cpu"="tonga" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readonly }
-attributes #3 = { nounwind }
+attributes #1 = { nounwind readnone willreturn }
+attributes #2 = { nounwind readonly willreturn }
+attributes #3 = { nounwind willreturn writeonly }

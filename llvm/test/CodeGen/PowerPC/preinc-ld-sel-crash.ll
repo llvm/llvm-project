@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
+target triple = "powerpc64le-unknown-linux"
 
 %t1 = type { %t2*, %t3* }
 %t2 = type <{ %t3*, i32, [4 x i8] }>

@@ -31,8 +31,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::unique_ptr<utils::IncludeInserter> Inserter;
-  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  utils::IncludeInserter Inserter;
   const bool ValuesOnly;
 };
 

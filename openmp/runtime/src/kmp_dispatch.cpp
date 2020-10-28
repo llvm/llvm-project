@@ -773,6 +773,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
                    sizeof(dispatch_private_info));
   KMP_BUILD_ASSERT(sizeof(dispatch_shared_info_template<UT>) ==
                    sizeof(dispatch_shared_info));
+  __kmp_assert_valid_gtid(gtid);
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
@@ -997,6 +998,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 template <typename UT>
 static void __kmp_dispatch_finish(int gtid, ident_t *loc) {
   typedef typename traits_t<UT>::signed_t ST;
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *th = __kmp_threads[gtid];
 
   KD_TRACE(100, ("__kmp_dispatch_finish: T#%d called\n", gtid));
@@ -1060,6 +1062,7 @@ static void __kmp_dispatch_finish(int gtid, ident_t *loc) {
 template <typename UT>
 static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
   typedef typename traits_t<UT>::signed_t ST;
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *th = __kmp_threads[gtid];
 
   KD_TRACE(100, ("__kmp_dispatch_finish_chunk: T#%d called\n", gtid));
@@ -1900,6 +1903,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 
   int status;
   dispatch_private_info_template<T> *pr;
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *th = __kmp_threads[gtid];
   kmp_team_t *team = th->th.th_team;
 
@@ -2192,6 +2196,7 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
       __kmp_error_construct(kmp_i18n_msg_CnsLoopIncrIllegal, ct_pdo, loc);
     }
   }
+  __kmp_assert_valid_gtid(gtid);
   th = __kmp_threads[gtid];
   team = th->th.th_team;
   KMP_DEBUG_ASSERT(th->th.th_teams_microtask); // we are in the teams construct

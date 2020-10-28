@@ -39,6 +39,11 @@ public:
   /// nullptr.
   Block *findNearestCommonDominator(Block *a, Block *b) const;
 
+  /// Return true if there is dominanceInfo for the given region.
+  bool hasDominanceInfo(Region *region) {
+    return dominanceInfos.count(region) != 0;
+  }
+
   /// Get the root dominance node of the given region.
   DominanceInfoNode *getRootNode(Region *region) {
     assert(dominanceInfos.count(region) != 0);
@@ -63,39 +68,58 @@ protected:
 };
 } // end namespace detail
 
-/// A class for computing basic dominance information.
+/// A class for computing basic dominance information. Note that this
+/// class is aware of different types of regions and returns a
+/// region-kind specific concept of dominance. See RegionKindInterface.
 class DominanceInfo : public detail::DominanceInfoBase</*IsPostDom=*/false> {
 public:
   using super::super;
 
-  /// Return true if the specified block is reachable from the entry
-  /// block of its region.
+  /// Return true if the specified block is reachable from the entry block of
+  /// its region. In an SSACFG region, a block is reachable from the entry block
+  /// if it is the successor of the entry block or another reachable block. In a
+  /// Graph region, all blocks are reachable.
   bool isReachableFromEntry(Block *a) const {
     return super::isReachableFromEntry(a);
   }
 
-  /// Return true if operation A properly dominates operation B.
+  /// Return true if operation A properly dominates operation B, i.e. if A and B
+  /// are in the same block and A properly dominates B within the block, or if
+  /// the block that contains A properly dominates the block that contains B. In
+  /// an SSACFG region, Operation A dominates Operation B in the same block if A
+  /// preceeds B. In a Graph region, all operations in a block dominate all
+  /// other operations in the same block.
   bool properlyDominates(Operation *a, Operation *b) const;
 
-  /// Return true if operation A dominates operation B.
+  /// Return true if operation A dominates operation B, i.e. if A and B are the
+  /// same operation or A properly dominates B.
   bool dominates(Operation *a, Operation *b) const {
     return a == b || properlyDominates(a, b);
   }
 
-  /// Return true if value A properly dominates operation B.
+  /// Return true if value A properly dominates operation B, i.e if the
+  /// operation that defines A properlyDominates B and the operation that
+  /// defines A does not contain B.
   bool properlyDominates(Value a, Operation *b) const;
 
-  /// Return true if operation A dominates operation B.
+  /// Return true if operation A dominates operation B, i.e if the operation
+  /// that defines A dominates B.
   bool dominates(Value a, Operation *b) const {
     return (Operation *)a.getDefiningOp() == b || properlyDominates(a, b);
   }
 
-  /// Return true if the specified block A dominates block B.
+  /// Return true if the specified block A dominates block B, i.e. if block A
+  /// and block B are the same block or block A properly dominates block B.
   bool dominates(Block *a, Block *b) const {
     return a == b || properlyDominates(a, b);
   }
 
-  /// Return true if the specified block A properly dominates block B.
+  /// Return true if the specified block A properly dominates block B, i.e.: if
+  /// block A contains block B, or if the region which contains block A also
+  /// contains block B or some parent of block B and block A dominates that
+  /// block in that kind of region.  In an SSACFG region, block A dominates
+  /// block B if all control flow paths from the entry block to block B flow
+  /// through block A. In a Graph region, all blocks dominate all other blocks.
   bool properlyDominates(Block *a, Block *b) const {
     return super::properlyDominates(a, b);
   }

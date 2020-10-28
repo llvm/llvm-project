@@ -16,9 +16,9 @@ define i32 @lower_global(i32 %a) nounwind {
 ;
 ; RV32I-MEDIUM-LABEL: lower_global:
 ; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Ltmp0:
+; RV32I-MEDIUM-NEXT:  .LBB0_1: # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(G)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Ltmp0)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.LBB0_1)
 ; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = load volatile i32, i32* @G
@@ -39,9 +39,9 @@ define void @lower_blockaddress() nounwind {
 ;
 ; RV32I-MEDIUM-LABEL: lower_blockaddress:
 ; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Ltmp1:
+; RV32I-MEDIUM-NEXT:  .LBB1_1: # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(addr)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Ltmp1)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.LBB1_1)
 ; RV32I-MEDIUM-NEXT:    addi a1, zero, 1
 ; RV32I-MEDIUM-NEXT:    sw a1, 0(a0)
 ; RV32I-MEDIUM-NEXT:    ret
@@ -82,16 +82,17 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM:       # %bb.0: # %entry
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, -16
 ; RV32I-MEDIUM-NEXT:    sw ra, 12(sp)
-; RV32I-MEDIUM-NEXT:  .Ltmp2:
-; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp3)
-; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Ltmp2)
+; RV32I-MEDIUM-NEXT:  .LBB2_5: # %entry
+; RV32I-MEDIUM-NEXT:    # Label of block must be emitted
+; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
+; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_5)
 ; RV32I-MEDIUM-NEXT:    addi a2, zero, 101
 ; RV32I-MEDIUM-NEXT:    sw a1, 8(sp)
 ; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %if.then
 ; RV32I-MEDIUM-NEXT:    lw a0, 8(sp)
 ; RV32I-MEDIUM-NEXT:    jr a0
-; RV32I-MEDIUM-NEXT:  .Ltmp3: # Block address taken
+; RV32I-MEDIUM-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-MEDIUM-NEXT:  .LBB2_2: # %return
 ; RV32I-MEDIUM-NEXT:    addi a0, zero, 4
 ; RV32I-MEDIUM-NEXT:    j .LBB2_4
@@ -139,9 +140,9 @@ define float @lower_constantpool(float %a) nounwind {
 ;
 ; RV32I-MEDIUM-LABEL: lower_constantpool:
 ; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Ltmp4:
+; RV32I-MEDIUM-NEXT:  .LBB3_1: # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.LCPI3_0)
-; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Ltmp4)
+; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB3_1)
 ; RV32I-MEDIUM-NEXT:    flw ft0, 0(a1)
 ; RV32I-MEDIUM-NEXT:    fmv.w.x ft1, a0
 ; RV32I-MEDIUM-NEXT:    fadd.s ft0, ft1, ft0

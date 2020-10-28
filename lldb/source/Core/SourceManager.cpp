@@ -183,14 +183,14 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         break;
       }
 
-      char prefix[32] = "";
+      std::string prefix;
       if (bp_locs) {
         uint32_t bp_count = bp_locs->NumLineEntriesWithLine(line);
 
         if (bp_count > 0)
-          ::snprintf(prefix, sizeof(prefix), "[%u] ", bp_count);
+          prefix = llvm::formatv("[{0}]", bp_count);
         else
-          ::snprintf(prefix, sizeof(prefix), "    ");
+          prefix = "    ";
       }
 
       char buffer[3];
@@ -206,7 +206,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
                 .str());
       }
 
-      s->Printf("%s%s %-4u\t", prefix, current_line_highlight.c_str(), line);
+      s->Printf("%s%s %-4u\t", prefix.c_str(), current_line_highlight.c_str(),
+                line);
 
       // So far we treated column 0 as a special 'no column value', but
       // DisplaySourceLines starts counting columns from 0 (and no column is

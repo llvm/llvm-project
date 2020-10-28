@@ -9,6 +9,7 @@
 #ifndef LLDB_SYMBOL_LINETABLE_H
 #define LLDB_SYMBOL_LINETABLE_H
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/LineEntry.h"

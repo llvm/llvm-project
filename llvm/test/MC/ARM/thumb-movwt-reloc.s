@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv8m.base-eabi -filetype asm -o - %s | FileCheck %s
-@ RUN: llvm-mc -triple thumbv8m.base-eabi -filetype obj -o - %s | llvm-readobj -r \
+@ RUN: llvm-mc -triple thumbv8m.base-eabi -filetype obj -o - %s | llvm-readobj -r - \
 @ RUN:   | FileCheck -check-prefix CHECK-RELOCATIONS %s
 
 	.syntax unified

@@ -34,10 +34,6 @@
 # RUN: not ld.lld -r -shared %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR2 %s
 # ERR2: -r and -shared may not be used together
 
-## Attempt to use -r and --gc-sections together
-# RUN: not ld.lld -r --gc-sections %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR3 %s
-# ERR3: -r and --gc-sections may not be used together
-
 ## Attempt to use -r and --gdb-index together
 # RUN: not ld.lld -r --gdb-index %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR4 %s
 # ERR4: -r and --gdb-index may not be used together

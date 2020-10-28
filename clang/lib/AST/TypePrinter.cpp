@@ -1564,6 +1564,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
+  case attr::OpenCLGlobalDeviceAddressSpace:
+  case attr::OpenCLGlobalHostAddressSpace:
   case attr::OpenCLLocalAddressSpace:
   case attr::OpenCLConstantAddressSpace:
   case attr::OpenCLGenericAddressSpace:
@@ -1631,6 +1633,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
+    break;
+  case attr::ArmSveVectorBits:
+    OS << "arm_sve_vector_bits";
     break;
   }
   OS << "))";
@@ -1863,6 +1868,10 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__constant";
   case LangAS::opencl_generic:
     return "__generic";
+  case LangAS::opencl_global_device:
+    return "__global_device";
+  case LangAS::opencl_global_host:
+    return "__global_host";
   case LangAS::cuda_device:
     return "__device__";
   case LangAS::cuda_constant:

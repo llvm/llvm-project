@@ -18,7 +18,7 @@ define void @f(<16 x i8>* %out, <16 x i8> %in, i1 %flag) {
 ; CHECK-NEXT:    movzbl %dl, %edx
 ; CHECK-NEXT:    movd %edx, %xmm1
 ; CHECK-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,2,3,4,5,6,7]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; CHECK-NEXT:    paddb %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm1

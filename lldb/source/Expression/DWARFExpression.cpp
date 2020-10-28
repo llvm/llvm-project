@@ -158,7 +158,7 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
                                       Value &value) {
   if (reg_ctx == nullptr) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("No register context in frame.\n");
+      error_ptr->SetErrorString("No register context in frame.\n");
   } else {
     uint32_t native_reg =
         reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
@@ -1036,22 +1036,21 @@ bool DWARFExpression::Evaluate(
             LLDB_INVALID_ADDRESS);
         if (!module_sp) {
           if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
+            error_ptr->SetErrorString(
                 "need module to resolve file address for DW_OP_deref");
           return false;
         }
         Address so_addr;
         if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
           if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
+            error_ptr->SetErrorString(
                 "failed to resolve file address in module");
           return false;
         }
         addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
         if (load_Addr == LLDB_INVALID_ADDRESS) {
           if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
-                "failed to resolve load address");
+            error_ptr->SetErrorString("failed to resolve load address");
           return false;
         }
         stack.back().GetScalar() = load_Addr;
@@ -1079,13 +1078,12 @@ bool DWARFExpression::Evaluate(
             }
           } else {
             if (error_ptr)
-              error_ptr->SetErrorStringWithFormat(
-                  "NULL process for DW_OP_deref.\n");
+              error_ptr->SetErrorString("NULL process for DW_OP_deref.\n");
             return false;
           }
         } else {
           if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
+            error_ptr->SetErrorString(
                 "NULL execution context for DW_OP_deref.\n");
           return false;
         }
@@ -1199,13 +1197,12 @@ bool DWARFExpression::Evaluate(
             }
           } else {
             if (error_ptr)
-              error_ptr->SetErrorStringWithFormat(
-                  "NULL process for DW_OP_deref.\n");
+              error_ptr->SetErrorString("NULL process for DW_OP_deref.\n");
             return false;
           }
         } else {
           if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
+            error_ptr->SetErrorString(
                 "NULL execution context for DW_OP_deref.\n");
           return false;
         }
@@ -2036,7 +2033,7 @@ bool DWARFExpression::Evaluate(
         }
       } else {
         if (error_ptr)
-          error_ptr->SetErrorStringWithFormat(
+          error_ptr->SetErrorString(
               "NULL execution context for DW_OP_fbreg.\n");
         return false;
       }

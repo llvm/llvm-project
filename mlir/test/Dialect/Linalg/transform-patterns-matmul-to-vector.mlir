@@ -36,7 +36,7 @@ func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
 func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memref<f32>) {
   // VECTOR-CONTRACTION: vector.contract
   // VECTOR-CONTRACTION-SAME: vector<1584xf32>, vector<1584xf32> into f32
-  linalg.dot(%A, %B, %C) : memref<1584xf32>, memref<1584xf32>, memref<f32>
+  linalg.dot %A, %B, %C : (memref<1584xf32>, memref<1584xf32>, memref<f32>)
   return
 }
 

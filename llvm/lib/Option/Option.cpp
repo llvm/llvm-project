@@ -106,9 +106,9 @@ bool Option::matches(OptSpecifier Opt) const {
   return false;
 }
 
-Arg *Option::acceptInternal(const ArgList &Args, unsigned &Index,
-                            unsigned ArgSize) const {
-  StringRef Spelling = StringRef(Args.getArgString(Index), ArgSize);
+Arg *Option::acceptInternal(const ArgList &Args, StringRef Spelling,
+                            unsigned &Index) const {
+  size_t ArgSize = Spelling.size();
   switch (getKind()) {
   case FlagClass: {
     if (ArgSize != strlen(Args.getArgString(Index)))
@@ -230,10 +230,11 @@ Arg *Option::acceptInternal(const ArgList &Args, unsigned &Index,
   }
 }
 
-Arg *Option::accept(const ArgList &Args,
-                    unsigned &Index,
-                    unsigned ArgSize) const {
-  std::unique_ptr<Arg> A(acceptInternal(Args, Index, ArgSize));
+Arg *Option::accept(const ArgList &Args, StringRef CurArg,
+                    bool GroupedShortOption, unsigned &Index) const {
+  std::unique_ptr<Arg> A(GroupedShortOption && getKind() == FlagClass
+                             ? new Arg(*this, CurArg, Index)
+                             : acceptInternal(Args, CurArg, Index));
   if (!A)
     return nullptr;
 

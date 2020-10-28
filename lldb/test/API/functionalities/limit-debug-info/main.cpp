@@ -25,4 +25,7 @@ struct TwoAsMember {
 array::One array_of_one[3];
 array::Two array_of_two[3];
 
-int main() { return 0; }
+result::One get_one() { return result::One(124); }
+result::Two get_two() { return result::Two(224); }
+
+int main() { return get_one().member; }

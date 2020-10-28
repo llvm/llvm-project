@@ -164,7 +164,7 @@ namespace constexpred {
                                                       // expected-error {{non-static data member cannot be constexpr; did you intend to make it const?}}
     template<typename T> constexpr float right<float,T> = 5;  // expected-error {{non-static data member cannot be constexpr; did you intend to make it static?}}
     template<> static constexpr int right<int,int> = 7;
-    template<> static constexpr float right<float,int>; // expected-error {{requires an initializer}}
+    template <> static constexpr float right<float, int>; // expected-error {{declaration of constexpr static data member 'right<float, int>' requires an initializer}}
     template static constexpr int right<int,int>;     // expected-error {{expected '<' after 'template'}}
   };
 }

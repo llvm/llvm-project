@@ -2311,7 +2311,7 @@ float64x2_t test_vrndiq_f64(float64x2_t a) {
 
 // CHECK-LABEL: @test_vcvt_s32_f32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = fptosi <2 x float> %a to <2 x i32>
+// CHECK:   [[TMP1:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtzs.v2i32.v2f32(<2 x float> %a)
 // CHECK:   ret <2 x i32> [[TMP1]]
 int32x2_t test_vcvt_s32_f32(float32x2_t a) {
   return vcvt_s32_f32(a);
@@ -2319,7 +2319,7 @@ int32x2_t test_vcvt_s32_f32(float32x2_t a) {
 
 // CHECK-LABEL: @test_vcvtq_s32_f32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = fptosi <4 x float> %a to <4 x i32>
+// CHECK:   [[TMP1:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtzs.v4i32.v4f32(<4 x float> %a)
 // CHECK:   ret <4 x i32> [[TMP1]]
 int32x4_t test_vcvtq_s32_f32(float32x4_t a) {
   return vcvtq_s32_f32(a);
@@ -2327,7 +2327,7 @@ int32x4_t test_vcvtq_s32_f32(float32x4_t a) {
 
 // CHECK-LABEL: @test_vcvtq_s64_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = fptosi <2 x double> %a to <2 x i64>
+// CHECK:   [[TMP1:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtzs.v2i64.v2f64(<2 x double> %a)
 // CHECK:   ret <2 x i64> [[TMP1]]
 int64x2_t test_vcvtq_s64_f64(float64x2_t a) {
   return vcvtq_s64_f64(a);
@@ -2335,7 +2335,7 @@ int64x2_t test_vcvtq_s64_f64(float64x2_t a) {
 
 // CHECK-LABEL: @test_vcvt_u32_f32(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = fptoui <2 x float> %a to <2 x i32>
+// CHECK:   [[TMP1:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtzu.v2i32.v2f32(<2 x float> %a)
 // CHECK:   ret <2 x i32> [[TMP1]]
 uint32x2_t test_vcvt_u32_f32(float32x2_t a) {
   return vcvt_u32_f32(a);
@@ -2343,7 +2343,7 @@ uint32x2_t test_vcvt_u32_f32(float32x2_t a) {
 
 // CHECK-LABEL: @test_vcvtq_u32_f32(
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = fptoui <4 x float> %a to <4 x i32>
+// CHECK:   [[TMP1:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtzu.v4i32.v4f32(<4 x float> %a)
 // CHECK:   ret <4 x i32> [[TMP1]]
 uint32x4_t test_vcvtq_u32_f32(float32x4_t a) {
   return vcvtq_u32_f32(a);
@@ -2351,7 +2351,7 @@ uint32x4_t test_vcvtq_u32_f32(float32x4_t a) {
 
 // CHECK-LABEL: @test_vcvtq_u64_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = fptoui <2 x double> %a to <2 x i64>
+// CHECK:   [[TMP1:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtzu.v2i64.v2f64(<2 x double> %a)
 // CHECK:   ret <2 x i64> [[TMP1]]
 uint64x2_t test_vcvtq_u64_f64(float64x2_t a) {
   return vcvtq_u64_f64(a);

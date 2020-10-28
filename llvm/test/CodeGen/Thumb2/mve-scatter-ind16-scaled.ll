@@ -177,5 +177,75 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc void @scaled_v8i16_i16_2gep(i16* %base, <8 x i16>* %offptr, <8 x i16> %input) {
+; CHECK-LABEL: scaled_v8i16_i16_2gep:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
+; CHECK-NEXT:    vldrh.s32 q3, [r1]
+; CHECK-NEXT:    vmov.i32 q2, #0x28
+; CHECK-NEXT:    vmov.u16 r1, q0[0]
+; CHECK-NEXT:    vshl.i32 q1, q1, #1
+; CHECK-NEXT:    vshl.i32 q3, q3, #1
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q3, q3, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, q2
+; CHECK-NEXT:    vadd.i32 q2, q3, q2
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s9
+; CHECK-NEXT:    vmov.u16 r1, q0[1]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    vmov.u16 r1, q0[2]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s11
+; CHECK-NEXT:    vmov.u16 r1, q0[3]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.u16 r1, q0[4]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s5
+; CHECK-NEXT:    vmov.u16 r1, q0[5]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.u16 r1, q0[6]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov.u16 r1, q0[7]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <8 x i16>, <8 x i16>* %offptr, align 2
+  %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> %offs
+  %ptrs2 = getelementptr inbounds i16, <8 x i16*> %ptrs, i16 20
+  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %input, <8 x i16*> %ptrs2, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @scaled_v8i16_i16_2gep2(i16* %base, <8 x i16>* %offptr, <8 x i16> %input) {
+; CHECK-LABEL: scaled_v8i16_i16_2gep2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r1, .LCPI9_0
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vstrh.16 q0, [r0, q1, uxtw #1]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI9_0:
+; CHECK-NEXT:    .short 20 @ 0x14
+; CHECK-NEXT:    .short 23 @ 0x17
+; CHECK-NEXT:    .short 26 @ 0x1a
+; CHECK-NEXT:    .short 29 @ 0x1d
+; CHECK-NEXT:    .short 32 @ 0x20
+; CHECK-NEXT:    .short 35 @ 0x23
+; CHECK-NEXT:    .short 38 @ 0x26
+; CHECK-NEXT:    .short 41 @ 0x29
+entry:
+  %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> <i16 0, i16 3, i16 6, i16 9, i16 12, i16 15, i16 18, i16 21>
+  %ptrs2 = getelementptr inbounds i16, <8 x i16*> %ptrs, i16 20
+  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %input, <8 x i16*> %ptrs2, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
 declare void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16>, <8 x i16*>, i32, <8 x i1>)
 declare void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half>, <8 x half*>, i32, <8 x i1>)

@@ -1017,10 +1017,14 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   unsigned InIndex = 0;
 
   for (const Argument &Arg : Fn.args()) {
+    const bool IsByRef = Arg.hasByRefAttr();
     Type *BaseArgTy = Arg.getType();
-    Align Alignment = DL.getABITypeAlign(BaseArgTy);
-    MaxAlign = std::max(Alignment, MaxAlign);
-    unsigned AllocSize = DL.getTypeAllocSize(BaseArgTy);
+    Type *MemArgTy = IsByRef ? Arg.getParamByRefType() : BaseArgTy;
+    MaybeAlign Alignment = IsByRef ? Arg.getParamAlign() : None;
+    if (!Alignment)
+      Alignment = DL.getABITypeAlign(MemArgTy);
+    MaxAlign = max(Alignment, MaxAlign);
+    uint64_t AllocSize = DL.getTypeAllocSize(MemArgTy);
 
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, Alignment) + ExplicitOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, Alignment) + AllocSize;
@@ -1224,7 +1228,7 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   switch (Op.getOpcode()) {
   default:
     Op->print(errs(), &DAG);
-    llvm_unreachable("Custom lowering code for this"
+    llvm_unreachable("Custom lowering code for this "
                      "instruction is not implemented yet!");
     break;
   case ISD::SIGN_EXTEND_INREG: return LowerSIGN_EXTEND_INREG(Op, DAG);
@@ -2698,14 +2702,12 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_SINT(SDValue Op,
   // TODO: Factor out code common with LowerFP_TO_UINT.
 
   EVT SrcVT = Src.getValueType();
-  if (Subtarget->has16BitInsts() && SrcVT == MVT::f16) {
+  if (SrcVT == MVT::f16 ||
+      (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
     SDLoc DL(Op);
 
-    SDValue FPExtend = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
-    SDValue FpToInt32 =
-        DAG.getNode(Op.getOpcode(), DL, MVT::i64, FPExtend);
-
-    return FpToInt32;
+    SDValue FpToInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, FpToInt32);
   }
 
   if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
@@ -2721,14 +2723,12 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_UINT(SDValue Op,
   // TODO: Factor out code common with LowerFP_TO_SINT.
 
   EVT SrcVT = Src.getValueType();
-  if (Subtarget->has16BitInsts() && SrcVT == MVT::f16) {
+  if (SrcVT == MVT::f16 ||
+      (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
     SDLoc DL(Op);
 
-    SDValue FPExtend = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
-    SDValue FpToInt32 =
-        DAG.getNode(Op.getOpcode(), DL, MVT::i64, FPExtend);
-
-    return FpToInt32;
+    SDValue FpToUInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, FpToUInt32);
   }
 
   if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
@@ -3462,24 +3462,24 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
   SDValue CmpLHS = Cond.getOperand(0);
 
-  unsigned Opc = isCttzOpc(RHS.getOpcode()) ? AMDGPUISD::FFBL_B32 :
-                                           AMDGPUISD::FFBH_U32;
-
   // select (setcc x, 0, eq), -1, (ctlz_zero_undef x) -> ffbh_u32 x
   // select (setcc x, 0, eq), -1, (cttz_zero_undef x) -> ffbl_u32 x
   if (CCOpcode == ISD::SETEQ &&
       (isCtlzOpc(RHS.getOpcode()) || isCttzOpc(RHS.getOpcode())) &&
-      RHS.getOperand(0) == CmpLHS &&
-      isNegativeOne(LHS)) {
+      RHS.getOperand(0) == CmpLHS && isNegativeOne(LHS)) {
+    unsigned Opc =
+        isCttzOpc(RHS.getOpcode()) ? AMDGPUISD::FFBL_B32 : AMDGPUISD::FFBH_U32;
     return getFFBX_U32(DAG, CmpLHS, SL, Opc);
   }
 
   // select (setcc x, 0, ne), (ctlz_zero_undef x), -1 -> ffbh_u32 x
   // select (setcc x, 0, ne), (cttz_zero_undef x), -1 -> ffbl_u32 x
   if (CCOpcode == ISD::SETNE &&
-      (isCtlzOpc(LHS.getOpcode()) || isCttzOpc(RHS.getOpcode())) &&
-      LHS.getOperand(0) == CmpLHS &&
-      isNegativeOne(RHS)) {
+      (isCtlzOpc(LHS.getOpcode()) || isCttzOpc(LHS.getOpcode())) &&
+      LHS.getOperand(0) == CmpLHS && isNegativeOne(RHS)) {
+    unsigned Opc =
+        isCttzOpc(LHS.getOpcode()) ? AMDGPUISD::FFBL_B32 : AMDGPUISD::FFBH_U32;
+
     return getFFBX_U32(DAG, CmpLHS, SL, Opc);
   }
 
@@ -4336,7 +4336,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ATOMIC_DEC)
   NODE_NAME_CASE(ATOMIC_LOAD_FMIN)
   NODE_NAME_CASE(ATOMIC_LOAD_FMAX)
-  NODE_NAME_CASE(ATOMIC_LOAD_CSUB)
   NODE_NAME_CASE(BUFFER_LOAD)
   NODE_NAME_CASE(BUFFER_LOAD_UBYTE)
   NODE_NAME_CASE(BUFFER_LOAD_USHORT)

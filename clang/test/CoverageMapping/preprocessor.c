@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name preprocessor.c %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.c
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name preprocessor.c %t.stripped.c | FileCheck %s
 
-                 // CHECK: func
+// CHECK: func
 void func() {    // CHECK: File 0, [[@LINE]]:13 -> [[@LINE+5]]:2 = #0
   int i = 0;
 #ifdef MACRO     // CHECK-NEXT: Skipped,File 0, [[@LINE]]:1 -> [[@LINE+2]]:7 = 0
@@ -11,7 +12,7 @@ void func() {    // CHECK: File 0, [[@LINE]]:13 -> [[@LINE+5]]:2 = #0
                  // CHECK: main
 int main() {     // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
   int i = 0;
-#  if 0            // CHECK-NEXT: Skipped,File 0, [[@LINE]]:1 -> [[@LINE+4]]:29 = 0
+#if 0 // CHECK-NEXT: Skipped,File 0, [[@LINE]]:1 -> [[@LINE+4]]:9 = 0
   if(i == 0) {
     i = 1;
   }
@@ -29,7 +30,7 @@ int main() {     // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
 }
 #endif
 
-  // CHECK-NEXT: Skipped,File 0, [[@LINE+1]]:1 -> [[@LINE+4]]:24
+  // CHECK-NEXT: Skipped,File 0, [[@LINE+1]]:1 -> [[@LINE+4]]:8
 #\
   if 0
 #\
@@ -59,7 +60,7 @@ int main() {     // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
 #\
   endif
 
-  // CHECK-NEXT: Skipped,File 0, [[@LINE+1]]:1 -> [[@LINE+6]]:26
+  // CHECK-NEXT: Skipped,File 0, [[@LINE+1]]:1 -> [[@LINE+6]]:10
 #\
   ifdef NOT_DEFINED
 #\

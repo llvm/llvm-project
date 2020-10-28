@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 """
 A gdb-compatible frontend for lldb that implements just enough
 commands to run the tests in the debuginfo-tests repository with lldb.

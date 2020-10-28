@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple i686-windows-gnu -filetype obj -o - %s \
-# RUN:    | llvm-readobj --coff-directives --symbols | FileCheck %s
+# RUN:    | llvm-readobj --coff-directives --symbols - | FileCheck %s
 
 # NOTE: this test checks multiple things:
 # - that -aligncomm is not emitted for 1-byte alignment

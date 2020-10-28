@@ -11,11 +11,21 @@ RUN:    | FileCheck %s
 RUN: llvm-symbolizer -obj="%p/Inputs/test.exe" -demangle=false < %t.input \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
 
+Test with native pdb reader.
+RUN: llvm-symbolizer -use-native-pdb-reader -obj="%p/Inputs/test.exe" < %t.input \
+RUN:    | FileCheck %s
+RUN: llvm-symbolizer -use-native-pdb-reader -obj="%p/Inputs/test.exe" -demangle=false < %t.input \
+RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
+
 Subtract ImageBase from all the offsets and run the test again with
 --relative-address.
 
 RUN: %python -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in sys.stdin]))' < %t.input \
 RUN:    | llvm-symbolizer -obj="%p/Inputs/test.exe" -demangle=false --relative-address \
+RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
+
+RUN: %python -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in sys.stdin]))' < %t.input \
+RUN:    | llvm-symbolizer -use-native-pdb-reader -obj="%p/Inputs/test.exe" -demangle=false --relative-address \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
 
 CHECK: foo(void)

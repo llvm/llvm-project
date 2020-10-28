@@ -13,7 +13,7 @@
 #include "src/signal/sigfillset.h"
 #include "src/signal/sigprocmask.h"
 
-#include "utils/UnitTest/ErrnoSetterMatcher.h"
+#include "test/ErrnoSetterMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 TEST(Sigdelset, Invalid) {

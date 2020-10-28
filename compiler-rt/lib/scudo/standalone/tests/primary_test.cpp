@@ -149,7 +149,7 @@ TEST(ScudoPrimaryTest, PrimaryIterate) {
 
 static std::mutex Mutex;
 static std::condition_variable Cv;
-static bool Ready = false;
+static bool Ready;
 
 template <typename Primary> static void performAllocations(Primary *Allocator) {
   static THREADLOCAL typename Primary::CacheT Cache;
@@ -176,6 +176,7 @@ template <typename Primary> static void performAllocations(Primary *Allocator) {
 }
 
 template <typename Primary> static void testPrimaryThreaded() {
+  Ready = false;
   auto Deleter = [](Primary *P) {
     P->unmapTestOnly();
     delete P;

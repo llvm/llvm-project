@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
-
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 
@@ -813,7 +813,17 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildLoad(const DstOp &Res, const SrcOp &Addr,
-                                MachineMemOperand &MMO);
+                                MachineMemOperand &MMO) {
+    return buildLoadInstr(TargetOpcode::G_LOAD, Res, Addr, MMO);
+  }
+
+  /// Build and insert a G_LOAD instruction, while constructing the
+  /// MachineMemOperand.
+  MachineInstrBuilder
+  buildLoad(const DstOp &Res, const SrcOp &Addr, MachinePointerInfo PtrInfo,
+            Align Alignment,
+            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+            const AAMDNodes &AAInfo = AAMDNodes());
 
   /// Build and insert `Res = <opcode> Addr, MMO`.
   ///
@@ -846,6 +856,14 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildStore(const SrcOp &Val, const SrcOp &Addr,
                                  MachineMemOperand &MMO);
+
+  /// Build and insert a G_STORE instruction, while constructing the
+  /// MachineMemOperand.
+  MachineInstrBuilder
+  buildStore(const SrcOp &Val, const SrcOp &Addr, MachinePointerInfo PtrInfo,
+             Align Alignment,
+             MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+             const AAMDNodes &AAInfo = AAMDNodes());
 
   /// Build and insert `Res0, ... = G_EXTRACT Src, Idx0`.
   ///
@@ -1581,6 +1599,13 @@ public:
   MachineInstrBuilder buildFExp2(const DstOp &Dst, const SrcOp &Src,
                                 Optional<unsigned> Flags = None) {
     return buildInstr(TargetOpcode::G_FEXP2, {Dst}, {Src}, Flags);
+  }
+
+  /// Build and insert \p Dst = G_FPOW \p Src0, \p Src1
+  MachineInstrBuilder buildFPow(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FPOW, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1

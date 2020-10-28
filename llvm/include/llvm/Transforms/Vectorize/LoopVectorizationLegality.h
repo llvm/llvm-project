@@ -202,9 +202,10 @@ public:
       Function *F, std::function<const LoopAccessInfo &(Loop &)> *GetLAA,
       LoopInfo *LI, OptimizationRemarkEmitter *ORE,
       LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
-      AssumptionCache *AC)
+      AssumptionCache *AC, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI)
       : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT),
-        GetLAA(GetLAA), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC) {}
+        GetLAA(GetLAA), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+        BFI(BFI), PSI(PSI) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -478,6 +479,10 @@ private:
   /// Assume instructions in predicated blocks must be dropped if the CFG gets
   /// flattened.
   SmallPtrSet<Instruction *, 8> ConditionalAssumes;
+
+  /// BFI and PSI are used to check for profile guided size optimizations.
+  BlockFrequencyInfo *BFI;
+  ProfileSummaryInfo *PSI;
 };
 
 } // namespace llvm

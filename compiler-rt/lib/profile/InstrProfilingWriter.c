@@ -6,6 +6,9 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+// Note: This is linked into the Darwin kernel, and must remain compatible
+// with freestanding compilation. See `darwin_add_builtin_libraries`.
+
 #ifdef _MSC_VER
 /* For _alloca */
 #include <malloc.h>

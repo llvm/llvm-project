@@ -490,11 +490,11 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     Result Type must be an OpTypePointer. Its Type operand is the type of
     object in memory.
 
-    Storage Class is the Storage Class of the memory holding the object. It
-    cannot be Generic. It must be the same as the Storage Class operand of
-    the Result Type.
+    Storage Class is the Storage Class of the memory holding the object.
+    Since the op is used to model function-level variables, the storage class
+    must be the `Function` Storage Class.
 
-    Initializer is optional.  If Initializer is present, it will be the
+    Initializer is optional. If Initializer is present, it will be the
     initial value of the variable’s memory content. Initializer must be an
     <id> from a constant instruction or a global (module scope) OpVariable
     instruction. Initializer must have the same type as the type pointed to
@@ -504,14 +504,10 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
 
     ```
     variable-op ::= ssa-id `=` `spv.Variable` (`init(` ssa-use `)`)?
-                    (`bind(` integer-literal, integer-literal `)`)?
-                    (`built_in(` string-literal `)`)?
                     attribute-dict? `:` spirv-pointer-type
     ```
 
-    where `init` specifies initializer and `bind` specifies the
-    descriptor set and binding number. `built_in` specifies SPIR-V
-    BuiltIn decoration associated with the op.
+    where `init` specifies initializer.
 
     #### Example:
 
@@ -519,9 +515,7 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     %0 = spv.constant ...
 
     %1 = spv.Variable : !spv.ptr<f32, Function>
-    %2 = spv.Variable init(%0): !spv.ptr<f32, Private>
-    %3 = spv.Variable init(%0) bind(1, 2): !spv.ptr<f32, Uniform>
-    %3 = spv.Variable built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Uniform>
+    %2 = spv.Variable init(%0): !spv.ptr<f32, Function>
     ```
   }];
 

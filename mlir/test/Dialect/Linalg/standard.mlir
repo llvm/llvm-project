@@ -13,9 +13,9 @@
 func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
           %arg1: memref<?xf32, offset: ?, strides: [1]>,
           %arg2: memref<f32>) {
-  linalg.dot(%arg0, %arg1, %arg2) : memref<?xf32, offset: ?, strides: [1]>,
-                                    memref<?xf32, offset: ?, strides: [1]>,
-                                    memref<f32>
+  linalg.dot %arg0, %arg1, %arg2  : (memref<?xf32, offset: ?, strides: [1]>,
+                                     memref<?xf32, offset: ?, strides: [1]>,
+                                     memref<f32>)
   return
 }
 // CHECK-LABEL: func @dot(

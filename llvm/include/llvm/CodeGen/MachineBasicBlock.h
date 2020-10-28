@@ -143,6 +143,10 @@ private:
   /// branch.
   bool AddressTaken = false;
 
+  /// Indicate that this basic block needs its symbol be emitted regardless of
+  /// whether the flow just falls-through to it.
+  bool LabelMustBeEmitted = false;
+
   /// Indicate that this basic block is the entry block of an EH scope, i.e.,
   /// the block that used to have a catchpad or cleanuppad instruction in the
   /// LLVM IR.
@@ -201,6 +205,13 @@ public:
   /// Set this block to reflect that it potentially is the target of an indirect
   /// branch.
   void setHasAddressTaken() { AddressTaken = true; }
+
+  /// Test whether this block must have its label emitted.
+  bool hasLabelMustBeEmitted() const { return LabelMustBeEmitted; }
+
+  /// Set this block to reflect that, regardless how we flow to it, we need
+  /// its label be emitted.
+  void setLabelMustBeEmitted() { LabelMustBeEmitted = true; }
 
   /// Return the MachineFunction containing this basic block.
   const MachineFunction *getParent() const { return xParent; }
@@ -860,6 +871,14 @@ public:
              bool IsStandalone = true) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST,
              const SlotIndexes * = nullptr, bool IsStandalone = true) const;
+
+  enum PrintNameFlag {
+    PrintNameIr = (1 << 0), ///< Add IR name where available
+    PrintNameAttributes = (1 << 1), ///< Print attributes
+  };
+
+  void printName(raw_ostream &os, unsigned printNameFlags = PrintNameIr,
+                 ModuleSlotTracker *moduleSlotTracker = nullptr) const;
 
   // Printing method used by LoopInfo.
   void printAsOperand(raw_ostream &OS, bool PrintType = true) const;

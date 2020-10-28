@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s | llvm-dwarfdump -debug-loc - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s | llvm-dwarfdump -name i4 - \
+; RUN:     | FileCheck %s
 
 ; The test inlines the function F four times, with each inlined variable for
 ; "i4" sharing the same virtual register. This means the live interval of the
@@ -22,12 +23,13 @@
 ;          F(a,b,c,d,e);
 ; }
 
-; CHECK:      .debug_loc contents:
-; CHECK-NEXT: 0x00000000:
-;   We currently emit an entry for the function prologue, too, which could be optimized away.
-; CHECK:              (0x0000000000000018, 0x0000000000000072): DW_OP_reg3 RBX
-;   We should only have one entry inside the function.
-; CHECK-NOT: :
+; Ignore the abstract entry.
+; CHECK: DW_TAG_formal_parameter
+; Check concrete entry has a single location.
+; CHECK:      DW_TAG_formal_parameter
+; CHECK-NEXT:   DW_AT_location (DW_OP_reg3 RBX)
+; CHECK-NEXT:   DW_AT_abstract_origin
+; CHECK-NOT:  DW_TAG_formal_parameter
 
 declare i32 @foobar(i32, i32, i32, i32, i32)
 

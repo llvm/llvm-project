@@ -73,13 +73,7 @@ ChildrenGetterTy<BasicBlock, IsPostDom>::get(const NodeRef &N) {
     return {Children.begin(), Children.end()};
   }
 
-  using SnapShotBBPairTy =
-      std::pair<const GraphDiff<BasicBlock *, IsPostDom> *, OrderedNodeTy>;
-
-  ChildrenTy Ret;
-  for (const auto &SnapShotBBPair : children<SnapShotBBPairTy>({GD, N}))
-    Ret.emplace_back(SnapShotBBPair.second);
-  return Ret;
+  return GD->template getChildren<IsPostDom>(N);
 }
 
 } // end of namespace IDFCalculatorDetail

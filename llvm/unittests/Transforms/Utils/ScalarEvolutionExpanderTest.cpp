@@ -265,7 +265,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   Phi->addIncoming(Add, L);
 
   Builder.SetInsertPoint(Post);
-  Builder.CreateRetVoid();
+  Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(Phi);
@@ -276,6 +276,11 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   EXPECT_FALSE(isSafeToExpandAt(AR, LPh->getTerminator(), SE));
   EXPECT_TRUE(isSafeToExpandAt(AR, L->getTerminator(), SE));
   EXPECT_TRUE(isSafeToExpandAt(AR, Post->getTerminator(), SE));
+
+  EXPECT_TRUE(LI->getLoopFor(L)->isLCSSAForm(*DT));
+  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  Exp.expandCodeFor(SE.getSCEV(Add), nullptr, Ret);
+  EXPECT_TRUE(LI->getLoopFor(L)->isLCSSAForm(*DT));
 }
 
 // Check that SCEV expander does not use the nuw instruction

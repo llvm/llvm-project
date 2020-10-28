@@ -1187,9 +1187,6 @@ public:
                            T->getTypeConstraintArguments());
   }
 
-  // FIXME: Non-trivial to implement, but important for C++
-  SUGARED_TYPE_CLASS(PackExpansion)
-
   QualType VisitObjCObjectType(const ObjCObjectType *T) {
     QualType baseType = recurse(T->getBaseType());
     if (baseType.isNull())
@@ -2294,6 +2291,37 @@ bool Type::isSizelessBuiltinType() const {
 
 bool Type::isSizelessType() const { return isSizelessBuiltinType(); }
 
+bool Type::isVLSTBuiltinType() const {
+  if (const BuiltinType *BT = getAs<BuiltinType>()) {
+    switch (BT->getKind()) {
+    case BuiltinType::SveInt8:
+    case BuiltinType::SveInt16:
+    case BuiltinType::SveInt32:
+    case BuiltinType::SveInt64:
+    case BuiltinType::SveUint8:
+    case BuiltinType::SveUint16:
+    case BuiltinType::SveUint32:
+    case BuiltinType::SveUint64:
+    case BuiltinType::SveFloat16:
+    case BuiltinType::SveFloat32:
+    case BuiltinType::SveFloat64:
+    case BuiltinType::SveBFloat16:
+    case BuiltinType::SveBool:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+bool Type::isVLST() const {
+  if (!isVLSTBuiltinType())
+    return false;
+
+  return hasAttr(attr::ArmSveVectorBits);
+}
+
 bool QualType::isPODType(const ASTContext &Context) const {
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
@@ -3315,6 +3343,12 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+}
+
+TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType can)
+    : Type(tc, can, D->getUnderlyingType()->getDependence()),
+      Decl(const_cast<TypedefNameDecl *>(D)) {
+  assert(!isa<TypedefType>(can) && "Invalid canonical type");
 }
 
 QualType TypedefType::desugar() const {

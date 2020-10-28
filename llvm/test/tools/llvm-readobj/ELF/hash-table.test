@@ -64,8 +64,8 @@ FileHeader:
   Machine: EM_X86_64
 ## We simulate no section header table by
 ## overriding the ELF header properties.
-  SHOff:   0x0
-  SHNum:   0x0
+  EShOff:  0x0
+  EShNum:  0x0
 Sections:
   - Name:   .hash
     Type:   SHT_HASH

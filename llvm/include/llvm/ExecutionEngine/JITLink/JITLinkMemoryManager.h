@@ -17,7 +17,10 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
+
 #include <cstdint>
+#include <future>
 
 namespace llvm {
 namespace jitlink {
@@ -73,6 +76,15 @@ public:
     /// Should transfer from working memory to target memory, and release
     /// working memory.
     virtual void finalizeAsync(FinalizeContinuation OnFinalize) = 0;
+
+    /// Calls finalizeAsync and waits for completion.
+    Error finalize() {
+      std::promise<MSVCPError> FinalizeResultP;
+      auto FinalizeResultF = FinalizeResultP.get_future();
+      finalizeAsync(
+          [&](Error Err) { FinalizeResultP.set_value(std::move(Err)); });
+      return FinalizeResultF.get();
+    }
 
     /// Should deallocate target memory.
     virtual Error deallocate() = 0;

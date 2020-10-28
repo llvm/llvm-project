@@ -117,7 +117,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   public:
     FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
 
-    Expected<CompileResult> operator()(Module &M) {
+    Expected<CompileResult> operator()(Module &M) override {
       auto *Foo = M.getFunction("foo");
       assert(Foo && "Expected function Foo not found");
       Foo->setVisibility(GlobalValue::HiddenVisibility);
@@ -187,7 +187,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   public:
     FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
 
-    Expected<CompileResult> operator()(Module &M) {
+    Expected<CompileResult> operator()(Module &M) override {
       Function *BarImpl = Function::Create(
           FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
           GlobalValue::ExternalLinkage, "bar", &M);

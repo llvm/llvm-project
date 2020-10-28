@@ -884,6 +884,7 @@ void llvm::computeDeadSymbols(
   while (!Worklist.empty()) {
     auto VI = Worklist.pop_back_val();
     for (auto &Summary : VI.getSummaryList()) {
+      Summary->setLive(true);
       if (auto *AS = dyn_cast<AliasSummary>(Summary.get())) {
         // If this is an alias, visit the aliasee VI to ensure that all copies
         // are marked live and it is added to the worklist for further
@@ -891,8 +892,6 @@ void llvm::computeDeadSymbols(
         visit(AS->getAliaseeVI(), true);
         continue;
       }
-
-      Summary->setLive(true);
       for (auto Ref : Summary->refs())
         visit(Ref, false);
       if (auto *FS = dyn_cast<FunctionSummary>(Summary.get()))

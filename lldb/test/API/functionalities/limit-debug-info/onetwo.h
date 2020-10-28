@@ -39,3 +39,18 @@ struct Two {
   virtual ~Two();
 };
 } // namespace array
+
+namespace result {
+struct One {
+  int member;
+  One(int member);
+  virtual ~One();
+};
+
+struct Two {
+  int member;
+  Two(int member);
+  One one() const;
+  virtual ~Two();
+};
+} // namespace result

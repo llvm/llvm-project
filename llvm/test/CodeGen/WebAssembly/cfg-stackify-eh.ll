@@ -975,6 +975,54 @@ try.cont:                                         ; preds = %catch.start, %for.e
   ret void
 }
 
+; Here an exception is semantically contained in a loop. 'ehcleanup' BB belongs
+; to the exception, but does not belong to the loop (because it does not have a
+; path back to the loop header), and is placed after the loop latch block
+; 'invoke.cont' intentionally. This tests if 'end_loop' marker is placed
+; correctly not right after 'invoke.cont' part but after 'ehcleanup' part,
+; NOSORT-LABEL: test18
+; NOSORT: loop
+; NOSORT: try
+; NOSORT: end_try
+; NOSORT: end_loop
+define void @test18(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  br label %while.cond
+
+while.cond:                                       ; preds = %invoke.cont, %entry
+  %n.addr.0 = phi i32 [ %n, %entry ], [ %dec, %invoke.cont ]
+  %tobool = icmp ne i32 %n.addr.0, 0
+  br i1 %tobool, label %while.body, label %while.end
+
+while.body:                                       ; preds = %while.cond
+  %dec = add nsw i32 %n.addr.0, -1
+  invoke void @foo()
+          to label %while.end unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %while.body
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %1) ]
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %catch.start
+  catchret from %1 to label %while.cond
+
+ehcleanup:                                        ; preds = %catch.start
+  %5 = cleanuppad within %1 []
+  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  call void @__clang_call_terminate(i8* %6) [ "funclet"(token %5) ]
+  unreachable
+
+while.end:                                        ; preds = %while.body, %while.cond
+  ret void
+}
+
 ; Check if the unwind destination mismatch stats are correct
 ; NOSORT-STAT: 17 wasm-cfg-stackify    - Number of EH pad unwind mismatches found
 

@@ -92,7 +92,7 @@ entry:
 
 ; Left the target features in this test because it is important that caller has
 ; -pcrelative-memops while callee has +pcrelative-memops
-attributes #0 = { nounwind "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+pcrelative-memops,+power8-vector,+power9-vector,+vsx,-htm,-qpx,-spe" }
-attributes #1 = { "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+pcrelative-memops,+power8-vector,+power9-vector,+vsx,-htm,-qpx,-spe" }
-attributes #2 = { nounwind "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+power9-vector,+vsx,-htm,-pcrelative-memops,-qpx,-spe" }
+attributes #0 = { nounwind "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+pcrelative-memops,+power8-vector,+power9-vector,+vsx,-htm,-spe" }
+attributes #1 = { "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+pcrelative-memops,+power8-vector,+power9-vector,+vsx,-htm,-spe" }
+attributes #2 = { nounwind "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+power9-vector,+vsx,-htm,-pcrelative-memops,-spe" }
 attributes #3 = { nounwind }

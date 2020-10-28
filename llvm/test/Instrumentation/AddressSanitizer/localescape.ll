@@ -1,5 +1,7 @@
-; RUN: opt < %s -asan -asan-module -asan-use-after-return -asan-stack-dynamic-alloca -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-use-after-return=0 -asan-stack-dynamic-alloca=0 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return -asan-stack-dynamic-alloca -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return -asan-stack-dynamic-alloca -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=0 -asan-stack-dynamic-alloca=0 -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=0 -asan-stack-dynamic-alloca=0 -S | FileCheck %s
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"

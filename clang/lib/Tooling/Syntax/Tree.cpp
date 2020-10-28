@@ -33,8 +33,8 @@ static void traverse(syntax::Node *N,
 } // namespace
 
 syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
-                     TokenBuffer Tokens)
-    : SourceMgr(SourceMgr), LangOpts(LangOpts), Tokens(std::move(Tokens)) {}
+                     const TokenBuffer &Tokens)
+    : SourceMgr(SourceMgr), LangOpts(LangOpts), Tokens(Tokens) {}
 
 const clang::syntax::TokenBuffer &syntax::Arena::tokenBuffer() const {
   return Tokens;

@@ -1551,6 +1551,8 @@ class AVConv1InsS_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{5}     = Sm{0};
   let Inst{15-12} = Sd{4-1};
   let Inst{22}    = Sd{0};
+
+  let hasSideEffects = 0;
 }
 
 class AVConv1IsH_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,

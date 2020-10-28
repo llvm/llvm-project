@@ -55,6 +55,15 @@ int __llvm_profile_is_continuous_mode_enabled(void);
 void __llvm_profile_enable_continuous_mode(void);
 
 /*!
+ * \brief Set the page size.
+ *
+ * This is a pre-requisite for enabling continuous mode. The buffer size
+ * calculation code inside of libprofile cannot simply call getpagesize(), as
+ * it is not allowed to depend on libc.
+ */
+void __llvm_profile_set_page_size(unsigned PageSize);
+
+/*!
  * \brief Get number of bytes necessary to pad the argument to eight
  * byte boundary.
  */

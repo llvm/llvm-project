@@ -19,6 +19,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
+#include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
@@ -31,6 +32,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+using WebAssembly::SortRegion;
+using WebAssembly::SortRegionInfo;
 
 #define DEBUG_TYPE "wasm-cfg-sort"
 
@@ -43,78 +46,6 @@ static cl::opt<bool> WasmDisableEHPadSort(
     cl::init(false));
 
 namespace {
-
-// Wrapper for loops and exceptions
-class Region {
-public:
-  virtual ~Region() = default;
-  virtual MachineBasicBlock *getHeader() const = 0;
-  virtual bool contains(const MachineBasicBlock *MBB) const = 0;
-  virtual unsigned getNumBlocks() const = 0;
-  using block_iterator = typename ArrayRef<MachineBasicBlock *>::const_iterator;
-  virtual iterator_range<block_iterator> blocks() const = 0;
-  virtual bool isLoop() const = 0;
-};
-
-template <typename T> class ConcreteRegion : public Region {
-  const T *Region;
-
-public:
-  ConcreteRegion(const T *Region) : Region(Region) {}
-  MachineBasicBlock *getHeader() const override { return Region->getHeader(); }
-  bool contains(const MachineBasicBlock *MBB) const override {
-    return Region->contains(MBB);
-  }
-  unsigned getNumBlocks() const override { return Region->getNumBlocks(); }
-  iterator_range<block_iterator> blocks() const override {
-    return Region->blocks();
-  }
-  bool isLoop() const override { return false; }
-};
-
-template <> bool ConcreteRegion<MachineLoop>::isLoop() const { return true; }
-
-// This class has information of nested Regions; this is analogous to what
-// LoopInfo is for loops.
-class RegionInfo {
-  const MachineLoopInfo &MLI;
-  const WebAssemblyExceptionInfo &WEI;
-  DenseMap<const MachineLoop *, std::unique_ptr<Region>> LoopMap;
-  DenseMap<const WebAssemblyException *, std::unique_ptr<Region>> ExceptionMap;
-
-public:
-  RegionInfo(const MachineLoopInfo &MLI, const WebAssemblyExceptionInfo &WEI)
-      : MLI(MLI), WEI(WEI) {}
-
-  // Returns a smallest loop or exception that contains MBB
-  const Region *getRegionFor(const MachineBasicBlock *MBB) {
-    const auto *ML = MLI.getLoopFor(MBB);
-    const auto *WE = WEI.getExceptionFor(MBB);
-    if (!ML && !WE)
-      return nullptr;
-    // We determine subregion relationship by domination of their headers, i.e.,
-    // if region A's header dominates region B's header, B is a subregion of A.
-    // WebAssemblyException contains BBs in all its subregions (loops or
-    // exceptions), but MachineLoop may not, because MachineLoop does not contain
-    // BBs that don't have a path to its header even if they are dominated by
-    // its header. So here we should use WE->contains(ML->getHeader()), but not
-    // ML->contains(WE->getHeader()).
-    if ((ML && !WE) || (ML && WE && WE->contains(ML->getHeader()))) {
-      // If the smallest region containing MBB is a loop
-      if (LoopMap.count(ML))
-        return LoopMap[ML].get();
-      LoopMap[ML] = std::make_unique<ConcreteRegion<MachineLoop>>(ML);
-      return LoopMap[ML].get();
-    } else {
-      // If the smallest region containing MBB is an exception
-      if (ExceptionMap.count(WE))
-        return ExceptionMap[WE].get();
-      ExceptionMap[WE] =
-          std::make_unique<ConcreteRegion<WebAssemblyException>>(WE);
-      return ExceptionMap[WE].get();
-    }
-  }
-};
 
 class WebAssemblyCFGSort final : public MachineFunctionPass {
   StringRef getPassName() const override { return "WebAssembly CFG Sort"; }
@@ -236,14 +167,14 @@ struct CompareBlockNumbersBackwards {
 /// Bookkeeping for a region to help ensure that we don't mix blocks not
 /// dominated by the its header among its blocks.
 struct Entry {
-  const Region *TheRegion;
+  const SortRegion *TheRegion;
   unsigned NumBlocksLeft;
 
   /// List of blocks not dominated by Loop's header that are deferred until
   /// after all of Loop's blocks have been seen.
   std::vector<MachineBasicBlock *> Deferred;
 
-  explicit Entry(const class Region *R)
+  explicit Entry(const SortRegion *R)
       : TheRegion(R), NumBlocksLeft(R->getNumBlocks()) {}
 };
 } // end anonymous namespace
@@ -287,10 +218,10 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                 CompareBlockNumbersBackwards>
       Ready;
 
-  RegionInfo RI(MLI, WEI);
+  SortRegionInfo SRI(MLI, WEI);
   SmallVector<Entry, 4> Entries;
   for (MachineBasicBlock *MBB = &MF.front();;) {
-    const Region *R = RI.getRegionFor(MBB);
+    const SortRegion *R = SRI.getRegionFor(MBB);
     if (R) {
       // If MBB is a region header, add it to the active region list. We can't
       // put any blocks that it doesn't dominate until we see the end of the
@@ -373,7 +304,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   MF.RenumberBlocks();
 
 #ifndef NDEBUG
-  SmallSetVector<const Region *, 8> OnStack;
+  SmallSetVector<const SortRegion *, 8> OnStack;
 
   // Insert a sentinel representing the degenerate loop that starts at the
   // function entry block and includes the entire function as a "loop" that
@@ -382,7 +313,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 
   for (auto &MBB : MF) {
     assert(MBB.getNumber() >= 0 && "Renumbered blocks should be non-negative.");
-    const Region *Region = RI.getRegionFor(&MBB);
+    const SortRegion *Region = SRI.getRegionFor(&MBB);
 
     if (Region && &MBB == Region->getHeader()) {
       // Region header.
@@ -408,10 +339,10 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       for (auto Pred : MBB.predecessors())
         assert(Pred->getNumber() < MBB.getNumber() &&
                "Non-loop-header predecessors should be topologically sorted");
-      assert(OnStack.count(RI.getRegionFor(&MBB)) &&
+      assert(OnStack.count(SRI.getRegionFor(&MBB)) &&
              "Blocks must be nested in their regions");
     }
-    while (OnStack.size() > 1 && &MBB == WebAssembly::getBottom(OnStack.back()))
+    while (OnStack.size() > 1 && &MBB == SRI.getBottom(OnStack.back()))
       OnStack.pop_back();
   }
   assert(OnStack.pop_back_val() == nullptr &&

@@ -1064,6 +1064,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeIndex, "index", CommandCompletions::eNoCompletion, { nullptr, false }, "An index into a list." },
     { eArgTypeLanguage, "source-language", CommandCompletions::eNoCompletion, { LanguageTypeHelpTextCallback, true }, nullptr },
     { eArgTypeLineNum, "linenum", CommandCompletions::eNoCompletion, { nullptr, false }, "Line number in a source file." },
+    { eArgTypeFileLineColumn, "linespec", CommandCompletions::eNoCompletion, { nullptr, false }, "A source specifier in the form file:line[:column]" },
     { eArgTypeLogCategory, "log-category", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a category within a log channel, e.g. all (try \"log list\" to see a list of all channels and their categories." },
     { eArgTypeLogChannel, "log-channel", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a log channel, e.g. process.gdb-remote (try \"log list\" to see a list of all channels and their categories)." },
     { eArgTypeMethod, "method", CommandCompletions::eNoCompletion, { nullptr, false }, "A C++ method name." },

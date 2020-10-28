@@ -39,6 +39,7 @@
 #include <set>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/Arg.h"
@@ -432,6 +433,30 @@ void EventThreadFunction() {
             body.try_emplace("reason", "changed");
             bp_event.try_emplace("body", std::move(body));
             g_vsc.SendJSON(llvm::json::Value(std::move(bp_event)));
+          }
+        }
+      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
+        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
+          int num_modules = lldb::SBTarget::GetNumModulesFromEvent(event);
+          for (int i = 0; i < num_modules; i++) {
+            auto module = lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
+            auto module_event = CreateEventObject("module");
+            llvm::json::Value module_value = CreateModule(module);
+            llvm::json::Object body;
+            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
+              body.try_emplace("reason", "new");
+            } else if (event_mask &
+                        lldb::SBTarget::eBroadcastBitModulesUnloaded) {
+              body.try_emplace("reason", "removed");
+            } else if (event_mask &
+                        lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
+              body.try_emplace("reason", "changed");
+            }
+            body.try_emplace("module", module_value);
+            module_event.try_emplace("body", std::move(body));
+            g_vsc.SendJSON(llvm::json::Value(std::move(module_event)));
           }
         }
       } else if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
@@ -1143,6 +1168,72 @@ void request_evaluate(const llvm::json::Object &request) {
       } else {
         body.try_emplace("variablesReference", (int64_t)0);
       }
+    }
+  }
+  response.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+// "getCompileUnitsRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Compile Unit request; value of command field is
+//                     'getCompileUnits'.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "getCompileUnits" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/getCompileUnitRequestArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments" ]
+//   }]
+// },
+// "getCompileUnitsRequestArguments": {
+//   "type": "object",
+//   "description": "Arguments for 'getCompileUnits' request.",
+//   "properties": {
+//     "moduleId": {
+//       "type": "string",
+//       "description": "The ID of the module."
+//     }
+//   },
+//   "required": [ "moduleId" ]
+// },
+// "getCompileUnitsResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to 'getCompileUnits' request.",
+//     "properties": {
+//       "body": {
+//         "description": "Response to 'getCompileUnits' request. Array of
+//                         paths of compile units."
+//       }
+//     }
+//   }]
+// }
+
+void request_getCompileUnits(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  lldb::SBProcess process = g_vsc.target.GetProcess();
+  llvm::json::Object body;
+  llvm::json::Array units;
+  auto arguments = request.getObject("arguments");
+  std::string module_id = std::string(GetString(arguments, "moduleId"));
+  int num_modules = g_vsc.target.GetNumModules();
+  for (int i = 0; i < num_modules; i++) {
+    auto curr_module = g_vsc.target.GetModuleAtIndex(i);
+    if (module_id == curr_module.GetUUIDString()) {
+      int num_units = curr_module.GetNumCompileUnits();
+      for (int j = 0; j < num_units; j++) {
+        auto curr_unit = curr_module.GetCompileUnitAtIndex(j);\
+        units.emplace_back(CreateCompileUnit(curr_unit));\
+      }
+      body.try_emplace("compileUnits", std::move(units));
+      break;
     }
   }
   response.try_emplace("body", std::move(body));
@@ -2734,6 +2825,7 @@ const std::map<std::string, RequestCallback> &GetRequestHandlers() {
       REQUEST_CALLBACK(disconnect),
       REQUEST_CALLBACK(evaluate),
       REQUEST_CALLBACK(exceptionInfo),
+      REQUEST_CALLBACK(getCompileUnits),
       REQUEST_CALLBACK(initialize),
       REQUEST_CALLBACK(launch),
       REQUEST_CALLBACK(next),

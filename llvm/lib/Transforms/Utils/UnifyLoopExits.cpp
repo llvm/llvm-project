@@ -33,7 +33,7 @@ struct UnifyLoopExits : public FunctionPass {
     initializeUnifyLoopExitsPass(*PassRegistry::getPassRegistry());
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredID(LowerSwitchID);
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
@@ -42,7 +42,7 @@ struct UnifyLoopExits : public FunctionPass {
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F) override;
 };
 } // namespace
 

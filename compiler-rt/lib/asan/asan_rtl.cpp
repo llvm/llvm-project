@@ -319,7 +319,7 @@ static void InitializeHighMemEnd() {
   kHighMemEnd = GetMaxUserVirtualAddress();
   // Increase kHighMemEnd to make sure it's properly
   // aligned together with kHighMemBeg:
-  kHighMemEnd |= SHADOW_GRANULARITY * GetMmapGranularity() - 1;
+  kHighMemEnd |= (GetMmapGranularity() << SHADOW_SCALE) - 1;
 #endif  // !ASAN_FIXED_MAPPING
   CHECK_EQ((kHighMemBeg % GetMmapGranularity()), 0);
 #endif  // !SANITIZER_MYRIAD2

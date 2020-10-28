@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 
 #this is a script to extract given named nodes from a dot file, with
 #the associated edges.  An edge is kept iff for edge x -> y

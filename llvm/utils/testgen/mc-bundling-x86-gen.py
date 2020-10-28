@@ -1,5 +1,5 @@
 
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Auto-generates an exhaustive and repetitive test for correct bundle-locked
 # alignment on x86.

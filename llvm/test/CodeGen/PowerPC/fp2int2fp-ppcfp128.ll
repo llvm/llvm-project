@@ -1,6 +1,5 @@
-; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=a2 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
 
 define linkonce_odr double @test1(ppc_fp128 %input) {
 entry:

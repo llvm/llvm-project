@@ -4,16 +4,16 @@
 define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm2, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm2, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
@@ -24,9 +24,9 @@ define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
@@ -42,16 +42,16 @@ define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 define <4 x i32> @bar(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm2, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm2, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
@@ -62,9 +62,9 @@ define <4 x i32> @bar(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
@@ -83,8 +83,8 @@ define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -100,9 +100,9 @@ define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]

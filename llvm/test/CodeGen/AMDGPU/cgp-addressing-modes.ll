@@ -748,10 +748,65 @@ done:
   ret void
 }
 
+; OPT-LABEL: @test_sink_small_offset_ds_append(
+; OPT: %0 = bitcast i32 addrspace(3)* %in to i8 addrspace(3)*
+; OPT: %sunkaddr = getelementptr i8, i8 addrspace(3)* %0, i32 28
+; OPT: %1 = bitcast i8 addrspace(3)* %sunkaddr to i32 addrspace(3)*
+; OPT: %tmp1 = call i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* %1, i1 false)
+define amdgpu_kernel void @test_sink_small_offset_ds_append(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
+entry:
+  %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
+  %in.gep = getelementptr i32, i32 addrspace(3)* %in, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1 = call i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* %in.gep, i1 false)
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, i32 addrspace(3)* %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
+; OPT-LABEL: @test_sink_small_offset_ds_consume(
+; OPT: %0 = bitcast i32 addrspace(3)* %in to i8 addrspace(3)*
+; OPT: %sunkaddr = getelementptr i8, i8 addrspace(3)* %0, i32 28
+; OPT: %1 = bitcast i8 addrspace(3)* %sunkaddr to i32 addrspace(3)*
+; OPT: %tmp1 = call i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* %1, i1 false)
+define amdgpu_kernel void @test_sink_small_offset_ds_consume(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
+entry:
+  %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
+  %in.gep = getelementptr i32, i32 addrspace(3)* %in, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1 = call i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* %in.gep, i1 false)
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, i32 addrspace(3)* %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #2
 declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #2
+declare i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* nocapture, i1 immarg) #3
+declare i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* nocapture, i1 immarg) #3
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind argmemonly }
+attributes #3 = { argmemonly convergent nounwind willreturn }

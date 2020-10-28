@@ -160,8 +160,6 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
 
   case AMD: return "amd";
   case Apple: return "apple";
-  case BGP: return "bgp";
-  case BGQ: return "bgq";
   case CSR: return "csr";
   case Freescale: return "fsl";
   case IBM: return "ibm";
@@ -187,7 +185,6 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case AMDHSA: return "amdhsa";
   case AMDPAL: return "amdpal";
   case Ananas: return "ananas";
-  case CNK: return "cnk";
   case CUDA: return "cuda";
   case CloudABI: return "cloudabi";
   case Contiki: return "contiki";
@@ -470,8 +467,6 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
     .Case("apple", Triple::Apple)
     .Case("pc", Triple::PC)
     .Case("scei", Triple::SCEI)
-    .Case("bgp", Triple::BGP)
-    .Case("bgq", Triple::BGQ)
     .Case("fsl", Triple::Freescale)
     .Case("ibm", Triple::IBM)
     .Case("img", Triple::ImaginationTechnologies)
@@ -508,7 +503,6 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("minix", Triple::Minix)
     .StartsWith("rtems", Triple::RTEMS)
     .StartsWith("nacl", Triple::NaCl)
-    .StartsWith("cnk", Triple::CNK)
     .StartsWith("aix", Triple::AIX)
     .StartsWith("cuda", Triple::CUDA)
     .StartsWith("nvcl", Triple::NVCL)

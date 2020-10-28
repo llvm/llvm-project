@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -208,3 +209,64 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   default:         return {0, 0, 0};
   }
 }
+
+namespace llvm {
+namespace RISCV {
+
+struct CPUInfo {
+  StringLiteral Name;
+  CPUKind Kind;
+  unsigned Features;
+  StringLiteral DefaultMarch;
+  bool is64Bit() const { return (Features & FK_64BIT); }
+};
+
+constexpr CPUInfo RISCVCPUInfo[] = {
+#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)                              \
+  {NAME, CK_##ENUM, FEATURES, DEFAULT_MARCH},
+#include "llvm/Support/RISCVTargetParser.def"
+};
+
+bool checkCPUKind(CPUKind Kind, bool IsRV64) {
+  if (Kind == CK_INVALID)
+    return false;
+  return RISCVCPUInfo[static_cast<unsigned>(Kind)].is64Bit() == IsRV64;
+}
+
+CPUKind parseCPUKind(StringRef CPU) {
+  return llvm::StringSwitch<CPUKind>(CPU)
+#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
+#include "llvm/Support/RISCVTargetParser.def"
+      .Default(CK_INVALID);
+}
+
+StringRef getMArchFromMcpu(StringRef CPU) {
+  CPUKind Kind = parseCPUKind(CPU);
+  return RISCVCPUInfo[static_cast<unsigned>(Kind)].DefaultMarch;
+}
+
+void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
+  for (const auto &C : RISCVCPUInfo) {
+    if (C.Kind != CK_INVALID && IsRV64 == C.is64Bit())
+      Values.emplace_back(C.Name);
+  }
+}
+
+// Get all features except standard extension feature
+bool getCPUFeaturesExceptStdExt(CPUKind Kind,
+                                std::vector<StringRef> &Features) {
+  unsigned CPUFeatures = RISCVCPUInfo[static_cast<unsigned>(Kind)].Features;
+
+  if (CPUFeatures == FK_INVALID)
+    return false;
+
+  if (CPUFeatures & FK_64BIT)
+    Features.push_back("+64bit");
+  else
+    Features.push_back("-64bit");
+
+  return true;
+}
+
+} // namespace RISCV
+} // namespace llvm

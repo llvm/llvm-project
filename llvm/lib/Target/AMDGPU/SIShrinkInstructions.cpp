@@ -185,6 +185,11 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
   if (!MI.getOperand(0).isReg())
     TII->commuteInstruction(MI, false, 0, 1);
 
+  // cmpk requires src0 to be a register
+  const MachineOperand &Src0 = MI.getOperand(0);
+  if (!Src0.isReg())
+    return;
+
   const MachineOperand &Src1 = MI.getOperand(1);
   if (!Src1.isImm())
     return;

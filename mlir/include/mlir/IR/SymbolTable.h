@@ -150,6 +150,7 @@ public:
     using iterator = std::vector<SymbolUse>::const_iterator;
     iterator begin() const { return uses.begin(); }
     iterator end() const { return uses.end(); }
+    bool empty() const { return uses.empty(); }
 
   private:
     std::vector<SymbolUse> uses;
@@ -252,10 +253,9 @@ public:
 };
 
 } // end namespace OpTrait
+} // end namespace mlir
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"
-
-} // end namespace mlir
 
 #endif // MLIR_IR_SYMBOLTABLE_H

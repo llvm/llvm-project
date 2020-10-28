@@ -42,6 +42,7 @@ class CallBase;
 class ExtractElementInst;
 class Function;
 class GlobalValue;
+class InstCombiner;
 class IntrinsicInst;
 class LoadInst;
 class LoopAccessInfo;
@@ -56,6 +57,7 @@ class TargetLibraryInfo;
 class Type;
 class User;
 class Value;
+struct KnownBits;
 template <typename T> class Optional;
 
 /// Information about a load/store intrinsic defined by the target.
@@ -542,6 +544,29 @@ public:
   /// target-independent defaults with information from \p L and \p SE.
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              PeelingPreferences &PP) const;
+
+  /// Targets can implement their own combinations for target-specific
+  /// intrinsics. This function will be called from the InstCombine pass every
+  /// time a target-specific intrinsic is encountered.
+  ///
+  /// \returns None to not do anything target specific or a value that will be
+  /// returned from the InstCombiner. It is possible to return null and stop
+  /// further processing of the intrinsic by returning nullptr.
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
+  /// Can be used to implement target-specific instruction combining.
+  /// \see instCombineIntrinsic
+  Optional<Value *>
+  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                                   APInt DemandedMask, KnownBits &Known,
+                                   bool &KnownBitsComputed) const;
+  /// Can be used to implement target-specific instruction combining.
+  /// \see instCombineIntrinsic
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) const;
   /// @}
 
   /// \name Scalar Target Information
@@ -996,10 +1021,47 @@ public:
   int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index = 0,
                      VectorType *SubTp = nullptr) const;
 
+  /// Represents a hint about the context in which a cast is used.
+  ///
+  /// For zext/sext, the context of the cast is the operand, which must be a
+  /// load of some kind. For trunc, the context is of the cast is the single
+  /// user of the instruction, which must be a store of some kind.
+  ///
+  /// This enum allows the vectorizer to give getCastInstrCost an idea of the
+  /// type of cast it's dealing with, as not every cast is equal. For instance,
+  /// the zext of a load may be free, but the zext of an interleaving load can
+  //// be (very) expensive!
+  ///
+  /// See \c getCastContextHint to compute a CastContextHint from a cast
+  /// Instruction*. Callers can use it if they don't need to override the
+  /// context and just want it to be calculated from the instruction.
+  ///
+  /// FIXME: This handles the types of load/store that the vectorizer can
+  /// produce, which are the cases where the context instruction is most
+  /// likely to be incorrect. There are other situations where that can happen
+  /// too, which might be handled here but in the long run a more general
+  /// solution of costing multiple instructions at the same times may be better.
+  enum class CastContextHint : uint8_t {
+    None,          ///< The cast is not used with a load/store of any kind.
+    Normal,        ///< The cast is used with a normal load/store.
+    Masked,        ///< The cast is used with a masked load/store.
+    GatherScatter, ///< The cast is used with a gather/scatter.
+    Interleave,    ///< The cast is used with an interleaved load/store.
+    Reversed,      ///< The cast is used with a reversed load/store.
+  };
+
+  /// Calculates a CastContextHint from \p I.
+  /// This should be used by callers of getCastInstrCost if they wish to
+  /// determine the context from some instruction.
+  /// \returns the CastContextHint for ZExt/SExt/Trunc, None if \p I is nullptr,
+  /// or if it's another type of cast.
+  static CastContextHint getCastContextHint(const Instruction *I);
+
   /// \return The expected cost of cast instructions, such as bitcast, trunc,
   /// zext, etc. If there is an existing instruction that holds Opcode, it
   /// may be passed in the 'I' parameter.
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                       TTI::CastContextHint CCH,
                        TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
                        const Instruction *I = nullptr) const;
 
@@ -1301,6 +1363,17 @@ public:
                               AssumptionCache &AC, TargetLibraryInfo *TLI,
                               DominatorTree *DT, const LoopAccessInfo *LAI) = 0;
   virtual bool emitGetActiveLaneMask() = 0;
+  virtual Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                                       IntrinsicInst &II) = 0;
+  virtual Optional<Value *>
+  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                                   APInt DemandedMask, KnownBits &Known,
+                                   bool &KnownBitsComputed) = 0;
+  virtual Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -1418,6 +1491,7 @@ public:
   virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
                              VectorType *SubTp) = 0;
   virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                               CastContextHint CCH,
                                TTI::TargetCostKind CostKind,
                                const Instruction *I) = 0;
   virtual int getExtractWithExtendCost(unsigned Opcode, Type *Dst,
@@ -1587,6 +1661,26 @@ public:
   }
   bool emitGetActiveLaneMask() override {
     return Impl.emitGetActiveLaneMask();
+  }
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) override {
+    return Impl.instCombineIntrinsic(IC, II);
+  }
+  Optional<Value *>
+  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                                   APInt DemandedMask, KnownBits &Known,
+                                   bool &KnownBitsComputed) override {
+    return Impl.simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
+                                                 KnownBitsComputed);
+  }
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) override {
+    return Impl.simplifyDemandedVectorEltsIntrinsic(
+        IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+        SimplifyAndSetOp);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);
@@ -1826,9 +1920,9 @@ public:
     return Impl.getShuffleCost(Kind, Tp, Index, SubTp);
   }
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::TargetCostKind CostKind,
+                       CastContextHint CCH, TTI::TargetCostKind CostKind,
                        const Instruction *I) override {
-    return Impl.getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+    return Impl.getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   }
   int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
                                unsigned Index) override {

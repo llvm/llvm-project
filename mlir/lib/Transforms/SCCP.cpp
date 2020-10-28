@@ -123,7 +123,7 @@ public:
   /// Build a lattice state with a given callable region, and a specified number
   /// of results to be initialized to the default lattice value (Unknown).
   CallableLatticeState(Region *callableRegion, unsigned numResults)
-      : callableArguments(callableRegion->front().getArguments()),
+      : callableArguments(callableRegion->getArguments()),
         resultLatticeValues(numResults) {}
 
   /// Returns the arguments to the callable region.
@@ -403,7 +403,7 @@ void SCCPSolver::initializeSymbolCallables(Operation *op) {
       // If not all of the uses of this symbol are visible, we can't track the
       // state of the arguments.
       if (symbol.isPublic() || (!allUsesVisible && symbol.isNested()))
-        markAllOverdefined(callableRegion->front().getArguments());
+        markAllOverdefined(callableRegion->getArguments());
     }
     if (callableLatticeState.empty())
       return;

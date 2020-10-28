@@ -395,6 +395,9 @@ BUILTIN(__builtin_ctanh, "XdXd", "Fne")
 BUILTIN(__builtin_ctanhf, "XfXf", "Fne")
 BUILTIN(__builtin_ctanhl, "XLdXLd", "Fne")
 
+// GCC-compatible C99 CMPLX implementation.
+BUILTIN(__builtin_complex, "v.", "nct")
+
 // FP Comparisons.
 BUILTIN(__builtin_isgreater     , "i.", "Fnct")
 BUILTIN(__builtin_isgreaterequal, "i.", "Fnct")

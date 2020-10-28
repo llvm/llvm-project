@@ -130,7 +130,7 @@ int foo(int n, double *ptr) {
   // CHECK:  store i32* [[P_PTR]], i32** [[PCAST_TOPTR2]],
   // CHECK:  [[BASE_PTR_GEP_ARG:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0))
+  // CHECK:  {{.+}} = call i32 @__tgt_target_mapper(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0), i8** null)
 
   // TCHECK:  define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], i32** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[P_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -254,7 +254,7 @@ int foo(int n, double *ptr) {
   // CHECK:  [[BASE_PTR_GEP_ARG2:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG2:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[SIZES_ARG2:%.+]] = getelementptr inbounds [9 x i[[SZ]]], [9 x i[[SZ]]]* [[SIZET2]],  i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK: {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 9, i8** [[BASE_PTR_GEP_ARG2]], i8** [[PTR_GEP_ARG2]], i[[SZ]]* [[SIZES_ARG2]], i64* getelementptr inbounds ([9 x i64], [9 x i64]* [[MAPT2]], i32 0, i32 0))
+  // CHECK: {{.+}} = call i32 @__tgt_target_mapper(i64 -1, {{.+}}, i32 9, i8** [[BASE_PTR_GEP_ARG2]], i8** [[PTR_GEP_ARG2]], i[[SZ]]* [[SIZES_ARG2]], i64* getelementptr inbounds ([9 x i64], [9 x i64]* [[MAPT2]], i32 0, i32 0), i8** null)
 
   // make sure that firstprivate variables are generated in all cases and that we use those instances for operations inside the
   // target region
@@ -353,7 +353,7 @@ int foo(int n, double *ptr) {
 
   // CHECK:  [[BASE_PTR_GEP_ARG3:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG3:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK: {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG3]], i8** [[PTR_GEP_ARG3]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT3]], i32 0, i32 0))
+  // CHECK: {{.+}} = call i32 @__tgt_target_mapper(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG3]], i8** [[PTR_GEP_ARG3]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT3]], i32 0, i32 0), i8** null)
 
   // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]], [[TTII]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[E:%.+]])
   // TCHECK-NOT: alloca [[TTII]],
@@ -500,7 +500,7 @@ struct S1 {
   // CHECK:  store i{{[0-9]+}} [[B_SIZE:%.+]], i{{[0-9]+}}* [[SIZES_GEP4_4]],
 
   // only check that we use the map types stored in the global variable
-  // CHECK:  call i32 @__tgt_target(i64 -1, {{.+}}, i32 6, i8** {{.+}}, i8** {{.+}}, i{{[0-9]+}}* {{.+}}, i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MAPT4]], i32 0, i32 0))
+  // CHECK:  call i32 @__tgt_target_mapper(i64 -1, {{.+}}, i32 6, i8** {{.+}}, i8** {{.+}}, i{{[0-9]+}}* {{.+}}, i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MAPT4]], i32 0, i32 0), i8** null)
 
   // TCHECK: define weak void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[B_IN:%.+]], i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i{{[0-9]+}}{{.+}} [[C_IN:%.+]])
   // TCHECK:  [[TH_ADDR:%.+]] = alloca [[S1]]*,
@@ -572,7 +572,7 @@ struct S1 {
   // CHECK:  store [10 x i{{[0-9]+}}]* [[B]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 
   // only check that the right sizes and map types are used
-  // CHECK:  call i32 @__tgt_target(i64 -1, {{.+}}, i32 3, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([3 x i[[SZ]]], [3 x i[[SZ]]]* [[SIZET5]], i32 0, i32 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT5]], i32 0, i32 0))
+  // CHECK:  call i32 @__tgt_target_mapper(i64 -1, {{.+}}, i32 3, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([3 x i[[SZ]]], [3 x i[[SZ]]]* [[SIZET5]], i32 0, i32 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT5]], i32 0, i32 0), i8** null)
 };
 
 int bar(int n, double *ptr) {
@@ -608,7 +608,7 @@ int bar(int n, double *ptr) {
 // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP6_1]] to [10 x i{{[0-9]+}}]**
 // CHECK:  store [10 x i{{[0-9]+}}]* [[B]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 
-// CHECK:  call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET6]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT6]], i32 0, i32 0))
+// CHECK:  call i32 @__tgt_target_mapper(i64 -1, {{.+}}, i32 2, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET6]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT6]], i32 0, i32 0), i8** null)
 
 // TCHECK: define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},

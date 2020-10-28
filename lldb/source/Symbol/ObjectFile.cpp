@@ -47,8 +47,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
       FileSpec archive_file;
       ObjectContainerCreateInstance create_object_container_callback;
 
-      const bool file_exists = FileSystem::Instance().Exists(*file);
       if (!data_sp) {
+        const bool file_exists = FileSystem::Instance().Exists(*file);
         // We have an object name which most likely means we have a .o file in
         // a static archive (.a file). Try and see if we have a cached archive
         // first without reading any data first
@@ -207,9 +207,11 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
 size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
                                            lldb::offset_t file_offset,
                                            lldb::offset_t file_size,
-                                           ModuleSpecList &specs) {
-  DataBufferSP data_sp =
-      FileSystem::Instance().CreateDataBuffer(file.GetPath(), 512, file_offset);
+                                           ModuleSpecList &specs,
+                                           DataBufferSP data_sp) {
+  if (!data_sp)
+    data_sp = FileSystem::Instance().CreateDataBuffer(file.GetPath(), 512,
+                                                      file_offset);
   if (data_sp) {
     if (file_size == 0) {
       const lldb::offset_t actual_file_size =

@@ -2,8 +2,8 @@
 // references to functions.  Failing to do so might cause pointer-to-function
 // equality to fail if /INCREMENTAL links are used.
 
-// RUN: llvm-mc -filetype=obj -incremental-linker-compatible -triple i686-pc-win32 %s | llvm-readobj -S | FileCheck %s
-// RUN: llvm-mc -filetype=obj -incremental-linker-compatible -triple x86_64-pc-win32 %s | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -filetype=obj -incremental-linker-compatible -triple i686-pc-win32 %s | llvm-readobj -S - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -incremental-linker-compatible -triple x86_64-pc-win32 %s | llvm-readobj -S - | FileCheck %s
 
 	.def	 _foo;
 	.scl	2;

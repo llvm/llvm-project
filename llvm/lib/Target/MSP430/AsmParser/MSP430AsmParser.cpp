@@ -156,12 +156,12 @@ public:
     addExprOperand(Inst, Mem.Offset);
   }
 
-  bool isReg() const        { return Kind == k_Reg; }
-  bool isImm() const        { return Kind == k_Imm; }
-  bool isToken() const      { return Kind == k_Tok; }
-  bool isMem() const        { return Kind == k_Mem; }
-  bool isIndReg() const     { return Kind == k_IndReg; }
-  bool isPostIndReg() const { return Kind == k_PostIndReg; }
+  bool isReg()   const override { return Kind == k_Reg; }
+  bool isImm()   const override { return Kind == k_Imm; }
+  bool isToken() const override { return Kind == k_Tok; }
+  bool isMem()   const override { return Kind == k_Mem; }
+  bool isIndReg()         const { return Kind == k_IndReg; }
+  bool isPostIndReg()     const { return Kind == k_PostIndReg; }
 
   bool isCGImm() const {
     if (Kind != k_Imm)
@@ -182,7 +182,7 @@ public:
     return Tok;
   }
 
-  unsigned getReg() const {
+  unsigned getReg() const override {
     assert(Kind == k_Reg && "Invalid access!");
     return Reg;
   }
@@ -222,10 +222,10 @@ public:
     return std::make_unique<MSP430Operand>(k_PostIndReg, RegNum, S, E);
   }
 
-  SMLoc getStartLoc() const { return Start; }
-  SMLoc getEndLoc() const { return End; }
+  SMLoc getStartLoc() const override { return Start; }
+  SMLoc getEndLoc() const override { return End; }
 
-  virtual void print(raw_ostream &O) const {
+  void print(raw_ostream &O) const override {
     switch (Kind) {
     case k_Tok:
       O << "Token " << Tok;

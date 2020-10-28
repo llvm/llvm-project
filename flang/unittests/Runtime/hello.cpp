@@ -38,16 +38,16 @@ static void hello() {
 }
 
 static void multiline() {
-  char buffer[4][32];
+  char buffer[5][32];
   StaticDescriptor<1> staticDescriptor[2];
   Descriptor &whole{staticDescriptor[0].descriptor()};
-  SubscriptValue extent[]{4};
+  SubscriptValue extent[]{5};
   whole.Establish(TypeCode{CFI_type_char}, sizeof buffer[0], &buffer, 1, extent,
       CFI_attribute_pointer);
   whole.Dump();
   whole.Check();
   Descriptor &section{staticDescriptor[1].descriptor()};
-  SubscriptValue lowers[]{0}, uppers[]{3}, strides[]{1};
+  SubscriptValue lowers[]{0}, uppers[]{4}, strides[]{1};
   section.Establish(whole.type(), whole.ElementBytes(), nullptr, 1, extent,
       CFI_attribute_pointer);
   if (auto error{
@@ -57,12 +57,16 @@ static void multiline() {
   }
   section.Dump();
   section.Check();
-  const char *format{"('?abcde,',T1,'>',T9,A,TL12,A,TR25,'<'//G0,25X,'done')"};
+  const char *format{
+      "('?abcde,',T1,'>',T9,A,TL12,A,TR25,'<'//G0,17X,'abcd',1(2I4))"};
   auto cookie{IONAME(BeginInternalArrayFormattedOutput)(
       section, format, std::strlen(format))};
   IONAME(OutputAscii)(cookie, "WORLD", 5);
   IONAME(OutputAscii)(cookie, "HELLO", 5);
   IONAME(OutputInteger64)(cookie, 789);
+  for (int j{666}; j <= 999; j += 111) {
+    IONAME(OutputInteger64)(cookie, j);
+  }
   if (auto status{IONAME(EndIoStatement)(cookie)}) {
     Fail() << "multiline: '" << format << "' failed, status "
            << static_cast<int>(status) << '\n';
@@ -70,9 +74,47 @@ static void multiline() {
     test(format,
         ">HELLO, WORLD                  <"
         "                                "
-        "789                         done"
+        "789                 abcd 666 777"
+        " 888 999                        "
         "                                ",
         std::string{buffer[0], sizeof buffer});
+  }
+}
+
+static void listInputTest() {
+  static const char input[]{",1*,(5.,6..)"};
+  auto cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
+  float z[6];
+  for (int j{0}; j < 6; ++j) {
+    z[j] = -(j + 1);
+  }
+  for (int j{0}; j < 6; j += 2) {
+    if (!IONAME(InputComplex32)(cookie, &z[j])) {
+      Fail() << "InputComplex32 failed\n";
+    }
+  }
+  auto status{IONAME(EndIoStatement)(cookie)};
+  if (status) {
+    Fail() << "Failed complex list-directed input, status "
+           << static_cast<int>(status) << '\n';
+  } else {
+    char output[33];
+    output[32] = '\0';
+    cookie = IONAME(BeginInternalListOutput)(output, 32);
+    for (int j{0}; j < 6; j += 2) {
+      if (!IONAME(OutputComplex32)(cookie, z[j], z[j + 1])) {
+        Fail() << "OutputComplex32 failed\n";
+      }
+    }
+    status = IONAME(EndIoStatement)(cookie);
+    static const char expect[33]{" (-1.,-2.) (-3.,-4.) (5.,6.)    "};
+    if (status) {
+      Fail() << "Failed complex list-directed output, status "
+             << static_cast<int>(status) << '\n';
+    } else if (std::strncmp(output, expect, 33) != 0) {
+      Fail() << "Failed complex list-directed output, expected '" << expect
+             << "', but got '" << output << "'\n";
+    }
   }
 }
 
@@ -133,6 +175,7 @@ int main() {
       {"(E32.17E0,';')", "          0.00000000000000000E+0;"},
       {"(G32.17E0,';')", "          0.0000000000000000    ;"},
       {"(1P,E32.17,';')", "         0.00000000000000000E+00;"},
+      {"(1PE32.17,';')", "         0.00000000000000000E+00;"}, // no comma
       {"(1P,F32.17,';')", "             0.00000000000000000;"},
       {"(1P,G32.17,';')", "          0.0000000000000000    ;"},
       {"(2P,E32.17,';')", "         00.0000000000000000E+00;"},
@@ -153,6 +196,7 @@ int main() {
       {"(E32.17E4,';')", "       0.10000000000000000E+0001;"},
       {"(G32.17E4,';')", "        1.0000000000000000      ;"},
       {"(1P,E32.17,';')", "         1.00000000000000000E+00;"},
+      {"(1PE32.17,';')", "         1.00000000000000000E+00;"}, // no comma
       {"(1P,F32.17,';')", "             0.10000000000000000;"},
       {"(1P,G32.17,';')", "          1.0000000000000000    ;"},
       {"(ES32.17,';')", "         1.00000000000000000E+00;"},
@@ -420,11 +464,16 @@ int main() {
   realInTest("(F18.0)", "                 0", 0x0);
   realInTest("(F18.0)", "                  ", 0x0);
   realInTest("(F18.0)", "                -0", 0x8000000000000000);
+  realInTest("(F18.0)", "                01", 0x3ff0000000000000);
   realInTest("(F18.0)", "                 1", 0x3ff0000000000000);
   realInTest("(F18.0)", "              125.", 0x405f400000000000);
   realInTest("(F18.0)", "              12.5", 0x4029000000000000);
   realInTest("(F18.0)", "              1.25", 0x3ff4000000000000);
+  realInTest("(F18.0)", "             01.25", 0x3ff4000000000000);
   realInTest("(F18.0)", "              .125", 0x3fc0000000000000);
+  realInTest("(F18.0)", "             0.125", 0x3fc0000000000000);
+  realInTest("(F18.0)", "             .0625", 0x3fb0000000000000);
+  realInTest("(F18.0)", "            0.0625", 0x3fb0000000000000);
   realInTest("(F18.0)", "               125", 0x405f400000000000);
   realInTest("(F18.1)", "               125", 0x4029000000000000);
   realInTest("(F18.2)", "               125", 0x3ff4000000000000);
@@ -433,6 +482,8 @@ int main() {
   realInTest("(1P,F18.0)", "               125", 0x4029000000000000); // 12.5
   realInTest("(BZ,F18.0)", "              125 ", 0x4093880000000000); // 1250
   realInTest("(DC,F18.0)", "              12,5", 0x4029000000000000);
+
+  listInputTest();
 
   return EndTests();
 }

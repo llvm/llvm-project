@@ -159,6 +159,11 @@ TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
     // First code should not end up in second module:
     ASSERT_FALSE(M[2]->getFunction("funcForProg1"));
 
+    // TODO: Remove this after the static initialization frontend implementation
+    // is recovered on AIX.
+    if (compiler.getTarget().getTriple().isOSAIX())
+      return;
+
     // Make sure global inits exist and are unique:
     const Function* GlobalInit1 = getGlobalInit(*M[1]);
     ASSERT_TRUE(GlobalInit1);

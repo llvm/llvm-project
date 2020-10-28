@@ -1,0 +1,95 @@
+## This test checks that an archive is flattened correctly.
+
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+
+## Input a correct archive:
+# RUN: rm -f %t.correct.ar
+# RUN: llvm-ar cr %t.correct.ar %t-input1.o %t-input2.o
+# RUN: llvm-libtool-darwin -static -o %t.lib %t.correct.ar
+
+## Check that binaries are present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# CHECK-NAMES:      [[PREFIX]]-input1.o
+# CHECK-NAMES-NEXT: [[PREFIX]]-input2.o
+
+## Check that symbols are present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# CHECK-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# CHECK-SYMBOLS-EMPTY:
+
+## Check that output archive is in Darwin format:
+# RUN: llvm-objdump --macho --archive-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DPREFIX=%basename_t.tmp -DARCHIVE=%t.lib
+
+# FORMAT:      Archive : [[ARCHIVE]]
+# FORMAT-NEXT: __.SYMDEF
+# FORMAT-NEXT: [[PREFIX]]-input1.o
+# FORMAT-NEXT: [[PREFIX]]-input2.o
+# FORMAT-NOT:  {{.}}
+
+## Passing both archive and object file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input2.o %t.correct.ar %t-input1.o
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=BOTH-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=BOTH-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# BOTH-NAMES:      [[PREFIX]]-input2.o
+# BOTH-NAMES-NEXT: [[PREFIX]]-input1.o
+# BOTH-NAMES-NEXT: [[PREFIX]]-input2.o
+# BOTH-NAMES-NEXT: [[PREFIX]]-input1.o
+
+# BOTH-SYMBOLS:      Archive map
+# BOTH-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# BOTH-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# BOTH-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# BOTH-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# BOTH-SYMBOLS-EMPTY:
+
+## Cannot read archive:
+# RUN: echo '!<arch>' >  %t-invalid-archive.lib
+# RUN: echo 'invalid' >> %t-invalid-archive.lib
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t-invalid-archive.lib 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-ARCHIVE -DARCHIVE=%t-invalid-archive.lib
+
+# INVALID-ARCHIVE: error: '[[ARCHIVE]]': truncated or malformed archive
+
+## Archive member not an object file:
+# RUN: rm -f %t.not-object.ar
+# RUN: touch %t.txt
+# RUN: llvm-ar cr %t.not-object.ar %t.txt
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t.not-object.ar 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-OBJECT -DARCHIVE=%t.not-object.ar -DFILE=%basename_t.tmp.txt
+
+## Do not recursively flatten archives:
+# RUN: rm -f %t.inner
+# RUN: rm -f %t.outer
+# RUN: llvm-ar cr %t.inner %t-input1.o
+# RUN: llvm-ar cr %t.outer %t.inner
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t.outer 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-OBJECT -DARCHIVE=%t.outer -DFILE=%basename_t.tmp.inner
+
+# NOT-OBJECT: error: '[[ARCHIVE]]': '[[FILE]]': The file was not recognized as a valid object file
+
+## Archive member not a Mach-O object file:
+# RUN: rm -f %t.not-macho.ar
+# RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-ar cr %t.not-macho.ar %t.elf
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t.not-macho.ar 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-MACHO -DARCHIVE=%t.not-macho.ar -DFILE=%basename_t.tmp.elf
+
+# NOT-MACHO: error: '[[ARCHIVE]]': '[[FILE]]': format not supported
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

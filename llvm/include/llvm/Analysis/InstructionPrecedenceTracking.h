@@ -110,7 +110,7 @@ public:
     return isPreceededBySpecialInstruction(Insn);
   }
 
-  virtual bool isSpecialInstruction(const Instruction *Insn) const;
+  bool isSpecialInstruction(const Instruction *Insn) const override;
 };
 
 class MemoryWriteTracking : public InstructionPrecedenceTracking {
@@ -133,7 +133,7 @@ public:
     return isPreceededBySpecialInstruction(Insn);
   }
 
-  virtual bool isSpecialInstruction(const Instruction *Insn) const;
+  bool isSpecialInstruction(const Instruction *Insn) const override;
 };
 
 } // llvm

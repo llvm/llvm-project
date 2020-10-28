@@ -24,47 +24,6 @@
 // The code in this file needs to run in an unrelocated binary. It should not
 // access any external symbol, including its own non-hidden globals.
 
-namespace __hwasan {
-
-static void UnmapFromTo(uptr from, uptr to) {
-  if (to == from)
-    return;
-  CHECK(to >= from);
-  uptr res = internal_munmap(reinterpret_cast<void *>(from), to - from);
-  if (UNLIKELY(internal_iserror(res))) {
-    Report("ERROR: %s failed to unmap 0x%zx (%zd) bytes at address %p\n",
-           SanitizerToolName, to - from, to - from, from);
-    CHECK("unable to unmap" && 0);
-  }
-}
-
-// Returns an address aligned to kShadowBaseAlignment, such that
-// 2**kShadowBaseAlingment on the left and shadow_size_bytes bytes on the right
-// of it are mapped no access.
-static uptr MapDynamicShadow(uptr shadow_size_bytes) {
-  const uptr granularity = GetMmapGranularity();
-  const uptr min_alignment = granularity << kShadowScale;
-  const uptr alignment = 1ULL << kShadowBaseAlignment;
-  CHECK_GE(alignment, min_alignment);
-
-  const uptr left_padding = 1ULL << kShadowBaseAlignment;
-  const uptr shadow_size =
-      RoundUpTo(shadow_size_bytes, granularity);
-  const uptr map_size = shadow_size + left_padding + alignment;
-
-  const uptr map_start = (uptr)MmapNoAccess(map_size);
-  CHECK_NE(map_start, ~(uptr)0);
-
-  const uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
-
-  UnmapFromTo(map_start, shadow_start - left_padding);
-  UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
-
-  return shadow_start;
-}
-
-}  // namespace __hwasan
-
 #if SANITIZER_ANDROID
 extern "C" {
 
@@ -82,7 +41,8 @@ static uptr PremapShadowSize() {
 }
 
 static uptr PremapShadow() {
-  return MapDynamicShadow(PremapShadowSize());
+  return MapDynamicShadow(PremapShadowSize(), kShadowScale,
+                          kShadowBaseAlignment, kHighMemEnd);
 }
 
 static bool IsPremapShadowAvailable() {
@@ -146,7 +106,8 @@ void InitShadowGOT() {
 uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
   if (IsPremapShadowAvailable())
     return FindPremappedShadowStart(shadow_size_bytes);
-  return MapDynamicShadow(shadow_size_bytes);
+  return MapDynamicShadow(shadow_size_bytes, kShadowScale, kShadowBaseAlignment,
+                          kHighMemEnd);
 }
 
 }  // namespace __hwasan
@@ -156,7 +117,8 @@ namespace __hwasan {
 void InitShadowGOT() {}
 
 uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
-  return MapDynamicShadow(shadow_size_bytes);
+  return MapDynamicShadow(shadow_size_bytes, kShadowScale, kShadowBaseAlignment,
+                          kHighMemEnd);
 }
 
 }  // namespace __hwasan

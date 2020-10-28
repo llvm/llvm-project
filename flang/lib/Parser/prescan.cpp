@@ -246,6 +246,7 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token, int outCol) {
+  bool badLabel{false};
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -255,6 +256,11 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
     if (*at_ != ' ' &&
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
+      if (!IsDecimalDigit(*at_) && !badLabel) {
+        Say(GetProvenance(at_),
+            "Character in fixed-form label field must be a digit"_en_US);
+        badLabel = true;
+      }
       ++outCol;
     }
     ++column_;
@@ -262,17 +268,11 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
   if (outCol > 1) {
     token.CloseToken();
   }
-  if (outCol < 7) {
-    if (outCol == 1) {
-      token.Put("      ", 6, sixSpaceProvenance_.start());
-    } else {
-      for (; outCol < 7; ++outCol) {
-        token.PutNextTokenChar(' ', spaceProvenance_);
-      }
-      token.CloseToken();
-    }
-  }
   SkipToNextSignificantCharacter();
+  if (IsDecimalDigit(*at_)) {
+    Say(GetProvenance(at_),
+        "Label digit is not in fixed-form label field"_en_US);
+  }
 }
 
 void Prescanner::SkipToEndOfLine() {
@@ -887,10 +887,8 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
         return nextLine_ + 6;
       }
     }
-    if (delimiterNesting_ > 0) {
-      if (!IsFixedFormCommentChar(col1)) {
-        return nextLine_;
-      }
+    if (IsImplicitContinuation()) {
+      return nextLine_;
     }
   }
   return nullptr; // not a continuation line
@@ -927,7 +925,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
       return p + 1;
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
-    } else if (ampersand || delimiterNesting_ > 0) {
+    } else if (ampersand || IsImplicitContinuation()) {
       if (p > nextLine_) {
         --p;
       } else {
@@ -979,6 +977,14 @@ bool Prescanner::FreeFormContinuation() {
     }
   } while (SkipCommentLine(ampersand));
   return false;
+}
+
+// Implicit line continuation allows a preprocessor macro call with
+// arguments to span multiple lines.
+bool Prescanner::IsImplicitContinuation() const {
+  return !inPreprocessorDirective_ && !inCharLiteral_ &&
+      delimiterNesting_ > 0 && nextLine_ < limit_ &&
+      ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 
 bool Prescanner::Continuation(bool mightNeedFixedFormSpace) {

@@ -87,24 +87,12 @@ def build_invocation(compile_flags):
   return " " + " ".join([clang_wrapper, config.clang] + compile_flags) + " "
 
 
-target_arch = config.target_arch
-if (target_arch == "arm"):
-  target_arch = "armv7"
-
 config.substitutions.append( ("%clang ", build_invocation(target_cflags)) )
 config.substitutions.append( ("%clangxx ", build_invocation(target_cxxflags)) )
 config.substitutions.append( ("%clang_builtins ", \
                               build_invocation(clang_builtins_cflags)))
 config.substitutions.append( ("%clangxx_builtins ", \
                               build_invocation(clang_builtins_cxxflags)))
-
-# FIXME: move the call_apsr.s into call_apsr.h as inline-asm.
-# some ARM tests needs call_apsr.s
-call_apsr_source = os.path.join(builtins_lit_source_dir, 'arm', 'call_apsr.S')
-march_flag = '-march=' + target_arch
-call_apsr_flags = ['-c', march_flag, call_apsr_source]
-config.substitutions.append( ("%arm_call_apsr ", \
-                              build_invocation(call_apsr_flags)) )
 
 # Default test suffixes.
 config.suffixes = ['.c', '.cpp']

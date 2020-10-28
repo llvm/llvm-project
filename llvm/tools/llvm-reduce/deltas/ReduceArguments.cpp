@@ -48,7 +48,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
   for (auto &F : *Program)
-    if (!F.isDeclaration()) {
+    if (!F.arg_empty()) {
       Funcs.push_back(&F);
       for (auto &A : F.args())
         if (O.shouldKeep())
@@ -73,7 +73,8 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
         continue;
       auto *I = cast<Instruction>(V);
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
-      I->eraseFromParent();
+      if (!I->isTerminator())
+        I->eraseFromParent();
     }
 
     // No arguments to reduce
@@ -81,10 +82,9 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
       continue;
 
     std::set<int> ArgIndexesToKeep;
-    int ArgI = 0;
-    for (auto &Arg : F->args())
-      if (ArgsToKeep.count(&Arg))
-        ArgIndexesToKeep.insert(++ArgI);
+    for (auto &Arg : enumerate(F->args()))
+      if (ArgsToKeep.count(&Arg.value()))
+        ArgIndexesToKeep.insert(Arg.index());
 
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function
@@ -94,6 +94,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
     // Rename Cloned Function to Old's name
     std::string FName = std::string(F->getName());
+    F->replaceAllUsesWith(ConstantExpr::getBitCast(ClonedFunc, F->getType()));
     F->eraseFromParent();
     ClonedFunc->setName(FName);
   }
@@ -107,7 +108,7 @@ static int countArguments(Module *Program) {
   outs() << "Param Index Reference:\n";
   int ArgsCount = 0;
   for (auto &F : *Program)
-    if (!F.isDeclaration() && F.arg_size()) {
+    if (!F.arg_empty()) {
       outs() << "  " << F.getName() << "\n";
       for (auto &A : F.args())
         outs() << "\t" << ++ArgsCount << ": " << A.getName() << "\n";

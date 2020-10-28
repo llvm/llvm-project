@@ -47,7 +47,11 @@ bool TargetOptions::HonorSignDependentRoundingFPMath() const {
 }
 
 /// NOTE: There are targets that still do not support the debug entry values
-/// production.
+/// production and that is being controlled with the SupportsDebugEntryValues.
+/// In addition, SCE debugger does not have the feature implemented, so prefer
+/// not to emit the debug entry values in that case.
+/// The EnableDebugEntryValues can be used for the testing purposes.
 bool TargetOptions::ShouldEmitDebugEntryValues() const {
-  return SupportsDebugEntryValues || EnableDebugEntryValues;
+  return (SupportsDebugEntryValues && DebuggerTuning != DebuggerKind::SCE) ||
+         EnableDebugEntryValues;
 }

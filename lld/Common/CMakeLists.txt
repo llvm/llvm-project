@@ -1,7 +1,3 @@
-if(NOT LLD_BUILT_STANDALONE)
-  set(tablegen_deps intrinsics_gen)
-endif()
-
 find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
 find_first_existing_vc_file("${LLD_SOURCE_DIR}" lld_vc)
 
@@ -57,5 +53,5 @@ add_lld_library(lldCommon
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS
-  ${tablegen_deps}
+  intrinsics_gen
   )

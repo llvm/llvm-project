@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -n -triple armv7-apple-darwin10 %s -filetype=obj -o %t.o
-@ RUN: llvm-readobj -r --expand-relocs < %t.o | FileCheck %s
+@ RUN: llvm-readobj -r --expand-relocs - < %t.o | FileCheck %s
 
 @ rdar://12359919
 

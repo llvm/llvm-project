@@ -7,7 +7,7 @@
 // RUN:   | FileCheck %s
 
 // RUN: llvm-mc -triple i686-windows -filetype obj %s -o - \
-// RUN:	  | llvm-readobj --symbols | FileCheck %s -check-prefix CHECK-SCN
+// RUN:	  | llvm-readobj --symbols - | FileCheck %s -check-prefix CHECK-SCN
 
 	.file "null-padded.asm"
 // CHECK: (nx 1) {{0x[0-9]+}} .file

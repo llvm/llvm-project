@@ -48,25 +48,25 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    jg LBB0_7
 ; CHECK-NEXT:  ## %bb.2: ## %for.cond1.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl $-1, %r13d
-; CHECK-NEXT:    movq %r15, %rbx
-; CHECK-NEXT:    movq %r14, %rbp
+; CHECK-NEXT:    movl $-1, %ebp
+; CHECK-NEXT:    movq %r15, %rdi
+; CHECK-NEXT:    movq %r14, %rbx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_3: ## %for.cond1
 ; CHECK-NEXT:    ## Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    incl %r13d
-; CHECK-NEXT:    cmpl $999, %r13d ## imm = 0x3E7
+; CHECK-NEXT:    incl %ebp
+; CHECK-NEXT:    cmpl $999, %ebp ## imm = 0x3E7
 ; CHECK-NEXT:    jg LBB0_6
 ; CHECK-NEXT:  ## %bb.4: ## %for.body3
 ; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=2
-; CHECK-NEXT:    addq $1002, %rbp ## imm = 0x3EA
-; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    addq $1001, %rbx ## imm = 0x3E9
+; CHECK-NEXT:    addq $1002, %rbx ## imm = 0x3EA
+; CHECK-NEXT:    leaq 1001(%rdi), %r13
 ; CHECK-NEXT:    movl $1000, %edx ## imm = 0x3E8
 ; CHECK-NEXT:    movl $120, %esi
 ; CHECK-NEXT:    callq _memchr
-; CHECK-NEXT:    cmpq %rax, %rbp
+; CHECK-NEXT:    cmpq %rax, %rbx
+; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:    jmp LBB0_5
 ; CHECK-NEXT:  LBB0_7: ## %for.end11

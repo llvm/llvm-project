@@ -86,7 +86,7 @@
 
 
 # XUNIT: <?xml version="1.0" encoding="UTF-8"?>
-# XUNIT-NEXT: <testsuites>
+# XUNIT-NEXT: <testsuites time="{{[0-9.]+}}">
 # XUNIT-NEXT: <testsuite name="shtest-format" tests="21" failures="7" skipped="4">
 
 # XUNIT: <testcase classname="shtest-format.external_shell" name="fail.txt" time="{{[0-9]+\.[0-9]+}}">

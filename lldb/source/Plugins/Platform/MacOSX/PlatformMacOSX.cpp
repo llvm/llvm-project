@@ -282,7 +282,33 @@ PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
 bool PlatformMacOSX::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                      ArchSpec &arch) {
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  return ARMGetSupportedArchitectureAtIndex(idx, arch);
+  // macOS for ARM64 support both native and translated x86_64 processes
+  if (!m_num_arm_arches || idx < m_num_arm_arches) {
+    bool res = ARMGetSupportedArchitectureAtIndex(idx, arch);
+    if (res)
+      return true;
+    if (!m_num_arm_arches)
+      m_num_arm_arches = idx;
+  }
+
+  // We can't use x86GetSupportedArchitectureAtIndex() because it uses
+  // the system architecture for some of its return values and also
+  // has a 32bits variant.
+  if (idx == m_num_arm_arches) {
+    arch.SetTriple("x86_64-apple-macosx");
+    return true;
+  } else if (idx == m_num_arm_arches + 1) {
+    arch.SetTriple("x86_64-apple-ios-macabi");
+    return true;
+  } else if (idx == m_num_arm_arches + 2) {
+    arch.SetTriple("arm64-apple-ios");
+    return true;
+  } else if (idx == m_num_arm_arches + 3) {
+    arch.SetTriple("arm64e-apple-ios");
+    return true;
+  }
+
+  return false;
 #else
   return x86GetSupportedArchitectureAtIndex(idx, arch);
 #endif

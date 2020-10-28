@@ -151,13 +151,66 @@ public:
   /// Forget analysis results for the given basic block.
   void eraseBlock(const BasicBlock *BB);
 
-  // Use to track SCCs for handling irreducible loops.
-  using SccMap = DenseMap<const BasicBlock *, int>;
-  using SccHeaderMap = DenseMap<const BasicBlock *, bool>;
-  using SccHeaderMaps = std::vector<SccHeaderMap>;
-  struct SccInfo {
+  class SccInfo {
+    // Enum of types to classify basic blocks in SCC. Basic block belonging to
+    // SCC is 'Inner' until it is either 'Header' or 'Exiting'. Note that a
+    // basic block can be 'Header' and 'Exiting' at the same time.
+    enum SccBlockType {
+      Inner = 0x0,
+      Header = 0x1,
+      Exiting = 0x2,
+    };
+    // Map of basic blocks to SCC IDs they belong to. If basic block doesn't
+    // belong to any SCC it is not in the map.
+    using SccMap = DenseMap<const BasicBlock *, int>;
+    // Each basic block in SCC is attributed with one or several types from
+    // SccBlockType. Map value has uint32_t type (instead of SccBlockType)
+    // since basic block may be for example "Header" and "Exiting" at the same
+    // time and we need to be able to keep more than one value from
+    // SccBlockType.
+    using SccBlockTypeMap = DenseMap<const BasicBlock *, uint32_t>;
+    // Vector containing classification of basic blocks for all  SCCs where i'th
+    // vector element corresponds to SCC with ID equal to i.
+    using SccBlockTypeMaps = std::vector<SccBlockTypeMap>;
+
     SccMap SccNums;
-    SccHeaderMaps SccHeaders;
+    SccBlockTypeMaps SccBlocks;
+
+  public:
+    explicit SccInfo(const Function &F);
+
+    /// If \p BB belongs to some SCC then ID of that SCC is returned, otherwise
+    /// -1 is returned. If \p BB belongs to more than one SCC at the same time
+    /// result is undefined.
+    int getSCCNum(const BasicBlock *BB) const;
+    /// Returns true if \p BB is a 'header' block in SCC with \p SccNum ID,
+    /// false otherwise.
+    bool isSCCHeader(const BasicBlock *BB, int SccNum) const {
+      return getSccBlockType(BB, SccNum) & Header;
+    }
+    /// Returns true if \p BB is an 'exiting' block in SCC with \p SccNum ID,
+    /// false otherwise.
+    bool isSCCExitingBlock(const BasicBlock *BB, int SccNum) const {
+      return getSccBlockType(BB, SccNum) & Exiting;
+    }
+    /// Fills in \p Enters vector with all such blocks that don't belong to
+    /// SCC with \p SccNum ID but there is an edge to a block belonging to the
+    /// SCC.
+    void getSccEnterBlocks(int SccNum,
+                           SmallVectorImpl<BasicBlock *> &Enters) const;
+    /// Fills in \p Exits vector with all such blocks that don't belong to
+    /// SCC with \p SccNum ID but there is an edge from a block belonging to the
+    /// SCC.
+    void getSccExitBlocks(int SccNum,
+                          SmallVectorImpl<BasicBlock *> &Exits) const;
+
+  private:
+    /// Returns \p BB's type according to classification given by SccBlockType
+    /// enum. Please note that \p BB must belong to SSC with \p SccNum ID.
+    uint32_t getSccBlockType(const BasicBlock *BB, int SccNum) const;
+    /// Calculates \p BB's type and stores it in internal data structures for
+    /// future use. Please note that \p BB must belong to SSC with \p SccNum ID.
+    void calculateSccBlockType(const BasicBlock *BB, int SccNum);
   };
 
 private:
@@ -196,6 +249,9 @@ private:
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;
 
+  /// Keeps information about all SCCs in a function.
+  std::unique_ptr<const SccInfo> SccI;
+
   /// Track the set of blocks directly succeeded by a returning block.
   SmallPtrSet<const BasicBlock *, 16> PostDominatedByUnreachable;
 
@@ -210,8 +266,7 @@ private:
   bool calcMetadataWeights(const BasicBlock *BB);
   bool calcColdCallHeuristics(const BasicBlock *BB);
   bool calcPointerHeuristics(const BasicBlock *BB);
-  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI,
-                                SccInfo &SccI);
+  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
   bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
   bool calcFloatingPointHeuristics(const BasicBlock *BB);
   bool calcInvokeHeuristics(const BasicBlock *BB);

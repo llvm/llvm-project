@@ -33,7 +33,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
         # Give threads time to start up, then break.
-        time.sleep(self._WAIT_TIMEOUT)
+        time.sleep(self.DEFAULT_SLEEP)
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
             [
@@ -51,8 +51,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
         # Wait until all threads have started.
-        threads = self.wait_for_thread_count(thread_count,
-                                             timeout_seconds=self._WAIT_TIMEOUT)
+        threads = self.wait_for_thread_count(thread_count)
         self.assertIsNotNone(threads)
 
         # On Windows, there could be more threads spawned. For example, DebugBreakProcess will

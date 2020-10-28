@@ -42,7 +42,6 @@ end
 ! type(t),parameter::a=t()
 !end
 
-! Don't write out intrinsics
 module m3a
   integer, parameter :: i4 = selected_int_kind(9)
 end
@@ -60,7 +59,6 @@ end
 !Expect: m3b.mod
 !module m3b
 ! use m3a,only:i4
-! use m3a,only:selected_int_kind
 ! integer(4)::j
 !end
 
@@ -82,7 +80,6 @@ end
 !Expect: m4b.mod
 !module m4b
 ! use m4a,only:a
-! use m4a,only:achar
 ! character(1_4,1),parameter::b="\001"
 !end
 

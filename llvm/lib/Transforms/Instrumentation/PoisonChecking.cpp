@@ -297,7 +297,7 @@ static bool rewrite(Function &F) {
         for (Value *V : I.operands())
           Checks.push_back(getPoisonFor(ValToPoison, V));
 
-      if (canCreatePoison(&I))
+      if (canCreatePoison(cast<Operator>(&I)))
         generateCreationChecks(I, Checks);
       ValToPoison[&I] = buildOrChain(B, Checks);
     }

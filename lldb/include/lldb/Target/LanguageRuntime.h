@@ -18,6 +18,7 @@
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/Runtime.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 
@@ -56,7 +57,7 @@ protected:
   void UpdateModuleListIfNeeded();
 };
 
-class LanguageRuntime : public PluginInterface {
+class LanguageRuntime : public Runtime, public PluginInterface {
 public:
   ~LanguageRuntime() override;
 
@@ -127,10 +128,6 @@ public:
     return lldb::ThreadSP();
   }
 
-  Process *GetProcess() { return m_process; }
-
-  Target &GetTargetRef() { return m_process->GetTarget(); }
-
   virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   virtual lldb::BreakpointResolverSP
@@ -159,7 +156,7 @@ public:
     return llvm::None;
   }
 
-  virtual void ModulesDidLoad(const ModuleList &module_list) {}
+  virtual void ModulesDidLoad(const ModuleList &module_list) override {}
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is
@@ -179,10 +176,7 @@ public:
   static char ID;
 
 protected:
-  // Classes that inherit from LanguageRuntime can see and modify these
-
   LanguageRuntime(Process *process);
-  Process *m_process;
 
 private:
   LanguageRuntime(const LanguageRuntime &) = delete;

@@ -1,5 +1,5 @@
 ; RUN: opt < %s -iv-users
-; RUN: opt < %s -passes='require<ivusers>'
+; RUN: opt < %s -passes='require<iv-users>'
 ; PR4538
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'

@@ -2,6 +2,7 @@
 // RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu && env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-powerpc64-ibm-linux-gnu | %fcheck-powerpc64-ibm-linux-gnu
 // RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu && env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-powerpc64le-ibm-linux-gnu | %fcheck-powerpc64le-ibm-linux-gnu
 // RUN: %libomptarget-compile-x86_64-pc-linux-gnu && env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-x86_64-pc-linux-gnu | %fcheck-x86_64-pc-linux-gnu -allow-empty
+// RUN: %libomptarget-compile-nvptx64-nvidia-cuda && env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-nvptx64-nvidia-cuda | %fcheck-nvptx64-nvidia-cuda -allow-empty
 
 #include <assert.h>
 #include <omp.h>
@@ -21,9 +22,7 @@ int main(int argc, char *argv[]) {
   }
 
   const int src_device = 0;
-  int dst_device = 1;
-  if (dst_device >= num_devices)
-    dst_device = num_devices - 1;
+  int dst_device = num_devices - 1;
 
   int length = N * sizeof(int);
   int *src_ptr = omp_target_alloc(length, src_device);

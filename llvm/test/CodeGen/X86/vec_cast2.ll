@@ -5,7 +5,7 @@ define <8 x float> @cvt_v8i8_v8f32(<8 x i8> %src) {
 ; CHECK-LABEL: cvt_v8i8_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovsxbd %xmm0, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -18,7 +18,7 @@ define <8 x float> @cvt_v8i16_v8f32(<8 x i16> %src) {
 ; CHECK-LABEL: cvt_v8i16_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -51,7 +51,7 @@ define <8 x float> @cvt_v8u8_v8f32(<8 x i8> %src) {
 ; CHECK-LABEL: cvt_v8u8_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0

@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-ppc-prefetching=true -mcpu=a2 < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
+target triple = "powerpc64le-unknown-linux"
 
 ; Function Attrs: nounwind
 define void @foo(double* nocapture %a, double* nocapture readonly %b) #0 {

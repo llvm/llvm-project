@@ -179,12 +179,12 @@ public:
   SingleCommandCompilationDatabase(tooling::CompileCommand Cmd)
       : Command(std::move(Cmd)) {}
 
-  virtual std::vector<tooling::CompileCommand>
-  getCompileCommands(StringRef FilePath) const {
+  std::vector<tooling::CompileCommand>
+  getCompileCommands(StringRef FilePath) const override {
     return {Command};
   }
 
-  virtual std::vector<tooling::CompileCommand> getAllCompileCommands() const {
+  std::vector<tooling::CompileCommand> getAllCompileCommands() const override {
     return {Command};
   }
 

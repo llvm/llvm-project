@@ -86,7 +86,7 @@ public:
       if (Sci->CanRelease)
         Sci->ReleaseInfo.LastReleaseAtNs = Time;
     }
-    setReleaseToOsIntervalMs(ReleaseToOsInterval);
+    setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
   void init(s32 ReleaseToOsInterval) {
     memset(this, 0, sizeof(*this));
@@ -184,13 +184,16 @@ public:
       getStats(Str, I, 0);
   }
 
-  void setReleaseToOsIntervalMs(s32 Interval) {
-    if (Interval >= MaxReleaseToOsIntervalMs) {
-      Interval = MaxReleaseToOsIntervalMs;
-    } else if (Interval <= MinReleaseToOsIntervalMs) {
-      Interval = MinReleaseToOsIntervalMs;
+  bool setOption(Option O, sptr Value) {
+    if (O == Option::ReleaseInterval) {
+      const s32 Interval =
+          Max(Min(static_cast<s32>(Value), MaxReleaseToOsIntervalMs),
+              MinReleaseToOsIntervalMs);
+      atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
+      return true;
     }
-    atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
+    // Not supported by the Primary, but not an error either.
+    return true;
   }
 
   uptr releaseToOS() {
@@ -423,10 +426,6 @@ private:
                 AvailableChunks, Rss >> 10, Sci->ReleaseInfo.RangesReleased);
   }
 
-  s32 getReleaseToOsIntervalMs() {
-    return atomic_load(&ReleaseToOsIntervalMs, memory_order_relaxed);
-  }
-
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
                                  bool Force = false) {
     const uptr BlockSize = getSizeByClassId(ClassId);
@@ -444,8 +443,21 @@ private:
     if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
 
+    // Releasing smaller blocks is expensive, so we want to make sure that a
+    // significant amount of bytes are free, and that there has been a good
+    // amount of batches pushed to the freelist before attempting to release.
+    if (BlockSize < PageSize / 16U) {
+      if (!Force && BytesPushed < Sci->AllocatedUser / 16U)
+        return 0;
+      // We want 8x% to 9x% free bytes (the larger the bock, the lower the %).
+      if ((BytesInFreeList * 100U) / Sci->AllocatedUser <
+          (100U - 1U - BlockSize / 16U))
+        return 0;
+    }
+
     if (!Force) {
-      const s32 IntervalMs = getReleaseToOsIntervalMs();
+      const s32 IntervalMs =
+          atomic_load(&ReleaseToOsIntervalMs, memory_order_relaxed);
       if (IntervalMs < 0)
         return 0;
       if (Sci->ReleaseInfo.LastReleaseAtNs +
@@ -455,28 +467,33 @@ private:
       }
     }
 
-    // TODO(kostyak): currently not ideal as we loop over all regions and
-    // iterate multiple times over the same freelist if a ClassId spans multiple
-    // regions. But it will have to do for now.
-    uptr TotalReleasedBytes = 0;
-    const uptr MaxSize = (RegionSize / BlockSize) * BlockSize;
+    DCHECK_GT(MinRegionIndex, 0U);
+    uptr First = 0;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] - 1U == ClassId) {
-        const uptr Region = I * RegionSize;
-        // If the region is the one currently associated to the size-class, we
-        // only need to release up to CurrentRegionAllocated, MaxSize otherwise.
-        const uptr Size = (Region == Sci->CurrentRegion)
-                              ? Sci->CurrentRegionAllocated
-                              : MaxSize;
-        ReleaseRecorder Recorder(Region);
-        releaseFreeMemoryToOS(Sci->FreeList, Region, Size, BlockSize,
-                              &Recorder);
-        if (Recorder.getReleasedRangesCount() > 0) {
-          Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
-          Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
-          Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
-          TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
-        }
+        First = I;
+        break;
+      }
+    }
+    uptr Last = 0;
+    for (uptr I = MaxRegionIndex; I >= MinRegionIndex; I--) {
+      if (PossibleRegions[I] - 1U == ClassId) {
+        Last = I;
+        break;
+      }
+    }
+    uptr TotalReleasedBytes = 0;
+    if (First && Last) {
+      const uptr Base = First * RegionSize;
+      const uptr NumberOfRegions = Last - First + 1U;
+      ReleaseRecorder Recorder(Base);
+      releaseFreeMemoryToOS(Sci->FreeList, Base, RegionSize, NumberOfRegions,
+                            BlockSize, &Recorder);
+      if (Recorder.getReleasedRangesCount() > 0) {
+        Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
+        Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
+        Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
+        TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
       }
     }
     Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();

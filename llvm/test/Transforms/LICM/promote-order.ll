@@ -1,7 +1,7 @@
 ; RUN: opt -tbaa -basic-aa -licm -enable-mssa-loop-dependency=false -S < %s | FileCheck %s --check-prefixes=CHECK,AST
 ; RUN: opt -tbaa -basic-aa -licm -enable-mssa-loop-dependency=true -S < %s | FileCheck %s --check-prefixes=CHECK,MSSA
-; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s  --check-prefixes=CHECK,AST
-; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s --check-prefixes=CHECK,MSSA
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s  --check-prefixes=CHECK,AST
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s --check-prefixes=CHECK,MSSA
 
 ; LICM should keep the stores in their original order when it sinks/promotes them.
 ; rdar://12045203

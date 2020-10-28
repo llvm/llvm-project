@@ -259,9 +259,6 @@ s_abs_i32 s1, s2
 // SICI: s_abs_i32 s1, s2 ; encoding: [0x02,0x34,0x81,0xbe]
 // GFX89: s_abs_i32 s1, s2 ; encoding: [0x02,0x30,0x81,0xbe]
 
-s_mov_fed_b32 s1, s2
-// SICI: s_mov_fed_b32 s1, s2 ; encoding: [0x02,0x35,0x81,0xbe]
-
 s_set_gpr_idx_idx s0
 // GFX89: s_set_gpr_idx_idx s0 ; encoding: [0x00,0x32,0x80,0xbe]
 // NOSICI: error: instruction not supported on this GPU

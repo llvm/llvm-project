@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX-RELOC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=-relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX-RELOC %s
 
 func:
 	.cfi_startproc

@@ -54,7 +54,7 @@ bar_m2
 
 foo
 # Func Hash:
-1152921640672869708
+1456607294772657484
 # Num Counters:
 10
 # Counter Values:
@@ -71,7 +71,7 @@ foo
 
 foo
 # Func Hash:
-29212902728
+146835646621254984
 # Num Counters:
 2
 # Counter Values:
@@ -80,7 +80,7 @@ foo
 
 bar
 # Func Hash:
-1152921569533132113
+1440408129826749777
 # Num Counters:
 5
 # Counter Values:
@@ -92,7 +92,7 @@ bar
 
 bar
 # Func Hash:
-56228292833
+567185239050791137
 # Num Counters:
 4
 # Counter Values:
@@ -103,7 +103,7 @@ bar
 
 main
 # Func Hash:
-1152921517491748863
+1895182923573755903
 # Num Counters:
 1
 # Counter Values:
@@ -111,7 +111,7 @@ main
 
 main
 # Func Hash:
-12884901887
+742261418966908927
 # Num Counters:
 1
 # Counter Values:
@@ -135,7 +135,7 @@ csfdo_plain.c:barbar
 
 goo
 # Func Hash:
-1152921517491748863
+1895182923573755903
 # Num Counters:
 1
 # Counter Values:
@@ -143,7 +143,7 @@ goo
 
 goo
 # Func Hash:
-12884901887
+742261418966908927
 # Num Counters:
 1
 # Counter Values:

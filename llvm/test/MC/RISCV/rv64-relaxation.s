@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c,+relax < %s \
 # RUN:     | llvm-objdump -d -M no-aliases - | FileCheck --check-prefix=RELAX-INSTR %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c,+relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX-RELOC %s
 
 FAR_JUMP_NEGATIVE:
   c.nop

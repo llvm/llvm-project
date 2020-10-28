@@ -21,7 +21,7 @@
 template <class SecondaryT> static void testSecondaryBasic(void) {
   scudo::GlobalStats S;
   S.init();
-  SecondaryT *L = new SecondaryT;
+  std::unique_ptr<SecondaryT> L(new SecondaryT);
   L->init(&S);
   const scudo::uptr Size = 1U << 16;
   void *P = L->allocate(Size);
@@ -30,7 +30,7 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
   L->deallocate(P);
   // If the Secondary can't cache that pointer, it will be unmapped.
-  if (!SecondaryT::canCache(Size))
+  if (!L->canCache(Size))
     EXPECT_DEATH(memset(P, 'A', Size), "");
 
   const scudo::uptr Align = 1U << 16;
@@ -59,7 +59,7 @@ TEST(ScudoSecondaryTest, SecondaryBasic) {
 #if !SCUDO_FUCHSIA
   testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorCache<>>>();
   testSecondaryBasic<
-      scudo::MapAllocator<scudo::MapAllocatorCache<64U, 1UL << 20>>>();
+      scudo::MapAllocator<scudo::MapAllocatorCache<128U, 64U, 1UL << 20>>>();
 #endif
 }
 
@@ -75,7 +75,7 @@ using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorCache<>>;
 TEST(ScudoSecondaryTest, SecondaryCombinations) {
   constexpr scudo::uptr MinAlign = FIRST_32_SECOND_64(8, 16);
   constexpr scudo::uptr HeaderSize = scudo::roundUpTo(8, MinAlign);
-  LargeAllocator *L = new LargeAllocator;
+  std::unique_ptr<LargeAllocator> L(new LargeAllocator);
   L->init(nullptr);
   for (scudo::uptr SizeLog = 0; SizeLog <= 20; SizeLog++) {
     for (scudo::uptr AlignLog = FIRST_32_SECOND_64(3, 4); AlignLog <= 16;
@@ -103,7 +103,7 @@ TEST(ScudoSecondaryTest, SecondaryCombinations) {
 }
 
 TEST(ScudoSecondaryTest, SecondaryIterate) {
-  LargeAllocator *L = new LargeAllocator;
+  std::unique_ptr<LargeAllocator> L(new LargeAllocator);
   L->init(nullptr);
   std::vector<void *> V;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
@@ -125,9 +125,32 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   Str.output();
 }
 
+TEST(ScudoSecondaryTest, SecondaryOptions) {
+  std::unique_ptr<LargeAllocator> L(new LargeAllocator);
+  L->init(nullptr);
+  // Attempt to set a maximum number of entries higher than the array size.
+  EXPECT_FALSE(L->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
+  // A negative number will be cast to a scudo::u32, and fail.
+  EXPECT_FALSE(L->setOption(scudo::Option::MaxCacheEntriesCount, -1));
+  if (L->canCache(0U)) {
+    // Various valid combinations.
+    EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+    EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+    EXPECT_TRUE(L->canCache(1UL << 18));
+    EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
+    EXPECT_FALSE(L->canCache(1UL << 18));
+    EXPECT_TRUE(L->canCache(1UL << 16));
+    EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
+    EXPECT_FALSE(L->canCache(1UL << 16));
+    EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+    EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+    EXPECT_TRUE(L->canCache(1UL << 16));
+  }
+}
+
 static std::mutex Mutex;
 static std::condition_variable Cv;
-static bool Ready = false;
+static bool Ready;
 
 static void performAllocations(LargeAllocator *L) {
   std::vector<void *> V;
@@ -153,11 +176,12 @@ static void performAllocations(LargeAllocator *L) {
 }
 
 TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
-  LargeAllocator *L = new LargeAllocator;
+  Ready = false;
+  std::unique_ptr<LargeAllocator> L(new LargeAllocator);
   L->init(nullptr, /*ReleaseToOsInterval=*/0);
   std::thread Threads[16];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
-    Threads[I] = std::thread(performAllocations, L);
+    Threads[I] = std::thread(performAllocations, L.get());
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     Ready = true;

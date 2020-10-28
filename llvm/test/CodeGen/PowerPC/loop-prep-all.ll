@@ -1,5 +1,4 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-bgq-linux < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BGQ
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -21,7 +20,6 @@ for.body:                                         ; preds = %for.body, %entry
 
 ; CHECK-LABEL: @foo
 
-; CHECK-BGQ-DAG: dcbt 4, 5
 ; CHECK-DAG: lfdu [[REG1:[0-9]+]], 8({{[0-9]+}})
 ; CHECK-DAG: fadd [[REG2:[0-9]+]], [[REG1]], 0
 ; CHECK-DAG: stfdu [[REG2]], 8({{[0-9]+}})
@@ -34,15 +32,13 @@ for.cond.cleanup6:                                ; preds = %for.body7
 
 for.body7:                                        ; preds = %for.body, %for.body7
   %i3.017 = phi i32 [ %inc9, %for.body7 ], [ 0, %for.body ]
-  tail call void bitcast (void (...)* @bar to void ()*)() #2
+  tail call void bitcast (void (...)* @bar to void ()*)() #0
   %inc9 = add nuw nsw i32 %i3.017, 1
   %exitcond = icmp eq i32 %inc9, 1024
   br i1 %exitcond, label %for.cond.cleanup6, label %for.body7
 }
 
-declare void @bar(...) #1
+declare void @bar(...) 
 
-attributes #0 = { nounwind "target-cpu"="a2q" }
-attributes #1 = { "target-cpu"="a2q" }
-attributes #2 = { nounwind }
+attributes #0 = { nounwind }
 

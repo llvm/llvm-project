@@ -44,7 +44,6 @@ namespace llvm {
   FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
   FunctionPass *createPPCBranchCoalescingPass();
-  FunctionPass *createPPCQPXLoadSplatPass();
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOpt::Level OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
@@ -68,7 +67,6 @@ namespace llvm {
   void initializePPCReduceCRLogicalsPass(PassRegistry&);
   void initializePPCBSelPass(PassRegistry&);
   void initializePPCBranchCoalescingPass(PassRegistry&);
-  void initializePPCQPXLoadSplatPass(PassRegistry&);
   void initializePPCBoolRetToIntPass(PassRegistry&);
   void initializePPCExpandISELPass(PassRegistry &);
   void initializePPCPreEmitPeepholePass(PassRegistry &);
@@ -106,6 +104,10 @@ namespace llvm {
     /// via the GOT. For example when combined with the MO_PCREL_FLAG it should
     /// produce the relocation @got@pcrel. Fixup is VK_PPC_GOT_PCREL.
     MO_GOT_FLAG = 8,
+
+    // MO_PCREL_OPT_FLAG - If this bit is set the operand is part of a
+    // PC Relative linker optimization.
+    MO_PCREL_OPT_FLAG = 16,
 
     /// The next are not flags but distinct values.
     MO_ACCESS_MASK = 0xf00,

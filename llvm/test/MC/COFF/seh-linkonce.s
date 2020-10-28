@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj --sections --section-symbols | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj --sections --section-symbols - | FileCheck %s
 
         .text
         .def     weak_func;

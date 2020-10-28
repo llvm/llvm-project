@@ -1,6 +1,6 @@
 ; RUN: opt < %s -loop-vectorize -S | FileCheck %s --check-prefixes=COMMON,DEFAULT
-; RUN: opt < %s -loop-vectorize -disable-mve-tail-predication=false  -prefer-predicate-over-epilog -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
-; RUN: opt < %s -loop-vectorize -disable-mve-tail-predication=false -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-ENABLE-TP
+; RUN: opt < %s -loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilog -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-PREFER
+; RUN: opt < %s -loop-vectorize -tail-predication=enabled -S | FileCheck %s --check-prefixes=COMMON,CHECK-TF,CHECK-ENABLE-TP
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-unknown-eabihf"

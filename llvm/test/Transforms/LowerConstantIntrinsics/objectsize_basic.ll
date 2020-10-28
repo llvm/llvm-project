@@ -89,3 +89,11 @@ define i64 @test_objectsize_byval_arg([42 x i8]* byval([42 x i8]) %ptr) {
   %size = tail call i64 @llvm.objectsize.i64(i8* %cast, i1 true, i1 false, i1 false)
   ret i64 %size
 }
+
+; CHECK-LABEL: @test_objectsize_byref_arg(
+; CHECK: ret i64 42
+define i64 @test_objectsize_byref_arg([42 x i8]* byref([42 x i8]) %ptr) {
+  %cast = bitcast [42 x i8]* %ptr to i8*
+  %size = tail call i64 @llvm.objectsize.i64(i8* %cast, i1 true, i1 false, i1 false)
+  ret i64 %size
+}

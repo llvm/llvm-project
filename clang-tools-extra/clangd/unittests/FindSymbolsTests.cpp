@@ -35,7 +35,7 @@ MATCHER_P(QName, Name, "") {
 }
 MATCHER_P(WithName, N, "") { return arg.name == N; }
 MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
-MATCHER_P(SymRange, Range, "") { return arg.location.range == Range; }
+MATCHER_P(SymRange, Range, "") { return arg.range == Range; }
 
 // GMock helpers for matching DocumentSymbol.
 MATCHER_P(SymNameRange, Range, "") { return arg.selectionRange == Range; }
@@ -710,6 +710,72 @@ TEST(DocumentSymbols, QualifiersWithTemplateArgs) {
                            WithName("Foo<int_type, double>::method1"),
                            WithName("Foo<int>::method2"), WithName("Foo_type"),
                            WithName("Foo_type::method3")));
+}
+
+TEST(DocumentSymbolsTest, Ranges) {
+  TestTU TU;
+  Annotations Main(R"(
+      $foo[[int foo(bool Argument) {
+        return 42;
+      }]]
+
+      $variable[[char GLOBAL_VARIABLE]];
+
+      $ns[[namespace ns {
+      $bar[[class Bar {
+      public:
+        $ctor[[Bar() {}]]
+        $dtor[[~Bar()]];
+
+      private:
+        $field[[unsigned Baz]];
+
+        $getbaz[[unsigned getBaz() { return Baz; }]]
+      }]];
+      }]] // namespace ns
+
+      $forwardclass[[class ForwardClassDecl]];
+
+      $struct[[struct StructDefinition {
+        $structfield[[int *Pointer = nullptr]];
+      }]];
+      $forwardstruct[[struct StructDeclaration]];
+
+      $forwardfunc[[void forwardFunctionDecl(int Something)]];
+    )");
+  TU.Code = Main.code().str();
+  EXPECT_THAT(
+      getSymbols(TU.build()),
+      UnorderedElementsAre(
+          AllOf(WithName("foo"), WithKind(SymbolKind::Function),
+                SymRange(Main.range("foo"))),
+          AllOf(WithName("GLOBAL_VARIABLE"), WithKind(SymbolKind::Variable),
+                SymRange(Main.range("variable"))),
+          AllOf(
+              WithName("ns"), WithKind(SymbolKind::Namespace),
+              SymRange(Main.range("ns")),
+              Children(AllOf(
+                  WithName("Bar"), WithKind(SymbolKind::Class),
+                  SymRange(Main.range("bar")),
+                  Children(
+                      AllOf(WithName("Bar"), WithKind(SymbolKind::Constructor),
+                            SymRange(Main.range("ctor"))),
+                      AllOf(WithName("~Bar"), WithKind(SymbolKind::Constructor),
+                            SymRange(Main.range("dtor"))),
+                      AllOf(WithName("Baz"), WithKind(SymbolKind::Field),
+                            SymRange(Main.range("field"))),
+                      AllOf(WithName("getBaz"), WithKind(SymbolKind::Method),
+                            SymRange(Main.range("getbaz"))))))),
+          AllOf(WithName("ForwardClassDecl"), WithKind(SymbolKind::Class),
+                SymRange(Main.range("forwardclass"))),
+          AllOf(WithName("StructDefinition"), WithKind(SymbolKind::Struct),
+                SymRange(Main.range("struct")),
+                Children(AllOf(WithName("Pointer"), WithKind(SymbolKind::Field),
+                               SymRange(Main.range("structfield"))))),
+          AllOf(WithName("StructDeclaration"), WithKind(SymbolKind::Struct),
+                SymRange(Main.range("forwardstruct"))),
+          AllOf(WithName("forwardFunctionDecl"), WithKind(SymbolKind::Function),
+                SymRange(Main.range("forwardfunc")))));
 }
 
 } // namespace

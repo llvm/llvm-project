@@ -1,0 +1,12 @@
+Test that import libraries (and the members thereof) can be added to another
+static library.
+
+RUN: rm -rf %t
+RUN: mkdir -p %t
+
+RUN: echo -e "EXPORTS\nMyFunc" > %t/lib.def
+RUN: llvm-dlltool -m i386:x86-64 -l %t/lib.lib -d %t/lib.def -D lib.dll
+RUN: llvm-lib -out:%t/newlib.lib %t/lib.lib
+
+RUN: llvm-ar t %t/newlib.lib | FileCheck %s
+CHECK: lib.dll

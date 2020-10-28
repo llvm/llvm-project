@@ -280,6 +280,9 @@ public:
   const MachineBasicBlock* getParent() const { return Parent; }
   MachineBasicBlock* getParent() { return Parent; }
 
+  /// Move the instruction before \p MovePos.
+  void moveBefore(MachineInstr *MovePos);
+
   /// Return the function that contains the basic block that this instruction
   /// belongs to.
   ///

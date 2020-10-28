@@ -7,8 +7,8 @@ define void @lame_encode_buffer_interleaved() local_unnamed_addr {
 ; CHECK:      # %bb.0:
 ; CHECK-NEXT:   lha 3, 0(3)
 ; CHECK-NEXT:   li 5, 1
-; CHECK-NEXT:   sldi 5, 5, 62
 ; CHECK-NEXT:   lhz 4, 0(0)
+; CHECK-NEXT:   sldi 5, 5, 62
 ; CHECK-NEXT:   mtctr 5
 ; CHECK-NEXT:   srawi 3, 3, 1
 ; CHECK-NEXT:   addze 3, 3

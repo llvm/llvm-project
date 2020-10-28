@@ -1270,7 +1270,7 @@ void Process::UpdateThreadListIfNeeded() {
           for (size_t i = 0; i < num_old_threads; ++i)
             old_thread_list.GetThreadAtIndex(i, false)->ClearBackingThread();
           // See if the OS plugin reports all threads.  If it does, then
-          // it is safe to clear unseen thread's plans here.  Otherwise we 
+          // it is safe to clear unseen thread's plans here.  Otherwise we
           // should preserve them in case they show up again:
           clear_unused_threads = GetOSPluginReportsAllThreads();
 
@@ -2291,6 +2291,9 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
     if (error.Fail())
       return;
 
+    if (bp->GetType() != BreakpointSite::eSoftware)
+      return;
+
     addr_t intersect_addr;
     size_t intersect_size;
     size_t opcode_offset;
@@ -3096,14 +3099,14 @@ void Process::CompleteAttach() {
   }
 }
 
-Status Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
+Status Process::ConnectRemote(llvm::StringRef remote_url) {
   m_abi_sp.reset();
   m_process_input_reader.reset();
 
   // Find the process and its architecture.  Make sure it matches the
   // architecture of the current Target, and if not adjust it.
 
-  Status error(DoConnectRemote(strm, remote_url));
+  Status error(DoConnectRemote(remote_url));
   if (error.Success()) {
     if (GetID() != LLDB_INVALID_PROCESS_ID) {
       EventSP event_sp;
@@ -3154,7 +3157,7 @@ Status Process::PrivateResume() {
     if (m_thread_list.WillResume()) {
       // Last thing, do the PreResumeActions.
       if (!RunPreResumeActions()) {
-        error.SetErrorStringWithFormat(
+        error.SetErrorString(
             "Process::PrivateResume PreResumeActions failed, not resuming.");
       } else {
         m_mod_id.BumpResumeID();
@@ -5757,41 +5760,25 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
 }
 
 void Process::ModulesDidLoad(ModuleList &module_list) {
+  // Inform the system runtime of the modified modules.
   SystemRuntime *sys_runtime = GetSystemRuntime();
-  if (sys_runtime) {
+  if (sys_runtime)
     sys_runtime->ModulesDidLoad(module_list);
-  }
 
   GetJITLoaders().ModulesDidLoad(module_list);
 
-  // Give runtimes a chance to be created.
+  // Give the instrumentation runtimes a chance to be created before informing
+  // them of the modified modules.
   InstrumentationRuntime::ModulesDidLoad(module_list, this,
                                          m_instrumentation_runtimes);
+  for (auto &runtime : m_instrumentation_runtimes)
+    runtime.second->ModulesDidLoad(module_list);
 
-  // Tell runtimes about new modules.
-  for (auto pos = m_instrumentation_runtimes.begin();
-       pos != m_instrumentation_runtimes.end(); ++pos) {
-    InstrumentationRuntimeSP runtime = pos->second;
-    runtime->ModulesDidLoad(module_list);
-  }
-
-  // Let any language runtimes we have already created know about the modules
-  // that loaded.
-
-  // Iterate over a copy of this language runtime list in case the language
-  // runtime ModulesDidLoad somehow causes the language runtime to be
-  // unloaded.
-  {
-    std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
-    LanguageRuntimeCollection language_runtimes(m_language_runtimes);
-    for (const auto &pair : language_runtimes) {
-      // We must check language_runtime_sp to make sure it is not nullptr as we
-      // might cache the fact that we didn't have a language runtime for a
-      // language.
-      LanguageRuntimeSP language_runtime_sp = pair.second;
-      if (language_runtime_sp)
-        language_runtime_sp->ModulesDidLoad(module_list);
-    }
+  // Give the language runtimes a chance to be created before informing them of
+  // the modified modules.
+  for (const lldb::LanguageType lang_type : Language::GetSupportedLanguages()) {
+    if (LanguageRuntime *runtime = GetLanguageRuntime(lang_type))
+      runtime->ModulesDidLoad(module_list);
   }
 
   // If we don't have an operating system plug-in, try to load one since
@@ -5799,7 +5786,7 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
   if (!m_os_up)
     LoadOperatingSystemPlugin(false);
 
-  // Give structured-data plugins a chance to see the modified modules.
+  // Inform the structured-data plugins of the modified modules.
   for (auto pair : m_structured_data_plugin_map) {
     if (pair.second)
       pair.second->ModulesDidLoad(*this, module_list);

@@ -150,6 +150,10 @@ cl::opt<bool> IterativeCounterPromotion(
     cl::ZeroOrMore, "iterative-counter-promotion", cl::init(true),
     cl::desc("Allow counter promotion across the whole loop nest."));
 
+cl::opt<bool> SkipRetExitBlock(
+    cl::ZeroOrMore, "skip-ret-exit-block", cl::init(true),
+    cl::desc("Suppress counter promotion if exit blocks contain ret."));
+
 class InstrProfilingLegacyPass : public ModulePass {
   InstrProfiling InstrProf;
 
@@ -272,6 +276,18 @@ public:
     // Skip 'infinite' loops:
     if (ExitBlocks.size() == 0)
       return false;
+
+    // Skip if any of the ExitBlocks contains a ret instruction.
+    // This is to prevent dumping of incomplete profile -- if the
+    // the loop is a long running loop and dump is called in the middle
+    // of the loop, the result profile is incomplete.
+    // FIXME: add other heuristics to detect long running loops.
+    if (SkipRetExitBlock) {
+      for (auto BB : ExitBlocks)
+        if (dyn_cast<ReturnInst>(BB->getTerminator()) != nullptr)
+          return false;
+    }
+
     unsigned MaxProm = getMaxNumOfPromotionsInLoop(&L);
     if (MaxProm == 0)
       return false;

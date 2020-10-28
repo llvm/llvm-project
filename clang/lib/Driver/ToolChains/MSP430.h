@@ -40,6 +40,11 @@ public:
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return true; }
 
+  UnwindLibType
+  GetUnwindLibType(const llvm::opt::ArgList &Args) const override {
+    return UNW_None;
+  }
+
 protected:
   Tool *buildLinker() const override;
 
@@ -61,6 +66,14 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
+
+private:
+  void AddStartFiles(bool UseExceptions, const llvm::opt::ArgList &Args,
+                     llvm::opt::ArgStringList &CmdArgs) const;
+  void AddDefaultLibs(const llvm::opt::ArgList &Args,
+                      llvm::opt::ArgStringList &CmdArgs) const;
+  void AddEndFiles(bool UseExceptions, const llvm::opt::ArgList &Args,
+                   llvm::opt::ArgStringList &CmdArgs) const;
 };
 
 void getMSP430TargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,

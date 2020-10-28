@@ -1308,7 +1308,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
                               &long_options_index);
 
     if (val == ':') {
-      error.SetErrorStringWithFormat("last option requires an argument");
+      error.SetErrorString("last option requires an argument");
       break;
     }
 
@@ -1317,7 +1317,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
 
     // Did we get an error?
     if (val == '?') {
-      error.SetErrorStringWithFormat("unknown or ambiguous option");
+      error.SetErrorString("unknown or ambiguous option");
       break;
     }
     // The option auto-set itself

@@ -4,7 +4,7 @@
 # RUN:     | llvm-objdump -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INSTR %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
-# RUN:     | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
+# RUN:     | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 # Checks that fixups that can be resolved within the same object file are
 # applied correctly

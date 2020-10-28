@@ -222,19 +222,19 @@ uint64_t mrrc2() {
 }
 
 unsigned rsr() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_register.i32(metadata ![[M0:.*]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_volatile_register.i32(metadata ![[M0:.*]])
   // CHECK-NEXT: ret i32 [[V0]]
   return __builtin_arm_rsr("cp1:2:c3:c4:5");
 }
 
 unsigned long long rsr64() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_register.i64(metadata ![[M1:.*]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M1:.*]])
   // CHECK-NEXT: ret i64 [[V0]]
   return __builtin_arm_rsr64("cp1:2:c3");
 }
 
 void *rsrp() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_register.i32(metadata ![[M2:.*]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_volatile_register.i32(metadata ![[M2:.*]])
   // CHECK-NEXT: [[V1:[%A-Za-z0-9.]+]] = inttoptr i32 [[V0]] to i8*
   // CHECK-NEXT: ret i8* [[V1]]
   return __builtin_arm_rsrp("sysreg");

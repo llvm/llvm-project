@@ -16,6 +16,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
@@ -123,19 +124,39 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
       module_sp.reset();
   }
 
-  if (!module_sp) {
-    if (can_create) {
-      // We'll call Target::ModulesDidLoad after all the modules have been
-      // added to the target, don't let it be called for every one.
-      module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
-      if (!module_sp || module_sp->GetObjectFile() == nullptr)
-        module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
-                                                    image_info.address);
+  if (module_sp || !can_create)
+    return module_sp;
 
-      if (did_create_ptr)
-        *did_create_ptr = (bool)module_sp;
+  if (HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
+    // When debugging on the host, we are most likely using the same shared
+    // cache as our inferior. The dylibs from the shared cache might not
+    // exist on the filesystem, so let's use the images in our own memory
+    // to create the modules.
+    // Check if the requested image is in our shared cache.
+    SharedCacheImageInfo image_info =
+        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
+
+    // If we found it and it has the correct UUID, let's proceed with
+    // creating a module from the memory contents.
+    if (image_info.uuid &&
+        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
+                                   image_info.data_sp);
+      module_sp =
+          target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }
   }
+  // We'll call Target::ModulesDidLoad after all the modules have been
+  // added to the target, don't let it be called for every one.
+  if (!module_sp)
+    module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
+  if (!module_sp || module_sp->GetObjectFile() == nullptr)
+    module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
+                                                image_info.address);
+
+  if (did_create_ptr)
+    *did_create_ptr = (bool)module_sp;
+
   return module_sp;
 }
 
@@ -556,7 +577,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
     }
   }
 
-  if (exe_idx != UINT32_MAX) {
+  // Set the target executable if we haven't found one so far.
+  if (exe_idx != UINT32_MAX && !target.GetExecutableModule()) {
     const bool can_create = true;
     ModuleSP exe_module_sp(FindTargetModuleForImageInfo(image_infos[exe_idx],
                                                         can_create, nullptr));

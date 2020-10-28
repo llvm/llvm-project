@@ -367,7 +367,6 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN: v_cmp_ne_u32_e32 vcc, 7, v0
 
 ; GCN: {{^}}[[FLOW]]:
-; GCN: s_cbranch_vccnz [[FLOW1:BB[0-9]+]]
 
 ; GCN: s_or_b64 exec, exec
 ; GCN: v_mov_b32_e32 v0, 2.0

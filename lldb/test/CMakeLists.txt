@@ -216,6 +216,9 @@ add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+    # LLVM's make_paths_relative uses Python3_EXECUTABLE which isn't set in a
+    # standalone LLDB build.
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
 endif()

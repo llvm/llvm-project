@@ -376,6 +376,7 @@ class TypePromotionTransaction;
       return *DT;
     }
 
+    void removeAllAssertingVHReferences(Value *V);
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
     BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
@@ -383,6 +384,7 @@ class TypePromotionTransaction;
     void eliminateMostlyEmptyBlock(BasicBlock *BB);
     bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                        bool isPreheader);
+    bool makeBitReverse(Instruction &I);
     bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
     bool optimizeInst(Instruction *I, bool &ModifiedDT);
     bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
@@ -437,7 +439,11 @@ char CodeGenPrepare::ID = 0;
 
 INITIALIZE_PASS_BEGIN(CodeGenPrepare, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(CodeGenPrepare, DEBUG_TYPE,
                     "Optimize for code generation", false, false)
 
@@ -599,6 +605,33 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 #endif
 
   return EverMadeChange;
+}
+
+/// An instruction is about to be deleted, so remove all references to it in our
+/// GEP-tracking data strcutures.
+void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
+  LargeOffsetGEPMap.erase(V);
+  NewGEPBases.erase(V);
+
+  auto GEP = dyn_cast<GetElementPtrInst>(V);
+  if (!GEP)
+    return;
+
+  LargeOffsetGEPID.erase(GEP);
+
+  auto VecI = LargeOffsetGEPMap.find(GEP->getPointerOperand());
+  if (VecI == LargeOffsetGEPMap.end())
+    return;
+
+  auto &GEPVector = VecI->second;
+  const auto &I = std::find_if(GEPVector.begin(), GEPVector.end(),
+                               [=](auto &Elt) { return Elt.first == GEP; });
+  if (I == GEPVector.end())
+    return;
+
+  GEPVector.erase(I);
+  if (GEPVector.empty())
+    LargeOffsetGEPMap.erase(VecI);
 }
 
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
@@ -4289,7 +4322,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     unsigned SrcAS
       = AddrInst->getOperand(0)->getType()->getPointerAddressSpace();
     unsigned DestAS = AddrInst->getType()->getPointerAddressSpace();
-    if (TLI.isNoopAddrSpaceCast(SrcAS, DestAS))
+    if (TLI.getTargetMachine().isNoopAddrSpaceCast(SrcAS, DestAS))
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
@@ -5242,7 +5275,9 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     WeakTrackingVH IterHandle(CurValue);
     BasicBlock *BB = CurInstIterator->getParent();
 
-    RecursivelyDeleteTriviallyDeadInstructions(Repl, TLInfo);
+    RecursivelyDeleteTriviallyDeadInstructions(
+        Repl, TLInfo, nullptr,
+        [&](Value *V) { removeAllAssertingVHReferences(V); });
 
     if (IterHandle != CurValue) {
       // If the iterator instruction was recursively deleted, start over at the
@@ -5363,7 +5398,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
   // If we have no uses, recursively delete the value and all dead instructions
   // using it.
   if (Ptr->use_empty())
-    RecursivelyDeleteTriviallyDeadInstructions(Ptr, TLInfo);
+    RecursivelyDeleteTriviallyDeadInstructions(
+        Ptr, TLInfo, nullptr,
+        [&](Value *V) { removeAllAssertingVHReferences(V); });
 
   return true;
 }
@@ -6647,7 +6684,8 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   Value *BC2 = Builder.CreateBitCast(Shuffle, SVIVecType);
 
   SVI->replaceAllUsesWith(BC2);
-  RecursivelyDeleteTriviallyDeadInstructions(SVI);
+  RecursivelyDeleteTriviallyDeadInstructions(
+      SVI, TLInfo, nullptr, [&](Value *V) { removeAllAssertingVHReferences(V); });
 
   // Also hoist the bitcast up to its operand if it they are not in the same
   // block.
@@ -7604,11 +7642,10 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
 
 /// Given an OR instruction, check to see if this is a bitreverse
 /// idiom. If so, insert the new intrinsic and return true.
-static bool makeBitReverse(Instruction &I, const DataLayout &DL,
-                           const TargetLowering &TLI) {
+bool CodeGenPrepare::makeBitReverse(Instruction &I) {
   if (!I.getType()->isIntegerTy() ||
-      !TLI.isOperationLegalOrCustom(ISD::BITREVERSE,
-                                    TLI.getValueType(DL, I.getType(), true)))
+      !TLI->isOperationLegalOrCustom(ISD::BITREVERSE,
+                                     TLI->getValueType(*DL, I.getType(), true)))
     return false;
 
   SmallVector<Instruction*, 4> Insts;
@@ -7616,7 +7653,8 @@ static bool makeBitReverse(Instruction &I, const DataLayout &DL,
     return false;
   Instruction *LastInst = Insts.back();
   I.replaceAllUsesWith(LastInst);
-  RecursivelyDeleteTriviallyDeadInstructions(&I);
+  RecursivelyDeleteTriviallyDeadInstructions(
+      &I, TLInfo, nullptr, [&](Value *V) { removeAllAssertingVHReferences(V); });
   return true;
 }
 
@@ -7638,7 +7676,7 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
   while (MadeBitReverse) {
     MadeBitReverse = false;
     for (auto &I : reverse(BB)) {
-      if (makeBitReverse(I, *DL, *TLI)) {
+      if (makeBitReverse(I)) {
         MadeBitReverse = MadeChange = true;
         break;
       }

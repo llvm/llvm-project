@@ -118,6 +118,10 @@ public:
   AffineExpr replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
                                    ArrayRef<AffineExpr> symReplacements) const;
 
+  /// Replace symbols[0 .. numDims - 1] by
+  /// symbols[shift .. shift + numDims - 1].
+  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift) const;
+
   AffineExpr operator+(int64_t v) const;
   AffineExpr operator+(AffineExpr other) const;
   AffineExpr operator-() const;

@@ -1,17 +1,19 @@
-// RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS=fast16labels=1 %run %t
+// RUN: %clang_dfsan %s -mllvm -dfsan-fast-16-labels -o %t
+// RUN: %run %t
 //
-// Tests DFSAN_OPTIONS=fast16labels=1
-//
+// Tests fast16labels mode.
+
 #include <sanitizer/dfsan_interface.h>
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 int foo(int a, int b) {
   return a + b;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   int a = 10;
   int b = 20;
   dfsan_set_label(8, &a, sizeof(a));

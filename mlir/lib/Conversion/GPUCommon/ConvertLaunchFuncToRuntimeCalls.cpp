@@ -39,7 +39,7 @@ static constexpr const char *kGpuModuleLoadName = "mgpuModuleLoad";
 static constexpr const char *kGpuModuleGetFunctionName =
     "mgpuModuleGetFunction";
 static constexpr const char *kGpuLaunchKernelName = "mgpuLaunchKernel";
-static constexpr const char *kGpuGetStreamHelperName = "mgpuGetStreamHelper";
+static constexpr const char *kGpuStreamCreateName = "mgpuStreamCreate";
 static constexpr const char *kGpuStreamSynchronizeName =
     "mgpuStreamSynchronize";
 static constexpr const char *kGpuMemHostRegisterName = "mgpuMemHostRegister";
@@ -98,12 +98,6 @@ private:
     const llvm::Module &module = getLLVMDialect()->getLLVMModule();
     return LLVM::LLVMType::getIntNTy(
         getLLVMDialect(), module.getDataLayout().getPointerSizeInBits());
-  }
-
-  LLVM::LLVMType getGpuRuntimeResultType() {
-    // This is declared as an enum in both CUDA and ROCm (HIP), but helpers
-    // use i32.
-    return getInt32Type();
   }
 
   // Allocate a void pointer on the stack.
@@ -168,27 +162,21 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::declareGpuRuntimeFunctions(
   if (!module.lookupSymbol(kGpuModuleLoadName)) {
     builder.create<LLVM::LLVMFuncOp>(
         loc, kGpuModuleLoadName,
-        LLVM::LLVMType::getFunctionTy(
-            getGpuRuntimeResultType(),
-            {
-                getPointerPointerType(), /* CUmodule *module */
-                getPointerType()         /* void *cubin */
-            },
-            /*isVarArg=*/false));
+        LLVM::LLVMType::getFunctionTy(getPointerType(),
+                                      {getPointerType()}, /* void *cubin */
+                                      /*isVarArg=*/false));
   }
   if (!module.lookupSymbol(kGpuModuleGetFunctionName)) {
     // The helper uses void* instead of CUDA's opaque CUmodule and
     // CUfunction, or ROCm (HIP)'s opaque hipModule_t and hipFunction_t.
     builder.create<LLVM::LLVMFuncOp>(
         loc, kGpuModuleGetFunctionName,
-        LLVM::LLVMType::getFunctionTy(
-            getGpuRuntimeResultType(),
-            {
-                getPointerPointerType(), /* void **function */
-                getPointerType(),        /* void *module */
-                getPointerType()         /* char *name */
-            },
-            /*isVarArg=*/false));
+        LLVM::LLVMType::getFunctionTy(getPointerType(),
+                                      {
+                                          getPointerType(), /* void *module */
+                                          getPointerType()  /* char *name   */
+                                      },
+                                      /*isVarArg=*/false));
   }
   if (!module.lookupSymbol(kGpuLaunchKernelName)) {
     // Other than the CUDA or ROCm (HIP) api, the wrappers use uintptr_t to
@@ -198,7 +186,7 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::declareGpuRuntimeFunctions(
     builder.create<LLVM::LLVMFuncOp>(
         loc, kGpuLaunchKernelName,
         LLVM::LLVMType::getFunctionTy(
-            getGpuRuntimeResultType(),
+            getVoidType(),
             {
                 getPointerType(),        /* void* f */
                 getIntPtrType(),         /* intptr_t gridXDim */
@@ -214,18 +202,18 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::declareGpuRuntimeFunctions(
             },
             /*isVarArg=*/false));
   }
-  if (!module.lookupSymbol(kGpuGetStreamHelperName)) {
+  if (!module.lookupSymbol(kGpuStreamCreateName)) {
     // Helper function to get the current GPU compute stream. Uses void*
     // instead of CUDA's opaque CUstream, or ROCm (HIP)'s opaque hipStream_t.
     builder.create<LLVM::LLVMFuncOp>(
-        loc, kGpuGetStreamHelperName,
+        loc, kGpuStreamCreateName,
         LLVM::LLVMType::getFunctionTy(getPointerType(), /*isVarArg=*/false));
   }
   if (!module.lookupSymbol(kGpuStreamSynchronizeName)) {
     builder.create<LLVM::LLVMFuncOp>(
         loc, kGpuStreamSynchronizeName,
-        LLVM::LLVMType::getFunctionTy(getGpuRuntimeResultType(),
-                                      getPointerType() /* CUstream stream */,
+        LLVM::LLVMType::getFunctionTy(getVoidType(),
+                                      {getPointerType()}, /* void *stream */
                                       /*isVarArg=*/false));
   }
   if (!module.lookupSymbol(kGpuMemHostRegisterName)) {
@@ -365,17 +353,13 @@ Value GpuLaunchFuncToGpuRuntimeCallsPass::generateKernelNameConstant(
 // hsaco in the 'rocdl.hsaco' attribute of the kernel function in the IR.
 //
 // %0 = call %binarygetter
-// %1 = alloca sizeof(void*)
-// call %moduleLoad(%2, %1)
-// %2 = alloca sizeof(void*)
-// %3 = load %1
-// %4 = <see generateKernelNameConstant>
-// call %moduleGetFunction(%2, %3, %4)
-// %5 = call %getStreamHelper()
-// %6 = load %2
-// %7 = <see setupParamsArray>
-// call %launchKernel(%6, <launchOp operands 0..5>, 0, %5, %7, nullptr)
-// call %streamSynchronize(%5)
+// %1 = call %moduleLoad(%0)
+// %2 = <see generateKernelNameConstant>
+// %3 = call %moduleGetFunction(%1, %2)
+// %4 = call %streamCreate()
+// %5 = <see setupParamsArray>
+// call %launchKernel(%3, <launchOp operands 0..5>, 0, %4, %5, nullptr)
+// call %streamSynchronize(%4)
 void GpuLaunchFuncToGpuRuntimeCallsPass::translateGpuLaunchCalls(
     mlir::gpu::LaunchFuncOp launchOp) {
   OpBuilder builder(launchOp);
@@ -405,36 +389,30 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::translateGpuLaunchCalls(
 
   // Emit the load module call to load the module data. Error checking is done
   // in the called helper function.
-  auto gpuModule = allocatePointer(builder, loc);
   auto gpuModuleLoad =
       getOperation().lookupSymbol<LLVM::LLVMFuncOp>(kGpuModuleLoadName);
-  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getGpuRuntimeResultType()},
-                               builder.getSymbolRefAttr(gpuModuleLoad),
-                               ArrayRef<Value>{gpuModule, data});
+  auto module = builder.create<LLVM::CallOp>(
+      loc, ArrayRef<Type>{getPointerType()},
+      builder.getSymbolRefAttr(gpuModuleLoad), ArrayRef<Value>{data});
   // Get the function from the module. The name corresponds to the name of
   // the kernel function.
-  auto gpuOwningModuleRef =
-      builder.create<LLVM::LoadOp>(loc, getPointerType(), gpuModule);
   auto kernelName = generateKernelNameConstant(
       launchOp.getKernelModuleName(), launchOp.getKernelName(), loc, builder);
-  auto gpuFunction = allocatePointer(builder, loc);
   auto gpuModuleGetFunction =
       getOperation().lookupSymbol<LLVM::LLVMFuncOp>(kGpuModuleGetFunctionName);
-  builder.create<LLVM::CallOp>(
-      loc, ArrayRef<Type>{getGpuRuntimeResultType()},
-      builder.getSymbolRefAttr(gpuModuleGetFunction),
-      ArrayRef<Value>{gpuFunction, gpuOwningModuleRef, kernelName});
-  // Grab the global stream needed for execution.
-  auto gpuGetStreamHelper =
-      getOperation().lookupSymbol<LLVM::LLVMFuncOp>(kGpuGetStreamHelperName);
-  auto gpuStream = builder.create<LLVM::CallOp>(
+  auto function = builder.create<LLVM::CallOp>(
       loc, ArrayRef<Type>{getPointerType()},
-      builder.getSymbolRefAttr(gpuGetStreamHelper), ArrayRef<Value>{});
+      builder.getSymbolRefAttr(gpuModuleGetFunction),
+      ArrayRef<Value>{module.getResult(0), kernelName});
+  // Grab the global stream needed for execution.
+  auto gpuStreamCreate =
+      getOperation().lookupSymbol<LLVM::LLVMFuncOp>(kGpuStreamCreateName);
+  auto stream = builder.create<LLVM::CallOp>(
+      loc, ArrayRef<Type>{getPointerType()},
+      builder.getSymbolRefAttr(gpuStreamCreate), ArrayRef<Value>{});
   // Invoke the function with required arguments.
   auto gpuLaunchKernel =
       getOperation().lookupSymbol<LLVM::LLVMFuncOp>(kGpuLaunchKernelName);
-  auto gpuFunctionRef =
-      builder.create<LLVM::LoadOp>(loc, getPointerType(), gpuFunction);
   auto paramsArray = setupParamsArray(launchOp, builder);
   if (!paramsArray) {
     launchOp.emitOpError() << "cannot pass given parameters to the kernel";
@@ -443,21 +421,21 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::translateGpuLaunchCalls(
   auto nullpointer =
       builder.create<LLVM::IntToPtrOp>(loc, getPointerPointerType(), zero);
   builder.create<LLVM::CallOp>(
-      loc, ArrayRef<Type>{getGpuRuntimeResultType()},
+      loc, ArrayRef<Type>{getVoidType()},
       builder.getSymbolRefAttr(gpuLaunchKernel),
-      ArrayRef<Value>{gpuFunctionRef, launchOp.getOperand(0),
+      ArrayRef<Value>{function.getResult(0), launchOp.getOperand(0),
                       launchOp.getOperand(1), launchOp.getOperand(2),
                       launchOp.getOperand(3), launchOp.getOperand(4),
                       launchOp.getOperand(5), zero, /* sharedMemBytes */
-                      gpuStream.getResult(0),       /* stream */
+                      stream.getResult(0),          /* stream */
                       paramsArray,                  /* kernel params */
                       nullpointer /* extra */});
   // Sync on the stream to make it synchronous.
   auto gpuStreamSync =
       getOperation().lookupSymbol<LLVM::LLVMFuncOp>(kGpuStreamSynchronizeName);
-  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getGpuRuntimeResultType()},
+  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getVoidType()},
                                builder.getSymbolRefAttr(gpuStreamSync),
-                               ArrayRef<Value>(gpuStream.getResult(0)));
+                               ArrayRef<Value>(stream.getResult(0)));
   launchOp.erase();
 }
 

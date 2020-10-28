@@ -372,14 +372,14 @@ define <16 x i8> @shuffle_8_18_uuuuuuuuuuuuuu(<16 x i8> %a, <16 x i8> %b) {
 ; BTVER1-LABEL: shuffle_8_18_uuuuuuuuuuuuuu:
 ; BTVER1:       # %bb.0:
 ; BTVER1-NEXT:    psrld $16, %xmm1
-; BTVER1-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; BTVER1-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; BTVER1-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; BTVER1-NEXT:    retq
 ;
 ; BTVER2-LABEL: shuffle_8_18_uuuuuuuuuuuuuu:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpsrld $16, %xmm1, %xmm1
-; BTVER2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; BTVER2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; BTVER2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; BTVER2-NEXT:    retq
   %1 = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 18, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

@@ -302,6 +302,13 @@ class StdLibraryFunctionsChecker
       Tmp.Op = BinaryOperator::negateComparisonOp(Op);
       return std::make_shared<BufferSizeConstraint>(Tmp);
     }
+
+    bool checkSpecificValidity(const FunctionDecl *FD) const override {
+      const bool ValidArg = getArgType(FD, ArgN)->isPointerType();
+      assert(ValidArg &&
+             "This constraint should be applied only on a pointer type");
+      return ValidArg;
+    }
   };
 
   /// The complete list of constraints that defines a single branch.
@@ -318,8 +325,8 @@ class StdLibraryFunctionsChecker
   // concessive signature, meaning there may be irrelevant types in the
   // signature which we do not check against a function with concrete types.
   struct Signature {
-    const ArgTypes ArgTys;
-    const QualType RetTy;
+    ArgTypes ArgTys;
+    QualType RetTy;
     Signature(ArgTypes ArgTys, QualType RetTy) : ArgTys(ArgTys), RetTy(RetTy) {
       assertRetTypeSuitableForSignature(RetTy);
       for (size_t I = 0, E = ArgTys.size(); I != E; ++I) {
@@ -327,6 +334,7 @@ class StdLibraryFunctionsChecker
         assertArgTypeSuitableForSignature(ArgTy);
       }
     }
+
     bool matches(const FunctionDecl *FD) const;
 
   private:
@@ -380,7 +388,7 @@ class StdLibraryFunctionsChecker
   ///   rules for the given parameter's type, those rules are checked once the
   ///   signature is matched.
   class Summary {
-    const Signature Sign;
+    Optional<Signature> Sign;
     const InvalidationKind InvalidationKd;
     Cases CaseConstraints;
     ConstraintSet ArgConstraints;
@@ -391,7 +399,14 @@ class StdLibraryFunctionsChecker
 
   public:
     Summary(ArgTypes ArgTys, QualType RetTy, InvalidationKind InvalidationKd)
-        : Sign(ArgTys, RetTy), InvalidationKd(InvalidationKd) {}
+        : Sign(Signature(ArgTys, RetTy)), InvalidationKd(InvalidationKd) {}
+
+    Summary(InvalidationKind InvalidationKd) : InvalidationKd(InvalidationKd) {}
+
+    Summary &setSignature(const Signature &S) {
+      Sign = S;
+      return *this;
+    }
 
     Summary &Case(ConstraintSet&& CS) {
       CaseConstraints.push_back(std::move(CS));
@@ -413,7 +428,9 @@ class StdLibraryFunctionsChecker
     // Returns true if the summary should be applied to the given function.
     // And if yes then store the function declaration.
     bool matchesAndSet(const FunctionDecl *FD) {
-      bool Result = Sign.matches(FD) && validateByConstraints(FD);
+      assert(Sign &&
+             "Signature must be set before comparing to a FunctionDecl");
+      bool Result = Sign->matches(FD) && validateByConstraints(FD);
       if (Result) {
         assert(!this->FD && "FD must not be set more than once");
         this->FD = FD;
@@ -761,6 +778,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
   const ASTContext &ACtx = BVF.getContext();
 
+  auto getRestrictTy = [&ACtx](QualType Ty) {
+    return ACtx.getLangOpts().C99 ? ACtx.getRestrictType(Ty) : Ty;
+  };
+
   // These types are useful for writing specifications quickly,
   // New specifications should probably introduce more types.
   // Some types are hard to obtain from the AST, eg. "ssize_t".
@@ -779,28 +800,18 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType IntPtrTy = ACtx.getPointerType(IntTy); // int *
   const QualType UnsignedIntPtrTy =
       ACtx.getPointerType(UnsignedIntTy); // unsigned int *
-  const QualType VoidPtrRestrictTy =
-      ACtx.getLangOpts().C99 ? ACtx.getRestrictType(VoidPtrTy) // void *restrict
-                             : VoidPtrTy;
+  const QualType VoidPtrRestrictTy = getRestrictTy(VoidPtrTy);
   const QualType ConstVoidPtrTy =
       ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *
   const QualType CharPtrTy = ACtx.getPointerType(ACtx.CharTy); // char *
-  const QualType CharPtrRestrictTy =
-      ACtx.getLangOpts().C99 ? ACtx.getRestrictType(CharPtrTy) // char *restrict
-                             : CharPtrTy;
+  const QualType CharPtrRestrictTy = getRestrictTy(CharPtrTy);
   const QualType ConstCharPtrTy =
       ACtx.getPointerType(ACtx.CharTy.withConst()); // const char *
-  const QualType ConstCharPtrRestrictTy =
-      ACtx.getLangOpts().C99
-          ? ACtx.getRestrictType(ConstCharPtrTy) // const char *restrict
-          : ConstCharPtrTy;
+  const QualType ConstCharPtrRestrictTy = getRestrictTy(ConstCharPtrTy);
   const QualType Wchar_tPtrTy = ACtx.getPointerType(ACtx.WCharTy); // wchar_t *
   const QualType ConstWchar_tPtrTy =
       ACtx.getPointerType(ACtx.WCharTy.withConst()); // const wchar_t *
-  const QualType ConstVoidPtrRestrictTy =
-      ACtx.getLangOpts().C99
-          ? ACtx.getRestrictType(ConstVoidPtrTy) // const void *restrict
-          : ConstVoidPtrTy;
+  const QualType ConstVoidPtrRestrictTy = getRestrictTy(ConstVoidPtrTy);
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
   const RangeInt UnsignedIntMax =
@@ -840,11 +851,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // Add a summary to a FunctionDecl found by lookup. The lookup is performed
     // by the given Name, and in the global scope. The summary will be attached
     // to the found FunctionDecl only if the signatures match.
-    void operator()(StringRef Name, Summary S) {
+    //
+    // Returns true if the summary has been added, false otherwise.
+    bool operator()(StringRef Name, Summary S) {
       IdentifierInfo &II = ACtx.Idents.get(Name);
       auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
       if (LookupRes.size() == 0)
-        return;
+        return false;
       for (Decl *D : LookupRes) {
         if (auto *FD = dyn_cast<FunctionDecl>(D)) {
           if (S.matchesAndSet(FD)) {
@@ -856,10 +869,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
               FD->print(llvm::errs());
               llvm::errs() << "\n";
             }
-            return;
+            return true;
           }
         }
       }
+      return false;
+    }
+    bool operator()(StringRef Name, Signature Sign, Summary Sum) {
+      return operator()(Name, Sum.setSignature(Sign));
     }
     // Add several summaries for the given name.
     void operator()(StringRef Name, const std::vector<Summary> &Summaries) {
@@ -927,8 +944,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // FILE *
     FilePtrTy = ACtx.getPointerType(*FileTy);
     // FILE *restrict
-    FilePtrRestrictTy =
-        ACtx.getLangOpts().C99 ? ACtx.getRestrictType(*FilePtrTy) : *FilePtrTy;
+    FilePtrRestrictTy = getRestrictTy(*FilePtrTy);
   }
 
   using RetType = QualType;
@@ -1434,9 +1450,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     Optional<QualType> StructStatPtrTy, StructStatPtrRestrictTy;
     if (StructStatTy) {
       StructStatPtrTy = ACtx.getPointerType(*StructStatTy);
-      StructStatPtrRestrictTy = ACtx.getLangOpts().C99
-                                    ? ACtx.getRestrictType(*StructStatPtrTy)
-                                    : *StructStatPtrTy;
+      StructStatPtrRestrictTy = getRestrictTy(*StructStatPtrTy);
     }
 
     if (StructStatPtrTy)
@@ -1702,6 +1716,276 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
+
+    Optional<QualType> StructSockaddrTy = lookupType("sockaddr", ACtx);
+    Optional<QualType> StructSockaddrPtrTy, ConstStructSockaddrPtrTy,
+        StructSockaddrPtrRestrictTy, ConstStructSockaddrPtrRestrictTy;
+    if (StructSockaddrTy) {
+      StructSockaddrPtrTy = ACtx.getPointerType(*StructSockaddrTy);
+      ConstStructSockaddrPtrTy =
+          ACtx.getPointerType(StructSockaddrTy->withConst());
+      StructSockaddrPtrRestrictTy = getRestrictTy(*StructSockaddrPtrTy);
+      ConstStructSockaddrPtrRestrictTy =
+          getRestrictTy(*ConstStructSockaddrPtrTy);
+    }
+    Optional<QualType> Socklen_tTy = lookupType("socklen_t", ACtx);
+    Optional<QualType> Socklen_tPtrTy, Socklen_tPtrRestrictTy;
+    Optional<RangeInt> Socklen_tMax;
+    if (Socklen_tTy) {
+      Socklen_tMax = BVF.getMaxValue(*Socklen_tTy).getLimitedValue();
+      Socklen_tPtrTy = ACtx.getPointerType(*Socklen_tTy);
+      Socklen_tPtrRestrictTy = getRestrictTy(*Socklen_tPtrTy);
+    }
+
+    // In 'socket.h' of some libc implementations with C99, sockaddr parameter
+    // is a transparent union of the underlying sockaddr_ family of pointers
+    // instead of being a pointer to struct sockaddr. In these cases, the
+    // standardized signature will not match, thus we try to match with another
+    // signature that has the joker Irrelevant type. We also remove those
+    // constraints which require pointer types for the sockaddr param.
+    if (StructSockaddrPtrRestrictTy && Socklen_tPtrRestrictTy) {
+      auto Accept = Summary(NoEvalCall)
+                        .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                         Range(0, IntMax)));
+      if (!addToFunctionSummaryMap(
+              "accept",
+              // int accept(int socket, struct sockaddr *restrict address,
+              //            socklen_t *restrict address_len);
+              Signature(ArgTypes{IntTy, *StructSockaddrPtrRestrictTy,
+                                 *Socklen_tPtrRestrictTy},
+                        RetType{IntTy}),
+              Accept))
+        addToFunctionSummaryMap(
+            "accept",
+            Signature(ArgTypes{IntTy, Irrelevant, *Socklen_tPtrRestrictTy},
+                      RetType{IntTy}),
+            Accept);
+
+      // int bind(int socket, const struct sockaddr *address, socklen_t
+      //          address_len);
+      if (!addToFunctionSummaryMap(
+              "bind",
+              Summary(ArgTypes{IntTy, *ConstStructSockaddrPtrTy, *Socklen_tTy},
+                      RetType{IntTy}, NoEvalCall)
+                  .ArgConstraint(
+                      ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                  .ArgConstraint(NotNull(ArgNo(1)))
+                  .ArgConstraint(
+                      BufferSize(/*Buffer=*/ArgNo(1), /*BufSize=*/ArgNo(2)))
+                  .ArgConstraint(ArgumentCondition(2, WithinRange,
+                                                   Range(0, *Socklen_tMax)))))
+        // Do not add constraints on sockaddr.
+        addToFunctionSummaryMap(
+            "bind", Summary(ArgTypes{IntTy, Irrelevant, *Socklen_tTy},
+                            RetType{IntTy}, NoEvalCall)
+                        .ArgConstraint(
+                            ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                        .ArgConstraint(ArgumentCondition(
+                            2, WithinRange, Range(0, *Socklen_tMax))));
+
+      // int getpeername(int socket, struct sockaddr *restrict address,
+      //                 socklen_t *restrict address_len);
+      if (!addToFunctionSummaryMap(
+              "getpeername",
+              Summary(ArgTypes{IntTy, *StructSockaddrPtrRestrictTy,
+                               *Socklen_tPtrRestrictTy},
+                      RetType{IntTy}, NoEvalCall)
+                  .ArgConstraint(
+                      ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                  .ArgConstraint(NotNull(ArgNo(1)))
+                  .ArgConstraint(NotNull(ArgNo(2)))))
+        addToFunctionSummaryMap(
+            "getpeername",
+            Summary(ArgTypes{IntTy, Irrelevant, *Socklen_tPtrRestrictTy},
+                    RetType{IntTy}, NoEvalCall)
+                .ArgConstraint(
+                    ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+      // int getsockname(int socket, struct sockaddr *restrict address,
+      //                 socklen_t *restrict address_len);
+      if (!addToFunctionSummaryMap(
+              "getsockname",
+              Summary(ArgTypes{IntTy, *StructSockaddrPtrRestrictTy,
+                               *Socklen_tPtrRestrictTy},
+                      RetType{IntTy}, NoEvalCall)
+                  .ArgConstraint(
+                      ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                  .ArgConstraint(NotNull(ArgNo(1)))
+                  .ArgConstraint(NotNull(ArgNo(2)))))
+        addToFunctionSummaryMap(
+            "getsockname",
+            Summary(ArgTypes{IntTy, Irrelevant, *Socklen_tPtrRestrictTy},
+                    RetType{IntTy}, NoEvalCall)
+                .ArgConstraint(
+                    ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+      // int connect(int socket, const struct sockaddr *address, socklen_t
+      //             address_len);
+      if (!addToFunctionSummaryMap(
+              "connect",
+              Summary(ArgTypes{IntTy, *ConstStructSockaddrPtrTy, *Socklen_tTy},
+                      RetType{IntTy}, NoEvalCall)
+                  .ArgConstraint(
+                      ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                  .ArgConstraint(NotNull(ArgNo(1)))))
+        addToFunctionSummaryMap(
+            "connect", Summary(ArgTypes{IntTy, Irrelevant, *Socklen_tTy},
+                               RetType{IntTy}, NoEvalCall)
+                           .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                            Range(0, IntMax))));
+
+      auto Recvfrom = Summary(NoEvalCall)
+                          .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                           Range(0, IntMax)))
+                          .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
+                                                    /*BufSize=*/ArgNo(2)));
+      if (Ssize_tTy &&
+          !addToFunctionSummaryMap(
+              "recvfrom",
+              // ssize_t recvfrom(int socket, void *restrict buffer,
+              //                  size_t length,
+              //                  int flags, struct sockaddr *restrict address,
+              //                  socklen_t *restrict address_len);
+              Signature(ArgTypes{IntTy, VoidPtrRestrictTy, SizeTy, IntTy,
+                                 *StructSockaddrPtrRestrictTy,
+                                 *Socklen_tPtrRestrictTy},
+                        RetType{*Ssize_tTy}),
+              Recvfrom))
+        addToFunctionSummaryMap(
+            "recvfrom",
+            Signature(ArgTypes{IntTy, VoidPtrRestrictTy, SizeTy, IntTy,
+                               Irrelevant, *Socklen_tPtrRestrictTy},
+                      RetType{*Ssize_tTy}),
+            Recvfrom);
+
+      auto Sendto = Summary(NoEvalCall)
+                        .ArgConstraint(
+                            ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                        .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
+                                                  /*BufSize=*/ArgNo(2)));
+      if (Ssize_tTy &&
+          !addToFunctionSummaryMap(
+              "sendto",
+              // ssize_t sendto(int socket, const void *message, size_t length,
+              //                int flags, const struct sockaddr *dest_addr,
+              //                socklen_t dest_len);
+              Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy,
+                                 *ConstStructSockaddrPtrTy, *Socklen_tTy},
+                        RetType{*Ssize_tTy}),
+              Sendto))
+        addToFunctionSummaryMap(
+            "sendto",
+            Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy, Irrelevant,
+                               *Socklen_tTy},
+                      RetType{*Ssize_tTy}),
+            Sendto);
+    }
+
+    // int listen(int sockfd, int backlog);
+    addToFunctionSummaryMap(
+        "listen", Summary(ArgTypes{IntTy, IntTy}, RetType{IntTy}, NoEvalCall)
+                      .ArgConstraint(
+                          ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    if (Ssize_tTy)
+      // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+      addToFunctionSummaryMap(
+          "recv", Summary(ArgTypes{IntTy, VoidPtrTy, SizeTy, IntTy},
+                          RetType{*Ssize_tTy}, NoEvalCall)
+                      .ArgConstraint(
+                          ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                      .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
+                                                /*BufSize=*/ArgNo(2))));
+
+    Optional<QualType> StructMsghdrTy = lookupType("msghdr", ACtx);
+    Optional<QualType> StructMsghdrPtrTy, ConstStructMsghdrPtrTy;
+    if (StructMsghdrTy) {
+      StructMsghdrPtrTy = ACtx.getPointerType(*StructMsghdrTy);
+      ConstStructMsghdrPtrTy = ACtx.getPointerType(StructMsghdrTy->withConst());
+    }
+
+    if (Ssize_tTy && StructMsghdrPtrTy)
+      // ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
+      addToFunctionSummaryMap(
+          "recvmsg", Summary(ArgTypes{IntTy, *StructMsghdrPtrTy, IntTy},
+                             RetType{*Ssize_tTy}, NoEvalCall)
+                         .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                          Range(0, IntMax))));
+
+    if (Ssize_tTy && ConstStructMsghdrPtrTy)
+      // ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
+      addToFunctionSummaryMap(
+          "sendmsg", Summary(ArgTypes{IntTy, *ConstStructMsghdrPtrTy, IntTy},
+                             RetType{*Ssize_tTy}, NoEvalCall)
+                         .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                          Range(0, IntMax))));
+
+    if (Socklen_tTy)
+      // int setsockopt(int socket, int level, int option_name,
+      //                const void *option_value, socklen_t option_len);
+      addToFunctionSummaryMap(
+          "setsockopt",
+          Summary(ArgTypes{IntTy, IntTy, IntTy, ConstVoidPtrTy, *Socklen_tTy},
+                  RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(NotNull(ArgNo(3)))
+              .ArgConstraint(
+                  BufferSize(/*Buffer=*/ArgNo(3), /*BufSize=*/ArgNo(4)))
+              .ArgConstraint(
+                  ArgumentCondition(4, WithinRange, Range(0, *Socklen_tMax))));
+
+    if (Socklen_tPtrRestrictTy)
+      // int getsockopt(int socket, int level, int option_name,
+      //                void *restrict option_value,
+      //                socklen_t *restrict option_len);
+      addToFunctionSummaryMap(
+          "getsockopt", Summary(ArgTypes{IntTy, IntTy, IntTy, VoidPtrRestrictTy,
+                                         *Socklen_tPtrRestrictTy},
+                                RetType{IntTy}, NoEvalCall)
+                            .ArgConstraint(NotNull(ArgNo(3)))
+                            .ArgConstraint(NotNull(ArgNo(4))));
+
+    if (Ssize_tTy)
+      // ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+      addToFunctionSummaryMap(
+          "send", Summary(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy},
+                          RetType{*Ssize_tTy}, NoEvalCall)
+                      .ArgConstraint(
+                          ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                      .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
+                                                /*BufSize=*/ArgNo(2))));
+
+    // int socketpair(int domain, int type, int protocol, int sv[2]);
+    addToFunctionSummaryMap("socketpair",
+                            Summary(ArgTypes{IntTy, IntTy, IntTy, IntPtrTy},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(3))));
+
+    if (ConstStructSockaddrPtrRestrictTy && Socklen_tTy)
+      // int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen,
+      //                 char *restrict node, socklen_t nodelen,
+      //                 char *restrict service,
+      //                 socklen_t servicelen, int flags);
+      //
+      // This is defined in netdb.h. And contrary to 'socket.h', the sockaddr
+      // parameter is never handled as a transparent union in netdb.h
+      addToFunctionSummaryMap(
+          "getnameinfo",
+          Summary(ArgTypes{*ConstStructSockaddrPtrRestrictTy, *Socklen_tTy,
+                           CharPtrRestrictTy, *Socklen_tTy, CharPtrRestrictTy,
+                           *Socklen_tTy, IntTy},
+                  RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(
+                  BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1)))
+              .ArgConstraint(
+                  ArgumentCondition(1, WithinRange, Range(0, *Socklen_tMax)))
+              .ArgConstraint(
+                  BufferSize(/*Buffer=*/ArgNo(2), /*BufSize=*/ArgNo(3)))
+              .ArgConstraint(
+                  ArgumentCondition(3, WithinRange, Range(0, *Socklen_tMax)))
+              .ArgConstraint(
+                  BufferSize(/*Buffer=*/ArgNo(4), /*BufSize=*/ArgNo(5)))
+              .ArgConstraint(
+                  ArgumentCondition(5, WithinRange, Range(0, *Socklen_tMax))));
   }
 
   // Functions for testing.

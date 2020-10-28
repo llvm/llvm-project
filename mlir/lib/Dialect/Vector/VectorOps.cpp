@@ -1466,22 +1466,6 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 // TransferReadOp
 //===----------------------------------------------------------------------===//
 
-/// Build the default minor identity map suitable for a vector transfer. This
-/// also handles the case memref<... x vector<...>> -> vector<...> in which the
-/// rank of the identity map must take the vector element type into account.
-AffineMap
-mlir::vector::impl::getTransferMinorIdentityMap(MemRefType memRefType,
-                                                VectorType vectorType) {
-  int64_t elementVectorRank = 0;
-  VectorType elementVectorType =
-      memRefType.getElementType().dyn_cast<VectorType>();
-  if (elementVectorType)
-    elementVectorRank += elementVectorType.getRank();
-  return AffineMap::getMinorIdentityMap(
-      memRefType.getRank(), vectorType.getRank() - elementVectorRank,
-      memRefType.getContext());
-}
-
 template <typename EmitFun>
 static LogicalResult verifyPermutationMap(AffineMap permutationMap,
                                           EmitFun emitOpError) {
@@ -1600,11 +1584,10 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, vectorType, memref, indices, permMap, maybeMasked);
 }
 
-template <typename TransferOp>
-static void printTransferAttrs(OpAsmPrinter &p, TransferOp op) {
+static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 2> elidedAttrs;
-  if (op.permutation_map() == TransferOp::getTransferMinorIdentityMap(
-                                  op.getMemRefType(), op.getVectorType()))
+  if (op.permutation_map() ==
+      getTransferMinorIdentityMap(op.getMemRefType(), op.getVectorType()))
     elidedAttrs.push_back(op.getPermutationMapAttrName());
   bool elideMasked = true;
   if (auto maybeMasked = op.masked()) {
@@ -1623,7 +1606,7 @@ static void printTransferAttrs(OpAsmPrinter &p, TransferOp op) {
 static void print(OpAsmPrinter &p, TransferReadOp op) {
   p << op.getOperationName() << " " << op.memref() << "[" << op.indices()
     << "], " << op.padding();
-  printTransferAttrs(p, op);
+  printTransferAttrs(p, cast<VectorTransferOpInterface>(op.getOperation()));
   p << " : " << op.getMemRefType() << ", " << op.getVectorType();
 }
 
@@ -1653,8 +1636,7 @@ static ParseResult parseTransferReadOp(OpAsmParser &parser,
   auto permutationAttrName = TransferReadOp::getPermutationMapAttrName();
   auto attr = result.attributes.get(permutationAttrName);
   if (!attr) {
-    auto permMap =
-        TransferReadOp::getTransferMinorIdentityMap(memRefType, vectorType);
+    auto permMap = getTransferMinorIdentityMap(memRefType, vectorType);
     result.attributes.set(permutationAttrName, AffineMapAttr::get(permMap));
   }
   return failure(
@@ -1733,6 +1715,7 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 
   int64_t memrefSize = op.getMemRefType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
+
   return cstOp.getValue() + vectorSize <= memrefSize;
 }
 
@@ -1744,23 +1727,11 @@ static LogicalResult foldTransferMaskAttribute(TransferOp op) {
   bool changed = false;
   SmallVector<bool, 4> isMasked;
   isMasked.reserve(op.getTransferRank());
-  // `permutationMap` results and `op.indices` sizes may not match and may not
-  // be aligned. The first `indicesIdx` may just be indexed and not transferred
-  // from/into the vector.
-  // For example:
-  //  vector.transfer %0[%i, %j, %k, %c0] : memref<?x?x?x?xf32>, vector<2x4xf32>
-  // with `permutation_map = (d0, d1, d2, d3) -> (d2, d3)`.
-  // The `permutationMap` results and `op.indices` are however aligned when
-  // iterating in reverse until we exhaust `permutationMap` results.
-  // As a consequence we iterate with 2 running indices: `resultIdx` and
-  // `indicesIdx`, until `resultIdx` reaches 0.
-  for (int64_t resultIdx = permutationMap.getNumResults() - 1,
-               indicesIdx = op.indices().size() - 1;
-       resultIdx >= 0; --resultIdx, --indicesIdx) {
+  op.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     // Already marked unmasked, nothing to see here.
     if (!op.isMaskedDim(resultIdx)) {
       isMasked.push_back(false);
-      continue;
+      return;
     }
     // Currently masked, check whether we can statically determine it is
     // inBounds.
@@ -1768,12 +1739,11 @@ static LogicalResult foldTransferMaskAttribute(TransferOp op) {
     isMasked.push_back(!inBounds);
     // We commit the pattern if it is "more inbounds".
     changed |= inBounds;
-  }
+  });
   if (!changed)
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  std::reverse(isMasked.begin(), isMasked.end());
   op.setAttr(TransferOp::getMaskedAttrName(), b.getBoolArrayAttr(isMasked));
   return success();
 }
@@ -1842,8 +1812,7 @@ static ParseResult parseTransferWriteOp(OpAsmParser &parser,
   auto permutationAttrName = TransferWriteOp::getPermutationMapAttrName();
   auto attr = result.attributes.get(permutationAttrName);
   if (!attr) {
-    auto permMap =
-        TransferWriteOp::getTransferMinorIdentityMap(memRefType, vectorType);
+    auto permMap = getTransferMinorIdentityMap(memRefType, vectorType);
     result.attributes.set(permutationAttrName, AffineMapAttr::get(permMap));
   }
   return failure(
@@ -1855,7 +1824,7 @@ static ParseResult parseTransferWriteOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, TransferWriteOp op) {
   p << op.getOperationName() << " " << op.vector() << ", " << op.memref() << "["
     << op.indices() << "]";
-  printTransferAttrs(p, op);
+  printTransferAttrs(p, cast<VectorTransferOpInterface>(op.getOperation()));
   p << " : " << op.getVectorType() << ", " << op.getMemRefType();
 }
 
@@ -1887,6 +1856,49 @@ LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
 Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
   auto s = getVectorType().getShape();
   return SmallVector<int64_t, 4>{s.begin(), s.end()};
+}
+
+//===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(GatherOp op) {
+  VectorType indicesVType = op.getIndicesVectorType();
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != indicesVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match indices dim");
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (llvm::size(op.pass_thru()) != 0) {
+    VectorType passVType = op.getPassThruVectorType();
+    if (resVType != passVType)
+      return op.emitOpError("expected pass_thru of same type as result type");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ScatterOp op) {
+  VectorType indicesVType = op.getIndicesVectorType();
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
+  if (valueVType.getDimSize(0) != indicesVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match indices dim");
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

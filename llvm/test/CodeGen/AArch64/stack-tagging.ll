@@ -1,5 +1,5 @@
-; RUN: opt < %s -stack-tagging -S -o - | FileCheck %s --check-prefixes=CHECK,SSI
-; RUN: opt < %s -stack-tagging -stack-tagging-use-stack-safety=0 -S -o - | FileCheck %s --check-prefixes=CHECK,NOSSI
+; RUN: opt < %s -aarch64-stack-tagging -S -o - | FileCheck %s --check-prefixes=CHECK,SSI
+; RUN: opt < %s -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 -S -o - | FileCheck %s --check-prefixes=CHECK,NOSSI
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"

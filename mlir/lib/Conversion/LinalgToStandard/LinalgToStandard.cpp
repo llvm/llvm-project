@@ -236,12 +236,12 @@ void mlir::populateLinalgToStandardConversionPatterns(
       LinalgOpConversion<PoolingMinOp>,
       LinalgOpConversion<PoolingSumOp>,
       LinalgOpConversion<CopyOp>,
-      LinalgOpConversion<DotOp>,
       LinalgOpConversion<FillOp>,
       LinalgOpConversion<GenericOp>,
       LinalgOpConversion<IndexedGenericOp>>(ctx);
   // TODO: collect all auto-generated named ops with a tblgen directive.
   patterns.insert<
+      LinalgOpConversion<DotOp>,
       LinalgOpConversion<BatchMatmulOp>,
       LinalgOpConversion<MatvecOp>,
       LinalgOpConversion<MatmulOp>>(ctx);

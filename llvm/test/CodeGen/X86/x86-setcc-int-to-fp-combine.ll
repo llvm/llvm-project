@@ -30,7 +30,7 @@ define void @foo1(<4 x float> %val, <4 x float> %test, <4 x double>* %p) nounwin
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    cmpeqps %xmm1, %xmm0
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)

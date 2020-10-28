@@ -146,7 +146,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
     if (s.startswith("/*")) {
       size_t e = s.find("*/", 2);
       if (e == StringRef::npos) {
-        error("unclosed comment in a linker script");
+        setError("unclosed comment in a linker script");
         return "";
       }
       s = s.substr(e + 2);

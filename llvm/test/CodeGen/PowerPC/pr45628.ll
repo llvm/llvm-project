@@ -223,9 +223,9 @@ define <1 x i128> @rotl_28(<1 x i128> %num) {
 ; P9-NOVSX-NEXT:    rldimi r5, r3, 28, 0
 ; P9-NOVSX-NEXT:    rotldi r3, r3, 28
 ; P9-NOVSX-NEXT:    rldimi r3, r4, 28, 0
+; P9-NOVSX-NEXT:    std r5, -8(r1)
 ; P9-NOVSX-NEXT:    std r3, -16(r1)
 ; P9-NOVSX-NEXT:    addi r3, r1, -16
-; P9-NOVSX-NEXT:    std r5, -8(r1)
 ; P9-NOVSX-NEXT:    lvx v2, 0, r3
 ; P9-NOVSX-NEXT:    blr
 ;

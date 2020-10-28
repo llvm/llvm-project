@@ -72,15 +72,15 @@ static LogicalResult foldMemRefCast(Operation *op) {
 
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes,
-    ValueRange args, int64_t inputCount, int64_t outputCount,
+    ValueRange args, int64_t argsIn, int64_t argsOut,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
-  build(builder, result, resultTypes, args,
-        builder.getI64IntegerAttr(inputCount),
-        builder.getI64IntegerAttr(outputCount),
+  build(builder, result, resultTypes, args, builder.getI64IntegerAttr(argsIn),
+        builder.getI64IntegerAttr(argsOut),
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getStrArrayAttr(iteratorTypes),
-        /*doc=*/nullptr, /*library_call=*/nullptr);
+        /*doc=*/nullptr, /*library_call=*/nullptr,
+        /*symbol_source=*/nullptr);
   if (!bodyBuild)
     return;
 
@@ -96,16 +96,16 @@ void GenericOp::build(
 
 void IndexedGenericOp::build(
     OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes,
-    ValueRange args, int64_t inputCount, int64_t outputCount,
+    ValueRange args, int64_t argsIn, int64_t argsOut,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
         bodyBuild) {
-  build(builder, result, resultTypes, args,
-        builder.getI64IntegerAttr(inputCount),
-        builder.getI64IntegerAttr(outputCount),
+  build(builder, result, resultTypes, args, builder.getI64IntegerAttr(argsIn),
+        builder.getI64IntegerAttr(argsOut),
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getStrArrayAttr(iteratorTypes),
-        /*doc=*/nullptr, /*library_call=*/nullptr);
+        /*doc=*/nullptr, /*library_call=*/nullptr,
+        /*symbol_source=*/nullptr);
   if (!bodyBuild)
     return;
 
@@ -259,6 +259,15 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   if (failed(BlockArgsVerifier<GenericOpType>::verify(op, region.front())))
     return failure();
 
+  auto attr = op.template getAttrOfType<IntegerAttr>("symbol_source");
+  int64_t targetRank = 0;
+  if (attr) {
+    unsigned index = attr.getInt();
+    if (index >= op.getNumOperands())
+      return op.emitOpError("symbol_source index out of range");
+    targetRank = op.getShapedType(index).getRank();
+  }
+
   SmallVector<AffineMap, 4> indexingMaps;
   indexingMaps.reserve(op.indexing_maps().size());
   for (auto en : llvm::enumerate(op.indexing_maps())) {
@@ -268,9 +277,9 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
     auto view = (idx < nInputViews) ? op.getInputShapedType(idx)
                                     : op.getOutputShapedType(idx - nInputViews);
 
-    if (m.getNumSymbols() != 0)
-      return op.emitOpError("expected indexing_map #")
-             << idx << " to have no symbols";
+    if (m.getNumSymbols() != targetRank)
+      return op.emitOpError("expected the number of symbols in indexing_map #")
+             << idx << " to match target rank";
 
     if (m.getNumDims() != nLoops)
       return op.emitOpError("expected indexing_map #")
@@ -283,8 +292,8 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   }
 
   auto concatMap = concatAffineMaps(indexingMaps);
-  auto aggregateMap = inversePermutation(concatMap);
-  if (!aggregateMap)
+  // TODO: Bound inference for maps with symbols
+  if (!concatMap.getNumSymbols() && !inversePermutation(concatMap))
     return op.emitOpError("expected the concatenation of maps in indexing_map "
                           "to be invertible");
 
@@ -590,6 +599,8 @@ void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
   result.addAttribute(ReshapeOp::getReassociationAttrName(),
                       b.getAffineMapArrayAttr(maps));
 }
+
+Value mlir::linalg::ReshapeOp::getViewSource() { return src(); }
 
 // Common verifier for reshape-like types. Fills `expandedType` and
 // `collapsedType` with the proper `src` or `result` type.
@@ -984,6 +995,8 @@ static LogicalResult verify(ConvOp op) {
     return op.emitOpError("expects memref elemental types to match");
   if (oType.getRank() != iType.getRank() || oType.getRank() != fType.getRank())
     return op.emitOpError("expects memref ranks to match");
+  if (oType.getRank() <= 2)
+    return op.emitOpError("expects memref ranks to be greater than 2");
   if (auto strides = op.strides()) {
     if (failed(
             verifyStrideOrDilation(op, strides->getValue(), /*isStride=*/true)))
@@ -1160,10 +1173,6 @@ LogicalResult CopyOp::fold(ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
-LogicalResult DotOp::fold(ArrayRef<Attribute>,
-                          SmallVectorImpl<OpFoldResult> &) {
-  return foldMemRefCast(*this);
-}
 LogicalResult FillOp::fold(ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
@@ -1267,6 +1276,17 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
   if (!tensorResultTypes.empty())
     result.addTypes(tensorResultTypes);
 
+  // The number of parsed arguments must equal
+  // the number of expected arguments for the current operation.
+  auto parsedArgs = operandsInfo.size();
+  auto expectedArgs = NamedStructuredOpType::getNumInputs() +
+                      NamedStructuredOpType::getNumOutputs();
+  if (parsedArgs != expectedArgs)
+    return parser.emitError(parser.getNameLoc(),
+                            "expects " + std::to_string(expectedArgs) +
+                                " operands, but found " +
+                                std::to_string(parsedArgs));
+
   buildNamedStructuredOpRegionAndAttributes<NamedStructuredOpType>(
       parser.getBuilder(), result, operandTypes, tensorResultTypes);
 
@@ -1286,11 +1306,51 @@ LogicalResult BatchMatmulOp::fold(ArrayRef<Attribute>,
                                   SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
+LogicalResult DotOp::fold(ArrayRef<Attribute>,
+                          SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
 LogicalResult MatmulOp::fold(ArrayRef<Attribute>,
                              SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
 LogicalResult MatvecOp::fold(ArrayRef<Attribute>,
                              SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvWOp::fold(ArrayRef<Attribute>,
+                            SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvNWCOp::fold(ArrayRef<Attribute>,
+                              SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvNCWOp::fold(ArrayRef<Attribute>,
+                              SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvHWOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvNHWCOp::fold(ArrayRef<Attribute>,
+                               SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvNCHWOp::fold(ArrayRef<Attribute>,
+                               SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvDHWOp::fold(ArrayRef<Attribute>,
+                              SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvNDHWCOp::fold(ArrayRef<Attribute>,
+                                SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult ConvNCDHWOp::fold(ArrayRef<Attribute>,
+                                SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }

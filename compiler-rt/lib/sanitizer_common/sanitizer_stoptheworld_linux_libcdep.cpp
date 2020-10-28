@@ -89,14 +89,14 @@ class SuspendedThreadsListLinux : public SuspendedThreadsList {
  public:
   SuspendedThreadsListLinux() { thread_ids_.reserve(1024); }
 
-  tid_t GetThreadID(uptr index) const;
-  uptr ThreadCount() const;
+  tid_t GetThreadID(uptr index) const override;
+  uptr ThreadCount() const override;
   bool ContainsTid(tid_t thread_id) const;
   void Append(tid_t tid);
 
   PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
-                                          uptr *sp) const;
-  uptr RegisterCount() const;
+                                          uptr *sp) const override;
+  uptr RegisterCount() const override;
 
  private:
   InternalMmapVector<tid_t> thread_ids_;

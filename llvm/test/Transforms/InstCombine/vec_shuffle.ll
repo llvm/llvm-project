@@ -1745,3 +1745,18 @@ define <4 x i32> @splat_assoc_add_mul(<4 x i32> %x, <4 x i32> %y) {
   %r = mul <4 x i32> %splatx, %a
   ret <4 x i32> %r
 }
+
+
+; Do not crash on constant expressions.
+
+define <4 x i32> @PR46872(<4 x i32> %x) {
+; CHECK-LABEL: @PR46872(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[A:%.*]] = and <4 x i32> [[S]], bitcast (<2 x i64> <i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64), i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64)> to <4 x i32>)
+; CHECK-NEXT:    ret <4 x i32> [[A]]
+;
+  %s = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 0, i32 1, i32 1>
+  %a = and <4 x i32> %s, bitcast (<2 x i64> <i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64), i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64)> to <4 x i32>)
+  ret <4 x i32> %a
+}
+

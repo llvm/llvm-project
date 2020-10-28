@@ -243,8 +243,8 @@ struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
   explicit ScopExpander(const Region &R, ScalarEvolution &SE,
                         const DataLayout &DL, const char *Name, ValueMapT *VMap,
                         BasicBlock *RTCBB)
-      : Expander(SE, DL, Name), SE(SE), Name(Name), R(R), VMap(VMap),
-        RTCBB(RTCBB) {}
+      : Expander(SE, DL, Name, /*PreserveLCSSA=*/false), SE(SE), Name(Name),
+        R(R), VMap(VMap), RTCBB(RTCBB) {}
 
   Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *I) {
     // If we generate code in the region we will immediately fall back to the

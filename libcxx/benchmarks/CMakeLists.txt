@@ -87,8 +87,6 @@ set(BENCHMARK_TEST_COMPILE_FLAGS
     -I${LIBCXX_SOURCE_DIR}/test/support
 )
 set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
-    -nostdinc++
-    -isystem ${LIBCXX_SOURCE_DIR}/include
     ${BENCHMARK_TEST_COMPILE_FLAGS}
     ${SANITIZER_FLAGS}
     -Wno-user-defined-literals
@@ -130,7 +128,7 @@ function(add_benchmark_test name source_file)
   set(libcxx_target ${name}_libcxx)
   list(APPEND libcxx_benchmark_targets ${libcxx_target})
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
-  add_dependencies(${libcxx_target} cxx cxx-headers google-benchmark-libcxx)
+  add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
   add_dependencies(cxx-benchmarks ${libcxx_target})
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(${libcxx_target} PRIVATE cxx_shared)

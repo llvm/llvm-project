@@ -262,6 +262,12 @@ TLI_DEFINE_STRING_INTERNAL("__atanhf_finite")
 /// long double __atanhl_finite(long double x);
 TLI_DEFINE_ENUM_INTERNAL(atanhl_finite)
 TLI_DEFINE_STRING_INTERNAL("__atanhl_finite")
+/// void __atomic_load(size_t size, void *mptr, void *vptr, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_load)
+TLI_DEFINE_STRING_INTERNAL("__atomic_load")
+/// void __atomic_store(size_t size, void *mptr, void *vptr, int smodel);
+TLI_DEFINE_ENUM_INTERNAL(atomic_store)
+TLI_DEFINE_STRING_INTERNAL("__atomic_store")
 /// double __cosh_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(cosh_finite)
 TLI_DEFINE_STRING_INTERNAL("__cosh_finite")

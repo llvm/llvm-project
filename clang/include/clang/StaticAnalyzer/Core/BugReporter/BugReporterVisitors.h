@@ -373,7 +373,7 @@ public:
 class FalsePositiveRefutationBRVisitor final : public BugReporterVisitor {
 private:
   /// Holds the constraints in a given path
-  ConstraintRangeTy Constraints;
+  ConstraintMap Constraints;
 
 public:
   FalsePositiveRefutationBRVisitor();
@@ -389,7 +389,6 @@ public:
   void addConstraints(const ExplodedNode *N,
                       bool OverwriteConstraintsOnExistingSyms);
 };
-
 
 /// The visitor detects NoteTags and displays the event notes they contain.
 class TagVisitor : public BugReporterVisitor {

@@ -1,12 +1,12 @@
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -S | FileCheck --check-prefix=PROMO --check-prefix=NONATOMIC_PROMO %s
-; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -S | FileCheck --check-prefix=PROMO --check-prefix=NONATOMIC_PROMO %s 
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -atomic-counter-update-promoted -S | FileCheck --check-prefix=PROMO --check-prefix=ATOMIC_PROMO %s
-; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -atomic-counter-update-promoted -S | FileCheck --check-prefix=PROMO --check-prefix=ATOMIC_PROMO %s 
+; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=NONATOMIC_PROMO %s
+; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=NONATOMIC_PROMO %s
+; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -atomic-counter-update-promoted -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=ATOMIC_PROMO %s
+; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -atomic-counter-update-promoted -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=ATOMIC_PROMO %s
 
 define void @foo(i32 %n, i32 %N) {
 ; PROMO-LABEL: @foo
 ; PROMO: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
-; PROMO-NEXT: add 
+; PROMO-NEXT: add
 ; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}3)
 bb:
   %tmp = add nsw i32 %n, 1

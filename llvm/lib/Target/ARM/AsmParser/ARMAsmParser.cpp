@@ -10598,6 +10598,12 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
         (isThumb() && !hasV8Ops()))
       return Match_InvalidOperand;
     break;
+  case ARM::t2TBB:
+  case ARM::t2TBH:
+    // Rn = sp is only allowed with ARMv8-A
+    if (!hasV8Ops() && (Inst.getOperand(0).getReg() == ARM::SP))
+      return Match_RequiresV8;
+    break;
   default:
     break;
   }

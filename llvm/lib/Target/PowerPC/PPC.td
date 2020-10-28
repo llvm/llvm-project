@@ -132,9 +132,6 @@ def FeaturePPC4xx    : SubtargetFeature<"ppc4xx", "IsPPC4xx", "true",
                                         "Enable PPC 4xx instructions">;
 def FeaturePPC6xx    : SubtargetFeature<"ppc6xx", "IsPPC6xx", "true",
                                         "Enable PPC 6xx instructions">;
-def FeatureQPX       : SubtargetFeature<"qpx","HasQPX", "true",
-                                        "Enable QPX instructions",
-                                        [FeatureFPU]>;
 def FeatureVSX       : SubtargetFeature<"vsx","HasVSX", "true",
                                         "Enable VSX instructions",
                                         [FeatureAltivec]>;
@@ -193,7 +190,7 @@ def FeatureFloat128 :
 def FeaturePOPCNTD   : SubtargetFeature<"popcntd","HasPOPCNTD",
                                         "POPCNTD_Fast",
                                         "Enable the popcnt[dw] instructions">;
-// Note that for the a2/a2q processor models we should not use popcnt[dw] by
+// Note that for the a2 processor models we should not use popcnt[dw] by
 // default. These processors do support the instructions, but they're
 // microcoded, and the software emulation is about twice as fast.
 def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
@@ -236,6 +233,10 @@ def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
 def FeaturePCRelativeMemops :
   SubtargetFeature<"pcrelative-memops", "HasPCRelativeMemops", "true",
                    "Enable PC relative Memory Ops",
+                   [FeatureISA3_0]>;
+def FeaturePairedVectorMemops:
+  SubtargetFeature<"paired-vector-memops", "PairedVectorMemops", "true",
+                   "32Byte load and store instructions",
                    [FeatureISA3_0]>;
 
 def FeaturePredictableSelectIsExpensive :
@@ -342,7 +343,7 @@ def ProcessorFeatures {
   // still exist with the exception of those we know are Power9 specific.
   list<SubtargetFeature> P10AdditionalFeatures =
     [DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
-     FeaturePCRelativeMemops, FeatureP10Vector];
+     FeaturePCRelativeMemops, FeatureP10Vector, FeaturePairedVectorMemops];
   list<SubtargetFeature> P10SpecificFeatures = [];
   list<SubtargetFeature> P10InheritableFeatures =
     !listconcat(P9InheritableFeatures, P10AdditionalFeatures);
@@ -514,15 +515,6 @@ def : ProcessorModel<"a2", PPCA2Model,
                    FeatureFPRND, FeatureFPCVT, FeatureISEL,
                    FeatureSlowPOPCNTD, FeatureCMPB, FeatureLDBRX,
                    Feature64Bit /*, Feature64BitRegs */, FeatureMFTB]>;
-def : ProcessorModel<"a2q", PPCA2Model,
-                  [DirectiveA2, FeatureICBT, FeatureBookE, FeatureMFOCRF,
-                   FeatureFCPSGN, FeatureFSqrt, FeatureFRE, FeatureFRES,
-                   FeatureFRSQRTE, FeatureFRSQRTES, FeatureRecipPrec,
-                   FeatureSTFIWX, FeatureLFIWAX,
-                   FeatureFPRND, FeatureFPCVT, FeatureISEL,
-                   FeatureSlowPOPCNTD, FeatureCMPB, FeatureLDBRX,
-                   Feature64Bit /*, Feature64BitRegs */, FeatureQPX,
-                   FeatureMFTB]>;
 def : ProcessorModel<"pwr3", G5Model,
                   [DirectivePwr3, FeatureAltivec,
                    FeatureFRES, FeatureFRSQRTE, FeatureMFOCRF,

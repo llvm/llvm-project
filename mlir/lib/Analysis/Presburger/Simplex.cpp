@@ -674,7 +674,7 @@ public:
       } else {
         if (simplex.con[i + 1].orientation == Orientation::Row) {
           unsigned ineqRow = simplex.con[i + 1].pos;
-          // Since it is an equality, the the sample value must be zero.
+          // Since it is an equality, the sample value must be zero.
           assert(simplex.tableau(ineqRow, 1) == 0 &&
                  "Equality's sample value must be zero.");
           for (unsigned col = 2; col < simplex.nCol; ++col) {

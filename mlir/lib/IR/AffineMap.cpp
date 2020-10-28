@@ -434,18 +434,19 @@ AffineMap mlir::inversePermutation(AffineMap map) {
 }
 
 AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
-  unsigned numResults = 0;
+  unsigned numResults = 0, numDims = 0, numSymbols = 0;
   for (auto m : maps)
     numResults += m.getNumResults();
-  unsigned numDims = 0;
   SmallVector<AffineExpr, 8> results;
   results.reserve(numResults);
   for (auto m : maps) {
-    assert(m.getNumSymbols() == 0 && "expected map without symbols");
-    results.append(m.getResults().begin(), m.getResults().end());
+    for (auto res : m.getResults())
+      results.push_back(res.shiftSymbols(m.getNumSymbols(), numSymbols));
+
+    numSymbols += m.getNumSymbols();
     numDims = std::max(m.getNumDims(), numDims);
   }
-  return AffineMap::get(numDims, /*numSymbols=*/0, results,
+  return AffineMap::get(numDims, numSymbols, results,
                         maps.front().getContext());
 }
 

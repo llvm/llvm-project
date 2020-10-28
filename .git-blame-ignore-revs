@@ -22,3 +22,12 @@ b9c1b51e45b845debb76d8658edabca70ca56079
 
 # r302496: That is the revert of r302421
 ff63090b0e1072bd398b8efef8ae2291613a6ec9
+
+# Fix more line endings changed in r320089. NFC.
+d8f0e6caa91e230a486c948ab643174e40bdf215
+
+# Correct line endings that got mixed up in r320089; NFC.
+29dc5ded45447915d96ef7ca3f02acf2232282e0
+
+# Remove line-endings added by r320089. NFC.
+100a0eedc00b2bf48bcdc6c209c000745a4a0e48

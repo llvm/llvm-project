@@ -218,42 +218,6 @@ entry:
 ; CHECK: cost of 2 for instruction:   %r = load <4 x double>, <4 x double>* %p, align 8
 }
 
-define <4 x float> @test_l_qv4float(<4 x float>* %p) #1 {
-entry:
-  %r = load <4 x float>, <4 x float>* %p, align 4
-  ret <4 x float> %r
-
-; CHECK-LABEL: test_l_qv4float
-; CHECK: cost of 2 for instruction:   %r = load <4 x float>, <4 x float>* %p, align 4
-}
-
-define <8 x float> @test_l_qv8float(<8 x float>* %p) #1 {
-entry:
-  %r = load <8 x float>, <8 x float>* %p, align 4
-  ret <8 x float> %r
-
-; CHECK-LABEL: test_l_qv8float
-; CHECK: cost of 4 for instruction:   %r = load <8 x float>, <8 x float>* %p, align 4
-}
-
-define <4 x double> @test_l_qv4double(<4 x double>* %p) #1 {
-entry:
-  %r = load <4 x double>, <4 x double>* %p, align 8
-  ret <4 x double> %r
-
-; CHECK-LABEL: test_l_qv4double
-; CHECK: cost of 2 for instruction:   %r = load <4 x double>, <4 x double>* %p, align 8
-}
-
-define <8 x double> @test_l_qv8double(<8 x double>* %p) #1 {
-entry:
-  %r = load <8 x double>, <8 x double>* %p, align 8
-  ret <8 x double> %r
-
-; CHECK-LABEL: test_l_qv8double
-; CHECK: cost of 4 for instruction:   %r = load <8 x double>, <8 x double>* %p, align 8
-}
-
 define void @test_s_v16i8(<16 x i8>* %p, <16 x i8> %v) #0 {
 entry:
   store <16 x i8> %v, <16 x i8>* %p, align 1
@@ -362,43 +326,6 @@ entry:
 ; CHECK: cost of 2 for instruction:   store <4 x double> %v, <4 x double>* %p, align 8
 }
 
-define void @test_s_qv4float(<4 x float>* %p, <4 x float> %v) #1 {
-entry:
-  store <4 x float> %v, <4 x float>* %p, align 4
-  ret void
-
-; CHECK-LABEL: test_s_qv4float
-; CHECK: cost of 7 for instruction:   store <4 x float> %v, <4 x float>* %p, align 4
-}
-
-define void @test_s_qv8float(<8 x float>* %p, <8 x float> %v) #1 {
-entry:
-  store <8 x float> %v, <8 x float>* %p, align 4
-  ret void
-
-; CHECK-LABEL: test_s_qv8float
-; CHECK: cost of 15 for instruction:   store <8 x float> %v, <8 x float>* %p, align 4
-}
-
-define void @test_s_qv4double(<4 x double>* %p, <4 x double> %v) #1 {
-entry:
-  store <4 x double> %v, <4 x double>* %p, align 8
-  ret void
-
-; CHECK-LABEL: test_s_qv4double
-; CHECK: cost of 7 for instruction:   store <4 x double> %v, <4 x double>* %p, align 8
-}
-
-define void @test_s_qv8double(<8 x double>* %p, <8 x double> %v) #1 {
-entry:
-  store <8 x double> %v, <8 x double>* %p, align 8
-  ret void
-
-; CHECK-LABEL: test_s_qv8double
-; CHECK: cost of 15 for instruction:   store <8 x double> %v, <8 x double>* %p, align 8
-}
-
 attributes #0 = { nounwind "target-cpu"="pwr7" }
-attributes #1 = { nounwind "target-cpu"="a2q" }
 attributes #2 = { nounwind "target-cpu"="pwr8" }
 

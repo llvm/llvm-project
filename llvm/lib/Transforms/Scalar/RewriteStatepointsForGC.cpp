@@ -2025,8 +2025,8 @@ chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
 
       Type *SrcTy = CI->getOperand(0)->getType();
       Cost += TTI.getCastInstrCost(CI->getOpcode(), CI->getType(), SrcTy,
-                                   TargetTransformInfo::TCK_SizeAndLatency,
-                                   CI);
+                                   TTI::getCastContextHint(CI),
+                                   TargetTransformInfo::TCK_SizeAndLatency, CI);
 
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
       // Cost of the address calculation

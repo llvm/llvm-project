@@ -37,7 +37,7 @@ namespace {
 #include "AMDGPUGenPreLegalizeGICombiner.inc"
 #undef AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
 
-class AMDGPUPreLegalizerCombinerInfo : public CombinerInfo {
+class AMDGPUPreLegalizerCombinerInfo final : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
 

@@ -751,6 +751,7 @@ static int parseFilenamePattern(const char *FilenamePat,
           return -1;
         }
 
+        __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
         I++; /* advance to 'c' */
       } else {

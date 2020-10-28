@@ -37,7 +37,7 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-#define DEBUG_TYPE "sve-intrinsic-opts"
+#define DEBUG_TYPE "aarch64-sve-intrinsic-opts"
 
 namespace llvm {
 void initializeSVEIntrinsicOptsPass(PassRegistry &);

@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=aarch64-linux-musl %s | FileCheck --check-prefix=PRINT %s
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-musl %s | llvm-readobj -r | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-musl %s | llvm-readobj -r - | FileCheck %s
 
 # PRINT: .reloc 8, R_AARCH64_NONE, .data
 # PRINT: .reloc 4, R_AARCH64_NONE, foo+4

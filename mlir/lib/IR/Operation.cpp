@@ -1022,7 +1022,7 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
     if (region.empty())
       continue;
 
-    if (region.front().getNumArguments() != 0) {
+    if (region.getNumArguments() != 0) {
       if (op->getNumRegions() > 1)
         return op->emitOpError("region #")
                << region.getRegionNumber() << " should have no arguments";

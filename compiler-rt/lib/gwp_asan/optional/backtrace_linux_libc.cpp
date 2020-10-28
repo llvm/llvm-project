@@ -23,6 +23,14 @@ size_t Backtrace(uintptr_t *TraceBuffer, size_t Size) {
   return backtrace(reinterpret_cast<void **>(TraceBuffer), Size);
 }
 
+// We don't need any custom handling for the Segv backtrace - the libc unwinder
+// has no problems with unwinding through a signal handler. Force inlining here
+// to avoid the additional frame.
+GWP_ASAN_ALWAYS_INLINE size_t SegvBacktrace(uintptr_t *TraceBuffer, size_t Size,
+                                            void * /*Context*/) {
+  return Backtrace(TraceBuffer, Size);
+}
+
 static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
                            gwp_asan::crash_handler::Printf_t Printf) {
   if (TraceLength == 0) {
@@ -53,4 +61,8 @@ crash_handler::PrintBacktrace_t getPrintBacktraceFunction() {
   return PrintBacktrace;
 }
 } // namespace options
+
+namespace crash_handler {
+SegvBacktrace_t getSegvBacktraceFunction() { return SegvBacktrace; }
+} // namespace crash_handler
 } // namespace gwp_asan

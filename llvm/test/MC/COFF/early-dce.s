@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple i686-windows -g -filetype obj -o - %s \
-# RUN:   | llvm-readobj -S --symbols | FileCheck %s
+# RUN:   | llvm-readobj -S --symbols - | FileCheck %s
 
 	.section .rdata
 

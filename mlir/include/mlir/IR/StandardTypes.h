@@ -564,7 +564,6 @@ public:
   // TODO: merge these two special values in a single one used everywhere.
   // Unfortunately, uses of `-1` have crept deep into the codebase now and are
   // hard to track.
-  static constexpr int64_t kDynamicSize = -1;
   static int64_t getDynamicStrideOrOffset() {
     return ShapedType::kDynamicStrideOrOffset;
   }

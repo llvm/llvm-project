@@ -424,7 +424,8 @@ bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
   switch (edit.descriptor) {
   case 'L':
   case 'G':
-    return io.Emit(truth ? "T" : "F", 1);
+    return io.EmitRepeated(' ', std::max(0, edit.width.value_or(1) - 1)) &&
+        io.Emit(truth ? "T" : "F", 1);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a LOGICAL data item",

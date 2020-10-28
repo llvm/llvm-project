@@ -1,6 +1,6 @@
 ; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-SCO
-; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO-HASQPX
-; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO-HASQPX
+; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO
+; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO
 ; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -code-model=small | FileCheck %s -check-prefix=SCM
 
 ; No combination of "powerpc64le-unknown-linux-gnu" + "CHECK-SCO", because
@@ -116,23 +116,6 @@ define void @caller_local_sret_32(%S_32* %a) #1 {
 
 attributes #0 = { noinline nounwind  }
 attributes #1 = { nounwind }
-
-; vector <4 x i1> test
-
-define void @callee_v4i1(i8 %a, <4 x i1> %b, <4 x i1> %c) { ret void }
-define void @caller_v4i1_reorder(i8 %a, <4 x i1> %b, <4 x i1> %c) {
-  tail call void @callee_v4i1(i8 %a, <4 x i1> %c, <4 x i1> %b)
-  ret void
-
-; <4 x i1> is 32 bytes aligned, if subtarget doesn't support qpx, then we can't
-; place b, c to qpx register, so we can't do sco on caller_v4i1_reorder
-
-; CHECK-SCO-LABEL: caller_v4i1_reorder:
-; CHECK-SCO: bl callee_v4i1
-
-; CHECK-SCO-HASQPX-LABEL: caller_v4i1_reorder:
-; CHECK-SCO-HASQPX: b callee_v4i1
-}
 
 define void @f128_callee(i32* %ptr, ppc_fp128 %a, ppc_fp128 %b) { ret void }
 define void @f128_caller(i32* %ptr, ppc_fp128 %a, ppc_fp128 %b) {
