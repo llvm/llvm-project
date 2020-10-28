@@ -1024,6 +1024,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     break;
   }
   case ADD:
+  case SUB:
   case MUL:
   case AND:
   case OR:
@@ -1040,9 +1041,10 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       int64_t Result;
       switch (getOpcode()) {
       default: llvm_unreachable("Bad opcode!");
-      case ADD: Result = LHSv +  RHSv; break;
-      case MUL: Result = LHSv *  RHSv; break;
-      case AND: Result = LHSv &  RHSv; break;
+      case ADD: Result = LHSv + RHSv; break;
+      case SUB: Result = LHSv - RHSv; break;
+      case MUL: Result = LHSv * RHSv; break;
+      case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
       case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
@@ -1072,6 +1074,7 @@ std::string BinOpInit::getAsString() const {
   switch (getOpcode()) {
   case CONCAT: Result = "!con"; break;
   case ADD: Result = "!add"; break;
+  case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
