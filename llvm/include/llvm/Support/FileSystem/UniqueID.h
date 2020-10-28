@@ -14,7 +14,8 @@
 #ifndef LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 #define LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 
-#include <cstddef>
+#include <cstdint>
+#include <tuple>
 
 namespace llvm {
 namespace sys {
