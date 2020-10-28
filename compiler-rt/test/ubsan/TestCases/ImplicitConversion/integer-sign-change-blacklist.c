@@ -1,5 +1,3 @@
-// UNSUPPORTED: ios
-
 // RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change                           -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion"
 // RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change                           -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion"
 // RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change                           -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion"
