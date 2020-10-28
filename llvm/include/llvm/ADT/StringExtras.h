@@ -165,34 +165,68 @@ inline std::string toHex(ArrayRef<uint8_t> Input, bool LowerCase = false) {
   return toHex(toStringRef(Input), LowerCase);
 }
 
-inline uint8_t hexFromNibbles(char MSB, char LSB) {
+/// Store the binary representation of the two provided values, \p MSB and
+/// \p LSB, that make up the nibbles of a hexadecimal digit. If \p MSB or \p LSB
+/// do not correspond to proper nibbles of a hexadecimal digit, this method
+/// returns false. Otherwise, returns true.
+inline bool tryGetHexFromNibbles(char MSB, char LSB, uint8_t &Hex) {
   unsigned U1 = hexDigitValue(MSB);
   unsigned U2 = hexDigitValue(LSB);
-  assert(U1 != -1U && U2 != -1U);
+  if (U1 == -1U || U2 == -1U)
+    return false;
 
-  return static_cast<uint8_t>((U1 << 4) | U2);
+  Hex = static_cast<uint8_t>((U1 << 4) | U2);
+  return true;
 }
 
-/// Convert hexadecimal string \p Input to its binary representation.
-/// The return string is half the size of \p Input.
-inline std::string fromHex(StringRef Input) {
-  if (Input.empty())
-    return std::string();
+/// Return the binary representation of the two provided values, \p MSB and
+/// \p LSB, that make up the nibbles of a hexadecimal digit.
+inline uint8_t hexFromNibbles(char MSB, char LSB) {
+  uint8_t Hex = 0;
+  bool GotHex = tryGetHexFromNibbles(MSB, LSB, Hex);
+  (void)GotHex;
+  assert(GotHex && "MSB and/or LSB do not correspond to hex digits");
+  return Hex;
+}
 
-  std::string Output;
+/// Convert hexadecimal string \p Input to its binary representation and store
+/// the result in \p Output. Returns true if the binary representation could be
+/// converted from the hexadecimal string. Returns false if \p Input contains
+/// non-hexadecimal digits. The output string is half the size of \p Input.
+inline bool tryGetFromHex(StringRef Input, std::string &Output) {
+  if (Input.empty())
+    return true;
+
   Output.reserve((Input.size() + 1) / 2);
   if (Input.size() % 2 == 1) {
-    Output.push_back(hexFromNibbles('0', Input.front()));
+    uint8_t Hex = 0;
+    if (!tryGetHexFromNibbles('0', Input.front(), Hex))
+      return false;
+
+    Output.push_back(Hex);
     Input = Input.drop_front();
   }
 
   assert(Input.size() % 2 == 0);
   while (!Input.empty()) {
-    uint8_t Hex = hexFromNibbles(Input[0], Input[1]);
+    uint8_t Hex = 0;
+    if (!tryGetHexFromNibbles(Input[0], Input[1], Hex))
+      return false;
+
     Output.push_back(Hex);
     Input = Input.drop_front(2);
   }
-  return Output;
+  return true;
+}
+
+/// Convert hexadecimal string \p Input to its binary representation.
+/// The return string is half the size of \p Input.
+inline std::string fromHex(StringRef Input) {
+  std::string Hex;
+  bool GotHex = tryGetFromHex(Input, Hex);
+  (void)GotHex;
+  assert(GotHex && "Input contains non hex digits");
+  return Hex;
 }
 
 /// Convert the string \p S to an integer of the specified type using
