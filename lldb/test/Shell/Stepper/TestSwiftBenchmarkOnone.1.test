@@ -1,0 +1,8 @@
+# XFAIL: *
+# rdar://problem/70552614
+#
+# REQUIRES: swift_Benchmark_Onone
+#
+# RUN: env STEPPER_OPTIONS="kSkipExprAllLocals=True" \
+# RUN:   %lldb --batch -o "command script import %p/Inputs/stepper.py" -- \
+# RUN:   %swift_Benchmark_Onone --num-samples 1 --num-iters 1 1
