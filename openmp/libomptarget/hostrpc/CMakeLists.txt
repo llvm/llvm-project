@@ -28,24 +28,6 @@ else()
   return()
 endif()
 
-if(${AOMP_STANDALONE_BUILD} STREQUAL "0")
-  message("------------- NON STANDALONE BUILD ---------------")
-  set(ROCDL_INC_OCKL ${DEVICELIBS_ROOT}/ockl/inc)
-  set(ROCDL_INC_OCML ${DEVICELIBS_ROOT}/ocml/inc)
-  set(ROCDL_INC_IRIF ${DEVICELIBS_ROOT}/irif/inc)
-  set(HIPINC ${ROCM_DIR}/hip/include)
-
-else()
-  # Assome rocm-device-libs repository is next to aomp-extras repository
-  set(ROCDL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../rocm-device-libs)
-  set(ROCDL_INC_OCKL ${ROCDL}/ockl/inc)
-  set(ROCDL_INC_OCML ${ROCDL}/ocml/inc)
-  set(ROCDL_INC_IRIF ${ROCDL}/irif/inc)
-  set(HIPINC ${CMAKE_CURRENT_SOURCE_DIR}/../../../../hip-on-vdi/include)
-endif()
-
-# add_custom_target(hostrpc ALL)
-
 #optimization level
 set(optimization_level 2)
 
@@ -97,21 +79,16 @@ macro(add_openmp_library libname archname dir)
   set(openmp_cmd ${LLVM_INSTALL_PREFIX}/bin/clang++)
   set(openmp_c_cmd ${LLVM_INSTALL_PREFIX}/bin/clang)
   set(openmp_args -O${optimization_level}
-    -fopenmp 
+    -fopenmp
     -fopenmp-targets=${triple}
     -Xopenmp-target=${triple}
     -march=${GPU}
-    -c 
+    -nogpulib
+    -nogpuinc
+    -c
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
-    -I${ROCM_DIR}/include
-    -I${CMAKE_CURRENT_BINARY_DIR}/../../runtime/src
-    -I${ROCDL_INC_OCKL}
-    -I${ROCDL_INC_OCML}
-    -I${ROCDL_INC_IRIF})
+    -I${CMAKE_CURRENT_BINARY_DIR}/../../runtime/src)
 
-  if(NOT ${AOMP_STANDALONE_BUILD})
-    set(openmp_args "${openmp_args};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
-  endif(NOT ${AOMP_STANDALONE_BUILD})
   set(obj_files)
   set(bc_files)
   file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")

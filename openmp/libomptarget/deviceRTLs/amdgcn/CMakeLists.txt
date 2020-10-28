@@ -124,7 +124,7 @@ message("======> list of AMDGCN GPUs to build for :${mcpus}")
 macro(add_ocl_bc_library dir)
   set(cl_cmd ${AOMP_BINDIR}/clang
     -fvisibility=default
-    -S -nogpulib -emit-llvm
+    -S -nogpulib -nogpuinc -emit-llvm
     -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
     -Dcl_khr_fp64 -Dcl_khr_fp16
     -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
@@ -138,9 +138,6 @@ macro(add_ocl_bc_library dir)
     -I${ROCM_DIR}/include)
   set(cl_bc_files)
   file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
-  if(NOT ${AOMP_STANDALONE_BUILD})
-    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
-  endif(NOT ${AOMP_STANDALONE_BUILD})
 
   foreach(file ${ARGN})
      file(RELATIVE_PATH rfile ${dir} ${file})
@@ -178,10 +175,6 @@ macro(add_cuda_bc_library)
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
     -I${devicertl_base_directory})
-
-  if(NOT ${AOMP_STANDALONE_BUILD})
-    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
-  endif(NOT ${AOMP_STANDALONE_BUILD})
 
   set(bc1_files)
 
