@@ -1058,6 +1058,7 @@ class SOPP_Pseudo<string opName, dag ins,
   let hasSideEffects = 0;
   let SALU = 1;
   let SOPP = 1;
+  let FixedSize = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
   bits <16> simm16;

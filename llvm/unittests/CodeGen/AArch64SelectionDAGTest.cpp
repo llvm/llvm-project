@@ -472,6 +472,127 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTO
   EXPECT_EQ(SplatIdx, 0);
 }
 
+TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  unsigned NumElts = 16;
+  MVT IntVT = MVT::i8;
+  MVT VecVT = MVT::getVectorVT(IntVT, NumElts);
+
+  // Base scalar constants.
+  SDValue Val0 = DAG->getConstant(0, Loc, IntVT);
+  SDValue Val1 = DAG->getConstant(1, Loc, IntVT);
+  SDValue Val2 = DAG->getConstant(2, Loc, IntVT);
+  SDValue Val3 = DAG->getConstant(3, Loc, IntVT);
+  SDValue UndefVal = DAG->getUNDEF(IntVT);
+
+  // Build some repeating sequences.
+  SmallVector<SDValue, 16> Pattern1111, Pattern1133, Pattern0123;
+  for(int I = 0; I != 4; ++I) {
+    Pattern1111.append(4, Val1);
+    Pattern1133.append(2, Val1);
+    Pattern1133.append(2, Val3);
+    Pattern0123.push_back(Val0);
+    Pattern0123.push_back(Val1);
+    Pattern0123.push_back(Val2);
+    Pattern0123.push_back(Val3);
+  }
+
+  // Build a non-pow2 repeating sequence.
+  SmallVector<SDValue, 16> Pattern022;
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+
+  // Build a non-repeating sequence.
+  SmallVector<SDValue, 16> Pattern1_3;
+  Pattern1_3.append(8, Val1);
+  Pattern1_3.append(8, Val3);
+
+  // Add some undefs to make it trickier.
+  Pattern1111[1] = Pattern1111[2] = Pattern1111[15] = UndefVal;
+  Pattern1133[0] = Pattern1133[2] = UndefVal;
+
+  auto *BV1111 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1111));
+  auto *BV1133 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1133));
+  auto *BV0123=
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern0123));
+  auto *BV022 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern022));
+  auto *BV1_3 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1_3));
+
+  // Check for sequences.
+  SmallVector<SDValue, 16> Seq1111, Seq1133, Seq0123, Seq022, Seq1_3;
+  BitVector Undefs1111, Undefs1133, Undefs0123, Undefs022, Undefs1_3;
+
+  EXPECT_TRUE(BV1111->getRepeatedSequence(Seq1111, &Undefs1111));
+  EXPECT_EQ(Undefs1111.count(), 3u);
+  EXPECT_EQ(Seq1111.size(), 1u);
+  EXPECT_EQ(Seq1111[0], Val1);
+
+  EXPECT_TRUE(BV1133->getRepeatedSequence(Seq1133, &Undefs1133));
+  EXPECT_EQ(Undefs1133.count(), 2u);
+  EXPECT_EQ(Seq1133.size(), 4u);
+  EXPECT_EQ(Seq1133[0], Val1);
+  EXPECT_EQ(Seq1133[1], Val1);
+  EXPECT_EQ(Seq1133[2], Val3);
+  EXPECT_EQ(Seq1133[3], Val3);
+
+  EXPECT_TRUE(BV0123->getRepeatedSequence(Seq0123, &Undefs0123));
+  EXPECT_EQ(Undefs0123.count(), 0u);
+  EXPECT_EQ(Seq0123.size(), 4u);
+  EXPECT_EQ(Seq0123[0], Val0);
+  EXPECT_EQ(Seq0123[1], Val1);
+  EXPECT_EQ(Seq0123[2], Val2);
+  EXPECT_EQ(Seq0123[3], Val3);
+
+  EXPECT_FALSE(BV022->getRepeatedSequence(Seq022, &Undefs022));
+  EXPECT_FALSE(BV1_3->getRepeatedSequence(Seq1_3, &Undefs1_3));
+
+  // Try again with DemandedElts masks.
+  APInt Mask1111_0 = APInt::getOneBitSet(NumElts, 0);
+  EXPECT_TRUE(BV1111->getRepeatedSequence(Mask1111_0, Seq1111, &Undefs1111));
+  EXPECT_EQ(Undefs1111.count(), 0u);
+  EXPECT_EQ(Seq1111.size(), 1u);
+  EXPECT_EQ(Seq1111[0], Val1);
+
+  APInt Mask1111_1 = APInt::getOneBitSet(NumElts, 2);
+  EXPECT_TRUE(BV1111->getRepeatedSequence(Mask1111_1, Seq1111, &Undefs1111));
+  EXPECT_EQ(Undefs1111.count(), 1u);
+  EXPECT_EQ(Seq1111.size(), 1u);
+  EXPECT_EQ(Seq1111[0], UndefVal);
+
+  APInt Mask0123 = APInt(NumElts, 0x7777);
+  EXPECT_TRUE(BV0123->getRepeatedSequence(Mask0123, Seq0123, &Undefs0123));
+  EXPECT_EQ(Undefs0123.count(), 0u);
+  EXPECT_EQ(Seq0123.size(), 4u);
+  EXPECT_EQ(Seq0123[0], Val0);
+  EXPECT_EQ(Seq0123[1], Val1);
+  EXPECT_EQ(Seq0123[2], Val2);
+  EXPECT_EQ(Seq0123[3], SDValue());
+
+  APInt Mask1_3 = APInt::getHighBitsSet(16, 8);
+  EXPECT_TRUE(BV1_3->getRepeatedSequence(Mask1_3, Seq1_3, &Undefs1_3));
+  EXPECT_EQ(Undefs1_3.count(), 0u);
+  EXPECT_EQ(Seq1_3.size(), 1u);
+  EXPECT_EQ(Seq1_3[0], Val3);
+}
+
 TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableMVT) {
   if (!TM)
     return;

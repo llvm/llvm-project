@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.pb.h"
+#include "Service.grpc.pb.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
@@ -31,8 +32,6 @@
 #include <grpc++/health_check_service_interface.h>
 #include <memory>
 #include <thread>
-
-#include "Index.grpc.pb.h"
 
 namespace clang {
 namespace clangd {
@@ -73,7 +72,7 @@ llvm::cl::opt<std::string> ServerAddress(
     "server-address", llvm::cl::init("0.0.0.0:50051"),
     llvm::cl::desc("Address of the invoked server. Defaults to 0.0.0.0:50051"));
 
-class RemoteIndexServer final : public SymbolIndex::Service {
+class RemoteIndexServer final : public v1::SymbolIndex::Service {
 public:
   RemoteIndexServer(clangd::SymbolIndex &Index, llvm::StringRef IndexRoot)
       : Index(Index) {

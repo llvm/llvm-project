@@ -8,8 +8,15 @@
 // RUN:    FileCheck %s --check-prefix=OK
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
+// Test version guess when no version.txt or cuda.h are found
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION
+// Unknown version with version.txt present
+// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION_V
+// Unknown version with no version.txt but with version info present in cuda.h
+// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION_H
 // Make sure that we don't warn about CUDA version during C++ compilation.
 // RUN: %clang --target=x86_64-linux -v -### -x c++ --cuda-gpu-arch=sm_60 \
 // RUN:    --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
@@ -65,5 +72,7 @@
 // ERR_SM61: error: GPU arch sm_61 {{.*}}
 // ERR_SM61-NOT: error: GPU arch sm_61
 
-// UNKNOWN_VERSION: Unknown CUDA version 999.999. Assuming the latest supported version
+// UNKNOWN_VERSION_V: Unknown CUDA version. version.txt:{{.*}}. Assuming the latest supported version
+// UNKNOWN_VERSION_H: Unknown CUDA version. cuda.h: CUDA_VERSION={{.*}}. Assuming the latest supported version
+// UNKNOWN_VERSION: Unknown CUDA version. No version found in version.txt or cuda.h. Assuming the latest supported version
 // UNKNOWN_VERSION_CXX-NOT: Unknown CUDA version

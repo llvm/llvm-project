@@ -1577,6 +1577,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::NoInline:
   case Attribute::AlwaysInline:
   case Attribute::OptimizeForSize:
+  case Attribute::NoStackProtect:
   case Attribute::StackProtect:
   case Attribute::StackProtectReq:
   case Attribute::StackProtectStrong:
@@ -1971,6 +1972,19 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S.getAsInteger(10, N))
       CheckFailed(
           "\"patchable-function-entry\" takes an unsigned integer: " + S, V);
+  }
+  {
+    unsigned N = 0;
+    if (Attrs.hasFnAttribute(Attribute::NoStackProtect))
+      ++N;
+    if (Attrs.hasFnAttribute(Attribute::StackProtect))
+      ++N;
+    if (Attrs.hasFnAttribute(Attribute::StackProtectReq))
+      ++N;
+    if (Attrs.hasFnAttribute(Attribute::StackProtectStrong))
+      ++N;
+    Assert(N < 2,
+           "nossp, ssp, sspreq, sspstrong fn attrs are mutually exclusive", V);
   }
 }
 

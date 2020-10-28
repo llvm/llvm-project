@@ -32,6 +32,40 @@ namespace dr2120 { // dr2120: 7
   static_assert(!__is_standard_layout(E), "");
 }
 
+namespace dr2126 { // dr2126: 12
+#if __cplusplus >= 201103L
+  struct A { int n; };
+
+  const A &a = {1};              // const temporary
+  A &b = (A &)(const A &)A{1};   // const temporary
+  A &&c = (A &&)(const A &)A{1}; // const temporary
+
+  A &&d = {1};                   // non-const temporary expected-note {{here}}
+  const A &e = (A &)(A &&) A{1}; // non-const temporary expected-note {{here}}
+  A &&f = (A &&)(A &&) A{1};     // non-const temporary expected-note {{here}}
+
+  constexpr const A &g = {1};    // const temporary
+  constexpr A &&h = {1};         // non-const temporary expected-note {{here}}
+
+  struct B { const A &a; };
+  B i = {{1}};           // extending decl not usable in constant expr expected-note {{here}}
+  const B j = {{1}};     // extending decl not usable in constant expr expected-note {{here}}
+  constexpr B k = {{1}}; // extending decl usable in constant expr
+
+  static_assert(a.n == 1, "");
+  static_assert(b.n == 1, "");
+  static_assert(c.n == 1, "");
+  static_assert(d.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(e.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(f.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(g.n == 1, "");
+  static_assert(h.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(i.a.n == 1, ""); // expected-error {{constant}} expected-note {{read of non-constexpr variable}}
+  static_assert(j.a.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(k.a.n == 1, "");
+#endif
+}
+
 namespace dr2140 { // dr2140: 9
 #if __cplusplus >= 201103L
   union U { int a; decltype(nullptr) b; };

@@ -358,9 +358,9 @@ define i64 @sext_like_noop(i32 %n) {
 ; X32-LABEL: 'sext_like_noop'
 ; X32-NEXT:  Classifying expressions for: @sext_like_noop
 ; X32-NEXT:    %ii = sext i32 %i to i64
-; X32-NEXT:    --> (sext i32 {1,+,1}<nuw><%for.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) --> (sext i32 (-1 + ptrtoint (i64 (i32)* @sext_like_noop to i32)) to i64) U: [-1,65535) S: [-65537,65535)
+; X32-NEXT:    --> (sext i32 {1,+,1}<nuw><%for.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) --> (-1 + (sext i32 ptrtoint (i64 (i32)* @sext_like_noop to i32) to i64))<nsw> U: [-1,65535) S: [-65537,65535)
 ; X32-NEXT:    %div = sdiv i64 55555, %ii
-; X32-NEXT:    --> %div U: full-set S: full-set --> sdiv (i64 55555, i64 sext (i32 add (i32 ptrtoint (i64 (i32)* @sext_like_noop to i32), i32 -1) to i64)) U: full-set S: full-set
+; X32-NEXT:    --> %div U: full-set S: full-set --> sdiv (i64 55555, i64 add (i64 sext (i32 ptrtoint (i64 (i32)* @sext_like_noop to i32) to i64), i64 -1)) U: full-set S: full-set
 ; X32-NEXT:    %i = phi i32 [ %inc, %for.body ], [ 1, %entry ]
 ; X32-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: (-1 + ptrtoint (i64 (i32)* @sext_like_noop to i32))<nsw> LoopDispositions: { %for.body: Computable }
 ; X32-NEXT:    %inc = add nuw i32 %i, 1

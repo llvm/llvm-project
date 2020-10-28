@@ -822,6 +822,11 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         return make_error<GenericBinaryError>("Bad relocation function index",
                                               object_error::parse_failed);
       break;
+    case wasm::R_WASM_TABLE_NUMBER_LEB:
+      if (!isValidTableSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation table index",
+                                              object_error::parse_failed);
+      break;
     case wasm::R_WASM_TYPE_INDEX_LEB:
       if (Reloc.Index >= Signatures.size())
         return make_error<GenericBinaryError>("Bad relocation type index",
@@ -1179,6 +1184,10 @@ bool WasmObjectFile::isDefinedEventIndex(uint32_t Index) const {
 
 bool WasmObjectFile::isValidFunctionSymbol(uint32_t Index) const {
   return Index < Symbols.size() && Symbols[Index].isTypeFunction();
+}
+
+bool WasmObjectFile::isValidTableSymbol(uint32_t Index) const {
+  return Index < Symbols.size() && Symbols[Index].isTypeTable();
 }
 
 bool WasmObjectFile::isValidGlobalSymbol(uint32_t Index) const {

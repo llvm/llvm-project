@@ -28,6 +28,7 @@
 #include <utility>
 
 #include <unistd.h>
+#include <errno.h>
 #include <sys/wait.h>
 #include "test_macros.h"
 #include "test_allocator.h"

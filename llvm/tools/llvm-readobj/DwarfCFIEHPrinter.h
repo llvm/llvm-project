@@ -225,7 +225,8 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
     W.getOStream() << "\n";
     W.startLine() << "Program:\n";
     W.indent();
-    Entry.cfis().dump(W.getOStream(), nullptr, W.getIndentLevel());
+    Entry.cfis().dump(W.getOStream(), DIDumpOptions(), nullptr,
+                      W.getIndentLevel());
     W.unindent();
     W.unindent();
     W.getOStream() << "\n";

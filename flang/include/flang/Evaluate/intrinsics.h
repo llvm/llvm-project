@@ -15,6 +15,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -64,8 +65,12 @@ class IntrinsicProcTable {
 private:
   class Implementation;
 
+  IntrinsicProcTable() = default;
+
 public:
   ~IntrinsicProcTable();
+  IntrinsicProcTable(IntrinsicProcTable &&) = default;
+
   static IntrinsicProcTable Configure(
       const common::IntrinsicTypeDefaultKinds &);
 
@@ -100,7 +105,7 @@ public:
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
-  Implementation *impl_{nullptr}; // owning pointer
+  std::unique_ptr<Implementation> impl_;
 };
 
 // Check if an intrinsic explicitly allows its INTENT(OUT) arguments to be

@@ -17,6 +17,7 @@
 #include "ProcessorTrace.h"
 #include "lldb/Host/linux/Support.h"
 
+#include <sys/ioctl.h>
 #include <sys/syscall.h>
 
 using namespace lldb;
@@ -273,6 +274,23 @@ ProcessorTraceMonitor::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
 #ifndef PERF_ATTR_SIZE_VER5
   llvm_unreachable("perf event not supported");
 #else
+  // Disable the perf event to force a flush out of the CPU's internal buffer.
+  // Besides, we can guarantee that the CPU won't override any data as we are
+  // reading the buffer.
+  //
+  // The Intel documentation says:
+  //
+  // Packets are first buffered internally and then written out asynchronously.
+  // To collect packet output for postprocessing, a collector needs first to
+  // ensure that all packet data has been flushed from internal buffers.
+  // Software can ensure this by stopping packet generation by clearing
+  // IA32_RTIT_CTL.TraceEn (see “Disabling Packet Generation” in
+  // Section 35.2.7.2).
+  //
+  // This is achieved by the PERF_EVENT_IOC_DISABLE ioctl request, as mentioned
+  // in the man page of perf_event_open.
+  ioctl(*m_fd, PERF_EVENT_IOC_DISABLE);
+
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
   Status error;
   uint64_t head = m_mmap_meta->aux_head;
@@ -293,6 +311,9 @@ ProcessorTraceMonitor::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
 
   ReadCyclicBuffer(buffer, GetAuxBuffer(), static_cast<size_t>(head), offset);
   LLDB_LOG(log, "ReadCyclic BUffer Done");
+
+  // Reenable tracing now we have read the buffer
+  ioctl(*m_fd, PERF_EVENT_IOC_ENABLE);
   return error;
 #endif
 }

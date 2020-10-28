@@ -29,6 +29,16 @@ define float @test_const(float %x) {
   ret float %call
 }
 
+; Combine to fmul because the constant is finite and non-zero, preserving fmf.
+define float @test_const_fmf(float %x) {
+; CHECK-LABEL: @test_const_fmf(
+; CHECK-NEXT:    [[CALL:%.*]] = fmul contract float [[X:%.*]], 9.950000e+01
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call contract float @llvm.amdgcn.fmul.legacy(float %x, float 99.5)
+  ret float %call
+}
+
 ; Combine to fmul because neither argument can be infinity or NaN.
 define float @test_finite(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_finite(

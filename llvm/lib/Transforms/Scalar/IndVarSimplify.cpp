@@ -2332,7 +2332,7 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
-  if (SE->isKnownPredicate(Pred, LHSS, RHSS))
+  if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
     return true;
 
   return false;
@@ -2416,14 +2416,15 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      if (isTrivialCond(L, BI, SE, false)) {
-        FoldExit(ExitingBB, false);
+      auto OptimizeCond = [&](bool Inverted) {
+        if (isTrivialCond(L, BI, SE, Inverted)) {
+          FoldExit(ExitingBB, Inverted);
+          return true;
+        }
+        return false;
+      };
+      if (OptimizeCond(false) || OptimizeCond(true))
         Changed = true;
-      }
-      if (isTrivialCond(L, BI, SE, true)) {
-        FoldExit(ExitingBB, true);
-        Changed = true;
-      }
       continue;
     }
 

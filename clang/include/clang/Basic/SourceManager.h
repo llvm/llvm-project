@@ -90,6 +90,35 @@ namespace SrcMgr {
     return CK == C_User_ModuleMap || CK == C_System_ModuleMap;
   }
 
+  /// Mapping of line offsets into a source file. This does not own the storage
+  /// for the line numbers.
+  class LineOffsetMapping {
+  public:
+    explicit operator bool() const { return Storage; }
+    unsigned size() const {
+      assert(Storage);
+      return Storage[0];
+    }
+    ArrayRef<unsigned> getLines() const {
+      assert(Storage);
+      return ArrayRef<unsigned>(Storage + 1, Storage + 1 + size());
+    }
+    const unsigned *begin() const { return getLines().begin(); }
+    const unsigned *end() const { return getLines().end(); }
+    const unsigned &operator[](int I) const { return getLines()[I]; }
+
+    static LineOffsetMapping get(llvm::MemoryBufferRef Buffer,
+                                 llvm::BumpPtrAllocator &Alloc);
+
+    LineOffsetMapping() = default;
+    LineOffsetMapping(ArrayRef<unsigned> LineOffsets,
+                      llvm::BumpPtrAllocator &Alloc);
+
+  private:
+    /// First element is the size, followed by elements at off-by-one indexes.
+    unsigned *Storage = nullptr;
+  };
+
   /// One instance of this struct is kept for every file loaded or used.
   ///
   /// This object owns the MemoryBuffer object.
@@ -115,14 +144,9 @@ namespace SrcMgr {
 
     /// A bump pointer allocated array of offsets for each source line.
     ///
-    /// This is lazily computed.  This is owned by the SourceManager
+    /// This is lazily computed.  The lines are owned by the SourceManager
     /// BumpPointerAllocator object.
-    unsigned *SourceLineCache = nullptr;
-
-    /// The number of lines in this ContentCache.
-    ///
-    /// This is only valid if SourceLineCache is non-null.
-    unsigned NumLines = 0;
+    mutable LineOffsetMapping SourceLineCache;
 
     /// Indicates whether the buffer itself was provided to override
     /// the actual file contents.
@@ -157,10 +181,8 @@ namespace SrcMgr {
       OrigEntry = RHS.OrigEntry;
       ContentsEntry = RHS.ContentsEntry;
 
-      assert(!RHS.Buffer && RHS.SourceLineCache == nullptr &&
+      assert(!RHS.Buffer && !RHS.SourceLineCache &&
              "Passed ContentCache object cannot own a buffer.");
-
-      NumLines = RHS.NumLines;
     }
 
     ContentCache &operator=(const ContentCache& RHS) = delete;
@@ -275,13 +297,13 @@ namespace SrcMgr {
 
   public:
     /// Return a FileInfo object.
-    static FileInfo get(SourceLocation IL, const ContentCache *Con,
+    static FileInfo get(SourceLocation IL, const ContentCache &Con,
                         CharacteristicKind FileCharacter, StringRef Filename) {
       FileInfo X;
       X.IncludeLoc = IL.getRawEncoding();
       X.NumCreatedFIDs = 0;
       X.HasLineDirectives = false;
-      X.ContentAndKind.setPointer(Con);
+      X.ContentAndKind.setPointer(&Con);
       X.ContentAndKind.setInt(FileCharacter);
       X.Filename = Filename;
       return X;
@@ -291,8 +313,8 @@ namespace SrcMgr {
       return SourceLocation::getFromRawEncoding(IncludeLoc);
     }
 
-    const ContentCache *getContentCache() const {
-      return ContentAndKind.getPointer();
+    const ContentCache &getContentCache() const {
+      return *ContentAndKind.getPointer();
     }
 
     /// Return whether this is a system header or not.
@@ -697,7 +719,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// These ivars serve as a cache used in the getLineNumber
   /// method which is used to speedup getLineNumber calls to nearby locations.
   mutable FileID LastLineNoFileIDQuery;
-  mutable SrcMgr::ContentCache *LastLineNoContentCache;
+  mutable const SrcMgr::ContentCache *LastLineNoContentCache;
   mutable unsigned LastLineNoFilePos;
   mutable unsigned LastLineNoResult;
 
@@ -973,7 +995,7 @@ public:
   llvm::Optional<llvm::MemoryBufferRef>
   getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
     if (auto *Entry = getSLocEntryForFile(FID))
-      return Entry->getFile().getContentCache()->getBufferOrNone(
+      return Entry->getFile().getContentCache().getBufferOrNone(
           Diag, getFileManager(), Loc);
     return None;
   }
@@ -992,8 +1014,7 @@ public:
   /// Returns the FileEntry record for the provided FileID.
   const FileEntry *getFileEntryForID(FileID FID) const {
     if (auto *Entry = getSLocEntryForFile(FID))
-      if (auto *Content = Entry->getFile().getContentCache())
-        return Content->OrigEntry;
+      return Entry->getFile().getContentCache().OrigEntry;
     return nullptr;
   }
 
@@ -1006,10 +1027,7 @@ public:
   /// Returns the FileEntry record for the provided SLocEntry.
   const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
   {
-    const SrcMgr::ContentCache *Content = sloc.getFile().getContentCache();
-    if (!Content)
-      return nullptr;
-    return Content->OrigEntry;
+    return sloc.getFile().getContentCache().OrigEntry;
   }
 
   /// Return a StringRef to the source buffer data for the
@@ -1793,10 +1811,10 @@ private:
   ///
   /// This works regardless of whether the ContentCache corresponds to a
   /// file or some other input source.
-  FileID createFileID(const SrcMgr::ContentCache *File, StringRef Filename,
-                      SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
-                      unsigned LoadedOffset);
+  FileID createFileIDImpl(const SrcMgr::ContentCache &File, StringRef Filename,
+                          SourceLocation IncludePos,
+                          SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
+                          unsigned LoadedOffset);
 
   const SrcMgr::ContentCache *
     getOrCreateContentCache(const FileEntry *SourceFile,

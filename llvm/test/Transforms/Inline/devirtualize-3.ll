@@ -1,5 +1,4 @@
 ; RUN: opt -basic-aa -S -O2 < %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -S -passes='default<O2>' < %s | FileCheck %s
 ; PR5009
 
 ; CHECK: define i32 @main() 

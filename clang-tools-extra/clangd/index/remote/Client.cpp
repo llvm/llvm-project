@@ -9,7 +9,7 @@
 #include <grpc++/grpc++.h>
 
 #include "Client.h"
-#include "Index.grpc.pb.h"
+#include "Service.grpc.pb.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "marshalling/Marshalling.h"

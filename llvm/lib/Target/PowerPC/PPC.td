@@ -236,7 +236,7 @@ def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
 def FeaturePCRelativeMemops :
   SubtargetFeature<"pcrelative-memops", "HasPCRelativeMemops", "true",
                    "Enable PC relative Memory Ops",
-                   [FeatureISA3_0]>;
+                   [FeatureISA3_0, FeaturePrefixInstrs]>;
 def FeaturePairedVectorMemops:
   SubtargetFeature<"paired-vector-memops", "PairedVectorMemops", "true",
                    "32Byte load and store instructions",

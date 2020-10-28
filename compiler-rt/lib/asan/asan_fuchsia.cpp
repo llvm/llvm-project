@@ -91,8 +91,7 @@ struct AsanThread::InitOptions {
 // Shared setup between thread creation and startup for the initial thread.
 static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
                                     uptr user_id, bool detached,
-                                    const char *name, uptr stack_bottom,
-                                    uptr stack_size) {
+                                    const char *name) {
   // In lieu of AsanThread::Create.
   AsanThread *thread = (AsanThread *)MmapOrDie(AsanThreadMmapSize(), __func__);
 
@@ -100,12 +99,6 @@ static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
   u32 tid =
       asanThreadRegistry().CreateThread(user_id, detached, parent_tid, &args);
   asanThreadRegistry().SetThreadName(tid, name);
-
-  // On other systems, AsanThread::Init() is called from the new
-  // thread itself.  But on Fuchsia we already know the stack address
-  // range beforehand, so we can do most of the setup right now.
-  const AsanThread::InitOptions options = {stack_bottom, stack_size};
-  thread->Init(&options);
 
   return thread;
 }
@@ -135,9 +128,16 @@ AsanThread *CreateMainThread() {
       _zx_object_get_property(thrd_get_zx_handle(self), ZX_PROP_NAME, name,
                               sizeof(name)) == ZX_OK
           ? name
-          : nullptr,
-      __sanitizer::MainThreadStackBase, __sanitizer::MainThreadStackSize);
+          : nullptr);
+  // We need to set the current thread before calling AsanThread::Init() below,
+  // since it reads the thread ID.
   SetCurrentThread(t);
+  DCHECK_EQ(t->tid(), 0);
+
+  const AsanThread::InitOptions options = {__sanitizer::MainThreadStackBase,
+                                           __sanitizer::MainThreadStackSize};
+  t->Init(&options);
+
   return t;
 }
 
@@ -153,8 +153,15 @@ static void *BeforeThreadCreateHook(uptr user_id, bool detached,
   GET_STACK_TRACE_THREAD;
   u32 parent_tid = GetCurrentTidOrInvalid();
 
-  return CreateAsanThread(&stack, parent_tid, user_id, detached, name,
-                          stack_bottom, stack_size);
+  AsanThread *thread =
+      CreateAsanThread(&stack, parent_tid, user_id, detached, name);
+
+  // On other systems, AsanThread::Init() is called from the new
+  // thread itself.  But on Fuchsia we already know the stack address
+  // range beforehand, so we can do most of the setup right now.
+  const AsanThread::InitOptions options = {stack_bottom, stack_size};
+  thread->Init(&options);
+  return thread;
 }
 
 // This is called after creating a new thread (in the creating thread),

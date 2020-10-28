@@ -404,6 +404,17 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       switch (Opcode) {
       default:
         return X86::reloc_riprel_4byte;
+      case X86::ADC32rm:
+      case X86::ADD32rm:
+      case X86::AND32rm:
+      case X86::CMP32rm:
+      case X86::MOV32rm:
+      case X86::OR32rm:
+      case X86::SBB32rm:
+      case X86::SUB32rm:
+      case X86::TEST32mr:
+      case X86::XOR32rm:
+        return X86::reloc_riprel_4byte_relax;
       case X86::MOV64rm:
         assert(HasREX);
         return X86::reloc_riprel_4byte_movq_load;

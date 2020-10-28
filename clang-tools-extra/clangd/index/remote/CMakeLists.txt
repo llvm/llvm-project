@@ -1,5 +1,7 @@
 if (CLANGD_ENABLE_REMOTE)
-  generate_grpc_protos(RemoteIndexProtos "Index.proto")
+  generate_protos(RemoteIndexServiceProto "Service.proto" GRPC)
+  generate_protos(RemoteIndexProto "Index.proto")
+  add_dependencies(RemoteIndexServiceProto RemoteIndexProto)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
@@ -12,7 +14,8 @@ if (CLANGD_ENABLE_REMOTE)
     Client.cpp
 
     LINK_LIBS
-    RemoteIndexProtos
+    RemoteIndexProto
+    RemoteIndexServiceProto
     clangdRemoteMarshalling
 
     protobuf
@@ -21,7 +24,8 @@ if (CLANGD_ENABLE_REMOTE)
     clangdSupport
 
     DEPENDS
-    RemoteIndexProtos
+    RemoteIndexProto
+    RemoteIndexServiceProto
     )
 
   add_subdirectory(marshalling)

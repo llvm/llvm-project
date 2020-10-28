@@ -222,6 +222,8 @@ if (LIBCXX_ENABLE_SHARED)
       "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
+
+    target_link_libraries(cxx_shared PRIVATE cxxabi-reexports)
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.

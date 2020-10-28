@@ -31,7 +31,7 @@ static bool hasRAWHazard(MachineInstr *DefMI, MachineInstr *MI,
 }
 
 ScheduleHazardRecognizer::HazardType
-ARMHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
+ARMHazardRecognizerFPMLx::getHazardType(SUnit *SU, int Stalls) {
   assert(Stalls == 0 && "ARM hazards don't support scoreboard lookahead");
 
   MachineInstr *MI = SU->getInstr();
@@ -68,33 +68,28 @@ ARMHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       }
     }
   }
-
-  return ScoreboardHazardRecognizer::getHazardType(SU, Stalls);
+  return NoHazard;
 }
 
-void ARMHazardRecognizer::Reset() {
+void ARMHazardRecognizerFPMLx::Reset() {
   LastMI = nullptr;
   FpMLxStalls = 0;
-  ScoreboardHazardRecognizer::Reset();
 }
 
-void ARMHazardRecognizer::EmitInstruction(SUnit *SU) {
+void ARMHazardRecognizerFPMLx::EmitInstruction(SUnit *SU) {
   MachineInstr *MI = SU->getInstr();
   if (!MI->isDebugInstr()) {
     LastMI = MI;
     FpMLxStalls = 0;
   }
-
-  ScoreboardHazardRecognizer::EmitInstruction(SU);
 }
 
-void ARMHazardRecognizer::AdvanceCycle() {
+void ARMHazardRecognizerFPMLx::AdvanceCycle() {
   if (FpMLxStalls && --FpMLxStalls == 0)
     // Stalled for 4 cycles but still can't schedule any other instructions.
     LastMI = nullptr;
-  ScoreboardHazardRecognizer::AdvanceCycle();
 }
 
-void ARMHazardRecognizer::RecedeCycle() {
+void ARMHazardRecognizerFPMLx::RecedeCycle() {
   llvm_unreachable("reverse ARM hazard checking unsupported");
 }

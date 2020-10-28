@@ -11,10 +11,10 @@
 // RUN: rm -f %tmp
 // RUN: echo "[implicit-integer-sign-change]" >> %tmp
 // RUN: echo "fun:implicitSignChange" >> %tmp
-// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O0 %s -o %t && not %run %t 2>&1 | not FileCheck %s
-// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O1 %s -o %t && not %run %t 2>&1 | not FileCheck %s
-// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O2 %s -o %t && not %run %t 2>&1 | not FileCheck %s
-// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O3 %s -o %t && not %run %t 2>&1 | not FileCheck %s
+// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O0 %s -o %t && %run %t 2>&1 | count 0
+// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O1 %s -o %t && %run %t 2>&1 | count 0
+// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O2 %s -o %t && %run %t 2>&1 | count 0
+// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -fsanitize-blacklist=%tmp -O3 %s -o %t && %run %t 2>&1 | count 0
 
 #include <stdint.h>
 
@@ -24,5 +24,5 @@ int32_t implicitSignChange(uint32_t argc) {
 }
 
 int main(int argc, char **argv) {
-  return implicitSignChange(~0U);
+  return !implicitSignChange(~0U);
 }
