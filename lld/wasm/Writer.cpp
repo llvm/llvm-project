@@ -293,10 +293,10 @@ void Writer::layoutMemory() {
   if (WasmSym::dataEnd)
     WasmSym::dataEnd->setVirtualAddress(memoryPtr);
 
-  log("mem: static data = " + Twine(memoryPtr - dataStart));
-
-  if (config->shared) {
-    out.dylinkSec->memSize = memoryPtr;
+  uint64_t staticDataSize = memoryPtr - dataStart;
+  log("mem: static data = " + Twine(staticDataSize));
+  if (config->isPic) {
+    out.dylinkSec->memSize = staticDataSize;
     return;
   }
 
@@ -323,7 +323,6 @@ void Writer::layoutMemory() {
             Twine(maxMemorySetting));
     memoryPtr = config->initialMemory;
   }
-  out.dylinkSec->memSize = memoryPtr;
   out.memorySec->numMemoryPages =
       alignTo(memoryPtr, WasmPageSize) / WasmPageSize;
   log("mem: total pages = " + Twine(out.memorySec->numMemoryPages));
