@@ -1655,14 +1655,20 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // In the recursive alias queries below, we may compare values from two
   // different loop iterations. Keep track of visited phi blocks, which will
   // be used when determining value equivalence.
-  auto Pair = VisitedPhiBBs.insert(PN->getParent());
+  bool BlockInserted = VisitedPhiBBs.insert(PN->getParent()).second;
   auto _ = make_scope_exit([&]() {
-    if (Pair.second)
+    if (BlockInserted)
       VisitedPhiBBs.erase(PN->getParent());
   });
 
+  // If we inserted a block into VisitedPhiBBs, alias analysis results that
+  // have been cached earlier may no longer be valid. Perform recursive queries
+  // with a new AAQueryInfo.
+  AAQueryInfo NewAAQI;
+  AAQueryInfo *UseAAQI = BlockInserted ? &NewAAQI : &AAQI;
+
   AliasResult Alias = aliasCheck(V2, V2Size, V2AAInfo, V1Srcs[0], PNSize,
-                                 PNAAInfo, AAQI, UnderV2);
+                                 PNAAInfo, *UseAAQI, UnderV2);
 
   // Early exit if the check of the first PHI source against V2 is MayAlias.
   // Other results are not possible.
@@ -1678,8 +1684,8 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   for (unsigned i = 1, e = V1Srcs.size(); i != e; ++i) {
     Value *V = V1Srcs[i];
 
-    AliasResult ThisAlias =
-        aliasCheck(V2, V2Size, V2AAInfo, V, PNSize, PNAAInfo, AAQI, UnderV2);
+    AliasResult ThisAlias = aliasCheck(V2, V2Size, V2AAInfo, V, PNSize,
+                                       PNAAInfo, *UseAAQI, UnderV2);
     Alias = MergeAliasResults(ThisAlias, Alias);
     if (Alias == MayAlias)
       break;

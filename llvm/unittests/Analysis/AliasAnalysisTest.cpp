@@ -249,12 +249,17 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
   auto &AA = getAAResults(*F);
   EXPECT_EQ(NoAlias, AA.alias(A1Loc, A2Loc));
   EXPECT_EQ(MayAlias, AA.alias(PhiLoc, A1Loc));
-  EXPECT_EQ(NoAlias, AA.alias(S1Loc, S2Loc)); // TODO: This is wrong
+  EXPECT_EQ(MayAlias, AA.alias(S1Loc, S2Loc));
 
   BatchAAResults BatchAA(AA);
   EXPECT_EQ(NoAlias, BatchAA.alias(A1Loc, A2Loc));
-  EXPECT_EQ(NoAlias, BatchAA.alias(PhiLoc, A1Loc)); // TODO: This is wrong.
-  EXPECT_EQ(NoAlias, BatchAA.alias(S1Loc, S2Loc)); // TODO: This is wrong
+  EXPECT_EQ(MayAlias, BatchAA.alias(PhiLoc, A1Loc));
+  EXPECT_EQ(MayAlias, BatchAA.alias(S1Loc, S2Loc));
+
+  BatchAAResults BatchAA2(AA);
+  EXPECT_EQ(NoAlias, BatchAA2.alias(A1Loc, A2Loc));
+  EXPECT_EQ(MayAlias, BatchAA2.alias(S1Loc, S2Loc));
+  EXPECT_EQ(MayAlias, BatchAA2.alias(PhiLoc, A1Loc));
 }
 
 class AAPassInfraTest : public testing::Test {
