@@ -2,6 +2,7 @@
 // Ensure that the debug information for a global variable includes
 // namespace information.
 
+// REQUIRES: lldb
 // UNSUPPORTED: system-windows
 
 // RUN: %dexter --fail-lt 1.0 -w \

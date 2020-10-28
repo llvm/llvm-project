@@ -2,6 +2,7 @@
 // Ensure that debug information for a local variable does not hide
 // a global definition that has the same name.
 
+// REQUIRES: lldb
 // UNSUPPORTED: system-windows
 
 // RUN: %dexter --fail-lt 1.0 -w \
