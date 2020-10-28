@@ -4,12 +4,25 @@
 ; RUN: opt -attributor-cgscc -enable-new-pm=0 -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 define internal void @foo(i32 %X) {
-; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    call void @foo(i32 [[X]])
-; CHECK-NEXT:    ret void
+; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
+; IS__CGSCC____-SAME: (i32 [[X:%.*]]) {
+; IS__CGSCC____-NEXT:    call void @foo(i32 [[X]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @foo( i32 %X )
   ret void
 }
 
+define void @bar() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
+; IS__TUNIT____-SAME: () [[ATTR0:#.*]] {
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC____-SAME: () [[ATTR0:#.*]] {
+; IS__CGSCC____-NEXT:    ret void
+;
+  ret void
+}

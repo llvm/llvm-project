@@ -2576,6 +2576,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     A.recordDependence(NoAliasAA, *this, DepClassTy::OPTIONAL);
 
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
+    const Function *ScopeFn = VIRP.getAnchorScope();
     auto &NoCaptureAA =
         A.getAAFor<AANoCapture>(*this, VIRP, /* TrackDependence */ false);
     // Check whether the value is captured in the scope using AANoCapture.
@@ -2584,11 +2585,13 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Instruction *UserI = cast<Instruction>(U.getUser());
 
-      // If user if curr instr and only use.
-      if (UserI == getCtxI() && UserI->hasOneUse())
+      // If UserI is the curr instruction and there is a single potential use of
+      // the value in UserI we allow the use.
+      // TODO: We should inspect the operands and allow those that cannot alias
+      //       with the value.
+      if (UserI == getCtxI() && UserI->getNumOperands() == 1)
         return true;
 
-      const Function *ScopeFn = VIRP.getAnchorScope();
       if (ScopeFn) {
         const auto &ReachabilityAA =
             A.getAAFor<AAReachability>(*this, IRPosition::function(*ScopeFn));
@@ -4075,7 +4078,8 @@ struct AANoCaptureImpl : public AANoCapture {
       return;
     }
 
-    const Function *F = isArgumentPosition() ? getAssociatedFunction() : AnchorScope;
+    const Function *F =
+        isArgumentPosition() ? getAssociatedFunction() : AnchorScope;
 
     // Check what state the associated function can actually capture.
     if (F)
@@ -4306,8 +4310,8 @@ private:
 
 ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   const IRPosition &IRP = getIRPosition();
-  const Value *V =
-      isArgumentPosition() ? IRP.getAssociatedArgument() : &IRP.getAssociatedValue();
+  const Value *V = isArgumentPosition() ? IRP.getAssociatedArgument()
+                                        : &IRP.getAssociatedValue();
   if (!V)
     return indicatePessimisticFixpoint();
 
@@ -7065,10 +7069,13 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     auto &V = getAssociatedValue();
     if (!AssumedConstantRange.isEmptySet() &&
         !AssumedConstantRange.isSingleElement()) {
-      if (Instruction *I = dyn_cast<Instruction>(&V))
+      if (Instruction *I = dyn_cast<Instruction>(&V)) {
+        assert(I == getCtxI() && "Should not annotate an instruction which is "
+                                 "not the context instruction");
         if (isa<CallInst>(I) || isa<LoadInst>(I))
           if (setRangeMetadataIfisBetterRange(I, AssumedConstantRange))
             Changed = ChangeStatus::CHANGED;
+      }
     }
 
     return Changed;
@@ -7376,6 +7383,11 @@ struct AAValueConstantRangeCallSiteReturned
 struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
   AAValueConstantRangeCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRangeFloating(IRP, A) {}
+
+  /// See AbstractAttribute::manifest()
+  ChangeStatus manifest(Attributor &A) override {
+    return ChangeStatus::UNCHANGED;
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
