@@ -26,7 +26,7 @@
 ; DW4: DW_TAG_compile_unit
 ; DW4:   DW_TAG_variable
 ; DW4:     DW_AT_name ("global")
-; DW4:     DW_AT_location (DW_OP_addr 0x0, DW_OP_deref, DW_OP_dup, DW_OP_lit7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_lit8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
+; DW4:     DW_AT_location (DW_OP_addr 0x0, DW_OP_deref, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
 ; DW4:   DW_TAG_base_type
 ; DW4:     DW_AT_name ("int")
 ; DW4:   NULL
