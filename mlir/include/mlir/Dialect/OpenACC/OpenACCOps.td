@@ -482,13 +482,18 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$async,
                        UnitAttr:$wait,
+                       Variadic<IntOrIndex>:$deviceTypeOperands,
+                       Optional<I1>:$ifCond,
                        Variadic<AnyType>:$hostOperands,
                        Variadic<AnyType>:$deviceOperands,
                        UnitAttr:$ifPresent);
 
   let assemblyFormat = [{
+    ( `if` `(` $ifCond^ `)` )?
     ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
     ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
+    ( `device_type` `(` $deviceTypeOperands^ `:`
+        type($deviceTypeOperands) `)` )?
     ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
     ( `host` `(` $hostOperands^ `:` type($hostOperands) `)` )?
     ( `device` `(` $deviceOperands^ `:` type($deviceOperands) `)` )?
