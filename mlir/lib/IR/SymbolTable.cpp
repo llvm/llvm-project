@@ -17,7 +17,7 @@ using namespace mlir;
 /// Return true if the given operation is unknown and may potentially define a
 /// symbol table.
 static bool isPotentiallyUnknownSymbolTable(Operation *op) {
-  return !op->getDialect() && op->getNumRegions() == 1;
+  return op->getNumRegions() == 1 && !op->getDialect();
 }
 
 /// Returns the string name of the given symbol, or None if this is not a
@@ -442,9 +442,9 @@ static WalkResult walkSymbolRefs(
     Operation *op,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   // Check to see if the operation has any attributes.
-  if (op->getMutableAttrDict().empty())
+  DictionaryAttr attrDict = op->getMutableAttrDict().getDictionaryOrNull();
+  if (!attrDict)
     return WalkResult::advance();
-  DictionaryAttr attrDict = op->getAttrDictionary();
 
   // A worklist of a container attribute and the current index into the held
   // attribute list.
