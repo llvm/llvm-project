@@ -123,9 +123,12 @@ public:
   // TODO
   bool requiresExtendedDesc() { return false; }
 
+  // Magic value to indicate we do not know the rank of an entity, either
+  // because it is assumed rank or because we have not determined it yet.
+  static constexpr int unknownRank() { return -1; }
   // This corresponds to the descriptor as defined ISO_Fortran_binding.h and the
   // addendum defined in descriptor.h.
-  mlir::LLVM::LLVMType convertBoxType(BoxType box, int rank = -1) {
+  mlir::LLVM::LLVMType convertBoxType(BoxType box, int rank = unknownRank()) {
     // (buffer*, ele-size, rank, type-descriptor, attribute, [dims])
     SmallVector<mlir::LLVM::LLVMType, 6> parts;
     mlir::Type ele = box.getEleTy();
@@ -141,6 +144,24 @@ public:
     parts.push_back(getDescFieldTypeModel<4>()(&getContext()));
     parts.push_back(getDescFieldTypeModel<5>()(&getContext()));
     parts.push_back(getDescFieldTypeModel<6>()(&getContext()));
+    if (rank == unknownRank()) {
+      if (auto seqTy = ele.dyn_cast<SequenceType>()) {
+        if (seqTy.getEleTy().isa<CharacterType>()) {
+          auto dim = seqTy.getDimension();
+          if (dim == 0) {
+            emitError(UnknownLoc::get(&getContext()))
+                << "missing length in character sequence type :" << eleTy;
+            rank = 0;
+          } else {
+            rank = dim - 1;
+          }
+        } else {
+          rank = seqTy.getDimension();
+        }
+      } else {
+        rank = 0;
+      }
+    }
     if (rank > 0) {
       auto rowTy = getDescFieldTypeModel<7>()(&getContext());
       parts.push_back(mlir::LLVM::LLVMType::getArrayTy(rowTy, rank));

@@ -1998,7 +1998,7 @@ private:
           auto dim = builder->createIntegerConstant(loc, idxTy, iter.index());
           auto dimInfo = builder->create<fir::BoxDimsOp>(loc, idxTy, idxTy,
                                                          idxTy, box, dim);
-          shapes.emplace_back(dimInfo.getResult(2));
+          shapes.emplace_back(dimInfo.getResult(1));
         } else if (spec->ubound().isAssumed()) {
           shapes.emplace_back(mlir::Value{});
         } else {
@@ -2019,14 +2019,18 @@ private:
           auto dim = builder->createIntegerConstant(loc, idxTy, iter.index());
           dimInfo = builder->create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
                                                     box, dim);
-          extents.emplace_back(dimInfo.getResult(2));
+          extents.emplace_back(dimInfo.getResult(1));
           if (auto low = spec->lbound().GetExplicit()) {
             auto expr = Fortran::semantics::SomeExpr{*low};
             auto lb =
                 builder->createConvert(loc, idxTy, createFIRExpr(loc, &expr));
             lbounds.emplace_back(lb);
           } else {
-            lbounds.emplace_back(dimInfo.getResult(1));
+            // FIXME: The front-end is not setting up the implicit lower
+            // bounds to 1 for assumed shape array. Do this here for now,
+            // but that is absolutely wrong for allocatable and pointers.
+            // lbounds.emplace_back(dimInfo.getResult(0));
+            lbounds.emplace_back(builder->createIntegerConstant(loc, idxTy, 1));
           }
         } else {
           if (auto low = spec->lbound().GetExplicit()) {
