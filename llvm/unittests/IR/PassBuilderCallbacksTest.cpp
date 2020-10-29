@@ -439,8 +439,8 @@ protected:
                   "exit:\n"
                   "  ret void\n"
                   "}\n")),
-        CallbacksHandle(),
-        PB(nullptr, PipelineTuningOptions(), None, &CallbacksHandle.Callbacks),
+        CallbacksHandle(), PB(false, nullptr, PipelineTuningOptions(), None,
+                              &CallbacksHandle.Callbacks),
         PM(true), LAM(true), FAM(true), CGAM(true), AM(true) {
 
     EXPECT_TRUE(&CallbacksHandle.Callbacks ==
