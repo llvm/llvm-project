@@ -90,8 +90,8 @@ body: |
 # instructions to fix vccz.
 
 # CHECK-LABEL: name: reload_vcc_from_vgpr
-# CHECK: $vcc_lo = V_READLANE_B32_vi $vgpr0, 8, implicit-def $vcc
-# CHECK: $vcc_hi = V_READLANE_B32_vi $vgpr0, 9
+# CHECK: $vcc_lo = V_READLANE_B32 $vgpr0, 8, implicit-def $vcc
+# CHECK: $vcc_hi = V_READLANE_B32 $vgpr0, 9
 # SI:    $vcc = S_MOV_B64 $vcc
 # GFX9:  $vcc = S_MOV_B64 $vcc
 # CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
@@ -99,8 +99,8 @@ body: |
 name: reload_vcc_from_vgpr
 body: |
   bb.0:
-    $vcc_lo = V_READLANE_B32_vi $vgpr0, 8, implicit-def $vcc
-    $vcc_hi = V_READLANE_B32_vi $vgpr0, 9
+    $vcc_lo = V_READLANE_B32 $vgpr0, 8, implicit-def $vcc
+    $vcc_hi = V_READLANE_B32 $vgpr0, 9
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
   bb.1:
 
