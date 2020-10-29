@@ -1347,6 +1347,19 @@ file_status __symlink_status(const path& p, error_code* ec) {
 path __temp_directory_path(error_code* ec) {
   ErrorHandler<path> err("temp_directory_path", ec);
 
+#if defined(_LIBCPP_WIN32API)
+  wchar_t buf[MAX_PATH];
+  DWORD retval = GetTempPathW(MAX_PATH, buf);
+  if (!retval)
+    return err.report(detail::make_windows_error(GetLastError()));
+  if (retval > MAX_PATH)
+    return err.report(errc::filename_too_long);
+  // GetTempPathW returns a path with a trailing slash, which we
+  // shouldn't include for consistency.
+  if (buf[retval-1] == L'\\')
+    buf[retval-1] = L'\0';
+  path p(buf);
+#else
   const char* env_paths[] = {"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
   const char* ret = nullptr;
 
@@ -1357,6 +1370,7 @@ path __temp_directory_path(error_code* ec) {
     ret = "/tmp";
 
   path p(ret);
+#endif
   error_code m_ec;
   file_status st = detail::posix_stat(p, &m_ec);
   if (!status_known(st))
