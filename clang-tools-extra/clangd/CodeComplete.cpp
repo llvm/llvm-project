@@ -1644,19 +1644,10 @@ private:
       return Scores;
 
     case RM::DecisionForest:
-      Scores.Quality = 0;
-      Scores.Relevance = 0;
-      // Exponentiating DecisionForest prediction makes the score of each tree a
-      // multiplciative boost (like NameMatch). This allows us to weigh the
-      // prediciton score and NameMatch appropriately.
-      Scores.ExcludingName = pow(Opts.DecisionForestBase,
-                                 evaluateDecisionForest(Quality, Relevance));
-      // NeedsFixIts is not part of the DecisionForest as generating training
-      // data that needs fixits is not-feasible.
-      if (Relevance.NeedsFixIts)
-        Scores.ExcludingName *= 0.5;
-      // NameMatch should be a multiplier on total score to support rescoring.
-      Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
+      DecisionForestScores DFScores = Opts.DecisionForestScorer(
+          Quality, Relevance, Opts.DecisionForestBase);
+      Scores.ExcludingName = DFScores.ExcludingName;
+      Scores.Total = DFScores.Total;
       return Scores;
     }
     llvm_unreachable("Unhandled CodeCompletion ranking model.");
