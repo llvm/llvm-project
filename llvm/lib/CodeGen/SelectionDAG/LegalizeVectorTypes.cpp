@@ -4781,7 +4781,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
         APInt::getSignedMaxValue(ElemVT.getSizeInBits()), dl, ElemVT);
     break;
   case ISD::VECREDUCE_FADD:
-    NeutralElem = DAG.getConstantFP(0.0, dl, ElemVT);
+    NeutralElem = DAG.getConstantFP(-0.0, dl, ElemVT);
     break;
   case ISD::VECREDUCE_FMUL:
     NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
