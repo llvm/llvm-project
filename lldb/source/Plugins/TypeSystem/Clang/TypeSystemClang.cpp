@@ -4819,6 +4819,12 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::OCLIntelSubgroupAVCImeDualRefStreamin:
       break;
 
+    // PowerPC -- Matrix Multiply Assist
+    case clang::BuiltinType::VectorPair:
+    case clang::BuiltinType::VectorQuad:
+      break;
+
+    // ARM -- Scalable Vector Extension
     case clang::BuiltinType::SveBool:
     case clang::BuiltinType::SveInt8:
     case clang::BuiltinType::SveInt8x2:
