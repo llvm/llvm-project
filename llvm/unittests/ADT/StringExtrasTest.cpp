@@ -89,6 +89,10 @@ TEST(StringExtrasTest, ToAndFromHex) {
   EXPECT_EQ(EvenStr, toHex(EvenData));
   EXPECT_EQ(EvenData, fromHex(EvenStr));
   EXPECT_EQ(StringRef(EvenStr).lower(), toHex(EvenData, true));
+
+  std::string InvalidStr = "A5ZX";
+  std::string IgnoredOutput;
+  EXPECT_FALSE(tryGetFromHex(InvalidStr, IgnoredOutput));
 }
 
 TEST(StringExtrasTest, to_float) {
