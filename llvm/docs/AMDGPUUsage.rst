@@ -1411,13 +1411,13 @@ The DWARF address space mapping used for AMDGPU is defined in
                                                  address address
                                                  space   space
    ======================================= ===== ======= ======== ================= =======================
-   ``DW_ASPACE_none``                      0x00  8       4        Global            *default address space*
-   ``DW_ASPACE_AMDGPU_generic``            0x01  8       4        Generic (Flat)
-   ``DW_ASPACE_AMDGPU_region``             0x02  4       4        Region (GDS)
-   ``DW_ASPACE_AMDGPU_local``              0x03  4       4        Local (group/LDS)
+   ``DW_ASPACE_none``                      0x00  64      32       Global            *default address space*
+   ``DW_ASPACE_AMDGPU_generic``            0x01  64      32       Generic (Flat)
+   ``DW_ASPACE_AMDGPU_region``             0x02  32      32       Region (GDS)
+   ``DW_ASPACE_AMDGPU_local``              0x03  32      32       Local (group/LDS)
    *Reserved*                              0x04
-   ``DW_ASPACE_AMDGPU_private_lane``       0x05  4       4        Private (Scratch) *focused lane*
-   ``DW_ASPACE_AMDGPU_private_wave``       0x06  4       4        Private (Scratch) *unswizzled wavefront*
+   ``DW_ASPACE_AMDGPU_private_lane``       0x05  32      32       Private (Scratch) *focused lane*
+   ``DW_ASPACE_AMDGPU_private_wave``       0x06  32      32       Private (Scratch) *unswizzled wavefront*
    ======================================= ===== ======= ======== ================= =======================
 
 See :ref:`amdgpu-address-spaces` for information on the AMDGPU address spaces
