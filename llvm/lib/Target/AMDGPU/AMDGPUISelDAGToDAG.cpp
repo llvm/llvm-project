@@ -2507,15 +2507,11 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   SDValue Chain = N->getOperand(0);
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
-  // TODO: Can this just be removed from the instruction?
-  SDValue GDS = CurDAG->getTargetConstant(1, SL, MVT::i1);
-
   const unsigned Opc = gwsIntrinToOpcode(IntrID);
   SmallVector<SDValue, 5> Ops;
   if (HasVSrc)
     Ops.push_back(N->getOperand(2));
   Ops.push_back(OffsetField);
-  Ops.push_back(GDS);
   Ops.push_back(Chain);
 
   SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
