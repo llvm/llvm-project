@@ -69,21 +69,22 @@ void FileManager::clearStatCache() { StatCache.reset(); }
 
 /// Retrieve the directory that the given file name resides in.
 /// Filename can point to either a real file or a virtual file.
-static llvm::ErrorOr<const DirectoryEntry *>
+static llvm::Expected<DirectoryEntryRef>
 getDirectoryFromFile(FileManager &FileMgr, StringRef Filename,
                      bool CacheFailure) {
   if (Filename.empty())
-    return std::errc::no_such_file_or_directory;
+    return llvm::errorCodeToError(
+        make_error_code(std::errc::no_such_file_or_directory));
 
   if (llvm::sys::path::is_separator(Filename[Filename.size() - 1]))
-    return std::errc::is_a_directory;
+    return llvm::errorCodeToError(make_error_code(std::errc::is_a_directory));
 
   StringRef DirName = llvm::sys::path::parent_path(Filename);
   // Use the current directory if file has no path component.
   if (DirName.empty())
     DirName = ".";
 
-  return FileMgr.getDirectory(DirName, CacheFailure);
+  return FileMgr.getDirectoryRef(DirName, CacheFailure);
 }
 
 /// Add all ancestors of the given path (pointing to either a file or
@@ -141,7 +142,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
       SeenDirEntries.insert({DirName, std::errc::no_such_file_or_directory});
   if (!SeenDirInsertResult.second) {
     if (SeenDirInsertResult.first->second)
-      return DirectoryEntryRef(&*SeenDirInsertResult.first);
+      return DirectoryEntryRef(*SeenDirInsertResult.first);
     return llvm::errorCodeToError(SeenDirInsertResult.first->second.getError());
   }
 
@@ -180,7 +181,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
     UDE.Name  = InterndDirName;
   }
 
-  return DirectoryEntryRef(&NamedDirEnt);
+  return DirectoryEntryRef(NamedDirEnt);
 }
 
 llvm::ErrorOr<const DirectoryEntry *>
@@ -235,14 +236,15 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   // without a 'sys' subdir will get a cached failure result.
   auto DirInfoOrErr = getDirectoryFromFile(*this, Filename, CacheFailure);
   if (!DirInfoOrErr) { // Directory doesn't exist, file can't exist.
+    std::error_code Err = errorToErrorCode(DirInfoOrErr.takeError());
     if (CacheFailure)
-      NamedFileEnt->second = DirInfoOrErr.getError();
+      NamedFileEnt->second = Err;
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::errorCodeToError(DirInfoOrErr.getError());
+    return llvm::errorCodeToError(Err);
   }
-  const DirectoryEntry *DirInfo = *DirInfoOrErr;
+  DirectoryEntryRef DirInfo = *DirInfoOrErr;
 
   // FIXME: Use the directory info to prune this, before doing the stat syscall.
   // FIXME: This will reduce the # syscalls.
@@ -270,12 +272,13 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
 
   if (Status.getName() == Filename) {
     // The name matches. Set the FileEntry.
-    NamedFileEnt->second = FileEntryRef::MapValue(UFE);
+    NamedFileEnt->second = FileEntryRef::MapValue(UFE, DirInfo);
   } else {
     // Name mismatch. We need a redirect. First grab the actual entry we want
     // to return.
     auto &Redirection =
-        *SeenFileEntries.insert({Status.getName(), FileEntryRef::MapValue(UFE)})
+        *SeenFileEntries
+             .insert({Status.getName(), FileEntryRef::MapValue(UFE, DirInfo)})
              .first;
     assert(Redirection.second->V.is<FileEntry *>() &&
            "filename redirected to a non-canonical filename?");
@@ -299,8 +302,8 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // module's structure when its headers/module map are mapped in the VFS.
     // We should remove this as soon as we can properly support a file having
     // multiple names.
-    if (DirInfo != UFE.Dir && Status.IsVFSMapped)
-      UFE.Dir = DirInfo;
+    if (&DirInfo.getDirEntry() != UFE.Dir && Status.IsVFSMapped)
+      UFE.Dir = &DirInfo.getDirEntry();
 
     // Always update LastRef to the last name by which a file was accessed.
     // FIXME: Neither this nor always using the first reference is correct; we
@@ -318,7 +321,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   UFE.LastRef = ReturnedRef;
   UFE.Size    = Status.getSize();
   UFE.ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
-  UFE.Dir     = DirInfo;
+  UFE.Dir     = &DirInfo.getDirEntry();
   UFE.UID     = NextFileUID++;
   UFE.UniqueID = Status.getUniqueID();
   UFE.IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
@@ -363,7 +366,8 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   // Now that all ancestors of Filename are in the cache, the
   // following call is guaranteed to find the DirectoryEntry from the
   // cache.
-  auto DirInfo = getDirectoryFromFile(*this, Filename, /*CacheFailure=*/true);
+  auto DirInfo = expectedToOptional(
+      getDirectoryFromFile(*this, Filename, /*CacheFailure=*/true));
   assert(DirInfo &&
          "The directory of a virtual file should already be in the cache.");
 
@@ -378,7 +382,7 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
       Status.getUser(), Status.getGroup(), Size,
       Status.getType(), Status.getPermissions());
 
-    NamedFileEnt.second = FileEntryRef::MapValue(*UFE);
+    NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
 
     // If we had already opened this file, close it now so we don't
     // leak the descriptor. We're not going to use the file
@@ -399,13 +403,13 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   } else {
     VirtualFileEntries.push_back(std::make_unique<FileEntry>());
     UFE = VirtualFileEntries.back().get();
-    NamedFileEnt.second = FileEntryRef::MapValue(*UFE);
+    NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
   }
 
   UFE->LastRef = FileEntryRef(NamedFileEnt);
   UFE->Size    = Size;
   UFE->ModTime = ModificationTime;
-  UFE->Dir     = *DirInfo;
+  UFE->Dir     = &DirInfo->getDirEntry();
   UFE->UID     = NextFileUID++;
   UFE->IsValid = true;
   UFE->File.reset();
@@ -432,7 +436,7 @@ llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
   BypassFileEntries.push_back(std::make_unique<FileEntry>());
   const FileEntry &VFE = VF.getFileEntry();
   FileEntry &BFE = *BypassFileEntries.back();
-  Insertion.first->second = FileEntryRef::MapValue(BFE);
+  Insertion.first->second = FileEntryRef::MapValue(BFE, VF.getDir());
   BFE.LastRef = FileEntryRef(*Insertion.first);
   BFE.Size = Status.getSize();
   BFE.Dir = VFE.Dir;
