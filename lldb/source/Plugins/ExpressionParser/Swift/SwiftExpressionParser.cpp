@@ -510,22 +510,28 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   imported_self_type = swift_runtime->BindGenericTypeParameters(
       *stack_frame, imported_self_type);
 
-  // This might be a referenced type, in which case we really want to
-  // extend the referent:
-  imported_self_type =
-      llvm::cast<TypeSystemSwift>(imported_self_type.GetTypeSystem())
-          ->GetReferentType(imported_self_type.GetOpaqueQualType());
+  {
+    auto *swift_type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
+        imported_self_type.GetTypeSystem());
+    if (!swift_type_system)
+      return;
+
+    // This might be a referenced type, in which case we really want to
+    // extend the referent:
+    imported_self_type = swift_type_system->GetReferentType(
+        imported_self_type.GetOpaqueQualType());
+  }
 
   {
-    auto *type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
+    auto *swift_type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
         imported_self_type.GetTypeSystem());
-    if (!type_system)
+    if (!swift_type_system)
       return;
 
     // If we are extending a generic class it's going to be a metatype,
     // and we have to grab the instance type:
-    imported_self_type =
-        type_system->GetInstanceType(imported_self_type.GetOpaqueQualType());
+    imported_self_type = swift_type_system->GetInstanceType(
+        imported_self_type.GetOpaqueQualType());
   }
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
