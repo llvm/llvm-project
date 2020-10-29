@@ -1168,9 +1168,9 @@ void AMDGPUInstPrinter::printVGPRIndexMode(const MCInst *MI, unsigned OpNo,
   unsigned Val = MI->getOperand(OpNo).getImm();
 
   if ((Val & ~ENABLE_MASK) != 0) {
-    O << " " << formatHex(static_cast<uint64_t>(Val));
+    O << formatHex(static_cast<uint64_t>(Val));
   } else {
-    O << " gpr_idx(";
+    O << "gpr_idx(";
     bool NeedComma = false;
     for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
       if (Val & (1 << ModeId)) {
