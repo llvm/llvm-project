@@ -57,6 +57,12 @@ static void remapInlinedOperands(iterator_range<Region::iterator> inlinedBlocks,
 // InlinerInterface
 //===----------------------------------------------------------------------===//
 
+bool InlinerInterface::isLegalToInline(Operation *call,
+                                       Operation *callable) const {
+  auto *handler = getInterfaceFor(call);
+  return handler ? handler->isLegalToInline(call, callable) : false;
+}
+
 bool InlinerInterface::isLegalToInline(
     Region *dest, Region *src, BlockAndValueMapping &valueMapping) const {
   // Regions can always be inlined into functions.
@@ -351,6 +357,10 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
     callResult.replaceAllUsesWith(castResult);
     castResult.getDefiningOp()->replaceUsesOfWith(castResult, callResult);
   }
+
+  // Check that it is legal to inline the callable into the call.
+  if (!interface.isLegalToInline(call, callable))
+    return cleanupState();
 
   // Attempt to inline the call.
   if (failed(inlineRegion(interface, src, call, mapper, callResults,
