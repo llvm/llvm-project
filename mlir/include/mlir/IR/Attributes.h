@@ -1621,6 +1621,10 @@ public:
   /// Return the underlying dictionary attribute.
   DictionaryAttr getDictionary(MLIRContext *context) const;
 
+  /// Return the underlying dictionary attribute or null if there are no
+  /// attributes within this dictionary.
+  DictionaryAttr getDictionaryOrNull() const { return attrs; }
+
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() const;
 
