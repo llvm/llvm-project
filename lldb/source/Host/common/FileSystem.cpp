@@ -49,7 +49,7 @@ void FileSystem::Initialize() {
   InstanceImpl().emplace();
 }
 
-void FileSystem::Initialize(std::shared_ptr<FileCollector> collector) {
+void FileSystem::Initialize(std::shared_ptr<FileCollectorBase> collector) {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace(collector);
 }

@@ -1,0 +1,14 @@
+# RUN: mkdir -p %t.repro
+# RUN: touch %t.known.file
+# RUN: mkdir -p %t.known.dir
+# RUN: touch %t.repro/index.yaml
+# RUN: echo -n "%t.known.file" > %t.repro/files.txt
+# RUN: echo -n "%t.known.dir" > %t.repro/dirs.txt
+
+# RUN: %lldb --reproducer-finalize %t.repro 2>&1 | FileCheck %s
+# CHECK-NOT: error
+# CHECK: Reproducer written to
+
+# RUN: echo "CHECK-DAG: %t.known.file" > %t.filecheck
+# RUN: echo "CHECK-DAG %t.known.dir" >> %t.filecheck
+# RUN: cat %t.repro/files.yaml | FileCheck %t.filecheck

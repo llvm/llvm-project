@@ -192,6 +192,10 @@ protected:
     auto &r = Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
+      if (llvm::Error e = repro::Finalize(r.GetReproducerPath())) {
+        SetError(result, std::move(e));
+        return result.Succeeded();
+      }
     } else if (r.IsReplaying()) {
       // Make this operation a NO-OP in replay mode.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
