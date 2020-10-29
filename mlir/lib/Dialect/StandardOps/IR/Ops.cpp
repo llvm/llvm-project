@@ -46,6 +46,11 @@ struct StdInlinerInterface : public DialectInlinerInterface {
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
+  /// All call operations within standard ops can be inlined.
+  bool isLegalToInline(Operation *call, Operation *callable) const final {
+    return true;
+  }
+
   /// All operations within standard ops can be inlined.
   bool isLegalToInline(Operation *, Region *,
                        BlockAndValueMapping &) const final {
