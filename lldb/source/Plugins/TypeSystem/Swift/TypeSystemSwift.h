@@ -97,6 +97,16 @@ public:
   static ConstString GetPluginNameStatic();
   /// \}
 
+  class LanguageFlags {
+  public:
+    enum : uint64_t {
+      eIsIndirectEnumCase = 0x1ULL
+    };
+
+  private:
+    LanguageFlags() = delete;
+  };
+
   static LanguageSet GetSupportedLanguagesForTypes();
   virtual SwiftASTContext *GetSwiftASTContext() = 0;
   virtual Module *GetModule() const = 0;
