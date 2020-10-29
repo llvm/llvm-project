@@ -208,6 +208,86 @@ LogicalResult ConstSizeOpConversion::matchAndRewrite(
 }
 
 namespace {
+struct IsBroadcastableOpConverter
+    : public OpConversionPattern<IsBroadcastableOp> {
+  using OpConversionPattern<IsBroadcastableOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(IsBroadcastableOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+
+LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
+    IsBroadcastableOp op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  // For now, this lowering is only defined on `tensor<?xindex>` operands, not
+  // on shapes.
+  IsBroadcastableOp::Adaptor transformed(operands);
+  if (transformed.lhs().getType().isa<ShapeType>() ||
+      transformed.rhs().getType().isa<ShapeType>())
+    return failure();
+
+  auto loc = op.getLoc();
+  Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
+  Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+
+  // Find smaller and greater rank and extent tensor.
+  Value lhsRank = rewriter.create<DimOp>(loc, transformed.lhs(), zero);
+  Value rhsRank = rewriter.create<DimOp>(loc, transformed.rhs(), zero);
+  Value lhsRankULE =
+      rewriter.create<CmpIOp>(loc, CmpIPredicate::ule, lhsRank, rhsRank);
+  Type indexTy = rewriter.getIndexType();
+  Value lesserRank =
+      rewriter.create<SelectOp>(loc, lhsRankULE, lhsRank, rhsRank);
+  Value greaterRank =
+      rewriter.create<SelectOp>(loc, lhsRankULE, rhsRank, lhsRank);
+  auto erasedRankType =
+      RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
+  Value rankErasedLhs =
+      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.lhs());
+  Value rankErasedRhs =
+      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.rhs());
+  Value lesserRankOperand =
+      rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedLhs, rankErasedRhs);
+  Value greaterRankOperand =
+      rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedRhs, rankErasedLhs);
+  Value rankDiff =
+      rewriter.create<SubIOp>(loc, indexTy, greaterRank, lesserRank);
+  Type i1Ty = rewriter.getI1Type();
+  Value init =
+      rewriter.create<ConstantOp>(loc, i1Ty, rewriter.getBoolAttr(true));
+
+  // Determine if all overlapping extents are broadcastable.
+  auto reduceResult = rewriter.create<ForOp>(
+      loc, rankDiff, greaterRank, one, ValueRange{init},
+      [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {
+        Value greaterRankOperandExtent =
+            b.create<ExtractElementOp>(loc, greaterRankOperand, ValueRange{iv});
+        Value greaterRankOperandExtentIsOne = b.create<CmpIOp>(
+            loc, CmpIPredicate::eq, greaterRankOperandExtent, one);
+        Value ivShifted = b.create<SubIOp>(loc, indexTy, iv, rankDiff);
+        Value lesserRankOperandExtent = b.create<ExtractElementOp>(
+            loc, lesserRankOperand, ValueRange{ivShifted});
+        Value lesserRankOperandExtentIsOne = b.create<CmpIOp>(
+            loc, CmpIPredicate::eq, lesserRankOperandExtent, one);
+        Value extentsAreEqual =
+            b.create<CmpIOp>(loc, CmpIPredicate::eq, greaterRankOperandExtent,
+                             lesserRankOperandExtent);
+        Value broadcastableExtents = b.create<AndOp>(
+            loc, iterArgs[0],
+            b.create<OrOp>(loc,
+                           b.create<OrOp>(loc, greaterRankOperandExtentIsOne,
+                                          lesserRankOperandExtentIsOne),
+                           extentsAreEqual));
+        b.create<scf::YieldOp>(loc, broadcastableExtents);
+      });
+
+  rewriter.replaceOp(op, reduceResult.results().front());
+  return success();
+}
+
+namespace {
 class GetExtentOpConverter : public OpConversionPattern<GetExtentOp> {
   using OpConversionPattern<GetExtentOp>::OpConversionPattern;
 
@@ -522,6 +602,7 @@ void mlir::populateShapeToStandardConversionPatterns(
       BroadcastOpConverter,
       ConstShapeOpConverter,
       ConstSizeOpConversion,
+      IsBroadcastableOpConverter,
       GetExtentOpConverter,
       RankOpConverter,
       ReduceOpConverter,
