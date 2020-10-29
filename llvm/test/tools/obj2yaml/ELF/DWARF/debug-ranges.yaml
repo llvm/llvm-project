@@ -216,7 +216,7 @@ Sections:
   - Name:         .debug_ranges
     Type:         [[TYPE=SHT_PROGBITS]]
     Flags:        [[FLAGS=<none>]]
-    Link:         [[LINK='']]
+    Link:         [[LINK=<none>]]
     EntSize:      [[ENTSIZE=<none>]]
     Info:         [[INFO=<none>]]
     AddressAlign: [[ADDRALIGN=0]]

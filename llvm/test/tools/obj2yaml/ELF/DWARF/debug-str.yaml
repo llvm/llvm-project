@@ -56,7 +56,7 @@ Sections:
   - Name:         .debug_str
     Type:         SHT_[[TYPE=PROGBITS]]
     Flags:        [[FLAGS=<none>]]
-    Link:         [[LINK='']]
+    Link:         [[LINK=<none>]]
     EntSize:      [[ENTSIZE=1]]
     Info:         [[INFO=<none>]]
     AddressAlign: [[ADDRALIGN=1]]
