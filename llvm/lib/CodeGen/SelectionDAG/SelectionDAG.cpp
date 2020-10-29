@@ -333,6 +333,39 @@ bool ISD::matchBinaryPredicate(
   return true;
 }
 
+ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
+  switch (VecReduceOpcode) {
+  default:
+    llvm_unreachable("Expected VECREDUCE opcode");
+  case ISD::VECREDUCE_FADD:
+    return ISD::FADD;
+  case ISD::VECREDUCE_FMUL:
+    return ISD::FMUL;
+  case ISD::VECREDUCE_ADD:
+    return ISD::ADD;
+  case ISD::VECREDUCE_MUL:
+    return ISD::MUL;
+  case ISD::VECREDUCE_AND:
+    return ISD::AND;
+  case ISD::VECREDUCE_OR:
+    return ISD::OR;
+  case ISD::VECREDUCE_XOR:
+    return ISD::XOR;
+  case ISD::VECREDUCE_SMAX:
+    return ISD::SMAX;
+  case ISD::VECREDUCE_SMIN:
+    return ISD::SMIN;
+  case ISD::VECREDUCE_UMAX:
+    return ISD::UMAX;
+  case ISD::VECREDUCE_UMIN:
+    return ISD::UMIN;
+  case ISD::VECREDUCE_FMAX:
+    return ISD::FMAXNUM;
+  case ISD::VECREDUCE_FMIN:
+    return ISD::FMINNUM;
+  }
+}
+
 ISD::NodeType ISD::getExtForLoadExtType(bool IsFP, ISD::LoadExtType ExtType) {
   switch (ExtType) {
   case ISD::EXTLOAD:
