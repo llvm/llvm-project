@@ -232,7 +232,7 @@ template <class ELFT> class ELFState {
                    ArrayRef<typename ELFT::Shdr> SHeaders);
 
   void finalizeStrings();
-  void writeELFHeader(raw_ostream &OS, uint64_t SHOff);
+  void writeELFHeader(raw_ostream &OS, Optional<uint64_t> SHOff);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::NoBitsSection &Section,
                            ContiguousBlobAccumulator &CBA);
@@ -363,7 +363,9 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
       std::string SecName = ("." + DebugSecName).str();
       ImplicitSections.push_back(StringRef(SecName).copy(StringAlloc));
     }
-  ImplicitSections.insert(ImplicitSections.end(), {".strtab", ".shstrtab"});
+  ImplicitSections.insert(ImplicitSections.end(), {".strtab"});
+  if (!Doc.SectionHeaders || !Doc.SectionHeaders->NoHeaders.getValueOr(false))
+    ImplicitSections.insert(ImplicitSections.end(), {".shstrtab"});
 
   // Insert placeholders for implicit sections that are not
   // defined explicitly in YAML.
@@ -379,7 +381,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
 }
 
 template <class ELFT>
-void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
+void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, Optional<uint64_t> SHOff) {
   using namespace llvm::ELF;
 
   Elf_Ehdr Header;
@@ -429,22 +431,19 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
   Header.e_shentsize = Doc.Header.EShEntSize ? (uint16_t)*Doc.Header.EShEntSize
                                              : sizeof(Elf_Shdr);
 
-  const bool NoShdrs =
-      Doc.SectionHeaders && Doc.SectionHeaders->NoHeaders.getValueOr(false);
-
   if (Doc.Header.EShOff)
     Header.e_shoff = *Doc.Header.EShOff;
-  else if (NoShdrs)
-    Header.e_shoff = 0;
+  else if (SHOff)
+    Header.e_shoff = *SHOff;
   else
-    Header.e_shoff = SHOff;
+    Header.e_shoff = 0;
 
   if (Doc.Header.EShNum)
     Header.e_shnum = *Doc.Header.EShNum;
   else if (!Doc.SectionHeaders ||
            (Doc.SectionHeaders->NoHeaders && !*Doc.SectionHeaders->NoHeaders))
     Header.e_shnum = Doc.getSections().size();
-  else if (NoShdrs)
+  else if (!SHOff)
     Header.e_shnum = 0;
   else
     Header.e_shnum =
@@ -454,10 +453,10 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
 
   if (Doc.Header.EShStrNdx)
     Header.e_shstrndx = *Doc.Header.EShStrNdx;
-  else if (NoShdrs || ExcludedSectionHeaders.count(".shstrtab"))
-    Header.e_shstrndx = 0;
-  else
+  else if (SHOff && !ExcludedSectionHeaders.count(".shstrtab"))
     Header.e_shstrndx = SN2I.get(".shstrtab");
+  else
+    Header.e_shstrndx = 0;
 
   OS.write((const char *)&Header, sizeof(Header));
 }
@@ -1884,11 +1883,17 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   // Now we can decide segment offsets.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
-  // Align the start of the section header table, which is written after all
-  // section data.
-  uint64_t SHOff =
-      State.alignToOffset(CBA, sizeof(typename ELFT::uint), /*Offset=*/None);
-  bool ReachedLimit = SHOff + arrayDataSize(makeArrayRef(SHeaders)) > MaxSize;
+  // If needed, align the start of the section header table, which is written
+  // after all section data.
+  const bool HasSectionHeaders =
+      !Doc.SectionHeaders || !Doc.SectionHeaders->NoHeaders.getValueOr(false);
+  Optional<uint64_t> SHOff;
+  if (HasSectionHeaders)
+    SHOff = State.alignToOffset(CBA, sizeof(typename ELFT::uint),
+                                /*Offset=*/None);
+  bool ReachedLimit = SHOff.getValueOr(CBA.getOffset()) +
+                          arrayDataSize(makeArrayRef(SHeaders)) >
+                      MaxSize;
   if (Error E = CBA.takeLimitError()) {
     // We report a custom error message instead below.
     consumeError(std::move(E));
@@ -1906,7 +1911,8 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   State.writeELFHeader(OS, SHOff);
   writeArrayData(OS, makeArrayRef(PHeaders));
   CBA.writeBlobToStream(OS);
-  writeArrayData(OS, makeArrayRef(SHeaders));
+  if (HasSectionHeaders)
+    writeArrayData(OS, makeArrayRef(SHeaders));
   return true;
 }
 
