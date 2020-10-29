@@ -58,11 +58,15 @@ void ReportFile::ReopenIfNecessary() {
   } else {
     internal_snprintf(full_path, kMaxPathLength, "%s.%zu", path_prefix, pid);
   }
-  fd = OpenFile(full_path, WrOnly);
+  error_t err;
+  fd = OpenFile(full_path, WrOnly, &err);
   if (fd == kInvalidFd) {
     const char *ErrorMsgPrefix = "ERROR: Can't open file: ";
     WriteToFile(kStderrFd, ErrorMsgPrefix, internal_strlen(ErrorMsgPrefix));
     WriteToFile(kStderrFd, full_path, internal_strlen(full_path));
+    char errmsg[100];
+    internal_snprintf(errmsg, sizeof(errmsg), " (reason: %d)", err);
+    WriteToFile(kStderrFd, errmsg, internal_strlen(errmsg));
     Die();
   }
   fd_pid = pid;
