@@ -158,6 +158,54 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
   return getBaseTypeSize(BaseType);
 }
 
+bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
+  if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
+    // FIXME: Enums without a fixed underlying type have unknown signedness
+    // here, leading to incorrectly emitted constants.
+    if (CTy->getTag() == dwarf::DW_TAG_enumeration_type)
+      return false;
+
+    // (Pieces of) aggregate types that get hacked apart by SROA may be
+    // represented by a constant. Encode them as unsigned bytes.
+    return true;
+  }
+
+  if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    dwarf::Tag T = (dwarf::Tag)Ty->getTag();
+    // Encode pointer constants as unsigned bytes. This is used at least for
+    // null pointer constant emission.
+    // FIXME: reference and rvalue_reference /probably/ shouldn't be allowed
+    // here, but accept them for now due to a bug in SROA producing bogus
+    // dbg.values.
+    if (T == dwarf::DW_TAG_pointer_type ||
+        T == dwarf::DW_TAG_ptr_to_member_type ||
+        T == dwarf::DW_TAG_reference_type ||
+        T == dwarf::DW_TAG_rvalue_reference_type)
+      return true;
+    assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
+           T == dwarf::DW_TAG_volatile_type ||
+           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
+    assert(DTy->getBaseType() && "Expected valid base type");
+    return isUnsignedDIType(DTy->getBaseType());
+  }
+
+  auto *BTy = cast<DIBasicType>(Ty);
+  unsigned Encoding = BTy->getEncoding();
+  assert((Encoding == dwarf::DW_ATE_unsigned ||
+          Encoding == dwarf::DW_ATE_unsigned_char ||
+          Encoding == dwarf::DW_ATE_signed ||
+          Encoding == dwarf::DW_ATE_signed_char ||
+          Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
+          Encoding == dwarf::DW_ATE_boolean ||
+          (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
+           Ty->getName() == "decltype(nullptr)")) &&
+         "Unsupported encoding");
+  return Encoding == dwarf::DW_ATE_unsigned ||
+         Encoding == dwarf::DW_ATE_unsigned_char ||
+         Encoding == dwarf::DW_ATE_UTF || Encoding == dwarf::DW_ATE_boolean ||
+         Ty->getTag() == dwarf::DW_TAG_unspecified_type;
+}
+
 static bool hasDebugInfo(const MachineModuleInfo *MMI,
                          const MachineFunction *MF) {
   if (!MMI->hasDebugInfo())

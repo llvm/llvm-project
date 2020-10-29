@@ -7539,6 +7539,11 @@ def err_incomplete_object_call : Error<
 def warn_condition_is_assignment : Warning<"using the result of an "
   "assignment as a condition without parentheses">,
   InGroup<Parentheses>;
+def warn_free_nonheap_object
+  : Warning<"attempt to call %0 on non-heap object %1">,
+    InGroup<DiagGroup<"free-nonheap-object">>,
+    DefaultIgnore; // FIXME: add to -Wall after sufficient testing
+
 // Completely identical except off by default.
 def warn_condition_is_idiomatic_assignment : Warning<"using the result "
   "of an assignment as a condition without parentheses">,
