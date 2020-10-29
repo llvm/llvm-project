@@ -33,7 +33,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 60
+#define CINDEX_VERSION_MINOR 61
 
 #define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
 
@@ -2052,62 +2052,58 @@ enum CXCursorKind {
    */
   CXCursor_CXXFunctionalCastExpr = 128,
 
-  /** OpenCL's addrspace_cast<> expression.
-   */
-  CXCursor_CXXAddrspaceCastExpr = 129,
-
   /** A C++ typeid expression (C++ [expr.typeid]).
    */
-  CXCursor_CXXTypeidExpr = 130,
+  CXCursor_CXXTypeidExpr = 129,
 
   /** [C++ 2.13.5] C++ Boolean Literal.
    */
-  CXCursor_CXXBoolLiteralExpr = 131,
+  CXCursor_CXXBoolLiteralExpr = 130,
 
   /** [C++0x 2.14.7] C++ Pointer Literal.
    */
-  CXCursor_CXXNullPtrLiteralExpr = 132,
+  CXCursor_CXXNullPtrLiteralExpr = 131,
 
   /** Represents the "this" expression in C++
    */
-  CXCursor_CXXThisExpr = 133,
+  CXCursor_CXXThisExpr = 132,
 
   /** [C++ 15] C++ Throw Expression.
    *
    * This handles 'throw' and 'throw' assignment-expression. When
    * assignment-expression isn't present, Op will be null.
    */
-  CXCursor_CXXThrowExpr = 134,
+  CXCursor_CXXThrowExpr = 133,
 
   /** A new expression for memory allocation and constructor calls, e.g:
    * "new CXXNewExpr(foo)".
    */
-  CXCursor_CXXNewExpr = 135,
+  CXCursor_CXXNewExpr = 134,
 
   /** A delete expression for memory deallocation and destructor calls,
    * e.g. "delete[] pArray".
    */
-  CXCursor_CXXDeleteExpr = 136,
+  CXCursor_CXXDeleteExpr = 135,
 
   /** A unary expression. (noexcept, sizeof, or other traits)
    */
-  CXCursor_UnaryExpr = 137,
+  CXCursor_UnaryExpr = 136,
 
   /** An Objective-C string literal i.e. @"foo".
    */
-  CXCursor_ObjCStringLiteral = 138,
+  CXCursor_ObjCStringLiteral = 137,
 
   /** An Objective-C \@encode expression.
    */
-  CXCursor_ObjCEncodeExpr = 139,
+  CXCursor_ObjCEncodeExpr = 138,
 
   /** An Objective-C \@selector expression.
    */
-  CXCursor_ObjCSelectorExpr = 140,
+  CXCursor_ObjCSelectorExpr = 139,
 
   /** An Objective-C \@protocol expression.
    */
-  CXCursor_ObjCProtocolExpr = 141,
+  CXCursor_ObjCProtocolExpr = 140,
 
   /** An Objective-C "bridged" cast expression, which casts between
    * Objective-C pointers and C pointers, transferring ownership in the process.
@@ -2116,7 +2112,7 @@ enum CXCursorKind {
    *   NSString *str = (__bridge_transfer NSString *)CFCreateString();
    * \endcode
    */
-  CXCursor_ObjCBridgedCastExpr = 142,
+  CXCursor_ObjCBridgedCastExpr = 141,
 
   /** Represents a C++0x pack expansion that produces a sequence of
    * expressions.
@@ -2131,7 +2127,7 @@ enum CXCursorKind {
    * }
    * \endcode
    */
-  CXCursor_PackExpansionExpr = 143,
+  CXCursor_PackExpansionExpr = 142,
 
   /** Represents an expression that computes the length of a parameter
    * pack.
@@ -2143,7 +2139,7 @@ enum CXCursorKind {
    * };
    * \endcode
    */
-  CXCursor_SizeOfPackExpr = 144,
+  CXCursor_SizeOfPackExpr = 143,
 
   /* Represents a C++ lambda expression that produces a local function
    * object.
@@ -2157,39 +2153,43 @@ enum CXCursorKind {
    * }
    * \endcode
    */
-  CXCursor_LambdaExpr = 145,
+  CXCursor_LambdaExpr = 144,
 
   /** Objective-c Boolean Literal.
    */
-  CXCursor_ObjCBoolLiteralExpr = 146,
+  CXCursor_ObjCBoolLiteralExpr = 145,
 
   /** Represents the "self" expression in an Objective-C method.
    */
-  CXCursor_ObjCSelfExpr = 147,
+  CXCursor_ObjCSelfExpr = 146,
 
   /** OpenMP 5.0 [2.1.5, Array Section].
    */
-  CXCursor_OMPArraySectionExpr = 148,
+  CXCursor_OMPArraySectionExpr = 147,
 
   /** Represents an @available(...) check.
    */
-  CXCursor_ObjCAvailabilityCheckExpr = 149,
+  CXCursor_ObjCAvailabilityCheckExpr = 148,
 
   /**
    * Fixed point literal
    */
-  CXCursor_FixedPointLiteral = 150,
+  CXCursor_FixedPointLiteral = 149,
 
   /** OpenMP 5.0 [2.1.4, Array Shaping].
    */
-  CXCursor_OMPArrayShapingExpr = 151,
+  CXCursor_OMPArrayShapingExpr = 150,
 
   /**
    * OpenMP 5.0 [2.1.6 Iterators]
    */
-  CXCursor_OMPIteratorExpr = 152,
+  CXCursor_OMPIteratorExpr = 151,
 
-  CXCursor_LastExpr = CXCursor_OMPIteratorExpr,
+  /** OpenCL's addrspace_cast<> expression.
+   */
+  CXCursor_CXXAddrspaceCastExpr = 152,
+
+  CXCursor_LastExpr = CXCursor_CXXAddrspaceCastExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,
