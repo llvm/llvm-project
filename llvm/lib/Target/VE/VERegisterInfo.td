@@ -112,10 +112,21 @@ foreach I = 0-63 in
                    DwarfRegNum<[I]>;
 
 // Generic integer registers - 64 bits wide
-let SubRegIndices = [sub_i32, sub_f32], CoveredBySubRegs = 1 in
-foreach I = 0-63 in
-  def SX#I : VEReg<I, "s"#I, [!cast<VEReg>("SW"#I), !cast<VEReg>("SF"#I)],
-                   ["s"#I]>, DwarfRegNum<[I]>;
+let SubRegIndices = [sub_i32, sub_f32], CoveredBySubRegs = 1 in {
+  // Several registers have specific names, so add them to one of aliases.
+  def SX8 : VEReg<8, "s8", [SW8, SF8], ["s8", "sl"]>, DwarfRegNum<[8]>;
+  def SX9 : VEReg<9, "s9", [SW9, SF9], ["s9", "fp"]>, DwarfRegNum<[9]>;
+  def SX10 : VEReg<10, "s10", [SW10, SF10], ["s10", "lr"]>, DwarfRegNum<[10]>;
+  def SX11 : VEReg<11, "s11", [SW11, SF11], ["s11", "sp"]>, DwarfRegNum<[11]>;
+  def SX14 : VEReg<14, "s14", [SW14, SF14], ["s14", "tp"]>, DwarfRegNum<[14]>;
+  def SX15 : VEReg<15, "s15", [SW15, SF15], ["s15", "got"]>, DwarfRegNum<[15]>;
+  def SX16 : VEReg<16, "s16", [SW16, SF16], ["s16", "plt"]>, DwarfRegNum<[16]>;
+
+  // Other generic registers.
+  foreach I = { 0-7, 12-13, 17-63 } in
+    def SX#I : VEReg<I, "s"#I, [!cast<VEReg>("SW"#I), !cast<VEReg>("SF"#I)],
+                     ["s"#I]>, DwarfRegNum<[I]>;
+}
 
 // Aliases of the S* registers used to hold 128-bit for values (long doubles).
 // Following foreach represents something like:
