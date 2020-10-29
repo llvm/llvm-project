@@ -14750,6 +14750,22 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
       llvm::MDNode::get(CGF.getLLVMContext(), None));
   return LD;
 }
+
+// \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
+Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
+  const unsigned XOffset = 12;
+  auto *DP = EmitAMDGPUDispatchPtr(CGF);
+  // Indexing the HSA kernel_dispatch_packet struct.
+  auto *Offset = llvm::ConstantInt::get(CGF.Int32Ty, XOffset + Index * 4);
+  auto *GEP = CGF.Builder.CreateGEP(DP, Offset);
+  auto *DstTy =
+      CGF.Int32Ty->getPointerTo(GEP->getType()->getPointerAddressSpace());
+  auto *Cast = CGF.Builder.CreateBitCast(GEP, DstTy);
+  auto *LD = CGF.Builder.CreateLoad(Address(Cast, CharUnits::fromQuantity(4)));
+  LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                  llvm::MDNode::get(CGF.getLLVMContext(), None));
+  return LD;
+}
 } // namespace
 
 // For processing memory ordering and memory scope arguments of various
@@ -15009,6 +15025,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return EmitAMDGPUWorkGroupSize(*this, 1);
   case AMDGPU::BI__builtin_amdgcn_workgroup_size_z:
     return EmitAMDGPUWorkGroupSize(*this, 2);
+
+  // amdgcn grid size
+  case AMDGPU::BI__builtin_amdgcn_grid_size_x:
+    return EmitAMDGPUGridSize(*this, 0);
+  case AMDGPU::BI__builtin_amdgcn_grid_size_y:
+    return EmitAMDGPUGridSize(*this, 1);
+  case AMDGPU::BI__builtin_amdgcn_grid_size_z:
+    return EmitAMDGPUGridSize(*this, 2);
 
   // r600 intrinsics
   case AMDGPU::BI__builtin_r600_recipsqrt_ieee:
