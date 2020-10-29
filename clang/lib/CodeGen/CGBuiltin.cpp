@@ -16675,6 +16675,17 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_bitselect, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {V1, V2, C});
   }
+  case WebAssembly::BI__builtin_wasm_signselect_i8x16:
+  case WebAssembly::BI__builtin_wasm_signselect_i16x8:
+  case WebAssembly::BI__builtin_wasm_signselect_i32x4:
+  case WebAssembly::BI__builtin_wasm_signselect_i64x2: {
+    Value *V1 = EmitScalarExpr(E->getArg(0));
+    Value *V2 = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_signselect, ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {V1, V2, C});
+  }
   case WebAssembly::BI__builtin_wasm_dot_s_i32x4_i16x8: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
