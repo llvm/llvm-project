@@ -516,6 +516,9 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
       llvm::cast<TypeSystemSwift>(imported_self_type.GetTypeSystem())
           ->GetReferentType(imported_self_type.GetOpaqueQualType());
 
+  if (!llvm::isa<TypeSystemSwift>(imported_self_type.GetTypeSystem()))
+    return;
+
   // If we are extending a generic class it's going to be a metatype,
   // and we have to grab the instance type:
   imported_self_type =
