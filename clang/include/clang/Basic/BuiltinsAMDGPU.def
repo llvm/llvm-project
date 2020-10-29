@@ -37,6 +37,10 @@ BUILTIN(__builtin_amdgcn_workgroup_size_x, "Us", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_size_y, "Us", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_size_z, "Us", "nc")
 
+BUILTIN(__builtin_amdgcn_grid_size_x, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_grid_size_y, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_grid_size_z, "Ui", "nc")
+
 BUILTIN(__builtin_amdgcn_mbcnt_hi, "UiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_lo, "UiUiUi", "nc")
 
