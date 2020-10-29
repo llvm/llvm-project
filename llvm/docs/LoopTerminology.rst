@@ -291,10 +291,11 @@ Loop Closed SSA (LCSSA)
 A program is in Loop Closed SSA Form if it is in SSA form
 and all values that are defined in a loop are used only inside
 this loop.
+
 Programs written in LLVM IR are always in SSA form but not necessarily
-in LCSSA. To achieve the latter, single entry PHI nodes are inserted
-at the end of the loops for all values that are live
-across the loop boundary [#lcssa-construction]_.
+in LCSSA. To achieve the latter, for each value that is live across the
+loop boundary, single entry PHI nodes are inserted to each of the exit blocks
+[#lcssa-construction]_ in order to "close" these values inside the loop.
 In particular, consider the following loop:
 
 .. code-block:: C
@@ -336,8 +337,23 @@ scheduling a LoopPass.
 After the loop optimizations are done, these extra phi nodes
 will be deleted by :ref:`-instcombine <passes-instcombine>`.
 
-The major benefit of this transformation is that it makes many other
-loop optimizations simpler.
+Note that an exit block is outside of a loop, so how can such a phi "close"
+the value inside the loop since it uses it outside of it ? First of all,
+for phi nodes, as
+`mentioned in the LangRef <https://llvm.org/docs/LangRef.html#id311>`_:
+"the use of each incoming value is deemed to occur on the edge from the
+corresponding predecessor block to the current block". Now, an
+edge to an exit block is considered outside of the loop because
+if we take that edge, it leads us clearly out of the loop.
+
+However, an edge doesn't actually contain any IR, so in source code,
+we have to choose a convention of whether the use happens in
+the current block or in the respective predecessor. For LCSSA's purpose,
+we consider the use happens in the latter (so as to consider the
+use inside) [#point-of-use-phis]_.
+
+The major benefit of LCSSA is that it makes many other loop optimizations
+simpler.
 
 First of all, a simple observation is that if one needs to see all
 the outside users, they can just iterate over all the (loop closing)
@@ -435,6 +451,27 @@ the context / scope / relative loop.
 
 .. [#lcssa-construction] To insert these loop-closing PHI nodes, one has to
   (re-)compute dominance frontiers (if the loop has multiple exits).
+
+.. [#point-of-use-phis] Considering the point of use of a PHI entry value
+  to be in the respective predecessor is a convention across the whole LLVM.
+  The reason is mostly practical; for example it preserves the dominance
+  property of SSA. It is also just an overapproximation of the actual
+  number of uses; the incoming block could branch to another block in which
+  case the value is not actually used but there are no side-effects (it might
+  increase its live range which is not relevant in LCSSA though).
+  Furthermore, we can gain some intuition if we consider liveness:
+  A PHI is *usually* inserted in the current block because the value can't
+  be used from this point and onwards (i.e. the current block is a dominance
+  frontier). It doesn't make sense to consider that the value is used in
+  the current block (because of the PHI) since the value stops being live
+  before the PHI. In some sense the PHI definition just "replaces" the original
+  value definition and doesn't actually use it. It should be stressed that
+  this analogy is only used as an example and does not pose any strict
+  requirements. For example, the value might dominate the current block
+  but we can still insert a PHI (as we do with LCSSA PHI nodes) *and*
+  use the original value afterwards (in which case the two live ranges overlap,
+  although in LCSSA (the whole point is that) we never do that).
+
 
 .. [#def-use-chain] A property of SSA is that there exists a def-use chain
   for each definition, which is a list of all the uses of this definition.
