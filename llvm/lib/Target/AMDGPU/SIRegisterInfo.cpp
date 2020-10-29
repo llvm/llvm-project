@@ -1029,12 +1029,12 @@ void SIRegisterInfo::buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI,
   } else if (!IsKill) {
     // Restore SGPRs from appropriate VGPR lanes
     if (!OnlyExecLo) {
-      BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32),
               getSubReg(SuperReg, SplitParts[FirstPart + ExecLane + 1]))
           .addReg(VGPR)
           .addImm(ExecLane + 1);
     }
-    BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
+    BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32),
             NumSubRegs == 1
                 ? SavedExecReg
                 : getSubReg(SuperReg, SplitParts[FirstPart + ExecLane]))
@@ -1094,12 +1094,11 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
       // Mark the "old value of vgpr" input undef only if this is the first sgpr
       // spill to this specific vgpr in the first basic block.
-      auto MIB = BuildMI(*MBB, MI, DL,
-              TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-              Spill.VGPR)
-        .addReg(SubReg, getKillRegState(UseKill))
-        .addImm(Spill.Lane)
-        .addReg(Spill.VGPR, VGPRDefined ? 0 : RegState::Undef);
+      auto MIB =
+          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill.VGPR)
+              .addReg(SubReg, getKillRegState(UseKill))
+              .addImm(Spill.Lane)
+              .addReg(Spill.VGPR, VGPRDefined ? 0 : RegState::Undef);
 
       if (i == 0 && NumSubRegs > 1) {
         // We may be spilling a super-register which is only partially defined,
@@ -1138,9 +1137,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
             NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
 
         MachineInstrBuilder WriteLane =
-            BuildMI(*MBB, MI, DL,
-                    TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-                    TmpVGPR)
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), TmpVGPR)
                 .addReg(SubReg, SubKillState)
                 .addImm(i % PerVGPR)
                 .addReg(TmpVGPR, TmpVGPRFlags);
@@ -1204,11 +1201,9 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
           NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
 
       SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
-      auto MIB =
-        BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
-                SubReg)
-        .addReg(Spill.VGPR)
-        .addImm(Spill.Lane);
+      auto MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), SubReg)
+                     .addReg(Spill.VGPR)
+                     .addImm(Spill.Lane);
       if (NumSubRegs > 1 && i == 0)
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
     }
@@ -1234,8 +1229,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
 
         bool LastSubReg = (i + 1 == e);
         auto MIB =
-            BuildMI(*MBB, MI, DL,
-                    TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32), SubReg)
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), SubReg)
                 .addReg(TmpVGPR, getKillRegState(LastSubReg))
                 .addImm(i);
         if (NumSubRegs > 1 && i == 0)
