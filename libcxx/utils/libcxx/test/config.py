@@ -131,7 +131,6 @@ class Configuration(object):
         self.configure_link_flags()
         self.configure_env()
         self.configure_debug_mode()
-        self.configure_warnings()
         self.configure_sanitizer()
         self.configure_coverage()
         self.configure_modules()
@@ -335,6 +334,12 @@ class Configuration(object):
         if not self.use_system_cxx_lib:
             self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
+        # On GCC, the libc++ headers cause errors due to throw() decorators
+        # on operator new clashing with those from the test suite, so we
+        # don't enable warnings in system headers on GCC.
+        if self.cxx.type != 'gcc':
+            self.cxx.compile_flags += ['-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER']
+
         # Add includes for the PSTL headers
         pstl_src_root = self.get_lit_conf('pstl_src_root')
         pstl_obj_root = self.get_lit_conf('pstl_obj_root')
@@ -504,41 +509,6 @@ class Configuration(object):
             self.lit_config.fatal('Invalid value for debug_level "%s".'
                                   % debug_level)
         self.cxx.compile_flags += ['-D_LIBCPP_DEBUG=%s' % debug_level]
-
-    def configure_warnings(self):
-        # Turn on warnings by default for Clang based compilers
-        default_enable_warnings = self.cxx.type in ['clang', 'apple-clang']
-        enable_warnings = self.get_lit_bool('enable_warnings',
-                                            default_enable_warnings)
-        self.cxx.useWarnings(enable_warnings)
-        self.cxx.warning_flags += ['-Werror', '-Wall', '-Wextra']
-        # On GCC, the libc++ headers cause errors due to throw() decorators
-        # on operator new clashing with those from the test suite, so we
-        # don't enable warnings in system headers on GCC.
-        if self.cxx.type != 'gcc':
-            self.cxx.warning_flags += ['-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER']
-        self.cxx.addWarningFlagIfSupported('-Wshadow')
-        self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
-        self.cxx.addWarningFlagIfSupported('-Wno-attributes')
-        self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
-        self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
-        self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
-        self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
-        self.cxx.addWarningFlagIfSupported('-Wno-aligned-allocation-unavailable')
-        self.cxx.addWarningFlagIfSupported('-Wno-atomic-alignment')
-
-        # GCC warns about places where we might want to add sized allocation/deallocation
-        # functions, but we know better what we're doing/testing in the test suite.
-        self.cxx.addWarningFlagIfSupported('-Wno-sized-deallocation')
-
-        # These warnings should be enabled in order to support the MSVC
-        # team using the test suite; They enable the warnings below and
-        # expect the test suite to be clean.
-        self.cxx.addWarningFlagIfSupported('-Wsign-compare')
-        self.cxx.addWarningFlagIfSupported('-Wunused-variable')
-        self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
-        self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
-        self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
 
     def configure_sanitizer(self):
         san = self.get_lit_conf('use_sanitizer', '').strip()
