@@ -324,7 +324,7 @@ bool SymbolCollector::handleDeclOccurrence(
   // refs, because the indexing code only populates relations for specific
   // occurrences. For example, RelationBaseOf is only populated for the
   // occurrence inside the base-specifier.
-  processRelations(*ND, *ID, Relations);
+  processRelations(*ND, ID, Relations);
 
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
   bool IsOnlyRef =
@@ -356,15 +356,15 @@ bool SymbolCollector::handleDeclOccurrence(
   if (!OriginalDecl)
     return true;
 
-  const Symbol *BasicSymbol = Symbols.find(*ID);
+  const Symbol *BasicSymbol = Symbols.find(ID);
   if (isPreferredDeclaration(*OriginalDecl, Roles))
     // If OriginalDecl is preferred, replace/create the existing canonical
     // declaration (e.g. a class forward declaration). There should be at most
     // one duplicate as we expect to see only one preferred declaration per
     // TU, because in practice they are definitions.
-    BasicSymbol = addDeclaration(*OriginalDecl, std::move(*ID), IsMainFileOnly);
+    BasicSymbol = addDeclaration(*OriginalDecl, std::move(ID), IsMainFileOnly);
   else if (!BasicSymbol || DeclIsCanonical)
-    BasicSymbol = addDeclaration(*ND, std::move(*ID), IsMainFileOnly);
+    BasicSymbol = addDeclaration(*ND, std::move(ID), IsMainFileOnly);
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
     addDefinition(*OriginalDecl, *BasicSymbol);
@@ -422,7 +422,7 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
   // Do not store references to main-file macros.
   if ((static_cast<unsigned>(Opts.RefFilter) & Roles) && !IsMainFileOnly &&
       (Opts.RefsInHeaders || SM.getFileID(SpellingLoc) == SM.getMainFileID()))
-    MacroRefs[*ID].push_back({Loc, Roles});
+    MacroRefs[ID].push_back({Loc, Roles});
 
   // Collect symbols.
   if (!Opts.CollectMacro)
@@ -447,11 +447,11 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
     return true;
 
   // Only collect one instance in case there are multiple.
-  if (Symbols.find(*ID) != nullptr)
+  if (Symbols.find(ID) != nullptr)
     return true;
 
   Symbol S;
-  S.ID = std::move(*ID);
+  S.ID = std::move(ID);
   S.Name = Name->getName();
   if (!IsMainFileOnly) {
     S.Flags |= Symbol::IndexedForCodeCompletion;
@@ -507,7 +507,7 @@ void SymbolCollector::processRelations(
     //       in the index and find nothing, but that's a situation they
     //       probably need to handle for other reasons anyways.
     // We currently do (B) because it's simpler.
-    this->Relations.insert(Relation{ID, RelationKind::BaseOf, *ObjectID});
+    this->Relations.insert(Relation{ID, RelationKind::BaseOf, ObjectID});
   }
 }
 
@@ -531,7 +531,7 @@ void SymbolCollector::finish() {
   };
   for (const NamedDecl *ND : ReferencedDecls) {
     if (auto ID = getSymbolID(ND)) {
-      IncRef(*ID);
+      IncRef(ID);
     }
   }
   if (Opts.CollectMacro) {
@@ -541,13 +541,13 @@ void SymbolCollector::finish() {
       if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
         if (auto ID = getSymbolID(II->getName(), MI, PP->getSourceManager()))
           if (MI->isUsedForHeaderGuard())
-            Symbols.erase(*ID);
+            Symbols.erase(ID);
     }
     // Now increment refcounts.
     for (const IdentifierInfo *II : ReferencedMacros) {
       if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
         if (auto ID = getSymbolID(II->getName(), MI, PP->getSourceManager()))
-          IncRef(*ID);
+          IncRef(ID);
     }
   }
   // Fill in IncludeHeaders.
@@ -624,7 +624,7 @@ void SymbolCollector::finish() {
                             NameKind == DeclarationName::CXXConstructorName;
         bool Spelled = IdentifierToken && IsTargetKind &&
                        Name.getAsString() == IdentifierToken->text(SM);
-        CollectRef(*ID, LocAndRole, Spelled);
+        CollectRef(ID, LocAndRole, Spelled);
       }
     }
   }
