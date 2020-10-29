@@ -11,6 +11,7 @@ namespace {
 
 class MacroExpanderTest : public ::testing::Test {
 public:
+  MacroExpanderTest() : Lex(Allocator, Buffers) {}
   std::unique_ptr<MacroExpander>
   create(const std::vector<std::string> &MacroDefinitions) {
     return std::make_unique<MacroExpander>(MacroDefinitions,
@@ -64,7 +65,9 @@ public:
           << Context << " in " << text(Tokens) << " at " << File << ":" << Line;
     }
   }
-
+protected:
+  llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
   TestLexer Lex;
 };
 

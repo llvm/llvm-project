@@ -71,8 +71,8 @@ public:
   /// where a problem occurred in case an error is returned.
   Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
 
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
-            unsigned IndentLevel = 1) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
+            bool IsEH, unsigned IndentLevel = 1) const;
 
 private:
   std::vector<Instruction> Instructions;
@@ -121,7 +121,8 @@ private:
   static ArrayRef<OperandType[2]> getOperandTypes();
 
   /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-  void printOperand(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+  void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+                    const MCRegisterInfo *MRI, bool IsEH,
                     const Instruction &Instr, unsigned OperandIdx,
                     uint64_t Operand) const;
 };
@@ -146,8 +147,8 @@ public:
   CFIProgram &cfis() { return CFIs; }
 
   /// Dump the instructions in this CFI fragment
-  virtual void dump(raw_ostream &OS, const MCRegisterInfo *MRI,
-                    bool IsEH) const = 0;
+  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                    const MCRegisterInfo *MRI, bool IsEH) const = 0;
 
 protected:
   const FrameKind Kind;
@@ -201,7 +202,7 @@ public:
 
   uint32_t getLSDAPointerEncoding() const { return LSDAPointerEncoding; }
 
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
             bool IsEH) const override;
 
 private:
@@ -242,7 +243,7 @@ public:
   uint64_t getAddressRange() const { return AddressRange; }
   Optional<uint64_t> getLSDAAddress() const { return LSDAAddress; }
 
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
             bool IsEH) const override;
 
   static bool classof(const FrameEntry *FE) { return FE->getKind() == FK_FDE; }
@@ -285,7 +286,7 @@ public:
   ~DWARFDebugFrame();
 
   /// Dump the section data into the given stream.
-  void dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
             Optional<uint64_t> Offset) const;
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole

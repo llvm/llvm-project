@@ -370,7 +370,6 @@ public:
       SizeType = UnsignedLong;
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
-      SuitableAlign = 64;
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
@@ -409,7 +408,6 @@ public:
     if (Triple.isOSAIX()) {
       // TODO: Set appropriate ABI for AIX platform.
       DataLayout = "E-m:a-i64:64-n32:64";
-      SuitableAlign = 64;
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();

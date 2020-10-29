@@ -6832,7 +6832,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       DeductionArg = PE->getPattern();
     TypeSourceInfo *TSI =
         Context.getTrivialTypeSourceInfo(ParamType, Param->getLocation());
-    if (auto *DTST = dyn_cast<DeducedTemplateSpecializationType>(DeducedT)) {
+    if (isa<DeducedTemplateSpecializationType>(DeducedT)) {
       InitializedEntity Entity =
           InitializedEntity::InitializeTemplateParameter(ParamType, Param);
       InitializationKind Kind = InitializationKind::CreateForInit(

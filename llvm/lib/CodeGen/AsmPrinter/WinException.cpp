@@ -137,8 +137,8 @@ void WinException::endFunction(const MachineFunction *MF) {
 
   endFuncletImpl();
 
-  // endFunclet will emit the necessary .xdata tables for x64 SEH.
-  if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets())
+  // endFunclet will emit the necessary .xdata tables for table-based SEH.
+  if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets())
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
@@ -151,7 +151,7 @@ void WinException::endFunction(const MachineFunction *MF) {
 
     // Emit the tables appropriate to the personality function in use. If we
     // don't recognize the personality, assume it uses an Itanium-style LSDA.
-    if (Per == EHPersonality::MSVC_Win64SEH)
+    if (Per == EHPersonality::MSVC_TableSEH)
       emitCSpecificHandlerTable(MF);
     else if (Per == EHPersonality::MSVC_X86SEH)
       emitExceptHandlerTable(MF);
@@ -269,7 +269,7 @@ void WinException::endFuncletImpl() {
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->emitValue(create32bitRef(FuncInfoXData), 4);
-    } else if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets() &&
+    } else if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
       // Emit an UNWIND_INFO struct describing the prologue.
       Asm->OutStreamer->EmitWinEHHandlerData();

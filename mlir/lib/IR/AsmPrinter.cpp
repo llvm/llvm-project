@@ -1506,8 +1506,22 @@ void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
   if (!attr.isSplat() && allowHex &&
       shouldPrintElementsAttrWithHex(numElements)) {
     ArrayRef<char> rawData = attr.getRawData();
-    os << '"' << "0x" << llvm::toHex(StringRef(rawData.data(), rawData.size()))
-       << "\"";
+    if (llvm::support::endian::system_endianness() ==
+        llvm::support::endianness::big) {
+      // Convert endianess in big-endian(BE) machines. `rawData` is BE in BE
+      // machines. It is converted here to print in LE format.
+      SmallVector<char, 64> outDataVec(rawData.size());
+      MutableArrayRef<char> convRawData(outDataVec);
+      DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+          rawData, convRawData, type);
+      os << '"' << "0x"
+         << llvm::toHex(StringRef(convRawData.data(), convRawData.size()))
+         << "\"";
+    } else {
+      os << '"' << "0x"
+         << llvm::toHex(StringRef(rawData.data(), rawData.size())) << "\"";
+    }
+
     return;
   }
 

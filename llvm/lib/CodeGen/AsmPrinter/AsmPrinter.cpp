@@ -1053,7 +1053,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   // Emit BB Information for each basic block in the funciton.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
-        MBB.pred_empty() ? FunctionSymbol : MBB.getSymbol();
+        MBB.isEntryBlock() ? FunctionSymbol : MBB.getSymbol();
     // Emit the basic block offset.
     emitLabelDifferenceAsULEB128(MBBSymbol, FunctionSymbol);
     // Emit the basic block size. When BBs have alignments, their size cannot
@@ -1134,9 +1134,12 @@ void AsmPrinter::emitFunctionBody() {
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
 
+  bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
+    DenseMap<unsigned, unsigned> OpcodeCounts;
     for (auto &MI : MBB) {
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
@@ -1202,6 +1205,10 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
         emitInstruction(&MI);
+        if (CanDoExtraAnalysis) {
+          auto I = OpcodeCounts.insert({MI.getOpcode(), 0u});
+          I.first->second++;
+        }
         break;
       }
 
@@ -1245,6 +1252,35 @@ void AsmPrinter::emitFunctionBody() {
       }
     }
     emitBasicBlockEnd(MBB);
+
+    if (CanDoExtraAnalysis) {
+      // Skip empty blocks.
+      if (MBB.empty())
+        continue;
+
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InstructionMix",
+                                          MBB.begin()->getDebugLoc(), &MBB);
+
+      // Generate instruction mix remark. First, convert opcodes to string
+      // names, then sort them in descending order by count and name.
+      SmallVector<std::pair<std::string, unsigned>, 128> OpcodeCountsVec;
+      for (auto &KV : OpcodeCounts) {
+        auto Name = (Twine("INST_") + TII->getName(KV.first)).str();
+        OpcodeCountsVec.emplace_back(Name, KV.second);
+      }
+      sort(OpcodeCountsVec, [](const std::pair<std::string, unsigned> &A,
+                               const std::pair<std::string, unsigned> &B) {
+        if (A.second > B.second)
+          return true;
+        if (A.second == B.second)
+          return A.first < B.first;
+        return false;
+      });
+      R << "BasicBlock: " << ore::NV("BasicBlock", MBB.getName()) << "\n";
+      for (auto &KV : OpcodeCountsVec)
+        R << KV.first << ": " << ore::NV(KV.first, KV.second) << "\n";
+      ORE->emit(R);
+    }
   }
 
   EmittedInsts += NumInstsInFunction;
@@ -3052,7 +3088,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Switch to a new section if this basic block must begin a section. The
   // entry block is always placed in the function section and is handled
   // separately.
-  if (MBB.isBeginSection() && !MBB.pred_empty()) {
+  if (MBB.isBeginSection() && !MBB.isEntryBlock()) {
     OutStreamer->SwitchSection(
         getObjFileLowering().getSectionForMachineBasicBlock(MF->getFunction(),
                                                             MBB, TM));
@@ -3090,24 +3126,22 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   }
 
   // Print the main label for the block.
-  if (MBB.pred_empty() ||
-      (!MF->hasBBLabels() && isBlockOnlyReachableByFallthrough(&MBB) &&
-       !MBB.isEHFuncletEntry() && !MBB.hasLabelMustBeEmitted())) {
+  if (shouldEmitLabelForBasicBlock(MBB)) {
+    if (isVerbose() && MBB.hasLabelMustBeEmitted())
+      OutStreamer->AddComment("Label of block must be emitted");
+    OutStreamer->emitLabel(MBB.getSymbol());
+  } else {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
                                   false);
     }
-  } else {
-    if (isVerbose() && MBB.hasLabelMustBeEmitted())
-      OutStreamer->AddComment("Label of block must be emitted");
-    OutStreamer->emitLabel(MBB.getSymbol());
   }
 
   // With BB sections, each basic block must handle CFI information on its own
   // if it begins a section (Entry block is handled separately by
   // AsmPrinterHandler::beginFunction).
-  if (MBB.isBeginSection() && !MBB.pred_empty())
+  if (MBB.isBeginSection() && !MBB.isEntryBlock())
     for (const HandlerInfo &HI : Handlers)
       HI.Handler->beginBasicBlock(MBB);
 }
@@ -3141,15 +3175,26 @@ void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,
     OutStreamer->emitSymbolAttribute(Sym, Attr);
 }
 
+bool AsmPrinter::shouldEmitLabelForBasicBlock(
+    const MachineBasicBlock &MBB) const {
+  // With `-fbasic-block-sections=`, a label is needed for every non-entry block
+  // in the labels mode (option `=labels`) and every section beginning in the
+  // sections mode (`=all` and `=list=`).
+  if ((MF->hasBBLabels() || MBB.isBeginSection()) && !MBB.isEntryBlock())
+    return true;
+  // A label is needed for any block with at least one predecessor (when that
+  // predecessor is not the fallthrough predecessor, or if it is an EH funclet
+  // entry, or if a label is forced).
+  return !MBB.pred_empty() &&
+         (!isBlockOnlyReachableByFallthrough(&MBB) || MBB.isEHFuncletEntry() ||
+          MBB.hasLabelMustBeEmitted());
+}
+
 /// isBlockOnlyReachableByFallthough - Return true if the basic block has
 /// exactly one predecessor and the control transfer mechanism between
 /// the predecessor and this block is a fall-through.
 bool AsmPrinter::
 isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
-  // With BasicBlock Sections, beginning of the section is not a fallthrough.
-  if (MBB->isBeginSection())
-    return false;
-
   // If this is a landing pad, it isn't a fall through.  If it has no preds,
   // then nothing falls through to it.
   if (MBB->isEHPad() || MBB->pred_empty())

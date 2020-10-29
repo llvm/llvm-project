@@ -1,13 +1,22 @@
 ;; This test checks for emission of DW_OP_implicit_value operation
 ;; for float type.
 
-; RUN: llc -debugger-tune=gdb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT:  DW_AT_location        ({{.*}}
 ; CHECK-NEXT:                     [{{.*}}): DW_OP_implicit_value 0x4 0xc3 0xf5 0x48 0x40)
 ; CHECK-NEXT:  DW_AT_name    ("f")
+
+; RUN: llc -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefix=SCE-CHECK
+
+; SCE-CHECK: .debug_info contents:
+; SCE-CHECK: DW_TAG_variable
+; SCE-CHECK-NEXT:  DW_AT_location        ({{.*}}
+; SCE-CHECK-NEXT:                     [{{.*}}): DW_OP_constu 0x4048f5c3, DW_OP_stack_value)
+; SCE-CHECK-NEXT:  DW_AT_name    ("f")
 
 ;; Generated from: clang -ggdb -O1
 ;;int main() {

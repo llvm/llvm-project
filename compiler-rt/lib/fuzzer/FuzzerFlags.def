@@ -132,6 +132,8 @@ FUZZER_FLAG_INT(print_corpus_stats, 0,
   "If 1, print statistics on corpus elements at exit.")
 FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
                                    " at exit.")
+FUZZER_FLAG_INT(print_full_coverage, 0, "If 1, print full coverage information "
+                                        "(all branches) as text at exit.")
 FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")

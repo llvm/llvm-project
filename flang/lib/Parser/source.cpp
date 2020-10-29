@@ -11,6 +11,7 @@
 #include "flang/Parser/char-buffer.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
@@ -50,21 +51,23 @@ void SourceFile::IdentifyPayload() {
 }
 
 std::string DirectoryName(std::string path) {
-  auto lastSlash{path.rfind("/")};
-  return lastSlash == std::string::npos ? path : path.substr(0, lastSlash);
+  llvm::SmallString<128> pathBuf{path};
+  llvm::sys::path::remove_filename(pathBuf);
+  return pathBuf.str().str();
 }
 
 std::string LocateSourceFile(
     std::string name, const std::vector<std::string> &searchPath) {
-  if (name.empty() || name == "-" || name[0] == '/') {
+  if (name.empty() || name == "-" || llvm::sys::path::is_absolute(name)) {
     return name;
   }
   for (const std::string &dir : searchPath) {
-    std::string path{dir + '/' + name};
+    llvm::SmallString<128> path{dir};
+    llvm::sys::path::append(path, name);
     bool isDir{false};
     auto er = llvm::sys::fs::is_directory(path, isDir);
     if (!er && !isDir) {
-      return path;
+      return path.str().str();
     }
   }
   return name;

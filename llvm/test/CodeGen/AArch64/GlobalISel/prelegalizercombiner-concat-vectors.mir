@@ -119,22 +119,15 @@ name: concat_to_build_vector_negative_test
 tracksRegLiveness: true
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0
 
     ; CHECK-LABEL: name: concat_to_build_vector_negative_test
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[IVEC]](<2 x s64>), [[DEF1]](<2 x s64>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[DEF]](<2 x s64>)
     ; CHECK: RET_ReallyLR implicit [[CONCAT_VECTORS]](<4 x s64>)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = COPY $x1
-    %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 1
-    %4:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s32)
+    %4:_(<2 x s64>) = COPY $q0
     %5:_(<2 x s64>) = G_IMPLICIT_DEF
     %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5
     RET_ReallyLR implicit %6

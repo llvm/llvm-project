@@ -61,6 +61,7 @@ bool VerifyObject(llvm::yaml::Node &N,
     if (!V) {
       ADD_FAILURE() << KS << " is not a string";
       Match = false;
+      continue;
     }
     std::string VS = V->getValue(Tmp).str();
     if (VS != I->second) {

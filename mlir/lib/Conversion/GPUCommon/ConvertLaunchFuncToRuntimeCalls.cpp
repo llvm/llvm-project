@@ -88,6 +88,8 @@ protected:
       "mgpuModuleLoad",
       llvmPointerType /* void *module */,
       {llvmPointerType /* void *cubin */}};
+  FunctionCallBuilder moduleUnloadCallBuilder = {
+      "mgpuModuleUnload", llvmVoidType, {llvmPointerType /* void *module */}};
   FunctionCallBuilder moduleGetFunctionCallBuilder = {
       "mgpuModuleGetFunction",
       llvmPointerType /* void *function */,
@@ -240,7 +242,8 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
 
   LLVMConversionTarget target(getContext());
-  if (failed(applyPartialConversion(getOperation(), target, patterns)))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
 
@@ -489,6 +492,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
        kernelParams,                /* kernel params */
        nullpointer /* extra */});
   streamSynchronizeCallBuilder.create(loc, rewriter, stream.getResult(0));
+  streamDestroyCallBuilder.create(loc, rewriter, stream.getResult(0));
+  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult(0));
 
   rewriter.eraseOp(op);
   return success();

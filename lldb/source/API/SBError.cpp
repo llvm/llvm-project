@@ -118,7 +118,7 @@ void SBError::SetErrorToGenericError() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBError, SetErrorToGenericError);
 
   CreateIfNeeded();
-  m_opaque_up->SetErrorToErrno();
+  m_opaque_up->SetErrorToGenericError();
 }
 
 void SBError::SetErrorString(const char *err_str) {

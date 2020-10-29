@@ -468,6 +468,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_IcelakeServer:
   case CK_Tigerlake:
   case CK_SapphireRapids:
+  case CK_Alderlake:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -541,6 +542,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_ZNVER2:
     defineCPUMacros(Builder, "znver2");
+    break;
+  case CK_ZNVER3:
+    defineCPUMacros(Builder, "znver3");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
@@ -1305,6 +1309,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_SapphireRapids:
     case CK_IcelakeClient:
     case CK_IcelakeServer:
+    case CK_Alderlake:
     case CK_KNL:
     case CK_KNM:
     // K7
@@ -1325,6 +1330,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     // Zen
     case CK_ZNVER1:
     case CK_ZNVER2:
+    case CK_ZNVER3:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:

@@ -18,106 +18,16 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/CfgTraits.h"
+#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
-#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/raw_ostream.h"
-
-namespace clang {
-
-/// Partial CFG traits for MLIR's CFG, without a value type.
-class CfgTraitsBase : public llvm::CfgTraitsBase {
-public:
-  using ParentType = CFG;
-  using BlockRef = CFGBlock *;
-  using ValueRef = void;
-
-  static llvm::CfgBlockRef wrapRef(BlockRef block) {
-    return makeOpaque<llvm::CfgBlockRefTag>(block);
-  }
-  static BlockRef unwrapRef(llvm::CfgBlockRef block) {
-    return static_cast<BlockRef>(getOpaque(block));
-  }
-};
-
-class CfgTraits : public llvm::CfgTraits<CfgTraitsBase, CfgTraits> {
-public:
-  static ParentType *getBlockParent(CFGBlock *block) {
-    return block->getParent();
-  }
-
-  // Clang's CFG contains null pointers for unreachable successors, e.g. when an
-  // if statement's condition is always false, it's 'then' branch is represented
-  // with a nullptr. Account for this in the predecessors / successors
-  // iteration.
-  template <typename BaseIteratorT> struct skip_null_iterator;
-
-  template <typename BaseIteratorT>
-  using skip_null_iterator_base =
-      llvm::iterator_adaptor_base<skip_null_iterator<BaseIteratorT>,
-                                  BaseIteratorT,
-                                  std::bidirectional_iterator_tag>;
-
-  template <typename BaseIteratorT>
-  struct skip_null_iterator : skip_null_iterator_base<BaseIteratorT> {
-    using Base = skip_null_iterator_base<BaseIteratorT>;
-
-    skip_null_iterator() = default;
-    skip_null_iterator(BaseIteratorT it, BaseIteratorT end)
-        : Base(it), m_end(end) {
-      forward();
-    }
-
-    skip_null_iterator &operator++() {
-      ++this->I;
-      forward();
-      return *this;
-    }
-
-    skip_null_iterator &operator--() {
-      do {
-        --this->I;
-      } while (!*this->I);
-      return *this;
-    }
-
-  private:
-    BaseIteratorT m_end;
-
-    void forward() {
-      while (this->I != m_end && !*this->I)
-        ++this->I;
-    }
-  };
-
-  static auto predecessors(CFGBlock *block) {
-    auto range = llvm::inverse_children<CFGBlock *>(block);
-    using iterator = skip_null_iterator<decltype(range.begin())>;
-    return llvm::make_range(iterator(range.begin(), range.end()),
-                            iterator(range.end(), range.end()));
-  }
-
-  static auto successors(CFGBlock *block) {
-    auto range = llvm::children<CFGBlock *>(block);
-    using iterator = skip_null_iterator<decltype(range.begin())>;
-    return llvm::make_range(iterator(range.begin(), range.end()),
-                            iterator(range.end(), range.end()));
-  }
-};
-
-} // namespace clang
-
-namespace llvm {
-
-template <> struct CfgTraitsFor<clang::CFGBlock> {
-  using CfgTraits = clang::CfgTraits;
-};
 
 // FIXME: There is no good reason for the domtree to require a print method
 // which accepts an LLVM Module, so remove this (and the method's argument that
 // needs it) when that is fixed.
 
+namespace llvm {
 
 class Module;
 

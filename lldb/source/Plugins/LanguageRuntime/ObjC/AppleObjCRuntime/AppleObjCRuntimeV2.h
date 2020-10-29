@@ -53,7 +53,8 @@ public:
                                 Address &address,
                                 Value::ValueType &value_type) override;
 
-  UtilityFunction *CreateObjectChecker(const char *) override;
+  llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
   // PluginInterface protocol
   ConstString GetPluginName() override;

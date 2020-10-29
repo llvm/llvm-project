@@ -113,6 +113,12 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
   ];
 }
 
+def LowerHostCodeToLLVM : Pass<"lower-host-to-llvm", "ModuleOp"> {
+  let summary = "Lowers the host module code and `gpu.launch_func` to LLVM";
+  let constructor = "mlir::createLowerHostCodeToLLVMPass()";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 //===----------------------------------------------------------------------===//
 // GPUToNVVM
 //===----------------------------------------------------------------------===//
@@ -212,6 +218,16 @@ def ConvertOpenMPToLLVM : Pass<"convert-openmp-to-llvm", "ModuleOp"> {
   let summary = "Convert the OpenMP ops to OpenMP ops with LLVM dialect";
   let constructor = "mlir::createConvertOpenMPToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// PDLToPDLInterp
+//===----------------------------------------------------------------------===//
+
+def ConvertPDLToPDLInterp : Pass<"convert-pdl-to-pdl-interp", "ModuleOp"> {
+  let summary = "Convert PDL ops to PDL interpreter ops";
+  let constructor = "mlir::createPDLToPDLInterpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect"];
 }
 
 //===----------------------------------------------------------------------===//

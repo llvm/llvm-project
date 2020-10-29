@@ -234,9 +234,10 @@ ArrayRef<CFIProgram::OperandType[2]> CFIProgram::getOperandTypes() {
 }
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
-                              bool IsEH, const Instruction &Instr,
-                              unsigned OperandIdx, uint64_t Operand) const {
+void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+                              const MCRegisterInfo *MRI, bool IsEH,
+                              const Instruction &Instr, unsigned OperandIdx,
+                              uint64_t Operand) const {
   assert(OperandIdx < 2);
   uint8_t Opcode = Instr.Opcode;
   OperandType Type = getOperandTypes()[Opcode][OperandIdx];
@@ -287,12 +288,13 @@ void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    Instr.Expression->print(OS, MRI, nullptr, IsEH);
+    Instr.Expression->print(OS, DumpOpts, MRI, nullptr, IsEH);
     break;
   }
 }
 
-void CFIProgram::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                      const MCRegisterInfo *MRI, bool IsEH,
                       unsigned IndentLevel) const {
   for (const auto &Instr : Instructions) {
     uint8_t Opcode = Instr.Opcode;
@@ -301,7 +303,7 @@ void CFIProgram::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
     OS.indent(2 * IndentLevel);
     OS << CallFrameString(Opcode, Arch) << ":";
     for (unsigned i = 0; i < Instr.Ops.size(); ++i)
-      printOperand(OS, MRI, IsEH, Instr, i, Instr.Ops[i]);
+      printOperand(OS, DumpOpts, MRI, IsEH, Instr, i, Instr.Ops[i]);
     OS << '\n';
   }
 }
@@ -318,7 +320,8 @@ constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
   return DW_CIE_ID;
 }
 
-void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
+void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+               const MCRegisterInfo *MRI, bool IsEH) const {
   // A CIE with a zero length is a terminator entry in the .eh_frame section.
   if (IsEH && Length == 0) {
     OS << format("%08" PRIx64, Offset) << " ZERO terminator\n";
@@ -350,11 +353,12 @@ void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
     OS << "\n";
   }
   OS << "\n";
-  CFIs.dump(OS, MRI, IsEH);
+  CFIs.dump(OS, DumpOpts, MRI, IsEH);
   OS << "\n";
 }
 
-void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
+void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+               const MCRegisterInfo *MRI, bool IsEH) const {
   OS << format("%08" PRIx64, Offset)
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
      << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8, CIEPointer)
@@ -368,7 +372,7 @@ void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIs.dump(OS, MRI, IsEH);
+  CFIs.dump(OS, DumpOpts, MRI, IsEH);
   OS << "\n";
 }
 
@@ -597,15 +601,16 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
   return nullptr;
 }
 
-void DWARFDebugFrame::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                           const MCRegisterInfo *MRI,
                            Optional<uint64_t> Offset) const {
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS, MRI, IsEH);
+      Entry->dump(OS, DumpOpts, MRI, IsEH);
     return;
   }
 
   OS << "\n";
   for (const auto &Entry : Entries)
-    Entry->dump(OS, MRI, IsEH);
+    Entry->dump(OS, DumpOpts, MRI, IsEH);
 }

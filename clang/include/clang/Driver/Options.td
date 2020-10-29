@@ -60,6 +60,10 @@ def LinkOption : OptionFlag;
 // flang mode.
 def FlangOption : OptionFlag;
 
+// FlangOnlyOption - This option should only be used by Flang (i.e. it is not
+// available for Clang)
+def FlangOnlyOption : OptionFlag;
+
 // FC1Option - This option should be accepted by flang -fc1.
 def FC1Option : OptionFlag;
 
@@ -2130,8 +2134,8 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[DriverOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
-def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption, FC1Option, FlangOption]>,
-  HelpText<"Display available options">;
+def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption, FC1Option,
+    FlangOption]>, HelpText<"Display available options">;
 def ibuiltininc : Flag<["-"], "ibuiltininc">,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
            "before or after -ibuiltininc. "
@@ -2811,7 +2815,8 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Flags<[CC1Option]>,
 def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
-def o : JoinedOrSeparate<["-"], "o">, Flags<[DriverOption, RenderAsInput, CC1Option, CC1AsOption]>,
+def o : JoinedOrSeparate<["-"], "o">, Flags<[DriverOption, RenderAsInput,
+  CC1Option, CC1AsOption, FC1Option, FlangOption]>,
   HelpText<"Write output to <file>">, MetaVarName<"<file>">;
 def pagezero__size : JoinedOrSeparate<["-"], "pagezero_size">;
 def pass_exit_codes : Flag<["-", "--"], "pass-exit-codes">, Flags<[Unsupported]>;
@@ -3545,6 +3550,12 @@ def fno_sycl : Flag<["-"], "fno-sycl">, Group<sycl_Group>, Flags<[CoreOption]>,
   HelpText<"Disable SYCL kernels compilation for device">;
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>, Flags<[CC1Option, NoArgumentUnused, CoreOption]>,
   HelpText<"SYCL language standard to compile for.">, Values<"2017, 121, 1.2.1, sycl-1.2.1">;
+
+//===----------------------------------------------------------------------===//
+// FlangOption and FC1 Options
+//===----------------------------------------------------------------------===//
+def test_io : Flag<["-"], "test-io">, Flags<[HelpHidden, FlangOption, FC1Option, FlangOnlyOption]>, Group<Action_Group>,
+  HelpText<"Run the InputOuputTest action. Use for development and testing only.">;
 
 //===----------------------------------------------------------------------===//
 // CC1 Options

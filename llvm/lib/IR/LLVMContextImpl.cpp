@@ -99,9 +99,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   UVConstants.clear();
   IntConstants.clear();
   FPConstants.clear();
-
-  for (auto &CDSConstant : CDSConstants)
-    delete CDSConstant.second;
   CDSConstants.clear();
 
   // Destroy attribute node lists.

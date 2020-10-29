@@ -555,10 +555,6 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
 
   unsigned CurNumVRegs = 0;
 
-  auto canPassGCPtrOnVReg = [&](SDValue SDV) {
-    return !(willLowerDirectly(SDV) || SDV.getValueType().isVector());
-  };
-
   auto processGCPtr = [&](const Value *V) {
     SDValue PtrSD = Builder.getValue(V);
     if (!LoweredGCPtrs.insert(PtrSD))
@@ -568,9 +564,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     assert(!LowerAsVReg.count(PtrSD) && "must not have been seen");
     if (LowerAsVReg.size() == MaxVRegPtrs)
       return;
-    assert(V->getType()->isVectorTy() == PtrSD.getValueType().isVector() &&
-           "IR and SD types disagree");
-    if (!canPassGCPtrOnVReg(PtrSD)) {
+    if (willLowerDirectly(PtrSD) || V->getType()->isVectorTy()) {
       LLVM_DEBUG(dbgs() << "direct/spill "; PtrSD.dump(&Builder.DAG));
       return;
     }
@@ -597,12 +591,8 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   };
 
   auto requireSpillSlot = [&](const Value *V) {
-    if (isGCValue(V)) {
-      SDValue SDV = Builder.getValue(V);
-      if (!LoweredGCPtrs.empty())
-        return !LowerAsVReg.count(SDV);
-      return !MaxVRegPtrs || !canPassGCPtrOnVReg(SDV);
-    }
+    if (isGCValue(V))
+      return !LowerAsVReg.count(Builder.getValue(V));
     return !(LiveInDeopt || UseRegistersForDeoptValues);
   };
 

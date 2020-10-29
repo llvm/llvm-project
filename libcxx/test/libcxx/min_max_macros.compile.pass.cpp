@@ -57,11 +57,7 @@ TEST_MACROS();
 TEST_MACROS();
 #include <climits>
 TEST_MACROS();
-#include <clocale>
-TEST_MACROS();
 #include <cmath>
-TEST_MACROS();
-#include <codecvt>
 TEST_MACROS();
 #include <complex>
 TEST_MACROS();
@@ -109,8 +105,6 @@ TEST_MACROS();
 TEST_MACROS();
 #include <forward_list>
 TEST_MACROS();
-#include <fstream>
-TEST_MACROS();
 #include <functional>
 TEST_MACROS();
 #ifndef _LIBCPP_HAS_NO_THREADS
@@ -121,15 +115,7 @@ TEST_MACROS();
 TEST_MACROS();
 #include <inttypes.h>
 TEST_MACROS();
-#include <iomanip>
-TEST_MACROS();
-#include <ios>
-TEST_MACROS();
 #include <iosfwd>
-TEST_MACROS();
-#include <iostream>
-TEST_MACROS();
-#include <istream>
 TEST_MACROS();
 #include <iterator>
 TEST_MACROS();
@@ -138,10 +124,6 @@ TEST_MACROS();
 #include <limits.h>
 TEST_MACROS();
 #include <list>
-TEST_MACROS();
-#include <locale>
-TEST_MACROS();
-#include <locale.h>
 TEST_MACROS();
 #include <map>
 TEST_MACROS();
@@ -159,15 +141,11 @@ TEST_MACROS();
 TEST_MACROS();
 #include <optional>
 TEST_MACROS();
-#include <ostream>
-TEST_MACROS();
 #include <queue>
 TEST_MACROS();
 #include <random>
 TEST_MACROS();
 #include <ratio>
-TEST_MACROS();
-#include <regex>
 TEST_MACROS();
 #include <scoped_allocator>
 TEST_MACROS();
@@ -180,8 +158,6 @@ TEST_MACROS();
 TEST_MACROS();
 #endif
 #include <span>
-TEST_MACROS();
-#include <sstream>
 TEST_MACROS();
 #include <stack>
 TEST_MACROS();
@@ -197,15 +173,11 @@ TEST_MACROS();
 TEST_MACROS();
 #include <stdlib.h>
 TEST_MACROS();
-#include <streambuf>
-TEST_MACROS();
 #include <string>
 TEST_MACROS();
 #include <string.h>
 TEST_MACROS();
 #include <string_view>
-TEST_MACROS();
-#include <strstream>
 TEST_MACROS();
 #include <system_error>
 TEST_MACROS();
@@ -240,6 +212,41 @@ TEST_MACROS();
 #include <wctype.h>
 TEST_MACROS();
 
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#   include <clocale>
+    TEST_MACROS();
+#   include <codecvt>
+    TEST_MACROS();
+#   include <fstream>
+    TEST_MACROS();
+#   include <iomanip>
+    TEST_MACROS();
+#   include <ios>
+    TEST_MACROS();
+#   include <iostream>
+    TEST_MACROS();
+#   include <istream>
+    TEST_MACROS();
+#   include <locale>
+    TEST_MACROS();
+#   include <locale.h>
+    TEST_MACROS();
+#   include <ostream>
+    TEST_MACROS();
+#   include <regex>
+    TEST_MACROS();
+#   include <sstream>
+    TEST_MACROS();
+#   include <streambuf>
+    TEST_MACROS();
+#   include <strstream>
+    TEST_MACROS();
+#   if __cplusplus >= 201103L
+#       include <experimental/regex>
+        TEST_MACROS();
+#   endif
+#endif
+
 // experimental headers
 #if __cplusplus >= 201103L
 #include <experimental/algorithm>
@@ -261,8 +268,6 @@ TEST_MACROS();
 #include <experimental/memory_resource>
 TEST_MACROS();
 #include <experimental/propagate_const>
-TEST_MACROS();
-#include <experimental/regex>
 TEST_MACROS();
 #include <experimental/set>
 TEST_MACROS();

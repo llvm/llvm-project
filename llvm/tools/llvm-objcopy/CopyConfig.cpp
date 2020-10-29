@@ -895,6 +895,9 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_add_rpath))
     Config.RPathToAdd.push_back(Arg->getValue());
 
+  for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_prepend_rpath))
+    Config.RPathToPrepend.push_back(Arg->getValue());
+
   for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_delete_rpath)) {
     StringRef RPath = Arg->getValue();
 
@@ -902,7 +905,12 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
     if (is_contained(Config.RPathToAdd, RPath))
       return createStringError(
           errc::invalid_argument,
-          "cannot specify both -add_rpath %s and -delete_rpath %s",
+          "cannot specify both -add_rpath '%s' and -delete_rpath '%s'",
+          RPath.str().c_str(), RPath.str().c_str());
+    if (is_contained(Config.RPathToPrepend, RPath))
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both -prepend_rpath '%s' and -delete_rpath '%s'",
           RPath.str().c_str(), RPath.str().c_str());
 
     Config.RPathsToRemove.insert(RPath);
@@ -922,23 +930,30 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         });
     if (It1 != Config.RPathsToUpdate.end())
       return createStringError(errc::invalid_argument,
-                               "cannot specify both -rpath " + It1->getFirst() +
-                                   " " + It1->getSecond() + " and -rpath " +
-                                   Old + " " + New);
+                               "cannot specify both -rpath '" +
+                                   It1->getFirst() + "' '" + It1->getSecond() +
+                                   "' and -rpath '" + Old + "' '" + New + "'");
 
     // Cannot specify the same rpath under both -delete_rpath and -rpath
     auto It2 = find_if(Config.RPathsToRemove, Match);
     if (It2 != Config.RPathsToRemove.end())
       return createStringError(errc::invalid_argument,
-                               "cannot specify both -delete_rpath " + *It2 +
-                                   " and -rpath " + Old + " " + New);
+                               "cannot specify both -delete_rpath '" + *It2 +
+                                   "' and -rpath '" + Old + "' '" + New + "'");
 
     // Cannot specify the same rpath under both -add_rpath and -rpath
     auto It3 = find_if(Config.RPathToAdd, Match);
     if (It3 != Config.RPathToAdd.end())
       return createStringError(errc::invalid_argument,
-                               "cannot specify both -add_rpath " + *It3 +
-                                   " and -rpath " + Old + " " + New);
+                               "cannot specify both -add_rpath '" + *It3 +
+                                   "' and -rpath '" + Old + "' '" + New + "'");
+
+    // Cannot specify the same rpath under both -prepend_rpath and -rpath.
+    auto It4 = find_if(Config.RPathToPrepend, Match);
+    if (It4 != Config.RPathToPrepend.end())
+      return createStringError(errc::invalid_argument,
+                               "cannot specify both -prepend_rpath '" + *It4 +
+                                   "' and -rpath '" + Old + "' '" + New + "'");
 
     Config.RPathsToUpdate.insert({Old, New});
   }

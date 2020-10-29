@@ -118,7 +118,7 @@ class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, rc:$data0, rc:$data1, offset:$offset, gds:$gds),
-  "$addr, $data0, $data1"#"$offset"#"$gds"> {
+  "$addr, $data0, $data1$offset$gds"> {
 
   let has_vdst = 0;
 }

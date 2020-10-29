@@ -961,6 +961,17 @@ public:
                                 const SCEV *&InvariantLHS,
                                 const SCEV *&InvariantRHS);
 
+  /// Return true if the result of the predicate LHS `Pred` RHS is loop
+  /// invariant with respect to L at given Context during at least first
+  /// MaxIter iterations.  Set InvariantPred, InvariantLHS and InvariantLHS so
+  /// that InvariantLHS `InvariantPred` InvariantRHS is the loop invariant form
+  /// of LHS `Pred` RHS. The predicate should be the loop's exit condition.
+  bool isLoopInvariantExitCondDuringFirstIterations(
+      ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
+      const Instruction *Context, const SCEV *MaxIter,
+      ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
+      const SCEV *&InvariantRHS);
+
   /// Simplify LHS and RHS in a comparison with predicate Pred. Return true
   /// iff any changes were made. If the operands are provably equal or
   /// unequal, LHS and RHS are set to the same value and Pred is set to either
@@ -1506,6 +1517,13 @@ private:
   /// Helper for \c getRange.
   ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Stop,
                                     const SCEV *MaxBECount, unsigned BitWidth);
+
+  /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
+  /// Start,+,\p Stop}<nw>.
+  ConstantRange getRangeForAffineNoSelfWrappingAR(const SCEVAddRecExpr *AddRec,
+                                                  const SCEV *MaxBECount,
+                                                  unsigned BitWidth,
+                                                  RangeSignHint SignHint);
 
   /// Try to compute a range for the affine SCEVAddRecExpr {\p Start,+,\p
   /// Stop} by "factoring out" a ternary expression from the add recurrence.

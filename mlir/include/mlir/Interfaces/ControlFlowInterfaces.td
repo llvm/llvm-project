@@ -140,6 +140,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   }];
 
   let extraClassDeclaration = [{
+    /// Convenience helper in case none of the operands is known.
+    void getSuccessorRegions(Optional<unsigned> index,
+                             SmallVectorImpl<RegionSuccessor> &regions) {
+       SmallVector<Attribute, 2> nullAttrs(getOperation()->getNumOperands());
+       getSuccessorRegions(index, nullAttrs, regions);
+    }
+
     /// Verify types along control flow edges described by this interface.
     static LogicalResult verifyTypes(Operation *op) {
       return detail::verifyTypesAlongControlFlowEdges(op);

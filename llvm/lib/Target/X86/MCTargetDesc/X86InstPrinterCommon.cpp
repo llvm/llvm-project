@@ -346,6 +346,21 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O) {
     O << "\trepne\t";
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
+
+  // These all require a pseudo prefix
+  if (Flags & X86::IP_USE_VEX)
+    O << "\t{vex}";
+  else if (Flags & X86::IP_USE_VEX2)
+    O << "\t{vex2}";
+  else if (Flags & X86::IP_USE_VEX3)
+    O << "\t{vex3}";
+  else if (Flags & X86::IP_USE_EVEX)
+    O << "\t{evex}";
+
+  if (Flags & X86::IP_USE_DISP8)
+    O << "\t{disp8}";
+  else if (Flags & X86::IP_USE_DISP32)
+    O << "\t{disp32}";
 }
 
 void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,

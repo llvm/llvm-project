@@ -711,13 +711,26 @@ public:
                                 ArrayRef<const Expr*> Args,
                                 const Expr *This = nullptr) const;
 
-  /// Indicates how the constant expression will be used.
-  enum ConstExprUsage { EvaluateForCodeGen, EvaluateForMangling };
+  enum class ConstantExprKind {
+    /// An integer constant expression (an array bound, enumerator, case value,
+    /// bit-field width, or similar) or similar.
+    Normal,
+    /// A non-class template argument. Such a value is only used for mangling,
+    /// not for code generation, so can refer to dllimported functions.
+    NonClassTemplateArgument,
+    /// A class template argument. Such a value is used for code generation.
+    ClassTemplateArgument,
+    /// An immediate invocation. The destruction of the end result of this
+    /// evaluation is not part of the evaluation, but all other temporaries
+    /// are destroyed.
+    ImmediateInvocation,
+  };
 
-  /// Evaluate an expression that is required to be a constant expression.
-  bool EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
-                              const ASTContext &Ctx,
-                              bool InPlace = false) const;
+  /// Evaluate an expression that is required to be a constant expression. Does
+  /// not check the syntactic constraints for C and C++98 constant expressions.
+  bool EvaluateAsConstantExpr(
+      EvalResult &Result, const ASTContext &Ctx,
+      ConstantExprKind Kind = ConstantExprKind::Normal) const;
 
   /// If the current Expr is a pointer, this will try to statically
   /// determine the number of bytes available where the pointer is pointing.
@@ -970,6 +983,8 @@ public:
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
                   llvm::detail::ConstantLog2<alignof(Expr)>::value,
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
+
+using ConstantExprKind = Expr::ConstantExprKind;
 
 //===----------------------------------------------------------------------===//
 // Wrapper Expressions.
@@ -1997,6 +2012,10 @@ public:
   }
 
   static StringRef getIdentKindName(IdentKind IK);
+  StringRef getIdentKindName() const {
+    return getIdentKindName(getIdentKind());
+  }
+
   static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl);
 
   SourceLocation getBeginLoc() const { return getLocation(); }

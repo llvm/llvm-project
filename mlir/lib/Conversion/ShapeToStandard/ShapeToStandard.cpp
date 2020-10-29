@@ -132,7 +132,7 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
             },
             [&](OpBuilder &b, Location loc) {
               // The broadcasting logic is:
-              // - if one extent (here we arbitrariliy choose the extent from
+              // - if one extent (here we arbitrarily choose the extent from
               // the greater-rank operand) is equal to 1, then take the extent
               // from the other operand
               // - otherwise, take the extent as-is.
@@ -508,7 +508,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
 
   // Apply conversion.
   auto module = getOperation();
-  if (failed(applyPartialConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

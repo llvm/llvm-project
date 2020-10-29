@@ -211,21 +211,23 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::nxv2bf16:  return "MVT::nxv2bf16";
   case MVT::nxv4bf16:  return "MVT::nxv4bf16";
   case MVT::nxv8bf16:  return "MVT::nxv8bf16";
-  case MVT::nxv1f32:  return "MVT::nxv1f32";
-  case MVT::nxv2f32:  return "MVT::nxv2f32";
-  case MVT::nxv4f32:  return "MVT::nxv4f32";
-  case MVT::nxv8f32:  return "MVT::nxv8f32";
-  case MVT::nxv16f32: return "MVT::nxv16f32";
-  case MVT::nxv1f64:  return "MVT::nxv1f64";
-  case MVT::nxv2f64:  return "MVT::nxv2f64";
-  case MVT::nxv4f64:  return "MVT::nxv4f64";
-  case MVT::nxv8f64:  return "MVT::nxv8f64";
-  case MVT::token:    return "MVT::token";
-  case MVT::Metadata: return "MVT::Metadata";
-  case MVT::iPTR:     return "MVT::iPTR";
-  case MVT::iPTRAny:  return "MVT::iPTRAny";
-  case MVT::Untyped:  return "MVT::Untyped";
-  case MVT::exnref:   return "MVT::exnref";
+  case MVT::nxv1f32:   return "MVT::nxv1f32";
+  case MVT::nxv2f32:   return "MVT::nxv2f32";
+  case MVT::nxv4f32:   return "MVT::nxv4f32";
+  case MVT::nxv8f32:   return "MVT::nxv8f32";
+  case MVT::nxv16f32:  return "MVT::nxv16f32";
+  case MVT::nxv1f64:   return "MVT::nxv1f64";
+  case MVT::nxv2f64:   return "MVT::nxv2f64";
+  case MVT::nxv4f64:   return "MVT::nxv4f64";
+  case MVT::nxv8f64:   return "MVT::nxv8f64";
+  case MVT::token:     return "MVT::token";
+  case MVT::Metadata:  return "MVT::Metadata";
+  case MVT::iPTR:      return "MVT::iPTR";
+  case MVT::iPTRAny:   return "MVT::iPTRAny";
+  case MVT::Untyped:   return "MVT::Untyped";
+  case MVT::exnref:    return "MVT::exnref";
+  case MVT::funcref:   return "MVT::funcref";
+  case MVT::externref: return "MVT::externref";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
 }

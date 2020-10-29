@@ -40,9 +40,8 @@ void ConvertStandardToSPIRVPass::runOnOperation() {
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, patterns))) {
+  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
     return signalPassFailure();
-  }
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>

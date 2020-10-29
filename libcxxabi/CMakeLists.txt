@@ -48,6 +48,23 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_B
   include(HandleOutOfTreeLLVM)
 endif()
 
+if (LIBCXXABI_STANDALONE_BUILD)
+  find_package(Python3 COMPONENTS Interpreter)
+  if(NOT Python3_Interpreter_FOUND)
+    message(WARNING "Python3 not found, using python2 as a fallback")
+    find_package(Python2 COMPONENTS Interpreter REQUIRED)
+    if(Python2_VERSION VERSION_LESS 2.7)
+      message(SEND_ERROR "Python 2.7 or newer is required")
+    endif()
+
+    # Treat python2 as python3
+    add_executable(Python3::Interpreter IMPORTED)
+    set_target_properties(Python3::Interpreter PROPERTIES
+      IMPORTED_LOCATION ${Python2_EXECUTABLE})
+    set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+  endif()
+endif()
+
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
 MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
@@ -138,23 +155,9 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: This is a hack for the fact that Standalone builds can't use targets
-#       from the other runtimes (so the cxx-headers target doesn't exist).
-set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
-    "Specify path to the installed libc++ includes. This is only relevant for Standalone builds, where the location of the headers can't be determined automatically.")
-if (LIBCXXABI_STANDALONE_BUILD)
-  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
-    message(FATAL_ERROR
-      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
-      "Please provide the path to where the libc++ headers have been installed.")
-  endif()
-  add_library(cxx-headers INTERFACE)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(cxx-headers INTERFACE /I "${LIBCXXABI_LIBCXX_INCLUDES}")
-  else()
-    target_compile_options(cxx-headers INTERFACE -I "${LIBCXXABI_LIBCXX_INCLUDES}")
-  endif()
-endif()
+set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
+    "Specify path to libc++ includes.")
+message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)

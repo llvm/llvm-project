@@ -655,6 +655,7 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
   for (auto &Block : llvm::make_range(std::next(F.begin()), F.end()))
     Blocks.push_back(&Block);
 
+  SmallSet<WeakTrackingVH, 16> Preds;
   for (auto &Block : Blocks) {
     auto *BB = cast_or_null<BasicBlock>(Block);
     if (!BB)
@@ -673,8 +674,16 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
 
       // Merge BB into SinglePred and delete it.
       MergeBlockIntoPredecessor(BB);
+      Preds.insert(SinglePred);
     }
   }
+
+  // (Repeatedly) merging blocks into their predecessors can create redundant
+  // debug intrinsics.
+  for (auto &Pred : Preds)
+    if (auto *BB = cast_or_null<BasicBlock>(Pred))
+      RemoveRedundantDbgInstrs(BB);
+
   return Changed;
 }
 

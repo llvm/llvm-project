@@ -285,15 +285,13 @@ void AMDGPUInstPrinter::printD16(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printExpCompr(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " compr";
+  printNamedBit(MI, OpNo, O, "compr");
 }
 
 void AMDGPUInstPrinter::printExpVM(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " vm";
+  printNamedBit(MI, OpNo, O, "vm");
 }
 
 void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
@@ -1217,15 +1215,13 @@ void AMDGPUInstPrinter::printIfSet(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printHigh(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI,
                                   raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " high";
+  printNamedBit(MI, OpNo, O, "high");
 }
 
 void AMDGPUInstPrinter::printClampSI(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " clamp";
+  printNamedBit(MI, OpNo, O, "clamp");
 }
 
 void AMDGPUInstPrinter::printOModSI(const MCInst *MI, unsigned OpNo,

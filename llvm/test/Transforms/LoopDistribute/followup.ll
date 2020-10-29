@@ -51,11 +51,15 @@ for.end:
 
 
 ; CHECK-LABEL: for.body.lver.orig:
-; CHECK: br i1 %exitcond.lver.orig, label %for.end, label %for.body.lver.orig, !llvm.loop ![[LOOP_ORIG:[0-9]+]]
+; CHECK: br i1 %exitcond.lver.orig, label %for.end.loopexit, label %for.body.lver.orig, !llvm.loop ![[LOOP_ORIG:[0-9]+]]
 ; CHECK-LABEL: for.body.ldist1:
 ; CHECK: br i1 %exitcond.ldist1, label %for.body.ph, label %for.body.ldist1, !llvm.loop ![[LOOP_SEQUENTIAL:[0-9]+]]
 ; CHECK-LABEL: for.body:
-; CHECK: br i1 %exitcond, label %for.end, label %for.body, !llvm.loop ![[LOOP_COINCIDENT:[0-9]+]]
+; CHECK: br i1 %exitcond, label %for.end.loopexit26, label %for.body, !llvm.loop ![[LOOP_COINCIDENT:[0-9]+]]
+; CHECK-LABEL: for.end.loopexit:
+; CHECK: br label %for.end
+; CHECK-LABEL: for.end.loopexit26:
+; CHECK: br label %for.end
 
 ; CHECK: ![[LOOP_ORIG]] = distinct !{![[LOOP_ORIG]], ![[FOLLOWUP_ALL:[0-9]+]], ![[FOLLOUP_FALLBACK:[0-9]+]]}
 ; CHECK: ![[FOLLOWUP_ALL]] = !{!"FollowupAll"}

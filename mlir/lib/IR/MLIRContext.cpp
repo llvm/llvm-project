@@ -292,8 +292,8 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// Identifers are uniqued by string value and use the internal string set for
-  /// storage.
+  /// Identifiers are uniqued by string value and use the internal string set
+  /// for storage.
   llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
   /// A thread local cache of identifiers to reduce lock contention.
   ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<llvm::NoneType> *>>
@@ -361,7 +361,7 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext(bool loadAllDialects) : impl(new MLIRContextImpl()) {
+MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -369,10 +369,8 @@ MLIRContext::MLIRContext(bool loadAllDialects) : impl(new MLIRContextImpl()) {
     printStackTraceOnDiagnostic(clOptions->printStackTraceOnDiagnostic);
   }
 
-  // Register dialects with this context.
+  // Ensure the builtin dialect is always pre-loaded.
   getOrLoadDialect<BuiltinDialect>();
-  if (loadAllDialects)
-    loadAllGloballyRegisteredDialects();
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
@@ -518,12 +516,6 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                              "' has already been registered");
 
   return dialect.get();
-}
-
-void MLIRContext::loadAllGloballyRegisteredDialects() {
-  if (!isGlobalDialectRegistryEnabled())
-    return;
-  getGlobalDialectRegistry().loadAll(this);
 }
 
 bool MLIRContext::allowsUnregisteredDialects() {

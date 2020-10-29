@@ -670,6 +670,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
   unsigned BitWidth = Known.getBitWidth();
 
+  // Refine Known set if the pointer alignment is set by assume bundles.
+  if (V->getType()->isPointerTy()) {
+    if (RetainedKnowledge RK = getKnowledgeValidInContext(
+            V, {Attribute::Alignment}, Q.CxtI, Q.DT, Q.AC)) {
+      Known.Zero.setLowBits(Log2_32(RK.ArgValue));
+    }
+  }
+
   // Note that the patterns below need to be kept in sync with the code
   // in AssumptionCache::updateAffectedValues.
 
@@ -1995,7 +2003,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   // Aligned pointers have trailing zeros - refine Known.Zero set
   if (isa<PointerType>(V->getType())) {
     Align Alignment = V->getPointerAlignment(Q.DL);
-    Known.Zero.setLowBits(countTrailingZeros(Alignment.value()));
+    Known.Zero.setLowBits(Log2(Alignment));
   }
 
   // computeKnownBitsFromAssume strictly refines Known.
@@ -6460,6 +6468,13 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
   unsigned Width = Lower.getBitWidth();
   const APInt *C;
   switch (II.getIntrinsicID()) {
+  case Intrinsic::ctpop:
+  case Intrinsic::ctlz:
+  case Intrinsic::cttz:
+    // Maximum of set/clear bits is the bit width.
+    assert(Lower == 0 && "Expected lower bound to be zero");
+    Upper = Width + 1;
+    break;
   case Intrinsic::uadd_sat:
     // uadd.sat(x, C) produces [C, UINT_MAX].
     if (match(II.getOperand(0), m_APInt(C)) ||

@@ -2672,10 +2672,13 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
     if (F->hasFnAttribute("gc-leaf-function"))
       return true;
 
-    if (auto IID = F->getIntrinsicID())
+    if (auto IID = F->getIntrinsicID()) {
       // Most LLVM intrinsics do not take safepoints.
       return IID != Intrinsic::experimental_gc_statepoint &&
-             IID != Intrinsic::experimental_deoptimize;
+             IID != Intrinsic::experimental_deoptimize &&
+             IID != Intrinsic::memcpy_element_unordered_atomic &&
+             IID != Intrinsic::memmove_element_unordered_atomic;
+    }
   }
 
   // Lib calls can be materialized by some passes, and won't be
@@ -2941,6 +2944,20 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
       for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
         Result->Provenance[BitIdx] = BitPart::Unset;
+      return Result;
+    }
+
+    // BITREVERSE - most likely due to us previous matching a partial
+    // bitreverse.
+    if (match(V, m_BitReverse(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!Res)
+        return Result;
+
+      Result = BitPart(Res->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[(BitWidth - 1) - BitIdx] = Res->Provenance[BitIdx];
       return Result;
     }
 

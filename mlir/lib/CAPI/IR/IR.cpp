@@ -26,7 +26,7 @@ using namespace mlir;
 /* ========================================================================== */
 
 MlirContext mlirContextCreate() {
-  auto *context = new MLIRContext(/*loadAllDialects=*/false);
+  auto *context = new MLIRContext;
   return wrap(context);
 }
 
@@ -146,6 +146,10 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module) {
 
 MlirContext mlirModuleGetContext(MlirModule module) {
   return wrap(unwrap(module).getContext());
+}
+
+MlirBlock mlirModuleGetBody(MlirModule module) {
+  return wrap(unwrap(module).getBody());
 }
 
 void mlirModuleDestroy(MlirModule module) {

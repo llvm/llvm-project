@@ -4210,16 +4210,21 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
         /*IndexTypeQuals=*/0);
     SVD = createImplicitFirstprivateForType(getContext(), Data, SizesType, CD,
                                             S.getBeginLoc());
-    MVD = createImplicitFirstprivateForType(
-        getContext(), Data, BaseAndPointerAndMapperType, CD, S.getBeginLoc());
     TargetScope.addPrivate(
         BPVD, [&InputInfo]() { return InputInfo.BasePointersArray; });
     TargetScope.addPrivate(PVD,
                            [&InputInfo]() { return InputInfo.PointersArray; });
     TargetScope.addPrivate(SVD,
                            [&InputInfo]() { return InputInfo.SizesArray; });
-    TargetScope.addPrivate(MVD,
-                           [&InputInfo]() { return InputInfo.MappersArray; });
+    // If there is no user-defined mapper, the mapper array will be nullptr. In
+    // this case, we don't need to privatize it.
+    if (!dyn_cast_or_null<llvm::ConstantPointerNull>(
+            InputInfo.MappersArray.getPointer())) {
+      MVD = createImplicitFirstprivateForType(
+          getContext(), Data, BaseAndPointerAndMapperType, CD, S.getBeginLoc());
+      TargetScope.addPrivate(MVD,
+                             [&InputInfo]() { return InputInfo.MappersArray; });
+    }
   }
   (void)TargetScope.Privatize();
   // Build list of dependences.
@@ -4269,8 +4274,10 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
           CGF.GetAddrOfLocalVar(PVD), /*Index=*/0);
       InputInfo.SizesArray = CGF.Builder.CreateConstArrayGEP(
           CGF.GetAddrOfLocalVar(SVD), /*Index=*/0);
-      InputInfo.MappersArray = CGF.Builder.CreateConstArrayGEP(
-          CGF.GetAddrOfLocalVar(MVD), /*Index=*/0);
+      // If MVD is nullptr, the mapper array is not privatized
+      if (MVD)
+        InputInfo.MappersArray = CGF.Builder.CreateConstArrayGEP(
+            CGF.GetAddrOfLocalVar(MVD), /*Index=*/0);
     }
 
     Action.Enter(CGF);

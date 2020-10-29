@@ -9,6 +9,7 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "llvm/Support//FileSystem.h"
 
 #include "gtest/gtest.h"
 
@@ -16,6 +17,51 @@ using namespace llvm;
 using namespace Fortran::frontend;
 
 namespace {
+
+TEST(CompilerInstance, SanityCheckForFileManager) {
+  const char *inputSource = "InputSourceFile";
+  std::string inputFile = "buffer-file-test.f";
+  std::error_code ec;
+
+  // 1. Create the input file for the file manager
+  // AllSources (which is used to manage files inside every compiler instance),
+  // works with paths. This means that it requires a physical file. Create one.
+  std::unique_ptr<llvm::raw_fd_ostream> os{
+      new llvm::raw_fd_ostream(inputFile, ec, llvm::sys::fs::OF_None)};
+  if (ec)
+    FAIL() << "Failed to create the input file";
+
+  // Populate the input file with the pre-defined input and flush it.
+  *(os) << inputSource;
+  os.reset();
+
+  // Get the path of the input file
+  llvm::SmallString<64> cwd;
+  if (std::error_code ec = llvm::sys::fs::current_path(cwd))
+    FAIL() << "Failed to obtain the current working directory";
+  std::string testFilePath(cwd.c_str());
+  testFilePath += "/" + inputFile;
+
+  // 2. Set up CompilerInstance (i.e. specify the input file)
+  std::string buf;
+  llvm::raw_string_ostream error_stream{buf};
+  CompilerInstance compInst;
+  const Fortran::parser::SourceFile *sf =
+      compInst.GetAllSources().Open(testFilePath, error_stream);
+
+  // 3. Verify the content of the input file
+  // This is just a sanity check to make sure that CompilerInstance is capable
+  // of reading input files.
+  llvm::ArrayRef<char> fileContent = sf->content();
+  EXPECT_FALSE(fileContent.size() == 0);
+  EXPECT_TRUE(
+      llvm::StringRef(fileContent.data()).startswith("InputSourceFile"));
+
+  // 4. Delete the test file
+  ec = llvm::sys::fs::remove(inputFile);
+  if (ec)
+    FAIL() << "Failed to delete the test file";
+}
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // 1. Set-up a basic DiagnosticConsumer

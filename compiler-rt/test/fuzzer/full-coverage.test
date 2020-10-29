@@ -1,0 +1,16 @@
+# FIXME: Disabled on Windows because -fPIC cannot be used to compile for Windows.
+UNSUPPORTED: windows
+# FIXME: See coverage.test.  Using UNSUPPORTED here due to random failures.
+UNSUPPORTED: s390x
+RUN: %cpp_compiler %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -O0 -shared -o %dynamiclib1
+RUN: %cpp_compiler %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -O0 -shared -o %dynamiclib2
+RUN: %cpp_compiler %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest
+
+RUN: %run %t-DSOTest -print_full_coverage=1 %S/dso-cov-input.txt 2>&1 | FileCheck %s
+CHECK: FULL COVERAGE:
+CHECK-DAG: U{{( [0-9]+)*}}
+CHECK-DAG: C{{( [0-9]+)*}}
+CHECK-DAG: U{{( [0-9]+)*}}
+CHECK-DAG: U{{( [0-9]+)*}}
+CHECK-DAG: C{{( [0-9]+)*}}
+CHECK-DAG: U{{( [0-9]+)*}}

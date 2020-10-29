@@ -45,8 +45,12 @@ StringRef MakeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
 
     // Objective-C categories have a `+suffix` format, but should be grouped
     // with the file they are a category of.
+    size_t StartIndex = Canonical.find_last_of('/');
+    if (StartIndex == StringRef::npos) {
+      StartIndex = 0;
+    }
     return Canonical.substr(
-        0, Canonical.find_first_of('+', Canonical.find_last_of('/')));
+        0, Canonical.find_first_of('+', StartIndex));
   }
   return RemoveFirstSuffix(
       RemoveFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}),

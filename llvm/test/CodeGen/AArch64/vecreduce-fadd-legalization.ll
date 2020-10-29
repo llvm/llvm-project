@@ -47,8 +47,7 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-LABEL: test_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, wzr
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    mov v0.s[3], wzr
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    fadd v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    faddp s0, v0.2s

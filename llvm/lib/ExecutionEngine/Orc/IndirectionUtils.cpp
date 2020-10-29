@@ -148,7 +148,7 @@ createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
     }
 
     case Triple::x86_64: {
-      if ( T.getOS() == Triple::OSType::Win32 ) {
+      if (T.getOS() == Triple::OSType::Win32) {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
         return CCMgrT::Create(ES, ErrorHandlerAddress);
       } else {

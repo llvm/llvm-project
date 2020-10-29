@@ -83,6 +83,7 @@ class X86AsmParser : public MCTargetAsmParser {
   enum VEXEncoding {
     VEXEncoding_Default,
     VEXEncoding_VEX,
+    VEXEncoding_VEX2,
     VEXEncoding_VEX3,
     VEXEncoding_EVEX,
   };
@@ -2818,8 +2819,10 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
 
-      if (Prefix == "vex" || Prefix == "vex2")
+      if (Prefix == "vex")
         ForcedVEXEncoding = VEXEncoding_VEX;
+      else if (Prefix == "vex2")
+        ForcedVEXEncoding = VEXEncoding_VEX2;
       else if (Prefix == "vex3")
         ForcedVEXEncoding = VEXEncoding_VEX3;
       else if (Prefix == "evex")
@@ -3837,6 +3840,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     return Match_Unsupported;
 
   if ((ForcedVEXEncoding == VEXEncoding_VEX ||
+       ForcedVEXEncoding == VEXEncoding_VEX2 ||
        ForcedVEXEncoding == VEXEncoding_VEX3) &&
       (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
     return Match_Unsupported;
@@ -3879,10 +3883,16 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   MCInst Inst;
 
-  // If VEX3 encoding is forced, we need to pass the USE_VEX3 flag to the
-  // encoder.
-  if (ForcedVEXEncoding == VEXEncoding_VEX3)
+  // If VEX/EVEX encoding is forced, we need to pass the USE_* flag to the
+  // encoder and printer.
+  if (ForcedVEXEncoding == VEXEncoding_VEX)
+    Prefixes |= X86::IP_USE_VEX;
+  else if (ForcedVEXEncoding == VEXEncoding_VEX2)
+    Prefixes |= X86::IP_USE_VEX2;
+  else if (ForcedVEXEncoding == VEXEncoding_VEX3)
     Prefixes |= X86::IP_USE_VEX3;
+  else if (ForcedVEXEncoding == VEXEncoding_EVEX)
+    Prefixes |= X86::IP_USE_EVEX;
 
   // Set encoded flags for {disp8} and {disp32}.
   if (ForcedDispEncoding == DispEncoding_Disp8)

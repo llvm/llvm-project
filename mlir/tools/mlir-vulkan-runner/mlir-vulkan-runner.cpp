@@ -53,11 +53,13 @@ int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj x;
   registerPassManagerCLOptions();
 
-  mlir::registerAllDialects();
   llvm::InitLLVM y(argc, argv);
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   mlir::initializeLLVMPasses();
 
-  return mlir::JitRunnerMain(argc, argv, &runMLIRPasses);
+  mlir::JitRunnerConfig jitRunnerConfig;
+  jitRunnerConfig.mlirTransformer = runMLIRPasses;
+
+  return mlir::JitRunnerMain(argc, argv, jitRunnerConfig);
 }

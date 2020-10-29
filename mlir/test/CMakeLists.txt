@@ -20,9 +20,10 @@ set(MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTOR
 set(MLIR_RUNNER_UTILS_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 # Passed to lit.site.cfg.py.in to set up the path where to find the libraries
-# for the mlir cuda / rocm / vulkan runner tests.
+# for the mlir cuda / rocm / spirv / vulkan runner tests.
 set(MLIR_CUDA_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 set(MLIR_ROCM_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+set(MLIR_SPIRV_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 set(MLIR_VULKAN_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 configure_lit_site_cfg(
@@ -78,6 +79,14 @@ endif()
 if(MLIR_ROCM_RUNNER_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-rocm-runner
+  )
+endif()
+
+if(MLIR_SPIRV_CPU_RUNNER_ENABLED)
+  add_subdirectory(mlir-spirv-cpu-runner)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-spirv-cpu-runner
+    mlir_test_spirv_cpu_runner_c_wrappers
   )
 endif()
 

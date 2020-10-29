@@ -1081,6 +1081,7 @@ def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
 def HasFPU : Predicate<"Subtarget->hasFPU()">;
 def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
+def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -3890,6 +3891,7 @@ def : Pat<(i1 (setcc i64:$s1, i64:$s2, SETGT)),
 def : Pat<(i1 (setcc i64:$s1, i64:$s2, SETEQ)),
           (EXTRACT_SUBREG (CMPD $s1, $s2), sub_eq)>;
 
+let Predicates = [IsNotISA3_1] in {
 // Instantiations of CRNotPat for i32.
 defm : CRNotPat<(i1 (setcc i32:$s1, immZExt16:$imm, SETUGE)),
                 (EXTRACT_SUBREG (CMPLWI $s1, imm:$imm), sub_lt)>;
@@ -3947,6 +3949,7 @@ defm : CRNotPat<(i1 (setcc i64:$s1, i64:$s2, SETLE)),
                 (EXTRACT_SUBREG (CMPD $s1, $s2), sub_gt)>;
 defm : CRNotPat<(i1 (setcc i64:$s1, i64:$s2, SETNE)),
                 (EXTRACT_SUBREG (CMPD $s1, $s2), sub_eq)>;
+}
 
 multiclass FSetCCPat<SDNode SetCC, ValueType Ty, PatLeaf FCmp> {
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),

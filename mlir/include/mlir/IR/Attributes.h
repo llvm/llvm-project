@@ -148,8 +148,8 @@ class AttributeInterface
                                AttributeTrait::TraitBase> {
 public:
   using Base = AttributeInterface<ConcreteType, Traits>;
-  using InterfaceBase = detail::Interface<ConcreteType, Type, Traits, Type,
-                                          AttributeTrait::TraitBase>;
+  using InterfaceBase = detail::Interface<ConcreteType, Attribute, Traits,
+                                          Attribute, AttributeTrait::TraitBase>;
   using InterfaceBase::InterfaceBase;
 
 private:
@@ -1140,6 +1140,25 @@ class DenseIntOrFPElementsAttr
 public:
   using Base::Base;
 
+  /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
+  /// the elements of `inRawData` has `type`. If `inRawData` is little endian
+  /// (LE), it is converted to big endian (BE). Conversely, if `inRawData` is
+  /// BE, converted to LE.
+  static void
+  convertEndianOfArrayRefForBEmachine(ArrayRef<char> inRawData,
+                                      MutableArrayRef<char> outRawData,
+                                      ShapedType type);
+
+  /// Convert endianess of input for big-endian(BE) machines. The number of
+  /// elements of `inRawData` is `numElements`, and each element has
+  /// `elementBitWidth` bits. If `inRawData` is little endian (LE), it is
+  /// converted to big endian (BE) and saved in `outRawData`. Conversely, if
+  /// `inRawData` is BE, converted to LE.
+  static void convertEndianOfCharForBEmachine(const char *inRawData,
+                                              char *outRawData,
+                                              size_t elementBitWidth,
+                                              size_t numElements);
+
 protected:
   friend DenseElementsAttr;
 
@@ -1601,6 +1620,10 @@ public:
 
   /// Return the underlying dictionary attribute.
   DictionaryAttr getDictionary(MLIRContext *context) const;
+
+  /// Return the underlying dictionary attribute or null if there are no
+  /// attributes within this dictionary.
+  DictionaryAttr getDictionaryOrNull() const { return attrs; }
 
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() const;

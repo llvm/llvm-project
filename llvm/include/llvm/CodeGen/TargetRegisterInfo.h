@@ -87,22 +87,21 @@ public:
 
   /// Return true if the specified register is included in this register class.
   /// This does not include virtual registers.
-  bool contains(unsigned Reg) const {
+  bool contains(Register Reg) const {
     /// FIXME: Historically this function has returned false when given vregs
     ///        but it should probably only receive physical registers
-    if (!Register::isPhysicalRegister(Reg))
+    if (!Reg.isPhysical())
       return false;
-    return MC->contains(Reg);
+    return MC->contains(Reg.asMCReg());
   }
 
   /// Return true if both registers are in this class.
-  bool contains(unsigned Reg1, unsigned Reg2) const {
+  bool contains(Register Reg1, Register Reg2) const {
     /// FIXME: Historically this function has returned false when given a vregs
     ///        but it should probably only receive physical registers
-    if (!Register::isPhysicalRegister(Reg1) ||
-        !Register::isPhysicalRegister(Reg2))
+    if (!Reg1.isPhysical() || !Reg2.isPhysical())
       return false;
-    return MC->contains(Reg1, Reg2);
+    return MC->contains(Reg1.asMCReg(), Reg2.asMCReg());
   }
 
   /// Return the cost of copying a value between two registers in this class.
@@ -401,9 +400,9 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(MCRegister Reg, unsigned RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
     for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units)
-      if (*Units == RegUnit)
+      if (Register(*Units) == RegUnit)
         return true;
     return false;
   }
@@ -983,7 +982,7 @@ public:
   /// go through this expensive heuristic.
   /// When this target hook is hit, by returning false, there is a high
   /// chance that the register allocation will fail altogether (usually with
-  /// ran out of registers).
+  /// "ran out of registers").
   /// That said, this error usually points to another problem in the
   /// optimization pipeline.
   virtual bool
@@ -992,8 +991,8 @@ public:
     return true;
   }
 
-  /// Deferred spilling delais the spill insertion of a virtual register
-  /// after every other allocations. By deferring the spilling, it is
+  /// Deferred spilling delays the spill insertion of a virtual register
+  /// after every other allocation. By deferring the spilling, it is
   /// sometimes possible to eliminate that spilling altogether because
   /// something else could have been eliminated, thus leaving some space
   /// for the virtual register.
@@ -1183,8 +1182,8 @@ public:
 
 // This is useful when building IndexedMaps keyed on virtual registers
 struct VirtReg2IndexFunctor {
-  using argument_type = unsigned;
-  unsigned operator()(unsigned Reg) const {
+  using argument_type = Register;
+  unsigned operator()(Register Reg) const {
     return Register::virtReg2Index(Reg);
   }
 };

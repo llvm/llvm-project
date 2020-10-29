@@ -3403,7 +3403,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // non-wide string literal, potentially casted, so the cast<> is safe.
     const Expr *AnnotationStrExpr = E->getArg(1)->IgnoreParenCasts();
     StringRef Str = cast<StringLiteral>(AnnotationStrExpr)->getString();
-    return RValue::get(EmitAnnotationCall(F, AnnVal, Str, E->getExprLoc()));
+    return RValue::get(
+        EmitAnnotationCall(F, AnnVal, Str, E->getExprLoc(), nullptr));
   }
   case Builtin::BI__builtin_addcb:
   case Builtin::BI__builtin_addcs:
@@ -16270,16 +16271,16 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_memory_size: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *I = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_size, ResultType);
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_memory_size, ResultType);
     return Builder.CreateCall(Callee, I);
   }
   case WebAssembly::BI__builtin_wasm_memory_grow: {
     llvm::Type *ResultType = ConvertType(E->getType());
-    Value *Args[] = {
-      EmitScalarExpr(E->getArg(0)),
-      EmitScalarExpr(E->getArg(1))
-    };
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_grow, ResultType);
+    Value *Args[] = {EmitScalarExpr(E->getArg(0)),
+                     EmitScalarExpr(E->getArg(1))};
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_memory_grow, ResultType);
     return Builder.CreateCall(Callee, Args);
   }
   case WebAssembly::BI__builtin_wasm_tls_size: {
@@ -16354,7 +16355,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_saturate_signed,
-                                     {ResT, Src->getType()});
+                                        {ResT, Src->getType()});
     return Builder.CreateCall(Callee, {Src});
   }
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32_f32:
@@ -16365,7 +16366,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_saturate_unsigned,
-                                     {ResT, Src->getType()});
+                                        {ResT, Src->getType()});
     return Builder.CreateCall(Callee, {Src});
   }
   case WebAssembly::BI__builtin_wasm_min_f32:
@@ -16374,8 +16375,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_min_f64x2: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::minimum,
-                                     ConvertType(E->getType()));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::minimum, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
   case WebAssembly::BI__builtin_wasm_max_f32:
@@ -16384,8 +16385,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_max_f64x2: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::maximum,
-                                     ConvertType(E->getType()));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::maximum, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
   case WebAssembly::BI__builtin_wasm_pmin_f32x4:
@@ -16592,19 +16593,62 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                         ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
-  case WebAssembly::BI__builtin_wasm_q15mulr_saturate_s_i8x16: {
+  case WebAssembly::BI__builtin_wasm_q15mulr_saturate_s_i16x8: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
     Function *Callee =
         CGM.getIntrinsic(Intrinsic::wasm_q15mulr_saturate_signed);
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_extmul_low_i8x16_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_extmul_high_i8x16_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_extmul_low_i8x16_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_extmul_high_i8x16_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_extmul_low_i16x8_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_extmul_high_i16x8_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_extmul_low_i16x8_u_i32x4:
+  case WebAssembly::BI__builtin_wasm_extmul_high_i16x8_u_i32x4:
+  case WebAssembly::BI__builtin_wasm_extmul_low_i32x4_s_i64x2:
+  case WebAssembly::BI__builtin_wasm_extmul_high_i32x4_s_i64x2:
+  case WebAssembly::BI__builtin_wasm_extmul_low_i32x4_u_i64x2:
+  case WebAssembly::BI__builtin_wasm_extmul_high_i32x4_u_i64x2: {
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_extmul_low_i8x16_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_extmul_low_i16x8_s_i32x4:
+    case WebAssembly::BI__builtin_wasm_extmul_low_i32x4_s_i64x2:
+      IntNo = Intrinsic::wasm_extmul_low_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_extmul_low_i8x16_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_extmul_low_i16x8_u_i32x4:
+    case WebAssembly::BI__builtin_wasm_extmul_low_i32x4_u_i64x2:
+      IntNo = Intrinsic::wasm_extmul_low_unsigned;
+      break;
+    case WebAssembly::BI__builtin_wasm_extmul_high_i8x16_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_extmul_high_i16x8_s_i32x4:
+    case WebAssembly::BI__builtin_wasm_extmul_high_i32x4_s_i64x2:
+      IntNo = Intrinsic::wasm_extmul_high_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_extmul_high_i8x16_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_extmul_high_i16x8_u_i32x4:
+    case WebAssembly::BI__builtin_wasm_extmul_high_i32x4_u_i64x2:
+      IntNo = Intrinsic::wasm_extmul_high_unsigned;
+      break;
+    default:
+      llvm_unreachable("unexptected builtin ID");
+    }
+
+    Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {LHS, RHS});
+  }
   case WebAssembly::BI__builtin_wasm_bitselect: {
     Value *V1 = EmitScalarExpr(E->getArg(0));
     Value *V2 = EmitScalarExpr(E->getArg(1));
     Value *C = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_bitselect,
-                                     ConvertType(E->getType()));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_bitselect, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {V1, V2, C});
   }
   case WebAssembly::BI__builtin_wasm_dot_s_i32x4_i16x8: {

@@ -109,3 +109,9 @@ static void test11_foo(void) __attribute__((alias("test11")));
 // CHECKGLOBALS: @test12_alias = alias void (), void ()* @test12
 void test12(void) {}
 inline void test12_alias(void) __attribute__((gnu_inline, alias("test12")));
+
+// Test that a non visible (-Wvisibility) type doesn't assert.
+// CHECKGLOBALS: @test13_alias = alias {}, bitcast (void (i32)* @test13 to {}*)
+enum a_type { test13_a };
+void test13(enum a_type y) {}
+void test13_alias(enum undeclared_type y) __attribute__((alias ("test13")));

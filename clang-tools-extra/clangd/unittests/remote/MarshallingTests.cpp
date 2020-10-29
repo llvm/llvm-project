@@ -133,7 +133,7 @@ TEST(RemoteMarshallingTest, URITranslation) {
 
   // Paths transmitted over the wire can not be absolute, they have to be
   // relative.
-  v1::Ref WithAbsolutePath;
+  Ref WithAbsolutePath;
   *WithAbsolutePath.mutable_location()->mutable_file_path() =
       "/usr/local/user/home/HelloWorld.cpp";
   Deserialized = ProtobufMarshaller.fromProtobuf(WithAbsolutePath);
@@ -282,7 +282,7 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
   Sym.IncludeHeaders.pop_back();
   Serialized = ProtobufMarshaller.toProtobuf(Sym);
   ASSERT_TRUE(bool(Serialized));
-  v1::HeaderWithReferences InvalidHeader;
+  HeaderWithReferences InvalidHeader;
   InvalidHeader.set_header(convert_to_slash("/absolute/path/Header.h"));
   InvalidHeader.set_references(9000);
   *Serialized->add_headers() = InvalidHeader;
@@ -388,7 +388,7 @@ TEST(RemoteMarshallingTest, RelationsRequestSerialization) {
 }
 
 TEST(RemoteMarshallingTest, RelationsRequestFailingSerialization) {
-  v1::RelationsRequest Serialized;
+  RelationsRequest Serialized;
   Serialized.add_subjects("ZZZZZZZZZZZZZZZZ");
   Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);

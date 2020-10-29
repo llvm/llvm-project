@@ -124,19 +124,26 @@ static StringRef const StyleNames[] = {
 
 static std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
 getNamingStyles(const ClangTidyCheck::OptionsView &Options) {
-  std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>> Styles;
-  Styles.reserve(array_lengthof(StyleNames));
-  for (auto const &StyleName : StyleNames) {
-    auto CaseOptional = Options.getOptional<IdentifierNamingCheck::CaseType>(
-        (StyleName + "Case").str());
-    auto Prefix = Options.get((StyleName + "Prefix").str(), "");
-    auto Postfix = Options.get((StyleName + "Suffix").str(), "");
+  std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>> Styles(
+      SK_Count);
+  SmallString<64> StyleString;
+  for (unsigned I = 0; I < SK_Count; ++I) {
+    StyleString = StyleNames[I];
+    size_t StyleSize = StyleString.size();
+    StyleString.append("Prefix");
+    std::string Prefix(Options.get(StyleString, ""));
+    // Fast replacement of [Pre]fix -> [Suf]fix.
+    memcpy(&StyleString[StyleSize], "Suf", 3);
+    std::string Postfix(Options.get(StyleString, ""));
+    memcpy(&StyleString[StyleSize], "Case", 4);
+    StyleString.pop_back();
+    StyleString.pop_back();
+    auto CaseOptional =
+        Options.getOptional<IdentifierNamingCheck::CaseType>(StyleString);
 
     if (CaseOptional || !Prefix.empty() || !Postfix.empty())
-      Styles.emplace_back(IdentifierNamingCheck::NamingStyle{
-          std::move(CaseOptional), std::move(Prefix), std::move(Postfix)});
-    else
-      Styles.emplace_back(llvm::None);
+      Styles[I].emplace(std::move(CaseOptional), std::move(Prefix),
+                        std::move(Postfix));
   }
   return Styles;
 }
@@ -161,18 +168,23 @@ IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
-  ArrayRef<llvm::Optional<NamingStyle>> NamingStyles =
-      getStyleForFile(Context->getCurrentFile());
+  SmallString<64> StyleString;
   for (size_t I = 0; I < SK_Count; ++I) {
-    if (!NamingStyles[I])
+    if (!MainFileStyle[I])
       continue;
-    if (NamingStyles[I]->Case)
-      Options.store(Opts, (StyleNames[I] + "Case").str(),
-                    *NamingStyles[I]->Case);
-    Options.store(Opts, (StyleNames[I] + "Prefix").str(),
-                  NamingStyles[I]->Prefix);
-    Options.store(Opts, (StyleNames[I] + "Suffix").str(),
-                  NamingStyles[I]->Suffix);
+    StyleString = StyleNames[I];
+    size_t StyleSize = StyleString.size();
+    StyleString.append("Prefix");
+    Options.store(Opts, StyleString, MainFileStyle[I]->Prefix);
+    // Fast replacement of [Pre]fix -> [Suf]fix.
+    memcpy(&StyleString[StyleSize], "Suf", 3);
+    Options.store(Opts, StyleString, MainFileStyle[I]->Suffix);
+    if (MainFileStyle[I]->Case) {
+      memcpy(&StyleString[StyleSize], "Case", 4);
+      StyleString.pop_back();
+      StyleString.pop_back();
+      Options.store(Opts, StyleString, *MainFileStyle[I]->Case);
+    }
   }
   Options.store(Opts, "GetConfigPerFile", GetConfigPerFile);
   Options.store(Opts, "IgnoreFailedSplit", IgnoreFailedSplit);

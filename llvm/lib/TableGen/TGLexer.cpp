@@ -562,6 +562,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("con", tgtok::XConcat)
     .Case("dag", tgtok::XDag)
     .Case("add", tgtok::XADD)
+    .Case("sub", tgtok::XSUB)
     .Case("mul", tgtok::XMUL)
     .Case("not", tgtok::XNOT)
     .Case("and", tgtok::XAND)
@@ -578,8 +579,8 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("listconcat", tgtok::XListConcat)
     .Case("listsplat", tgtok::XListSplat)
     .Case("strconcat", tgtok::XStrConcat)
-    .Case("setop", tgtok::XSetOp)
-    .Case("getop", tgtok::XGetOp)
+    .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
+    .Cases("getdagop", "getop", tgtok::XGetDagOp) // !getop is deprecated.
     .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind : ReturnError(Start-1, "Unknown operator");

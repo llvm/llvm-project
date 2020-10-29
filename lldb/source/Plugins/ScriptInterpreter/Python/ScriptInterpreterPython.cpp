@@ -2733,8 +2733,9 @@ uint64_t replace_all(std::string &str, const std::string &oldStr,
 
 bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     const char *pathname, bool init_session, lldb_private::Status &error,
-    StructuredData::ObjectSP *module_sp) {
+    StructuredData::ObjectSP *module_sp, FileSpec extra_search_dir) {
   namespace fs = llvm::sys::fs;
+  namespace path = llvm::sys::path;
 
   if (!pathname || !pathname[0]) {
     error.SetErrorString("invalid pathname");
@@ -2743,44 +2744,23 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
 
   lldb::DebuggerSP debugger_sp = m_debugger.shared_from_this();
 
-  FileSpec target_file(pathname);
-  FileSystem::Instance().Resolve(target_file);
-  FileSystem::Instance().Collect(target_file);
-  std::string basename(target_file.GetFilename().GetCString());
-
-  StreamString command_stream;
-
   // Before executing Python code, lock the GIL.
   Locker py_lock(this,
                  Locker::AcquireLock |
                      (init_session ? Locker::InitSession : 0) | Locker::NoSTDIN,
                  Locker::FreeAcquiredLock |
                      (init_session ? Locker::TearDownSession : 0));
-  fs::file_status st;
-  std::error_code ec = status(target_file.GetPath(), st);
 
-  if (ec || st.type() == fs::file_type::status_error ||
-      st.type() == fs::file_type::type_unknown ||
-      st.type() == fs::file_type::file_not_found) {
-    // if not a valid file of any sort, check if it might be a filename still
-    // dot can't be used but / and \ can, and if either is found, reject
-    if (strchr(pathname, '\\') || strchr(pathname, '/')) {
-      error.SetErrorString("invalid pathname");
-      return false;
-    }
-    basename = pathname; // not a filename, probably a package of some sort,
-                         // let it go through
-  } else if (is_directory(st) || is_regular_file(st)) {
-    if (target_file.GetDirectory().IsEmpty()) {
-      error.SetErrorString("invalid directory name");
-      return false;
+  auto ExtendSysPath = [this](std::string directory) -> llvm::Error {
+    if (directory.empty()) {
+      return llvm::make_error<llvm::StringError>(
+          "invalid directory name", llvm::inconvertibleErrorCode());
     }
 
-    std::string directory = target_file.GetDirectory().GetCString();
     replace_all(directory, "\\", "\\\\");
     replace_all(directory, "'", "\\'");
 
-    // now make sure that Python has "directory" in the search path
+    // Make sure that Python has "directory" in the search path.
     StreamString command_stream;
     command_stream.Printf("if not (sys.path.__contains__('%s')):\n    "
                           "sys.path.insert(1,'%s');\n\n",
@@ -2792,27 +2772,68 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                                  .SetSetLLDBGlobals(false))
             .Success();
     if (!syspath_retval) {
-      error.SetErrorString("Python sys.path handling failed");
-      return false;
+      return llvm::make_error<llvm::StringError>(
+          "Python sys.path handling failed", llvm::inconvertibleErrorCode());
     }
 
+    return llvm::Error::success();
+  };
+
+  std::string module_name(pathname);
+
+  if (extra_search_dir) {
+    if (llvm::Error e = ExtendSysPath(extra_search_dir.GetPath())) {
+      error = std::move(e);
+      return false;
+    }
   } else {
-    error.SetErrorString("no known way to import this module specification");
-    return false;
+    FileSpec module_file(pathname);
+    FileSystem::Instance().Resolve(module_file);
+    FileSystem::Instance().Collect(module_file);
+
+    fs::file_status st;
+    std::error_code ec = status(module_file.GetPath(), st);
+
+    if (ec || st.type() == fs::file_type::status_error ||
+        st.type() == fs::file_type::type_unknown ||
+        st.type() == fs::file_type::file_not_found) {
+      // if not a valid file of any sort, check if it might be a filename still
+      // dot can't be used but / and \ can, and if either is found, reject
+      if (strchr(pathname, '\\') || strchr(pathname, '/')) {
+        error.SetErrorString("invalid pathname");
+        return false;
+      }
+      // Not a filename, probably a package of some sort, let it go through.
+    } else if (is_directory(st) || is_regular_file(st)) {
+      if (module_file.GetDirectory().IsEmpty()) {
+        error.SetErrorString("invalid directory name");
+        return false;
+      }
+      if (llvm::Error e =
+              ExtendSysPath(module_file.GetDirectory().GetCString())) {
+        error = std::move(e);
+        return false;
+      }
+      module_name = module_file.GetFilename().GetCString();
+    } else {
+      error.SetErrorString("no known way to import this module specification");
+      return false;
+    }
   }
 
   // Strip .py or .pyc extension
-  llvm::StringRef extension = target_file.GetFileNameExtension().GetCString();
+  llvm::StringRef extension = llvm::sys::path::extension(module_name);
   if (!extension.empty()) {
     if (extension == ".py")
-      basename.resize(basename.length() - 3);
+      module_name.resize(module_name.length() - 3);
     else if (extension == ".pyc")
-      basename.resize(basename.length() - 4);
+      module_name.resize(module_name.length() - 4);
   }
 
   // check if the module is already import-ed
+  StreamString command_stream;
   command_stream.Clear();
-  command_stream.Printf("sys.modules.__contains__('%s')", basename.c_str());
+  command_stream.Printf("sys.modules.__contains__('%s')", module_name.c_str());
   bool does_contain = false;
   // this call will succeed if the module was ever imported in any Debugger
   // in the lifetime of the process in which this LLDB framework is living
@@ -2827,9 +2848,9 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   // this call will fail if the module was not imported in this Debugger
   // before
   command_stream.Clear();
-  command_stream.Printf("sys.getrefcount(%s)", basename.c_str());
+  command_stream.Printf("sys.getrefcount(%s)", module_name.c_str());
   bool was_imported_locally = GetSessionDictionary()
-                                  .GetItemForKey(PythonString(basename))
+                                  .GetItemForKey(PythonString(module_name))
                                   .IsAllocated();
 
   bool was_imported = (was_imported_globally || was_imported_locally);
@@ -2839,12 +2860,12 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
 
   if (was_imported) {
     if (!was_imported_locally)
-      command_stream.Printf("import %s ; reload_module(%s)", basename.c_str(),
-                            basename.c_str());
+      command_stream.Printf("import %s ; reload_module(%s)",
+                            module_name.c_str(), module_name.c_str());
     else
-      command_stream.Printf("reload_module(%s)", basename.c_str());
+      command_stream.Printf("reload_module(%s)", module_name.c_str());
   } else
-    command_stream.Printf("import %s", basename.c_str());
+    command_stream.Printf("import %s", module_name.c_str());
 
   error = ExecuteMultipleLines(command_stream.GetData(),
                                ScriptInterpreter::ExecuteScriptOptions()
@@ -2855,8 +2876,8 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
 
   // if we are here, everything worked
   // call __lldb_init_module(debugger,dict)
-  if (!LLDBSwigPythonCallModuleInit(basename.c_str(), m_dictionary_name.c_str(),
-                                    debugger_sp)) {
+  if (!LLDBSwigPythonCallModuleInit(module_name.c_str(),
+                                    m_dictionary_name.c_str(), debugger_sp)) {
     error.SetErrorString("calling __lldb_init_module failed");
     return false;
   }
@@ -2864,7 +2885,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   if (module_sp) {
     // everything went just great, now set the module object
     command_stream.Clear();
-    command_stream.Printf("%s", basename.c_str());
+    command_stream.Printf("%s", module_name.c_str());
     void *module_pyobj = nullptr;
     if (ExecuteOneLineWithReturn(
             command_stream.GetData(),

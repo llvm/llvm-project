@@ -262,6 +262,21 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__nv_sinf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_sin(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_sin
+  func @gpu_sin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = std.sin %arg_f32 : f32
+    // CHECK: llvm.call @__nv_sinf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.sin %arg_f64 : f64
+    // CHECK: llvm.call @__nv_sin(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_tanhf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_tanh(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_tanh

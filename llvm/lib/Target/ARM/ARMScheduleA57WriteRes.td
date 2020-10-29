@@ -68,7 +68,7 @@ foreach Lat = 4-16 in {
   }
 }
 
-def A57Write_4cyc_1M  : SchedWriteRes<[A57UnitL]> { let Latency = 4;  }
+def A57Write_4cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 4;  }
 def A57Write_4cyc_1X  : SchedWriteRes<[A57UnitX]> { let Latency = 4;  }
 def A57Write_4cyc_1W  : SchedWriteRes<[A57UnitW]> { let Latency = 4;  }
 def A57Write_5cyc_1X  : SchedWriteRes<[A57UnitX]> { let Latency = 5;  }

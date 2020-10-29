@@ -36,7 +36,8 @@ enum ClangFlags {
   LinkOption = (1 << 13),
   FlangOption = (1 << 14),
   FC1Option = (1 << 15),
-  Ignored = (1 << 16),
+  FlangOnlyOption = (1 << 16),
+  Ignored = (1 << 17),
 };
 
 enum ID {

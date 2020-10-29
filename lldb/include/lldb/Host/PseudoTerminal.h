@@ -62,15 +62,11 @@ public:
   /// @li PseudoTerminal::ReleasePrimaryFileDescriptor() @li
   /// PseudoTerminal::ReleaseSaveFileDescriptor()
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
   /// \return
   ///     \b Parent process: a child process ID that is greater
-  ///         than zero, or -1 if the fork fails.
+  ///         than zero, or an error if the fork fails.
   ///     \b Child process: zero.
-  lldb::pid_t Fork(char *error_str, size_t error_len);
+  llvm::Expected<lldb::pid_t> Fork();
 
   /// The primary file descriptor accessor.
   ///

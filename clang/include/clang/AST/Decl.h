@@ -2253,10 +2253,6 @@ public:
   bool usesSEHTry() const { return FunctionDeclBits.UsesSEHTry; }
   void setUsesSEHTry(bool UST) { FunctionDeclBits.UsesSEHTry = UST; }
 
-  /// Indicates the function uses Floating Point constrained intrinsics
-  bool usesFPIntrin() const { return FunctionDeclBits.UsesFPIntrin; }
-  void setUsesFPIntrin(bool Val) { FunctionDeclBits.UsesFPIntrin = Val; }
-
   /// Whether this function has been deleted.
   ///
   /// A function that is "deleted" (via the C++0x "= delete" syntax)

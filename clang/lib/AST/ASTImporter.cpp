@@ -1035,6 +1035,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id: \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+  case BuiltinType::Id: \
+    return Importer.getToContext().Id##Ty;
+#include "clang/Basic/PPCTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -8654,7 +8658,7 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
     }
     ToID = ToSM.getFileID(MLoc);
   } else {
-    const SrcMgr::ContentCache *Cache = FromSLoc.getFile().getContentCache();
+    const SrcMgr::ContentCache *Cache = &FromSLoc.getFile().getContentCache();
 
     if (!IsBuiltin && !Cache->BufferOverridden) {
       // Include location of this file.

@@ -1,8 +1,8 @@
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV0 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V0
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV1 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V1
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV2 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V2
-// RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV3 -o %t && %run %t 2>&1 | not FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V3
-// RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV4 -o %t && %run %t 2>&1 | not FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V4
+// RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV3 -o %t && %run %t 2>&1 | count 0
+// RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV4 -o %t && %run %t 2>&1 | count 0
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV5 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V5
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V6
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V7
@@ -10,8 +10,8 @@
 // RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV0 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V0
 // RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV1 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V1
 // RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV2 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V2
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV3 -o %t && %run %t 2>&1 | not FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V3
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV4 -o %t && %run %t 2>&1 | not FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V4
+// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV3 -o %t && %run %t 2>&1 | count 0
+// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV4 -o %t && %run %t 2>&1 | count 0
 // RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV5 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V5
 // RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V6
 // RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V7

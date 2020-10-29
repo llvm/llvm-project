@@ -15,16 +15,12 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/IR/Types.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
@@ -1042,7 +1038,12 @@ public:
 class VectorInsertStridedSliceOpSameRankRewritePattern
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+  VectorInsertStridedSliceOpSameRankRewritePattern(MLIRContext *ctx)
+      : OpRewritePattern<InsertStridedSliceOp>(ctx) {
+    // This pattern creates recursive InsertStridedSliceOp, but the recursion is
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1093,9 +1094,6 @@ public:
     rewriter.replaceOp(op, res);
     return success();
   }
-  /// This pattern creates recursive InsertStridedSliceOp, but the recursion is
-  /// bounded as the rank is strictly decreasing.
-  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 /// Returns the strides if the memory underlying `memRefType` has a contiguous
@@ -1505,7 +1503,12 @@ private:
 class VectorExtractStridedSliceOpConversion
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+  VectorExtractStridedSliceOpConversion(MLIRContext *ctx)
+      : OpRewritePattern<ExtractStridedSliceOp>(ctx) {
+    // This pattern creates recursive ExtractStridedSliceOp, but the recursion
+    // is bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1552,9 +1555,6 @@ public:
     rewriter.replaceOp(op, res);
     return success();
   }
-  /// This pattern creates recursive ExtractStridedSliceOp, but the recursion is
-  /// bounded as the rank is strictly decreasing.
-  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 } // namespace
@@ -1619,7 +1619,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
     populateVectorToVectorCanonicalizationPatterns(patterns, &getContext());
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
     populateVectorContractLoweringPatterns(patterns, &getContext());
-    applyPatternsAndFoldGreedily(getOperation(), patterns);
+    applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
   // Convert to the LLVM IR dialect.
@@ -1632,7 +1632,8 @@ void LowerVectorToLLVMPass::runOnOperation() {
   populateStdToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  if (failed(applyPartialConversion(getOperation(), target, patterns)))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
 
