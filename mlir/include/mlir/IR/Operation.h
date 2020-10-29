@@ -520,7 +520,7 @@ public:
   ///       });
   template <typename FnT, typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return detail::walkOperations(this, std::forward<FnT>(callback));
+    return detail::walk(this, std::forward<FnT>(callback));
   }
 
   //===--------------------------------------------------------------------===//
