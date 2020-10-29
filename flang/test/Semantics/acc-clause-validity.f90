@@ -45,8 +45,11 @@ program openacc_clause_validity
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data
 
-  !ERROR: Only the READONLY modifier is allowed for the COPYIN clause on the ENTER DATA directive
+  !ERROR: Modifier is not allowed for the COPYIN clause on the ENTER DATA directive
   !$acc enter data copyin(zero: i)
+
+  !ERROR: Modifier is not allowed for the COPYOUT clause on the EXIT DATA directive
+  !$acc exit data copyout(zero: i)
 
   !ERROR: Only the ZERO modifier is allowed for the CREATE clause on the ENTER DATA directive
   !$acc enter data create(readonly: i)
