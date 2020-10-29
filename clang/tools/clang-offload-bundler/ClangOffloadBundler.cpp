@@ -1025,7 +1025,9 @@ int main(int argc, const char **argv) {
 
   // Save the current executable directory as it will be useful to find other
   // tools.
-  BundlerExecutable = sys::fs::getMainExecutable(argv[0], &BundlerExecutable);
+  BundlerExecutable = argv[0];
+  if (!llvm::sys::fs::exists(BundlerExecutable))
+    BundlerExecutable = sys::fs::getMainExecutable(argv[0], &BundlerExecutable);
 
   if (llvm::Error Err = Unbundle ? UnbundleFiles() : BundleFiles()) {
     reportError(std::move(Err));
