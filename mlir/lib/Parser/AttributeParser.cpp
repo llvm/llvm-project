@@ -16,6 +16,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Endian.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -694,6 +695,20 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
     p.emitError(loc) << "elements hex data size is invalid for provided type: "
                      << type;
     return nullptr;
+  }
+
+  if (llvm::support::endian::system_endianness() ==
+      llvm::support::endianness::big) {
+    // Convert endianess in big-endian(BE) machines. `rawData` is
+    // little-endian(LE) because HEX in raw data of dense element attribute
+    // is always LE format. It is converted into BE here to be used in BE
+    // machines.
+    SmallVector<char, 64> outDataVec(rawData.size());
+    MutableArrayRef<char> convRawData(outDataVec);
+    DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+        rawData, convRawData, type);
+    return DenseElementsAttr::getFromRawBuffer(type, convRawData,
+                                               detectedSplat);
   }
 
   return DenseElementsAttr::getFromRawBuffer(type, rawData, detectedSplat);
