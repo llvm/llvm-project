@@ -939,17 +939,23 @@ public:
   bool isKnownOnEveryIteration(ICmpInst::Predicate Pred,
                                const SCEVAddRecExpr *LHS, const SCEV *RHS);
 
-  /// Return true if, for all loop invariant X, the predicate "LHS `Pred` X"
-  /// is monotonically increasing or decreasing.  In the former case set
-  /// `Increasing` to true and in the latter case set `Increasing` to false.
-  ///
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
   /// around.  A predicate is said to be monotonically decreasing if may go
   /// from being true to being false as the loop iterates, but never the other
   /// way around.
-  bool isMonotonicPredicate(const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
-                            bool &Increasing);
+  enum MonotonicPredicateType {
+    MonotonicallyIncreasing,
+    MonotonicallyDecreasing
+  };
+
+  /// If, for all loop invariant X, the predicate "LHS `Pred` X" is
+  /// monotonically increasing or decreasing, returns
+  /// Some(MonotonicallyIncreasing) and Some(MonotonicallyDecreasing)
+  /// respectively. If we could not prove either of these facts, returns None.
+  Optional<MonotonicPredicateType>
+  getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
+                            ICmpInst::Predicate Pred);
 
   /// Return true if the result of the predicate LHS `Pred` RHS is loop
   /// invariant with respect to L.  Set InvariantPred, InvariantLHS and
@@ -1881,8 +1887,9 @@ private:
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
-  bool isMonotonicPredicateImpl(const SCEVAddRecExpr *LHS,
-                                ICmpInst::Predicate Pred, bool &Increasing);
+  Optional<MonotonicPredicateType>
+  getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
+                                ICmpInst::Predicate Pred);
 
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)
