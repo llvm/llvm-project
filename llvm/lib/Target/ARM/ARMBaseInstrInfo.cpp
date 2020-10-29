@@ -603,8 +603,17 @@ bool ARMBaseInstrInfo::ClobbersPredicate(MachineInstr &MI,
   bool Found = false;
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
-    if ((MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR)) ||
-        (MO.isReg() && MO.isDef() && MO.getReg() == ARM::CPSR)) {
+    bool ClobbersCPSR = MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR);
+    bool IsCPSR = MO.isReg() && MO.isDef() && MO.getReg() == ARM::CPSR;
+    if (ClobbersCPSR || IsCPSR) {
+
+      // Filter out T1 instructions that have a dead CPSR,
+      // allowing IT blocks to be generated containing T1 instructions
+      const MCInstrDesc &MCID = MI.getDesc();
+      if (MCID.TSFlags & ARMII::ThumbArithFlagSetting && MO.isDead() &&
+          SkipDead)
+        continue;
+
       Pred.push_back(MO);
       Found = true;
     }
