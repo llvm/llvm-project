@@ -95,12 +95,13 @@ void func(Strong *);
 @end
 
 id g0;
+StrongSmall g1, g2;
 
+// CHECK: %[[STRUCT_STRONGSMALL:.*]] = type { i32, i8* }
 // CHECK: %[[STRUCT_STRONGOUTER:.*]] = type { %[[STRUCT_STRONG:.*]], i8*, double }
 // CHECK: %[[STRUCT_STRONG]] = type { %[[STRUCT_TRIVIAL:.*]], i8* }
 // CHECK: %[[STRUCT_TRIVIAL]] = type { [4 x i32] }
 // CHECK: %[[STRUCT_BLOCK_BYREF_T:.*]] = type { i8*, %[[STRUCT_BLOCK_BYREF_T]]*, i32, i32, i8*, i8*, i8*, %[[STRUCT_STRONGOUTER]] }
-// CHECK: %[[STRUCT_STRONGSMALL:.*]] = type { i32, i8* }
 // CHECK: %[[STRUCT_STRONGBLOCK:.*]] = type { void ()* }
 // CHECK: %[[STRUCT_BITFIELD1:.*]] = type { i8, i8, i8*, i32, i8*, [3 x i32], i8*, double, i8, i8 }
 
@@ -898,6 +899,49 @@ struct ZeroBitfield {
 void test_zero_bitfield() {
   struct ZeroBitfield volatile a, b;
   a = b;
+}
+
+// CHECK-LABEL: define i8* @test_conditional0(
+// CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__copy_constructor_8_8_t0w4_s8(i8** %[[V1]], i8** bitcast (%[[STRUCT_STRONGSMALL]]* @g2 to i8**))
+
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__copy_constructor_8_8_t0w4_s8(i8** %[[V2]], i8** bitcast (%[[STRUCT_STRONGSMALL]]* @g1 to i8**))
+
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V5]])
+// CHECK: @llvm.objc.autoreleaseReturnValue
+
+id test_conditional0(int c) {
+  return (c ? g2 : g1).f1;
+}
+
+// CHECK-LABEL: define i8* @test_conditional1(
+// CHECK-NOT: call void @__destructor
+
+id test_conditional1(int c) {
+  calleeStrongSmall(c ? g2 : g1);
+}
+
+// CHECK-LABEL: define i8* @test_assignment0(
+// CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: call void @__copy_assignment_8_8_t0w4_s8(i8** bitcast (%[[STRUCT_STRONGSMALL]]* @g2 to i8**), i8** bitcast (%[[STRUCT_STRONGSMALL]]* @g1 to i8**))
+// CHECK: %[[V0:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__copy_constructor_8_8_t0w4_s8(i8** %[[V0]], i8** bitcast (%[[STRUCT_STRONGSMALL]]* @g2 to i8**))
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V3]])
+
+id test_assignment0(void) {
+  return (g2 = g1).f1;
+}
+
+// CHECK-LABEL: define i8* @test_assignment1(
+// CHECK-NOT: call void @__destructor
+
+id test_assignment1(void) {
+  calleeStrongSmall(g2 = g1);
 }
 
 #endif /* USESTRUCT */
