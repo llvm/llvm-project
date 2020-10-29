@@ -12850,11 +12850,24 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 // Match the mathematical pattern A - (A / B) * B, where A and B can be
-// arbitrary expressions.
+// arbitrary expressions. Also match zext (trunc A to iB) to iY, which is used
+// for URem with constant power-of-2 second operands.
 // It's not always easy, as A and B can be folded (imagine A is X / 2, and B is
 // 4, A / B becomes X / 8).
 bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
                                 const SCEV *&RHS) {
+  // Try to match 'zext (trunc A to iB) to iY', which is used
+  // for URem with constant power-of-2 second operands. Make sure the size of
+  // the operand A matches the size of the whole expressions.
+  if (const auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(Expr))
+    if (const auto *Trunc = dyn_cast<SCEVTruncateExpr>(ZExt->getOperand(0))) {
+      LHS = Trunc->getOperand();
+      if (LHS->getType() != Expr->getType())
+        LHS = getZeroExtendExpr(LHS, Expr->getType());
+      RHS = getConstant(APInt(getTypeSizeInBits(Expr->getType()), 1)
+                        << getTypeSizeInBits(Trunc->getType()));
+      return true;
+    }
   const auto *Add = dyn_cast<SCEVAddExpr>(Expr);
   if (Add == nullptr || Add->getNumOperands() != 2)
     return false;
