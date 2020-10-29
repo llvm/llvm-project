@@ -12,6 +12,10 @@
 
 #include "common.h"
 
+#if !defined(PATH_MAX)
+#define PATH_MAX 4096
+#endif
+
 using namespace lldb;
 
 void test(SBDebugger &dbg, std::vector<std::string> args) {
