@@ -7,6 +7,7 @@ add_clang_tool(clang-format
 set(CLANG_FORMAT_LIB_DEPS
   clangBasic
   clangFormat
+  clangFrontend
   clangRewrite
   clangToolingCore
   )

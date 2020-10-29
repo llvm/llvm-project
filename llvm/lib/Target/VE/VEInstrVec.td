@@ -1427,3 +1427,27 @@ defm LZVM : RVMSm<"lzvm", 0xa5, VM>;
 
 // Section 8.17.12 - TOVM (Trailing One of VM)
 defm TOVM : RVMSm<"tovm", 0xa6, VM>;
+
+//-----------------------------------------------------------------------------
+// Section 8.18 - Vector Control Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.18.1 - LVL (Load VL)
+let sx = 0, cz = 0, sz = 0, hasSideEffects = 0, Defs = [VL] in {
+  def LVLr : RR<0xbf, (outs), (ins I64:$sy), "lvl $sy">;
+  let cy = 0 in def LVLi : RR<0xbf, (outs), (ins simm7:$sy), "lvl $sy">;
+}
+
+// Section 8.18.2 - SVL (Save VL)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0, Uses = [VL] in
+def SVL : RR<0x2f, (outs I64:$sx), (ins), "svl $sx">;
+
+// Section 8.18.3 - SMVL (Save Maximum Vector Length)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 in
+def SMVL : RR<0x2e, (outs I64:$sx), (ins), "smvl $sx">;
+
+// Section 8.18.4 - LVIX (Load Vector Data Index)
+let sx = 0, cz = 0, sz = 0, hasSideEffects = 0, Defs = [VIX] in {
+  def LVIXr : RR<0xaf, (outs), (ins I64:$sy), "lvix $sy">;
+  let cy = 0 in def LVIXi : RR<0xaf, (outs), (ins uimm6:$sy), "lvix $sy">;
+}
