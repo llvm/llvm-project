@@ -1095,23 +1095,21 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   // FIXME: For backend options that are not yet recorded as function
   // attributes in the IR, keep track of them so we can embed them in a
   // separate data section and use them when building the bitcode.
-  if (Opts.getEmbedBitcode() == CodeGenOptions::Embed_All) {
-    for (const auto &A : Args) {
-      // Do not encode output and input.
-      if (A->getOption().getID() == options::OPT_o ||
-          A->getOption().getID() == options::OPT_INPUT ||
-          A->getOption().getID() == options::OPT_x ||
-          A->getOption().getID() == options::OPT_fembed_bitcode ||
-          A->getOption().matches(options::OPT_W_Group))
-        continue;
-      ArgStringList ASL;
-      A->render(Args, ASL);
-      for (const auto &arg : ASL) {
-        StringRef ArgStr(arg);
-        Opts.CmdArgs.insert(Opts.CmdArgs.end(), ArgStr.begin(), ArgStr.end());
-        // using \00 to separate each commandline options.
-        Opts.CmdArgs.push_back('\0');
-      }
+  for (const auto &A : Args) {
+    // Do not encode output and input.
+    if (A->getOption().getID() == options::OPT_o ||
+        A->getOption().getID() == options::OPT_INPUT ||
+        A->getOption().getID() == options::OPT_x ||
+        A->getOption().getID() == options::OPT_fembed_bitcode ||
+        A->getOption().matches(options::OPT_W_Group))
+      continue;
+    ArgStringList ASL;
+    A->render(Args, ASL);
+    for (const auto &arg : ASL) {
+      StringRef ArgStr(arg);
+      Opts.CmdArgs.insert(Opts.CmdArgs.end(), ArgStr.begin(), ArgStr.end());
+      // using \00 to separate each commandline options.
+      Opts.CmdArgs.push_back('\0');
     }
   }
 
