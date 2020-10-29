@@ -214,14 +214,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
 static void insertNoopsInBundle(MachineInstr *MI, const SIInstrInfo &TII,
                                 unsigned Quantity) {
   while (Quantity > 0) {
-    unsigned Arg;
-    if (Quantity >= 8)
-      Arg = 7;
-    else
-      Arg = Quantity - 1;
-    Quantity -= Arg + 1;
+    unsigned Arg = std::min(Quantity, 8u);
+    Quantity -= Arg;
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
-        .addImm(Arg);
+        .addImm(Arg - 1);
   }
 }
 

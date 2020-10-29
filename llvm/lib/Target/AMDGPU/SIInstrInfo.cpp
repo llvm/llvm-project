@@ -1543,13 +1543,9 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
                               unsigned Quantity) const {
   DebugLoc DL = MBB.findDebugLoc(MI);
   while (Quantity > 0) {
-    unsigned Arg;
-    if (Quantity >= 8)
-      Arg = 7;
-    else
-      Arg = Quantity - 1;
-    Quantity -= Arg + 1;
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg);
+    unsigned Arg = std::min(Quantity, 8u);
+    Quantity -= Arg;
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg - 1);
   }
 }
 

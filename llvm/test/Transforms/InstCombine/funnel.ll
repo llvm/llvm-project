@@ -280,3 +280,66 @@ define i8 @fshr_commute_8bit(i32 %x, i32 %y, i32 %shift) {
   %conv2 = trunc i32 %or to i8
   ret i8 %conv2
 }
+
+; Convert select pattern to funnel shift that ends in 'or'.
+
+define i8 @fshr_select(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @fshr_select(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHAMT:%.*]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 8, [[SHAMT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SUB]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp = icmp eq i8 %shamt, 0
+  %sub = sub i8 8, %shamt
+  %shr = lshr i8 %y, %shamt
+  %shl = shl i8 %x, %sub
+  %or = or i8 %shl, %shr
+  %r = select i1 %cmp, i8 %y, i8 %or
+  ret i8 %r
+}
+
+; Convert select pattern to funnel shift that ends in 'or'.
+
+define i16 @fshl_select(i16 %x, i16 %y, i16 %shamt) {
+; CHECK-LABEL: @fshl_select(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[SHAMT:%.*]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = sub i16 16, [[SHAMT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[X:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i16 [[X]], i16 [[OR]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %cmp = icmp eq i16 %shamt, 0
+  %sub = sub i16 16, %shamt
+  %shr = lshr i16 %y, %sub
+  %shl = shl i16 %x, %shamt
+  %or = or i16 %shr, %shl
+  %r = select i1 %cmp, i16 %x, i16 %or
+  ret i16 %r
+}
+
+; Convert select pattern to funnel shift that ends in 'or'.
+
+define <2 x i64> @fshl_select_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %shamt) {
+; CHECK-LABEL: @fshl_select_vector(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[SHAMT:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> <i64 64, i64 64>, [[SHAMT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i64> [[X:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[Y]], <2 x i64> [[OR]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %cmp = icmp eq <2 x i64> %shamt, zeroinitializer
+  %sub = sub <2 x i64> <i64 64, i64 64>, %shamt
+  %shr = lshr <2 x i64> %x, %sub
+  %shl = shl <2 x i64> %y, %shamt
+  %or = or <2 x i64> %shl, %shr
+  %r = select <2 x i1> %cmp, <2 x i64> %y, <2 x i64> %or
+  ret <2 x i64> %r
+}
