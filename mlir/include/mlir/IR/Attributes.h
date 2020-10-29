@@ -1140,6 +1140,25 @@ class DenseIntOrFPElementsAttr
 public:
   using Base::Base;
 
+  /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
+  /// the elements of `inRawData` has `type`. If `inRawData` is little endian
+  /// (LE), it is converted to big endian (BE). Conversely, if `inRawData` is
+  /// BE, converted to LE.
+  static void
+  convertEndianOfArrayRefForBEmachine(ArrayRef<char> inRawData,
+                                      MutableArrayRef<char> outRawData,
+                                      ShapedType type);
+
+  /// Convert endianess of input for big-endian(BE) machines. The number of
+  /// elements of `inRawData` is `numElements`, and each element has
+  /// `elementBitWidth` bits. If `inRawData` is little endian (LE), it is
+  /// converted to big endian (BE) and saved in `outRawData`. Conversely, if
+  /// `inRawData` is BE, converted to LE.
+  static void convertEndianOfCharForBEmachine(const char *inRawData,
+                                              char *outRawData,
+                                              size_t elementBitWidth,
+                                              size_t numElements);
+
 protected:
   friend DenseElementsAttr;
 
