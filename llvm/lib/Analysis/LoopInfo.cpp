@@ -431,6 +431,10 @@ static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
     for (const Use &U : I.uses()) {
       const Instruction *UI = cast<Instruction>(U.getUser());
       const BasicBlock *UserBB = UI->getParent();
+
+      // For practical purposes, we consider that the use in a PHI
+      // occurs in the respective predecessor block. For more info,
+      // see the `phi` doc in LangRef and the LCSSA doc.
       if (const PHINode *P = dyn_cast<PHINode>(UI))
         UserBB = P->getIncomingBlock(U);
 
