@@ -46,6 +46,10 @@ extern "C" hipModule_t mgpuModuleLoad(void *data) {
   return module;
 }
 
+extern "C" void mgpuModuleUnload(hipModule_t module) {
+  HIP_REPORT_IF_ERROR(hipModuleUnload(module));
+}
+
 extern "C" hipFunction_t mgpuModuleGetFunction(hipModule_t module,
                                                const char *name) {
   hipFunction_t function = nullptr;
