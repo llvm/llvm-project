@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-spill-cfi-saved-regs -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-spill-cfi-saved-regs -amdgpu-spill-cfi-saved-regs -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-spill-cfi-saved-regs -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-spill-cfi-saved-regs -amdgpu-spill-cfi-saved-regs -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
 ; CHECK-LABEL: kern:
 ; CHECK: .cfi_startproc
