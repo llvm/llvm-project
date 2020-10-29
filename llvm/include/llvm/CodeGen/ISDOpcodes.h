@@ -1166,6 +1166,10 @@ static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END + 400;
 /// be used with SelectionDAG::getMemIntrinsicNode.
 static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
 
+/// Get underlying scalar opcode for VECREDUCE opcode.
+/// For example ISD::AND for ISD::VECREDUCE_AND.
+NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
 /// addressing modes.
