@@ -351,7 +351,7 @@ public:
   void addFragmentOffset(const DIExpression *Expr);
 
   void emitLegacySExt(unsigned FromBits);
-  void emitLegacyZExt(unsigned FromBits, unsigned ToBits);
+  void emitLegacyZExt(unsigned FromBits);
 
   /// Emit location information expressed via WebAssembly location + offset
   /// The Index is an identifier for locals, globals or operand stack.
