@@ -277,6 +277,9 @@ public:
     lldb::SBTypeEnumMemberList
     GetEnumMembers();
 
+    lldb::SBModule
+    GetModule();
+
     const char*
     GetName();
 
@@ -330,6 +333,7 @@ public:
                 return template_args
             return None
 
+        module = property(GetModule, None, doc='''A read only property that returns the module in which type is defined.''') 
         name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
         size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
         is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
