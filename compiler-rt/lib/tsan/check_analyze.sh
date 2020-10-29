@@ -11,7 +11,7 @@
 # ./projects/compiler-rt/lib/tsan/tests/rtl/TsanRtlTest-x86_64-Test
 #   --gtest_also_run_disabled_tests --gtest_filter=DISABLED_BENCH.Mop*
 
-set -ux
+set -u
 
 if [[ "$#" != 1 ]]; then
   echo "Usage: $0 /path/to/binary/built/with/tsan"
