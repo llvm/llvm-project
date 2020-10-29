@@ -20,7 +20,9 @@
 
 // Specifying the log name via the __memprof_profile_filename variable.
 // RUN: %clangxx_memprof  %s -o %t -DPROFILE_NAME_VAR="%t.log2"
+// RUN: ls -l %T | FileCheck %s --dump-input=always
 // RUN: rm -f %t.log2.*
+// RUN: ls -l %T | FileCheck %s --dump-input=always
 // RUN: %run %t
 // RUN: FileCheck %s --check-prefix=CHECK-GOOD --dump-input=always < %t.log2.*
 
@@ -41,3 +43,4 @@ int main(int argc, char **argv) {
 // CHECK-GOOD: Memory allocation stack id
 // CHECK-INVALID: ERROR: Can't open file: /dev/null/INVALID
 // CHECK-LONG: ERROR: Path is too long: 01234
+// CHECK: log_path_test
