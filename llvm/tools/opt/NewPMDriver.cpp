@@ -94,12 +94,12 @@ static cl::opt<std::string> VectorizerStartEPPipeline(
     cl::Hidden);
 static cl::opt<std::string> PipelineStartEPPipeline(
     "passes-ep-pipeline-start",
-    cl::desc("A textual description of the function pass pipeline inserted at "
+    cl::desc("A textual description of the module pass pipeline inserted at "
              "the PipelineStart extension point into default pipelines"),
     cl::Hidden);
 static cl::opt<std::string> OptimizerLastEPPipeline(
     "passes-ep-optimizer-last",
-    cl::desc("A textual description of the function pass pipeline inserted at "
+    cl::desc("A textual description of the module pass pipeline inserted at "
              "the OptimizerLast extension point into default pipelines"),
     cl::Hidden);
 
