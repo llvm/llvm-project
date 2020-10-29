@@ -560,8 +560,9 @@ inline std::error_code GetTestEC(unsigned Idx = 0) {
 
 inline bool ErrorIsImp(const std::error_code& ec,
                        std::vector<std::errc> const& errors) {
+  std::error_condition cond = ec.default_error_condition();
   for (auto errc : errors) {
-    if (ec == std::make_error_code(errc))
+    if (cond.value() == static_cast<int>(errc))
       return true;
   }
   return false;
