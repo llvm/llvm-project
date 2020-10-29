@@ -121,6 +121,19 @@ private:
   llvm::acc::Directive currentDirective_;
 };
 
+bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
+  if (GetContext().directive == llvm::acc::ACCD_enter_data ||
+      GetContext().directive == llvm::acc::ACCD_exit_data) {
+    context_.Say(GetContext().clauseSource,
+        "Modifier is not allowed for the %s clause "
+        "on the %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(getClauseName(clause).str()),
+        ContextDirectiveAsFortran());
+    return true;
+  }
+  return false;
+}
+
 void AccStructureChecker::Enter(const parser::AccClause &x) {
   SetContextClause(x);
 }
@@ -375,6 +388,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyin &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
+    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyin))
+      return;
     if (modifier->v != parser::AccDataModifier::Modifier::ReadOnly) {
       context_.Say(GetContext().clauseSource,
           "Only the READONLY modifier is allowed for the %s clause "
@@ -392,6 +407,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
+    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyout))
+      return;
     if (modifier->v != parser::AccDataModifier::Modifier::Zero) {
       context_.Say(GetContext().clauseSource,
           "Only the ZERO modifier is allowed for the %s clause "
