@@ -78,8 +78,7 @@ protected:
 namespace swift {
 struct SwiftOptionalSummaryProvider : public TypeSummaryImpl {
   SwiftOptionalSummaryProvider(const TypeSummaryImpl::Flags &flags)
-      : TypeSummaryImpl(TypeSummaryImpl::Kind::eInternal,
-                        TypeSummaryImpl::Flags()) {}
+      : TypeSummaryImpl(TypeSummaryImpl::Kind::eInternal, flags) {}
 
   virtual ~SwiftOptionalSummaryProvider() {}
 
