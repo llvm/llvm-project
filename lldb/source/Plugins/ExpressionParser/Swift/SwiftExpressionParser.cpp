@@ -517,7 +517,7 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
           ->GetReferentType(imported_self_type.GetOpaqueQualType());
 
   {
-    auto type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
+    auto *type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
         imported_self_type.GetTypeSystem());
     if (!type_system)
       return;
