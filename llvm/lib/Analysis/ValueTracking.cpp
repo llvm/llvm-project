@@ -5991,6 +5991,45 @@ CmpInst::Predicate llvm::getInverseMinMaxPred(SelectPatternFlavor SPF) {
   return getMinMaxPred(getInverseMinMaxFlavor(SPF));
 }
 
+std::pair<Intrinsic::ID, bool>
+llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
+  // Check if VL contains select instructions that can be folded into a min/max
+  // vector intrinsic and return the intrinsic if it is possible.
+  // TODO: Support floating point min/max.
+  bool AllCmpSingleUse = true;
+  SelectPatternResult SelectPattern;
+  SelectPattern.Flavor = SPF_UNKNOWN;
+  if (all_of(VL, [&SelectPattern, &AllCmpSingleUse](Value *I) {
+        Value *LHS, *RHS;
+        auto CurrentPattern = matchSelectPattern(I, LHS, RHS);
+        if (!SelectPatternResult::isMinOrMax(CurrentPattern.Flavor) ||
+            CurrentPattern.Flavor == SPF_FMINNUM ||
+            CurrentPattern.Flavor == SPF_FMAXNUM)
+          return false;
+        if (SelectPattern.Flavor != SPF_UNKNOWN &&
+            SelectPattern.Flavor != CurrentPattern.Flavor)
+          return false;
+        SelectPattern = CurrentPattern;
+        AllCmpSingleUse &=
+            match(I, m_Select(m_OneUse(m_Value()), m_Value(), m_Value()));
+        return true;
+      })) {
+    switch (SelectPattern.Flavor) {
+    case SPF_SMIN:
+      return {Intrinsic::smin, AllCmpSingleUse};
+    case SPF_UMIN:
+      return {Intrinsic::umin, AllCmpSingleUse};
+    case SPF_SMAX:
+      return {Intrinsic::smax, AllCmpSingleUse};
+    case SPF_UMAX:
+      return {Intrinsic::umax, AllCmpSingleUse};
+    default:
+      llvm_unreachable("unexpected select pattern flavor");
+    }
+  }
+  return {Intrinsic::not_intrinsic, false};
+}
+
 /// Return true if "icmp Pred LHS RHS" is always true.
 static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
                             const Value *RHS, const DataLayout &DL,
