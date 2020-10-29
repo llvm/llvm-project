@@ -124,7 +124,7 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
 
 bool ScriptInterpreterLua::LoadScriptingModule(
     const char *filename, bool init_session, lldb_private::Status &error,
-    StructuredData::ObjectSP *module_sp) {
+    StructuredData::ObjectSP *module_sp, FileSpec extra_search_dir) {
 
   FileSystem::Instance().Collect(filename);
   if (llvm::Error e = m_lua->LoadModule(filename)) {
