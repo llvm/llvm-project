@@ -12,9 +12,7 @@
 
 #include "lld/Common/Version.h"
 
-#ifdef HAVE_VCS_VERSION_INC
 #include "VCSVersion.inc"
-#endif
 
 // Returns a version string, e.g.:
 // lld 9.0.0 (https://github.com/llvm/llvm-project.git 9efdd7ac5e914d3c9fa1ef)
