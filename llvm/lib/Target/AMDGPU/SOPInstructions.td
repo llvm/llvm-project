@@ -1036,7 +1036,7 @@ def S_SET_GPR_IDX_ON : SOPC_Pseudo <
   "s_set_gpr_idx_on" ,
   (outs),
   (ins SSrc_b32:$src0, GPRIdxMode:$src1),
-  "$src0,$src1"> {
+  "$src0, $src1"> {
   let Defs = [M0, MODE]; // No scc def
   let Uses = [M0, MODE]; // Other bits of mode, m0 unmodified.
   let hasSideEffects = 1; // Sets mode.gpr_idx_en
@@ -1289,7 +1289,6 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_MODE : SOPP_Pseudo<"s_set_gpr_idx_mode", (ins GPRIdxMode:$simm16),
   "$simm16"> {
-  /*"s_set_gpr_idx_mode$simm16"> {*/
   let Defs = [M0, MODE];
   let Uses = [MODE];
 }
