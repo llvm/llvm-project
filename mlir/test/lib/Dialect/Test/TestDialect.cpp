@@ -77,15 +77,17 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
-  bool isLegalToInline(Operation *call, Operation *callable) const final {
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const final {
     // Don't allow inlining calls that are marked `noinline`.
     return !call->hasAttr("noinline");
   }
-  bool isLegalToInline(Region *, Region *, BlockAndValueMapping &) const final {
+  bool isLegalToInline(Region *, Region *, bool,
+                       BlockAndValueMapping &) const final {
     // Inlining into test dialect regions is legal.
     return true;
   }
-  bool isLegalToInline(Operation *, Region *,
+  bool isLegalToInline(Operation *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }
