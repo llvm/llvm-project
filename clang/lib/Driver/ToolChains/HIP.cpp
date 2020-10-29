@@ -89,6 +89,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
   }
 
+  Arg *GTune =
+      Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group);
+  if (GTune && !GTune->getOption().matches(options::OPT_glldb) &&
+      !GTune->getOption().matches(options::OPT_gsce)) {
+    LldArgs.push_back("-plugin-opt=-amdgpu-spill-cfi-saved-regs");
+    LldArgs.push_back("-plugin-opt=-disable-dwarf-locations");
+  }
+
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
