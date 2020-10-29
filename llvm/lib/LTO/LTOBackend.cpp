@@ -373,8 +373,7 @@ bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
           dbgs() << "Post-(Thin)LTO merge bitcode embedding was requested, but "
                     "command line arguments are not available");
     llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
-                               /*EmbedBitcode*/ true,
-                               /*EmbedMarker*/ false,
+                               /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
@@ -398,7 +397,7 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedOptimized)
     llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true,
-                               /*EmbedMarker*/ false,
+                               /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
 
   std::unique_ptr<ToolOutputFile> DwoOut;

@@ -562,7 +562,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
           if (Encoding == dwarf::DW_ATE_signed)
             emitLegacySExt(PrevConvertOp->getArg(0));
           else if (Encoding == dwarf::DW_ATE_unsigned)
-            emitLegacyZExt(PrevConvertOp->getArg(0), BitSize);
+            emitLegacyZExt(PrevConvertOp->getArg(0));
           PrevConvertOp = None;
         } else {
           PrevConvertOp = Op;
@@ -642,26 +642,23 @@ void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
 void DwarfExpression::emitLegacySExt(unsigned FromBits) {
   // (((X >> (FromBits - 1)) * (~0)) << FromBits) | X
   emitOp(dwarf::DW_OP_dup);
-  emitConstu(FromBits - 1);
+  emitOp(dwarf::DW_OP_constu);
+  emitUnsigned(FromBits - 1);
   emitOp(dwarf::DW_OP_shr);
   emitOp(dwarf::DW_OP_lit0);
   emitOp(dwarf::DW_OP_not);
   emitOp(dwarf::DW_OP_mul);
-  emitConstu(FromBits);
+  emitOp(dwarf::DW_OP_constu);
+  emitUnsigned(FromBits);
   emitOp(dwarf::DW_OP_shl);
   emitOp(dwarf::DW_OP_or);
 }
 
-void DwarfExpression::emitLegacyZExt(unsigned FromBits, unsigned ToBits) {
-  if (FromBits < 64) {
-    // X & ((1 << FromBits) - 1)
-    emitConstu((1ULL << FromBits) - 1);
-    emitOp(dwarf::DW_OP_and);
-  } else {
-    addOpPiece(FromBits, 0);
-    emitOp(dwarf::DW_OP_lit0);
-    addOpPiece(ToBits - FromBits, FromBits);
-  }
+void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
+  // (X & (1 << FromBits - 1))
+  emitOp(dwarf::DW_OP_constu);
+  emitUnsigned((1ULL << FromBits) - 1);
+  emitOp(dwarf::DW_OP_and);
 }
 
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {

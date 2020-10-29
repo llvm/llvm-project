@@ -158,11 +158,11 @@ class raw_ostream;
   /// pass an empty (default-initialized) MemoryBufferRef, and the serialization
   /// will be handled by this API. The same behavior happens if the provided Buf
   /// is not bitcode (i.e. if it's invalid data or even textual LLVM assembly).
-  /// If EmbedMarker is set, the command line is also exported in
+  /// If EmbedCmdline is set, the command line is also exported in
   /// the corresponding section (__LLVM,_cmdline / .llvmcmd) - even if CmdArgs
   /// were empty.
   void EmbedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
-                            bool EmbedMarker,
+                            bool EmbedCmdline,
                             const std::vector<uint8_t> &CmdArgs);
 
 } // end namespace llvm

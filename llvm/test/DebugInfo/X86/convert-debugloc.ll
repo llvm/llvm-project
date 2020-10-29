@@ -62,7 +62,7 @@
 ; NOCONV:     DW_TAG_formal_parameter
 ; NOCONV:     DW_TAG_variable
 ; NOCONV:       DW_AT_location (
-; NOCONV:         {{.*}}, DW_OP_dup, DW_OP_lit7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_lit8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
+; NOCONV:         {{.*}}, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
 ; NOCONV:       DW_AT_name ("y")
 ; NOCONV:     NULL
 ; NOCONV:   DW_TAG_base_type

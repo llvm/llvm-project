@@ -472,9 +472,32 @@ private:
 
 } // end anonymous namespace
 
-ModulePass *createDebugifyModulePass() { return new DebugifyModulePass(); }
+void llvm::exportDebugifyStats(StringRef Path, const DebugifyStatsMap &Map) {
+  std::error_code EC;
+  raw_fd_ostream OS{Path, EC};
+  if (EC) {
+    errs() << "Could not open file: " << EC.message() << ", " << Path << '\n';
+    return;
+  }
 
-FunctionPass *createDebugifyFunctionPass() {
+  OS << "Pass Name" << ',' << "# of missing debug values" << ','
+     << "# of missing locations" << ',' << "Missing/Expected value ratio" << ','
+     << "Missing/Expected location ratio" << '\n';
+  for (const auto &Entry : Map) {
+    StringRef Pass = Entry.first;
+    DebugifyStatistics Stats = Entry.second;
+
+    OS << Pass << ',' << Stats.NumDbgValuesMissing << ','
+       << Stats.NumDbgLocsMissing << ',' << Stats.getMissingValueRatio() << ','
+       << Stats.getEmptyLocationRatio() << '\n';
+  }
+}
+
+ModulePass *llvm::createDebugifyModulePass() {
+  return new DebugifyModulePass();
+}
+
+FunctionPass *llvm::createDebugifyFunctionPass() {
   return new DebugifyFunctionPass();
 }
 
@@ -484,15 +507,15 @@ PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
   return PreservedAnalyses::all();
 }
 
-ModulePass *createCheckDebugifyModulePass(bool Strip,
-                                          StringRef NameOfWrappedPass,
-                                          DebugifyStatsMap *StatsMap) {
+ModulePass *llvm::createCheckDebugifyModulePass(bool Strip,
+                                                StringRef NameOfWrappedPass,
+                                                DebugifyStatsMap *StatsMap) {
   return new CheckDebugifyModulePass(Strip, NameOfWrappedPass, StatsMap);
 }
 
-FunctionPass *createCheckDebugifyFunctionPass(bool Strip,
-                                              StringRef NameOfWrappedPass,
-                                              DebugifyStatsMap *StatsMap) {
+FunctionPass *
+llvm::createCheckDebugifyFunctionPass(bool Strip, StringRef NameOfWrappedPass,
+                                      DebugifyStatsMap *StatsMap) {
   return new CheckDebugifyFunctionPass(Strip, NameOfWrappedPass, StatsMap);
 }
 
