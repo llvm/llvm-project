@@ -15,40 +15,54 @@ DEFAULT_PARAMETERS = [
   Parameter(name='std', choices=_allStandards, type=str,
             help="The version of the standard to compile the test suite with.",
             default=lambda cfg: next(s for s in reversed(_allStandards) if hasCompileFlag(cfg, '-std='+s)),
-            feature=lambda std:
-              Feature(name=std, compileFlag='-std={}'.format(std),
-                      when=lambda cfg: hasCompileFlag(cfg, '-std={}'.format(std)))),
+            actions=lambda std: [
+              AddFeature(std),
+              AddCompileFlag('-std={}'.format(std)),
+            ]),
 
   Parameter(name='enable_exceptions', choices=[True, False], type=bool, default=True,
             help="Whether to enable exceptions when compiling the test suite.",
-            feature=lambda exceptions: None if exceptions else
-              Feature(name='no-exceptions', compileFlag='-fno-exceptions')),
+            actions=lambda exceptions: [] if exceptions else [
+              AddFeature('no-exceptions'),
+              AddCompileFlag('-fno-exceptions')
+            ]),
 
   Parameter(name='enable_rtti', choices=[True, False], type=bool, default=True,
             help="Whether to enable RTTI when compiling the test suite.",
-            feature=lambda rtti: None if rtti else
-              Feature(name='no-rtti', compileFlag='-fno-rtti')),
+            actions=lambda rtti: [] if rtti else [
+              AddFeature('no-rtti'),
+              AddCompileFlag('-fno-rtti')
+            ]),
 
   Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
             help="The C++ Standard Library implementation being tested.",
-            feature=lambda stdlib: Feature(name=stdlib)),
+            actions=lambda stdlib: [
+              AddFeature(stdlib)
+            ]),
 
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_filesystem', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for the C++ <filesystem> library.",
-            feature=lambda filesystem: None if filesystem else
-              Feature(name='c++filesystem-disabled')),
+            actions=lambda filesystem: [] if filesystem else [
+              AddFeature('c++filesystem-disabled')
+            ]),
 
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
-          help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
-          feature=lambda experimental: None if not experimental else
-            Feature(name='c++experimental', linkFlag='-lc++experimental')),
+            help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
+            actions=lambda experimental: [] if not experimental else [
+              AddFeature('c++experimental'),
+              AddLinkFlag('-lc++experimental')
+            ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests that take longer to run. This can be useful when running on a very slow device.",
-            feature=lambda enabled: Feature(name='long_tests') if enabled else None),
+            actions=lambda enabled: [] if not enabled else [
+              AddFeature('long_tests')
+            ]),
 
   Parameter(name='enable_debug_tests', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests that exercise the libc++ debugging mode.",
-            feature=lambda enabled: None if enabled else Feature(name='libcxx-no-debug-mode')),
+            actions=lambda enabled: [] if enabled else [
+              AddFeature('libcxx-no-debug-mode')
+            ]),
 ]
