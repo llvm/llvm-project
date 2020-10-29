@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-distribute-patterns=distribution-multiplicity=32 | FileCheck %s
+// RUN: mlir-opt %s -test-vector-distribute-patterns=distribution-multiplicity=32 -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @distribute_vector_add
 //  CHECK-SAME: (%[[ID:.*]]: index
@@ -12,6 +12,8 @@ func @distribute_vector_add(%id : index, %A: vector<32xf32>, %B: vector<32xf32>)
   %0 = addf %A, %B : vector<32xf32>
   return %0: vector<32xf32>
 }
+
+// -----
 
 // CHECK-LABEL: func @vector_add_read_write
 //  CHECK-SAME: (%[[ID:.*]]: index
@@ -34,12 +36,19 @@ func @vector_add_read_write(%id : index, %A: memref<32xf32>, %B: memref<32xf32>,
   return
 }
 
-// CHECK-LABEL: func @vector_add_cycle
+// -----
+
+// CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<()[s0] -> (s0 * 2)>
+
+//       CHECK: func @vector_add_cycle
 //  CHECK-SAME: (%[[ID:.*]]: index
-//       CHECK:    %[[EXA:.*]] = vector.transfer_read %{{.*}}[%[[ID]]], %{{.*}} : memref<64xf32>, vector<2xf32>
-//  CHECK-NEXT:    %[[EXB:.*]] = vector.transfer_read %{{.*}}[%[[ID]]], %{{.*}} : memref<64xf32>, vector<2xf32>
+//       CHECK:    %[[ID1:.*]] = affine.apply #[[MAP0]]()[%[[ID]]]
+//  CHECK-NEXT:    %[[EXA:.*]] = vector.transfer_read %{{.*}}[%[[ID1]]], %{{.*}} : memref<64xf32>, vector<2xf32>
+//  CHECK-NEXT:    %[[ID2:.*]] = affine.apply #[[MAP0]]()[%[[ID]]]
+//  CHECK-NEXT:    %[[EXB:.*]] = vector.transfer_read %{{.*}}[%[[ID2]]], %{{.*}} : memref<64xf32>, vector<2xf32>
 //  CHECK-NEXT:    %[[ADD:.*]] = addf %[[EXA]], %[[EXB]] : vector<2xf32>
-//  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[ID]]] : vector<2xf32>, memref<64xf32>
+//  CHECK-NEXT:    %[[ID3:.*]] = affine.apply #[[MAP0]]()[%[[ID]]]
+//  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[ID3]]] : vector<2xf32>, memref<64xf32>
 //  CHECK-NEXT:    return
 func @vector_add_cycle(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: memref<64xf32>) {
   %c0 = constant 0 : index
@@ -50,6 +59,8 @@ func @vector_add_cycle(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: 
   vector.transfer_write %acc, %C[%c0]: vector<64xf32>, memref<64xf32>
   return
 }
+
+// -----
 
 // Negative test to make sure nothing is done in case the vector size is not a
 // multiple of multiplicity.

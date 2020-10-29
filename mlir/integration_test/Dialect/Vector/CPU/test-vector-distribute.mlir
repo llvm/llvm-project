@@ -1,8 +1,17 @@
-// RUN: mlir-opt %s -test-vector-distribute-patterns=distribution-multiplicity=32 \
-// RUN:  -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm | \
+// RUN: mlir-opt %s -test-vector-to-forloop -convert-vector-to-scf \
+// RUN:   -lower-affine -convert-scf-to-std -convert-vector-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
+
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine \
+// RUN: -convert-scf-to-std -convert-vector-to-llvm | mlir-cpu-runner -e main \
+// RUN: -entry-point-result=void \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
+// RUN: mlir-opt %s -test-vector-to-forloop | FileCheck %s -check-prefix=TRANSFORM
+
 
 func @print_memref_f32(memref<*xf32>)
 
@@ -19,30 +28,29 @@ func @alloc_1d_filled_inc_f32(%arg0: index, %arg1: f32) -> memref<?xf32> {
   return %0 : memref<?xf32>
 }
 
-func @vector_add_cycle(%id : index, %A: memref<?xf32>, %B: memref<?xf32>, %C: memref<?xf32>) {
-  %c0 = constant 0 : index
-  %cf0 = constant 0.0 : f32
-  %a = vector.transfer_read %A[%c0], %cf0: memref<?xf32>, vector<64xf32>
-  %b = vector.transfer_read %B[%c0], %cf0: memref<?xf32>, vector<64xf32>
-  %acc = addf %a, %b: vector<64xf32>
-  vector.transfer_write %acc, %C[%c0]: vector<64xf32>, memref<?xf32>
-  return
-}
-
-// Loop over a function containinng a large add vector and distribute it so that
-// each iteration of the loop process part of the vector operation.
+// Large vector addf that can be broken down into a loop of smaller vector addf.
 func @main() {
+  %cf0 = constant 0.0 : f32
   %cf1 = constant 1.0 : f32
   %cf2 = constant 2.0 : f32
   %c0 = constant 0 : index
   %c1 = constant 1 : index
+  %c32 = constant 32 : index
   %c64 = constant 64 : index
   %out = alloc(%c64) : memref<?xf32>
   %in1 = call @alloc_1d_filled_inc_f32(%c64, %cf1) : (index, f32) -> memref<?xf32>
   %in2 = call @alloc_1d_filled_inc_f32(%c64, %cf2) : (index, f32) -> memref<?xf32>
-  scf.for %arg5 = %c0 to %c64 step %c1 {
-    call @vector_add_cycle(%arg5, %in1, %in2, %out) : (index, memref<?xf32>, memref<?xf32>, memref<?xf32>) -> ()
-  }
+  // Check that the tansformatio correctly happened.
+  // TRANSFORM: scf.for
+  // TRANSFORM:   vector.transfer_read {{.*}} : memref<?xf32>, vector<2xf32>
+  // TRANSFORM:   vector.transfer_read {{.*}} : memref<?xf32>, vector<2xf32>
+  // TRANSFORM:   %{{.*}} = addf %{{.*}}, %{{.*}} : vector<2xf32>
+  // TRANSFORM:   vector.transfer_write {{.*}} : vector<2xf32>, memref<?xf32>
+  // TRANSFORM: }
+  %a = vector.transfer_read %in1[%c0], %cf0: memref<?xf32>, vector<64xf32>
+  %b = vector.transfer_read %in2[%c0], %cf0: memref<?xf32>, vector<64xf32>
+  %acc = addf %a, %b: vector<64xf32>
+  vector.transfer_write %acc, %out[%c0]: vector<64xf32>, memref<?xf32>
   %converted = memref_cast %out : memref<?xf32> to memref<*xf32>
   call @print_memref_f32(%converted): (memref<*xf32>) -> ()
   // CHECK:      Unranked{{.*}}data =

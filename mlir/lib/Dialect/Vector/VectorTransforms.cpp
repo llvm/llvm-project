@@ -2526,9 +2526,13 @@ struct TransferReadExtractPattern
       return failure();
     edsc::ScopedContext scope(rewriter, read.getLoc());
     using mlir::edsc::op::operator+;
+    using mlir::edsc::op::operator*;
     using namespace mlir::edsc::intrinsics;
     SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
-    indices.back() = indices.back() + extract.id();
+    indices.back() =
+        indices.back() +
+        (extract.id() *
+         std_constant_index(extract.getResultType().getDimSize(0)));
     Value newRead = vector_transfer_read(extract.getType(), read.memref(),
                                          indices, read.permutation_map(),
                                          read.padding(), ArrayAttr());
@@ -2552,10 +2556,14 @@ struct TransferWriteInsertPattern
       return failure();
     edsc::ScopedContext scope(rewriter, write.getLoc());
     using mlir::edsc::op::operator+;
+    using mlir::edsc::op::operator*;
     using namespace mlir::edsc::intrinsics;
     SmallVector<Value, 4> indices(write.indices().begin(),
                                   write.indices().end());
-    indices.back() = indices.back() + insert.id();
+    indices.back() =
+        indices.back() +
+        (insert.id() *
+         std_constant_index(insert.getSourceVectorType().getDimSize(0)));
     vector_transfer_write(insert.vector(), write.memref(), indices,
                           write.permutation_map(), ArrayAttr());
     rewriter.eraseOp(write);
