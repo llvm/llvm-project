@@ -747,6 +747,23 @@ def : Pat<(select
           )>;
 } // foreach vec_t
 
+// Sign select
+multiclass SIMDSignSelect<ValueType vec_t, string vec, bits<32> simdop> {
+  defm SIGNSELECT_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins),
+           [(set (vec_t V128:$dst),
+             (vec_t (int_wasm_signselect
+               (vec_t V128:$v1), (vec_t V128:$v2), (vec_t V128:$c)
+             ))
+           )],
+           vec#".signselect\t$dst, $v1, $v2, $c", vec#".signselect", simdop>;
+}
+
+defm : SIMDSignSelect<v16i8, "i8x16", 125>;
+defm : SIMDSignSelect<v8i16, "i16x8", 126>;
+defm : SIMDSignSelect<v4i32, "i32x4", 127>;
+defm : SIMDSignSelect<v2i64, "i64x2", 148>;
+
 //===----------------------------------------------------------------------===//
 // Integer unary arithmetic
 //===----------------------------------------------------------------------===//
