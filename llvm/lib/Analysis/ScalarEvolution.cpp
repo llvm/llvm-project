@@ -9274,13 +9274,15 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   if (!ICmpInst::isRelational(Pred))
     return None;
 
+  bool IsGreater = ICmpInst::isGE(Pred) || ICmpInst::isGT(Pred);
+  assert((IsGreater || ICmpInst::isLE(Pred) || ICmpInst::isLT(Pred)) &&
+         "Should be greater or less!");
+
   // Check that AR does not wrap.
   if (ICmpInst::isUnsigned(Pred)) {
     if (!LHS->hasNoUnsignedWrap())
       return None;
-    return Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE
-               ? MonotonicallyIncreasing
-               : MonotonicallyDecreasing;
+    return IsGreater ? MonotonicallyIncreasing : MonotonicallyDecreasing;
   } else {
     assert(ICmpInst::isSigned(Pred) &&
            "Relational predicate is either signed or unsigned!");
@@ -9289,17 +9291,11 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 
     const SCEV *Step = LHS->getStepRecurrence(*this);
 
-    if (isKnownNonNegative(Step)) {
-      return Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE
-                 ? MonotonicallyIncreasing
-                 : MonotonicallyDecreasing;
-    }
+    if (isKnownNonNegative(Step))
+      return IsGreater ? MonotonicallyIncreasing : MonotonicallyDecreasing;
 
-    if (isKnownNonPositive(Step)) {
-      return Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE
-                 ? MonotonicallyIncreasing
-                 : MonotonicallyDecreasing;
-    }
+    if (isKnownNonPositive(Step))
+      return !IsGreater ? MonotonicallyIncreasing : MonotonicallyDecreasing;
 
     return None;
   }
