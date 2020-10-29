@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -423,9 +424,11 @@ static bool format(StringRef FileName) {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
+    TextDiagnosticPrinter DiagnosticsConsumer(errs(), &*DiagOpts);
     DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-        new DiagnosticOptions);
+        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
+        &DiagnosticsConsumer, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, Code.get(), Sources, Files,
                                    InMemoryFileSystem.get());
