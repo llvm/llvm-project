@@ -8,11 +8,12 @@ subroutine test_assumed_shape_1(x)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
   ! CHECK: %[[c0:.*]] = constant 0 : index
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %[[c0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+  ! CHECK: %[[c1:.*]] = constant 1 : index
 
   print *, x
   ! Test extent/lower bound use in the IO statement
   ! CHECK: %[[cookie:.*]] = fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[dims]]#1, %[[dims]]#2 : (index, index) -> !fir.shapeshift<1>
+  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK: %[[newbox:.*]] = fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xi32>>
   ! CHECK: %[[castedBox:.*]] = fir.convert %[[newbox]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
   ! CHECK: fir.call @_FortranAioOutputDescriptor(%[[cookie]], %[[castedBox]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
@@ -27,7 +28,7 @@ subroutine test_assumed_shape_2(x)
   ! CHECK: %[[dims2:.*]]:3 = fir.box_dims
   print *, x
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK: fir.shape %[[dims1]]#2, %[[dims2]]#2
+  ! CHECK: fir.shape %[[dims1]]#1, %[[dims2]]#1
 end subroutine
 
 ! explicit lower bounds different from 1
@@ -56,9 +57,10 @@ subroutine test_assumed_shape_char(c)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<10x?x!fir.char<1>>>) -> !fir.ref<!fir.array<10x?x!fir.char<1>>>
 
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<10x?x!fir.char<1>>>, index) -> (index, index, index)
+  ! CHECK: %[[c1:.*]] = constant 1 : index
 
   print *, c
-  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[dims]]#1, %[[dims]]#2 : (index, index) -> !fir.shapeshift<1>
+  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK: fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<10x?x!fir.char<1>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10x?x!fir.char<1>>>
 end subroutine
 
@@ -70,9 +72,10 @@ subroutine test_assumed_shape_char_2(c)
   ! CHECK: %[[len:.*]] = fir.box_elesize %arg0 : (!fir.box<!fir.array<?x?x!fir.char<1>>>) -> index
 
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x?x!fir.char<1>>>, index) -> (index, index, index)
+  ! CHECK: %[[c1:.*]] = constant 1 : index
 
   print *, c
-  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[dims]]#1, %[[dims]]#2 : (index, index) -> !fir.shapeshift<1>
+  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK: fir.embox %[[addr]](%[[shape]]) typeparams %[[len]] : (!fir.ref<!fir.array<?x?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x?x!fir.char<1>>>
 end subroutine
 
@@ -87,5 +90,5 @@ subroutine test_assumed_shape_char_3(c)
   ! CHECK: %[[dims2:.*]]:3 = fir.box_dims
   print *, c
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK: fir.shape %[[dims1]]#2, %[[dims2]]#2
+  ! CHECK: fir.shape %[[dims1]]#1, %[[dims2]]#1
 end subroutine
