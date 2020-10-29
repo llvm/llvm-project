@@ -18,7 +18,6 @@
 namespace mlir {
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
 
-std::unique_ptr<OperationPass<FuncOp>> createLinalgFusionPass();
 std::unique_ptr<Pass> createLinalgFusionOfTensorOpsPass();
 std::unique_ptr<Pass> createFoldReshapeOpsByLinearizationPass();
 
