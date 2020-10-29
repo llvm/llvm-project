@@ -15680,12 +15680,15 @@ The first argument to this intrinsic is a scalar start value for the reduction.
 The type of the start value matches the element-type of the vector input.
 The second argument must be a vector of floating-point values.
 
+To ignore the start value, negative zero (``-0.0``) can be used, as it is
+the neutral value of floating point addition.
+
 Examples:
 """""""""
 
 ::
 
-      %unord = call reassoc float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> %input) ; relaxed reduction
+      %unord = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %input) ; relaxed reduction
       %ord = call float @llvm.vector.reduce.fadd.v4f32(float %start_value, <4 x float> %input) ; sequential reduction
 
 
@@ -15750,6 +15753,9 @@ Arguments:
 The first argument to this intrinsic is a scalar start value for the reduction.
 The type of the start value matches the element-type of the vector input.
 The second argument must be a vector of floating-point values.
+
+To ignore the start value, one (``1.0``) can be used, as it is the neutral
+value of floating point multiplication.
 
 Examples:
 """""""""
