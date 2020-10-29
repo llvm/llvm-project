@@ -15,7 +15,7 @@
 // liveness analysis does not pay attention to aliases, which can occur due to
 // branches (and their associated block arguments) in general. For this purpose,
 // BufferDeallocation firstly finds all possible aliases for a single value
-// (using the BufferPlacementAliasAnalysis class). Consider the following
+// (using the BufferAliasAnalysis class). Consider the following
 // example:
 //
 // ^bb0(%arg0):
@@ -31,7 +31,7 @@
 // We should place the dealloc for %new_value in exit. However, we have to free
 // the buffer in the same block, because it cannot be freed in the post
 // dominator. However, this requires a new copy buffer for %arg1 that will
-// contain the actual contents. Using the class BufferPlacementAliasAnalysis, we
+// contain the actual contents. Using the class BufferAliasAnalysis, we
 // will find out that %new_value has a potential alias %arg1. In order to find
 // the dealloc position we have to find all potential aliases, iterate over
 // their uses and find the common post-dominator block (note that additional
@@ -89,112 +89,6 @@ static void getSuccessorRegions(RegionBranchOpInterface regionInterface,
   // Get all successor regions using the temporarily allocated
   // `operandAttributes`.
   regionInterface.getSuccessorRegions(index, operandAttributes, successors);
-}
-
-//===----------------------------------------------------------------------===//
-// BufferPlacementAliasAnalysis
-//===----------------------------------------------------------------------===//
-
-/// Constructs a new alias analysis using the op provided.
-BufferPlacementAliasAnalysis::BufferPlacementAliasAnalysis(Operation *op) {
-  build(op);
-}
-
-/// Find all immediate and indirect aliases this value could potentially
-/// have. Note that the resulting set will also contain the value provided as
-/// it is an alias of itself.
-BufferPlacementAliasAnalysis::ValueSetT
-BufferPlacementAliasAnalysis::resolve(Value value) const {
-  ValueSetT result;
-
-  /// Recursively determines alias information for the given value. It stores
-  /// all newly found potential aliases in the given result set.
-  std::function<void(Value)> resolveRecursive = [&](Value current) {
-    if (!result.insert(current).second)
-      return;
-    auto it = aliases.find(current);
-    if (it == aliases.end())
-      return;
-    for (Value alias : it->second)
-      resolveRecursive(alias);
-  };
-
-  resolveRecursive(value);
-  return result;
-}
-
-/// Removes the given values from all alias sets.
-void BufferPlacementAliasAnalysis::remove(
-    const SmallPtrSetImpl<Value> &aliasValues) {
-  for (auto &entry : aliases)
-    llvm::set_subtract(entry.second, aliasValues);
-}
-
-/// This function constructs a mapping from values to its immediate aliases.
-/// It iterates over all blocks, gets their predecessors, determines the
-/// values that will be passed to the corresponding block arguments and
-/// inserts them into the underlying map. Furthermore, it wires successor
-/// regions and branch-like return operations from nested regions.
-void BufferPlacementAliasAnalysis::build(Operation *op) {
-  // Registers all aliases of the given values.
-  auto registerAliases = [&](auto values, auto aliases) {
-    for (auto entry : llvm::zip(values, aliases))
-      this->aliases[std::get<0>(entry)].insert(std::get<1>(entry));
-  };
-
-  // Add additional aliases created by view changes to the alias list.
-  op->walk([&](ViewLikeOpInterface viewInterface) {
-    aliases[viewInterface.getViewSource()].insert(
-        viewInterface.getOperation()->getResult(0));
-  });
-
-  // Query all branch interfaces to link block argument aliases.
-  op->walk([&](BranchOpInterface branchInterface) {
-    Block *parentBlock = branchInterface.getOperation()->getBlock();
-    for (auto it = parentBlock->succ_begin(), e = parentBlock->succ_end();
-         it != e; ++it) {
-      // Query the branch op interface to get the successor operands.
-      auto successorOperands =
-          branchInterface.getSuccessorOperands(it.getIndex());
-      if (!successorOperands.hasValue())
-        continue;
-      // Build the actual mapping of values to their immediate aliases.
-      registerAliases(successorOperands.getValue(), (*it)->getArguments());
-    }
-  });
-
-  // Query the RegionBranchOpInterface to find potential successor regions.
-  op->walk([&](RegionBranchOpInterface regionInterface) {
-    // Extract all entry regions and wire all initial entry successor inputs.
-    SmallVector<RegionSuccessor, 2> entrySuccessors;
-    getSuccessorRegions(regionInterface, /*index=*/llvm::None, entrySuccessors);
-    for (RegionSuccessor &entrySuccessor : entrySuccessors) {
-      // Wire the entry region's successor arguments with the initial
-      // successor inputs.
-      assert(entrySuccessor.getSuccessor() &&
-             "Invalid entry region without an attached successor region");
-      registerAliases(regionInterface.getSuccessorEntryOperands(
-                          entrySuccessor.getSuccessor()->getRegionNumber()),
-                      entrySuccessor.getSuccessorInputs());
-    }
-
-    // Wire flow between regions and from region exits.
-    for (Region &region : regionInterface.getOperation()->getRegions()) {
-      // Iterate over all successor region entries that are reachable from the
-      // current region.
-      SmallVector<RegionSuccessor, 2> successorRegions;
-      getSuccessorRegions(regionInterface, region.getRegionNumber(),
-                          successorRegions);
-      for (RegionSuccessor &successorRegion : successorRegions) {
-        // Iterate over all immediate terminator operations and wire the
-        // successor inputs with the operands of each terminator.
-        walkReturnOperations(&region, [&](Operation *terminator) {
-          registerAliases(terminator->getOperands(),
-                          successorRegion.getSuccessorInputs());
-        });
-      }
-    }
-  });
 }
 
 //===----------------------------------------------------------------------===//

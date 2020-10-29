@@ -50,6 +50,15 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
+static cl::opt<bool> EnableFlatScratch(
+  "amdgpu-enable-flat-scratch",
+  cl::desc("Use flat scratch instructions"),
+  cl::init(false));
+
+static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
+                           cl::desc("Enable the use of AA during codegen."),
+                           cl::init(true));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 R600Subtarget &
@@ -286,6 +295,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
   InstSelector.reset(new AMDGPUInstructionSelector(
   *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
+}
+
+bool GCNSubtarget::enableFlatScratch() const {
+  return EnableFlatScratch && hasFlatScratchInsts();
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
@@ -600,6 +613,8 @@ bool GCNSubtarget::hasMadF16() const {
 bool GCNSubtarget::useVGPRIndexMode() const {
   return !hasMovrel() || (EnableVGPRIndexMode && hasVGPRIndexMode());
 }
+
+bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)

@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -26,7 +26,7 @@ struct TestExpandTanhPass
 void TestExpandTanhPass::runOnFunction() {
   OwningRewritePatternList patterns;
   populateExpandTanhPattern(patterns, &getContext());
-  applyPatternsAndFoldGreedily(getOperation(), patterns);
+  applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

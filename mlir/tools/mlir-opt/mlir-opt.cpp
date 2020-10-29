@@ -53,6 +53,7 @@ void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
 void registerTestDialect(DialectRegistry &);
 void registerTestDynamicPipelinePass();
+void registerTestExpandMemRefReshapePass();
 void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
@@ -115,6 +116,7 @@ void registerTestPasses() {
   registerTestDynamicPipelinePass();
   registerTestFunc();
   registerTestExpandTanhPass();
+  registerTestExpandMemRefReshapePass();
   registerTestGpuMemoryPromotionPass();
   registerTestInterfaces();
   registerTestLinalgCodegenStrategy();
@@ -144,7 +146,6 @@ void registerTestPasses() {
 #endif
 
 int main(int argc, char **argv) {
-  registerAllDialects();
   registerAllPasses();
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();

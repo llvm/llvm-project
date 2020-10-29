@@ -40,7 +40,7 @@
 # RUN:                            -delete_rpath @executable_b/. %t 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=COMBINED
 
-# COMBINED: cannot specify both -add_rpath @executable_b/. and -delete_rpath @executable_b/.
+# COMBINED: cannot specify both -add_rpath '@executable_b/.' and -delete_rpath '@executable_b/.'
 
 ## Remove all RPATHS
 # RUN: yaml2obj %s -o %t2

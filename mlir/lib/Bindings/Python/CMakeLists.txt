@@ -4,6 +4,9 @@
 
 set(PY_SRC_FILES
   mlir/__init__.py
+  mlir/ir.py
+  mlir/dialects/__init__.py
+  mlir/dialects/std.py
 )
 
 add_custom_target(MLIRBindingsPythonSources ALL

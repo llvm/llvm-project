@@ -2995,8 +2995,8 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     return;
 
   // -stack-protector=0 is default.
-  unsigned StackProtectorLevel = 0;
-  unsigned DefaultStackProtectorLevel =
+  LangOptions::StackProtectorMode StackProtectorLevel = LangOptions::SSPOff;
+  LangOptions::StackProtectorMode DefaultStackProtectorLevel =
       TC.GetDefaultStackProtectorLevel(KernelOrKext);
 
   if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
@@ -3005,7 +3005,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
                                options::OPT_fstack_protector)) {
     if (A->getOption().matches(options::OPT_fstack_protector))
       StackProtectorLevel =
-          std::max<unsigned>(LangOptions::SSPOn, DefaultStackProtectorLevel);
+          std::max<>(LangOptions::SSPOn, DefaultStackProtectorLevel);
     else if (A->getOption().matches(options::OPT_fstack_protector_strong))
       StackProtectorLevel = LangOptions::SSPStrong;
     else if (A->getOption().matches(options::OPT_fstack_protector_all))
@@ -3989,7 +3989,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   if (Args.hasFlag(options::OPT_fdebug_types_section,
                    options::OPT_fno_debug_types_section, false)) {
-    if (!T.isOSBinFormatELF()) {
+    if (!(T.isOSBinFormatELF() || T.isOSBinFormatWasm())) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << Args.getLastArg(options::OPT_fdebug_types_section)
                  ->getAsString(Args)
@@ -4957,11 +4957,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // crashes.
   if (D.CCGenDiagnostics)
     CmdArgs.push_back("-disable-pragma-debug-crash");
-
-  if (RawTriple.isOSAIX())
-    if (Arg *A = Args.getLastArg(options::OPT_G))
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << RawTriple.str();
 
   bool UseSeparateSections = isUseSeparateSections(Triple);
 

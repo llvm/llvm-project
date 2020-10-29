@@ -159,27 +159,16 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
     if (!m_get_queues_impl_code_up) {
       if (g_get_current_queues_function_code != nullptr) {
-        Status error;
-        m_get_queues_impl_code_up.reset(
-            exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
-                g_get_current_queues_function_code, eLanguageTypeC,
-                g_get_current_queues_function_name, error));
-        if (error.Fail()) {
-          LLDB_LOGF(
-              log,
-              "Failed to get UtilityFunction for queues introspection: %s.",
-              error.AsCString());
+        auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+            g_get_current_queues_function_code,
+            g_get_current_queues_function_name, eLanguageTypeC, exe_ctx);
+        if (!utility_fn_or_error) {
+          LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                         "Failed to create UtilityFunction for queues "
+                         "introspection: {0}.");
           return args_addr;
         }
-
-        if (!m_get_queues_impl_code_up->Install(diagnostics, exe_ctx)) {
-          if (log) {
-            LLDB_LOGF(log, "Failed to install queues introspection");
-            diagnostics.Dump(log);
-          }
-          m_get_queues_impl_code_up.reset();
-          return args_addr;
-        }
+        m_get_queues_impl_code_up = std::move(*utility_fn_or_error);
       } else {
         if (log) {
           LLDB_LOGF(log, "No queues introspection code found.");

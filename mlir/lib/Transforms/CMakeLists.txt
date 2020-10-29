@@ -7,7 +7,6 @@ add_mlir_library(MLIRTransforms
   Canonicalizer.cpp
   CopyRemoval.cpp
   CSE.cpp
-  DialectConversion.cpp
   Inliner.cpp
   LocationSnapshot.cpp
   LoopCoalescing.cpp

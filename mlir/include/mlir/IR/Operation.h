@@ -323,9 +323,18 @@ public:
   template <typename AttrClass> AttrClass getAttrOfType(Identifier name) {
     return getAttr(name).dyn_cast_or_null<AttrClass>();
   }
-
   template <typename AttrClass> AttrClass getAttrOfType(StringRef name) {
     return getAttr(name).dyn_cast_or_null<AttrClass>();
+  }
+
+  /// Return true if the operation has an attribute with the provided name,
+  /// false otherwise.
+  bool hasAttr(Identifier name) { return static_cast<bool>(getAttr(name)); }
+  bool hasAttr(StringRef name) { return static_cast<bool>(getAttr(name)); }
+  template <typename AttrClass, typename NameT>
+  bool hasAttrOfType(NameT &&name) {
+    return static_cast<bool>(
+        getAttrOfType<AttrClass>(std::forward<NameT>(name)));
   }
 
   /// If the an attribute exists with the specified name, change it to the new

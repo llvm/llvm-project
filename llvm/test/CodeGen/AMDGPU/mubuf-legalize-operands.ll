@@ -245,8 +245,9 @@ entry:
 ; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
 ; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
-; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRC0:[0-9]+]], v[[VRSRC0]]
+; W64-O0-DAG: v_readfirstlane_b32 s[[S0:[0-9]+]], v[[VRSRC0]]
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP1:[0-9]+]], v[[VRSRC1]]
+; W64-O0-DAG: s_mov_b32 s[[SRSRC0:[0-9]+]], s[[S0]]
 ; W64-O0-DAG: s_mov_b32 s[[SRSRC1:[0-9]+]], s[[SRSRCTMP1]]
 ; W64-O0-DAG: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC0]]:[[SRSRC1]]{{\]}}, v{{\[}}[[VRSRC0]]:[[VRSRC1]]{{\]}}
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP2:[0-9]+]], v[[VRSRC2]]
@@ -255,8 +256,11 @@ entry:
 ; W64-O0-DAG: s_mov_b32 s[[SRSRC3:[0-9]+]], s[[SRSRCTMP3]]
 ; W64-O0-DAG: v_cmp_eq_u64_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v{{\[}}[[VRSRC2]]:[[VRSRC3]]{{\]}}
 ; W64-O0-DAG: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[CMP0]], [[CMP1]]
+; W64-O0-DAG: s_mov_b32 s[[S1:[0-9]+]], s[[SRSRCTMP1]]
+; W64-O0-DAG: s_mov_b32 s[[S2:[0-9]+]], s[[SRSRCTMP2]]
+; W64-O0-DAG: s_mov_b32 s[[S3:[0-9]+]], s[[SRSRCTMP3]]
 ; W64-O0: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[AND]]
-; W64-O0: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, {{.*}} idxen
+; W64-O0: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s{{\[}}[[S0]]:[[S3]]{{\]}}, {{.*}} idxen
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_store_dword [[RES]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF_TMP:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0: s_xor_b64 exec, exec, [[SAVE]]
@@ -280,8 +284,9 @@ entry:
 ; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
-; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRC0:[0-9]+]], v[[VRSRC0]]
+; W64-O0-DAG: v_readfirstlane_b32 s[[S0:[0-9]+]], v[[VRSRC0]]
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP1:[0-9]+]], v[[VRSRC1]]
+; W64-O0-DAG: s_mov_b32 s[[SRSRC0:[0-9]+]], s[[S0]]
 ; W64-O0-DAG: s_mov_b32 s[[SRSRC1:[0-9]+]], s[[SRSRCTMP1]]
 ; W64-O0-DAG: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC0]]:[[SRSRC1]]{{\]}}, v{{\[}}[[VRSRC0]]:[[VRSRC1]]{{\]}}
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP2:[0-9]+]], v[[VRSRC2]]
@@ -290,8 +295,11 @@ entry:
 ; W64-O0-DAG: s_mov_b32 s[[SRSRC3:[0-9]+]], s[[SRSRCTMP3]]
 ; W64-O0-DAG: v_cmp_eq_u64_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v{{\[}}[[VRSRC2]]:[[VRSRC3]]{{\]}}
 ; W64-O0-DAG: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[CMP0]], [[CMP1]]
+; W64-O0-DAG: s_mov_b32 s[[S1:[0-9]+]], s[[SRSRCTMP1]]
+; W64-O0-DAG: s_mov_b32 s[[S2:[0-9]+]], s[[SRSRCTMP2]]
+; W64-O0-DAG: s_mov_b32 s[[S3:[0-9]+]], s[[SRSRCTMP3]]
 ; W64-O0: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[AND]]
-; W64-O0: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, {{.*}} idxen
+; W64-O0: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s{{\[}}[[S0]]:[[S3]]{{\]}}, {{.*}} idxen
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_store_dword [[RES]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF_TMP:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0: s_xor_b64 exec, exec, [[SAVE]]

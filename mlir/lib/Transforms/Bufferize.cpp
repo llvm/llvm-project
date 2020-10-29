@@ -74,7 +74,7 @@ BufferizeTypeConverter::getResultConversionKind(Type origin, Type converted) {
 
 void mlir::populateBufferizeMaterializationLegality(ConversionTarget &target) {
   target.addLegalOp<TensorLoadOp, TensorToMemrefOp>();
-};
+}
 
 //===----------------------------------------------------------------------===//
 // BufferizeFuncOpConverter
@@ -148,7 +148,7 @@ public:
   }
 
   /// This method returns the mapping values list. The unknown result values
-  /// that only their indicies are available are replaced with their values.
+  /// that only their indices are available are replaced with their values.
   void getMappingValues(ValueRange valuesToReplaceIndices,
                         SmallVectorImpl<Value> &values) {
     // Append available values to the list.

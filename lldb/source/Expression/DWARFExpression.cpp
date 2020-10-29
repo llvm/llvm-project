@@ -89,8 +89,8 @@ void DWARFExpression::DumpLocation(Stream *s, const DataExtractor &data,
                                    lldb::DescriptionLevel level,
                                    ABI *abi) const {
   llvm::DWARFExpression(data.GetAsLLVM(), data.GetAddressByteSize())
-      .print(s->AsRawOstream(), abi ? &abi->GetMCRegisterInfo() : nullptr,
-             nullptr);
+      .print(s->AsRawOstream(), llvm::DIDumpOptions(),
+             abi ? &abi->GetMCRegisterInfo() : nullptr, nullptr);
 }
 
 void DWARFExpression::SetLocationListAddresses(addr_t cu_file_addr,

@@ -552,6 +552,8 @@ template <class ELFT>
 static void overrideFields(ELFYAML::Section *From, typename ELFT::Shdr &To) {
   if (!From)
     return;
+  if (From->ShAddrAlign)
+    To.sh_addralign = *From->ShAddrAlign;
   if (From->ShFlags)
     To.sh_flags = *From->ShFlags;
   if (From->ShName)
@@ -901,7 +903,8 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
 
   assignSectionAddress(SHeader, YAMLSec);
 
-  SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, /*Offset=*/None);
+  SHeader.sh_offset =
+      alignToOffset(CBA, SHeader.sh_addralign, RawSec ? RawSec->Offset : None);
 
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     assert(Symbols.empty());

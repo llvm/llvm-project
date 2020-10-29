@@ -37,6 +37,10 @@ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   // Skip the RTL frames by searching for the PC in the stacktrace.
   uptr pc_location = LocatePcInTrace(pc);
   PopStackFrames(pc_location);
+
+  // Replace the first frame with the PC because the frame in the
+  // stacktrace might be incorrect.
+  trace_buffer[0] = pc;
 }
 
 void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {

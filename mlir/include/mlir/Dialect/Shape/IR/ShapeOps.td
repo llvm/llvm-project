@@ -123,9 +123,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [
   let arguments = (ins IndexAttr:$value);
   let results = (outs Shape_SizeType:$result);
 
-  let builders = [
-    OpBuilder<"int64_t value">
-  ];
+  let builders = [OpBuilderDAG<(ins "int64_t":$value)>];
 
   let assemblyFormat = "$value attr-dict";
   let hasFolder = 1;
@@ -231,8 +229,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
-    OpBuilder<"Value shape, "
-              "int64_t dim">
+    OpBuilderDAG<(ins "Value":$shape, "int64_t":$dim)>
   ];
 
   let extraClassDeclaration = [{
@@ -331,9 +328,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
   let results = (outs Shape_SizeOrIndexType:$result);
 
-  let builders = [
-    OpBuilder<"Value shape">,
-  ];
+  let builders = [OpBuilderDAG<(ins "Value":$shape)>];
 
   let assemblyFormat = "$shape `:` type($shape) `->` type($result) attr-dict";
 
@@ -382,9 +377,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
   let results = (outs Variadic<AnyType>:$result);
   let regions = (region SizedRegion<1>:$region);
 
-  let builders = [
-    OpBuilder<"Value shape, ValueRange initVals">,
-  ];
+  let builders = [OpBuilderDAG<(ins "Value":$shape, "ValueRange":$initVals)>];
 
   let verifier = [{ return ::verify(*this); }];
   let printer = [{ return ::print(p, *this); }];
@@ -404,9 +397,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
 
   let assemblyFormat = "$arg `:` type($arg) `->` type($result) attr-dict";
 
-  let builders = [
-    OpBuilder<"Value arg">
-  ];
+  let builders = [OpBuilderDAG<(ins "Value":$arg)>];
 
   let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
   let hasCanonicalizer = 1;
@@ -483,8 +474,8 @@ def Shape_YieldOp : Shape_Op<"yield",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [
-    OpBuilder<"", [{ build($_builder, $_state, llvm::None); }]>
+  let builders = [OpBuilderDAG<(ins),
+    [{ build($_builder, $_state, llvm::None); }]>
   ];
 
   let verifier = [{ return ::verify(*this); }];
@@ -660,9 +651,7 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [
-    OpBuilder<"", [{ /* nothing to do */ }]>
-  ];
+  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }

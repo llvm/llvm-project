@@ -157,6 +157,15 @@ def uimm3 : Operand<i32>, PatLeaf<(imm), [{
   let ParserMatchClass = UImm3AsmOperand;
 }
 
+// uimm4 - Generic immediate value.
+def UImm4AsmOperand : AsmOperandClass {
+  let Name = "UImm4";
+}
+def uimm4 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<4>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm4AsmOperand;
+}
+
 // uimm6 - Generic immediate value.
 def UImm6AsmOperand : AsmOperandClass {
   let Name = "UImm6";
@@ -442,6 +451,9 @@ def GetTLSAddr : SDNode<"VEISD::GETTLSADDR", SDT_SPCall,
 def GetStackTop : SDNode<"VEISD::GETSTACKTOP", SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
 
+// MEMBARRIER
+def MemBarrier : SDNode<"VEISD::MEMBARRIER", SDTNone,
+                        [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // VE Flag Conditions
@@ -775,10 +787,10 @@ multiclass BCbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond,
   let bpf = 0 /* NONE */ in
   def "" : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
               !strconcat(opcStr, " ", cmpStr, "$addr")>;
-  let bpf = 2 /* NOT TaKEN */ in
+  let bpf = 2 /* NOT TAKEN */ in
   def _nt : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
                !strconcat(opcStr, ".nt ", cmpStr, "$addr")>;
-  let bpf = 3 /* TaKEN */ in
+  let bpf = 3 /* TAKEN */ in
   def _t : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
               !strconcat(opcStr, ".t ", cmpStr, "$addr")>;
 }
@@ -807,10 +819,10 @@ multiclass BCRbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond> {
   let bpf = 0 /* NONE */ in
   def "" : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
               !strconcat(opcStr, " ", cmpStr, "$imm32")>;
-  let bpf = 2 /* NOT TaKEN */ in
+  let bpf = 2 /* NOT TAKEN */ in
   def _nt : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
                !strconcat(opcStr, ".nt ", cmpStr, "$imm32")>;
-  let bpf = 3 /* TaKEN */ in
+  let bpf = 3 /* TAKEN */ in
   def _t : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
               !strconcat(opcStr, ".t ", cmpStr, "$imm32")>;
 }
@@ -1651,6 +1663,119 @@ defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
+// Atomic loads
+multiclass ATMLDm<SDPatternOperator from,
+                  SDPatternOperator torri, SDPatternOperator torii,
+                  SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
+  def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
+  def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
+  def : Pat<(from ADDRzii:$addr), (tozii MEMzii:$addr)>;
+}
+defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
+defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
+defm : ATMLDm<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
+defm : ATMLDm<atomic_load_64, LDrri, LDrii, LDzri, LDzii>;
+
+def i2l : OutPatFrag<(ops node:$exp),
+                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $exp, sub_i32)>;
+
+// Optimized atomic loads with sext
+multiclass SXATMLDm<SDPatternOperator from, Operand TY,
+                    SDPatternOperator torri, SDPatternOperator torii,
+                    SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrri:$addr))), TY)),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrii:$addr))), TY)),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRzri:$addr))), TY)),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRzii:$addr))), TY)),
+            (i2l (tozii MEMzii:$addr))>;
+}
+multiclass SXATMLD32m<SDPatternOperator from,
+                      SDPatternOperator torri, SDPatternOperator torii,
+                      SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (sext (from ADDRrri:$addr))),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (sext (from ADDRrii:$addr))),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (sext (from ADDRzri:$addr))),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (sext (from ADDRzii:$addr))),
+            (i2l (tozii MEMzii:$addr))>;
+}
+defm : SXATMLDm<atomic_load_8, i8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
+defm : SXATMLDm<atomic_load_16, i16, LD2BSXrri, LD2BSXrii, LD2BSXzri,
+                LD2BSXzii>;
+defm : SXATMLD32m<atomic_load_32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
+
+// Optimized atomic loads with zext
+multiclass ZXATMLDm<SDPatternOperator from, Operand VAL,
+                    SDPatternOperator torri, SDPatternOperator torii,
+                    SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (and (anyext (from ADDRrri:$addr)), VAL)),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (and (anyext (from ADDRrii:$addr)), VAL)),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (and (anyext (from ADDRzri:$addr)), VAL)),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (and (anyext (from ADDRzii:$addr)), VAL)),
+            (i2l (tozii MEMzii:$addr))>;
+}
+multiclass ZXATMLD32m<SDPatternOperator from, Operand VAL,
+                      SDPatternOperator torri, SDPatternOperator torii,
+                      SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (zext (from ADDRrri:$addr))),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (zext (from ADDRrii:$addr))),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (zext (from ADDRzri:$addr))),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (zext (from ADDRzii:$addr))),
+            (i2l (tozii MEMzii:$addr))>;
+}
+defm : ZXATMLDm<atomic_load_8, 0xFF, LD1BZXrri, LD1BZXrii, LD1BZXzri,
+                LD1BZXzii>;
+defm : ZXATMLDm<atomic_load_16, 0xFFFF, LD2BZXrri, LD2BZXrii, LD2BZXzri,
+                LD2BZXzii>;
+defm : ZXATMLD32m<atomic_load_32, 0xFFFFFFFF, LDLZXrri, LDLZXrii, LDLZXzri,
+                  LDLZXzii>;
+
+// Atomic stores
+multiclass ATMSTm<SDPatternOperator from, ValueType ty,
+                  SDPatternOperator torri, SDPatternOperator torii,
+                  SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(from ADDRrri:$addr, ty:$src), (torri MEMrri:$addr, $src)>;
+  def : Pat<(from ADDRrii:$addr, ty:$src), (torii MEMrii:$addr, $src)>;
+  def : Pat<(from ADDRzri:$addr, ty:$src), (tozri MEMzri:$addr, $src)>;
+  def : Pat<(from ADDRzii:$addr, ty:$src), (tozii MEMzii:$addr, $src)>;
+}
+defm : ATMSTm<atomic_store_8, i32, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
+defm : ATMSTm<atomic_store_16, i32, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
+defm : ATMSTm<atomic_store_32, i32, STLrri, STLrii, STLzri, STLzii>;
+defm : ATMSTm<atomic_store_64, i64, STrri, STrii, STzri, STzii>;
+
+// Optimized atomic stores with truncate
+multiclass TRATMSTm<SDPatternOperator from,
+                  ValueType ty,
+                  SDPatternOperator torri,
+                  SDPatternOperator torii,
+                  SDPatternOperator tozri,
+                  SDPatternOperator tozii> {
+  def : Pat<(from ADDRrri:$addr, (i32 (trunc i64:$src))),
+            (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from ADDRrii:$addr, (i32 (trunc i64:$src))),
+            (torii MEMrii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from ADDRzri:$addr, (i32 (trunc i64:$src))),
+            (tozri MEMzri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from ADDRzii:$addr, (i32 (trunc i64:$src))),
+            (tozii MEMzii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+}
+defm : TRATMSTm<atomic_store_8, i32, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
+defm : TRATMSTm<atomic_store_16, i32, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
+defm : TRATMSTm<atomic_store_32, i32, STLrri, STLrii, STLzri, STLzii>;
+
 // Address calculation and its optimization
 def : Pat<(VEhi tconstpool:$in), (LEASLzii 0, 0, tconstpool:$in)>;
 def : Pat<(VElo tconstpool:$in),
@@ -1781,6 +1906,14 @@ let Uses = [SX11], hasSideEffects = 1 in
 def GETSTACKTOP : Pseudo<(outs I64:$dst), (ins),
                          "# GET STACK TOP",
                          [(set iPTR:$dst, (GetStackTop))]>;
+
+// MEMBARRIER
+let hasSideEffects = 1 in
+def MEMBARRIER : Pseudo<(outs), (ins), "# MEMBARRIER", [(MemBarrier)] >;
+
+//===----------------------------------------------------------------------===//
+// Other patterns
+//===----------------------------------------------------------------------===//
 
 // SETCC pattern matches
 //

@@ -48,6 +48,7 @@ public:
   static const char *Replay(const char *path, bool skip_version_check);
   static const char *Replay(const char *path, const SBReplayOptions &options);
   static const char *PassiveReplay(const char *path);
+  static const char *Finalize(const char *path);
   static const char *GetPath();
   static bool SetAutoGenerate(bool b);
   static bool Generate();

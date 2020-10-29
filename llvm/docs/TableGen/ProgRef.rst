@@ -21,8 +21,11 @@ and generate one or more output files. These output files are typically
 developer needs.
 
 This document describes the LLVM TableGen facility in detail. It is intended
-for the programmer who is using TableGen to produce tables for a project. If
-you are looking for a simple overview, check out :doc:`TableGen Overview <./index>`.
+for the programmer who is using TableGen to produce code for a project. If
+you are looking for a simple overview, check out the :doc:`TableGen Overview
+<./index>`.  The various ``xxx-tblgen`` commands used to invoke TableGen are
+described in :doc:`xxx-tblgen: Target Description to C++ Code
+<../CommandGuide/tblgen>`.
 
 An example of a backend is ``RegisterInfo``, which generates the register
 file information for a particular target machine, for use by the LLVM
@@ -206,13 +209,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add     !and         !cast        !con         !dag
-               : !empty   !eq          !foldl       !foreach     !ge
-               : !getop   !gt          !head        !if          !isa
-               : !le      !listconcat  !listsplat   !lt          !mul
-               : !ne      !not         !or          !setop       !shl
-               : !size    !sra         !srl         !strconcat   !subst
-               : !tail    !xor
+               : !add        !and         !cast        !con         !dag
+               : !empty      !eq          !foldl       !foreach     !ge
+               : !getdagop   !gt          !head        !if          !isa
+               : !le         !listconcat  !listsplat   !lt          !mul
+               : !ne         !not         !or          !setdagop    !shl
+               : !size       !sra         !srl         !strconcat   !sub
+               : !subst      !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1243,7 +1246,7 @@ or to associate an argument in one DAG with a like-named argument in another
 DAG.
 
 The following bang operators are useful for working with DAGs:
-``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getop``, ``!setop``, ``!size``.
+``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagop``, ``!setdagop``, ``!size``.
 
 Defvar in a record body
 -----------------------
@@ -1445,6 +1448,10 @@ operator produces a boolean result, the result value will be 1 for true or 0
 for false. When an operator tests a boolean argument, it interprets 0 as false
 and non-0 as true.
 
+.. warning::
+  The ``!getop`` and ``!setop`` bang operators are deprecated in favor of
+  ``!getdagop`` and ``!setdagop``.
+
 ``!add(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator adds *a*, *b*, etc., and produces the sum.
 
@@ -1544,26 +1551,27 @@ and non-0 as true.
     The arguments must be ``bit``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
-``!getop(``\ *dag*\ ``)`` --or-- ``!getop<``\ *type*\ ``>(``\ *dag*\ ``)``
+``!getdagop(``\ *dag*\ ``)`` --or-- ``!getdagop<``\ *type*\ ``>(``\ *dag*\ ``)``
     This operator produces the operator of the given *dag* node.
-    Example: ``!getop((foo 1, 2))`` results in ``foo``.
+    Example: ``!getdagop((foo 1, 2))`` results in ``foo``. Recall that
+    DAG operators are always records.
 
-    The result of ``!getop`` can be used directly in a context where
-    any record value at all is acceptable (typically placing it into
+    The result of ``!getdagop`` can be used directly in a context where
+    any record class at all is acceptable (typically placing it into
     another dag value). But in other contexts, it must be explicitly
-    cast to a particular class type. The ``<``\ *type*\ ``>`` syntax is
+    cast to a particular class. The ``<``\ *type*\ ``>`` syntax is
     provided to make this easy.
 
     For example, to assign the result to a value of type ``BaseClass``, you
     could write either of these::
 
-      BaseClass b = !getop<BaseClass>(someDag);
-      BaseClass b = !cast<BaseClass>(!getop(someDag));
+      BaseClass b = !getdagop<BaseClass>(someDag);
+      BaseClass b = !cast<BaseClass>(!getdagop(someDag));
 
     But to create a new DAG node that reuses the operator from another, no
     cast is necessary::
 
-      dag d = !dag(!getop(someDag), args, names);
+      dag d = !dag(!getdagop(someDag), args, names);
 
 ``!gt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than *b*; 0 otherwise.
@@ -1620,11 +1628,11 @@ and non-0 as true.
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
 
-``!setop(``\ *dag*\ ``,`` *op*\ ``)``
+``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its
     operator replaced with *op*.
 
-    Example: ``!setop((foo 1, 2), bar)`` results in ``(bar 1, 2)``.
+    Example: ``!setdagop((foo 1, 2), bar)`` results in ``(bar 1, 2)``.
 
 ``!shl(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* left logically by *count* bits and produces the resulting
@@ -1655,11 +1663,15 @@ and non-0 as true.
     are not strings, in which
     case an implicit ``!cast<string>`` is done on those operands.
 
+``!sub(``\ *a*\ ``,`` *b*\ ``)``
+    This operator subtracts *b* from *a* and produces the arithmetic difference.
+
 ``!subst(``\ *target*\ ``,`` *repl*\ ``,`` *value*\ ``)``
     This operator replaces all occurrences of the *target* in the *value* with
-    the *repl* and produces the resulting value. For strings, this is straightforward.
+    the *repl* and produces the resulting value. The *value* can
+    be a string, in which case substring substitution is performed.
 
-    If the arguments are record names, the function produces the *repl*
+    The *value* can be a record name, in which case the operator produces the *repl*
     record if the *target* record name equals the *value* record name; otherwise it
     produces the *value*.
 

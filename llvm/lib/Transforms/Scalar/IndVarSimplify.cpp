@@ -2307,9 +2307,9 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 }
 
 // Returns true if the condition of \p BI being checked is invariant and can be
-// proved to be trivially true.
+// proved to be trivially true during at least first \p MaxIter iterations.
 static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
-                          bool ProvingLoopExit) {
+                          bool ProvingLoopExit, const SCEV *MaxIter) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   using namespace PatternMatch;
@@ -2332,10 +2332,23 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
-  if (SE->isKnownPredicate(Pred, LHSS, RHSS))
+  if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
     return true;
 
-  return false;
+  if (ProvingLoopExit)
+    return false;
+
+  ICmpInst::Predicate InvariantPred;
+  const SCEV *InvariantLHS, *InvariantRHS;
+
+  // Check if there is a loop-invariant predicate equivalent to our check.
+  if (!SE->isLoopInvariantExitCondDuringFirstIterations(
+           Pred, LHSS, RHSS, L, BI, MaxIter, InvariantPred, InvariantLHS,
+           InvariantRHS))
+    return false;
+
+  // Can we prove it to be trivially true?
+  return SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI);
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -2416,14 +2429,15 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      if (isTrivialCond(L, BI, SE, false)) {
-        FoldExit(ExitingBB, false);
+      auto OptimizeCond = [&](bool Inverted) {
+        if (isTrivialCond(L, BI, SE, Inverted, MaxExitCount)) {
+          FoldExit(ExitingBB, Inverted);
+          return true;
+        }
+        return false;
+      };
+      if (OptimizeCond(false) || OptimizeCond(true))
         Changed = true;
-      }
-      if (isTrivialCond(L, BI, SE, true)) {
-        FoldExit(ExitingBB, true);
-        Changed = true;
-      }
       continue;
     }
 

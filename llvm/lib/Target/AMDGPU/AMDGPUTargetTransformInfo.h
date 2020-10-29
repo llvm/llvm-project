@@ -227,6 +227,8 @@ public:
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const;
 
+  bool canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
+                                 InstCombiner &IC) const;
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) const;
   Optional<Value *> simplifyDemandedVectorEltsIntrinsic(

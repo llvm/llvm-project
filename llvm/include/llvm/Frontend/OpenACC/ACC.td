@@ -517,7 +517,6 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Default>,
     VersionedClause<ACCC_Gang>,
     VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Independent>,
     VersionedClause<ACCC_NumGangs>,
     VersionedClause<ACCC_NumWorkers>,
     VersionedClause<ACCC_Reduction>,

@@ -1698,25 +1698,27 @@ static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if (!Cmp0->isEquality())
     return nullptr;
 
-  // The equality compare must be against a constant. Convert the 'null' pointer
-  // constant to an integer zero value.
-  APInt MinMaxC;
-  const APInt *C;
-  if (match(Cmp0->getOperand(1), m_APInt(C)))
-    MinMaxC = *C;
-  else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
-    MinMaxC = APInt::getNullValue(8);
-  else
-    return nullptr;
-
   // The non-equality compare must include a common operand (X). Canonicalize
   // the common operand as operand 0 (the predicate is swapped if the common
   // operand was operand 1).
   ICmpInst::Predicate Pred0 = Cmp0->getPredicate();
   Value *X = Cmp0->getOperand(0);
   ICmpInst::Predicate Pred1;
-  if (!match(Cmp1, m_c_ICmp(Pred1, m_Specific(X), m_Value())) ||
-      ICmpInst::isEquality(Pred1))
+  bool HasNotOp = match(Cmp1, m_c_ICmp(Pred1, m_Not(m_Specific(X)), m_Value()));
+  if (!HasNotOp && !match(Cmp1, m_c_ICmp(Pred1, m_Specific(X), m_Value())))
+    return nullptr;
+  if (ICmpInst::isEquality(Pred1))
+    return nullptr;
+
+  // The equality compare must be against a constant. Flip bits if we matched
+  // a bitwise not. Convert a null pointer constant to an integer zero value.
+  APInt MinMaxC;
+  const APInt *C;
+  if (match(Cmp0->getOperand(1), m_APInt(C)))
+    MinMaxC = HasNotOp ? ~*C : *C;
+  else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
+    MinMaxC = APInt::getNullValue(8);
+  else
     return nullptr;
 
   // DeMorganize if this is 'or': P0 || P1 --> !P0 && !P1.

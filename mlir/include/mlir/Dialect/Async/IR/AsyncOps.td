@@ -43,7 +43,7 @@ def Async_ExecuteOp :
     (`async.token` or `async.value`).
 
    `async.execute` operation takes `async.token` dependencies and `async.value`
-    operands separatly, and starts execution of the attached body region only
+    operands separately, and starts execution of the attached body region only
     when all tokens and values become ready.
 
     Example:
@@ -118,7 +118,8 @@ def Async_AwaitOp : Async_Op<"await", [NoSideEffect]> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Value operand, ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilderDAG<(ins "Value":$operand,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = [{

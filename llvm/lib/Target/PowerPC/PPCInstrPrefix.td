@@ -1,3 +1,8 @@
+// Mask immediates for MMA instructions (2, 4 and 8 bits).
+def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
+def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
+def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC ISA 3.1 specific type constraints.
 //
@@ -1341,6 +1346,220 @@ defm XVF64GER : ACC_NEG_UM_M42_XOM84C<59, 58, (ins vsrpevenrc:$XA, vsrc:$XB),
                                       "xvf64ger", "$AT, $XA, $XB">;
 //------------------------------------------------------------------------------
 
+// MMA Intrinsics
+let Predicates = [MMA] in {
+  def : Pat<(v512i1 (int_ppc_mma_xvi4ger8 v16i8:$XA, v16i8:$XB)),
+            (XVI4GER8 RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvi4ger8pp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVI4GER8PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_xvi8ger4 v16i8:$XA, v16i8:$XB)),
+            (XVI8GER4 RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvi8ger4pp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVI8GER4PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_xvi16ger2s v16i8:$XA, v16i8:$XB)),
+            (XVI16GER2S RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvi16ger2spp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVI16GER2SPP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_xvf16ger2 v16i8:$XA, v16i8:$XB)),
+            (XVF16GER2 RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf16ger2pp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF16GER2PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf16ger2pn v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF16GER2PN $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf16ger2np v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf16ger2nn v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF16GER2NN $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_xvf32ger v16i8:$XA, v16i8:$XB)),
+            (XVF32GER RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf32gerpp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF32GERPP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf32gerpn v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF32GERPN $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf32gernp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF32GERNP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf32gernn v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVF32GERNN $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf64ger v256i1:$XA, v16i8:$XB)),
+            (XVF64GER $XA, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf64gerpp v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
+            (XVF64GERPP $ATi, $XA, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf64gerpn v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
+            (XVF64GERPN $ATi, $XA, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf64gernp v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
+            (XVF64GERNP $ATi, $XA, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvf64gernn v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
+            (XVF64GERNN $ATi, $XA, RCCp.BToVSRC)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_xvbf16ger2 v16i8:$XA, v16i8:$XB)),
+            (XVBF16GER2 RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvbf16ger2pp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVBF16GER2PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvbf16ger2pn v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVBF16GER2PN $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvbf16ger2np v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVBF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvbf16ger2nn v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVBF16GER2NN $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvi16ger2 v16i8:$XA, v16i8:$XB)),
+            (XVI16GER2 RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvi16ger2pp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVI16GER2PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+  def : Pat<(v512i1 (int_ppc_mma_xvi8ger4spp v512i1:$ATi, v16i8:$XA, v16i8:$XB)),
+            (XVI8GER4SPP $ATi, RCCp.AToVSRC, RCCp.BToVSRC)>;
+}
+
+// MMA Intrinsics
+let Predicates = [MMA, PrefixInstrs] in {
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi4ger8 v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                            Msk4Imm:$YMSK, Msk8Imm:$PMSK)),
+            (PMXVI4GER8 RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                        Msk4Imm:$YMSK, Msk8Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi4ger8pp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                              Msk8Imm:$PMSK)),
+            (PMXVI4GER8PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK, Msk8Imm:$PMSK)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi8ger4 v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                            Msk4Imm:$YMSK, Msk4Imm:$PMSK)),
+            (PMXVI8GER4 RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                        Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi8ger4pp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                              Msk4Imm:$PMSK)),
+            (PMXVI8GER4PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi16ger2s v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                              Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
+            (PMXVI16GER2S RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi16ger2spp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                                Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                                Msk2Imm:$PMSK)),
+            (PMXVI16GER2SPP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2 v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                             Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
+            (PMXVF16GER2 RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                         Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2pp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVF16GER2PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2pn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVF16GER2PN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2np v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2pn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVF16GER2PN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2np v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf16ger2nn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVF16GER2NN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf32ger v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                            Msk4Imm:$YMSK)),
+            (PMXVF32GER RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                        Msk4Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf32gerpp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk4Imm:$YMSK)),
+            (PMXVF32GERPP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf32gerpn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk4Imm:$YMSK)),
+            (PMXVF32GERPN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf32gernp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk4Imm:$YMSK)),
+            (PMXVF32GERNP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf32gernn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk4Imm:$YMSK)),
+            (PMXVF32GERNN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf64ger v256i1:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                            Msk2Imm:$YMSK)),
+            (PMXVF64GER $XA, RCCp.BToVSRC, Msk4Imm:$XMSK, Msk2Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf64gerpp v512i1:$ATi, v256i1:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk2Imm:$YMSK)),
+            (PMXVF64GERPP $ATi, $XA, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk2Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf64gerpn v512i1:$ATi, v256i1:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk2Imm:$YMSK)),
+            (PMXVF64GERPN $ATi, $XA, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk2Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf64gernp v512i1:$ATi, v256i1:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk2Imm:$YMSK)),
+            (PMXVF64GERNP $ATi, $XA, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk2Imm:$YMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvf64gernn v512i1:$ATi, v256i1:$XA, v16i8:$XB,
+                                              Msk4Imm:$XMSK, Msk2Imm:$YMSK)),
+            (PMXVF64GERNN $ATi, $XA, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk2Imm:$YMSK)>;
+
+  def : Pat<(v512i1 (int_ppc_mma_pmxvbf16ger2 v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                              Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
+            (PMXVBF16GER2 RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvbf16ger2pp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                                Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                                Msk2Imm:$PMSK)),
+            (PMXVBF16GER2PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvbf16ger2pn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                                Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                                Msk2Imm:$PMSK)),
+            (PMXVBF16GER2PN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvbf16ger2np v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                                Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                                Msk2Imm:$PMSK)),
+            (PMXVBF16GER2NP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvbf16ger2nn v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                                Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                                Msk2Imm:$PMSK)),
+            (PMXVBF16GER2NN $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi16ger2 v16i8:$XA, v16i8:$XB, Msk4Imm:$XMSK,
+                                             Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
+            (PMXVI16GER2 RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                         Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi8ger4spp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVI8GER4SPP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v512i1 (int_ppc_mma_pmxvi16ger2pp v512i1:$ATi, v16i8:$XA, v16i8:$XB,
+                                               Msk4Imm:$XMSK, Msk4Imm:$YMSK,
+                                               Msk2Imm:$PMSK)),
+            (PMXVI16GER2PP $ATi, RCCp.AToVSRC, RCCp.BToVSRC, Msk4Imm:$XMSK,
+                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+}
+
 def Concats {
   dag VecsToVecPair0 =
     (v256i1 (INSERT_SUBREG
@@ -1398,12 +1617,6 @@ let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
   def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins memrr:$src),
                               "lxvpx $XTp, $src", IIC_LdStLFD,
                               []>;
-  let Predicates = [PrefixInstrs] in {
-    defm PLXVP :
-      8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
-                                  (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
-                                  IIC_LdStLFD>;
-  }
 }
 
 let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
@@ -1413,12 +1626,20 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
   def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, memrr:$dst),
                                "stxvpx $XTp, $dst", IIC_LdStLFD,
                                []>;
-  let Predicates = [PrefixInstrs] in {
-    defm PSTXVP :
-      8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
-                                  (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
-                                  "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
-  }
+}
+
+let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs] in {
+  defm PLXVP :
+    8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
+                                (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
+                                IIC_LdStLFD>;
+}
+
+let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] in {
+  defm PSTXVP :
+    8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
+                                (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
+                                "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
 }
 
 // TODO: We have an added complexity of 500 here. This is only a temporary
@@ -2135,6 +2356,113 @@ let Predicates = [IsISA3_1] in {
 let Predicates = [IsISA3_1, HasVSX] in {
   def XVCVSPBF16 : XX2_XT6_XO5_XB6<60, 17, 475, "xvcvspbf16", vsrc, []>;
   def XVCVBF16SPN : XX2_XT6_XO5_XB6<60, 16, 475, "xvcvbf16spn", vsrc, []>;
+}
+
+// Multiclass defining patterns for Set Boolean Extension Reverse Instructions.
+// This is analogous to the CRNotPat multiclass but specifically for Power10
+// and newer subtargets since the extended forms use Set Boolean instructions.
+// The first two anonymous patterns defined are actually a duplicate of those
+// in CRNotPat, but it is preferable to define both multiclasses as complete
+// ones rather than pulling that small common section out.
+multiclass P10ReverseSetBool<dag pattern, dag result> {
+  def : Pat<pattern, (crnot result)>;
+  def : Pat<(not pattern), result>;
+
+  def : Pat<(i32 (zext pattern)),
+            (SETBCR result)>;
+  def : Pat<(i64 (zext pattern)),
+            (SETBCR8 result)>;
+
+  def : Pat<(i32 (sext pattern)),
+            (SETNBCR result)>;
+  def : Pat<(i64 (sext pattern)),
+            (SETNBCR8 result)>;
+
+  def : Pat<(i32 (anyext pattern)),
+            (SETBCR result)>;
+  def : Pat<(i64 (anyext pattern)),
+            (SETBCR8 result)>;
+}
+
+multiclass IntSetP10RevSetBool<SDNode SetCC, ValueType Ty, ImmLeaf ZExtTy,
+                               ImmLeaf SExtTy, PatLeaf Cmpi, PatLeaf Cmpli,
+                               PatLeaf Cmp, PatLeaf Cmpl> {
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
+                           (EXTRACT_SUBREG (Cmpl $s1, $s2), sub_lt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),
+                           (EXTRACT_SUBREG (Cmp $s1, $s2), sub_lt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETULE)),
+                           (EXTRACT_SUBREG (Cmpl $s1, $s2), sub_gt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETLE)),
+                           (EXTRACT_SUBREG (Cmp $s1, $s2), sub_gt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETNE)),
+                           (EXTRACT_SUBREG (Cmp $s1, $s2), sub_eq)>;
+
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, ZExtTy:$imm, SETUGE)),
+                           (EXTRACT_SUBREG (Cmpli $s1, imm:$imm), sub_lt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, SExtTy:$imm, SETGE)),
+                           (EXTRACT_SUBREG (Cmpi $s1, imm:$imm), sub_lt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, ZExtTy:$imm, SETULE)),
+                           (EXTRACT_SUBREG (Cmpli $s1, imm:$imm), sub_gt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, SExtTy:$imm, SETLE)),
+                           (EXTRACT_SUBREG (Cmpi $s1, imm:$imm), sub_gt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, SExtTy:$imm, SETNE)),
+                           (EXTRACT_SUBREG (Cmpi $s1, imm:$imm), sub_eq)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, ZExtTy:$imm, SETNE)),
+                           (EXTRACT_SUBREG (Cmpli $s1, imm:$imm), sub_eq)>;
+}
+
+multiclass FSetP10RevSetBool<SDNode SetCC, ValueType Ty, PatLeaf FCmp> {
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETULE)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_gt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETLE)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_gt)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETUNE)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_eq)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETNE)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_eq)>;
+  defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETO)),
+                           (EXTRACT_SUBREG (FCmp $s1, $s2), sub_un)>;
+}
+
+let Predicates = [IsISA3_1] in {
+  def : Pat<(i32 (zext i1:$in)),
+            (SETBC $in)>;
+  def : Pat<(i64 (zext i1:$in)),
+            (SETBC8 $in)>;
+  def : Pat<(i32 (sext i1:$in)),
+            (SETNBC $in)>;
+  def : Pat<(i64 (sext i1:$in)),
+            (SETNBC8 $in)>;
+  def : Pat<(i32 (anyext i1:$in)),
+            (SETBC $in)>;
+  def : Pat<(i64 (anyext i1:$in)),
+            (SETBC8 $in)>;
+
+  // Instantiation of the set boolean reverse patterns for 32-bit integers.
+  defm : IntSetP10RevSetBool<setcc, i32, immZExt16, imm32SExt16,
+                             CMPWI, CMPLWI, CMPW, CMPLW>;
+  defm : P10ReverseSetBool<(i1 (setcc i32:$s1, imm:$imm, SETNE)),
+                           (EXTRACT_SUBREG (CMPLWI (XORIS $s1, (HI16 imm:$imm)),
+                                           (LO16 imm:$imm)), sub_eq)>;
+
+  // Instantiation of the set boolean reverse patterns for 64-bit integers.
+  defm : IntSetP10RevSetBool<setcc, i64, immZExt16, imm64SExt16,
+                             CMPDI, CMPLDI, CMPD, CMPLD>;
+  defm : P10ReverseSetBool<(i1 (setcc i64:$s1, imm64ZExt32:$imm, SETNE)),
+                           (EXTRACT_SUBREG (CMPLDI (XORIS8 $s1, (HI16 imm:$imm)),
+                                           (LO16 imm:$imm)), sub_eq)>;
+}
+
+// Instantiation of the set boolean reverse patterns for f32, f64, f128.
+let Predicates = [IsISA3_1, HasFPU] in {
+  defm : FSetP10RevSetBool<setcc, f32, FCMPUS>;
+  defm : FSetP10RevSetBool<setcc, f64, FCMPUD>;
+  defm : FSetP10RevSetBool<setcc, f128, XSCMPUQP>;
 }
 
 //---------------------------- Anonymous Patterns ----------------------------//

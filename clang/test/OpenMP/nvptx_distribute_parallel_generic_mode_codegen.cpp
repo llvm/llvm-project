@@ -35,8 +35,8 @@ int main(int argc, char **argv) {
 }
 
 // SEQ: [[MEM_TY:%.+]] = type { [128 x i8] }
-// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] undef
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* undef
 // SEQ-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 40
 // SEQ-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 // CHECK-DAG: @__omp_offloading_{{.*}}_main_[[LINE:l.+]]_exec_mode = weak constant i8 0

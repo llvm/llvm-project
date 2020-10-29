@@ -264,6 +264,10 @@ public:
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
+  bool isNumRegsMajorCostOfLSR() {
+    return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
+  }
+
   bool isProfitableLSRChainElement(Instruction *I) {
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }
@@ -1190,25 +1194,23 @@ public:
     case Intrinsic::vector_reduce_and:
     case Intrinsic::vector_reduce_or:
     case Intrinsic::vector_reduce_xor:
-    case Intrinsic::vector_reduce_fadd:
-    case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_smax:
     case Intrinsic::vector_reduce_smin:
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
+      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+    }
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul: {
+      IntrinsicCostAttributes Attrs(
+          IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, 1, I);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
@@ -1288,7 +1290,17 @@ public:
     unsigned ScalarizationCostPassed = ICA.getScalarizationCost();
     bool SkipScalarizationCost = ICA.skipScalarizationCost();
 
-    auto *VecOpTy = Tys.empty() ? nullptr : dyn_cast<VectorType>(Tys[0]);
+    VectorType *VecOpTy = nullptr;
+    if (!Tys.empty()) {
+      // The vector reduction operand is operand 0 except for fadd/fmul.
+      // Their operand 0 is a scalar start value, so the vector op is operand 1.
+      unsigned VecTyIndex = 0;
+      if (IID == Intrinsic::vector_reduce_fadd ||
+          IID == Intrinsic::vector_reduce_fmul)
+        VecTyIndex = 1;
+      assert(Tys.size() > VecTyIndex && "Unexpected IntrinsicCostAttributes");
+      VecOpTy = dyn_cast<VectorType>(Tys[VecTyIndex]);
+    }
 
     SmallVector<unsigned, 2> ISDs;
     unsigned SingleCallCost = 10; // Library call cost. Make it expensive.

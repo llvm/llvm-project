@@ -47,6 +47,10 @@ extern "C" CUmodule mgpuModuleLoad(void *data) {
   return module;
 }
 
+extern "C" void mgpuModuleUnload(CUmodule module) {
+  CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
+}
+
 extern "C" CUfunction mgpuModuleGetFunction(CUmodule module, const char *name) {
   CUfunction function = nullptr;
   CUDA_REPORT_IF_ERROR(cuModuleGetFunction(&function, module, name));

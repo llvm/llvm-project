@@ -5,6 +5,7 @@ add_flang_library(flangFrontendTool
   clangBasic
 
   LINK_LIBS
+  flangFrontend
   clangBasic
   clangDriver
 

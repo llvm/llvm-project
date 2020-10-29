@@ -78,6 +78,7 @@ func TestAttributes(t *testing.T) {
 		"returns_twice",
 		"signext",
 		"safestack",
+		"nossp",
 		"ssp",
 		"sspreq",
 		"sspstrong",

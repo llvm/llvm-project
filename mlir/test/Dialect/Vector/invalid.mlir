@@ -1333,26 +1333,26 @@ func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %va
 
 func @extract_map_rank(%v: vector<2x32xf32>, %id : index) {
   // expected-error@+1 {{'vector.extract_map' op expects source and destination vectors of rank 1}}
-  %0 = vector.extract_map %v[%id : 32] : vector<2x32xf32> to vector<2x1xf32>
+  %0 = vector.extract_map %v[%id] : vector<2x32xf32> to vector<2x1xf32>
 }
 
 // -----
 
 func @extract_map_size(%v: vector<63xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op vector sizes mismatch. Source size must be equal to destination size * multiplicity}}
-  %0 = vector.extract_map %v[%id : 32] : vector<63xf32> to vector<2xf32>
+  // expected-error@+1 {{'vector.extract_map' op source vector size must be a multiple of destination vector size}}
+  %0 = vector.extract_map %v[%id] : vector<63xf32> to vector<2xf32>
 }
 
 // -----
 
-func @insert_map_rank(%v: vector<2x1xf32>, %id : index) {
+func @insert_map_rank(%v: vector<2x1xf32>, %v1: vector<2x32xf32>, %id : index) {
   // expected-error@+1 {{'vector.insert_map' op expected source and destination vectors of rank 1}}
-  %0 = vector.insert_map %v, %id, 32 : vector<2x1xf32> to vector<2x32xf32>
+  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<2x32xf32>
 }
 
 // -----
 
-func @insert_map_size(%v: vector<1xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op vector sizes mismatch. Destination size must be equal to source size * multiplicity}}
-  %0 = vector.insert_map %v, %id, 32 : vector<1xf32> to vector<64xf32>
+func @insert_map_size(%v: vector<3xf32>, %v1: vector<64xf32>, %id : index) {
+  // expected-error@+1 {{'vector.insert_map' op destination vector size must be a multiple of source vector size}}
+  %0 = vector.insert_map %v, %v1[%id] : vector<3xf32> into vector<64xf32>
 }

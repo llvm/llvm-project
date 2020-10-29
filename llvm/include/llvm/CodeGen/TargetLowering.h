@@ -1686,10 +1686,6 @@ public:
 
   virtual bool isJumpTableRelative() const;
 
-  /// Return true if a mulh[s|u] node for a specific type is cheaper than
-  /// a multiply followed by a shift. This is false by default.
-  virtual bool isMulhCheaperThanMulShift(EVT Type) const { return false; }
-
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   Register getStackPointerRegisterToSaveRestore() const {
@@ -4313,9 +4309,12 @@ public:
 
   /// Expand rotations.
   /// \param N Node to expand
+  /// \param AllowVectorOps expand vector rotate, this should only be performed
+  ///        if the legalization is happening outside of LegalizeVectorOps
   /// \param Result output after conversion
   /// \returns True, if the expansion was successful, false otherwise
-  bool expandROT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  bool expandROT(SDNode *N, bool AllowVectorOps, SDValue &Result,
+                 SelectionDAG &DAG) const;
 
   /// Expand float(f32) to SINT(i64) conversion
   /// \param N Node to expand

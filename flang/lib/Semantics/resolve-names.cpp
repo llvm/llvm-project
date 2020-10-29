@@ -157,8 +157,17 @@ public:
   evaluate::FoldingContext &GetFoldingContext() const {
     return context_->foldingContext();
   }
-  bool IsIntrinsic(const SourceName &name) const {
-    return context_->intrinsics().IsIntrinsic(name.ToString());
+  bool IsIntrinsic(
+      const SourceName &name, std::optional<Symbol::Flag> flag) const {
+    if (!flag) {
+      return context_->intrinsics().IsIntrinsic(name.ToString());
+    } else if (flag == Symbol::Flag::Function) {
+      return context_->intrinsics().IsIntrinsicFunction(name.ToString());
+    } else if (flag == Symbol::Flag::Subroutine) {
+      return context_->intrinsics().IsIntrinsicSubroutine(name.ToString());
+    } else {
+      DIE("expected Subroutine or Function flag");
+    }
   }
 
   // Make a placeholder symbol for a Name that otherwise wouldn't have one.
@@ -2096,11 +2105,23 @@ void ScopeHandler::ApplyImplicitRules(Symbol &symbol) {
     if (const DeclTypeSpec * type{GetImplicitType(symbol)}) {
       symbol.set(Symbol::Flag::Implicit);
       symbol.SetType(*type);
-    } else if (symbol.has<ProcEntityDetails>() &&
-        !symbol.attrs().test(Attr::EXTERNAL) && IsIntrinsic(symbol.name())) {
-      // type will be determined in expression semantics
-      symbol.attrs().set(Attr::INTRINSIC);
-    } else if (!context().HasError(symbol)) {
+      return;
+    }
+    if (symbol.has<ProcEntityDetails>() &&
+        !symbol.attrs().test(Attr::EXTERNAL)) {
+      std::optional<Symbol::Flag> functionOrSubroutineFlag;
+      if (symbol.test(Symbol::Flag::Function)) {
+        functionOrSubroutineFlag = Symbol::Flag::Function;
+      } else if (symbol.test(Symbol::Flag::Subroutine)) {
+        functionOrSubroutineFlag = Symbol::Flag::Subroutine;
+      }
+      if (IsIntrinsic(symbol.name(), functionOrSubroutineFlag)) {
+        // type will be determined in expression semantics
+        symbol.attrs().set(Attr::INTRINSIC);
+        return;
+      }
+    }
+    if (!context().HasError(symbol)) {
       Say(symbol.name(), "No explicit type declared for '%s'"_err_en_US);
       context().SetError(symbol);
     }
@@ -3321,7 +3342,7 @@ bool DeclarationVisitor::HandleAttributeStmt(
 }
 Symbol &DeclarationVisitor::HandleAttributeStmt(
     Attr attr, const parser::Name &name) {
-  if (attr == Attr::INTRINSIC && !IsIntrinsic(name.source)) {
+  if (attr == Attr::INTRINSIC && !IsIntrinsic(name.source, std::nullopt)) {
     Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
   }
   auto *symbol{FindInScope(currScope(), name)};
@@ -5779,7 +5800,7 @@ void ResolveNamesVisitor::HandleProcedureName(
   CHECK(flag == Symbol::Flag::Function || flag == Symbol::Flag::Subroutine);
   auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
   if (!symbol) {
-    if (IsIntrinsic(name.source)) {
+    if (IsIntrinsic(name.source, flag)) {
       symbol =
           &MakeSymbol(InclusiveScope(), name.source, Attrs{Attr::INTRINSIC});
     } else {
@@ -5808,8 +5829,9 @@ void ResolveNamesVisitor::HandleProcedureName(
     // error was reported
   } else {
     symbol = &Resolve(name, symbol)->GetUltimate();
-    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name()) &&
-        !IsDummy(*symbol)) {
+    bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
+    if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
+        IsIntrinsic(symbol->name(), flag) && !IsDummy(*symbol)) {
       symbol->attrs().set(Attr::INTRINSIC);
       // 8.2(3): ignore type from intrinsic in type-declaration-stmt
       symbol->get<ProcEntityDetails>().set_interface(ProcInterface{});

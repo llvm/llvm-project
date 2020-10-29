@@ -90,6 +90,7 @@ int main (int argc, char const *argv[])
 
     struct LargePackedBits large_packed =
       (struct LargePackedBits){ 0xcbbbbaaaa, 0xdffffeeee };
+    struct LargePackedBits *large_packed_ptr = &large_packed;
     
     return 0;               //// Set break point at this line.
 

@@ -24,7 +24,7 @@ void die(const char *Message) {
   if (&android_set_abort_message != nullptr)
     android_set_abort_message(Message);
   abort();
-#else // __BIONIC__
+#else  // __BIONIC__
   fprintf(stderr, "%s", Message);
   __builtin_trap();
 #endif // __BIONIC__

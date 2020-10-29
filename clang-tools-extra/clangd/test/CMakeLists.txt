@@ -21,6 +21,10 @@ if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)
 endif()
 
+if(CLANGD_ENABLE_REMOTE)
+  list(APPEND CLANGD_TEST_DEPS clangd-index-server)
+endif()
+
 foreach(dep FileCheck count not llvm-config)
   if(TARGET ${dep})
     list(APPEND CLANGD_TEST_DEPS ${dep})

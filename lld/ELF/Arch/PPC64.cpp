@@ -788,16 +788,40 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
   case R_PPC64_GOT_TLSLD16_LO:
     writeFromHalf16(loc, 0x3c6d0000); // addis r3, r13, 0
     break;
-  case R_PPC64_TLSLD:
-    write32(loc, NOP);
-    write32(loc + 4, 0x38631000); // addi r3, r3, 4096
+  case R_PPC64_GOT_TLSLD_PCREL34:
+    // Relax from paddi r3, 0, x1@got@tlsld@pcrel, 1 to
+    //            paddi r3, r13, 0x1000, 0
+    writePrefixedInstruction(loc, 0x06000000386d1000);
     break;
+  case R_PPC64_TLSLD: {
+    // PC Relative Relaxation:
+    // Relax from bl __tls_get_addr@notoc(x@tlsld)
+    // to
+    //            nop
+    // TOC Relaxation:
+    // Relax from bl __tls_get_addr(x@tlsld)
+    //            nop
+    // to
+    //            nop
+    //            addi r3, r3, 4096
+    const uintptr_t locAsInt = reinterpret_cast<uintptr_t>(loc);
+    if (locAsInt % 4 == 0) {
+      write32(loc, NOP);
+      write32(loc + 4, 0x38631000); // addi r3, r3, 4096
+    } else if (locAsInt % 4 == 1) {
+      write32(loc - 1, NOP);
+    } else {
+      errorOrWarn("R_PPC64_TLSLD has unexpected byte alignment");
+    }
+    break;
+  }
   case R_PPC64_DTPREL16:
   case R_PPC64_DTPREL16_HA:
   case R_PPC64_DTPREL16_HI:
   case R_PPC64_DTPREL16_DS:
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
+  case R_PPC64_DTPREL34:
     relocate(loc, rel, val);
     break;
   default:
@@ -977,6 +1001,8 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_GOT_TLSLD16_HI:
   case R_PPC64_GOT_TLSLD16_LO:
     return R_TLSLD_GOT;
+  case R_PPC64_GOT_TLSLD_PCREL34:
+    return R_TLSLD_PC;
   case R_PPC64_GOT_TPREL16_HA:
   case R_PPC64_GOT_TPREL16_LO_DS:
   case R_PPC64_GOT_TPREL16_DS:
@@ -1010,6 +1036,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
   case R_PPC64_DTPREL64:
+  case R_PPC64_DTPREL34:
     return R_DTPREL;
   case R_PPC64_TLSGD:
     return R_TLSDESC_CALL;
@@ -1284,9 +1311,16 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_DTPREL64:
     write64(loc, val - dynamicThreadPointerOffset);
     break;
+  case R_PPC64_DTPREL34:
+    // The Dynamic Thread Vector actually points 0x8000 bytes past the start
+    // of the TLS block. Therefore, in the case of R_PPC64_DTPREL34 we first
+    // need to subtract that value then fallthrough to the general case.
+    val -= dynamicThreadPointerOffset;
+    LLVM_FALLTHROUGH;
   case R_PPC64_PCREL34:
   case R_PPC64_GOT_PCREL34:
   case R_PPC64_GOT_TLSGD_PCREL34:
+  case R_PPC64_GOT_TLSLD_PCREL34:
   case R_PPC64_GOT_TPREL_PCREL34:
   case R_PPC64_TPREL34: {
     const uint64_t si0Mask = 0x00000003ffff0000;

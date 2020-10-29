@@ -5703,11 +5703,16 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
-  Expr::ConstExprUsage Usage = CCE == Sema::CCEK_TemplateArg
-                                   ? Expr::EvaluateForMangling
-                                   : Expr::EvaluateForCodeGen;
 
-  if (!Result.get()->EvaluateAsConstantExpr(Eval, Usage, S.Context) ||
+  ConstantExprKind Kind;
+  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+    Kind = ConstantExprKind::ClassTemplateArgument;
+  else if (CCE == Sema::CCEK_TemplateArg)
+    Kind = ConstantExprKind::NonClassTemplateArgument;
+  else
+    Kind = ConstantExprKind::Normal;
+
+  if (!Result.get()->EvaluateAsConstantExpr(Eval, S.Context, Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.
@@ -5726,9 +5731,14 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // It's not a constant expression. Produce an appropriate diagnostic.
   if (Notes.size() == 1 &&
-      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr)
+      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
     S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
-  else {
+  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
+                                   diag::note_constexpr_invalid_template_arg) {
+    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      S.Diag(Notes[I].first, Notes[I].second);
+  } else {
     S.Diag(From->getBeginLoc(), diag::err_expr_not_cce)
         << CCE << From->getSourceRange();
     for (unsigned I = 0; I < Notes.size(); ++I)
@@ -12725,8 +12735,6 @@ public:
 }
 
 /// Attempts to recover from a call where no functions were found.
-///
-/// Returns true if new candidates were found.
 static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
                       UnresolvedLookupExpr *ULE,
@@ -12783,7 +12791,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     return ExprError();
   }
 
-  // Build an implicit member call if appropriate.  Just drop the
+  // Build an implicit member access expression if appropriate. Just drop the
   // casts and such from the call, we don't really care.
   ExprResult NewFn = ExprError();
   if ((*R.begin())->isCXXClassMember())
@@ -12798,12 +12806,19 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   if (NewFn.isInvalid())
     return ExprError();
 
-  // This shouldn't cause an infinite loop because we're giving it
-  // an expression with viable lookup results, which should never
-  // end up here.
-  return SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
-                               MultiExprArg(Args.data(), Args.size()),
-                               RParenLoc);
+  auto CallE =
+      SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
+                            MultiExprArg(Args.data(), Args.size()), RParenLoc);
+  if (CallE.isInvalid())
+    return ExprError();
+  // We now have recovered a callee. However, building a real call may lead to
+  // incorrect secondary diagnostics if our recovery wasn't correct.
+  // We keep the recovery behavior but suppress all following diagnostics by
+  // using RecoveryExpr. We deliberately drop the return type of the recovery
+  // function, and rely on clang's dependent mechanism to suppress following
+  // diagnostics.
+  return SemaRef.CreateRecoveryExpr(CallE.get()->getBeginLoc(),
+                                    CallE.get()->getEndLoc(), {CallE.get()});
 }
 
 /// Constructs and populates an OverloadedCandidateSet from

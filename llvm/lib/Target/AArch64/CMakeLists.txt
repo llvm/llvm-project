@@ -32,6 +32,7 @@ add_llvm_target(AArch64CodeGen
   GISel/AArch64PreLegalizerCombiner.cpp
   GISel/AArch64PostLegalizerCombiner.cpp
   GISel/AArch64PostLegalizerLowering.cpp
+  GISel/AArch64PostSelectOptimize.cpp
   GISel/AArch64RegisterBankInfo.cpp
   AArch64A57FPLoadBalancing.cpp
   AArch64AdvSIMDScalarPass.cpp

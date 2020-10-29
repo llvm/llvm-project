@@ -414,9 +414,8 @@ incompatible with the flags that gdb specifies.
 //
 //  COMPATIBILITY
 //    The gdb-remote serial protocol documentation says that numbers
-//    in "vFile:" packets should be hexidecimal. Instead lldb uses
-//    decimal for the number of bytes and offset.
-//    lldb-server can process either format.
+//    in "vFile:" packets should be hexadecimal. Instead lldb uses
+//    decimal.
 
 
 //----------------------------------------------------------------------
@@ -439,8 +438,8 @@ incompatible with the flags that gdb specifies.
 //
 //  COMPATIBILITY
 //    The gdb-remote serial protocol documentation says that numbers
-//    in "vFile:" packets should be hexidecimal. Instead lldb uses
-//    decimal for the offset. lldb-server can process either format.
+//    in "vFile:" packets should be hexadecimal. Instead lldb uses
+//    decimal.
 
 
 

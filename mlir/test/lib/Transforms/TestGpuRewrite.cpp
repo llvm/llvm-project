@@ -12,8 +12,8 @@
 
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -26,7 +26,7 @@ struct TestGpuRewritePass
   void runOnOperation() override {
     OwningRewritePatternList patterns;
     populateGpuRewritePatterns(&getContext(), patterns);
-    applyPatternsAndFoldGreedily(getOperation(), patterns);
+    applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 } // namespace

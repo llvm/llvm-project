@@ -41,7 +41,7 @@ typedef int AVAIL_ATTR unavail_int; // expected-note {{marked as being introduce
 
 I5 *i5;
 
-// expected-error@+1 2 {{'annotate' attribute takes one argument}}
+// expected-error@+1 2 {{'annotate' attribute takes at least 1 argument}}
 #pragma clang attribute push (__attribute__((annotate)), apply_to=objc_implementation)
 @interface I6 @end
 @interface I6 (MyCat) @end

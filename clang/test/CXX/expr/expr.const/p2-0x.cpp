@@ -280,6 +280,16 @@ namespace UndefinedBehavior {
     constexpr float f10 = f2 - f2; // expected-error {{constant expression}} expected-note {{produces a NaN}}
     constexpr float f11 = f2 + f4; // expected-error {{constant expression}} expected-note {{produces a NaN}}
     constexpr float f12 = f2 / f2; // expected-error {{constant expression}} expected-note {{produces a NaN}}
+#pragma float_control(push)
+#pragma float_control(except, on)
+constexpr float pi = 3.14f;
+constexpr unsigned ubig = 0xFFFFFFFF;
+constexpr float ce = 1.0 / 3.0; // not-expected-error {{constant expression}} not-expected-note {{floating point arithmetic suppressed in strict evaluation modes}}
+constexpr int ci = (int) pi;
+constexpr float fbig = (float) ubig; // not-expected-error {{constant expression}} not-expected-note {{floating point arithmetic suppressed in strict evaluation modes}}
+constexpr float fabspi = __builtin_fabs(pi); // no error expected
+constexpr float negpi = -pi; // expect no error on unary operator
+#pragma float_control(pop)
     static_assert(!isinf(f1), "");
     static_assert(isinf(f2), "");
     static_assert(!isinf(f3), "");

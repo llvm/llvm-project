@@ -251,7 +251,8 @@ public:
 
   llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
 
-  virtual UtilityFunction *CreateObjectChecker(const char *) = 0;
+  virtual llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) = 0;
 
   virtual ObjCRuntimeVersions GetRuntimeVersion() const {
     return ObjCRuntimeVersions::eObjC_VersionUnknown;

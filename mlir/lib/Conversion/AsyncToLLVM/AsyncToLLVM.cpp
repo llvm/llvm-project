@@ -723,7 +723,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   target.addDynamicallyLegalOp<CallOp>(
       [&](CallOp op) { return converter.isLegal(op.getResultTypes()); });
 
-  if (failed(applyPartialConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 } // namespace

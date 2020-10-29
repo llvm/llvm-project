@@ -67,7 +67,8 @@ void ShapeToShapeLowering::runOnFunction() {
   ConversionTarget target(getContext());
   target.addLegalDialect<ShapeDialect, StandardOpsDialect>();
   target.addIllegalOp<NumElementsOp>();
-  if (failed(mlir::applyPartialConversion(getFunction(), target, patterns)))
+  if (failed(mlir::applyPartialConversion(getFunction(), target,
+                                          std::move(patterns))))
     signalPassFailure();
 }
 

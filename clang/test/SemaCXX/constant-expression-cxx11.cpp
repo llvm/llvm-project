@@ -409,12 +409,23 @@ namespace ConstAddedByReference {
   const int &r = (0);
   constexpr int n = r;
 
+  int &&r2 = 0; // expected-note {{created here}}
+  constexpr int n2 = r2; // expected-error {{constant}} expected-note {{read of temporary}}
+
   struct A { constexpr operator int() const { return 0; }};
   struct B { constexpr operator const int() const { return 0; }};
   const int &ra = A();
   const int &rb = B();
   constexpr int na = ra;
   constexpr int nb = rb;
+
+  struct C { int &&r; };
+  constexpr C c1 = {1};
+  constexpr int &c1r = c1.r;
+  constexpr const C &c2 = {2};
+  constexpr int &c2r = c2.r;
+  constexpr C &&c3 = {3}; // expected-note {{created here}}
+  constexpr int &c3r = c3.r; // expected-error {{constant}} expected-note {{read of temporary}}
 }
 
 }
@@ -1843,6 +1854,11 @@ namespace InitializerList {
 
   static_assert(*std::initializer_list<int>{1, 2, 3}.begin() == 1, "");
   static_assert(std::initializer_list<int>{1, 2, 3}.begin()[2] == 3, "");
+
+  namespace DR2126 {
+    constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
+    static_assert(il.begin()[1] == 2.0, "");
+  }
 }
 
 namespace StmtExpr {

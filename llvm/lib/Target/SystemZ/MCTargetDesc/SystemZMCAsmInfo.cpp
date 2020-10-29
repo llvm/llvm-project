@@ -17,6 +17,8 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   CalleeSaveStackSlotSize = 8;
   IsLittleEndian = false;
 
+  MaxInstLength = 6;
+
   CommentString = "#";
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";

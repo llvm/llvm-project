@@ -115,6 +115,12 @@ option(LIBCXX_ENABLE_RANDOM_DEVICE
    a source of randomness, such as some embedded platforms. When this is not
    supported, most of <random> will still be available, but std::random_device
    will not." ON)
+option(LIBCXX_ENABLE_LOCALIZATION
+  "Whether to include support for localization in the library. Disabling
+   localization can be useful when porting to platforms that don't support
+   the C locale API (e.g. embedded). When localization is not supported,
+   several parts of the library will be disabled: <iostream>, <regex>, <locale>
+   will be completely unusable, and other parts may be only partly available." ON)
 option(LIBCXX_TEST_GDB_PRETTY_PRINTERS "Test gdb pretty printers." OFF)
 set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/legacy.cfg.in" CACHE STRING
     "The Lit testing configuration to use when running the tests.")
@@ -397,11 +403,9 @@ endif ()
 # Configure System
 #===============================================================================
 
-# TODO: Other projects rely on the location where we generate the libc++ headers
-#       internally. We should get rid of these dependencies.
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
-  set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
@@ -409,11 +413,11 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   endif()
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  set(LIBCXX_GENERATED_INCLUDE_DIR  "${LLVM_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_HEADER_DIR  ${LLVM_BINARY_DIR})
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
 else()
   set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
-  set(LIBCXX_GENERATED_INCLUDE_DIR  "${CMAKE_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_HEADER_DIR  ${CMAKE_BINARY_DIR})
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
 endif()
 
@@ -845,6 +849,7 @@ config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITHMS)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
+config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 
 if (LIBCXX_ABI_DEFINES)
   set(abi_defines)

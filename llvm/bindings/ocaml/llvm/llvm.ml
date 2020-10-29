@@ -122,6 +122,7 @@ module Attribute = struct
   | Noinline
   | Alwaysinline
   | Optsize
+  | Nossp
   | Ssp
   | Sspreq
   | Alignment of int

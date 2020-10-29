@@ -65,7 +65,7 @@ entry:
 ; CHECK: for.body.ph.lver.orig:
 ; CHECK:     br label %for.body.lver.orig
 ; CHECK: for.body.lver.orig:
-; CHECK:    br i1 %exitcond.lver.orig, label %for.end, label %for.body.lver.orig
+; CHECK:    br i1 %exitcond.lver.orig, label %for.end.loopexit, label %for.body.lver.orig
 
 ; Verify the two distributed loops.
 

@@ -3927,6 +3927,7 @@ MachineInstr *AArch64InstructionSelector::emitIntegerCompare(
   LLT CmpTy = MRI.getType(LHS.getReg());
   assert(!CmpTy.isVector() && "Expected scalar or pointer");
   unsigned Size = CmpTy.getSizeInBits();
+  (void)Size;
   assert((Size == 32 || Size == 64) && "Expected a 32-bit or 64-bit LHS/RHS?");
   // Fold the compare into a cmn or tst if possible.
   if (auto FoldCmp = tryFoldIntegerCompare(LHS, RHS, Predicate, MIRBuilder))

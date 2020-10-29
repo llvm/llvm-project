@@ -73,14 +73,7 @@ To measure the latency of all instructions for the host architecture, run:
 
 .. code-block:: bash
 
-  #!/bin/bash
-  readonly INSTRUCTIONS=$(($(grep INSTRUCTION_LIST_END build/lib/Target/X86/X86GenInstrInfo.inc | cut -f2 -d=) - 1))
-  for INSTRUCTION in $(seq 1 ${INSTRUCTIONS});
-  do
-    ./build/bin/llvm-exegesis -mode=latency -opcode-index=${INSTRUCTION} | sed -n '/---/,$p'
-  done
-
-FIXME: Provide an :program:`llvm-exegesis` option to test all instructions.
+    $ llvm-exegesis -mode=latency -opcode-index=-1
 
 
 EXAMPLE 2: benchmarking a custom code snippet

@@ -525,12 +525,24 @@ DICompositeType *DIBuilder::createEnumerationType(
   return CTy;
 }
 
-DICompositeType *DIBuilder::createArrayType(uint64_t Size,
-                                            uint32_t AlignInBits, DIType *Ty,
-                                            DINodeArray Subscripts) {
-  auto *R = DICompositeType::get(VMContext, dwarf::DW_TAG_array_type, "",
-                                 nullptr, 0, nullptr, Ty, Size, AlignInBits, 0,
-                                 DINode::FlagZero, Subscripts, 0, nullptr);
+DICompositeType *DIBuilder::createArrayType(
+    uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
+    PointerUnion<DIExpression *, DIVariable *> DL,
+    PointerUnion<DIExpression *, DIVariable *> AS,
+    PointerUnion<DIExpression *, DIVariable *> AL,
+    PointerUnion<DIExpression *, DIVariable *> RK) {
+  auto *R = DICompositeType::get(
+      VMContext, dwarf::DW_TAG_array_type, "", nullptr, 0,
+      nullptr, Ty, Size, AlignInBits, 0, DINode::FlagZero,
+      Subscripts, 0, nullptr, nullptr, "", nullptr,
+      DL.is<DIExpression *>() ? (Metadata *)DL.get<DIExpression *>()
+                              : (Metadata *)DL.get<DIVariable *>(),
+      AS.is<DIExpression *>() ? (Metadata *)AS.get<DIExpression *>()
+                              : (Metadata *)AS.get<DIVariable *>(),
+      AL.is<DIExpression *>() ? (Metadata *)AL.get<DIExpression *>()
+                              : (Metadata *)AL.get<DIVariable *>(),
+      RK.is<DIExpression *>() ? (Metadata *)RK.get<DIExpression *>()
+                              : (Metadata *)RK.get<DIVariable *>());
   trackIfUnresolved(R);
   return R;
 }
@@ -647,6 +659,18 @@ DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, Metadata *CountNode) {
 DISubrange *DIBuilder::getOrCreateSubrange(Metadata *CountNode, Metadata *LB,
                                            Metadata *UB, Metadata *Stride) {
   return DISubrange::get(VMContext, CountNode, LB, UB, Stride);
+}
+
+DIGenericSubrange *DIBuilder::getOrCreateGenericSubrange(
+    DIGenericSubrange::BoundType CountNode, DIGenericSubrange::BoundType LB,
+    DIGenericSubrange::BoundType UB, DIGenericSubrange::BoundType Stride) {
+  auto ConvToMetadata = [&](DIGenericSubrange::BoundType Bound) -> Metadata * {
+    return Bound.is<DIExpression *>() ? (Metadata *)Bound.get<DIExpression *>()
+                                      : (Metadata *)Bound.get<DIVariable *>();
+  };
+  return DIGenericSubrange::get(VMContext, ConvToMetadata(CountNode),
+                                ConvToMetadata(LB), ConvToMetadata(UB),
+                                ConvToMetadata(Stride));
 }
 
 static void checkGlobalVariableScope(DIScope *Context) {

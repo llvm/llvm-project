@@ -91,6 +91,11 @@ public:
   /// removing the quote characters and unescaping the contents of the string.
   std::string getStringValue() const;
 
+  /// Given a token containing a hex string literal, return its value or None if
+  /// the token does not contain a valid hex string. A hex string literal is a
+  /// string starting with `0x` and only containing hex digits.
+  Optional<std::string> getHexStringValue() const;
+
   /// Given a token containing a symbol reference, return the unescaped string
   /// value.
   std::string getSymbolReference() const;

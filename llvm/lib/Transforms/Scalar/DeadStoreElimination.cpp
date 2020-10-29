@@ -2426,7 +2426,8 @@ struct DSEState {
         // adding them to a worklist. Bail when we run into a memory def that
         // does not match LoadAccess.
         SetVector<MemoryAccess *> ToCheck;
-        MemoryAccess *Current = Def->getDefiningAccess();
+        MemoryAccess *Current =
+            MSSA.getWalker()->getClobberingMemoryAccess(Def);
         // We don't want to bail when we run into the store memory def. But,
         // the phi access may point to it. So, pretend like we've already
         // checked it.

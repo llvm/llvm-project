@@ -51,10 +51,10 @@ namespace tgtok {
     MultiClass, String, Defset, Defvar, If, Then, ElseKW,
 
     // !keywords.
-    XConcat, XADD, XMUL, XNOT, XAND, XOR, XXOR, XSRA, XSRL, XSHL,
+    XConcat, XADD, XSUB, XMUL, XNOT, XAND, XOR, XXOR, XSRA, XSRL, XSHL,
     XListConcat, XListSplat, XStrConcat, XCast, XSubst, XForEach, XFoldl,
     XHead, XTail, XSize, XEmpty, XIf, XCond, XEq, XIsA, XDag, XNe, XLe,
-    XLt, XGe, XGt, XSetOp, XGetOp,
+    XLt, XGe, XGt, XSetDagOp, XGetDagOp,
 
     // Integer value.
     IntVal,

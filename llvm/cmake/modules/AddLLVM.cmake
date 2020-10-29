@@ -90,6 +90,8 @@ function(add_llvm_symbol_exports target_name export_file)
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-exported_symbols_list,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    # FIXME: `-Wl,-bE:` bypasses whatever handling there is in the build
+    # compiler driver to defer to the specified export list.
     set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
@@ -1498,7 +1500,12 @@ if len(sys.argv) < 3: sys.exit(0)\n
 sys.stdout.write(';'.join(relpath(p) for p in sys.argv[2].split(';')))"
     ${basedir}
     ${pathlist_escaped}
-    OUTPUT_VARIABLE pathlist_relative)
+    OUTPUT_VARIABLE pathlist_relative
+    ERROR_VARIABLE error
+    RESULT_VARIABLE result)
+  if (NOT result EQUAL 0)
+    message(FATAL_ERROR "make_paths_relative() failed due to error '${result}', with stderr\n${error}")
+  endif()
   set(${out_pathlist} "${pathlist_relative}" PARENT_SCOPE)
 endfunction()
 

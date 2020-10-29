@@ -64,7 +64,7 @@ void GPUToSPIRVPass::runOnOperation() {
   populateSCFToSPIRVPatterns(context, typeConverter,scfContext, patterns);
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
 
-  if (failed(applyFullConversion(kernelModules, *target, patterns)))
+  if (failed(applyFullConversion(kernelModules, *target, std::move(patterns))))
     return signalPassFailure();
 }
 

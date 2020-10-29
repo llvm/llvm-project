@@ -535,6 +535,23 @@ define <2 x i32> @partial_bswap_vector(<2 x i32> %x) {
 }
 declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
 
+define i16 @partial_bitreverse(i16 %x) {
+; CHECK-LABEL: @partial_bitreverse(
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %rev= call i16 @llvm.bitreverse.i16(i16 %x)
+  %lo = and i16 %rev, 255
+  %hi = and i16 %rev, -256
+  %revlo = call i16 @llvm.bitreverse.i16(i16 %lo)
+  %revhi = call i16 @llvm.bitreverse.i16(i16 %hi)
+  %newlo = lshr i16 %revlo, 8
+  %newhi = shl  i16 %revhi, 8
+  %or = or i16 %newlo, %newhi
+  ret i16 %or
+}
+declare i16 @llvm.bitreverse.i16(i16)
+
 define i64 @bswap_and_mask_0(i64 %0) {
 ; CHECK-LABEL: @bswap_and_mask_0(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP0:%.*]], -72057594037927681
@@ -575,6 +592,39 @@ define i64 @bswap_and_mask_2(i64 %0) {
   %6 = and i64 %5, 71776119061217280
   %7 = or i64 %4, %6
   ret i64 %7
+}
+
+define i64 @bswap_trunc(i64 %x01234567) {
+; CHECK-LABEL: @bswap_trunc(
+; CHECK-NEXT:    [[X7ZZZZZZZ:%.*]] = shl i64 [[X01234567:%.*]], 56
+; CHECK-NEXT:    [[XZ0123456:%.*]] = lshr i64 [[X01234567]], 8
+; CHECK-NEXT:    [[XZZZZZ012:%.*]] = lshr i64 [[X01234567]], 40
+; CHECK-NEXT:    [[X3456:%.*]] = trunc i64 [[XZ0123456]] to i32
+; CHECK-NEXT:    [[XZ012:%.*]] = trunc i64 [[XZZZZZ012]] to i32
+; CHECK-NEXT:    [[X6543:%.*]] = call i32 @llvm.bswap.i32(i32 [[X3456]])
+; CHECK-NEXT:    [[X210Z:%.*]] = call i32 @llvm.bswap.i32(i32 [[XZ012]])
+; CHECK-NEXT:    [[XZ210:%.*]] = lshr exact i32 [[X210Z]], 8
+; CHECK-NEXT:    [[XZZZZ6543:%.*]] = zext i32 [[X6543]] to i64
+; CHECK-NEXT:    [[XZZZZZ210:%.*]] = zext i32 [[XZ210]] to i64
+; CHECK-NEXT:    [[XZ6543ZZZ:%.*]] = shl nuw nsw i64 [[XZZZZ6543]], 24
+; CHECK-NEXT:    [[XZ6543210:%.*]] = or i64 [[XZ6543ZZZ]], [[XZZZZZ210]]
+; CHECK-NEXT:    [[X76543210:%.*]] = or i64 [[XZ6543210]], [[X7ZZZZZZZ]]
+; CHECK-NEXT:    ret i64 [[X76543210]]
+;
+  %x7zzzzzzz = shl i64 %x01234567, 56
+  %xz0123456 = lshr i64 %x01234567, 8
+  %xzzzzz012 = lshr i64 %x01234567, 40
+  %x3456 = trunc i64 %xz0123456 to i32
+  %xz012 = trunc i64 %xzzzzz012 to i32
+  %x6543 = call i32 @llvm.bswap.i32(i32 %x3456)
+  %x210z = call i32 @llvm.bswap.i32(i32 %xz012)
+  %xz210 = lshr i32 %x210z, 8
+  %xzzzz6543 = zext i32 %x6543 to i64
+  %xzzzzz210 = zext i32 %xz210 to i64
+  %xz6543zzz = shl i64 %xzzzz6543, 24
+  %xz6543210 = or i64 %xzzzzz210, %xz6543zzz
+  %x76543210 = or i64 %xz6543210, %x7zzzzzzz
+  ret i64 %x76543210
 }
 
 define i32 @shuf_4bytes(<4 x i8> %x) {
@@ -682,6 +732,19 @@ define i32 @funnel_binary(i32 %abcd) {
   %dczz = and i32 %dcdz, -65536
   %zzba = and i32 %zaba,  65535
   %dcba = or i32 %dczz, %zzba
+  ret i32 %dcba
+}
+
+define i32 @funnel_and(i32 %abcd) {
+; CHECK-LABEL: @funnel_and(
+; CHECK-NEXT:    [[DCBA:%.*]] = call i32 @llvm.bswap.i32(i32 [[ABCD:%.*]])
+; CHECK-NEXT:    ret i32 [[DCBA]]
+;
+  %zzcz = and i32 %abcd, 65280
+  %zcza = call i32 @llvm.fshl.i32(i32 %zzcz, i32 %abcd, i32 8)
+  %zbzz = and i32 %abcd, 16711680
+  %dzbz = call i32 @llvm.fshl.i32(i32 %abcd, i32 %zbzz, i32 24)
+  %dcba = or i32 %zcza, %dzbz
   ret i32 %dcba
 }
 
