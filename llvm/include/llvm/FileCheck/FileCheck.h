@@ -30,6 +30,7 @@ struct FileCheckRequest {
   std::vector<StringRef> ImplicitCheckNot;
   std::vector<StringRef> GlobalDefines;
   bool AllowEmptyInput = false;
+  bool AllowUnusedPrefixes = false;
   bool MatchFullLines = false;
   bool IgnoreCase = false;
   bool IsDefaultCheckPrefix = false;
