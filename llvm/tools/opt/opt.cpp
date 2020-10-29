@@ -446,28 +446,6 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 void initializeExampleIRTransforms(llvm::PassRegistry &Registry);
 #endif
 
-static void exportDebugifyStats(llvm::StringRef Path,
-                                const DebugifyStatsMap &Map) {
-  std::error_code EC;
-  raw_fd_ostream OS{Path, EC};
-  if (EC) {
-    errs() << "Could not open file: " << EC.message() << ", " << Path << '\n';
-    return;
-  }
-
-  OS << "Pass Name" << ',' << "# of missing debug values" << ','
-     << "# of missing locations" << ',' << "Missing/Expected value ratio" << ','
-     << "Missing/Expected location ratio" << '\n';
-  for (const auto &Entry : Map) {
-    StringRef Pass = Entry.first;
-    DebugifyStatistics Stats = Entry.second;
-
-    OS << Pass << ',' << Stats.NumDbgValuesMissing << ','
-       << Stats.NumDbgLocsMissing << ',' << Stats.getMissingValueRatio() << ','
-       << Stats.getEmptyLocationRatio() << '\n';
-  }
-}
-
 struct TimeTracerRAII {
   TimeTracerRAII(StringRef ProgramName) {
     if (TimeTrace)
