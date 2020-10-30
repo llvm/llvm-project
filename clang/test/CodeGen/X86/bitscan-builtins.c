@@ -8,18 +8,18 @@
 #include <x86intrin.h>
 
 int test_bit_scan_forward(int a) {
-  return _bit_scan_forward(a);
 // CHECK-LABEL: test_bit_scan_forward
 // CHECK: %[[call:.*]] = call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 true)
 // CHECK: ret i32 %[[call]]
+  return _bit_scan_forward(a);
 }
 
 int test_bit_scan_reverse(int a) {
-  return _bit_scan_reverse(a);
 // CHECK-LABEL: test_bit_scan_reverse
 // CHECK:  %[[call:.*]] = call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 true)
 // CHECK:  %[[sub:.*]] = sub nsw i32 31, %[[call]]
 // CHECK: ret i32 %[[sub]]
+  return _bit_scan_reverse(a);
 }
 
 int test__bsfd(int X) {
