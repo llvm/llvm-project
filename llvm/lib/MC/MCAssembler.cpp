@@ -768,7 +768,8 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
   for (const MCFragment &F : *Sec)
     writeFragment(OS, *this, Layout, F);
 
-  assert(OS.tell() - Start == Layout.getSectionAddressSize(Sec));
+  assert(getContext().hadError() ||
+         OS.tell() - Start == Layout.getSectionAddressSize(Sec));
 }
 
 std::tuple<MCValue, uint64_t, bool>
