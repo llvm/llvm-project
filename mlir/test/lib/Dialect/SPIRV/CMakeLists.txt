@@ -2,6 +2,7 @@
 add_mlir_library(MLIRSPIRVTestPasses
   TestAvailability.cpp
   TestEntryPointAbi.cpp
+  TestModuleCombiner.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
