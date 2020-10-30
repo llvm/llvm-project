@@ -59,6 +59,13 @@ struct RegisterImmPair {
   int64_t Imm;
 };
 
+struct ShiftOfShiftedLogic {
+  MachineInstr *Logic;
+  MachineInstr *Shift2;
+  Register LogicNonShiftReg;
+  uint64_t ValSum;
+};
+
 using OperandBuildSteps =
     SmallVector<std::function<void(MachineInstrBuilder &)>, 4>;
 struct InstructionBuildSteps {
@@ -231,6 +238,14 @@ public:
   /// Fold (shift (shift base, x), y) -> (shift base (x+y))
   bool matchShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo);
   bool applyShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo);
+
+  /// If we have a shift-by-constant of a bitwise logic op that itself has a
+  /// shift-by-constant operand with identical opcode, we may be able to convert
+  /// that into 2 independent shifts followed by the logic op.
+  bool matchShiftOfShiftedLogic(MachineInstr &MI,
+                                ShiftOfShiftedLogic &MatchInfo);
+  bool applyShiftOfShiftedLogic(MachineInstr &MI,
+                                ShiftOfShiftedLogic &MatchInfo);
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
