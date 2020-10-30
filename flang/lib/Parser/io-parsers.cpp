@@ -139,6 +139,10 @@ TYPE_CONTEXT_PARSER("CLOSE statement"_en_US,
 // R1210 read-stmt ->
 //         READ ( io-control-spec-list ) [input-item-list] |
 //         READ format [, input-item-list]
+// The ambiguous READ(CVAR) is parsed as if CVAR were the unit.
+// As Fortran doesn't have internal unformatted I/O, it should
+// be parsed as if (CVAR) were a format; this is corrected by
+// rewriting in semantics when we know that CVAR is character.
 constexpr auto inputItemList{
     extension<LanguageFeature::IOListLeadingComma>(
         some("," >> inputItem)) || // legacy extension: leading comma
