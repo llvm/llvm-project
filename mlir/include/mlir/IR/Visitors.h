@@ -92,10 +92,8 @@ WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback);
 template <
     typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<std::is_same<ArgT, Operation *>::value ||
-                            std::is_same<ArgT, Region *>::value ||
-                            std::is_same<ArgT, Block *>::value,
-                        RetT>::type
+typename std::enable_if<
+    llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value, RetT>::type
 walk(Operation *op, FuncTy &&callback) {
   return walk(op, function_ref<RetT(ArgT)>(callback));
 }
@@ -109,11 +107,10 @@ walk(Operation *op, FuncTy &&callback) {
 template <
     typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
-                            !std::is_same<ArgT, Region *>::value &&
-                            !std::is_same<ArgT, Block *>::value &&
-                            std::is_same<RetT, void>::value,
-                        RetT>::type
+typename std::enable_if<
+    !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
+        std::is_same<RetT, void>::value,
+    RetT>::type
 walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
@@ -135,11 +132,10 @@ walk(Operation *op, FuncTy &&callback) {
 template <
     typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
-                            !std::is_same<ArgT, Region *>::value &&
-                            !std::is_same<ArgT, Block *>::value &&
-                            std::is_same<RetT, WalkResult>::value,
-                        RetT>::type
+typename std::enable_if<
+    !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
+        std::is_same<RetT, WalkResult>::value,
+    RetT>::type
 walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
