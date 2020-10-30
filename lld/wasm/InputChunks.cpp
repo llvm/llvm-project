@@ -60,6 +60,7 @@ void InputChunk::verifyRelocTargets() const {
   for (const WasmRelocation &rel : relocations) {
     uint64_t existingValue;
     unsigned bytesRead = 0;
+    unsigned paddedLEBWidth = 5;
     auto offset = rel.Offset - getInputSectionOffset();
     const uint8_t *loc = data().data() + offset;
     switch (rel.Type) {
@@ -68,17 +69,23 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_EVENT_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
-    case R_WASM_MEMORY_ADDR_LEB64:
       existingValue = decodeULEB128(loc, &bytesRead);
       break;
+    case R_WASM_MEMORY_ADDR_LEB64:
+      existingValue = decodeULEB128(loc, &bytesRead);
+      paddedLEBWidth = 10;
+      break;
     case R_WASM_TABLE_INDEX_SLEB:
-    case R_WASM_TABLE_INDEX_SLEB64:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
-    case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
+      existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
+      break;
+    case R_WASM_TABLE_INDEX_SLEB64:
+    case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB64:
       existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
+      paddedLEBWidth = 10;
       break;
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_MEMORY_ADDR_I32:
@@ -95,8 +102,8 @@ void InputChunk::verifyRelocTargets() const {
       llvm_unreachable("unknown relocation type");
     }
 
-    if (bytesRead && bytesRead != 5)
-      warn("expected LEB at relocation site be 5-byte padded");
+    if (bytesRead && bytesRead != paddedLEBWidth)
+      warn("expected LEB at relocation site be 5/10-byte padded");
 
     if (rel.Type != R_WASM_GLOBAL_INDEX_LEB &&
         rel.Type != R_WASM_GLOBAL_INDEX_I32) {
