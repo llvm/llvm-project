@@ -1036,81 +1036,110 @@ const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
 const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
                                              unsigned Depth) {
   assert(Ty->isIntegerTy() && "Target type must be an integer type!");
+  assert(Depth <= 1 && "getPtrToIntExpr() should self-recurse at most once.");
 
   // We could be called with an integer-typed operands during SCEV rewrites.
   // Since the operand is an integer already, just perform zext/trunc/self cast.
   if (!Op->getType()->isPointerTy())
     return getTruncateOrZeroExtend(Op, Ty);
 
+  // What would be an ID for such a SCEV cast expression?
   FoldingSetNodeID ID;
   ID.AddInteger(scPtrToInt);
   ID.AddPointer(Op);
+
   void *IP = nullptr;
+
+  // Is there already an expression for such a cast?
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-    return getTruncateOrZeroExtend(S, Ty, Depth);
+    return getTruncateOrZeroExtend(S, Ty);
 
-  assert((isa<SCEVNAryExpr>(Op) || isa<SCEVUnknown>(Op)) &&
-         "We can only gen an nary expression, or an unknown here.");
-
-  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
-
-  // If the input operand is not an unknown (and thus is an nary expression),
-  // sink the cast to operands, so that the operation is performed on integers,
-  // and we eventually end up with just an ptrtoint(unknown).
-  if (const SCEVNAryExpr *NaryExpr = dyn_cast<SCEVNAryExpr>(Op)) {
-    SmallVector<const SCEV *, 2> NewOps;
-    NewOps.reserve(NaryExpr->getNumOperands());
-    for (const SCEV *Op : NaryExpr->operands())
-      NewOps.push_back(Op->getType()->isPointerTy()
-                           ? getPtrToIntExpr(Op, IntPtrTy, Depth + 1)
-                           : Op);
-    const SCEV *NewNaryExpr = nullptr;
-    switch (SCEVTypes SCEVType = NaryExpr->getSCEVType()) {
-    case scAddExpr:
-      NewNaryExpr = getAddExpr(NewOps, NaryExpr->getNoWrapFlags(), Depth + 1);
-      break;
-    case scAddRecExpr:
-      NewNaryExpr =
-          getAddRecExpr(NewOps, cast<SCEVAddRecExpr>(NaryExpr)->getLoop(),
-                        NaryExpr->getNoWrapFlags());
-      break;
-    case scUMaxExpr:
-    case scSMaxExpr:
-    case scUMinExpr:
-    case scSMinExpr:
-      NewNaryExpr = getMinMaxExpr(SCEVType, NewOps);
-      break;
-
-    case scMulExpr:
-      NewNaryExpr = getMulExpr(NewOps, NaryExpr->getNoWrapFlags(), Depth + 1);
-      break;
-    case scUDivExpr:
-      NewNaryExpr = getUDivExpr(NewOps[0], NewOps[1]);
-      break;
-    case scConstant:
-    case scTruncate:
-    case scZeroExtend:
-    case scSignExtend:
-    case scPtrToInt:
-    case scUnknown:
-    case scCouldNotCompute:
-      llvm_unreachable("We can't get these types here.");
-    }
-    return getTruncateOrZeroExtend(NewNaryExpr, Ty, Depth);
+  // If not, is this expression something we can't reduce any further?
+  if (isa<SCEVUnknown>(Op)) {
+    // Create an explicit cast node.
+    // We can reuse the existing insert position since if we get here,
+    // we won't have made any changes which would invalidate it.
+    Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
+    assert(getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(
+               Op->getType())) == getDataLayout().getTypeSizeInBits(IntPtrTy) &&
+           "We can only model ptrtoint if SCEV's effective (integer) type is "
+           "sufficiently wide to represent all possible pointer values.");
+    SCEV *S = new (SCEVAllocator)
+        SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
+    UniqueSCEVs.InsertNode(S, IP);
+    addToLoopUseLists(S);
+    return getTruncateOrZeroExtend(S, Ty);
   }
 
-  // The cast wasn't folded; create an explicit cast node. We can reuse
-  // the existing insert position since if we get here, we won't have
-  // made any changes which would invalidate it.
-  assert(getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(
-             Op->getType())) == getDataLayout().getTypeSizeInBits(IntPtrTy) &&
-         "We can only model ptrtoint if SCEV's effective (integer) type is "
-         "sufficiently wide to represent all possible pointer values.");
-  SCEV *S = new (SCEVAllocator)
-      SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
-  UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
-  return getTruncateOrZeroExtend(S, Ty, Depth);
+  assert(Depth == 0 &&
+         "getPtrToIntExpr() should not self-recurse for non-SCEVUnknown's.");
+
+  // Otherwise, we've got some expression that is more complex than just a
+  // single SCEVUnknown. But we don't want to have a SCEVPtrToIntExpr of an
+  // arbitrary expression, we want to have SCEVPtrToIntExpr of an SCEVUnknown
+  // only, and the expressions must otherwise be integer-typed.
+  // So sink the cast down to the SCEVUnknown's.
+
+  /// The SCEVPtrToIntSinkingRewriter takes a scalar evolution expression,
+  /// which computes a pointer-typed value, and rewrites the whole expression
+  /// tree so that *all* the computations are done on integers, and the only
+  /// pointer-typed operands in the expression are SCEVUnknown.
+  class SCEVPtrToIntSinkingRewriter
+      : public SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter> {
+    using Base = SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter>;
+
+  public:
+    SCEVPtrToIntSinkingRewriter(ScalarEvolution &SE) : SCEVRewriteVisitor(SE) {}
+
+    static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE) {
+      SCEVPtrToIntSinkingRewriter Rewriter(SE);
+      return Rewriter.visit(Scev);
+    }
+
+    const SCEV *visit(const SCEV *S) {
+      Type *STy = S->getType();
+      // If the expression is not pointer-typed, just keep it as-is.
+      if (!STy->isPointerTy())
+        return S;
+      // Else, recursively sink the cast down into it.
+      return Base::visit(S);
+    }
+
+    const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      SmallVector<const SCEV *, 2> Operands;
+      bool Changed = false;
+      for (auto *Op : Expr->operands()) {
+        Operands.push_back(visit(Op));
+        Changed |= Op != Operands.back();
+      }
+      return !Changed ? Expr : SE.getAddExpr(Operands, Expr->getNoWrapFlags());
+    }
+
+    const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+      SmallVector<const SCEV *, 2> Operands;
+      bool Changed = false;
+      for (auto *Op : Expr->operands()) {
+        Operands.push_back(visit(Op));
+        Changed |= Op != Operands.back();
+      }
+      return !Changed ? Expr : SE.getMulExpr(Operands, Expr->getNoWrapFlags());
+    }
+
+    const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+      Type *ExprPtrTy = Expr->getType();
+      assert(ExprPtrTy->isPointerTy() &&
+             "Should only reach pointer-typed SCEVUnknown's.");
+      Type *ExprIntPtrTy = SE.getDataLayout().getIntPtrType(ExprPtrTy);
+      return SE.getPtrToIntExpr(Expr, ExprIntPtrTy, /*Depth=*/1);
+    }
+  };
+
+  // And actually perform the cast sinking.
+  const SCEV *IntOp = SCEVPtrToIntSinkingRewriter::rewrite(Op, *this);
+  assert(IntOp->getType()->isIntegerTy() &&
+         "We must have succeeded in sinking the cast, "
+         "and ending up with an integer-typed expression!");
+  return getTruncateOrZeroExtend(IntOp, Ty);
 }
 
 const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
