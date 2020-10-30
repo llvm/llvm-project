@@ -104,6 +104,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   switch (beginDir.v) {
   case llvm::omp::OMPD_parallel:
     CheckNoBranching(block, llvm::omp::OMPD_parallel, beginDir.source);
+    break;
   default:
     break;
   }
