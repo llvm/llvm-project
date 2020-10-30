@@ -215,13 +215,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag
+               : !add        !and         !cast        !con         !dag 
                : !empty      !eq          !foldl       !foreach     !ge
-               : !getdagop   !gt          !head        !if          !isa
-               : !le         !listconcat  !listsplat   !lt          !mul
-               : !ne         !not         !or          !setdagop    !shl
-               : !size       !sra         !srl         !strconcat   !sub
-               : !subst      !tail        !xor
+               : !getdagop   !gt          !head        !if          !interleave
+               : !isa        !le          !listconcat  !listsplat   !lt
+               : !mul        !ne          !not         !or          !setdagop
+               : !shl        !size        !sra         !srl         !strconcat
+               : !sub        !subst       !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1616,6 +1616,12 @@ and non-0 as true.
   This operator evaluates the *test*, which must produce a ``bit`` or
   ``int``. If the result is not 0, the *then* expression is produced; otherwise
   the *else* expression is produced.
+
+``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
+    This operator concatenates the items in the *list*, interleaving the
+    *delim* string between each pair, and produces the resulting string.
+    The list can be a list of string, int, bits, or bit. An empty list
+    results in an empty string. The delimiter can be the empty string.
 
 ``!isa<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator produces 1 if the type of *a* is a subtype of the given *type*; 0

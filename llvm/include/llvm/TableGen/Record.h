@@ -88,7 +88,7 @@ public:
   /// a bit set is not an int, but they are convertible.
   virtual bool typeIsA(const RecTy *RHS) const;
 
-  /// Returns the type representing list<this>.
+  /// Returns the type representing list<thistype>.
   ListRecTy *getListTy();
 };
 
@@ -809,8 +809,8 @@ public:
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t { ADD, SUB, MUL, AND, OR, XOR, SHL, SRA, SRL, LISTCONCAT,
-                            LISTSPLAT, STRCONCAT, CONCAT, EQ, NE, LE, LT, GE,
-                            GT, SETDAGOP };
+                            LISTSPLAT, STRCONCAT, INTERLEAVE, CONCAT, EQ,
+                            NE, LE, LT, GE, GT, SETDAGOP };
 
 private:
   Init *LHS, *RHS;
@@ -830,7 +830,6 @@ public:
                         RecTy *Type);
   static Init *getStrConcat(Init *lhs, Init *rhs);
   static Init *getListConcat(TypedInit *lhs, Init *rhs);
-  static Init *getListSplat(TypedInit *lhs, Init *rhs);
 
   void Profile(FoldingSetNodeID &ID) const;
 
