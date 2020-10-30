@@ -12,6 +12,8 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
@@ -49,7 +51,8 @@ public:
   /// option and cache the results for reuse. \returns resource directory path
   /// associated with the given invocation command or empty string if the
   /// compiler path is NOT an absolute path.
-  StringRef findResourceDir(const tooling::CommandLineArguments &Args) {
+  StringRef findResourceDir(const tooling::CommandLineArguments &Args,
+                            bool ClangCLMode) {
     if (Args.size() < 1)
       return "";
 
@@ -65,8 +68,12 @@ public:
     if (CachedResourceDir != Cache.end())
       return CachedResourceDir->second;
 
-    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName,
-                                                "-print-resource-dir"};
+    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName};
+    if (ClangCLMode)
+      PrintResourceDirArgs.push_back("/clang:-print-resource-dir");
+    else
+      PrintResourceDirArgs.push_back("-print-resource-dir");
+
     llvm::SmallString<64> OutputFile, ErrorFile;
     llvm::sys::fs::createTemporaryFile("print-resource-dir-output",
                                        "" /*no-suffix*/, OutputFile);
@@ -421,23 +428,52 @@ int main(int argc, const char **argv) {
         bool HasMQ = false;
         bool HasMD = false;
         bool HasResourceDir = false;
+        bool ClangCLMode = false;
+
         // We need to find the last -o value.
         if (!Args.empty()) {
+          ClangCLMode =
+              llvm::sys::path::stem(Args[0]).contains_lower("clang-cl") ||
+              llvm::is_contained(Args, "--driver-mode=cl");
+
           std::size_t Idx = Args.size() - 1;
           for (auto It = Args.rbegin(); It != Args.rend(); ++It) {
             StringRef Arg = Args[Idx];
-            if (LastO.empty()) {
-              if (Arg == "-o" && It != Args.rbegin())
-                LastO = Args[Idx + 1];
-              else if (Arg.startswith("-o"))
-                LastO = Arg.drop_front(2).str();
+            if (ClangCLMode) {
+              if (LastO.empty()) {
+                // With clang-cl, the output obj file can be specified with
+                // "/opath", "/o path", "/Fopath", and the dash counterparts.
+                // Also, clang-cl adds ".obj" extension if none is found.
+                if ((Arg == "-o" || Arg == "/o") && It != Args.rbegin())
+                  LastO = Args[Idx + 1];
+                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                  LastO = Arg.drop_front(3).str();
+                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                  LastO = Arg.drop_front(2).str();
+
+                if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))
+                  LastO.append(".obj");
+              }
+              if (Arg == "/clang:-MT")
+                HasMT = true;
+              if (Arg == "/clang:-MQ")
+                HasMQ = true;
+              if (Arg == "/clang:-MD")
+                HasMD = true;
+            } else {
+              if (LastO.empty()) {
+                if (Arg == "-o" && It != Args.rbegin())
+                  LastO = Args[Idx + 1];
+                else if (Arg.startswith("-o"))
+                  LastO = Arg.drop_front(2).str();
+              }
+              if (Arg == "-MT")
+                HasMT = true;
+              if (Arg == "-MQ")
+                HasMQ = true;
+              if (Arg == "-MD")
+                HasMD = true;
             }
-            if (Arg == "-MT")
-              HasMT = true;
-            if (Arg == "-MQ")
-              HasMQ = true;
-            if (Arg == "-MD")
-              HasMD = true;
             if (Arg == "-resource-dir")
               HasResourceDir = true;
             --Idx;
@@ -446,21 +482,36 @@ int main(int argc, const char **argv) {
         // If there's no -MT/-MQ Driver would add -MT with the value of the last
         // -o option.
         tooling::CommandLineArguments AdjustedArgs = Args;
+
         AdjustedArgs.push_back("-o");
+#ifdef _WIN32
+        AdjustedArgs.push_back("nul");
+#else
         AdjustedArgs.push_back("/dev/null");
+#endif
+
         if (!HasMT && !HasMQ) {
-          AdjustedArgs.push_back("-M");
-          AdjustedArgs.push_back("-MT");
           // We're interested in source dependencies of an object file.
+          std::string FileNameArg;
           if (!HasMD) {
             // FIXME: We are missing the directory unless the -o value is an
             // absolute path.
-            AdjustedArgs.push_back(!LastO.empty() ? LastO
-                                                  : getObjFilePath(FileName));
+            FileNameArg = !LastO.empty() ? LastO : getObjFilePath(FileName);
           } else {
-            AdjustedArgs.push_back(std::string(FileName));
+            FileNameArg = std::string(FileName);
+          }
+
+          if (ClangCLMode) {
+            AdjustedArgs.push_back("/clang:-M");
+            AdjustedArgs.push_back("/clang:-MT");
+            AdjustedArgs.push_back(Twine("/clang:", FileNameArg).str());
+          } else {
+            AdjustedArgs.push_back("-M");
+            AdjustedArgs.push_back("-MT");
+            AdjustedArgs.push_back(std::move(FileNameArg));
           }
         }
+
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-Eonly");
         AdjustedArgs.push_back("-Xclang");
@@ -469,7 +520,7 @@ int main(int argc, const char **argv) {
 
         if (!HasResourceDir) {
           StringRef ResourceDir =
-              ResourceDirCache.findResourceDir(Args);
+              ResourceDirCache.findResourceDir(Args, ClangCLMode);
           if (!ResourceDir.empty()) {
             AdjustedArgs.push_back("-resource-dir");
             AdjustedArgs.push_back(std::string(ResourceDir));
