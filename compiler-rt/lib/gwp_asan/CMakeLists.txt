@@ -22,6 +22,8 @@ set(GWP_ASAN_HEADERS
   mutex.h
   options.h
   options.inc
+  platform_specific/guarded_pool_allocator_fuchsia.h
+  platform_specific/guarded_pool_allocator_posix.h
   platform_specific/guarded_pool_allocator_tls.h
   platform_specific/mutex_fuchsia.h
   platform_specific/mutex_posix.h
