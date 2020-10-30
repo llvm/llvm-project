@@ -28,8 +28,8 @@ public:
 
   // These methods are pure virtual in MCStreamer, thus, have to be overridden:
 
-  MOCK_METHOD2(emitSymbolAttribute,
-               bool(MCSymbol *Symbol, MCSymbolAttr Attribute));
+  MOCK_METHOD3(emitSymbolAttribute,
+               bool(MCSymbol *Symbol, MCSymbolAttr Attribute, SMLoc Loc));
   MOCK_METHOD3(emitCommonSymbol,
                void(MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment));
   MOCK_METHOD5(emitZerofill,
