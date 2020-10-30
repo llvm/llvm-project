@@ -694,8 +694,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
 
     assignSectionAddress(SHeader, Sec);
 
-    if (!Sec->Link.empty())
-      SHeader.sh_link = toSectionIndex(Sec->Link, Sec->Name);
+    if (Sec->Link)
+      SHeader.sh_link = toSectionIndex(*Sec->Link, Sec->Name);
 
     if (IsFirstUndefSection) {
       if (auto RawSec = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
@@ -866,10 +866,10 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   else
     SHeader.sh_type = IsStatic ? ELF::SHT_SYMTAB : ELF::SHT_DYNSYM;
 
-  if (RawSec && !RawSec->Link.empty()) {
+  if (RawSec && RawSec->Link) {
     // If the Link field is explicitly defined in the document,
     // we should use it.
-    SHeader.sh_link = toSectionIndex(RawSec->Link, RawSec->Name);
+    SHeader.sh_link = toSectionIndex(*RawSec->Link, RawSec->Name);
   } else {
     // When we describe the .dynsym section in the document explicitly, it is
     // allowed to omit the "DynamicSymbols" tag. In this case .dynstr is not
@@ -1023,8 +1023,8 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
   else if (Name == ".debug_str")
     SHeader.sh_flags = ELF::SHF_MERGE | ELF::SHF_STRINGS;
 
-  if (YAMLSec && !YAMLSec->Link.empty())
-    SHeader.sh_link = toSectionIndex(YAMLSec->Link, Name);
+  if (YAMLSec && YAMLSec->Link)
+    SHeader.sh_link = toSectionIndex(*YAMLSec->Link, Name);
 
   assignSectionAddress(SHeader, YAMLSec);
 }
@@ -1180,7 +1180,7 @@ void ELFState<ELFT>::writeSectionContent(
 
   // For relocation section set link to .symtab by default.
   unsigned Link = 0;
-  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+  if (!Section.Link && !ExcludedSectionHeaders.count(".symtab") &&
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
@@ -1191,9 +1191,9 @@ void ELFState<ELFT>::writeSectionContent(
     return;
 
   for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
-    unsigned SymIdx = Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name,
-                                                 Section.Link == ".dynsym")
-                                 : 0;
+    const bool IsDynamic = Section.Link && (*Section.Link == ".dynsym");
+    unsigned SymIdx =
+        Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name, IsDynamic) : 0;
     if (IsRela) {
       Elf_Rela REntry;
       zero(REntry);
@@ -1261,7 +1261,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
          "Section type is not SHT_GROUP");
 
   unsigned Link = 0;
-  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+  if (!Section.Link && !ExcludedSectionHeaders.count(".symtab") &&
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
@@ -1379,7 +1379,7 @@ void ELFState<ELFT>::writeSectionContent(
     SHeader.sh_entsize = 16;
 
   unsigned Link = 0;
-  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+  if (!Section.Link && !ExcludedSectionHeaders.count(".symtab") &&
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
@@ -1402,7 +1402,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::HashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   unsigned Link = 0;
-  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".dynsym") &&
+  if (!Section.Link && !ExcludedSectionHeaders.count(".dynsym") &&
       SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
@@ -1592,7 +1592,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::AddrsigSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   unsigned Link = 0;
-  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+  if (!Section.Link && !ExcludedSectionHeaders.count(".symtab") &&
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
@@ -1653,7 +1653,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::GnuHashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   unsigned Link = 0;
-  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".dynsym") &&
+  if (!Section.Link && !ExcludedSectionHeaders.count(".dynsym") &&
       SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 

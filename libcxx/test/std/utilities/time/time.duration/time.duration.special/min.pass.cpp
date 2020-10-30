@@ -27,14 +27,14 @@ void test()
     ASSERT_NOEXCEPT(       std::chrono::duration_values<typename D::rep>::min());
 #endif
     {
-    typedef typename D::rep Rep;
-    Rep min_rep = std::chrono::duration_values<Rep>::min();
+    typedef typename D::rep DRep;
+    DRep min_rep = std::chrono::duration_values<DRep>::min();
     assert(D::min().count() == min_rep);
     }
 #if TEST_STD_VER >= 11
     {
-    typedef typename D::rep Rep;
-    constexpr Rep min_rep = std::chrono::duration_values<Rep>::min();
+    typedef typename D::rep DRep;
+    constexpr DRep min_rep = std::chrono::duration_values<DRep>::min();
     static_assert(D::min().count() == min_rep, "");
     }
 #endif

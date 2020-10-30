@@ -4,8 +4,8 @@
 # RUN: %lldb %t -o "image lookup -v -s lookup_ranges" -o exit 2>&1 | FileCheck %s
 
 # CHECK: DIE has DW_AT_ranges(0x47) attribute, but range extraction failed (No debug_ranges section),
-# CHECK:  Function: id = {0x7fffffff0000001c}, name = "ranges", range = [0x0000000000000000-0x0000000000000004)
-# CHECK:    Blocks: id = {0x7fffffff0000001c}, range = [0x00000000-0x00000004)
+# CHECK:  Function: id = {0x0000001c}, name = "ranges", range = [0x0000000000000000-0x0000000000000004)
+# CHECK:    Blocks: id = {0x0000001c}, range = [0x00000000-0x00000004)
 
         .text
         .p2align 12

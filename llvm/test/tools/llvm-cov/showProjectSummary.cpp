@@ -12,10 +12,10 @@ int main(int argc, char ** argv) {
 }
 
 // Test console output.
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT,TEXT-FILE,TEXT-HEADER %S/Inputs/showProjectSummary.test
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s | FileCheck -check-prefixes=TEXT,TEXT-FILE,TEXT-HEADER %S/Inputs/showProjectSummary.test
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT-TITLE,TEXT,TEXT-FILE,TEXT-HEADER %S/Inputs/showProjectSummary.test
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -name=main -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT-FUNCTION,TEXT-HEADER %S/Inputs/showProjectSummary.test
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT %S/Inputs/showProjectSummary.test
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s | FileCheck -check-prefixes=TEXT %S/Inputs/showProjectSummary.test
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT-TITLE,TEXT %S/Inputs/showProjectSummary.test
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile %t.profdata -project-title "Test Suite" -name=main -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT-FUNCTION %S/Inputs/showProjectSummary.test
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -instr-profile=%t.profdata -o %t.dir -path-equivalence=/tmp,%S %s
 // RUN: FileCheck -check-prefixes=TEXT-FOOTER -input-file=%t.dir/index.txt %S/Inputs/showProjectSummary.test
 

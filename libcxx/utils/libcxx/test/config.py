@@ -526,6 +526,11 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
         self.cxx.addWarningFlagIfSupported('-Wno-aligned-allocation-unavailable')
         self.cxx.addWarningFlagIfSupported('-Wno-atomic-alignment')
+
+        # GCC warns about places where we might want to add sized allocation/deallocation
+        # functions, but we know better what we're doing/testing in the test suite.
+        self.cxx.addWarningFlagIfSupported('-Wno-sized-deallocation')
+
         # These warnings should be enabled in order to support the MSVC
         # team using the test suite; They enable the warnings below and
         # expect the test suite to be clean.

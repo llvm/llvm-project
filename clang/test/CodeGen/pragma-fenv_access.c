@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
 
 #pragma STDC FENV_ACCESS ON
 

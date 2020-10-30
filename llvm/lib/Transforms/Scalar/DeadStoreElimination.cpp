@@ -501,28 +501,40 @@ isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
   if (BP1 != BP2)
     return OW_Unknown;
 
-  // The later store completely overlaps the earlier store if:
-  //
-  // 1. Both start at the same offset and the later one's size is greater than
-  //    or equal to the earlier one's, or
-  //
-  //      |--earlier--|
-  //      |--   later   --|
-  //
-  // 2. The earlier store has an offset greater than the later offset, but which
-  //    still lies completely within the later store.
-  //
-  //        |--earlier--|
-  //    |-----  later  ------|
+  // The later access completely overlaps the earlier store if and only if
+  // both start and end of the earlier one is "inside" the later one:
+  //    |<->|--earlier--|<->|
+  //    |-------later-------|
+  // Accesses may overlap if and only if start of one of them is "inside"
+  // another one:
+  //    |<->|--earlier--|<----->|
+  //    |-------later-------|
+  //           OR
+  //    |----- earlier -----|
+  //    |<->|---later---|<----->|
   //
   // We have to be careful here as *Off is signed while *.Size is unsigned.
-  if (EarlierOff >= LaterOff &&
-      LaterSize >= EarlierSize &&
-      uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
-    return OW_Complete;
 
-  // Later may overwrite earlier completely with other partial writes.
-  return OW_MaybePartial;
+  // Check if the earlier access starts "not before" the later one.
+  if (EarlierOff >= LaterOff) {
+    // If the earlier access ends "not after" the later access then the earlier
+    // one is completely overwritten by the later one.
+    if (uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
+      return OW_Complete;
+    // If start of the earlier access is "before" end of the later access then
+    // accesses overlap.
+    else if ((uint64_t)(EarlierOff - LaterOff) < LaterSize)
+      return OW_MaybePartial;
+  }
+  // If start of the later access is "before" end of the earlier access then
+  // accesses overlap.
+  else if ((uint64_t)(LaterOff - EarlierOff) < EarlierSize) {
+    return OW_MaybePartial;
+  }
+
+  // Can reach here only if accesses are known not to overlap. There is no
+  // dedicated code to indicate no overlap so signal "unknown".
+  return OW_Unknown;
 }
 
 /// Return 'OW_Complete' if a store to the 'Later' location completely

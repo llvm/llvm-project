@@ -126,19 +126,21 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   assert(SE.getTypeSizeInBits(V->getType()) == SE.getTypeSizeInBits(Ty) &&
          "InsertNoopCastOfTo cannot change sizes!");
 
-  auto *PtrTy = dyn_cast<PointerType>(Ty);
   // inttoptr only works for integral pointers. For non-integral pointers, we
   // can create a GEP on i8* null  with the integral value as index. Note that
   // it is safe to use GEP of null instead of inttoptr here, because only
   // expressions already based on a GEP of null should be converted to pointers
   // during expansion.
-  if (Op == Instruction::IntToPtr && DL.isNonIntegralPointerType(PtrTy)) {
-    auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
-    assert(DL.getTypeAllocSize(Int8PtrTy->getElementType()) == 1 &&
-           "alloc size of i8 must by 1 byte for the GEP to be correct");
-    auto *GEP = Builder.CreateGEP(
-        Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "uglygep");
-    return Builder.CreateBitCast(GEP, Ty);
+  if (Op == Instruction::IntToPtr) {
+    auto *PtrTy = cast<PointerType>(Ty);
+    if (DL.isNonIntegralPointerType(PtrTy)) {
+      auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
+      assert(DL.getTypeAllocSize(Int8PtrTy->getElementType()) == 1 &&
+             "alloc size of i8 must by 1 byte for the GEP to be correct");
+      auto *GEP = Builder.CreateGEP(
+          Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "uglygep");
+      return Builder.CreateBitCast(GEP, Ty);
+    }
   }
   // Short-circuit unnecessary bitcasts.
   if (Op == Instruction::BitCast) {
@@ -2236,9 +2238,9 @@ template<typename T> static int costAndCollectOperands(
                         unsigned MinIdx, unsigned MaxIdx) {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     Type *OpType = S->getOperand(0)->getType();
-    return NumRequired *
-      TTI.getCmpSelInstrCost(Opcode, OpType,
-                             CmpInst::makeCmpResultType(OpType), CostKind);
+    return NumRequired * TTI.getCmpSelInstrCost(
+                             Opcode, OpType, CmpInst::makeCmpResultType(OpType),
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
   };
 
   switch (S->getSCEVType()) {
@@ -2366,11 +2368,10 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // Assume to be zero-cost.
     return false;
   case scConstant: {
-    auto *Constant = dyn_cast<SCEVConstant>(S);
     // Only evalulate the costs of constants when optimizing for size.
     if (CostKind != TargetTransformInfo::TCK_CodeSize)
       return 0;
-    const APInt &Imm = Constant->getAPInt();
+    const APInt &Imm = cast<SCEVConstant>(S)->getAPInt();
     Type *Ty = S->getType();
     BudgetRemaining -= TTI.getIntImmCostInst(
         WorkItem.ParentOpcode, WorkItem.OperandIdx, Imm, Ty, CostKind);
@@ -2410,7 +2411,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr: {
-    assert(dyn_cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
+    assert(cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)
     // than the number of it's terms.
