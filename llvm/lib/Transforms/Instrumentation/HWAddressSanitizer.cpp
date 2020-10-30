@@ -207,8 +207,10 @@ public:
 
   void initializeCallbacks(Module &M);
 
+  Value *getOpaqueNoopCast(IRBuilder<> &IRB, Value *Val);
+
   Value *getDynamicShadowIfunc(IRBuilder<> &IRB);
-  Value *getDynamicShadowNonTls(IRBuilder<> &IRB);
+  Value *getShadowNonTls(IRBuilder<> &IRB);
 
   void untagPointerOperand(Instruction *I, Value *Addr);
   Value *shadowBase();
@@ -294,7 +296,7 @@ private:
 
   Constant *ShadowGlobal;
 
-  Value *LocalDynamicShadow = nullptr;
+  Value *ShadowBase = nullptr;
   Value *StackBaseTag = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
@@ -572,20 +574,27 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
       M.getOrInsertFunction("__hwasan_handle_vfork", IRB.getVoidTy(), IntptrTy);
 }
 
-Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
+Value *HWAddressSanitizer::getOpaqueNoopCast(IRBuilder<> &IRB, Value *Val) {
   // An empty inline asm with input reg == output reg.
   // An opaque no-op cast, basically.
-  InlineAsm *Asm = InlineAsm::get(
-      FunctionType::get(Int8PtrTy, {ShadowGlobal->getType()}, false),
-      StringRef(""), StringRef("=r,0"),
-      /*hasSideEffects=*/false);
-  return IRB.CreateCall(Asm, {ShadowGlobal}, ".hwasan.shadow");
+  // This prevents code bloat as a result of rematerializing trivial definitions
+  // such as constants or global addresses at every load and store.
+  InlineAsm *Asm =
+      InlineAsm::get(FunctionType::get(Int8PtrTy, {Val->getType()}, false),
+                     StringRef(""), StringRef("=r,0"),
+                     /*hasSideEffects=*/false);
+  return IRB.CreateCall(Asm, {Val}, ".hwasan.shadow");
 }
 
-Value *HWAddressSanitizer::getDynamicShadowNonTls(IRBuilder<> &IRB) {
-  // Generate code only when dynamic addressing is needed.
+Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
+  return getOpaqueNoopCast(IRB, ShadowGlobal);
+}
+
+Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
   if (Mapping.Offset != kDynamicShadowSentinel)
-    return nullptr;
+    return getOpaqueNoopCast(
+        IRB, ConstantExpr::getIntToPtr(
+                 ConstantInt::get(IntptrTy, Mapping.Offset), Int8PtrTy));
 
   if (Mapping.InGlobal) {
     return getDynamicShadowIfunc(IRB);
@@ -621,7 +630,7 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
     return;
 
   // Do not instrument the load fetching the dynamic shadow address.
-  if (LocalDynamicShadow == I)
+  if (ShadowBase == I)
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
@@ -685,20 +694,13 @@ void HWAddressSanitizer::untagPointerOperand(Instruction *I, Value *Addr) {
   I->setOperand(getPointerOperandIndex(I), UntaggedPtr);
 }
 
-Value *HWAddressSanitizer::shadowBase() {
-  if (LocalDynamicShadow)
-    return LocalDynamicShadow;
-  return ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, Mapping.Offset),
-                                   Int8PtrTy);
-}
-
 Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   // Mem >> Scale
   Value *Shadow = IRB.CreateLShr(Mem, Mapping.Scale);
   if (Mapping.Offset == 0)
     return IRB.CreateIntToPtr(Shadow, Int8PtrTy);
   // (Mem >> Scale) + Offset
-  return IRB.CreateGEP(Int8Ty, shadowBase(), Shadow);
+  return IRB.CreateGEP(Int8Ty, ShadowBase, Shadow);
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
@@ -715,7 +717,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                        M, UseShortGranules
                               ? Intrinsic::hwasan_check_memaccess_shortgranules
                               : Intrinsic::hwasan_check_memaccess),
-                   {shadowBase(), Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
     return;
   }
 
@@ -1003,12 +1005,12 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   if (!Mapping.InTls) {
-    LocalDynamicShadow = getDynamicShadowNonTls(IRB);
+    ShadowBase = getShadowNonTls(IRB);
     return;
   }
 
   if (!WithFrameRecord && TargetTriple.isAndroid()) {
-    LocalDynamicShadow = getDynamicShadowIfunc(IRB);
+    ShadowBase = getDynamicShadowIfunc(IRB);
     return;
   }
 
@@ -1069,12 +1071,12 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   // Get shadow base address by aligning RecordPtr up.
   // Note: this is not correct if the pointer is already aligned.
   // Runtime library will make sure this never happens.
-  LocalDynamicShadow = IRB.CreateAdd(
+  ShadowBase = IRB.CreateAdd(
       IRB.CreateOr(
           ThreadLongMaybeUntagged,
           ConstantInt::get(IntptrTy, (1ULL << kShadowBaseAlignment) - 1)),
       ConstantInt::get(IntptrTy, 1), "hwasan.shadow");
-  LocalDynamicShadow = IRB.CreateIntToPtr(LocalDynamicShadow, Int8PtrTy);
+  ShadowBase = IRB.CreateIntToPtr(ShadowBase, Int8PtrTy);
 }
 
 Value *HWAddressSanitizer::readRegister(IRBuilder<> &IRB, StringRef Name) {
@@ -1226,7 +1228,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       IntrinToInstrument.empty())
     return Changed;
 
-  assert(!LocalDynamicShadow);
+  assert(!ShadowBase);
 
   Instruction *InsertPt = &*F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(InsertPt);
@@ -1306,7 +1308,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
   }
 
-  LocalDynamicShadow = nullptr;
+  ShadowBase = nullptr;
   StackBaseTag = nullptr;
 
   return true;
