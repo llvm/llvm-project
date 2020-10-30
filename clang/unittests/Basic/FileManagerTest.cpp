@@ -350,6 +350,58 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
             f2 ? *f2 : nullptr);
 }
 
+TEST_F(FileManagerTest, getFileRefEquality) {
+  auto StatCache = std::make_unique<FakeStatCache>();
+  StatCache->InjectDirectory("dir", 40);
+  StatCache->InjectFile("dir/f1.cpp", 41);
+  StatCache->InjectFile("dir/f1-also.cpp", 41);
+  StatCache->InjectFile("dir/f1-redirect.cpp", 41, "dir/f1.cpp");
+  StatCache->InjectFile("dir/f2.cpp", 42);
+  manager.setStatCache(std::move(StatCache));
+
+  auto F1 = manager.getFileRef("dir/f1.cpp");
+  auto F1Again = manager.getFileRef("dir/f1.cpp");
+  auto F1Also = manager.getFileRef("dir/f1-also.cpp");
+  auto F1Redirect = manager.getFileRef("dir/f1-redirect.cpp");
+  auto F2 = manager.getFileRef("dir/f2.cpp");
+
+  // Check Expected<FileEntryRef> for error.
+  ASSERT_FALSE(!F1);
+  ASSERT_FALSE(!F1Also);
+  ASSERT_FALSE(!F1Again);
+  ASSERT_FALSE(!F1Redirect);
+  ASSERT_FALSE(!F2);
+
+  // Check names.
+  EXPECT_EQ("dir/f1.cpp", F1->getName());
+  EXPECT_EQ("dir/f1.cpp", F1Again->getName());
+  EXPECT_EQ("dir/f1-also.cpp", F1Also->getName());
+  EXPECT_EQ("dir/f1.cpp", F1Redirect->getName());
+  EXPECT_EQ("dir/f2.cpp", F2->getName());
+
+  // Compare against FileEntry*.
+  EXPECT_EQ(&F1->getFileEntry(), *F1);
+  EXPECT_EQ(*F1, &F1->getFileEntry());
+  EXPECT_NE(&F2->getFileEntry(), *F1);
+  EXPECT_NE(*F1, &F2->getFileEntry());
+
+  // Compare using ==.
+  EXPECT_EQ(*F1, *F1Also);
+  EXPECT_EQ(*F1, *F1Again);
+  EXPECT_EQ(*F1, *F1Redirect);
+  EXPECT_EQ(*F1Also, *F1Redirect);
+  EXPECT_NE(*F2, *F1);
+  EXPECT_NE(*F2, *F1Also);
+  EXPECT_NE(*F2, *F1Again);
+  EXPECT_NE(*F2, *F1Redirect);
+
+  // Compare using isSameRef.
+  EXPECT_TRUE(F1->isSameRef(*F1Again));
+  EXPECT_TRUE(F1->isSameRef(*F1Redirect));
+  EXPECT_FALSE(F1->isSameRef(*F1Also));
+  EXPECT_FALSE(F1->isSameRef(*F2));
+}
+
 // getFile() Should return the same entry as getVirtualFile if the file actually
 // is a virtual file, even if the name is not exactly the same (but is after
 // normalisation done by the file system, like on Windows). This can be checked
