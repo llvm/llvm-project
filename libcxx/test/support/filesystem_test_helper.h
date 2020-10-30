@@ -330,7 +330,7 @@ public:
         env_.create_file("dir1/file2", 42);
         env_.create_file("empty_file");
         env_.create_file("non_empty_file", 42);
-        env_.create_symlink("dir1", "symlink_to_dir", false);
+        env_.create_symlink("dir1", "symlink_to_dir", false, true);
         env_.create_symlink("empty_file", "symlink_to_empty_file", false);
     }
 
