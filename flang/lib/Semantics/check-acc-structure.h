@@ -111,12 +111,7 @@ public:
 
 private:
 
-  void CheckNoBranching(const parser::Block &block,
-      const llvm::acc::Directive directive,
-      const parser::CharBlock &directiveSource) const;
-
   bool CheckAllowedModifier(llvm::acc::Clause clause);
-
   llvm::StringRef getClauseName(llvm::acc::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
 };
