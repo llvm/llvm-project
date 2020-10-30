@@ -19,6 +19,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -47,9 +48,9 @@ namespace {
       AU.addPreservedID(BreakCriticalEdgesID);
     }
 
-    bool valueEscapes(const Instruction *Inst) const {
-      const BasicBlock *BB = Inst->getParent();
-      for (const User *U : Inst->users()) {
+    bool valueEscapes(const Instruction &Inst) const {
+      const BasicBlock *BB = Inst.getParent();
+      for (const User *U : Inst.users()) {
         const Instruction *UI = cast<Instruction>(U);
         if (UI->getParent() != BB || isa<PHINode>(UI))
           return true;
@@ -90,33 +91,26 @@ bool RegToMem::runOnFunction(Function &F) {
   // Find the escaped instructions. But don't create stack slots for
   // allocas in entry block.
   std::list<Instruction*> WorkList;
-  for (BasicBlock &ibb : F)
-    for (BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie;
-         ++iib) {
-      if (!(isa<AllocaInst>(iib) && iib->getParent() == BBEntry) &&
-          valueEscapes(&*iib)) {
-        WorkList.push_front(&*iib);
-      }
-    }
+  for (Instruction &I : instructions(F))
+    if (!(isa<AllocaInst>(I) && I.getParent() == BBEntry) && valueEscapes(I))
+      WorkList.push_front(&I);
 
   // Demote escaped instructions
   NumRegsDemoted += WorkList.size();
-  for (Instruction *ilb : WorkList)
-    DemoteRegToStack(*ilb, false, AllocaInsertionPoint);
+  for (Instruction *I : WorkList)
+    DemoteRegToStack(*I, false, AllocaInsertionPoint);
 
   WorkList.clear();
 
   // Find all phi's
-  for (BasicBlock &ibb : F)
-    for (BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie;
-         ++iib)
-      if (isa<PHINode>(iib))
-        WorkList.push_front(&*iib);
+  for (BasicBlock &BB : F)
+    for (auto &Phi : BB.phis())
+      WorkList.push_front(&Phi);
 
   // Demote phi nodes
   NumPhisDemoted += WorkList.size();
-  for (Instruction *ilb : WorkList)
-    DemotePHIToStack(cast<PHINode>(ilb), AllocaInsertionPoint);
+  for (Instruction *I : WorkList)
+    DemotePHIToStack(cast<PHINode>(I), AllocaInsertionPoint);
 
   return true;
 }
