@@ -5319,7 +5319,7 @@ agents.
                                                                                               mode, omit vmcnt(0) and
                                                                                               vscnt(0).
                                                            - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              waitcnt lgkmcnt(0).
+                                                                                              lgkmcnt(0).
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -5582,7 +5582,7 @@ agents.
                                                                                               mode, omit vmcnt(0) and
                                                                                               vscnt(0).
                                                            - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              s_waitcnt lgkmcnt(0).
+                                                                                              lgkmcnt(0).
                                                            - Must happen after              - Must happen after
                                                              any preceding                    any preceding
                                                              local/generic                    local/generic
@@ -5592,7 +5592,7 @@ agents.
                                                                                             - Could be split into
                                                                                               separate s_waitcnt
                                                                                               vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
+                                                                                              vscnt(0), and s_waitcnt
                                                                                               lgkmcnt(0) to allow
                                                                                               them to be
                                                                                               independently moved
@@ -5633,11 +5633,10 @@ agents.
                                                                                           3. s_waitcnt vm/vscnt(0)
 
                                                                                             - If CU wavefront execution
-                                                                                              mode, omit vm/vscnt(0).
+                                                                                              mode, omit.
                                                                                             - Use vmcnt(0) if atomic with
                                                                                               return and vscnt(0) if
                                                                                               atomic with no-return.
-                                                                                              waitcnt lgkmcnt(0).
                                                                                             - Must happen before
                                                                                               the following
                                                                                               buffer_gl0_inv.
@@ -5726,8 +5725,7 @@ agents.
                                                                                             - If CU wavefront execution
                                                                                               mode, omit vmcnt(0) and
                                                                                               vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              waitcnt lgkmcnt(0).
+                                                           - If OpenCL, omit.               - If OpenCL, omit lgkmcnt(0).
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -5776,12 +5774,12 @@ agents.
 
                                                          2. flat_atomic                   2. flat_atomic
                                                          3. s_waitcnt lgkmcnt(0)          3. s_waitcnt lgkmcnt(0) &
-                                                                                             vm/vscnt(0)
+                                                                                             vmcnt(0) & vscnt(0)
 
                                                                                             - If CU wavefront execution
-                                                                                              mode, omit vm/vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              waitcnt lgkmcnt(0).
+                                                                                              mode, omit vmcnt(0) and
+                                                                                              vscnt(0).
+                                                           - If OpenCL, omit.               - If OpenCL, omit lgkmcnt(0).
                                                            - Must happen before             - Must happen before
                                                              any following                    the following
                                                              global/generic                   buffer_gl0_inv.
@@ -5886,7 +5884,7 @@ agents.
                                                            - Could be split into            - Could be split into
                                                              separate s_waitcnt               separate s_waitcnt
                                                              vmcnt(0) and                     vmcnt(0), s_waitcnt
-                                                             s_waitcnt                        vscnt(0) and s_waitcnt
+                                                             s_waitcnt                        vscnt(0), and s_waitcnt
                                                              lgkmcnt(0) to allow              lgkmcnt(0) to allow
                                                              them to be                       them to be
                                                              independently moved              independently moved
@@ -6208,7 +6206,7 @@ agents.
                                                                                             - Could be split into
                                                                                               separate s_waitcnt
                                                                                               vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
+                                                                                              vscnt(0), and s_waitcnt
                                                                                               lgkmcnt(0) to allow
                                                                                               them to be
                                                                                               independently moved
