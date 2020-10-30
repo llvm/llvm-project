@@ -372,24 +372,23 @@ void SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
   TypeSet type_set;
 
   CompileUnit *comp_unit = nullptr;
-  DWARFUnit *dwarf_cu = nullptr;
   if (sc_scope)
     comp_unit = sc_scope->CalculateSymbolContextCompileUnit();
 
-  if (comp_unit) {
-    dwarf_cu = GetDWARFCompileUnit(comp_unit);
-    if (!dwarf_cu)
+  const auto &get = [&](DWARFUnit *unit) {
+    if (!unit)
       return;
-    GetTypes(dwarf_cu->DIE(), dwarf_cu->GetOffset(),
-             dwarf_cu->GetNextUnitOffset(), type_mask, type_set);
+    unit = &unit->GetNonSkeletonUnit();
+    GetTypes(unit->DIE(), unit->GetOffset(), unit->GetNextUnitOffset(),
+             type_mask, type_set);
+  };
+  if (comp_unit) {
+    get(GetDWARFCompileUnit(comp_unit));
   } else {
     DWARFDebugInfo &info = DebugInfo();
     const size_t num_cus = info.GetNumUnits();
-    for (size_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
-      dwarf_cu = info.GetUnitAtIndex(cu_idx);
-      if (dwarf_cu)
-        GetTypes(dwarf_cu->DIE(), 0, UINT32_MAX, type_mask, type_set);
-    }
+    for (size_t cu_idx = 0; cu_idx < num_cus; ++cu_idx)
+      get(info.GetUnitAtIndex(cu_idx));
   }
 
   std::set<CompilerType> compiler_type_set;
