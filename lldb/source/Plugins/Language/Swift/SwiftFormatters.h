@@ -88,9 +88,6 @@ bool ClosedRange_SummaryProvider(ValueObject &valobj, Stream &stream,
 bool CountableClosedRange_SummaryProvider(ValueObject &valobj, Stream &stream,
                                           const TypeSummaryOptions &options);
 
-bool StridedRangeGenerator_SummaryProvider(ValueObject &valobj, Stream &stream,
-                                           const TypeSummaryOptions &options);
-
 bool SIMDVector_SummaryProvider(ValueObject &valobj, Stream &stream,
                                 const TypeSummaryOptions &options);
 
