@@ -1847,7 +1847,6 @@ size_t __char_to_wide(const string &str, wchar_t *out, size_t outlen) {
 //                           directory entry definitions
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef _LIBCPP_WIN32API
 error_code directory_entry::__do_refresh() noexcept {
   __data_.__reset();
   error_code failure_ec;
@@ -1901,47 +1900,5 @@ error_code directory_entry::__do_refresh() noexcept {
 
   return failure_ec;
 }
-#else
-error_code directory_entry::__do_refresh() noexcept {
-  __data_.__reset();
-  error_code failure_ec;
-
-  file_status st = _VSTD_FS::symlink_status(__p_, failure_ec);
-  if (!status_known(st)) {
-    __data_.__reset();
-    return failure_ec;
-  }
-
-  if (!_VSTD_FS::exists(st) || !_VSTD_FS::is_symlink(st)) {
-    __data_.__cache_type_ = directory_entry::_RefreshNonSymlink;
-    __data_.__type_ = st.type();
-    __data_.__non_sym_perms_ = st.permissions();
-  } else { // we have a symlink
-    __data_.__sym_perms_ = st.permissions();
-    // Get the information about the linked entity.
-    // Ignore errors from stat, since we don't want errors regarding symlink
-    // resolution to be reported to the user.
-    error_code ignored_ec;
-    st = _VSTD_FS::status(__p_, ignored_ec);
-
-    __data_.__type_ = st.type();
-    __data_.__non_sym_perms_ = st.permissions();
-
-    // If we failed to resolve the link, then only partially populate the
-    // cache.
-    if (!status_known(st)) {
-      __data_.__cache_type_ = directory_entry::_RefreshSymlinkUnresolved;
-      return error_code{};
-    }
-    __data_.__cache_type_ = directory_entry::_RefreshSymlink;
-  }
-
-  // FIXME: This is currently broken, and the implementation only a placeholder.
-  // We need to cache last_write_time, file_size, and hard_link_count here before
-  // the implementation actually works.
-
-  return failure_ec;
-}
-#endif
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
