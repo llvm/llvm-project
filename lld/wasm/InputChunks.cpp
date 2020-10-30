@@ -109,9 +109,9 @@ void InputChunk::verifyRelocTargets() const {
         rel.Type != R_WASM_GLOBAL_INDEX_I32) {
       auto expectedValue = file->calcExpectedValue(rel);
       if (expectedValue != existingValue)
-        warn("unexpected existing value for " + relocTypeToString(rel.Type) +
-             ": existing=" + Twine(existingValue) +
-             " expected=" + Twine(expectedValue));
+        warn(toString(this) + ": unexpected existing value for " +
+             relocTypeToString(rel.Type) + ": existing=" +
+             Twine(existingValue) + " expected=" + Twine(expectedValue));
     }
   }
 }
