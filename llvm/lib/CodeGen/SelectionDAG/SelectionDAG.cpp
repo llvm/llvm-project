@@ -338,6 +338,7 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   default:
     llvm_unreachable("Expected VECREDUCE opcode");
   case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_SEQ_FADD:
     return ISD::FADD;
   case ISD::VECREDUCE_FMUL:
     return ISD::FMUL;
