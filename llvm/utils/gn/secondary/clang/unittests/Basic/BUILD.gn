@@ -10,7 +10,6 @@ unittest("BasicTests") {
   sources = [
     "CharInfoTest.cpp",
     "DiagnosticTest.cpp",
-    "FileEntryTest.cpp",
     "FileManagerTest.cpp",
     "LineOffsetMappingTest.cpp",
     "SourceManagerTest.cpp",
