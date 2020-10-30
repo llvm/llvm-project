@@ -14,5 +14,5 @@ int main() {
 // CHECK: {{.*}} call {{.*}}
 // CHECK-NOT: br i1 {{.*}}
 // CHECK: br {{.*}}label %[[BB1:.*]], label{{.*}}!prof ![[PD1:[0-9]+]]
-// CHECK: {{.*}}[[BB1]]: 
-// CHECK:![[PD1]] = !{!"branch_weights", i32 0, i32 1}
+// CHECK: {{.*}}[[BB1]]:
+// CHECK:![[PD1]] = !{!"branch_weights", i64 0, i64 1}

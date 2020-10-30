@@ -45,7 +45,7 @@ exit:
   ret i32 %result
 }
 
-!0 = !{!"branch_weights", i64 64, i64 4}
+!0 = !{!"branch_weights", i32 64, i32 4}
 
 define i32 @test3(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK: Printing analysis {{.*}} for function 'test3'
@@ -89,7 +89,7 @@ exit:
   ret i32 %result
 }
 
-!1 = !{!"branch_weights", i64 4, i64 4, i64 64, i64 4, i64 4}
+!1 = !{!"branch_weights", i32 4, i32 4, i32 64, i32 4, i32 4}
 
 define i32 @test4(i32 %x) nounwind uwtable readnone ssp {
 ; CHECK: Printing analysis {{.*}} for function 'test4'
@@ -116,7 +116,7 @@ return:
   ret i32 %retval.0
 }
 
-!2 = !{!"branch_weights", i64 7, i64 6, i64 4, i64 4, i64 64}
+!2 = !{!"branch_weights", i32 7, i32 6, i32 4, i32 4, i32 64}
 
 declare void @coldfunc() cold
 
@@ -196,7 +196,7 @@ exit:
   ret i32 %result
 }
 
-!3 = !{!"branch_weights", i64 100, i64 1}
+!3 = !{!"branch_weights", i32 100, i32 1}
 
 define i32 @test_cold_call_sites(i32* %a) {
 ; Test that edges to blocks post-dominated by cold call sites
@@ -328,13 +328,13 @@ invoke.to0:
 ; CHECK: edge invoke.to0 -> invoke.to1 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge invoke.to0 -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
   invoke i32 @InvokeCall() to label %invoke.to1 unwind label %lpad,
-     !prof !{!"branch_weights", i64 444}
+     !prof !{!"branch_weights", i32 444}
 
 invoke.to1:
 ; CHECK: invoke.to1 -> invoke.to2 probability is 0x55555555 / 0x80000000 = 66.67%
 ; CHECK: invoke.to1 -> lpad probability is 0x2aaaaaab / 0x80000000 = 33.33%
   invoke i32 @InvokeCall() to label %invoke.to2 unwind label %lpad,
-     !prof !{!"branch_weights", i64 222, i64 111}
+     !prof !{!"branch_weights", i32 222, i32 111}
   ret void
 
 invoke.to2:
@@ -435,7 +435,7 @@ exit:
   ret i32 %b
 }
 
-!4 = !{!"branch_weights", i64 0, i64 1}
+!4 = !{!"branch_weights", i32 0, i32 1}
 
 define i32 @test_unreachable_with_prof_equal(i32 %a, i32 %b) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_prof_equal'
@@ -453,7 +453,7 @@ exit:
   ret i32 %b
 }
 
-!5 = !{!"branch_weights", i64 2147483647, i64 1}
+!5 = !{!"branch_weights", i32 2147483647, i32 1}
 
 define i32 @test_unreachable_with_prof_zero(i32 %a, i32 %b) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_prof_zero'
@@ -471,7 +471,7 @@ exit:
   ret i32 %b
 }
 
-!6 = !{!"branch_weights", i64 0, i64 0}
+!6 = !{!"branch_weights", i32 0, i32 0}
 
 define i32 @test_unreachable_with_prof_less(i32 %a, i32 %b) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_prof_less'
@@ -489,7 +489,7 @@ exit:
   ret i32 %b
 }
 
-!7 = !{!"branch_weights", i64 1, i64 0}
+!7 = !{!"branch_weights", i32 1, i32 0}
 
 define i32 @test_unreachable_with_switch_prof1(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_switch_prof1'
@@ -532,7 +532,7 @@ exit:
   ret i32 %result
 }
 
-!8 = !{!"branch_weights", i64 4, i64 4, i64 64, i64 4, i64 4}
+!8 = !{!"branch_weights", i32 4, i32 4, i32 64, i32 4, i32 4}
 
 define i32 @test_unreachable_with_switch_prof2(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_switch_prof2'
@@ -574,7 +574,7 @@ exit:
   ret i32 %result
 }
 
-!9 = !{!"branch_weights", i64 4, i64 4, i64 64, i64 4, i64 4}
+!9 = !{!"branch_weights", i32 4, i32 4, i32 64, i32 4, i32 4}
 
 define i32 @test_unreachable_with_switch_prof3(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_switch_prof3'
@@ -615,7 +615,7 @@ exit:
   ret i32 %result
 }
 
-!10 = !{!"branch_weights", i64 0, i64 4, i64 64, i64 4, i64 4}
+!10 = !{!"branch_weights", i32 0, i32 4, i32 64, i32 4, i32 4}
 
 define i32 @test_unreachable_with_switch_prof4(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_switch_prof4'
@@ -647,4 +647,4 @@ case_e:
 
 }
 
-!11 = !{!"branch_weights", i64 0, i64 4, i64 64, i64 4, i64 4}
+!11 = !{!"branch_weights", i32 0, i32 4, i32 64, i32 4, i32 4}

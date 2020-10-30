@@ -103,4 +103,4 @@ declare void @__cxa_end_catch()
 !3 = !{!"VP", i32 0, i64 1, i64 -6116256810522035449, i64 1}
 ; ICP-NOT: !3 = !{!"VP", i32 0, i64 1, i64 -2732222848796217051, i64 1}
 ; ICP-NOT: !4 = !{!"VP", i32 0, i64 1, i64 -6116256810522035449, i64 1}
-; ICP: [[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 0}
+; ICP: [[BRANCH_WEIGHT]] = !{!"branch_weights", i64 1, i64 0}

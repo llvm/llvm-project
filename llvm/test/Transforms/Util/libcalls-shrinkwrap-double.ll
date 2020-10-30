@@ -238,4 +238,4 @@ define void @test_pow(i32 %int_val, double %exp) {
 
 declare double @pow(double, double)
 
-; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 2000}
+; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i64 1, i64 2000}

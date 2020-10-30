@@ -221,5 +221,5 @@ void tu2(int &i) {
   }
 }
 
-// CHECK: !6 = !{!"branch_weights", i32 2000, i32 1}
-// CHECK: !10 = !{!"branch_weights", i32 1, i32 2000}
+// CHECK: !6 = !{!"branch_weights", i64 2000, i64 1}
+// CHECK: !10 = !{!"branch_weights", i64 1, i64 2000}

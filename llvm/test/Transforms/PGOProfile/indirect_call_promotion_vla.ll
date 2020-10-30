@@ -24,5 +24,5 @@ entry:
   ret i32 %call
 }
 
-; CHECK: [[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1500, i32 100}
+; CHECK: [[BRANCH_WEIGHT]] = !{!"branch_weights", i64 1500, i64 100}
 !1 = !{!"VP", i32 0, i64 1600, i64 -2545542355363006406, i64 1500}

@@ -96,5 +96,5 @@ int g1() {
   return i;
 }
 
-// CHECK-DAG: ![[unlikely_threadlocal]] = !{!"branch_weights", i32 1, i32 1023}
-// CHECK-DAG: ![[unlikely_staticlocal]] = !{!"branch_weights", i32 1, i32 1048575}
+// CHECK-DAG: ![[unlikely_threadlocal]] = !{!"branch_weights", i64 1, i64 1023}
+// CHECK-DAG: ![[unlikely_staticlocal]] = !{!"branch_weights", i64 1, i64 1048575}

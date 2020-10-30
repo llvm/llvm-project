@@ -223,7 +223,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Conf.DebugPassManager);
   SI.registerCallbacks(PIC);
-  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(Conf.DebugPassManager, TM, Conf.PTO, PGOOpt, &PIC);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.
@@ -270,10 +270,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   }
 
   if (IsThinLTO)
-    MPM = PB.buildThinLTODefaultPipeline(OL, Conf.DebugPassManager,
-                                         ImportSummary);
+    MPM = PB.buildThinLTODefaultPipeline(OL, ImportSummary);
   else
-    MPM = PB.buildLTODefaultPipeline(OL, Conf.DebugPassManager, ExportSummary);
+    MPM = PB.buildLTODefaultPipeline(OL, ExportSummary);
   MPM.run(Mod, MAM);
 
   // FIXME (davide): verify the output.
@@ -283,7 +282,7 @@ static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
                                  TargetMachine *TM, std::string PipelineDesc,
                                  std::string AAPipelineDesc,
                                  bool DisableVerify) {
-  PassBuilder PB(TM);
+  PassBuilder PB(Conf.DebugPassManager, TM);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.
