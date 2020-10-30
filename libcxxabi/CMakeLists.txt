@@ -282,6 +282,10 @@ endif()
 # library.
 add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 
+# libcxxabi needs to, for various reasons, include the libcpp headers as if
+# it is being built as part of libcxx.
+add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
   add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)

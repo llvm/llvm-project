@@ -8,7 +8,6 @@
 // This file implements the new and delete operators.
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_BUILDING_LIBRARY
 #include "__cxxabi_config.h"
 #include <new>
 #include <cstdlib>
