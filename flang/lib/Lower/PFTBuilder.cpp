@@ -191,16 +191,38 @@ private:
     resetFunctionState();
   }
 
-  /// Ensure that a function ends with a valid branch target (and is nonempty).
+  /// Add the end statement Evaluation of a sub/program to the PFT.
+  /// There may be intervening internal subprogram definitions between
+  /// prior statements and this end statement.
   void endFunctionBody() {
     if (evaluationListStack.empty())
       return;
     auto evaluationList = evaluationListStack.back();
-    if (evaluationList->empty() ||
-        !evaluationList->back().isA<parser::ContinueStmt>()) {
-      static const parser::ContinueStmt endTarget{};
-      addEvaluation(
-          lower::pft::Evaluation{endTarget, parentVariantStack.back(), {}, {}});
+    if (evaluationList->empty() || !evaluationList->back().isEndStmt()) {
+      const auto &endStmt =
+          parentVariantStack.back().get<lower::pft::FunctionLikeUnit>().endStmt;
+      endStmt.visit(common::visitors{
+          [&](const parser::Statement<parser::EndProgramStmt> &s) {
+            addEvaluation(lower::pft::Evaluation{
+                s.statement, parentVariantStack.back(), s.source, s.label});
+          },
+          [&](const parser::Statement<parser::EndFunctionStmt> &s) {
+            addEvaluation(lower::pft::Evaluation{
+                s.statement, parentVariantStack.back(), s.source, s.label});
+          },
+          [&](const parser::Statement<parser::EndSubroutineStmt> &s) {
+            addEvaluation(lower::pft::Evaluation{
+                s.statement, parentVariantStack.back(), s.source, s.label});
+          },
+          [&](const parser::Statement<parser::EndMpSubprogramStmt> &s) {
+            addEvaluation(lower::pft::Evaluation{
+                s.statement, parentVariantStack.back(), s.source, s.label});
+          },
+          [&](const auto &s) {
+            llvm_unreachable("missing end statement or unexpected begin "
+                             "statement reference");
+          },
+      });
     }
     lastLexicalEvaluation = nullptr;
   }
@@ -307,7 +329,7 @@ private:
     auto &entryPointList = eval.getOwningProcedure()->entryPointList;
     evaluationListStack.back()->emplace_back(std::move(eval));
     lower::pft::Evaluation *p = &evaluationListStack.back()->back();
-    if (p->isActionStmt() || p->isConstructStmt()) {
+    if (p->isActionStmt() || p->isConstructStmt() || p->isEndStmt()) {
       if (lastLexicalEvaluation) {
         lastLexicalEvaluation->lexicalSuccessor = p;
         p->printIndex = lastLexicalEvaluation->printIndex + 1;
@@ -833,7 +855,7 @@ public:
                      [&](const lower::pft::BlockDataUnit &unit) {
                        outputStream << getNodeIndex(unit) << " ";
                        outputStream << "BlockData: ";
-                       outputStream << "\nEndBlockData\n\n";
+                       outputStream << "\nEnd BlockData\n\n";
                      },
                      [&](const lower::pft::FunctionLikeUnit &func) {
                        dumpFunctionLikeUnit(outputStream, func);
@@ -945,9 +967,9 @@ public:
       outputStream << "\nContains\n";
       for (auto &func : functionLikeUnit.nestedFunctions)
         dumpFunctionLikeUnit(outputStream, func);
-      outputStream << "EndContains\n";
+      outputStream << "End Contains\n";
     }
-    outputStream << "End" << unitKind << ' ' << name << "\n\n";
+    outputStream << "End " << unitKind << ' ' << name << "\n\n";
   }
 
   void dumpModuleLikeUnit(llvm::raw_ostream &outputStream,
@@ -957,7 +979,7 @@ public:
     outputStream << "\nContains\n";
     for (auto &func : moduleLikeUnit.nestedFunctions)
       dumpFunctionLikeUnit(outputStream, func);
-    outputStream << "EndContains\nEndModuleLike\n\n";
+    outputStream << "End Contains\nEnd ModuleLike\n\n";
   }
 
   // Top level directives
@@ -968,7 +990,7 @@ public:
     outputStream << "CompilerDirective: !";
     outputStream << directive.get<Fortran::parser::CompilerDirective>()
                         .source.ToString();
-    outputStream << "\nEndCompilerDirective\n\n";
+    outputStream << "\nEnd CompilerDirective\n\n";
   }
 
   template <typename T>

@@ -137,6 +137,10 @@ using ConstructStmts = std::tuple<
     parser::MaskedElsewhereStmt, parser::ElsewhereStmt, parser::EndWhereStmt,
     parser::ForallConstructStmt, parser::EndForallStmt>;
 
+using EndStmts =
+    std::tuple<parser::EndProgramStmt, parser::EndFunctionStmt,
+               parser::EndSubroutineStmt, parser::EndMpSubprogramStmt>;
+
 using Constructs =
     std::tuple<parser::AssociateConstruct, parser::BlockConstruct,
                parser::CaseConstruct, parser::ChangeTeamConstruct,
@@ -157,6 +161,9 @@ static constexpr bool isOtherStmt{common::HasMember<A, OtherStmts>};
 
 template <typename A>
 static constexpr bool isConstructStmt{common::HasMember<A, ConstructStmts>};
+
+template <typename A>
+static constexpr bool isEndStmt{common::HasMember<A, EndStmts>};
 
 template <typename A>
 static constexpr bool isConstruct{common::HasMember<A, Constructs>};
@@ -196,8 +203,8 @@ template <typename A>
 using MakeReferenceVariant = typename MakeReferenceVariantHelper<A>::type;
 
 using EvaluationTuple =
-    common::CombineTuples<ActionStmts, OtherStmts, ConstructStmts, Constructs,
-                          Directives>;
+    common::CombineTuples<ActionStmts, OtherStmts, ConstructStmts, EndStmts,
+                          Constructs, Directives>;
 /// Hide non-nullable pointers to the parse-tree node.
 /// Build type std::variant<const A* const, const B* const, ...>
 /// from EvaluationTuple type (std::tuple<A, B, ...>).
@@ -236,6 +243,10 @@ struct Evaluation : EvaluationVariant {
     return visit(common::visitors{[](auto &r) {
       return pft::isConstructStmt<std::decay_t<decltype(r)>>;
     }});
+  }
+  constexpr bool isEndStmt() const {
+    return visit(common::visitors{
+        [](auto &r) { return pft::isEndStmt<std::decay_t<decltype(r)>>; }});
   }
   constexpr bool isConstruct() const {
     return visit(common::visitors{
