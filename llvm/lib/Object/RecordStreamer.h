@@ -48,7 +48,8 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute,
+                           SMLoc Loc) override;
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     unsigned ByteAlignment, SMLoc Loc = SMLoc()) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

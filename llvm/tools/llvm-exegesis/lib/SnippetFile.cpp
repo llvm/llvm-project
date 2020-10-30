@@ -89,7 +89,8 @@ private:
   // We only care about instructions, we don't implement this part of the API.
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override {}
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute,
+                           SMLoc) override {
     return false;
   }
   void emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
