@@ -92,12 +92,14 @@ PARSE_MODE_THREAD = 1
 PARSE_MODE_IMAGES = 2
 PARSE_MODE_THREGS = 3
 PARSE_MODE_SYSTEM = 4
+PARSE_MODE_INSTRS = 5
 
 
 class CrashLog(symbolication.Symbolicator):
     """Class that does parses darwin crash logs"""
     parent_process_regex = re.compile('^Parent Process:\s*(.*)\[(\d+)\]')
     thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
+    thread_instrs_regex = re.compile('^Thread ([0-9]+) instruction stream')
     thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
     app_backtrace_regex = re.compile(
         '^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
@@ -469,13 +471,18 @@ class CrashLog(symbolication.Symbolicator):
                         thread_idx = int(thread_state_match.group(1))
                         parse_mode = PARSE_MODE_THREGS
                         thread = self.threads[thread_idx]
-                    else:
-                        thread_match = self.thread_regex.search(line)
-                        if thread_match:
-                            app_specific_backtrace = False
-                            parse_mode = PARSE_MODE_THREAD
-                            thread_idx = int(thread_match.group(1))
-                            thread = CrashLog.Thread(thread_idx, False)
+                        continue
+                    thread_insts_match  = self.thread_instrs_regex.search(line)
+                    if thread_insts_match:
+                        parse_mode = PARSE_MODE_INSTRS
+                        continue
+                    thread_match = self.thread_regex.search(line)
+                    if thread_match:
+                        app_specific_backtrace = False
+                        parse_mode = PARSE_MODE_THREAD
+                        thread_idx = int(thread_match.group(1))
+                        thread = CrashLog.Thread(thread_idx, False)
+                        continue
                     continue
                 elif line.startswith('Binary Images:'):
                     parse_mode = PARSE_MODE_IMAGES
@@ -539,6 +546,8 @@ class CrashLog(symbolication.Symbolicator):
                     thread.registers[reg.strip()] = int(value, 0)
             elif parse_mode == PARSE_MODE_SYSTEM:
                 self.system_profile.append(line)
+            elif parse_mode == PARSE_MODE_INSTRS:
+                pass
         f.close()
 
     def dump(self):
