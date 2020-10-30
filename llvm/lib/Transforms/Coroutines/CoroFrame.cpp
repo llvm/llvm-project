@@ -946,7 +946,7 @@ private:
       return;
 
     if (!IsOffsetKnown) {
-      AliasOffetMap[&I] = {};
+      AliasOffetMap[&I].reset();
     } else {
       auto Itr = AliasOffetMap.find(&I);
       if (Itr == AliasOffetMap.end()) {
