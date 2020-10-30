@@ -15,7 +15,6 @@
 #define LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 
 #include <cstdint>
-#include <tuple>
 
 namespace llvm {
 namespace sys {
@@ -34,7 +33,12 @@ public:
   }
   bool operator!=(const UniqueID &Other) const { return !(*this == Other); }
   bool operator<(const UniqueID &Other) const {
-    return std::tie(Device, File) < std::tie(Other.Device, Other.File);
+    /// Don't use std::tie since it bloats the compile time of this header.
+    if (Device < Other.Device)
+      return true;
+    if (Other.Device < Device)
+      return false;
+    return File < Other.File;
   }
 
   uint64_t getDevice() const { return Device; }
