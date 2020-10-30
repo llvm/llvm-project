@@ -149,6 +149,7 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
+# XRay uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(XRAY_DEPS cxx-headers)
 endif()
