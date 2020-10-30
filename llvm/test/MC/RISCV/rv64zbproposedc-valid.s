@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+experimental-zbproposedc,+experimental-b < %s \
 # RUN:     | llvm-objdump --mattr=+c,+experimental-zbproposedc,+experimental-b -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 
 # CHECK-ASM-AND-OBJ: c.zext.w s0
