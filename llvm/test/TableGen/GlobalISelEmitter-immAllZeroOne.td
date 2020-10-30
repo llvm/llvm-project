@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -optimize-match-table=false -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefixes=GISEL-NOOPT,GISEL %s
-// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -optimize-match-table=true -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefixes=GISEL-OPT,GISEL %s
+// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -optimize-match-table=false -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefixes=GISEL-NOOPT %s
+// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns -optimize-match-table=true -I %p/../../include -I %p/Common %s -o - | FileCheck -check-prefixes=GISEL-OPT %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"

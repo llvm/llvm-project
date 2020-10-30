@@ -777,14 +777,6 @@ public:
     return !useSVEForFixedLengthVectors();
   }
 
-  // FIXME: Move useSVEForFixedLengthVectors*() back to private scope once
-  // reduction legalization is complete.      
-  bool useSVEForFixedLengthVectors() const;
-  // Normally SVE is only used for byte size vectors that do not fit within a
-  // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
-  // used for 64bit and 128bit vectors as well.
-  bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
-
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -1012,6 +1004,12 @@ private:
 
   bool shouldLocalize(const MachineInstr &MI,
                       const TargetTransformInfo *TTI) const override;
+
+  bool useSVEForFixedLengthVectors() const;
+  // Normally SVE is only used for byte size vectors that do not fit within a
+  // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
+  // used for 64bit and 128bit vectors as well.
+  bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
 };
 
 namespace AArch64 {

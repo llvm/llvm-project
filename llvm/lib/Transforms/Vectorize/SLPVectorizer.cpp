@@ -3539,33 +3539,16 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     case Instruction::ICmp:
     case Instruction::Select: {
       // Calculate the cost of this instruction.
-      int ScalarEltCost =
-          TTI->getCmpSelInstrCost(E->getOpcode(), ScalarTy, Builder.getInt1Ty(),
-                                  CmpInst::BAD_ICMP_PREDICATE, CostKind, VL0);
+      int ScalarEltCost = TTI->getCmpSelInstrCost(E->getOpcode(), ScalarTy,
+                                                  Builder.getInt1Ty(),
+                                                  CostKind, VL0);
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
       auto *MaskTy = FixedVectorType::get(Builder.getInt1Ty(), VL.size());
       int ScalarCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecCost =
-          TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
-                                  CmpInst::BAD_ICMP_PREDICATE, CostKind, VL0);
-      // Check if it is possible and profitable to use min/max for selects in
-      // VL.
-      //
-      auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VL);
-      if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
-        IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, VecTy,
-                                          {VecTy, VecTy});
-        int IntrinsicCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-        // If the selects are the only uses of the compares, they will be dead
-        // and we can adjust the cost by removing their cost.
-        if (IntrinsicAndUse.second)
-          IntrinsicCost -=
-              TTI->getCmpSelInstrCost(Instruction::ICmp, VecTy, MaskTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
-        VecCost = std::min(VecCost, IntrinsicCost);
-      }
+      int VecCost = TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
+                                            CostKind, VL0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::FNeg:

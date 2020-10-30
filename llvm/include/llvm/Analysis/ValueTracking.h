@@ -728,14 +728,6 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// minimum/maximum flavor.
   CmpInst::Predicate getInverseMinMaxPred(SelectPatternFlavor SPF);
 
-  /// Check if the values in \p VL are select instructions that can be converted
-  /// to a min or max (vector) intrinsic. Returns the intrinsic ID, if such a
-  /// conversion is possible, together with a bool indicating whether all select
-  /// conditions are only used by the selects. Otherwise return
-  /// Intrinsic::not_intrinsic.
-  std::pair<Intrinsic::ID, bool>
-  canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL);
-
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no
   /// implication can be made.

@@ -84,20 +84,20 @@ Currently, the following sequence is used:
   // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - load.c
   [...]
   foo:
-        str     x30, [sp, #-16]!
-        adrp    x9, :got:__hwasan_shadow                // load shadow address from GOT into x9
-        ldr     x9, [x9, :got_lo12:__hwasan_shadow]
-        bl      __hwasan_check_x0_2_short               // call outlined tag check
-                                                        // (arguments: x0 = address, x9 = shadow base;
+        stp     x30, x20, [sp, #-16]!
+        adrp    x20, :got:__hwasan_shadow               // load shadow address from GOT into x20
+        ldr     x20, [x20, :got_lo12:__hwasan_shadow]
+        bl      __hwasan_check_x0_2_short_v2            // call outlined tag check
+                                                        // (arguments: x0 = address, x20 = shadow base;
                                                         // "2" encodes the access type and size)
         ldr     w0, [x0]                                // inline load
-        ldr     x30, [sp], #16
+        ldp     x30, x20, [sp], #16
         ret
 
   [...]
-  __hwasan_check_x0_2_short:
-        ubfx    x16, x0, #4, #52                        // shadow offset
-        ldrb    w16, [x9, x16]                          // load shadow tag
+  __hwasan_check_x0_2_short_v2:
+        sbfx    x16, x0, #4, #52                        // shadow offset
+        ldrb    w16, [x20, x16]                         // load shadow tag
         cmp     x16, x0, lsr #56                        // extract address tag, compare with shadow tag
         b.ne    .Ltmp0                                  // jump to short tag handler on mismatch
   .Ltmp1:

@@ -198,7 +198,7 @@ private:
 using chrono::duration;
 using chrono::duration_cast;
 
-using TimeSpec = std::timespec;
+using TimeSpec = timespec;
 using StatT = struct stat;
 
 template <class FileTimeT, class TimeT,

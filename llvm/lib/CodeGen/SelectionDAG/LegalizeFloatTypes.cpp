@@ -140,6 +140,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMAX:
       R = SoftenFloatRes_VECREDUCE(N);
       break;
+    case ISD::VECREDUCE_SEQ_FADD:
+      R = SoftenFloatRes_VECREDUCE_SEQ(N);
+      break;
   }
 
   // If R is null, the sub-method took care of registering the result.
@@ -784,6 +787,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ(SDNode *N) {
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
+  return SDValue();
+}
 
 //===----------------------------------------------------------------------===//
 //  Convert Float Operand to Integer
@@ -2254,6 +2261,9 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMAX:
       R = PromoteFloatRes_VECREDUCE(N);
       break;
+    case ISD::VECREDUCE_SEQ_FADD:
+      R = PromoteFloatRes_VECREDUCE_SEQ(N);
+      break;
   }
 
   if (R.getNode())
@@ -2494,6 +2504,11 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_VECREDUCE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_VECREDUCE_SEQ(SDNode *N) {
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
+  return SDValue();
+}
+
 SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
   EVT VT = N->getValueType(0);
 
@@ -2607,6 +2622,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAX:
     R = SoftPromoteHalfRes_VECREDUCE(N);
+    break;
+  case ISD::VECREDUCE_SEQ_FADD:
+    R = SoftPromoteHalfRes_VECREDUCE_SEQ(N);
     break;
   }
 
@@ -2803,6 +2821,12 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE(SDNode *N) {
   // Expand and soften recursively.
   ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduce(N, DAG));
+  return SDValue();
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N) {
+  // Expand and soften.
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
   return SDValue();
 }
 

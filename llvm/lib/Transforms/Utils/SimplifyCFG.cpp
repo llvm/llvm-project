@@ -2013,7 +2013,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
 
     BudgetRemaining -=
         TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(), nullptr,
-                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                               CostKind);
 
     // Don't convert to selects if we could remove undefined behavior instead.
     if (passingValueIsAlwaysUndefined(OrigV, &PN) ||

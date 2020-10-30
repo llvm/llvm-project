@@ -33,7 +33,7 @@
 
 using namespace fs;
 
-using TimeSpec = std::timespec;
+using TimeSpec = timespec;
 using StatT = struct stat;
 
 using Sec = std::chrono::duration<file_time_type::rep>;

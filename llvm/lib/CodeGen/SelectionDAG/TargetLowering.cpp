@@ -8030,6 +8030,28 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   return Res;
 }
 
+SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  SDValue AccOp = Node->getOperand(0);
+  SDValue VecOp = Node->getOperand(1);
+  SDNodeFlags Flags = Node->getFlags();
+
+  EVT VT = VecOp.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  SmallVector<SDValue, 8> Ops;
+  DAG.ExtractVectorElements(VecOp, Ops, 0, NumElts);
+
+  unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Node->getOpcode());
+
+  SDValue Res = AccOp;
+  for (unsigned i = 0; i < NumElts; i++)
+    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res, Ops[i], Flags);
+
+  return Res;
+}
+
 bool TargetLowering::expandREM(SDNode *Node, SDValue &Result,
                                SelectionDAG &DAG) const {
   EVT VT = Node->getValueType(0);

@@ -32,10 +32,10 @@ class MiniDumpUUIDTestCase(TestBase):
             os.path.normcase(module.GetFileSpec().dirname or ""))
         self.assertEqual(verify_uuid, module.GetUUIDString())
 
-    def get_minidump_modules(self, yaml_file):
+    def get_minidump_modules(self, yaml_file, exe = None):
         minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
         self.yaml2obj(yaml_file, minidump_path)
-        self.target = self.dbg.CreateTarget(None)
+        self.target = self.dbg.CreateTarget(exe)
         self.process = self.target.LoadCore(minidump_path)
         return self.target.modules
 
@@ -266,6 +266,24 @@ class MiniDumpUUIDTestCase(TestBase):
         # will check that this matches.
         self.verify_module(modules[0], so_path, "48EB9FD7")
 
+    def test_breakpad_hash_match_exe_outside_sysroot(self):
+        """
+            Check that we can match the breakpad .text section hash when the
+            module is specified as the exe during launch, and a syroot is
+            provided, which does not contain the exe.
+        """
+        sysroot_path = os.path.join(self.getBuildDir(), "mock_sysroot")
+        lldbutil.mkdir_p(sysroot_path)
+        so_dir = os.path.join(self.getBuildDir(), "binary")
+        so_path = os.path.join(so_dir, "libbreakpad.so")
+        lldbutil.mkdir_p(so_dir)
+        self.yaml2obj("libbreakpad.yaml", so_path)
+        self.runCmd("platform select remote-linux --sysroot '%s'" % sysroot_path)
+        modules = self.get_minidump_modules("linux-arm-breakpad-uuid-match.yaml", so_path)
+        self.assertEqual(1, len(modules))
+        # LLDB makes up its own UUID as well when there is no build ID so we
+        # will check that this matches.
+        self.verify_module(modules[0], so_path, "D9C480E8")
 
     def test_facebook_hash_match(self):
         """

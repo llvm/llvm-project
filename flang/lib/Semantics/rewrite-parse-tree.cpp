@@ -146,7 +146,25 @@ void FixMisparsedUntaggedNamelistName(READ_OR_WRITE &x) {
   }
 }
 
+// READ(CVAR) [, ...] will be misparsed as UNIT=CVAR; correct
+// it to READ CVAR [,...] with CVAR as a format rather than as
+// an internal I/O unit for unformatted I/O, which Fortran does
+// not support.
 void RewriteMutator::Post(parser::ReadStmt &x) {
+  if (x.iounit && !x.format && x.controls.empty()) {
+    if (auto *var{std::get_if<parser::Variable>(&x.iounit->u)}) {
+      const parser::Name &last{parser::GetLastName(*var)};
+      DeclTypeSpec *type{last.symbol ? last.symbol->GetType() : nullptr};
+      if (type && type->category() == DeclTypeSpec::Character) {
+        x.format = std::visit(
+            [](auto &&indirection) {
+              return parser::Expr{std::move(indirection)};
+            },
+            std::move(var->u));
+        x.iounit.reset();
+      }
+    }
+  }
   FixMisparsedUntaggedNamelistName(x);
 }
 
