@@ -37,9 +37,8 @@
 
 ; ASM:	      .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:	  .long	4101                    # Type
-; ASM-NEXT:	  .byte	0x0a, 0x80, 0x40, 0x61  # Value
-; ASM-NEXT:	  .byte	0x07, 0x80, 0xff, 0xff
-; ASM-NEXT:	  .byte	0xff, 0xff
+; ASM-NEXT:	  .byte	0x03, 0x80, 0x40, 0x61  # Value
+; ASM-NEXT:	  .byte	0x07, 0x80
 ; ASM-NEXT:	  .asciz	"ENUM_B"                # Name
 ; ASM-NEXT:	  .p2align	2
 ; ASM-NOT:    .asciz "S::SEnum"             # Name
@@ -64,7 +63,7 @@
 ; OBJ-NEXT:       ConstantSym {
 ; OBJ-NEXT:         Kind: S_CONSTANT (0x1107)
 ; OBJ-NEXT:         Type: TestEnum (0x1005)
-; OBJ-NEXT:         Value: 18446744071562551616
+; OBJ-NEXT:         Value: -214700000
 ; OBJ-NEXT:         Name: ENUM_B
 ; OBJ-NEXT:       }
 ; OBJ-NOT:          Name: S::SEnum

@@ -86,19 +86,19 @@
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:	  .long	4100                    # Type
-; ASM-NEXT:   .byte	0x08, 0x00              # Value
+; ASM-NEXT:   .byte	0x00, 0x80, 0x08        # Value
 ; ASM-NEXT:	  .asciz	"foo::constExpr"        # Name
 ; ASM-NEXT:   .p2align	2
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:   .long	4100                    # Type
-; ASM-NEXT:   .byte	0x09, 0x00              # Value
+; ASM-NEXT:   .byte	0x00, 0x80, 0x09        # Value
 ; ASM-NEXT:   .asciz	"foo::constVal"         # Name
 ; ASM-NEXT:   .p2align	2
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:   .long	4100                    # Type
-; ASM-NEXT:   .byte	0x0e, 0x00              # Value
+; ASM-NEXT:   .byte	0x00, 0x80, 0x0e        # Value
 ; ASM-NEXT:   .asciz	"foo::Data::DataConstExpr" # Name
 ; ASM-NEXT:   .p2align	2
 
