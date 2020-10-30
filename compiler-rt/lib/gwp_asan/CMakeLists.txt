@@ -23,6 +23,8 @@ set(GWP_ASAN_HEADERS
   options.h
   options.inc
   platform_specific/guarded_pool_allocator_tls.h
+  platform_specific/mutex_fuchsia.h
+  platform_specific/mutex_posix.h
   stack_trace_compressor.h
   utilities.h
 )
