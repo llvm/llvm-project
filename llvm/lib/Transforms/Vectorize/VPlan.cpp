@@ -213,11 +213,10 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
 
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
-  while (It != end() &&
-         (It->getVPRecipeID() == VPRecipeBase::VPWidenPHISC ||
-          It->getVPRecipeID() == VPRecipeBase::VPWidenIntOrFpInductionSC ||
-          It->getVPRecipeID() == VPRecipeBase::VPPredInstPHISC ||
-          It->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC))
+  while (It != end() && (isa<VPWidenPHIRecipe>(&*It) ||
+                         isa<VPWidenIntOrFpInductionRecipe>(&*It) ||
+                         isa<VPPredInstPHIRecipe>(&*It) ||
+                         isa<VPWidenCanonicalIVRecipe>(&*It)))
     It++;
   return It;
 }
