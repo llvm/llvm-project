@@ -467,41 +467,11 @@ public:
                      "attempt to access out of bounds operation");
   }
 
-  void insert(int index, PyOperation &newOperation) {
-    parentOperation->checkValid();
-    newOperation.checkValid();
-    if (index < 0) {
-      throw SetPyError(
-          PyExc_IndexError,
-          "only positive insertion indices are supported for operations");
-    }
-    if (newOperation.isAttached()) {
-      throw SetPyError(
-          PyExc_ValueError,
-          "attempt to insert an operation that has already been inserted");
-    }
-    // TODO: Needing to do this check is unfortunate, especially since it will
-    // be a forward-scan, just like the following call to
-    // mlirBlockInsertOwnedOperation. Switch to insert before/after once
-    // D88148 lands.
-    if (index > dunderLen()) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to insert operation past end");
-    }
-    mlirBlockInsertOwnedOperation(block, index, newOperation.get());
-    newOperation.setAttached();
-    // TODO: Rework the parentKeepAlive so as to avoid ownership hazards under
-    // the new ownership.
-  }
-
   static void bind(py::module &m) {
     py::class_<PyOperationList>(m, "OperationList")
         .def("__getitem__", &PyOperationList::dunderGetItem)
         .def("__iter__", &PyOperationList::dunderIter)
-        .def("__len__", &PyOperationList::dunderLen)
-        .def("insert", &PyOperationList::insert, py::arg("index"),
-             py::arg("operation"),
-             "Inserts an operation at an indexed position");
+        .def("__len__", &PyOperationList::dunderLen);
   }
 
 private:
@@ -668,7 +638,75 @@ py::object PyMlirContext::createOperation(
 
   // Construct the operation.
   MlirOperation operation = mlirOperationCreate(&state);
-  return PyOperation::createDetached(getRef(), operation).releaseObject();
+  PyOperationRef created = PyOperation::createDetached(getRef(), operation);
+
+  // InsertPoint active?
+  PyInsertionPoint *ip =
+      PyThreadContextEntry::getDefaultInsertionPoint(/*required=*/false);
+  if (ip)
+    ip->insert(*created.get());
+
+  return created.releaseObject();
+}
+
+//------------------------------------------------------------------------------
+// PyThreadContextEntry management
+//------------------------------------------------------------------------------
+
+std::vector<PyThreadContextEntry> &PyThreadContextEntry::getStack() {
+  static thread_local std::vector<PyThreadContextEntry> stack;
+  return stack;
+}
+
+PyThreadContextEntry *PyThreadContextEntry::getTos() {
+  auto &stack = getStack();
+  if (stack.empty())
+    return nullptr;
+  return &stack.back();
+}
+
+void PyThreadContextEntry::push(pybind11::object context,
+                                pybind11::object insertionPoint) {
+  auto &stack = getStack();
+  stack.emplace_back(std::move(context), std::move(insertionPoint));
+}
+
+PyMlirContext *PyThreadContextEntry::getContext() {
+  if (!context)
+    return nullptr;
+  return py::cast<PyMlirContext *>(context);
+}
+
+PyInsertionPoint *PyThreadContextEntry::getInsertionPoint() {
+  if (!insertionPoint)
+    return nullptr;
+  return py::cast<PyInsertionPoint *>(insertionPoint);
+}
+
+PyMlirContext *PyThreadContextEntry::getDefaultContext(bool required) {
+  auto *tos = getTos();
+  PyMlirContext *context = tos ? tos->getContext() : nullptr;
+  if (required && !context) {
+    throw SetPyError(
+        PyExc_RuntimeError,
+        "A default context is required for this call but is not provided. "
+        "Establish a default by surrounding the code with "
+        "'with context:'");
+  }
+  return context;
+}
+
+PyInsertionPoint *
+PyThreadContextEntry::getDefaultInsertionPoint(bool required) {
+  auto *tos = getTos();
+  PyInsertionPoint *ip = tos ? tos->getInsertionPoint() : nullptr;
+  if (required && !ip)
+    throw SetPyError(PyExc_RuntimeError,
+                     "A default insertion point is required for this call but "
+                     "is not provided. "
+                     "Establish a default by surrounding the code with "
+                     "'with InsertionPoint(...):'");
+  return ip;
 }
 
 //------------------------------------------------------------------------------
@@ -791,7 +829,6 @@ PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
   }
   // Use existing.
   PyOperation *existing = it->second.second;
-  assert(existing->parentKeepAlive.is(parentKeepAlive));
   py::object pyRef = py::reinterpret_borrow<py::object>(it->second.first);
   return PyOperationRef(existing, std::move(pyRef));
 }
@@ -858,6 +895,22 @@ py::object PyOperation::getAsm(bool binary,
   return fileObject.attr("getvalue")();
 }
 
+PyOperationRef PyOperation::getParentOperation() {
+  if (!isAttached())
+    throw SetPyError(PyExc_ValueError, "Detached operations have no parent");
+  MlirOperation operation = mlirOperationGetParentOperation(get());
+  if (mlirOperationIsNull(operation))
+    throw SetPyError(PyExc_ValueError, "Operation has no parent.");
+  return PyOperation::forOperation(getContext(), operation);
+}
+
+PyBlock PyOperation::getBlock() {
+  PyOperationRef parentOperation = getParentOperation();
+  MlirBlock block = mlirOperationGetBlock(get());
+  assert(!mlirBlockIsNull(block) && "Attached operation has null parent");
+  return PyBlock{std::move(parentOperation), block};
+}
+
 PyOpView::PyOpView(py::object operation)
     : operationObject(std::move(operation)),
       operation(py::cast<PyOperation *>(this->operationObject)) {}
@@ -895,6 +948,76 @@ py::object PyOpView::createRawSubclass(py::object userClass) {
   py::str origName = userClass.attr("__name__");
   py::str newName = py::str("_") + origName;
   return parentMetaclass(newName, py::make_tuple(userClass), attributes);
+}
+
+//------------------------------------------------------------------------------
+// PyInsertionPoint.
+//------------------------------------------------------------------------------
+
+PyInsertionPoint::PyInsertionPoint(PyBlock &block) : block(block) {}
+
+PyInsertionPoint::PyInsertionPoint(PyOperation &beforeOperation)
+    : block(beforeOperation.getBlock()),
+      refOperation(beforeOperation.getRef()) {}
+
+void PyInsertionPoint::insert(PyOperation &operation) {
+  if (operation.isAttached())
+    throw SetPyError(PyExc_ValueError,
+                     "Attempt to insert operation that is already attached");
+  block.getParentOperation()->checkValid();
+  MlirOperation beforeOp = {nullptr};
+  if (refOperation) {
+    // Insert before operation.
+    (*refOperation)->checkValid();
+    beforeOp = (*refOperation)->get();
+  }
+  mlirBlockInsertOwnedOperationBefore(block.get(), beforeOp, operation.get());
+  operation.setAttached();
+}
+
+PyInsertionPoint PyInsertionPoint::atBlockBegin(PyBlock &block) {
+  MlirOperation firstOp = mlirBlockGetFirstOperation(block.get());
+  if (mlirOperationIsNull(firstOp)) {
+    // Just insert at end.
+    return PyInsertionPoint(block);
+  }
+
+  // Insert before first op.
+  PyOperationRef firstOpRef = PyOperation::forOperation(
+      block.getParentOperation()->getContext(), firstOp);
+  return PyInsertionPoint{block, std::move(firstOpRef)};
+}
+
+PyInsertionPoint PyInsertionPoint::atBlockTerminator(PyBlock &block) {
+  MlirOperation terminator = mlirBlockGetTerminator(block.get());
+  if (mlirOperationIsNull(terminator))
+    throw SetPyError(PyExc_ValueError, "Block has no terminator");
+  PyOperationRef terminatorOpRef = PyOperation::forOperation(
+      block.getParentOperation()->getContext(), terminator);
+  return PyInsertionPoint{block, std::move(terminatorOpRef)};
+}
+
+py::object PyInsertionPoint::contextEnter() {
+  auto context = block.getParentOperation()->getContext().getObject();
+  py::object self = py::cast(this);
+  PyThreadContextEntry::push(/*context=*/std::move(context),
+                             /*insertionPoint=*/self);
+  return self;
+}
+
+void PyInsertionPoint::contextExit(pybind11::object excType,
+                                   pybind11::object excVal,
+                                   pybind11::object excTb) {
+  auto &stack = PyThreadContextEntry::getStack();
+  if (stack.empty())
+    throw SetPyError(PyExc_RuntimeError,
+                     "Unbalanced insertion point enter/exit");
+  auto &tos = stack.back();
+  PyInsertionPoint *current = tos.getInsertionPoint();
+  if (current != this)
+    throw SetPyError(PyExc_RuntimeError,
+                     "Unbalanced insertion point enter/exit");
+  stack.pop_back();
 }
 
 //------------------------------------------------------------------------------
@@ -2387,6 +2510,24 @@ void mlir::python::populateIRSubmodule(py::module &m) {
             return printAccum.join();
           },
           "Returns the assembly form of the block.");
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyInsertionPoint.
+  //----------------------------------------------------------------------------
+
+  py::class_<PyInsertionPoint>(m, "InsertionPoint")
+      .def(py::init<PyBlock &>(), py::arg("block"),
+           "Inserts after the last operation but still inside the block.")
+      .def("__enter__", &PyInsertionPoint::contextEnter)
+      .def("__exit__", &PyInsertionPoint::contextExit)
+      .def(py::init<PyOperation &>(), py::arg("beforeOperation"),
+           "Inserts before a referenced operation.")
+      .def_static("at_block_begin", &PyInsertionPoint::atBlockBegin,
+                  py::arg("block"), "Inserts at the beginning of the block.")
+      .def_static("at_block_terminator", &PyInsertionPoint::atBlockTerminator,
+                  py::arg("block"), "Inserts before the block terminator.")
+      .def("insert", &PyInsertionPoint::insert, py::arg("operation"),
+           "Inserts an operation.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyAttribute.

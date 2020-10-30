@@ -261,16 +261,30 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   MlirBlock block = mlirRegionGetFirstBlock(region);
   operation = mlirBlockGetFirstOperation(block);
   region = mlirOperationGetRegion(operation, 0);
+  MlirOperation parentOperation = operation;
   block = mlirRegionGetFirstBlock(region);
   operation = mlirBlockGetFirstOperation(block);
 
-  // In the module we created, the first operation of the first function is an
-  // "std.dim", which has an attribute and a single result that we can use to
-  // test the printing mechanism.
+  // Verify that parent operation and block report correctly.
+  fprintf(stderr, "Parent operation eq: %d\n",
+          mlirOperationEqual(mlirOperationGetParentOperation(operation),
+                             parentOperation));
+  fprintf(stderr, "Block eq: %d\n",
+          mlirBlockEqual(mlirOperationGetBlock(operation), block));
+
+  // In the module we created, the first operation of the first function is
+  // an "std.dim", which has an attribute and a single result that we can
+  // use to test the printing mechanism.
   mlirBlockPrint(block, printToStderr, NULL);
   fprintf(stderr, "\n");
   fprintf(stderr, "First operation: ");
   mlirOperationPrint(operation, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  // Get the block terminator and print it.
+  MlirOperation terminator = mlirBlockGetTerminator(block);
+  fprintf(stderr, "Terminator: ");
+  mlirOperationPrint(terminator, printToStderr, NULL);
   fprintf(stderr, "\n");
 
   // Get the attribute by index.
@@ -1100,6 +1114,8 @@ int main() {
 
   printFirstOfEach(ctx, module);
   // clang-format off
+  // CHECK: Parent operation eq: 1
+  // CHECK: Block eq: 1
   // CHECK:   %[[C0:.*]] = constant 0 : index
   // CHECK:   %[[DIM:.*]] = dim %{{.*}}, %[[C0]] : memref<?xf32>
   // CHECK:   %[[C1:.*]] = constant 1 : index
@@ -1111,6 +1127,7 @@ int main() {
   // CHECK:   }
   // CHECK: return
   // CHECK: First operation: {{.*}} = constant 0 : index
+  // CHECK: Terminator: return
   // CHECK: Get attr 0: 0 : index
   // CHECK: Get attr 0 by name: 0 : index
   // CHECK: does_not_exist is null: 1

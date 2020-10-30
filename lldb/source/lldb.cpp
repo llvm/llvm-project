@@ -13,9 +13,7 @@ using namespace lldb_private;
 
 #include "clang/Basic/Version.h"
 
-#ifdef HAVE_VCS_VERSION_INC
 #include "VCSVersion.inc"
-#endif
 
 static const char *GetLLDBRevision() {
 #ifdef LLDB_REVISION

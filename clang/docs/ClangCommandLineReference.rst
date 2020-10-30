@@ -1641,6 +1641,10 @@ Sets various macros to claim compatibility with the given GCC version (default i
 
 Allow device side init function in HIP
 
+.. option:: -fgpu-defer-diag, -fno-gpu-defer-diag
+
+Defer host/device related diagnostic messages for CUDA/HIP
+
 .. option:: -fgpu-rdc, -fcuda-rdc, -fno-gpu-rdc
 
 Generate relocatable device code, also known as separate compilation mode
@@ -2655,6 +2659,10 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
 
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
+
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2831,6 +2839,18 @@ Enable stack probes
 
 Set the stack probe size
 
+.. option:: -mstack-protector-guard-offset=<arg>
+
+Use the given offset for addressing the stack-protector guard
+
+.. option:: -mstack-protector-guard-reg=<arg>
+
+Use the given reg for addressing the stack-protector guard
+
+.. option:: -mstack-protector-guard=<arg>
+
+Use the given guard (global, tls) for addressing the stack-protector guard
+
 .. option:: -mstackrealign, -mno-stackrealign
 
 Force realign the stack at entry to every function
@@ -2859,7 +2879,7 @@ Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) \| 24
 .. option:: -mtune=<arg>
 .. program:: clang
 
-Only supported on X86. Otherwise accepted for compatibility with GCC.
+Only supported on X86 and RISC-V. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 
@@ -2873,7 +2893,7 @@ Only supported on X86. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mwavefrontsize64, -mno-wavefrontsize64
 
-Wavefront size 64 is used
+Specify wavefront size 64 mode (AMDGPU only)
 
 .. option:: -mwindows<arg>
 
@@ -2935,27 +2955,27 @@ Specify the size in bits of an SVE vector register. Defaults to the vector lengt
 
 AMDGPU
 ------
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Legacy option to specify code object v3 (AMDGPU only)
-
 .. option:: -mcumode, -mno-cumode
 
-CU wavefront execution mode is used (AMDGPU only)
+Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
 
 .. option:: -msram-ecc, -mno-sram-ecc
 
-Enable SRAM ECC (AMDGPU only)
+Specify SRAM ECC mode (AMDGPU only)
 
 .. option:: -mxnack, -mno-xnack
 
-Enable XNACK (AMDGPU only)
+Specify XNACK mode (AMDGPU only)
 
 ARM
 ---
-.. option:: -fAAPCSBitfieldLoad
+.. option:: -faapcs-bitfield-load
 
 Follows the AAPCS standard that all volatile bit-field write generates at least one load. (ARM only).
+
+.. option:: -faapcs-bitfield-width, -fno-aapcs-bitfield-width
+
+Follow the AAPCS standard requirement stating that volatile bit-field width is dictated by the field container type. (ARM only).
 
 .. option:: -ffixed-r9
 
@@ -3490,13 +3510,7 @@ Set DWARF fission mode to either 'split' or 'single'
 
 .. option:: -gstrict-dwarf, -gno-strict-dwarf
 
-.. option:: -gz
-
-DWARF debug sections compression type
-
-.. program:: clang1
-.. option:: -gz=<arg>
-.. program:: clang
+.. option:: -gz=<arg>, -gz (equivalent to -gz=zlib)
 
 DWARF debug sections compression type
 

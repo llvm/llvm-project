@@ -177,8 +177,7 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
 
 static Optional<SmallVector<Value, 1>>
 fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
-                  PatternRewriter &rewriter,
-                  OperationFolder *folder = nullptr) {
+                  PatternRewriter &rewriter) {
   if (!areTensorOpsFusable(producer, consumer, consumerIdx))
     return llvm::None;
 
@@ -440,8 +439,8 @@ static bool isFusableWithReshapeByDimExpansion(LinalgOp linalgOp,
 /// conditions have been satisfied.
 static Optional<SmallVector<Value, 1>>
 fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
-                           unsigned fusedTensorIndex, PatternRewriter &rewriter,
-                           OperationFolder *folder = nullptr) {
+                           unsigned fusedTensorIndex,
+                           PatternRewriter &rewriter) {
   assert(isFusableWithReshapeByDimExpansion(linalgOp, fusedTensorIndex) &&
          "preconditions for fuse operation failed");
   // Check if reshape is expanding or collapsing.
@@ -929,7 +928,7 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
 
 Optional<SmallVector<Value, 1>>
 mlir::linalg::fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
-                            unsigned consumerIdx, OperationFolder *folder) {
+                            unsigned consumerIdx) {
   if (consumerIdx >= consumer->getNumOperands())
     return llvm::None;
   Operation *producer = consumer->getOperand(consumerIdx).getDefiningOp();
@@ -942,7 +941,7 @@ mlir::linalg::fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
     return llvm::None;
 
   return fuseTensorOpsImpl(cast<LinalgOp>(producer), cast<LinalgOp>(consumer),
-                           consumerIdx, rewriter, folder);
+                           consumerIdx, rewriter);
 }
 
 namespace {

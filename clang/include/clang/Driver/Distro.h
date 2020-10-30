@@ -70,6 +70,7 @@ public:
     UbuntuEoan,
     UbuntuFocal,
     UbuntuGroovy,
+    UbuntuHirsute,
     UnknownDistro
   };
 
@@ -121,7 +122,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuGroovy;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuHirsute;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

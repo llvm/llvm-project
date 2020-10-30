@@ -35,4 +35,5 @@ void test_default_does_not_allocate() {
 
 int main(int, char**) {
   test_default_does_not_allocate();
+  return 0;
 }

@@ -93,7 +93,8 @@ public:
   void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute,
+                           SMLoc Loc = SMLoc()) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
@@ -290,8 +291,8 @@ void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
   cast<MCSymbolMachO>(Symbol)->setThumbFunc();
 }
 
-bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
-                                          MCSymbolAttr Attribute) {
+bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym, MCSymbolAttr Attribute,
+                                          SMLoc) {
   MCSymbolMachO *Symbol = cast<MCSymbolMachO>(Sym);
 
   // Indirect symbols are handled differently, to match how 'as' handles

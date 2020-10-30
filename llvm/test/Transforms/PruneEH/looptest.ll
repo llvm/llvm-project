@@ -1,4 +1,5 @@
-; RUN: opt < %s -prune-eh -S | FileCheck %s
+; RUN: opt < %s -prune-eh -S -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes='function-attrs,function(simplify-cfg)' -S | FileCheck %s
 
 declare void @nounwind() nounwind
 

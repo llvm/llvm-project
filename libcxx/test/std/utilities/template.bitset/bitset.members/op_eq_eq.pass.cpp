@@ -16,7 +16,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "bitset_test_cases.h"
+#include "../bitset_test_cases.h"
 #include "test_macros.h"
 
 template <std::size_t N>

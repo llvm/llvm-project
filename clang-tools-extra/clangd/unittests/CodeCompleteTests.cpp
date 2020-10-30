@@ -194,6 +194,33 @@ TEST(DecisionForestRankingModel, ReferencesAffectRanking) {
       ElementsAre(Named("clangA"), Named("clangD")));
 }
 
+TEST(DecisionForestRankingModel, DecisionForestScorerCallbackTest) {
+  clangd::CodeCompleteOptions Opts;
+  constexpr float MagicNumber = 1234.5678;
+  Opts.RankingModel = CodeCompleteOptions::DecisionForest;
+  Opts.DecisionForestScorer = [](const SymbolQualitySignals &,
+                                 const SymbolRelevanceSignals &, float Base) {
+    DecisionForestScores Scores;
+    Scores.Total = MagicNumber;
+    Scores.ExcludingName = MagicNumber;
+    return Scores;
+  };
+  llvm::StringRef Code = "int func() { int xyz; xy^ }";
+  auto Results = completions(Code,
+                             /*IndexSymbols=*/{}, Opts);
+  ASSERT_EQ(Results.Completions.size(), 1u);
+  EXPECT_EQ(Results.Completions[0].Score.Total, MagicNumber);
+  EXPECT_EQ(Results.Completions[0].Score.ExcludingName, MagicNumber);
+
+  // Do not use DecisionForestScorer for heuristics model.
+  Opts.RankingModel = CodeCompleteOptions::Heuristics;
+  Results = completions(Code,
+                        /*IndexSymbols=*/{}, Opts);
+  ASSERT_EQ(Results.Completions.size(), 1u);
+  EXPECT_NE(Results.Completions[0].Score.Total, MagicNumber);
+  EXPECT_NE(Results.Completions[0].Score.ExcludingName, MagicNumber);
+}
+
 TEST(CompletionTest, Limit) {
   clangd::CodeCompleteOptions Opts;
   Opts.Limit = 2;

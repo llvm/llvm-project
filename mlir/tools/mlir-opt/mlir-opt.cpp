@@ -61,6 +61,7 @@ void registerTestGpuParallelLoopMappingPass();
 void registerTestInterfaces();
 void registerTestLinalgCodegenStrategy();
 void registerTestLinalgFusionTransforms();
+void registerTestLinalgGreedyFusion();
 void registerTestLinalgHoisting();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
@@ -121,6 +122,7 @@ void registerTestPasses() {
   registerTestInterfaces();
   registerTestLinalgCodegenStrategy();
   registerTestLinalgFusionTransforms();
+  registerTestLinalgGreedyFusion();
   registerTestLinalgHoisting();
   registerTestLinalgTransforms();
   registerTestLivenessPass();

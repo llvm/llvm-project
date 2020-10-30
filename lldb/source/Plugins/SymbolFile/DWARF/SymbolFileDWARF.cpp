@@ -1270,7 +1270,7 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
 
   return user_id_t(GetDwoNum().getValueOr(0x7fffffff)) << 32 |
          ref.die_offset() |
-         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
+         lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>

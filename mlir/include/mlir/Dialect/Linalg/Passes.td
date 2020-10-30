@@ -23,12 +23,6 @@ def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
-def LinalgFusion : FunctionPass<"linalg-fusion"> {
-  let summary = "Fuse operations in the linalg dialect";
-  let constructor = "mlir::createLinalgFusionPass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-}
-
 def LinalgFusionOfTensorOps : Pass<"linalg-fusion-for-tensor-ops"> {
   let summary = "Fuse operations on RankedTensorType in linalg dialect";
   let constructor = "mlir::createLinalgFusionOfTensorOpsPass()";

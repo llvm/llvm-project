@@ -13,6 +13,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
@@ -68,6 +69,9 @@ public:
 protected:
   InputFile(Kind k, MemoryBufferRef m)
       : mb(m), fileKind(k), live(!config->gcSections) {}
+
+  void checkArch(llvm::Triple::ArchType arch) const;
+
   MemoryBufferRef mb;
 
   // List of all symbols referenced or defined by this file.

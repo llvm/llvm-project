@@ -2,9 +2,10 @@
 
 # RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
 # RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+# RUN: llvm-as %S/Inputs/x86_64-osx.ll -o %t-x86_64.bc
 
 # RUN: rm -rf %t.lib
-# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o %t-x86_64.bc
 
 ## Check that binaries are present:
 # RUN: llvm-ar t %t.lib | \
@@ -12,6 +13,7 @@
 
 # CHECK-NAMES:      [[PREFIX]]-input1.o
 # CHECK-NAMES-NEXT: [[PREFIX]]-input2.o
+# CHECK-NAMES-NEXT: [[PREFIX]]-x86_64.bc
 
 ## Check that symbols are present:
 # RUN: llvm-nm --print-armap %t.lib | \
@@ -20,6 +22,7 @@
 # CHECK-SYMBOLS:      Archive map
 # CHECK-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
 # CHECK-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# CHECK-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
 # CHECK-SYMBOLS-EMPTY:
 
 ## Check that output archive is in Darwin format:
@@ -30,6 +33,7 @@
 # FORMAT-NEXT: __.SYMDEF
 # FORMAT-NEXT: [[PREFIX]]-input1.o
 # FORMAT-NEXT: [[PREFIX]]-input2.o
+# FORMAT-NEXT: [[PREFIX]]-x86_64.bc
 # FORMAT-NOT:  {{.}}
 
 ## Check that the output file is overwritten:

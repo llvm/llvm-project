@@ -1,4 +1,4 @@
-## This test checks that a universal file is flattened correctly.
+## This test checks that a universal object file is flattened correctly.
 
 # RUN: yaml2obj %s -o %t-universal.o
 # RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o

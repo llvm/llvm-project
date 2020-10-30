@@ -19,7 +19,7 @@
 // RUN:   not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-LONG --dump-input=always
 
 // Specifying the log name via the __memprof_profile_filename variable.
-// TODO: Temporarily disabled due to llvm-avr-linux bot failure
+// Temporarily disable until bot failures fixed
 // %clangxx_memprof  %s -o %t -DPROFILE_NAME_VAR="%t.log2"
 // rm -f %t.log2.*
 // %run %t

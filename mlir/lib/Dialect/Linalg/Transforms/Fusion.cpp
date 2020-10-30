@@ -13,7 +13,6 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
-#include "mlir/Dialect/Linalg/EDSC/FoldedIntrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -24,7 +23,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -36,8 +34,6 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
-
-using folded_std_constant_index = FoldedValueBuilder<ConstantIndexOp>;
 
 using llvm::dbgs;
 
@@ -201,8 +197,7 @@ static ShapeDimension getShapeDefiningLoopRange(LinalgOp op,
 ///   2. Tensor case: `producerIdx` is the index of the tensor in
 ///      `producer.getResults()`.
 static LinalgOp fuse(OpBuilder &b, LinalgOp producer, unsigned producerIdx,
-                     LinalgOp consumer, unsigned consumerIdx,
-                     OperationFolder *folder = nullptr) {
+                     LinalgOp consumer, unsigned consumerIdx) {
   Operation *shapeProducingOp =
       consumer.getShapedOperand(consumerIdx).getDefiningOp();
   assert((isa<SubViewOp>(shapeProducingOp) ||
@@ -244,9 +239,9 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer, unsigned producerIdx,
                  << "existing LoopRange: " << loopRanges[i] << "\n");
     else {
       auto shapeDim = getShapeDefiningLoopRange(producer, i);
-      loopRanges[i] = Range{folded_std_constant_index(folder, 0),
+      loopRanges[i] = Range{std_constant_index(0),
                             std_dim(shapeDim.shape, shapeDim.dimension),
-                            folded_std_constant_index(folder, 1)};
+                            std_constant_index(1)};
       LLVM_DEBUG(llvm::dbgs() << "new LoopRange: " << loopRanges[i] << "\n");
     }
   }
@@ -396,15 +391,21 @@ findFusableProducer(LinalgOp consumer, unsigned consumerIdx,
   return {};
 }
 
-Optional<FusionInfo> mlir::linalg::fuseProducerOfBuffer(
-    OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
-    const LinalgDependenceGraph &graph, OperationFolder *folder) {
+Optional<FusionInfo>
+mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, LinalgOp consumer,
+                                   unsigned consumerIdx,
+                                   const LinalgDependenceGraph &graph) {
   Optional<LinalgDependenceGraph::LinalgDependenceGraphElem> fusableDependence =
       findFusableProducer(consumer, consumerIdx, graph);
   if (!fusableDependence)
     return {};
 
   LinalgOp producerOp = cast<LinalgOp>(fusableDependence->dependentOpView.op);
+  // If producer is already in the same block as consumer, we are done.
+  if (consumer.getOperation()->getBlock() ==
+      producerOp.getOperation()->getBlock())
+    return {};
+
   Value producerView = fusableDependence->dependentOpView.view;
   Value consumerView = fusableDependence->indexingView;
 
@@ -427,8 +428,7 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOfBuffer(
   assert(producerIdxOpt.hasValue() && "incorrect operand index");
   unsigned producerIdx = producerIdxOpt.getValue();
 
-  auto fusedProducer =
-      fuse(b, producerOp, producerIdx, consumer, consumerIdx, folder);
+  auto fusedProducer = fuse(b, producerOp, producerIdx, consumer, consumerIdx);
   return FusionInfo{producerOp, fusedProducer};
 }
 
@@ -459,10 +459,9 @@ static void getProducerOfTensor(Value tensor, LinalgOp &producer,
   }
 }
 
-Optional<FusionInfo>
-mlir::linalg::fuseProducerOfTensor(OpBuilder &b, LinalgOp consumer,
-                                   unsigned consumerIdx,
-                                   OperationFolder *folder) {
+Optional<FusionInfo> mlir::linalg::fuseProducerOfTensor(OpBuilder &b,
+                                                        LinalgOp consumer,
+                                                        unsigned consumerIdx) {
   Value inputTensor = consumer.getInput(consumerIdx);
   LinalgOp producerOp;
   unsigned producerIdx;
@@ -475,13 +474,18 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, LinalgOp consumer,
     return {};
   }
 
+  // If producer is already in the same block as consumer, we are done.
+  if (consumer.getOperation()->getBlock() ==
+      producerOp.getOperation()->getBlock())
+    return {};
+
   // Insert fused `producer` just before `consumer`.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(consumer.getOperation());
   ScopedContext scope(b, consumer.getLoc());
   LLVM_DEBUG(dbgs() << "Fuse into consumer: " << *consumer << "\n");
   LinalgOp fusedProducer =
-      fuse(b, producerOp, producerIdx, consumer, consumerIdx, folder);
+      fuse(b, producerOp, producerIdx, consumer, consumerIdx);
 
   // Replace use.
   // Canonicalizations are not guaranteed to have happened before constructing
@@ -795,73 +799,4 @@ mlir::linalg::tileAndFuseLinalgOps(PatternRewriter &rewriter, LinalgOp op,
   default:;
   }
   return llvm::None;
-}
-
-static void fuseLinalgOpsGreedily(FuncOp f) {
-  LLVM_DEBUG(f.print(dbgs() << "\nBefore linalg-fusion: \n"));
-
-  OpBuilder b(f);
-  OperationFolder folder(f.getContext());
-  DenseSet<Operation *> eraseSet;
-
-  // Save original Linalg ops, we only want to make a pass over those.
-  SmallVector<Operation *, 8> linalgOps;
-  f.walk([&](LinalgOp op) {
-    // TODO: support multi-results.
-    if (op.getOperation()->getNumResults() <= 1)
-      linalgOps.push_back(op);
-  });
-
-  // Tile and Fuse for tensors inputs (TODO: all tensor operands).
-  for (auto *op : llvm::reverse(linalgOps)) {
-    LinalgOp linalgOp = cast<LinalgOp>(op);
-    for (auto en : llvm::enumerate(linalgOp.getShapedOperands())) {
-      if (en.value().getType().isa<MemRefType>()) {
-        // TODO: LinalgDependenceGraph should be able to update itself.
-        // The current naive and expensive reconstruction of the graph should be
-        // removed.
-        linalg::Aliases aliases;
-        linalg::LinalgDependenceGraph graph(aliases, linalgOps);
-        if (auto info =
-                fuseProducerOfBuffer(b, op, en.index(), graph, &folder)) {
-          auto *originalOp = info->originalProducer.getOperation();
-          eraseSet.insert(originalOp);
-          auto *originalOpInLinalgOpsVector =
-              std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-          *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
-        }
-      } else {
-        assert(en.value().getType().isa<RankedTensorType>());
-        // Tile and Fuse tensor input (TODO: init_tensors too).
-        if (en.index() >= linalgOp.getNumInputs())
-          continue;
-        if (auto info = fuseProducerOfTensor(b, op, en.index(), &folder)) {
-          auto *originalOp = info->originalProducer.getOperation();
-          auto *originalOpInLinalgOpsVector =
-              std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-          *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
-          // Don't mark for erasure in the tensor case, let DCE handle this.
-        }
-      }
-    }
-  }
-  // The `fuseProducerOfBuffer` function performs structural checks and in
-  // particular that no covering read or write exist between the consumer and
-  // the producer. As a consequence, the only fusions that may occur preserve
-  // subsequent dependences and are guaranteed by construction to produce the
-  // whole view. We may thus erase the producer once it is fused.
-  for (auto *e : eraseSet)
-    e->erase();
-
-  LLVM_DEBUG(f.print(dbgs() << "\nAfter linalg-fusion: \n"));
-}
-
-namespace {
-struct LinalgFusionPass : public LinalgFusionBase<LinalgFusionPass> {
-  void runOnFunction() override { fuseLinalgOpsGreedily(getFunction()); }
-};
-} // namespace
-
-std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgFusionPass() {
-  return std::make_unique<LinalgFusionPass>();
 }
