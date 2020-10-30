@@ -20,9 +20,6 @@ class TestContiguousArray(lldbtest.TestBase):
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        self.expect("frame variable --dynamic-type run-target",
-                    startstr="""(ContiguousArray<a.Class>) array = {
-  _buffer = {
-    _storage = 1 value {
-      [0] = 0x""")
-
+        self.expect("frame variable",
+                    startstr="""(ContiguousArray<a.Class>) array = 1 value {
+  [0] = 0x""")
