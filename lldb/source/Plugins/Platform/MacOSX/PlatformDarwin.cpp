@@ -221,7 +221,7 @@ BringInRemoteFile(Platform *platform,
 lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
     const lldb_private::FileSpecList *module_search_paths_ptr,
-    lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
+    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
   LLDB_LOGF(log,
@@ -238,7 +238,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
   Status err;
 
   err = ModuleList::GetSharedModule(module_spec, module_sp,
-                                    module_search_paths_ptr, old_module_sp_ptr,
+                                    module_search_paths_ptr, old_modules,
                                     did_create_ptr);
   if (module_sp)
     return err;
@@ -341,8 +341,8 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
 
 Status PlatformDarwin::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
 
@@ -351,16 +351,16 @@ Status PlatformDarwin::GetSharedModule(
     // module first.
     if (m_remote_platform_sp) {
       error = m_remote_platform_sp->GetSharedModule(
-          module_spec, process, module_sp, module_search_paths_ptr,
-          old_module_sp_ptr, did_create_ptr);
+          module_spec, process, module_sp, module_search_paths_ptr, old_modules,
+          did_create_ptr);
     }
   }
 
   if (!module_sp) {
     // Fall back to the local platform and find the file locally
     error = Platform::GetSharedModule(module_spec, process, module_sp,
-                                      module_search_paths_ptr,
-                                      old_module_sp_ptr, did_create_ptr);
+                                      module_search_paths_ptr, old_modules,
+                                      did_create_ptr);
 
     const FileSpec &platform_file = module_spec.GetFileSpec();
     if (!module_sp && module_search_paths_ptr && platform_file) {
@@ -373,7 +373,7 @@ Status PlatformDarwin::GetSharedModule(
           new_module_spec.GetFileSpec() = bundle_directory;
           if (Host::ResolveExecutableInBundle(new_module_spec.GetFileSpec())) {
             Status new_error(Platform::GetSharedModule(
-                new_module_spec, process, module_sp, nullptr, old_module_sp_ptr,
+                new_module_spec, process, module_sp, nullptr, old_modules,
                 did_create_ptr));
 
             if (module_sp)
@@ -400,8 +400,8 @@ Status PlatformDarwin::GetSharedModule(
                 ModuleSpec new_module_spec(module_spec);
                 new_module_spec.GetFileSpec() = new_file_spec;
                 Status new_error(Platform::GetSharedModule(
-                    new_module_spec, process, module_sp, nullptr,
-                    old_module_sp_ptr, did_create_ptr));
+                    new_module_spec, process, module_sp, nullptr, old_modules,
+                    did_create_ptr));
 
                 if (module_sp) {
                   module_sp->SetPlatformFileSpec(new_file_spec);
@@ -1639,8 +1639,8 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
 
 lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   const FileSpec &platform_file = module_spec.GetFileSpec();
   // See if the file is present in any of the module_search_paths_ptr
   // directories.
@@ -1697,9 +1697,9 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
         if (FileSystem::Instance().Exists(path_to_try)) {
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
-          Status new_error(Platform::GetSharedModule(
-              new_module_spec, process, module_sp, nullptr, old_module_sp_ptr,
-              did_create_ptr));
+          Status new_error(
+              Platform::GetSharedModule(new_module_spec, process, module_sp,
+                                        nullptr, old_modules, did_create_ptr));
 
           if (module_sp) {
             module_sp->SetPlatformFileSpec(path_to_try);

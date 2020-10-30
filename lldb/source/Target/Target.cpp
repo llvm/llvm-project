@@ -1965,8 +1965,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
     module_sp = m_images.FindFirstModule(module_spec);
 
   if (!module_sp) {
-    ModuleSP old_module_sp; // This will get filled in if we have a new version
-                            // of the library
+    llvm::SmallVector<ModuleSP, 1>
+        old_modules; // This will get filled in if we have a new version
+                     // of the library
     bool did_create_module = false;
     FileSpecList search_paths = GetExecutableSearchPaths();
     // If there are image search path entries, try to use them first to acquire
@@ -1979,7 +1980,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         transformed_spec.GetFileSpec().GetFilename() =
             module_spec.GetFileSpec().GetFilename();
         error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &search_paths, &old_module_sp,
+                                            &search_paths, &old_modules,
                                             &did_create_module);
       }
     }
@@ -1997,7 +1998,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         // We have a UUID, it is OK to check the global module list...
         error =
             ModuleList::GetSharedModule(module_spec, module_sp, &search_paths,
-                                        &old_module_sp, &did_create_module);
+                                        &old_modules, &did_create_module);
       }
 
       if (!module_sp) {
@@ -2006,7 +2007,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
               module_spec, m_process_sp.get(), module_sp, &search_paths,
-              &old_module_sp, &did_create_module);
+              &old_modules, &did_create_module);
         } else {
           error.SetErrorString("no platform is currently set");
         }
@@ -2057,18 +2058,18 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         // this target. So let's remove the UUID from the module list, and look
         // in the target's module list. Only do this if there is SOMETHING else
         // in the module spec...
-        if (!old_module_sp) {
-          if (module_spec.GetUUID().IsValid() &&
-              !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
-              !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
-            ModuleSpec module_spec_copy(module_spec.GetFileSpec());
-            module_spec_copy.GetUUID().Clear();
+        if (module_spec.GetUUID().IsValid() &&
+            !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
+            !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
+          ModuleSpec module_spec_copy(module_spec.GetFileSpec());
+          module_spec_copy.GetUUID().Clear();
 
-            ModuleList found_modules;
-            m_images.FindModules(module_spec_copy, found_modules);
-            if (found_modules.GetSize() == 1)
-              old_module_sp = found_modules.GetModuleAtIndex(0);
-          }
+          ModuleList found_modules;
+          m_images.FindModules(module_spec_copy, found_modules);
+          found_modules.ForEach([&](const ModuleSP &found_module) -> bool {
+            old_modules.push_back(found_module);
+            return true;
+          });
         }
 
         // Preload symbols outside of any lock, so hopefully we can do this for
@@ -2076,14 +2077,67 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         if (GetPreloadSymbols())
           module_sp->PreloadSymbols();
 
-        if (old_module_sp && m_images.GetIndexForModule(old_module_sp.get()) !=
-                                 LLDB_INVALID_INDEX32) {
-          m_images.ReplaceModule(old_module_sp, module_sp);
+        llvm::SmallVector<ModuleSP, 1> replaced_modules;
+        for (ModuleSP &old_module_sp : old_modules) {
+          if (m_images.GetIndexForModule(old_module_sp.get()) !=
+              LLDB_INVALID_INDEX32) {
+            if (replaced_modules.empty())
+              m_images.ReplaceModule(old_module_sp, module_sp);
+            else
+              m_images.Remove(old_module_sp);
+
+            replaced_modules.push_back(std::move(old_module_sp));
+          }
+        }
+
+        if (replaced_modules.size() > 1) {
+          // The same new module replaced multiple old modules
+          // simultaneously.  It's not clear this should ever
+          // happen (if we always replace old modules as we add
+          // new ones, presumably we should never have more than
+          // one old one).  If there are legitimate cases where
+          // this happens, then the ModuleList::Notifier interface
+          // may need to be adjusted to allow reporting this.
+          // In the meantime, just log that this has happened; just
+          // above we called ReplaceModule on the first one, and Remove
+          // on the rest.
+          if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET |
+                                                  LIBLLDB_LOG_MODULES)) {
+            StreamString message;
+            auto dump = [&message](Module &dump_module) -> void {
+              UUID dump_uuid = dump_module.GetUUID();
+
+              message << '[';
+              dump_module.GetDescription(message.AsRawOstream());
+              message << " (uuid ";
+
+              if (dump_uuid.IsValid())
+                dump_uuid.Dump(&message);
+              else
+                message << "not specified";
+
+              message << ")]";
+            };
+
+            message << "New module ";
+            dump(*module_sp);
+            message.AsRawOstream()
+                << llvm::formatv(" simultaneously replaced {0} old modules: ",
+                                 replaced_modules.size());
+            for (ModuleSP &replaced_module_sp : replaced_modules)
+              dump(*replaced_module_sp);
+
+            log->PutString(message.GetString());
+          }
+        }
+
+        if (replaced_modules.empty())
+          m_images.Append(module_sp, notify);
+
+        for (ModuleSP &old_module_sp : replaced_modules) {
           Module *old_module_ptr = old_module_sp.get();
           old_module_sp.reset();
           ModuleList::RemoveSharedModuleIfOrphaned(old_module_ptr);
-        } else {
-          m_images.Append(module_sp, notify);
         }
       } else
         module_sp.reset();

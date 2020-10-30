@@ -443,12 +443,11 @@ public:
 
   static bool ModuleIsInCache(const Module *module_ptr);
 
-  static Status GetSharedModule(const ModuleSpec &module_spec,
-                                lldb::ModuleSP &module_sp,
-                                const FileSpecList *module_search_paths_ptr,
-                                lldb::ModuleSP *old_module_sp_ptr,
-                                bool *did_create_ptr,
-                                bool always_create = false);
+  static Status
+  GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                  const FileSpecList *module_search_paths_ptr,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                  bool *did_create_ptr, bool always_create = false);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
