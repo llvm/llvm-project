@@ -1267,8 +1267,9 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
-  return user_id_t(GetDwoNum().getValueOr(0x7fffffff)) << 32 |
-         ref.die_offset() |
+  lldbassert(GetDwoNum().getValueOr(0) <= 0x3fffffff);
+  return user_id_t(GetDwoNum().getValueOr(0)) << 32 | ref.die_offset() |
+         lldb::user_id_t(GetDwoNum().hasValue()) << 62 |
          lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
 }
 
@@ -1297,9 +1298,10 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
-  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x7fffffff;
-  if (*dwo_num == 0x7fffffff)
-    dwo_num = llvm::None;
+  llvm::Optional<uint32_t> dwo_num;
+  bool dwo_valid = uid >> 62 & 1;
+  if (dwo_valid)
+    dwo_num = uid >> 32 & 0x3fffffff;
 
   return DecodedUID{*this, {dwo_num, section, die_offset}};
 }
