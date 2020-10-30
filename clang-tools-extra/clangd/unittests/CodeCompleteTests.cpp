@@ -196,10 +196,10 @@ TEST(DecisionForestRankingModel, ReferencesAffectRanking) {
 
 TEST(DecisionForestRankingModel, DecisionForestScorerCallbackTest) {
   clangd::CodeCompleteOptions Opts;
-  constexpr float MagicNumber = 1234.5678;
+  constexpr float MagicNumber = 1234.5678f;
   Opts.RankingModel = CodeCompleteOptions::DecisionForest;
-  Opts.DecisionForestScorer = [](const SymbolQualitySignals &,
-                                 const SymbolRelevanceSignals &, float Base) {
+  Opts.DecisionForestScorer = [&](const SymbolQualitySignals &,
+                                  const SymbolRelevanceSignals &, float Base) {
     DecisionForestScores Scores;
     Scores.Total = MagicNumber;
     Scores.ExcludingName = MagicNumber;
