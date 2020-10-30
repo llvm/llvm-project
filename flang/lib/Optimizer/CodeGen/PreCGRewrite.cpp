@@ -172,11 +172,12 @@ public:
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
       rank = shapeOp.getType().cast<ShapeType>().getRank();
-    } else {
-      auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp());
-      if (shiftOp)
-        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+    } else if (auto shiftOp =
+                   dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp())) {
+      populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
       rank = shiftOp.getType().cast<ShapeShiftType>().getRank();
+    } else {
+      return mlir::failure();
     }
     mlir::NamedAttrList attrs;
     auto idxTy = rewriter.getIndexType();
@@ -194,6 +195,9 @@ public:
     auto dimAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::shapeAttrName(), dimAttr));
+    auto shiftAttr = rewriter.getIntegerAttr(idxTy, shiftOpers.size());
+    attrs.push_back(
+        rewriter.getNamedAttr(XArrayCoorOp::shiftAttrName(), shiftAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
     if (auto s = arrCoor.slice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
