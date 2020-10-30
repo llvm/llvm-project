@@ -1,6 +1,6 @@
 ; RUN: opt -S -denormal-fp-math-f32=ieee %s | FileCheck -check-prefixes=IEEE,ALL %s
 ; RUN: opt -S -denormal-fp-math-f32=preserve-sign %s | FileCheck -check-prefixes=PRESERVESIGN,ALL %s
-; RUN: opt -S -denormal-fp-math-f32=positive-zero %s | FileCheck -check-prefixes=POSZERO,ALL %s
+; RUN: opt -S -denormal-fp-math-f32=positive-zero %s | FileCheck -check-prefixes=POSITIVEZERO,ALL %s
 
 ; ALL: @no_denormal_fp_math_f32_attr() [[NOATTR:#[0-9]+]] {
 define i32 @no_denormal_fp_math_f32_attr() #0 {
