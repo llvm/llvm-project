@@ -1214,20 +1214,23 @@ private:
                                        valueList, blockList);
   }
 
-  // Nop statements - Code is generated elsewhere, often at the construct level.
+  // Nop statements - No code, or code is generated elsewhere.
   void genFIR(const Fortran::parser::CaseStmt &) {}              // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {}         // nop
   void genFIR(const Fortran::parser::ContinueStmt &) {}          // nop
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}             // nop
-  void genFIR(const Fortran::parser::EntryStmt &) {}             // nop
-  void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
   void genFIR(const Fortran::parser::ElseIfStmt &) {}            // nop
   void genFIR(const Fortran::parser::ElseStmt &) {}              // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}             // nop
-  void genFIR(const Fortran::parser::ForallConstructStmt &) {}   // nop
-  void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {} // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}             // nop
   void genFIR(const Fortran::parser::EndForallStmt &) {}         // nop
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}             // nop
+  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}   // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}         // nop
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}     // nop
+  void genFIR(const Fortran::parser::EntryStmt &) {}             // nop
+  void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {} // nop
+  void genFIR(const Fortran::parser::ForallConstructStmt &) {}   // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
 
   void genFIR(const Fortran::parser::AssociateConstruct &) { TODO(""); }
   void genFIR(const Fortran::parser::AssociateStmt &) { TODO(""); }
