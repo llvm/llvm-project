@@ -541,7 +541,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::StridedRangeGenerator_SummaryProvider,
       "Swift.StridedRangeGenerator summary provider",
-      ConstString("^Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
+      ConstString("Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
 
   TypeSummaryImpl::Flags simd_summary_flags;
   simd_summary_flags.SetCascades(true)
