@@ -14,6 +14,7 @@
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/HostInfo.h"
 
@@ -26,6 +27,7 @@ protected:
   SubsystemRAII<FileSystem, HostInfo, TypeSystemClang, ObjectFileELF,
                 SymbolFileDWARF>
       subsystems;
+  llvm::Optional<TestFile> m_file;
   lldb::ModuleSP m_module_sp;
   DWARFUnit *m_dwarf_unit;
 
