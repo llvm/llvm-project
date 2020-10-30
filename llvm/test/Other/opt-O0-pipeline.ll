@@ -2,6 +2,9 @@
 
 ; REQUIRES: asserts
 
+; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
+; CHECK-NOEXT: {{^}}
+
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT:   FunctionPass Manager
