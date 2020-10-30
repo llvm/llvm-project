@@ -2368,11 +2368,10 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // Assume to be zero-cost.
     return false;
   case scConstant: {
-    auto *Constant = dyn_cast<SCEVConstant>(S);
     // Only evalulate the costs of constants when optimizing for size.
     if (CostKind != TargetTransformInfo::TCK_CodeSize)
       return 0;
-    const APInt &Imm = Constant->getAPInt();
+    const APInt &Imm = cast<SCEVConstant>(S)->getAPInt();
     Type *Ty = S->getType();
     BudgetRemaining -= TTI.getIntImmCostInst(
         WorkItem.ParentOpcode, WorkItem.OperandIdx, Imm, Ty, CostKind);
@@ -2412,7 +2411,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr: {
-    assert(dyn_cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
+    assert(cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)
     // than the number of it's terms.
