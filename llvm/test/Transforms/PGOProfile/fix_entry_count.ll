@@ -31,4 +31,4 @@ for.end:
   ret i32 %sum
 }
 ; USE: ![[ENTRY_COUNT]] = !{!"function_entry_count", i64 1}
-; USE: ![[BW_FOR_COND]] = !{!"branch_weights", i32 96, i32 1}
+; USE: ![[BW_FOR_COND]] = !{!"branch_weights", i64 96, i64 1}

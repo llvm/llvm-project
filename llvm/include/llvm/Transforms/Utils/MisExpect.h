@@ -28,7 +28,7 @@ namespace misexpect {
 /// \param Weights A vector of profile weights for each target block
 /// \param Ctx The current LLVM context
 void verifyMisExpect(llvm::Instruction *I,
-                     const llvm::SmallVector<uint32_t, 4> &Weights,
+                     const llvm::SmallVector<uint64_t, 4> &Weights,
                      llvm::LLVMContext &Ctx);
 
 /// checkClangInstrumentation - verify if llvm.expect matches PGO profile

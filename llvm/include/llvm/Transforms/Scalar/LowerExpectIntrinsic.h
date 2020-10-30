@@ -32,8 +32,8 @@ struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
-extern cl::opt<uint32_t> LikelyBranchWeight;
-extern cl::opt<uint32_t> UnlikelyBranchWeight;
+extern cl::opt<uint64_t> LikelyBranchWeight;
+extern cl::opt<uint64_t> UnlikelyBranchWeight;
 }
 
 #endif

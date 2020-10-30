@@ -27,7 +27,7 @@ entry:
   ]
 ; USE: ]
 ; USE-SAME: !prof ![[BW_SWITCH:[0-9]+]]
-; USE: ![[BW_SWITCH]] = !{!"branch_weights", i32 3, i32 2, i32 0, i32 5}
+; USE: ![[BW_SWITCH]] = !{!"branch_weights", i64 3, i64 2, i64 0, i64 5}
 
 sw.bb:
 ; GEN: sw.bb:

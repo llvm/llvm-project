@@ -76,5 +76,5 @@ attributes #0 = { "use-sample-profile" }
 ;; Check the profile of funciton sum is only merged once though the original callsite is replicted.
 ; CHECK: name: "sum"
 ; CHECK-NEXT: {!"function_entry_count", i64 46}
-; CHECK: !{!"branch_weights", i32 11, i32 37}
-; CHECK: !{!"branch_weights", i32 11, i32 1}
+; CHECK: !{!"branch_weights", i64 11, i64 37}
+; CHECK: !{!"branch_weights", i64 11, i64 1}

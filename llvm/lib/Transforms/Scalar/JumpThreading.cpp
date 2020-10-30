@@ -293,7 +293,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
     if (BP >= BranchProbability(50, 100))
       continue;
 
-    SmallVector<uint32_t, 2> Weights;
+    SmallVector<uint64_t, 2> Weights;
     if (PredBr->getSuccessor(0) == PredOutEdge.second) {
       Weights.push_back(BP.getNumerator());
       Weights.push_back(BP.getCompl().getNumerator());
@@ -2541,7 +2541,7 @@ void JumpThreadingPass::UpdateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   // shouldn't make edges extremely likely or unlikely based solely on static
   // estimation.
   if (BBSuccProbs.size() >= 2 && doesBlockHaveProfileData(BB)) {
-    SmallVector<uint32_t, 4> Weights;
+    SmallVector<uint64_t, 4> Weights;
     for (auto Prob : BBSuccProbs)
       Weights.push_back(Prob.getNumerator());
 

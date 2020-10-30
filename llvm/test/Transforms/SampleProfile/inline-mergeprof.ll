@@ -90,14 +90,14 @@ declare i32 @printf(i8*, ...)
 
 ; SCALE: name: "sum"
 ; SCALE-NEXT: {!"function_entry_count", i64 46}
-; SCALE: !{!"branch_weights", i32 11, i32 2}
+; SCALE: !{!"branch_weights", i64 11, i64 2}
 ; SCALE: !{!"branch_weights", i64 20}
 ; SCALE: name: "sub"
 ; SCALE-NEXT: {!"function_entry_count", i64 -1}
 
 ; MERGE: name: "sum"
 ; MERGE-NEXT: {!"function_entry_count", i64 46}
-; MERGE: !{!"branch_weights", i32 11, i32 23}
-; MERGE: !{!"branch_weights", i32 10}
+; MERGE: !{!"branch_weights", i64 11, i64 23}
+; MERGE: !{!"branch_weights", i64 10}
 ; MERGE: name: "sub"
 ; MERGE-NEXT: {!"function_entry_count", i64 3}

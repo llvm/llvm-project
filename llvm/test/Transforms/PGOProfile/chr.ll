@@ -2543,11 +2543,11 @@ bb3:
 !13 = !{i32 999999, i64 1, i32 2}
 
 !14 = !{!"function_entry_count", i64 100}
-!15 = !{!"branch_weights", i32 0, i32 1}
-!16 = !{!"branch_weights", i32 1, i32 1}
-!17 = !{!"branch_weights", i32 0, i32 0}
-; CHECK: !15 = !{!"branch_weights", i32 1000, i32 0}
-; CHECK: !16 = !{!"branch_weights", i32 0, i32 1}
-; CHECK: !17 = !{!"branch_weights", i32 1, i32 1}
-; CHECK: !18 = !{!"branch_weights", i32 1, i32 0}
-; CHECK: !19 = !{!"branch_weights", i32 0, i32 1000}
+!15 = !{!"branch_weights", i64 0, i64 1}
+!16 = !{!"branch_weights", i64 1, i64 1}
+!17 = !{!"branch_weights", i64 0, i64 0}
+; CHECK: !15 = !{!"branch_weights", i64 1000, i64 0}
+; CHECK: !16 = !{!"branch_weights", i64 0, i64 1}
+; CHECK: !17 = !{!"branch_weights", i64 1, i64 1}
+; CHECK: !18 = !{!"branch_weights", i64 1, i64 0}
+; CHECK: !19 = !{!"branch_weights", i64 0, i64 1000}
