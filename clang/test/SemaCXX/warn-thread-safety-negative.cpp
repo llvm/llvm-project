@@ -118,6 +118,33 @@ void testNamespaceGlobals() EXCLUSIVE_LOCKS_REQUIRED(!globalMutex) {
   ns::fq(); // expected-warning {{calling function 'fq' requires negative capability '!globalMutex'}}
 }
 
+class StaticMembers {
+public:
+  void pub() EXCLUSIVE_LOCKS_REQUIRED(!publicMutex);
+  void prot() EXCLUSIVE_LOCKS_REQUIRED(!protectedMutex);
+  void priv() EXCLUSIVE_LOCKS_REQUIRED(!privateMutex);
+  void test() {
+    pub();
+    prot();
+    priv();
+  }
+
+  static Mutex publicMutex;
+
+protected:
+  static Mutex protectedMutex;
+
+private:
+  static Mutex privateMutex;
+};
+
+void testStaticMembers() {
+  StaticMembers x;
+  x.pub();
+  x.prot();
+  x.priv();
+}
+
 }  // end namespace ScopeTest
 
 namespace DoubleAttribute {
