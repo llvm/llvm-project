@@ -43,10 +43,10 @@ int main(int, char**)
 
     for (int i = 11000; i <= 11020; ++i)
     {
-        year year(i);
-        assert(static_cast<int>(--year) == i - 1);
-        assert(static_cast<int>(year--) == i - 1);
-        assert(static_cast<int>(year)   == i - 2);
+        year yr(i);
+        assert(static_cast<int>(--yr) == i - 1);
+        assert(static_cast<int>(yr--) == i - 1);
+        assert(static_cast<int>(yr)   == i - 2);
     }
 
   return 0;

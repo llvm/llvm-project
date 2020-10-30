@@ -10,6 +10,10 @@
 // We're building as C, so this test doesn't work when building with modules.
 // UNSUPPORTED: -fmodules
 
+// GCC complains about unrecognized arguments because we're compiling the
+// file as C, but we're passing C++ flags on the command-line.
+// UNSUPPORTED: gcc
+
 // Test that the C wrapper headers can be included when compiling them as C.
 
 // NOTE: It's not common or recommended to have libc++ in the header search

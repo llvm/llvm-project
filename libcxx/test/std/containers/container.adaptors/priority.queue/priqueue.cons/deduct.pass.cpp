@@ -108,12 +108,12 @@ int main(int, char**)
 //  has to match the type of the one used by the underlying container
     typedef long double T;
     typedef std::greater<T> Comp;
-    typedef test_allocator<T> A;
-    typedef std::deque<T, A> Cont;
+    typedef test_allocator<T> Alloc;
+    typedef std::deque<T, Alloc> Cont;
 
     Cont c{2,3,0,1};
     std::priority_queue<T, Cont, Comp> source(Comp(), c);
-    std::priority_queue pri(source, A(2)); // queue(queue &, allocator)
+    std::priority_queue pri(source, Alloc(2)); // queue(queue &, allocator)
     static_assert(std::is_same_v<decltype(pri)::value_type, T>, "");
     static_assert(std::is_same_v<decltype(pri)::container_type, Cont>, "");
     assert(pri.size() == 4);
