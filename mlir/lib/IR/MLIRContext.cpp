@@ -23,6 +23,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseMap.h"
@@ -86,6 +87,22 @@ void mlir::registerMLIRContextCLOptions() {
 //===----------------------------------------------------------------------===//
 
 namespace {
+struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  LogicalResult getAlias(Attribute attr, raw_ostream &os) const override {
+    if (attr.isa<AffineMapAttr>()) {
+      os << "map";
+      return success();
+    }
+    if (attr.isa<IntegerSetAttr>()) {
+      os << "set";
+      return success();
+    }
+    return failure();
+  }
+};
+
 /// A builtin dialect to define types/etc that are necessary for the validity of
 /// the IR.
 struct BuiltinDialect : public Dialect {
@@ -102,6 +119,7 @@ struct BuiltinDialect : public Dialect {
                   UnitAttr>();
     addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
                   UnknownLoc>();
+    addInterfaces<BuiltinOpAsmDialectInterface>();
 
     // TODO: These operations should be moved to a different dialect when they
     // have been fully decoupled from the core.

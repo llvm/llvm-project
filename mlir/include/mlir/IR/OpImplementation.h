@@ -801,21 +801,17 @@ class OpAsmDialectInterface
 public:
   OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
 
-  /// Hooks for getting identifier aliases for symbols. The identifier is used
-  /// in place of the symbol when printing textual IR.
-  ///
-  /// Hook for defining Attribute kind aliases. This will generate an alias for
-  /// all attributes of the given kind in the form : <alias>[0-9]+. These
-  /// aliases must not contain `.`.
-  virtual void getAttributeKindAliases(
-      SmallVectorImpl<std::pair<TypeID, StringRef>> &aliases) const {}
-  /// Hook for defining Attribute aliases. These aliases must not contain `.` or
-  /// end with a numeric digit([0-9]+).
-  virtual void getAttributeAliases(
-      SmallVectorImpl<std::pair<Attribute, StringRef>> &aliases) const {}
-  /// Hook for defining Type aliases.
-  virtual void
-  getTypeAliases(SmallVectorImpl<std::pair<Type, StringRef>> &aliases) const {}
+  /// Hooks for getting an alias identifier alias for a given symbol, that is
+  /// not necessarily a part of this dialect. The identifier is used in place of
+  /// the symbol when printing textual IR. These aliases must not contain `.` or
+  /// end with a numeric digit([0-9]+). Returns success if an alias was
+  /// provided, failure otherwise.
+  virtual LogicalResult getAlias(Attribute attr, raw_ostream &os) const {
+    return failure();
+  }
+  virtual LogicalResult getAlias(Type type, raw_ostream &os) const {
+    return failure();
+  }
 
   /// Get a special name to use when printing the given operation. See
   /// OpAsmInterface.td#getAsmResultNames for usage details and documentation.
