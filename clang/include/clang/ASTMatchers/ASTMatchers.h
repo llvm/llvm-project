@@ -3965,9 +3965,9 @@ AST_MATCHER(VarDecl, isExceptionVariable) {
 ///   f(0, 0);
 /// \endcode
 AST_POLYMORPHIC_MATCHER_P(argumentCountIs,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
-                                                          CXXConstructExpr,
-                                                          ObjCMessageExpr),
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(
+                              CallExpr, CXXConstructExpr,
+                              CXXUnresolvedConstructExpr, ObjCMessageExpr),
                           unsigned, N) {
   return Node.getNumArgs() == N;
 }
@@ -3981,9 +3981,9 @@ AST_POLYMORPHIC_MATCHER_P(argumentCountIs,
 ///   void x(int) { int y; x(y); }
 /// \endcode
 AST_POLYMORPHIC_MATCHER_P2(hasArgument,
-                           AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
-                                                           CXXConstructExpr,
-                                                           ObjCMessageExpr),
+                           AST_POLYMORPHIC_SUPPORTED_TYPES(
+                               CallExpr, CXXConstructExpr,
+                               CXXUnresolvedConstructExpr, ObjCMessageExpr),
                            unsigned, N, internal::Matcher<Expr>, InnerMatcher) {
   return (N < Node.getNumArgs() &&
           InnerMatcher.matches(
