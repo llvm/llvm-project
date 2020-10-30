@@ -528,6 +528,16 @@ define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
+; CHECK-LABEL: eq_v2i64:
+; SIMD128-NEXT: .functype eq_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i64x2.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x i64> @llvm.wasm.eq(<2 x i64>, <2 x i64>)
+define <2 x i64> @eq_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = call <2 x i64> @llvm.wasm.eq(<2 x i64> %x, <2 x i64> %y)
+  ret <2 x i64> %a
+}
+
 ; CHECK-LABEL: widen_low_s_v2i64:
 ; SIMD128-NEXT: .functype widen_low_s_v2i64 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.widen_low_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
