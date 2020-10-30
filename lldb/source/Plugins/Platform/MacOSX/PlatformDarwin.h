@@ -47,7 +47,7 @@ public:
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,
-                  lldb::ModuleSP *old_module_sp_ptr,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr) override;
 
   size_t GetSoftwareBreakpointTrapOpcode(
@@ -138,7 +138,7 @@ protected:
   virtual lldb_private::Status GetSharedModuleWithLocalCache(
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr,
-      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   struct SDKEnumeratorInfo {
     lldb_private::FileSpec found_path;
@@ -164,7 +164,7 @@ protected:
       const lldb_private::ModuleSpec &module_spec,
       lldb_private::Process *process, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr,
-      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   static std::string FindComponentInPath(llvm::StringRef path,
                                          llvm::StringRef component);

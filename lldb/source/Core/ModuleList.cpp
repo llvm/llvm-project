@@ -741,11 +741,11 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
   return GetSharedModuleList().RemoveOrphans(mandatory);
 }
 
-Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
-                                   ModuleSP &module_sp,
-                                   const FileSpecList *module_search_paths_ptr,
-                                   ModuleSP *old_module_sp_ptr,
-                                   bool *did_create_ptr, bool always_create) {
+Status
+ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
+                            const FileSpecList *module_search_paths_ptr,
+                            llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                            bool *did_create_ptr, bool always_create) {
   ModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(
       shared_module_list.m_modules_mutex);
@@ -757,8 +757,6 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
   if (did_create_ptr)
     *did_create_ptr = false;
-  if (old_module_sp_ptr)
-    old_module_sp_ptr->reset();
 
   const UUID *uuid_ptr = module_spec.GetUUIDPtr();
   const FileSpec &module_file_spec = module_spec.GetFileSpec();
@@ -779,8 +777,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
         // Make sure the file for the module hasn't been modified
         if (module_sp->FileHasChanged()) {
-          if (old_module_sp_ptr && !*old_module_sp_ptr)
-            *old_module_sp_ptr = module_sp;
+          if (old_modules)
+            old_modules->push_back(module_sp);
 
           Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
           if (log != nullptr)
@@ -934,8 +932,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
             located_binary_modulespec.GetFileSpec());
         if (file_spec_mod_time != llvm::sys::TimePoint<>()) {
           if (file_spec_mod_time != module_sp->GetModificationTime()) {
-            if (old_module_sp_ptr)
-              *old_module_sp_ptr = module_sp;
+            if (old_modules)
+              old_modules->push_back(module_sp);
             shared_module_list.Remove(module_sp);
             module_sp.reset();
           }
