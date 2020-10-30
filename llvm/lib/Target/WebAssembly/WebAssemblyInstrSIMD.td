@@ -1116,6 +1116,15 @@ multiclass SIMDWiden<ValueType vec_t, string vec, ValueType arg_t, string arg,
 defm "" : SIMDWiden<v8i16, "i16x8", v16i8, "i8x16", 135>;
 defm "" : SIMDWiden<v4i32, "i32x4", v8i16, "i16x8", 167>;
 
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_low_signed,
+                      "i64x2.widen_low_i32x4_s", 199>;
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_high_signed,
+                      "i64x2.widen_high_i32x4_s", 200>;
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_low_unsigned,
+                      "i64x2.widen_low_i32x4_u", 201>;
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_high_unsigned,
+                      "i64x2.widen_high_i32x4_u", 202>;
+
 // Narrowing operations
 multiclass SIMDNarrow<ValueType vec_t, string vec, ValueType arg_t, string arg,
                       bits<32> baseInst> {

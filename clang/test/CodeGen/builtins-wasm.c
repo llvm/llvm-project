@@ -918,6 +918,30 @@ u16x8 narrow_u_i16x8_i32x4(u32x4 low, u32x4 high) {
   // WEBASSEMBLY: ret
 }
 
+i64x2 widen_low_s_i32x4_i64x2(i32x4 x) {
+  return __builtin_wasm_widen_low_s_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.low.signed(<4 x i32> %x)
+  // WEBASSEMBLY: ret
+}
+
+i64x2 widen_high_s_i32x4_i64x2(i32x4 x) {
+  return __builtin_wasm_widen_high_s_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.high.signed(<4 x i32> %x)
+  // WEBASSEMBLY: ret
+}
+
+u64x2 widen_low_u_i32x4_i64x2(u32x4 x) {
+  return __builtin_wasm_widen_low_u_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.low.unsigned(<4 x i32> %x)
+  // WEBASSEMBLY: ret
+}
+
+u64x2 widen_high_u_i32x4_i64x2(u32x4 x) {
+  return __builtin_wasm_widen_high_u_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.high.unsigned(<4 x i32> %x)
+  // WEBASSEMBLY: ret
+}
+
 i32x4 load32_zero(int *p) {
   return __builtin_wasm_load32_zero(p);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.load32.zero(i32* %p)
