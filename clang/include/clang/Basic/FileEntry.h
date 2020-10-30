@@ -148,7 +148,7 @@ private:
 
   // Private constructor for use by OptionalStorage.
   FileEntryRef(optional_none_tag) : ME(nullptr) {}
-  bool hasOptionalValue() const { return ME; }
+  constexpr bool hasOptionalValue() const { return ME; }
 
   const MapEntry *ME;
 };
