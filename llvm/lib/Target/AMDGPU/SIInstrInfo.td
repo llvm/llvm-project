@@ -2564,6 +2564,16 @@ def getSOPPWithRelaxation : InstrMapping {
   let ValueCols = [["1"]];
 }
 
+// Maps flat scratch opcodes by addressing modes
+def getFlatScratchInstSTfromSS : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SS"];
+  let ValueCols = [["ST"]];
+}
+
+
 include "SIInstructions.td"
 
 include "DSInstructions.td"

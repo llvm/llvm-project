@@ -173,7 +173,7 @@ static bool frameIndexMayFold(const SIInstrInfo *TII,
                               int OpNo,
                               const MachineOperand &OpToFold) {
   return OpToFold.isFI() &&
-    (TII->isMUBUF(UseMI) || TII->isFLATScratch(UseMI)) &&
+    TII->isMUBUF(UseMI) &&
     OpNo == AMDGPU::getNamedOperandIdx(UseMI.getOpcode(), AMDGPU::OpName::vaddr);
 }
 

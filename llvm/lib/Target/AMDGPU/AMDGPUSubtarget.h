@@ -959,6 +959,8 @@ public:
     return true;
   }
 
+  bool enableFlatScratch() const;
+
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 

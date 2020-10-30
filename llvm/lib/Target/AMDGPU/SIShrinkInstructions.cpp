@@ -548,7 +548,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
       if (I->hasRegisterImplicitUseOperand(AMDGPU::M0))
         continue;
 
-      if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0 : 1)))
+      if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
         continue;
 
       MovX = &*I;

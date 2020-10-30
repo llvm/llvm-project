@@ -679,7 +679,7 @@ defm V_FMAC_F32 : VOP2Inst <"v_fmac_f32", VOP_MAC_F32>;
 
 } // End SubtargetPredicate = HasDLInsts
 
-let SubtargetPredicate = HasNoMadMacF32Insts in {
+let SubtargetPredicate = HasFmaLegacy32 in {
 
 let Constraints = "$vdst = $src2",
     DisableEncoding = "$src2",
@@ -687,7 +687,7 @@ let Constraints = "$vdst = $src2",
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
-} // End SubtargetPredicate = HasNoMadMacF32Insts
+} // End SubtargetPredicate = HasFmaLegacy32
 
 let Constraints = "$vdst = $src2",
       DisableEncoding="$src2",
