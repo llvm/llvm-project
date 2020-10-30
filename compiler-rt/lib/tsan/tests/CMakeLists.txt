@@ -53,6 +53,12 @@ foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 
+set(TSAN_DEPS gtest tsan)
+# TSan uses C++ standard library headers.
+if (TARGET cxx-headers OR HAVE_LIBCXX)
+  set(TSAN_DEPS cxx-headers)
+endif()
+
 # add_tsan_unittest(<name>
 #                   SOURCES <sources list>
 #                   HEADERS <extra headers list>)
@@ -66,7 +72,7 @@ macro(add_tsan_unittest testname)
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         RUNTIME ${TSAN_TEST_RUNTIME}
         COMPILE_DEPS ${TEST_HEADERS} ${TSAN_RTL_HEADERS}
-        DEPS gtest tsan
+        DEPS ${TSAN_DEPS}
         CFLAGS ${TSAN_UNITTEST_CFLAGS}
         LINK_FLAGS ${LINK_FLAGS})
     endforeach()
