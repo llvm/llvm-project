@@ -111,7 +111,7 @@ def testBlockArgumentList():
       return
     }
   """)
-  func = module.operation.regions[0].blocks[0].operations[0]
+  func = module.body.operations[0]
   entry_block = func.regions[0].blocks[0]
   assert len(entry_block.arguments) == 3
   # CHECK: Argument 0, type i32
@@ -152,8 +152,8 @@ def testDetachedOperation():
 run(testDetachedOperation)
 
 
-# CHECK-LABEL: TEST: testOperationInsert
-def testOperationInsert():
+# CHECK-LABEL: TEST: testOperationInsertionPoint
+def testOperationInsertionPoint():
   ctx = mlir.ir.Context()
   ctx.allow_unregistered_dialects = True
   module = ctx.parse_module(r"""
@@ -168,10 +168,11 @@ def testOperationInsert():
   op1 = ctx.create_operation("custom.op1", loc)
   op2 = ctx.create_operation("custom.op2", loc)
 
-  func = module.operation.regions[0].blocks[0].operations[0]
+  func = module.body.operations[0]
   entry_block = func.regions[0].blocks[0]
-  entry_block.operations.insert(0, op1)
-  entry_block.operations.insert(1, op2)
+  ip = mlir.ir.InsertionPoint.at_block_begin(entry_block)
+  ip.insert(op1)
+  ip.insert(op2)
   # CHECK: func @f1
   # CHECK: "custom.op1"()
   # CHECK: "custom.op2"()
@@ -180,13 +181,13 @@ def testOperationInsert():
 
   # Trying to add a previously added op should raise.
   try:
-    entry_block.operations.insert(0, op1)
+    ip.insert(op1)
   except ValueError:
     pass
   else:
     assert False, "expected insert of attached op to raise"
 
-run(testOperationInsert)
+run(testOperationInsertionPoint)
 
 
 # CHECK-LABEL: TEST: testOperationWithRegion
@@ -202,7 +203,8 @@ def testOperationWithRegion():
   # CHECK:   "custom.terminator"() : () -> ()
   # CHECK: }) : () -> ()
   terminator = ctx.create_operation("custom.terminator", loc)
-  block.operations.insert(0, terminator)
+  ip = mlir.ir.InsertionPoint(block)
+  ip.insert(terminator)
   print(op1)
 
   # Now add the whole operation to another op.
@@ -216,9 +218,10 @@ def testOperationWithRegion():
       return %1 : i32
     }
   """)
-  func = module.operation.regions[0].blocks[0].operations[0]
+  func = module.body.operations[0]
   entry_block = func.regions[0].blocks[0]
-  entry_block.operations.insert(0, op1)
+  ip = mlir.ir.InsertionPoint.at_block_begin(entry_block)
+  ip.insert(op1)
   # CHECK: func @f1
   # CHECK: "custom.op1"()
   # CHECK:   "custom.terminator"
@@ -238,7 +241,7 @@ def testOperationResultList():
     }
     func @f2() -> (i32, f64, index)
   """)
-  caller = module.operation.regions[0].blocks[0].operations[0]
+  caller = module.body.operations[0]
   call = caller.regions[0].blocks[0].operations[0]
   assert len(call.results) == 3
   # CHECK: Result 0, type i32

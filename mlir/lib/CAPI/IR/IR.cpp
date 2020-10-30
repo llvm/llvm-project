@@ -249,6 +249,14 @@ int mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
+MlirBlock mlirOperationGetBlock(MlirOperation op) {
+  return wrap(unwrap(op)->getBlock());
+}
+
+MlirOperation mlirOperationGetParentOperation(MlirOperation op) {
+  return wrap(unwrap(op)->getParentOp());
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -401,6 +409,16 @@ MlirOperation mlirBlockGetFirstOperation(MlirBlock block) {
   if (cppBlock->empty())
     return wrap(static_cast<Operation *>(nullptr));
   return wrap(&cppBlock->front());
+}
+
+MlirOperation mlirBlockGetTerminator(MlirBlock block) {
+  Block *cppBlock = unwrap(block);
+  if (cppBlock->empty())
+    return wrap(static_cast<Operation *>(nullptr));
+  Operation &back = cppBlock->back();
+  if (!back.isKnownTerminator())
+    return wrap(static_cast<Operation *>(nullptr));
+  return wrap(&back);
 }
 
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation) {
