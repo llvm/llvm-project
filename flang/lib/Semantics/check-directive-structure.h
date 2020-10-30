@@ -36,8 +36,8 @@ public:
       parser::CharBlock sourcePosition, D directive,
       std::string &&upperCaseDirName)
       : context_{context}, sourcePosition_{sourcePosition},
-        currentDirective_{directive}, upperCaseDirName_{
-                                          std::move(upperCaseDirName)} {}
+        upperCaseDirName_{std::move(upperCaseDirName)}, currentDirective_{
+                                                            directive} {}
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 

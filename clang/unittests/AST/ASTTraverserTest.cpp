@@ -299,6 +299,34 @@ void template_test() {
 void actual_template_test() {
   template_test<4>();
 }
+
+struct OneParamCtor {
+  explicit OneParamCtor(int);
+};
+struct TwoParamCtor {
+  explicit TwoParamCtor(int, int);
+};
+
+void varDeclCtors() {
+  {
+  auto var1 = OneParamCtor(5);
+  auto var2 = TwoParamCtor(6, 7);
+  }
+  {
+  OneParamCtor var3(5);
+  TwoParamCtor var4(6, 7);
+  }
+  int i = 0;
+  {
+  auto var5 = OneParamCtor(i);
+  auto var6 = TwoParamCtor(i, 7);
+  }
+  {
+  OneParamCtor var7(i);
+  TwoParamCtor var8(i, 7);
+  }
+}
+
 )cpp");
 
   {
@@ -444,6 +472,145 @@ StaticAssertDecl
 `-StringLiteral
 )cpp");
   }
+
+  auto varChecker = [&AST](StringRef varName, StringRef SemanticDump,
+                           StringRef SyntacticDump) {
+    auto FN = ast_matchers::match(
+        functionDecl(
+            hasName("varDeclCtors"),
+            forEachDescendant(varDecl(hasName(varName)).bind("varDeclCtor"))),
+        AST->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<Decl>("varDeclCtor")),
+              SemanticDump);
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<Decl>("varDeclCtor")),
+              SyntacticDump);
+  };
+
+  varChecker("var1",
+             R"cpp(
+VarDecl 'var1'
+`-ExprWithCleanups
+  `-CXXConstructExpr
+    `-MaterializeTemporaryExpr
+      `-CXXFunctionalCastExpr
+        `-CXXConstructExpr
+          `-IntegerLiteral
+)cpp",
+             R"cpp(
+VarDecl 'var1'
+`-CXXConstructExpr
+  `-IntegerLiteral
+)cpp");
+
+  varChecker("var2",
+             R"cpp(
+VarDecl 'var2'
+`-ExprWithCleanups
+  `-CXXConstructExpr
+    `-MaterializeTemporaryExpr
+      `-CXXTemporaryObjectExpr
+        |-IntegerLiteral
+        `-IntegerLiteral
+)cpp",
+             R"cpp(
+VarDecl 'var2'
+`-CXXTemporaryObjectExpr
+  |-IntegerLiteral
+  `-IntegerLiteral
+)cpp");
+
+  varChecker("var3",
+             R"cpp(
+VarDecl 'var3'
+`-CXXConstructExpr
+  `-IntegerLiteral
+)cpp",
+             R"cpp(
+VarDecl 'var3'
+`-CXXConstructExpr
+  `-IntegerLiteral
+)cpp");
+
+  varChecker("var4",
+             R"cpp(
+VarDecl 'var4'
+`-CXXConstructExpr
+  |-IntegerLiteral
+  `-IntegerLiteral
+)cpp",
+             R"cpp(
+VarDecl 'var4'
+`-CXXConstructExpr
+  |-IntegerLiteral
+  `-IntegerLiteral
+)cpp");
+
+  varChecker("var5",
+             R"cpp(
+VarDecl 'var5'
+`-ExprWithCleanups
+  `-CXXConstructExpr
+    `-MaterializeTemporaryExpr
+      `-CXXFunctionalCastExpr
+        `-CXXConstructExpr
+          `-ImplicitCastExpr
+            `-DeclRefExpr 'i'
+)cpp",
+             R"cpp(
+VarDecl 'var5'
+`-CXXConstructExpr
+  `-DeclRefExpr 'i'
+)cpp");
+
+  varChecker("var6",
+             R"cpp(
+VarDecl 'var6'
+`-ExprWithCleanups
+  `-CXXConstructExpr
+    `-MaterializeTemporaryExpr
+      `-CXXTemporaryObjectExpr
+        |-ImplicitCastExpr
+        | `-DeclRefExpr 'i'
+        `-IntegerLiteral
+)cpp",
+             R"cpp(
+VarDecl 'var6'
+`-CXXTemporaryObjectExpr
+  |-DeclRefExpr 'i'
+  `-IntegerLiteral
+)cpp");
+
+  varChecker("var7",
+             R"cpp(
+VarDecl 'var7'
+`-CXXConstructExpr
+  `-ImplicitCastExpr
+    `-DeclRefExpr 'i'
+)cpp",
+             R"cpp(
+VarDecl 'var7'
+`-CXXConstructExpr
+  `-DeclRefExpr 'i'
+)cpp");
+
+  varChecker("var8",
+             R"cpp(
+VarDecl 'var8'
+`-CXXConstructExpr
+  |-ImplicitCastExpr
+  | `-DeclRefExpr 'i'
+  `-IntegerLiteral
+)cpp",
+             R"cpp(
+VarDecl 'var8'
+`-CXXConstructExpr
+  |-DeclRefExpr 'i'
+  `-IntegerLiteral
+)cpp");
 }
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceStructs) {
@@ -647,7 +814,7 @@ FunctionDecl 'func2'
 FunctionDecl 'func3'
 `-CompoundStmt
   `-ReturnStmt
-    `-CXXFunctionalCastExpr
+    `-CXXConstructExpr
       `-IntegerLiteral
 )cpp";
   EXPECT_EQ(
