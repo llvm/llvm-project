@@ -644,8 +644,8 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
 
 Status PlatformDarwinKernel::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
   const FileSpec &platform_file = module_spec.GetFileSpec();
@@ -676,7 +676,7 @@ Status PlatformDarwinKernel::GetSharedModule(
     // framework on macOS systems, a chance.
     error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
                                            module_search_paths_ptr,
-                                           old_module_sp_ptr, did_create_ptr);
+                                           old_modules, did_create_ptr);
     if (error.Success() && module_sp.get()) {
       return error;
     }
