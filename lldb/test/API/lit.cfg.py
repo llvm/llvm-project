@@ -103,7 +103,12 @@ def delete_module_cache(path):
 
 if is_configured('llvm_use_sanitizer'):
   if 'Address' in config.llvm_use_sanitizer:
-    config.environment['ASAN_OPTIONS'] = 'detect_stack_use_after_return=1'
+# Begin Swift mod.
+# Swift's libReflection builds without ASAN, which causes a known
+# false positive in std::vector. We also want to support testing a sanitized
+# lldb using unsanitized llvm, clang, and swift libraries.
+    config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0:detect_stack_use_after_return=1'
+# End Swift mod.
     if 'Darwin' in config.host_os and 'x86' in config.host_triple:
       config.environment['DYLD_INSERT_LIBRARIES'] = find_sanitizer_runtime(
           'libclang_rt.asan_osx_dynamic.dylib')
