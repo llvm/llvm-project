@@ -2307,34 +2307,6 @@ void CGBuilderInserter::InsertHelper(
     CGF->InsertHelper(I, Name, BB, InsertPt);
 }
 
-static bool hasRequiredFeatures(const SmallVectorImpl<StringRef> &ReqFeatures,
-                                CodeGenModule &CGM, const FunctionDecl *FD,
-                                std::string &FirstMissing) {
-  // If there aren't any required features listed then go ahead and return.
-  if (ReqFeatures.empty())
-    return false;
-
-  // Now build up the set of caller features and verify that all the required
-  // features are there.
-  llvm::StringMap<bool> CallerFeatureMap;
-  CGM.getContext().getFunctionFeatureMap(CallerFeatureMap, FD);
-
-  // If we have at least one of the features in the feature list return
-  // true, otherwise return false.
-  return std::all_of(
-      ReqFeatures.begin(), ReqFeatures.end(), [&](StringRef Feature) {
-        SmallVector<StringRef, 1> OrFeatures;
-        Feature.split(OrFeatures, '|');
-        return llvm::any_of(OrFeatures, [&](StringRef Feature) {
-          if (!CallerFeatureMap.lookup(Feature)) {
-            FirstMissing = Feature.str();
-            return false;
-          }
-          return true;
-        });
-      });
-}
-
 // Emits an error if we don't have a valid set of target features for the
 // called function.
 void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
@@ -2361,19 +2333,20 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
   // listed cpu and any listed features.
   unsigned BuiltinID = TargetDecl->getBuiltinID();
   std::string MissingFeature;
+  llvm::StringMap<bool> CallerFeatureMap;
+  CGM.getContext().getFunctionFeatureMap(CallerFeatureMap, FD);
   if (BuiltinID) {
-    SmallVector<StringRef, 1> ReqFeatures;
-    const char *FeatureList =
-        CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
+    StringRef FeatureList(
+        CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     // Return if the builtin doesn't have any required features.
-    if (!FeatureList || StringRef(FeatureList) == "")
+    if (FeatureList.empty())
       return;
-    StringRef(FeatureList).split(ReqFeatures, ',');
-    if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
+    assert(FeatureList.find(' ') == StringRef::npos &&
+           "Space in feature list");
+    TargetFeatures TF(CallerFeatureMap);
+    if (!TF.hasRequiredFeatures(FeatureList))
       CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
-          << TargetDecl->getDeclName()
-          << CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
-
+          << TargetDecl->getDeclName() << FeatureList;
   } else if (!TargetDecl->isMultiVersion() &&
              TargetDecl->hasAttr<TargetAttr>()) {
     // Get the required features for the callee.
@@ -2396,7 +2369,13 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
       if (F.getValue())
         ReqFeatures.push_back(F.getKey());
     }
-    if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
+    if (!llvm::all_of(ReqFeatures, [&](StringRef Feature) {
+      if (!CallerFeatureMap.lookup(Feature)) {
+        MissingFeature = Feature.str();
+        return false;
+      }
+      return true;
+    }))
       CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
           << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
   }
