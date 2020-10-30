@@ -2238,9 +2238,9 @@ template<typename T> static int costAndCollectOperands(
                         unsigned MinIdx, unsigned MaxIdx) {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     Type *OpType = S->getOperand(0)->getType();
-    return NumRequired * TTI.getCmpSelInstrCost(
-                             Opcode, OpType, CmpInst::makeCmpResultType(OpType),
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+    return NumRequired *
+      TTI.getCmpSelInstrCost(Opcode, OpType,
+                             CmpInst::makeCmpResultType(OpType), CostKind);
   };
 
   switch (S->getSCEVType()) {
