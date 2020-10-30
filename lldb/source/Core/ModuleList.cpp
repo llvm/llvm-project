@@ -171,7 +171,9 @@ void ModuleList::Append(const ModuleSP &module_sp, bool notify) {
   AppendImpl(module_sp, notify);
 }
 
-void ModuleList::ReplaceEquivalent(const ModuleSP &module_sp) {
+void ModuleList::ReplaceEquivalent(
+    const ModuleSP &module_sp,
+    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules) {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
 
@@ -184,11 +186,14 @@ void ModuleList::ReplaceEquivalent(const ModuleSP &module_sp) {
 
     size_t idx = 0;
     while (idx < m_modules.size()) {
-      ModuleSP module_sp(m_modules[idx]);
-      if (module_sp->MatchesModuleSpec(equivalent_module_spec))
+      ModuleSP test_module_sp(m_modules[idx]);
+      if (test_module_sp->MatchesModuleSpec(equivalent_module_spec)) {
+        if (old_modules)
+          old_modules->push_back(test_module_sp);
         RemoveImpl(m_modules.begin() + idx);
-      else
+      } else {
         ++idx;
+      }
     }
     // Now add the new module to the list
     Append(module_sp);
@@ -820,7 +825,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
           *did_create_ptr = true;
         }
 
-        shared_module_list.ReplaceEquivalent(module_sp);
+        shared_module_list.ReplaceEquivalent(module_sp, old_modules);
         return error;
       }
     }
@@ -857,7 +862,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             if (did_create_ptr)
               *did_create_ptr = true;
 
-            shared_module_list.ReplaceEquivalent(module_sp);
+            shared_module_list.ReplaceEquivalent(module_sp, old_modules);
             return Status();
           }
         }
@@ -955,7 +960,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
           if (did_create_ptr)
             *did_create_ptr = true;
 
-          shared_module_list.ReplaceEquivalent(module_sp);
+          shared_module_list.ReplaceEquivalent(module_sp, old_modules);
         }
       } else {
         located_binary_modulespec.GetFileSpec().GetPath(path, sizeof(path));
