@@ -59,20 +59,20 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, %struct.Vector2*
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i16*, i16** [[MBEGIN]], align 8
 ; CHECK-NEXT:    [[TMP48:%.*]] = zext i32 [[TMP16]] to i64
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[TMP14]], i64 [[TMP48]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[IDX_EXT21]], 1
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV8:%.*]] = phi [33 x i16]* [ [[TMP4:%.*]], [[FOR_BODY]] ], [ [[TMP2]], [[FOR_BODY_LR_PH]] ]
-; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP3]], [[FOR_BODY_LR_PH]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i16* [ [[SCEVGEP1:%.*]], [[FOR_BODY]] ], [ [[SCEVGEP]], [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV8:%.*]] = phi [33 x i16]* [ [[TMP3:%.*]], [[FOR_BODY]] ], [ [[TMP2]], [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[LSR_IV810:%.*]] = bitcast [33 x i16]* [[LSR_IV8]] to i16*
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[SCEVGEP1]], i64 [[LSR_IV]]
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = bitcast i8* [[UGLYGEP]] to i16*
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i16, i16* [[LSR_IV810]], align 2
-; CHECK-NEXT:    store i16 [[TMP29]], i16* [[LSR_IV]], align 2
-; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i16, i16* [[LSR_IV]], i64 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV2]], -2
+; CHECK-NEXT:    store i16 [[TMP29]], i16* [[UGLYGEP2]], align 2
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT3:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to i16*
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV8]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP4]] = bitcast i16* [[SCEVGEP9]] to [33 x i16]*
+; CHECK-NEXT:    [[TMP3]] = bitcast i16* [[SCEVGEP9]] to [33 x i16]*
 ; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq i16* [[LSR_IV_NEXT3]], null
 ; CHECK-NEXT:    br i1 [[CMP27]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:

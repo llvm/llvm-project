@@ -266,6 +266,10 @@ PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
       isl::manage(isl_pw_aff_from_aff(isl_aff_val_on_domain(ls, v))));
 }
 
+PWACtx SCEVAffinator::visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
+  return visit(Expr->getOperand(0));
+}
+
 PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   // Truncate operations are basically modulo operations, thus we can
   // model them that way. However, for large types we assume the operand
@@ -537,8 +541,6 @@ PWACtx SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
   if (Instruction *I = dyn_cast<Instruction>(Expr->getValue())) {
     switch (I->getOpcode()) {
     case Instruction::IntToPtr:
-      return visit(SE.getSCEVAtScope(I->getOperand(0), getScope()));
-    case Instruction::PtrToInt:
       return visit(SE.getSCEVAtScope(I->getOperand(0), getScope()));
     case Instruction::SDiv:
       return visitSDivInstruction(I);
