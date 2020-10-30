@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVBASEINFO_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVBASEINFO_H
 
+#include "RISCVRegisterInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -205,10 +206,10 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
 ABI getTargetABI(StringRef ABIName);
 
 // Returns the register used to hold the stack pointer after realignment.
-MCRegister getBPReg();
+Register getBPReg();
 
 // Returns the register holding shadow call stack pointer.
-MCRegister getSCSPReg();
+Register getSCSPReg();
 
 } // namespace RISCVABI
 
