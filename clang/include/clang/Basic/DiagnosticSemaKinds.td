@@ -9077,6 +9077,10 @@ def err_ret_local_block : Error<
 def note_local_var_initializer : Note<
   "%select{via initialization of|binding reference}0 variable "
   "%select{%2 |}1here">;
+def note_lambda_capture_initializer : Note<
+  "%select{implicitly |}2captured%select{| by reference}3"
+  "%select{%select{ due to use|}2 here|"
+  " via initialization of lambda capture %0}1">;
 def note_init_with_default_member_initalizer : Note<
   "initializing field %0 with default member initializer">;
 
