@@ -36,7 +36,7 @@ struct A
     static int count;
 
     A() {++count;}
-    A(const A&) {++count;}
+    A(const A& other) : B(other) {++count;}
     ~A() {--count;}
 };
 
