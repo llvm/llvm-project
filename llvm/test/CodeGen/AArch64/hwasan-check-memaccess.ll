@@ -30,6 +30,12 @@ define i8* @f2(i8* %x0, i8* %x1) {
   ret i8* %x0
 }
 
+define void @f3(i8* %x0, i8* %x1) {
+  ; 0x3ff0000 (kernel, match-all = 0xff)
+  call void @llvm.hwasan.check.memaccess(i8* %x0, i8* %x1, i32 67043328)
+  ret void
+}
+
 declare void @llvm.hwasan.check.memaccess(i8*, i8*, i32)
 declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
 
@@ -83,3 +89,20 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
 ; CHECK-NEXT: adrp  x16, :got:__hwasan_tag_mismatch
 ; CHECK-NEXT: ldr x16, [x16, :got_lo12:__hwasan_tag_mismatch]
 ; CHECK-NEXT: br  x16
+
+; CHECK:      __hwasan_check_x1_67043328:
+; CHECK-NEXT: sbfx x16, x1, #4, #52
+; CHECK-NEXT: ldrb w16, [x9, x16]
+; CHECK-NEXT: cmp x16, x1, lsr #56
+; CHECK-NEXT: b.ne .Ltmp5
+; CHECK-NEXT: .Ltmp6:
+; CHECK-NEXT: ret
+; CHECK-NEXT: .Ltmp5:
+; CHECK-NEXT: lsr x16, x1, #56
+; CHECK-NEXT: cmp x16, #255
+; CHECK-NEXT: b.eq .Ltmp6
+; CHECK-NEXT: stp x0, x1, [sp, #-256]!
+; CHECK-NEXT: stp x29, x30, [sp, #232]
+; CHECK-NEXT: mov x0, x1
+; CHECK-NEXT: mov x1, #0
+; CHECK-NEXT: b __hwasan_tag_mismatch
