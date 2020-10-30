@@ -47,11 +47,11 @@ int main(int, char**)
 
     for (int i = 10000; i <= 10020; ++i)
     {
-        year year(i);
-        assert(static_cast<int>(year += years{10}) == i + 10);
-        assert(static_cast<int>(year)              == i + 10);
-        assert(static_cast<int>(year -= years{ 9}) == i +  1);
-        assert(static_cast<int>(year)              == i +  1);
+        year yr(i);
+        assert(static_cast<int>(yr += years{10}) == i + 10);
+        assert(static_cast<int>(yr)              == i + 10);
+        assert(static_cast<int>(yr -= years{ 9}) == i +  1);
+        assert(static_cast<int>(yr)              == i +  1);
     }
 
   return 0;

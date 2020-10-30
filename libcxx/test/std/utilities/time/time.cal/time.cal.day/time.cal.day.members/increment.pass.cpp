@@ -43,10 +43,10 @@ int main(int, char**)
 
     for (unsigned i = 10; i <= 20; ++i)
     {
-        day day(i);
-        assert(static_cast<unsigned>(++day) == i + 1);
-        assert(static_cast<unsigned>(day++) == i + 1);
-        assert(static_cast<unsigned>(day)   == i + 2);
+        day d(i);
+        assert(static_cast<unsigned>(++d) == i + 1);
+        assert(static_cast<unsigned>(d++) == i + 1);
+        assert(static_cast<unsigned>(d)   == i + 2);
     }
 
   return 0;
