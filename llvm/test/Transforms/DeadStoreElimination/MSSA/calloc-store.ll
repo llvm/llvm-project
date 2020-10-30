@@ -114,13 +114,9 @@ define i8* @test10() {
   ret i8* %p
 }
 
-; TODO: we could also eliminate the last store i8 0, i8* %p.3.2, but currently
-; don't because those are eliminated before eliminating killed stores.
 define i8* @test11() {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[P:%.*]] = tail call noalias i8* @calloc(i64 1, i64 4)
-; CHECK-NEXT:    [[P_3_2:%.*]] = getelementptr i8, i8* [[P]], i32 3
-; CHECK-NEXT:    store i8 0, i8* [[P_3_2]], align 1
 ; CHECK-NEXT:    ret i8* [[P]]
 ;
 
