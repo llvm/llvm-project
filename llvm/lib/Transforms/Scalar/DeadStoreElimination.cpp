@@ -2504,15 +2504,6 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     assert(SILoc.Ptr && "SILoc should not be null");
     const Value *SILocUnd = getUnderlyingObject(SILoc.Ptr);
 
-    // Check if the store is a no-op.
-    if (isRemovable(SI) && State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
-      LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
-      State.deleteDeadInstruction(SI);
-      NumRedundantStores++;
-      MadeChange = true;
-      continue;
-    }
-
     MemoryAccess *Current = KillingDef;
     LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by "
                       << *KillingDef << " (" << *SI << ")\n");
@@ -2522,10 +2513,11 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
     SetVector<MemoryAccess *> ToCheck;
-    ToCheck.insert(KillingDef->getDefiningAccess());
 
-    if (!SILocUnd)
-      continue;
+    if (SILocUnd)
+      ToCheck.insert(KillingDef->getDefiningAccess());
+
+    bool Shortend = false;
     bool IsMemTerm = State.isMemTerminatorInst(SI);
     DSEState::CheckCache Cache;
     // Check if MemoryAccesses in the worklist are killed by KillingDef.
@@ -2612,6 +2604,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
               ++NumModifiedStores;
               MadeChange = true;
 
+              Shortend = true;
               // Remove later store and remove any outstanding overlap intervals
               // for the updated store.
               State.deleteDeadInstruction(Later);
@@ -2631,6 +2624,16 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
           MadeChange = true;
         }
       }
+    }
+
+    // Check if the store is a no-op.
+    if (!Shortend && isRemovable(SI) &&
+        State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
+      LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
+      State.deleteDeadInstruction(SI);
+      NumRedundantStores++;
+      MadeChange = true;
+      continue;
     }
   }
 

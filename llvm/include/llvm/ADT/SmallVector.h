@@ -925,7 +925,7 @@ public:
       SmallVectorImpl<T>::operator=(RHS);
   }
 
-  const SmallVector &operator=(const SmallVector &RHS) {
+  SmallVector &operator=(const SmallVector &RHS) {
     SmallVectorImpl<T>::operator=(RHS);
     return *this;
   }
@@ -940,17 +940,17 @@ public:
       SmallVectorImpl<T>::operator=(::std::move(RHS));
   }
 
-  const SmallVector &operator=(SmallVector &&RHS) {
+  SmallVector &operator=(SmallVector &&RHS) {
     SmallVectorImpl<T>::operator=(::std::move(RHS));
     return *this;
   }
 
-  const SmallVector &operator=(SmallVectorImpl<T> &&RHS) {
+  SmallVector &operator=(SmallVectorImpl<T> &&RHS) {
     SmallVectorImpl<T>::operator=(::std::move(RHS));
     return *this;
   }
 
-  const SmallVector &operator=(std::initializer_list<T> IL) {
+  SmallVector &operator=(std::initializer_list<T> IL) {
     this->assign(IL);
     return *this;
   }

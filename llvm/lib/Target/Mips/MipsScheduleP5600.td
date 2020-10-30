@@ -449,8 +449,8 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(NLOC|NLZC)_[BHWD]$")>;
 // cvt.ps.[sw], cvt.s.(pl|pu), c.<cc>.[ds], c.<cc>.ps, mul.[ds], mul.ps,
 // pl[lu].ps, sub.[ds], sub.ps, trunc.w.[ds], trunc.w.ps
 def : InstRW<[P5600WriteFPUL],
-             (instrs FADD_D32, FADD_D64, FADD_S, FMUL_D32, FMUL_D64, FMUL_S,
-              FSUB_D32, FSUB_D64, FSUB_S)>;
+             (instrs FADD_D32, FADD_D64, FADD_PS64, FADD_S, FMUL_D32, FMUL_D64,
+              FMUL_PS64, FMUL_S, FSUB_D32, FSUB_D64, FSUB_PS64, FSUB_S)>;
 def : InstRW<[P5600WriteFPUL], (instregex "^TRUNC_(L|W)_(S|D32|D64)$")>;
 def : InstRW<[P5600WriteFPUL],
              (instregex "^CVT_(S|D32|D64|L|W)_(S|D32|D64|L|W)$")>;
