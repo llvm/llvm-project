@@ -1086,9 +1086,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // conversion is unnecessary and can be replaced with an ANY_EXTEND
     // of the FMV_W_X_RV64 operand.
     if (Op0->getOpcode() == RISCVISD::FMV_W_X_RV64) {
-      SDValue AExtOp =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0.getOperand(0));
-      return DCI.CombineTo(N, AExtOp);
+      assert(Op0.getOperand(0).getValueType() == MVT::i64 &&
+             "Unexpected value type!");
+      return Op0.getOperand(0);
     }
 
     // This is a target-specific version of a DAGCombine performed in
@@ -1101,15 +1101,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue NewFMV = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64,
                                  Op0.getOperand(0));
     APInt SignBit = APInt::getSignMask(32).sext(64);
-    if (Op0.getOpcode() == ISD::FNEG) {
-      return DCI.CombineTo(N,
-                           DAG.getNode(ISD::XOR, DL, MVT::i64, NewFMV,
-                                       DAG.getConstant(SignBit, DL, MVT::i64)));
-    }
+    if (Op0.getOpcode() == ISD::FNEG)
+      return DAG.getNode(ISD::XOR, DL, MVT::i64, NewFMV,
+                         DAG.getConstant(SignBit, DL, MVT::i64));
+
     assert(Op0.getOpcode() == ISD::FABS);
-    return DCI.CombineTo(N,
-                         DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
-                                     DAG.getConstant(~SignBit, DL, MVT::i64)));
+    return DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
+                       DAG.getConstant(~SignBit, DL, MVT::i64));
   }
   }
 
