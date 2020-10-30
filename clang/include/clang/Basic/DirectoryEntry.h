@@ -51,7 +51,26 @@ public:
   const MapEntry &getMapEntry() const { return *ME; }
 
   DirectoryEntryRef() = delete;
-  DirectoryEntryRef(MapEntry &ME) : ME(&ME) {}
+  DirectoryEntryRef(const MapEntry &ME) : ME(&ME) {}
+
+  /// Allow DirectoryEntryRef to degrade into 'const DirectoryEntry*' to
+  /// facilitate incremental adoption.
+  ///
+  /// The goal is to avoid code churn due to dances like the following:
+  /// \code
+  /// // Old code.
+  /// lvalue = rvalue;
+  ///
+  /// // Temporary code from an incremental patch.
+  /// lvalue = &rvalue.getDirectoryEntry();
+  ///
+  /// // Final code.
+  /// lvalue = rvalue;
+  /// \endcode
+  ///
+  /// FIXME: Once DirectoryEntryRef is "everywhere" and DirectoryEntry::getName
+  /// has been deleted, delete this implicit conversion.
+  operator const DirectoryEntry *() const { return &getDirEntry(); }
 
 private:
   friend class FileMgr::MapEntryOptionalStorage<DirectoryEntryRef>;
@@ -146,5 +165,77 @@ static_assert(
 
 } // end namespace optional_detail
 } // end namespace llvm
+
+namespace clang {
+
+/// Wrapper around Optional<DirectoryEntryRef> that degrades to 'const
+/// DirectoryEntry*', facilitating incremental patches to propagate
+/// DirectoryEntryRef.
+///
+/// This class can be used as return value or field where it's convenient for
+/// an Optional<DirectoryEntryRef> to degrade to a 'const DirectoryEntry*'. The
+/// purpose is to avoid code churn due to dances like the following:
+/// \code
+/// // Old code.
+/// lvalue = rvalue;
+///
+/// // Temporary code from an incremental patch.
+/// Optional<DirectoryEntryRef> MaybeF = rvalue;
+/// lvalue = MaybeF ? &MaybeF.getDirectoryEntry() : nullptr;
+///
+/// // Final code.
+/// lvalue = rvalue;
+/// \endcode
+///
+/// FIXME: Once DirectoryEntryRef is "everywhere" and DirectoryEntry::LastRef
+/// and DirectoryEntry::getName have been deleted, delete this class and
+/// replace instances with Optional<DirectoryEntryRef>.
+class OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr
+    : public Optional<DirectoryEntryRef> {
+public:
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr() = default;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(
+      OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &&) = default;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(
+      const OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &) = default;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
+  operator=(OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &&) = default;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
+  operator=(const OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &) = default;
+
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(llvm::NoneType) {}
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(DirectoryEntryRef Ref)
+      : Optional<DirectoryEntryRef>(Ref) {}
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(Optional<DirectoryEntryRef> MaybeRef)
+      : Optional<DirectoryEntryRef>(MaybeRef) {}
+
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &operator=(llvm::NoneType) {
+    Optional<DirectoryEntryRef>::operator=(None);
+    return *this;
+  }
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &operator=(DirectoryEntryRef Ref) {
+    Optional<DirectoryEntryRef>::operator=(Ref);
+    return *this;
+  }
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
+  operator=(Optional<DirectoryEntryRef> MaybeRef) {
+    Optional<DirectoryEntryRef>::operator=(MaybeRef);
+    return *this;
+  }
+
+  /// Degrade to 'const DirectoryEntry *' to allow  DirectoryEntry::LastRef and
+  /// DirectoryEntry::getName have been deleted, delete this class and replace
+  /// instances with Optional<DirectoryEntryRef>
+  operator const DirectoryEntry *() const {
+    return hasValue() ? &getValue().getDirEntry() : nullptr;
+  }
+};
+
+static_assert(std::is_trivially_copyable<
+                  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr>::value,
+              "OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr should be "
+              "trivially copyable");
+
+} // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIRECTORYENTRY_H
