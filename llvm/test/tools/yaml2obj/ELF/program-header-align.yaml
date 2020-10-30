@@ -25,9 +25,8 @@ Sections:
 ProgramHeaders:
   - Type:  PT_TLS
     Align: 16
-    Sections:
-      - Section: .tdata
-      - Section: .tbss
+    FirstSec: .tdata
+    LastSec:  .tbss
 
 ## If Align is not specified, p_align is inferred from the maximum alignment
 ## of contained sections.
@@ -48,7 +47,6 @@ Sections:
     Type:         SHT_PROGBITS
     AddressAlign: 16
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .text
-      - Section: .text.hot
+  - Type:     PT_LOAD
+    FirstSec: .text
+    LastSec:  .text.hot

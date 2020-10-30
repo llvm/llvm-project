@@ -467,12 +467,16 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, Optional<uint64_t> SHOff) {
 template <class ELFT>
 void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
   DenseMap<StringRef, ELFYAML::Fill *> NameToFill;
-  for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks)
-    if (auto S = dyn_cast<ELFYAML::Fill>(D.get()))
+  DenseMap<StringRef, size_t> NameToIndex;
+  for (size_t I = 0, E = Doc.Chunks.size(); I != E; ++I) {
+    if (auto S = dyn_cast<ELFYAML::Fill>(Doc.Chunks[I].get()))
       NameToFill[S->Name] = S;
+    NameToIndex[Doc.Chunks[I]->Name] = I + 1;
+  }
 
   std::vector<ELFYAML::Section *> Sections = Doc.getSections();
-  for (ELFYAML::ProgramHeader &YamlPhdr : Doc.ProgramHeaders) {
+  for (size_t I = 0, E = Doc.ProgramHeaders.size(); I != E; ++I) {
+    ELFYAML::ProgramHeader &YamlPhdr = Doc.ProgramHeaders[I];
     Elf_Phdr Phdr;
     zero(Phdr);
     Phdr.p_type = YamlPhdr.Type;
@@ -481,22 +485,30 @@ void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
     Phdr.p_paddr = YamlPhdr.PAddr;
     PHeaders.push_back(Phdr);
 
-    // Map Sections list to corresponding chunks.
-    for (const ELFYAML::SectionName &SecName : YamlPhdr.Sections) {
-      if (ELFYAML::Fill *Fill = NameToFill.lookup(SecName.Section)) {
-        YamlPhdr.Chunks.push_back(Fill);
-        continue;
-      }
+    if (!YamlPhdr.FirstSec && !YamlPhdr.LastSec)
+      continue;
 
-      unsigned Index;
-      if (SN2I.lookup(SecName.Section, Index)) {
-        YamlPhdr.Chunks.push_back(Sections[Index]);
-        continue;
-      }
+    // Get the index of the section, or 0 in the case when the section doesn't exist.
+    size_t First = NameToIndex[*YamlPhdr.FirstSec];
+    if (!First)
+      reportError("unknown section or fill referenced: '" + *YamlPhdr.FirstSec +
+                  "' by the 'FirstSec' key of the program header with index " +
+                  Twine(I));
+    size_t Last = NameToIndex[*YamlPhdr.LastSec];
+    if (!Last)
+      reportError("unknown section or fill referenced: '" + *YamlPhdr.LastSec +
+                  "' by the 'LastSec' key of the program header with index " +
+                  Twine(I));
+    if (!First || !Last)
+      continue;
 
-      reportError("unknown section or fill referenced: '" + SecName.Section +
-                  "' by program header");
-    }
+    if (First > Last)
+      reportError("program header with index " + Twine(I) +
+                  ": the section index of " + *YamlPhdr.FirstSec +
+                  " is greater than the index of " + *YamlPhdr.LastSec);
+
+    for (size_t I = First; I <= Last; ++I)
+      YamlPhdr.Chunks.push_back(Doc.Chunks[I - 1].get());
   }
 }
 

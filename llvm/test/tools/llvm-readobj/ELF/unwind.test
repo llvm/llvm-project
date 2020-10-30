@@ -217,16 +217,16 @@ ProgramHeaders:
     Flags:    [ PF_X, PF_R ]
     VAddr:    0x00400000
     PAddr:    0x00400000
-    Sections:
-      - Section: .text
-  - Type: PT_GNU_EH_FRAME
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x004013C0
-    PAddr: 0x004013C0
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_GNU_EH_FRAME
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x004013C0
+    PAddr:    0x004013C0
     MemSize:  [[MEMSIZE]]
     FileSize: [[FILESIZE]]
-    Sections:
-      - Section: .eh_frame_hdr
+    FirstSec: .eh_frame_hdr
+    LastSec:  .eh_frame_hdr
 
 ## Document we report a error when the memory size of the PT_GNU_EH_FRAME does not match its file size.
 ## TODO: we want to report a warning and continue dumping instead.
@@ -326,11 +326,10 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 ProgramHeaders:
-  - Type: PT_GNU_EH_FRAME
+  - Type:     PT_GNU_EH_FRAME
     MemSize:  [[SIZE]]
     FileSize: [[SIZE]]
     Offset:   [[OFFSET]]
-    Sections: []
 
 ## Case B: test we report an error when the file size of the PT_GNU_EH_FRAME
 ##         is invalid (goes past the end of the file).

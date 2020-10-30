@@ -38,10 +38,9 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Document that we ignore the sh_entsize value when dumping the hash section.
 ## Implementation assumes that the size of entries is 4, matching the ELF specification.
@@ -117,14 +116,13 @@ Sections:
 SectionHeaderTable:
   NoHeaders: [[NOHEADERS=false]]
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x10
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x10
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Document we don't report a warning when the value of the sh_entsize field of the SHT_HASH section is not 4.
 
@@ -179,9 +177,8 @@ DynamicSymbols: []
 ProgramHeaders:
   - Type:     PT_LOAD
     FileSize: 0x23a
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a warning when the hash table goes past the end of the file.
 
@@ -274,10 +271,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec: .dynamic
 
 ## Show we do not duplicate warnings when printing both the hash table and the hash histogram.
 ## Note that --elf-hash-histogram is only implemented for llvm-readelf currently.

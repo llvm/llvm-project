@@ -12,9 +12,9 @@ Sections:
     AddressAlign:    0x8
     Content:         "0001020304"
 ProgramHeaders:
-  - Type: PT_NULL
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0xF00000000
-    PAddr: 0x100000
-    Sections:
-      - Section: .text
+  - Type:     PT_NULL
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xF00000000
+    PAddr:    0x100000
+    FirstSec: .text
+    LastSec:  .text

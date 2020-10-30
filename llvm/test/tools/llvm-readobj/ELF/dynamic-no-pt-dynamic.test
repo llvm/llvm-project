@@ -32,7 +32,7 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic

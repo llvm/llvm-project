@@ -97,20 +97,19 @@ Sections:
 ## An arbitrary linker-generated valid content.
     Content: 040000001000000003000000474E55004FCB712AA6387724A9F465A32CD8C14B
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .hash
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
-  - Type: PT_GNU_EH_FRAME
-    Sections:
-      - Section: .eh_frame_hdr
-  - Type: PT_NOTE
-    Sections:
-      - Section: .note.gnu.build-id
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .hash
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_GNU_EH_FRAME
+    FirstSec: .eh_frame_hdr
+    LastSec:  .eh_frame_hdr
+  - Type:     PT_NOTE
+    FirstSec: .note.gnu.build-id
+    LastSec:  .note.gnu.build-id
 Symbols: []
 DynamicSymbols:
   - Name: foo

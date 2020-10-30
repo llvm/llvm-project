@@ -29,28 +29,27 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Size:            64
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x1000
-    Align: 0x1000
-    Sections:
-      - Section: .text
-  - Type: PT_LOAD
-    Flags: [ PF_R, PF_W ]
-    VAddr: 0x2000
-    Align: 0x1000
-    Sections:
-      - Section: .data
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1000
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x2000
+    Align:    0x1000
+    FirstSec: .data
+    LastSec:  .data
   - Type: PT_GNU_STACK
     Flags: [ PF_R, PF_W ]
     VAddr: 0x0000
     Align: 0x0000
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x2010
-    Sections:
-      - Section: .xdata
-      - Section: .after
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x2010
+    FirstSec: .xdata
+    LastSec:  .after
 
 #CHECK:     ProgramHeaders [
 #CHECK-NEXT:   ProgramHeader {

@@ -28,28 +28,27 @@ Sections:
 ProgramHeaders:
 ## Show what virtual and physical address we set by default for the case where
 ## a program header has no sections.
-  - Type:     PT_LOAD
-    Flags:    [ PF_X, PF_R ]
-    Sections: []
+  - Type:  PT_LOAD
+    Flags: [ PF_X, PF_R ]
 ## Show what virtual and physical address we set by default for the case
 ## where a program header includes a section with a virtual address that
 ## is explicitly set.
   - Type:     PT_LOAD
     Flags:    [ PF_X, PF_R ]
-    Sections:
-      - Section: .foo
+    FirstSec: .foo
+    LastSec:  .foo
 ## Now we have a program header that has a virtual address different to
 ## the address of the section included. Show that the default physical address
 ## is equal to the program header's virtual address.
-  - Type:  PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0xAAAA1000
-    Sections:
-      - Section: .foo
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xAAAA1000
+    FirstSec: .foo
+    LastSec:  .foo
 ## Show that we are able to set different virtual and physical addresses.
-  - Type:  PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0xAAAA1000
-    PAddr: 0xBBBB2000
-    Sections:
-      - Section: .foo
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xAAAA1000
+    PAddr:    0xBBBB2000
+    FirstSec: .foo
+    LastSec:  .foo

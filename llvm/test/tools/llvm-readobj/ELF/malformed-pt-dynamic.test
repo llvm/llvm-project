@@ -140,7 +140,7 @@ Sections:
 ProgramHeaders:
   - Type:     PT_DYNAMIC
     FileSize: [[FILESIZE=<none>]]
-    Sections:
-      - Section: .dynamic
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 SectionHeaderTable:
   NoHeaders: [[NOHEADERS=false]]

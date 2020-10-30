@@ -48,16 +48,14 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .dynamic
 
 ## In this case .text goes after .dynamic and we don't display any warnings,
 ## though the content of the .text is used for dumping the dynamic table.
@@ -102,16 +100,14 @@ Sections:
     AddressAlign: 0x100
     Content: "00000000000000000000000000000000"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
 
 ## In this case .text goes after .dynamic, but (PT_DYNAMIC segment size % dynamic entry size != 0)
 ## and we have to use the information from the section header instead.
@@ -157,13 +153,11 @@ Sections:
     AddressAlign: 0x100
     Content: "00"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text

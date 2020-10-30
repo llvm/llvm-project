@@ -281,15 +281,14 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # RUN: yaml2obj %s --docnum=1 -DBITS=32 -DSYMBOLIC=0x12345678 -DDEBUG=0xfedcba09 \
 # RUN:   -DTEXTREL=0x11223344 -DBINDNOW=0x88776655 -DFLAGS=0xffffffff \

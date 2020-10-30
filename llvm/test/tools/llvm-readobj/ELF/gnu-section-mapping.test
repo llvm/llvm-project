@@ -39,19 +39,17 @@ Sections:
     Size:    0x4
 ProgramHeaders:
 ## Case 1: an arbitrary segment with sections.
-  - Type:  PT_PHDR
-    Flags: [ PF_W ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_PHDR
+    Flags:    [ PF_W ]
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 2: another segment with different sections.
-  - Type:  PT_PHDR
-    Flags: [ PF_X ]
-    VAddr: 0x2000
-    Sections:
-      - Section: .bar.begin
-      - Section: .bar.end
+  - Type:     PT_PHDR
+    Flags:    [ PF_X ]
+    VAddr:    0x2000
+    FirstSec: .bar.begin
+    LastSec:  .bar.end
 
 ## Check that --section-mapping=false --program-headers produces just program headers.
 # RUN: llvm-readelf --section-mapping=false --program-headers %t64.elf \
