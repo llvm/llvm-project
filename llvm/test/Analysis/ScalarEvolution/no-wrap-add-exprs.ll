@@ -186,19 +186,19 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
 ; CHECK-NEXT:    %ptr = bitcast [16 x i8]* @z_addr to i8*
 ; CHECK-NEXT:    --> @z_addr U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %int0 = ptrtoint i8* %ptr to i32
-; CHECK-NEXT:    --> %int0 U: [0,-3) S: [-2147483648,2147483645)
+; CHECK-NEXT:    --> (trunc i64 (ptrtoint [16 x i8]* @z_addr to i64) to i32) U: [0,-3) S: [-2147483648,2147483645)
 ; CHECK-NEXT:    %int5 = add i32 %int0, 5
-; CHECK-NEXT:    --> (5 + %int0) U: [5,2) S: [-2147483643,-2147483646)
+; CHECK-NEXT:    --> (5 + (trunc i64 (ptrtoint [16 x i8]* @z_addr to i64) to i32)) U: [5,2) S: [-2147483643,-2147483646)
 ; CHECK-NEXT:    %int.zext = zext i32 %int5 to i64
-; CHECK-NEXT:    --> (1 + (zext i32 (4 + %int0) to i64))<nuw><nsw> U: [1,4294967294) S: [1,4294967297)
+; CHECK-NEXT:    --> (1 + (zext i32 (4 + (trunc i64 (ptrtoint [16 x i8]* @z_addr to i64) to i32)) to i64))<nuw><nsw> U: [1,4294967294) S: [1,4294967297)
 ; CHECK-NEXT:    %ptr_noalign = bitcast [16 x i8]* @z_addr_noalign to i8*
 ; CHECK-NEXT:    --> @z_addr_noalign U: full-set S: full-set
 ; CHECK-NEXT:    %int0_na = ptrtoint i8* %ptr_noalign to i32
-; CHECK-NEXT:    --> %int0_na U: full-set S: full-set
+; CHECK-NEXT:    --> (trunc i64 (ptrtoint [16 x i8]* @z_addr_noalign to i64) to i32) U: full-set S: full-set
 ; CHECK-NEXT:    %int5_na = add i32 %int0_na, 5
-; CHECK-NEXT:    --> (5 + %int0_na) U: full-set S: full-set
+; CHECK-NEXT:    --> (5 + (trunc i64 (ptrtoint [16 x i8]* @z_addr_noalign to i64) to i32)) U: full-set S: full-set
 ; CHECK-NEXT:    %int.zext_na = zext i32 %int5_na to i64
-; CHECK-NEXT:    --> (zext i32 (5 + %int0_na) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    --> (zext i32 (5 + (trunc i64 (ptrtoint [16 x i8]* @z_addr_noalign to i64) to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %tmp = load i32, i32* %tmp_addr, align 4
 ; CHECK-NEXT:    --> %tmp U: full-set S: full-set
 ; CHECK-NEXT:    %mul = and i32 %tmp, -4

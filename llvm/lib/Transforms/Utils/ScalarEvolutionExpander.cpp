@@ -663,7 +663,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
       L = PickMostRelevantLoop(L, getRelevantLoop(Op), SE.DT);
     return RelevantLoops[N] = L;
   }
-  if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(S)) {
+  if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(S)) {
     const Loop *Result = getRelevantLoop(C->getOperand());
     return RelevantLoops[C] = Result;
   }
@@ -1661,6 +1661,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   return expand(T);
 }
 
+Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
+  Value *V =
+      expandCodeForImpl(S->getOperand(), S->getOperand()->getType(), false);
+  return Builder.CreatePtrToInt(V, S->getType());
+}
+
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeForImpl(
@@ -2241,6 +2247,9 @@ template<typename T> static int costAndCollectOperands(
   case scUnknown:
   case scConstant:
     return 0;
+  case scPtrToInt:
+    Cost = CastCost(Instruction::PtrToInt);
+    break;
   case scTruncate:
     Cost = CastCost(Instruction::Trunc);
     break;
@@ -2368,10 +2377,11 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return BudgetRemaining < 0;
   }
   case scTruncate:
+  case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
-    int Cost = costAndCollectOperands<SCEVIntegralCastExpr>(WorkItem, TTI,
-                                                            CostKind, Worklist);
+    int Cost =
+        costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
     BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
   }
