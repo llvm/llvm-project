@@ -171,8 +171,7 @@ template <> class OptionalStorage<clang::FileEntryRef> {
 
 public:
   ~OptionalStorage() = default;
-  OptionalStorage() noexcept
-      : MaybeRef(clang::FileEntryRef::optional_none_tag()) {}
+  OptionalStorage() : MaybeRef(clang::FileEntryRef::optional_none_tag()) {}
   OptionalStorage(OptionalStorage const &Other) = default;
   OptionalStorage(OptionalStorage &&Other) = default;
   OptionalStorage &operator=(OptionalStorage const &Other) = default;
@@ -182,20 +181,20 @@ public:
   explicit OptionalStorage(in_place_t, ArgTypes &&...Args)
       : MaybeRef(std::forward<ArgTypes>(Args)...) {}
 
-  void reset() noexcept { MaybeRef = clang::FileEntryRef::optional_none_tag(); }
+  void reset() { MaybeRef = clang::FileEntryRef::optional_none_tag(); }
 
-  bool hasValue() const noexcept { return MaybeRef.hasOptionalValue(); }
+  bool hasValue() const { return MaybeRef.hasOptionalValue(); }
 
-  clang::FileEntryRef &getValue() LLVM_LVALUE_FUNCTION noexcept {
+  clang::FileEntryRef &getValue() LLVM_LVALUE_FUNCTION {
     assert(hasValue());
     return MaybeRef;
   }
-  clang::FileEntryRef const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  clang::FileEntryRef const &getValue() const LLVM_LVALUE_FUNCTION {
     assert(hasValue());
     return MaybeRef;
   }
 #if LLVM_HAS_RVALUE_REFERENCE_THIS
-  clang::FileEntryRef &&getValue() &&noexcept {
+  clang::FileEntryRef &&getValue() && {
     assert(hasValue());
     return std::move(MaybeRef);
   }
@@ -247,7 +246,7 @@ namespace clang {
 class OptionalFileEntryRefDegradesToFileEntryPtr
     : public Optional<FileEntryRef> {
 public:
-  OptionalFileEntryRefDegradesToFileEntryPtr() noexcept = default;
+  OptionalFileEntryRefDegradesToFileEntryPtr() = default;
   OptionalFileEntryRefDegradesToFileEntryPtr(
       OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
   OptionalFileEntryRefDegradesToFileEntryPtr(
