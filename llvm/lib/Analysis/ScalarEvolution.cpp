@@ -1047,17 +1047,61 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
   ID.AddPointer(Op);
   void *IP = nullptr;
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-    return getTruncateOrZeroExtend(S, Ty);
+    return getTruncateOrZeroExtend(S, Ty, Depth);
 
-  assert(!isa<SCEVConstant>(Op) &&
-         "SCEVConstant is an integer, no constant folding to do.");
+  assert((isa<SCEVNAryExpr>(Op) || isa<SCEVUnknown>(Op)) &&
+         "We can only gen an nary expression, or an unknown here.");
 
-  // FIXME: simplifications.
+  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
+
+  // If the input operand is not an unknown (and thus is an nary expression),
+  // sink the cast to operands, so that the operation is performed on integers,
+  // and we eventually end up with just an ptrtoint(unknown).
+  if (const SCEVNAryExpr *NaryExpr = dyn_cast<SCEVNAryExpr>(Op)) {
+    SmallVector<const SCEV *, 2> NewOps;
+    NewOps.reserve(NaryExpr->getNumOperands());
+    for (const SCEV *Op : NaryExpr->operands())
+      NewOps.push_back(Op->getType()->isPointerTy()
+                           ? getPtrToIntExpr(Op, IntPtrTy, Depth + 1)
+                           : Op);
+    const SCEV *NewNaryExpr = nullptr;
+    switch (SCEVTypes SCEVType = NaryExpr->getSCEVType()) {
+    case scAddExpr:
+      NewNaryExpr = getAddExpr(NewOps, NaryExpr->getNoWrapFlags(), Depth + 1);
+      break;
+    case scAddRecExpr:
+      NewNaryExpr =
+          getAddRecExpr(NewOps, cast<SCEVAddRecExpr>(NaryExpr)->getLoop(),
+                        NaryExpr->getNoWrapFlags());
+      break;
+    case scUMaxExpr:
+    case scSMaxExpr:
+    case scUMinExpr:
+    case scSMinExpr:
+      NewNaryExpr = getMinMaxExpr(SCEVType, NewOps);
+      break;
+
+    case scMulExpr:
+      NewNaryExpr = getMulExpr(NewOps, NaryExpr->getNoWrapFlags(), Depth + 1);
+      break;
+    case scUDivExpr:
+      NewNaryExpr = getUDivExpr(NewOps[0], NewOps[1]);
+      break;
+    case scConstant:
+    case scTruncate:
+    case scZeroExtend:
+    case scSignExtend:
+    case scPtrToInt:
+    case scUnknown:
+    case scCouldNotCompute:
+      llvm_unreachable("We can't get these types here.");
+    }
+    return getTruncateOrZeroExtend(NewNaryExpr, Ty, Depth);
+  }
 
   // The cast wasn't folded; create an explicit cast node. We can reuse
   // the existing insert position since if we get here, we won't have
   // made any changes which would invalidate it.
-  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
   assert(getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(
              Op->getType())) == getDataLayout().getTypeSizeInBits(IntPtrTy) &&
          "We can only model ptrtoint if SCEV's effective (integer) type is "
@@ -1066,7 +1110,7 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
       SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
-  return getTruncateOrZeroExtend(S, Ty);
+  return getTruncateOrZeroExtend(S, Ty, Depth);
 }
 
 const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
