@@ -656,11 +656,11 @@ private:
     StackNode &operator=(const StackNode &) = delete;
 
     // Accessors.
-    unsigned currentGeneration() { return CurrentGeneration; }
-    unsigned childGeneration() { return ChildGeneration; }
+    unsigned currentGeneration() const { return CurrentGeneration; }
+    unsigned childGeneration() const { return ChildGeneration; }
     void childGeneration(unsigned generation) { ChildGeneration = generation; }
     DomTreeNode *node() { return Node; }
-    DomTreeNode::const_iterator childIter() { return ChildIter; }
+    DomTreeNode::const_iterator childIter() const { return ChildIter; }
 
     DomTreeNode *nextChild() {
       DomTreeNode *child = *ChildIter;
@@ -668,8 +668,8 @@ private:
       return child;
     }
 
-    DomTreeNode::const_iterator end() { return EndIter; }
-    bool isProcessed() { return Processed; }
+    DomTreeNode::const_iterator end() const { return EndIter; }
+    bool isProcessed() const { return Processed; }
     void process() { Processed = true; }
 
   private:

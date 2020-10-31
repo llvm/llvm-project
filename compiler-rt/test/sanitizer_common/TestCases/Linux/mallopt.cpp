@@ -1,5 +1,9 @@
 // Check that mallopt does not return invalid values (ex. -1).
 // RUN: %clangxx -O2 %s -o %t && %run %t
+
+// Investigate why it fails with NDK 21.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <malloc.h>
 

@@ -563,8 +563,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
           Push->addOperand(DefMov->getOperand(i));
-        Push->cloneMergedMemRefs(MF, {&*DefMov, &*Store});
-
+        Push->cloneMergedMemRefs(MF, {DefMov, &*Store});
         DefMov->eraseFromParent();
       } else {
         PushOpcode = Is64Bit ? X86::PUSH64r : X86::PUSH32r;

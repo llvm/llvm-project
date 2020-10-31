@@ -243,6 +243,8 @@ void LSUnit::onInstructionExecuted(const InstRef &IR) {
       CurrentStoreGroupID = 0;
     if (GroupID == CurrentLoadBarrierGroupID)
       CurrentLoadBarrierGroupID = 0;
+    if (GroupID == CurrentStoreBarrierGroupID)
+      CurrentStoreBarrierGroupID = 0;
   }
 }
 
