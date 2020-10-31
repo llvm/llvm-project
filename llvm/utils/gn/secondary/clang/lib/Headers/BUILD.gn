@@ -116,6 +116,7 @@ copy("Headers") {
     "avx512vpopcntdqintrin.h",
     "avx512vpopcntdqvlintrin.h",
     "avxintrin.h",
+    "avxvnniintrin.h",
     "bmi2intrin.h",
     "bmiintrin.h",
     "cet.h",

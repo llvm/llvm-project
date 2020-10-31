@@ -306,6 +306,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXINT8 = true;
     } else if (Feature == "+amx-tile") {
       HasAMXTILE = true;
+    } else if (Feature == "+avxvnni") {
+      HasAVXVNNI = true;
     } else if (Feature == "+serialize") {
       HasSERIALIZE = true;
     } else if (Feature == "+tsxldtrk") {
@@ -728,6 +730,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMXINT8__");
   if (HasAMXBF16)
     Builder.defineMacro("__AMXBF16__");
+  if (HasAVXVNNI)
+    Builder.defineMacro("__AVXVNNI__");
   if (HasSERIALIZE)
     Builder.defineMacro("__SERIALIZE__");
   if (HasTSXLDTRK)
@@ -846,6 +850,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512vbmi2", true)
       .Case("avx512ifma", true)
       .Case("avx512vp2intersect", true)
+      .Case("avxvnni", true)
       .Case("bmi", true)
       .Case("bmi2", true)
       .Case("cldemote", true)
@@ -918,6 +923,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-bf16", HasAMXBF16)
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-tile", HasAMXTILE)
+      .Case("avxvnni", HasAVXVNNI)
       .Case("avx", SSELevel >= AVX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
