@@ -404,7 +404,7 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   O << ']';
 }
 
-static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
+static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
                               char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
   bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
