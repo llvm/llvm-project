@@ -560,8 +560,9 @@ void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
                        ->getValue()
                        .getZExtValue());
     Val *= APS;
-    Vals.push_back(MDB.createConstant(ConstantInt::get(
-        Type::getInt64Ty(getContext()), Val.udiv(APT).getLimitedValue())));
+    Vals.push_back(MDB.createConstant(
+        ConstantInt::get(Type::getInt32Ty(getContext()),
+                         Val.udiv(APT).getLimitedValue(UINT32_MAX))));
   } else if (ProfDataName->getString().equals("VP"))
     for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
       // The first value is the key of the value profile, which will not change.

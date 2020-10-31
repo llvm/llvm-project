@@ -1376,5 +1376,29 @@ TEST(InstructionsTest, DropLocation) {
   }
 }
 
+TEST(InstructionsTest, BranchWeightOverflow) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @callee()
+
+      define void @caller() {
+        call void @callee(), !prof !1
+        ret void
+      }
+
+      !1 = !{!"branch_weights", i32 20000}
+  )");
+  ASSERT_TRUE(M);
+  CallInst *CI =
+      cast<CallInst>(&M->getFunction("caller")->getEntryBlock().front());
+  uint64_t ProfWeight;
+  CI->extractProfTotalWeight(ProfWeight);
+  ASSERT_EQ(ProfWeight, 20000U);
+  CI->updateProfWeight(10000000, 1);
+  CI->extractProfTotalWeight(ProfWeight);
+  ASSERT_EQ(ProfWeight, UINT32_MAX);
+}
+
 } // end anonymous namespace
 } // end namespace llvm
