@@ -114,67 +114,7 @@ enum class NodeRole : uint8_t {
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
 
-class SimpleDeclarator;
-
-/// A root node for a translation unit. Parent is always null.
-class TranslationUnit final : public Tree {
-public:
-  TranslationUnit() : Tree(NodeKind::TranslationUnit) {}
-  static bool classof(const Node *N);
-};
-
-/// A base class for all expressions. Note that expressions are not statements,
-/// even though they are in clang.
-class Expression : public Tree {
-public:
-  Expression(NodeKind K) : Tree(K) {}
-  static bool classof(const Node *N);
-};
-
-/// A sequence of these specifiers make a `nested-name-specifier`.
-/// e.g. the `std` or `vector<int>` in `std::vector<int>::size`.
-class NameSpecifier : public Tree {
-public:
-  NameSpecifier(NodeKind K) : Tree(K) {}
-  static bool classof(const Node *N);
-};
-
-/// The global namespace name specifier, this specifier doesn't correspond to a
-/// token instead an absence of tokens before a `::` characterizes it, in
-/// `::std::vector<int>` it would be characterized by the absence of a token
-/// before the first `::`
-class GlobalNameSpecifier final : public NameSpecifier {
-public:
-  GlobalNameSpecifier() : NameSpecifier(NodeKind::GlobalNameSpecifier) {}
-  static bool classof(const Node *N);
-};
-
-/// A name specifier holding a decltype, of the form: `decltype ( expression ) `
-/// e.g. the `decltype(s)` in `decltype(s)::size`.
-class DecltypeNameSpecifier final : public NameSpecifier {
-public:
-  DecltypeNameSpecifier() : NameSpecifier(NodeKind::DecltypeNameSpecifier) {}
-  static bool classof(const Node *N);
-};
-
-/// A identifier name specifier, of the form `identifier`
-/// e.g. the `std` in `std::vector<int>::size`.
-class IdentifierNameSpecifier final : public NameSpecifier {
-public:
-  IdentifierNameSpecifier()
-      : NameSpecifier(NodeKind::IdentifierNameSpecifier) {}
-  static bool classof(const Node *N);
-};
-
-/// A name specifier with a simple-template-id, of the form `template_opt
-/// identifier < template-args >` e.g. the `vector<int>` in
-/// `std::vector<int>::size`.
-class SimpleTemplateNameSpecifier final : public NameSpecifier {
-public:
-  SimpleTemplateNameSpecifier()
-      : NameSpecifier(NodeKind::SimpleTemplateNameSpecifier) {}
-  static bool classof(const Node *N);
-};
+#include "clang/Tooling/Syntax/NodeClasses.inc"
 
 /// Models a `nested-name-specifier`. C++ [expr.prim.id.qual]
 /// e.g. the `std::vector<int>::` in `std::vector<int>::size`.
