@@ -67,7 +67,8 @@ protected:
 
 private:
   // Color logs so we can distinguish them from test output.
-  void log(Level L, const llvm::formatv_object_base &Message) override {
+  void log(Level L, const char *Fmt,
+           const llvm::formatv_object_base &Message) override {
     raw_ostream::Colors Color;
     switch (L) {
     case Level::Verbose:
