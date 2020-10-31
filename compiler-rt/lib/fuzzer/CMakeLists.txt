@@ -64,6 +64,7 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
   # Remove -stdlib= which is unused when passing -nostdinc++.
   string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 elseif(TARGET cxx-headers OR HAVE_LIBCXX)
+  # libFuzzer uses C++ standard library headers.
   set(LIBFUZZER_DEPS cxx-headers)
 endif()
 
