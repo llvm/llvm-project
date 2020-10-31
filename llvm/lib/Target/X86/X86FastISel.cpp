@@ -2708,10 +2708,9 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     // movq (%rax), %rax
     // movq (%rax), %rax
     // ...
-    unsigned DestReg;
     unsigned Depth = cast<ConstantInt>(II->getOperand(0))->getZExtValue();
     while (Depth--) {
-      DestReg = createResultReg(RC);
+      Register DestReg = createResultReg(RC);
       addDirectMem(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                            TII.get(Opc), DestReg), SrcReg);
       SrcReg = DestReg;
