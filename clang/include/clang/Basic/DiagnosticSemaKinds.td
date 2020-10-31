@@ -3162,6 +3162,11 @@ def warn_attribute_has_no_effect_on_infinite_loop : Warning<
    InGroup<IgnoredAttributes>;
 def note_attribute_has_no_effect_on_infinite_loop_here : Note<
   "annotating the infinite loop here">;
+def warn_attribute_has_no_effect_on_if_constexpr : Warning<
+  "attribute %0 has no effect when annotating an 'if constexpr' statement">,
+   InGroup<IgnoredAttributes>;
+def note_attribute_has_no_effect_on_if_constexpr_here : Note<
+  "annotating the 'if constexpr' statement here">;
 def err_decl_attribute_invalid_on_stmt : Error<
   "%0 attribute cannot be applied to a statement">;
 def err_stmt_attribute_invalid_on_decl : Error<
