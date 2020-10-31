@@ -254,7 +254,7 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
   const LoadSDNode *LD = cast<LoadSDNode>(Node);
   uint64_t size = LD->getMemOperand()->getSize();
 
-  if (!size || size > 8 || (size & (size - 1)))
+  if (!size || size > 8 || (size & (size - 1)) || !LD->isSimple())
     return;
 
   SDNode *LDAddrNode = LD->getOperand(1).getNode();
@@ -342,7 +342,7 @@ bool BPFDAGToDAGISel::getConstantFieldValue(const GlobalAddressSDNode *Node,
                                             unsigned char *ByteSeq) {
   const GlobalVariable *V = dyn_cast<GlobalVariable>(Node->getGlobal());
 
-  if (!V || !V->hasInitializer())
+  if (!V || !V->hasInitializer() || !V->isConstant())
     return false;
 
   const Constant *Init = V->getInitializer();
