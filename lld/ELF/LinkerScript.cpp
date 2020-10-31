@@ -679,8 +679,11 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
       auto *firstIsec = cast<InputSectionBase>(
           cast<InputSectionDescription>(sec->sectionCommands[0])
               ->sectionBases[0]);
-      if (firstIsec->getLinkOrderDep()->getOutputSection() !=
-          isec->getLinkOrderDep()->getOutputSection())
+      OutputSection *firstIsecOut =
+          firstIsec->flags & SHF_LINK_ORDER
+              ? firstIsec->getLinkOrderDep()->getOutputSection()
+              : nullptr;
+      if (firstIsecOut != isec->getLinkOrderDep()->getOutputSection())
         continue;
     }
 
