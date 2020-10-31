@@ -32,9 +32,9 @@
 ; CHECK: call i32 (i8*, ...) @printf{{.*}} !prof ![[IDX3:[0-9]*]]
 ; CHECK: = !{!"TotalCount", i64 26781}
 ; CHECK: = !{!"MaxCount", i64 5553}
-; CHECK: ![[IDX1]] = !{!"branch_weights", i64 5392, i64 163}
-; CHECK: ![[IDX2]] = !{!"branch_weights", i64 5280, i64 113}
-; CHECK: ![[IDX3]] = !{!"branch_weights", i64 1}
+; CHECK: ![[IDX1]] = !{!"branch_weights", i32 5392, i32 163}
+; CHECK: ![[IDX2]] = !{!"branch_weights", i32 5280, i32 113}
+; CHECK: ![[IDX3]] = !{!"branch_weights", i32 1}
 
 ; Function Attrs: nounwind uwtable
 define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !4 {

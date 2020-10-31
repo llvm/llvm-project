@@ -47,11 +47,11 @@ void debug_captured() {
   if (x) {} // This is DC2. Checked above.
 }
 
-// PGOUSE-DAG: ![[DC1]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[DC2]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[CS1]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[C11]] = !{!"branch_weights", i64 11, i64 2}
-// PGOUSE-DAG: ![[C12]] = !{!"branch_weights", i64 2, i64 1}
+// PGOUSE-DAG: ![[DC1]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[DC2]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[CS1]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[C11]] = !{!"branch_weights", i32 11, i32 2}
+// PGOUSE-DAG: ![[C12]] = !{!"branch_weights", i32 2, i32 1}
 
 int main(int argc, const char *argv[]) {
   debug_captured();

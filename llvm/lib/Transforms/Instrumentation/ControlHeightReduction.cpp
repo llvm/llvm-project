@@ -1865,9 +1865,9 @@ void CHR::fixupBranchesAndSelects(CHRScope *Scope,
         << " branches or selects";
   });
   MergedBR->setCondition(MergedCondition);
-  uint64_t Weights[] = {
-      CHRBranchBias.scale(1000),
-      CHRBranchBias.getCompl().scale(1000),
+  uint32_t Weights[] = {
+      static_cast<uint32_t>(CHRBranchBias.scale(1000)),
+      static_cast<uint32_t>(CHRBranchBias.getCompl().scale(1000)),
   };
   MDBuilder MDB(F.getContext());
   MergedBR->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
