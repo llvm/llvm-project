@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: not wasm-ld --fatal-warnings -o out.wasm %t.o 2>&1 | FileCheck %s
+# RUN: not wasm-ld --fatal-warnings %t.o -o - 2>&1 | FileCheck %s
 #
 # CHECK: bad-reloc.yaml.tmp.o:(_start): unexpected existing value for R_WASM_MEMORY_ADDR_LEB: existing=1 expected=0
 #
