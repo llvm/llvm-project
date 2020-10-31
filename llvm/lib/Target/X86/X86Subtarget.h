@@ -355,6 +355,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Processor has AVX-512 Vector Neural Network Instructions
   bool HasVNNI = false;
 
+  /// Processor has AVX Vector Neural Network Instructions
+  bool HasAVXVNNI = false;
+
   /// Processor has AVX-512 bfloat16 floating-point extensions
   bool HasBF16 = false;
 
@@ -750,6 +753,7 @@ public:
   bool useRetpolineIndirectBranches() const {
     return UseRetpolineIndirectBranches;
   }
+  bool hasAVXVNNI() const { return HasAVXVNNI; }
   bool hasAMXTILE() const { return HasAMXTILE; }
   bool hasAMXBF16() const { return HasAMXBF16; }
   bool hasAMXINT8() const { return HasAMXINT8; }
