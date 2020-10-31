@@ -376,8 +376,8 @@ static void initializeAliases(
       continue;
     }
     // Otherwise, add the index to the name.
-    for (auto &symbolIt : llvm::enumerate(it.second))
-      symbolToAlias.insert({symbolIt.value(), {it.first, symbolIt.index()}});
+    for (int i = 0, e = it.second.size(); i < e; ++i)
+      symbolToAlias.insert({it.second[i], {it.first, i}});
   }
 }
 
