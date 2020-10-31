@@ -646,6 +646,16 @@ define i32 @all_v2i64(<2 x i64> %x) {
   ret i32 %a
 }
 
+; CHECK-LABEL: bitmask_v2i64:
+; SIMD128-NEXT: .functype bitmask_v2i64 (v128) -> (i32){{$}}
+; SIMD128-NEXT: i64x2.bitmask $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare i32 @llvm.wasm.bitmask.v2i64(<2 x i64>)
+define i32 @bitmask_v2i64(<2 x i64> %x) {
+  %a = call i32 @llvm.wasm.bitmask.v2i64(<2 x i64> %x)
+  ret i32 %a
+}
+
 ; CHECK-LABEL: bitselect_v2i64:
 ; SIMD128-NEXT: .functype bitselect_v2i64 (v128, v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}

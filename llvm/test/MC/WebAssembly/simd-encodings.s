@@ -523,6 +523,9 @@ main:
     # CHECK: i64x2.all_true # encoding: [0xfd,0xc3,0x01]
     i64x2.all_true
 
+    # CHECK: i64x2.bitmask # encoding: [0xfd,0xc4,0x01]
+    i64x2.bitmask
+
     # CHECK: i64x2.widen_low_i32x4_s # encoding: [0xfd,0xc7,0x01]
     i64x2.widen_low_i32x4_s
 
