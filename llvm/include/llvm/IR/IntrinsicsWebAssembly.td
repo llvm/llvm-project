@@ -151,6 +151,7 @@ def int_wasm_dot :
   Intrinsic<[llvm_v4i32_ty],
             [llvm_v8i16_ty, llvm_v8i16_ty],
             [IntrNoMem, IntrSpeculatable]>;
+
 def int_wasm_narrow_signed :
   Intrinsic<[llvm_anyvector_ty],
             [llvm_anyvector_ty, LLVMMatchType<1>],
@@ -159,6 +160,18 @@ def int_wasm_narrow_unsigned :
   Intrinsic<[llvm_anyvector_ty],
             [llvm_anyvector_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrSpeculatable]>;
+
+// TODO: Replace these intrinsics with normal ISel patterns once i32x4 to i64x2
+// widening is merged to the proposal.
+def int_wasm_widen_low_signed :
+  Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_widen_high_signed :
+  Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_widen_low_unsigned :
+  Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_widen_high_unsigned :
+  Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
+
 def int_wasm_q15mulr_saturate_signed :
   Intrinsic<[llvm_v8i16_ty],
             [llvm_v8i16_ty, llvm_v8i16_ty],

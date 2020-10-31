@@ -520,6 +520,18 @@ main:
     # CHECK: i64x2.all_true # encoding: [0xfd,0xc3,0x01]
     i64x2.all_true
 
+    # CHECK: i64x2.widen_low_i32x4_s # encoding: [0xfd,0xc7,0x01]
+    i64x2.widen_low_i32x4_s
+
+    # CHECK: i64x2.widen_high_i32x4_s # encoding: [0xfd,0xc8,0x01]
+    i64x2.widen_high_i32x4_s
+
+    # CHECK: i64x2.widen_low_i32x4_u # encoding: [0xfd,0xc9,0x01]
+    i64x2.widen_low_i32x4_u
+
+    # CHECK: i64x2.widen_high_i32x4_u # encoding: [0xfd,0xca,0x01]
+    i64x2.widen_high_i32x4_u
+
     # CHECK: i64x2.shl # encoding: [0xfd,0xcb,0x01]
     i64x2.shl
 

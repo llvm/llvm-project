@@ -528,6 +528,46 @@ define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
+; CHECK-LABEL: widen_low_s_v2i64:
+; SIMD128-NEXT: .functype widen_low_s_v2i64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i64x2.widen_low_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x i64> @llvm.wasm.widen.low.signed(<4 x i32>)
+define <2 x i64> @widen_low_s_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.widen.low.signed(<4 x i32> %x)
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: widen_high_s_v2i64:
+; SIMD128-NEXT: .functype widen_high_s_v2i64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i64x2.widen_high_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x i64> @llvm.wasm.widen.high.signed(<4 x i32>)
+define <2 x i64> @widen_high_s_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.widen.high.signed(<4 x i32> %x)
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: widen_low_u_v2i64:
+; SIMD128-NEXT: .functype widen_low_u_v2i64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i64x2.widen_low_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x i64> @llvm.wasm.widen.low.unsigned(<4 x i32>)
+define <2 x i64> @widen_low_u_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.widen.low.unsigned(<4 x i32> %x)
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: widen_high_u_v2i64:
+; SIMD128-NEXT: .functype widen_high_u_v2i64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i64x2.widen_high_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x i64> @llvm.wasm.widen.high.unsigned(<4 x i32>)
+define <2 x i64> @widen_high_u_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.widen.high.unsigned(<4 x i32> %x)
+  ret <2 x i64> %a
+}
+
 ; CHECK-LABEL: extmul_low_s_v2i64:
 ; SIMD128-NEXT: .functype extmul_low_s_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.extmul_low_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
