@@ -511,6 +511,9 @@ main:
     # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xba,0x01]
     i32x4.dot_i16x8_s
 
+    # CHECK: i64x2.eq # encoding: [0xfd,0xc0,0x01]
+    i64x2.eq
+
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg
 
@@ -519,6 +522,9 @@ main:
 
     # CHECK: i64x2.all_true # encoding: [0xfd,0xc3,0x01]
     i64x2.all_true
+
+    # CHECK: i64x2.bitmask # encoding: [0xfd,0xc4,0x01]
+    i64x2.bitmask
 
     # CHECK: i64x2.widen_low_i32x4_s # encoding: [0xfd,0xc7,0x01]
     i64x2.widen_low_i32x4_s
