@@ -207,8 +207,8 @@ for.end:                                          ; preds = %for.body
   ret i32 0
 }
 
-; CHECK: [[LP3]] = !{!"branch_weights", i64 10, i64 2490}
-; CHECK: [[LP6]] = !{!"branch_weights", i64 10, i64 0}
+; CHECK: [[LP3]] = !{!"branch_weights", i32 10, i32 2490}
+; CHECK: [[LP6]] = !{!"branch_weights", i32 10, i32 0}
 ; original loop has latchExitWeight=10 and backedgeTakenWeight=10,000,
 ; therefore estimatedBackedgeTakenCount=1,000 and estimatedTripCount=1,001.
 ; Vectorizing by 4 produces estimatedTripCounts of 1,001/4=250 and 1,001%4=1
@@ -217,6 +217,6 @@ for.end:                                          ; preds = %for.body
 ; loop invocation weights of 10 are the above {10, 2490} and {10, 0}.
 
 !0 = !{!"function_entry_count", i64 100}
-!1 = !{!"branch_weights", i64 100, i64 0}
-!2 = !{!"branch_weights", i64 10, i64 90}
-!3 = !{!"branch_weights", i64 10, i64 10000}
+!1 = !{!"branch_weights", i32 100, i32 0}
+!2 = !{!"branch_weights", i32 10, i32 90}
+!3 = !{!"branch_weights", i32 10, i32 10000}

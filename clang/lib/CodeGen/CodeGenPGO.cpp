@@ -1013,11 +1013,29 @@ void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
   RegionCounts = ProfRecord->Counts;
 }
 
-/// Scale an individual branch weight (add 1).
+/// Calculate what to divide by to scale weights.
+///
+/// Given the maximum weight, calculate a divisor that will scale all the
+/// weights to strictly less than UINT32_MAX.
+static uint64_t calculateWeightScale(uint64_t MaxWeight) {
+  return MaxWeight < UINT32_MAX ? 1 : MaxWeight / UINT32_MAX + 1;
+}
+
+/// Scale an individual branch weight (and add 1).
+///
+/// Scale a 64-bit weight down to 32-bits using \c Scale.
 ///
 /// According to Laplace's Rule of Succession, it is better to compute the
 /// weight based on the count plus 1, so universally add 1 to the value.
-static uint64_t scaleBranchWeight(uint64_t Weight) { return Weight + 1; }
+///
+/// \pre \c Scale was calculated by \a calculateWeightScale() with a weight no
+/// greater than \c Weight.
+static uint32_t scaleBranchWeight(uint64_t Weight, uint64_t Scale) {
+  assert(Scale && "scale by 0?");
+  uint64_t Scaled = Weight / Scale + 1;
+  assert(Scaled <= UINT32_MAX && "overflow 32-bits");
+  return Scaled;
+}
 
 llvm::MDNode *CodeGenFunction::createProfileWeights(uint64_t TrueCount,
                                                     uint64_t FalseCount) const {
@@ -1025,9 +1043,12 @@ llvm::MDNode *CodeGenFunction::createProfileWeights(uint64_t TrueCount,
   if (!TrueCount && !FalseCount)
     return nullptr;
 
+  // Calculate how to scale down to 32-bits.
+  uint64_t Scale = calculateWeightScale(std::max(TrueCount, FalseCount));
+
   llvm::MDBuilder MDHelper(CGM.getLLVMContext());
-  return MDHelper.createBranchWeights(scaleBranchWeight(TrueCount),
-                                      scaleBranchWeight(FalseCount));
+  return MDHelper.createBranchWeights(scaleBranchWeight(TrueCount, Scale),
+                                      scaleBranchWeight(FalseCount, Scale));
 }
 
 llvm::MDNode *
@@ -1041,10 +1062,13 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
   if (MaxWeight == 0)
     return nullptr;
 
-  SmallVector<uint64_t, 16> ScaledWeights;
+  // Calculate how to scale down to 32-bits.
+  uint64_t Scale = calculateWeightScale(MaxWeight);
+
+  SmallVector<uint32_t, 16> ScaledWeights;
   ScaledWeights.reserve(Weights.size());
   for (uint64_t W : Weights)
-    ScaledWeights.push_back(scaleBranchWeight(W));
+    ScaledWeights.push_back(scaleBranchWeight(W, Scale));
 
   llvm::MDBuilder MDHelper(CGM.getLLVMContext());
   return MDHelper.createBranchWeights(ScaledWeights);

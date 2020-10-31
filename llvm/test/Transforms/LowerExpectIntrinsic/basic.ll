@@ -285,10 +285,10 @@ define i32 @test10(i64 %t6) {
 
 declare i1 @llvm.expect.i1(i1, i1) nounwind readnone
 
-; CHECK: !0 = !{!"branch_weights", i64 2000, i64 1}
+; CHECK: !0 = !{!"branch_weights", i32 2000, i32 1}
 ; CHECK: !1 = !{!"misexpect", i64 0, i64 2000, i64 1}
-; CHECK: !2 = !{!"branch_weights", i64 1, i64 2000}
+; CHECK: !2 = !{!"branch_weights", i32 1, i32 2000}
 ; CHECK: !3 = !{!"misexpect", i64 1, i64 2000, i64 1}
-; CHECK: !4 = !{!"branch_weights", i64 1, i64 1, i64 2000}
+; CHECK: !4 = !{!"branch_weights", i32 1, i32 1, i32 2000}
 ; CHECK: !5 = !{!"misexpect", i64 2, i64 2000, i64 1}
-; CHECK: !6 = !{!"branch_weights", i64 2000, i64 1, i64 1}
+; CHECK: !6 = !{!"branch_weights", i32 2000, i32 1, i32 1}

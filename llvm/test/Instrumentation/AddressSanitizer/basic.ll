@@ -229,4 +229,4 @@ define void @test_swifterror_3() sanitize_address {
 ; CHECK: call void @__asan_init()
 
 ; PROF
-; CHECK: ![[PROF]] = !{!"branch_weights", i64 1, i64 100000}
+; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 100000}

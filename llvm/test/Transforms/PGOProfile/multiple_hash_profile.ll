@@ -30,10 +30,10 @@ entry:
   %mul.i = select i1 %cmp.i, i32 1, i32 %i
 ; CHECK: %mul.i = select i1 %cmp.i, i32 1, i32 %i
 ; CHECK-SAME: !prof ![[BW:[0-9]+]]
-; CHECK: ![[BW]] = !{!"branch_weights", i64 12, i64 6}
+; CHECK: ![[BW]] = !{!"branch_weights", i32 12, i32 6}
 ; CHECKOLDHASH: %mul.i = select i1 %cmp.i, i32 1, i32 %i
 ; CHECKOLDHASH-SAME: !prof ![[BW:[0-9]+]]
-; CHECKOLDHASH: ![[BW]] = !{!"branch_weights", i64 6, i64 12}
+; CHECKOLDHASH: ![[BW]] = !{!"branch_weights", i32 6, i32 12}
   %retval.0.i = mul nsw i32 %mul.i, %i
   ret i32 %retval.0.i
 }
