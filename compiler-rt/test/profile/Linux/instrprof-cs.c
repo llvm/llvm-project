@@ -30,6 +30,6 @@ int main() {
   return 0;
 }
 
-// CS: ![[PD1]] = !{!"branch_weights", i64 0, i64 1}
-// CS: ![[PD2]] = !{!"branch_weights", i64 1, i64 0}
-// CIS: ![[PD]] = !{!"branch_weights", i64 2, i64 2}
+// CS: ![[PD1]] = !{!"branch_weights", i32 0, i32 1}
+// CS: ![[PD2]] = !{!"branch_weights", i32 1, i32 0}
+// CIS: ![[PD]] = !{!"branch_weights", i32 2, i32 2}

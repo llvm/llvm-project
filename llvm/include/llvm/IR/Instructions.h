@@ -3494,7 +3494,7 @@ public:
 /// their prof branch_weights metadata.
 class SwitchInstProfUpdateWrapper {
   SwitchInst &SI;
-  Optional<SmallVector<uint64_t, 8>> Weights = None;
+  Optional<SmallVector<uint32_t, 8> > Weights = None;
   bool Changed = false;
 
 protected:

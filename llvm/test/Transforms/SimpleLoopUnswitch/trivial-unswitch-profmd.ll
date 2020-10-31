@@ -47,7 +47,7 @@ loop_begin:
   i32 0, label %loop0
   i32 1, label %loop1
   i32 2, label %loop_exit2
-  ], !prof !{!"branch_weights", i64 99, i64 100, i64 101, i64 102}
+  ], !prof !{!"branch_weights", i32 99, i32 100, i32 101, i32 102}
 
 loop0:
   call void @some_func()
@@ -118,7 +118,7 @@ loop_begin:
   i32 0, label %loop0
   i32 1, label %loop1
   i32 2, label %loop2
-  ], !prof !{!"branch_weights", i64 99, i64 100, i64 101, i64 102}
+  ], !prof !{!"branch_weights", i32 99, i32 100, i32 101, i32 102}
 
 loop0:
   call void @some_func()
@@ -194,7 +194,7 @@ loop_begin:
   i32 13, label %loop_exit1
   i32 2, label %loop2
   i32 42, label %loop_exit3
-  ], !prof !{!"branch_weights", i64 99, i64 100, i64 101, i64 113, i64 102, i64 142}
+  ], !prof !{!"branch_weights", i32 99, i32 100, i32 101, i32 113, i32 102, i32 142}
 
 loop0:
   call void @some_func()
@@ -221,8 +221,8 @@ loop_exit3:
   ret i32 0
 }
 
-; CHECK: ![[MD0]] = !{!"branch_weights", i64 300, i64 102}
-; CHECK: ![[MD1]] = !{!"branch_weights", i64 99, i64 100, i64 101}
-; CHECK: ![[MD2]] = !{!"branch_weights", i64 99, i64 100, i64 101, i64 102}
-; CHECK: ![[MD3]] = !{!"branch_weights", i64 102, i64 100, i64 101}
-; CHECK: ![[MD4]] = !{!"branch_weights", i64 99, i64 113, i64 142, i64 100, i64 101, i64 102}
+; CHECK: ![[MD0]] = !{!"branch_weights", i32 300, i32 102}
+; CHECK: ![[MD1]] = !{!"branch_weights", i32 99, i32 100, i32 101}
+; CHECK: ![[MD2]] = !{!"branch_weights", i32 99, i32 100, i32 101, i32 102}
+; CHECK: ![[MD3]] = !{!"branch_weights", i32 102, i32 100, i32 101}
+; CHECK: ![[MD4]] = !{!"branch_weights", i32 99, i32 113, i32 142, i32 100, i32 101, i32 102}

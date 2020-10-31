@@ -129,12 +129,12 @@ sw.epilog:
   ret void
 }
 
-!0 = !{!"branch_weights", i64 64, i64 4}
-!1 = !{!"branch_weights", i64 4, i64 64}
-; CHECK: !0 = !{!"branch_weights", i64 256, i64 4352, i64 16}
-!2 = !{!"branch_weights", i64 4, i64 4, i64 8}
-!3 = !{!"branch_weights", i64 8, i64 8, i64 4}
-; CHECK: !1 = !{!"branch_weights", i64 32, i64 48, i64 96, i64 16}
-!4 = !{!"branch_weights", i64 7, i64 6, i64 4, i64 3}
-!5 = !{!"branch_weights", i64 17, i64 13, i64 9}
-; CHECK: !3 = !{!"branch_weights", i64 7, i64 3, i64 4, i64 6}
+!0 = !{!"branch_weights", i32 64, i32 4}
+!1 = !{!"branch_weights", i32 4, i32 64}
+; CHECK: !0 = !{!"branch_weights", i32 256, i32 4352, i32 16}
+!2 = !{!"branch_weights", i32 4, i32 4, i32 8}
+!3 = !{!"branch_weights", i32 8, i32 8, i32 4}
+; CHECK: !1 = !{!"branch_weights", i32 32, i32 48, i32 96, i32 16}
+!4 = !{!"branch_weights", i32 7, i32 6, i32 4, i32 3}
+!5 = !{!"branch_weights", i32 17, i32 13, i32 9}
+; CHECK: !3 = !{!"branch_weights", i32 7, i32 3, i32 4, i32 6}

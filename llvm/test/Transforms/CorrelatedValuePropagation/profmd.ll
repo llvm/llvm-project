@@ -24,7 +24,7 @@ negative:
   i32 2, label %out
   i32 3, label %out
 ; CHECK-NEXT: !prof ![[MD0:[0-9]+]]
-  ], !prof !{!"branch_weights", i64 99, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6}
+  ], !prof !{!"branch_weights", i32 99, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6}
 
 out:
   %p = phi i32 [ 1, %entry ], [ -1, %negative ], [ -1, %negative ], [ -1, %negative ], [ -1, %negative ], [ -1, %negative ]
@@ -51,7 +51,7 @@ positive:
   i32 0, label %out
   i32 -1, label %next
   i32 -2, label %next
-  ], !prof !{!"branch_weights", i64 99, i64 1, i64 2, i64 3}
+  ], !prof !{!"branch_weights", i32 99, i32 1, i32 2, i32 3}
 
 out:
   %p = phi i32 [ -1, %entry ], [ 1, %positive ], [ 1, %positive ]
@@ -78,7 +78,7 @@ positive:
   i32 1, label %next
   i32 -1, label %next
   i32 -2, label %next
-  ], !prof !{!"branch_weights", i64 99, i64 1, i64 2, i64 3}
+  ], !prof !{!"branch_weights", i32 99, i32 1, i32 2, i32 3}
 
 out:
   %p = phi i32 [ -1, %entry ], [ 1, %positive ]
@@ -108,12 +108,12 @@ negative:
   i32 1, label %out
   i32 2, label %out
   i32 3, label %out
-  ], !prof !{!"branch_weights", i64 99, i64 1, i64 2, i64 3, i64 4}
+  ], !prof !{!"branch_weights", i32 99, i32 1, i32 2, i32 3, i32 4}
 
 out:
   %p = phi i32 [ 1, %entry ], [ -1, %negative ], [ -1, %negative ], [ -1, %negative ], [ -1, %negative ], [ -1, %negative ]
   ret i32 %p
 }
 
-; CHECK: ![[MD0]] = !{!"branch_weights", i64 99, i64 4, i64 3}
-; CHECK: ![[MD1]] = !{!"branch_weights", i64 1, i64 99}
+; CHECK: ![[MD0]] = !{!"branch_weights", i32 99, i32 4, i32 3}
+; CHECK: ![[MD1]] = !{!"branch_weights", i32 1, i32 99}

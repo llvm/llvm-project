@@ -25,4 +25,4 @@ if.end:
 ; USE-DAG: {{![0-9]+}} = !{i32 1, !"ProfileSummary", {{![0-9]+}}}
 ; USE-DAG: {{![0-9]+}} = !{!"DetailedSummary", {{![0-9]+}}}
 ; USE-DAG: ![[FUNC_ENTRY_COUNT]] = !{!"function_entry_count", i64 3}
-; USE-DAG: ![[BW_ENTRY]] = !{!"branch_weights", i64 2, i64 1}
+; USE-DAG: ![[BW_ENTRY]] = !{!"branch_weights", i32 2, i32 1}
