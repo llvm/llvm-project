@@ -23,7 +23,8 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
-#include <ctime>
+
+#include <time.h>
 
 uptr __memprof_shadow_memory_dynamic_address; // Global interface symbol.
 
