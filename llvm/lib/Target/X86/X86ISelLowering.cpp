@@ -3381,8 +3381,8 @@ private:
 
   void forwardMustTailParameters(SDValue &Chain);
 
-  bool is64Bit() { return Subtarget.is64Bit(); }
-  bool isWin64() { return Subtarget.isCallingConvWin64(CallConv); }
+  bool is64Bit() const { return Subtarget.is64Bit(); }
+  bool isWin64() const { return Subtarget.isCallingConvWin64(CallConv); }
 
   X86MachineFunctionInfo *FuncInfo;
   const SDLoc &DL;
