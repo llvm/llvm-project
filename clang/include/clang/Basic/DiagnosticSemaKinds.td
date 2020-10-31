@@ -3157,6 +3157,11 @@ def warn_cxx11_gnu_attribute_on_type : Warning<
 def warn_unhandled_ms_attribute_ignored : Warning<
   "__declspec attribute %0 is not supported">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_has_no_effect_on_infinite_loop : Warning<
+  "attribute %0 has no effect when annotating an infinite loop">,
+   InGroup<IgnoredAttributes>;
+def note_attribute_has_no_effect_on_infinite_loop_here : Note<
+  "annotating the infinite loop here">;
 def err_decl_attribute_invalid_on_stmt : Error<
   "%0 attribute cannot be applied to a statement">;
 def err_stmt_attribute_invalid_on_decl : Error<

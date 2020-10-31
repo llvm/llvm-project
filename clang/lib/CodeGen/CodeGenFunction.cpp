@@ -2555,3 +2555,12 @@ llvm::MDNode *CodeGenFunction::createBranchWeights(Stmt::Likelihood LH) const {
   llvm::MDBuilder MDHelper(CGM.getLLVMContext());
   return MDHelper.createBranchWeights(LHW->first, LHW->second);
 }
+
+llvm::MDNode *CodeGenFunction::createProfileOrBranchWeightsForLoop(
+    const Stmt *Cond, uint64_t LoopCount, const Stmt *Body) const {
+  llvm::MDNode *Weights = createProfileWeightsForLoop(Cond, LoopCount);
+  if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
+    Weights = createBranchWeights(Stmt::getLikelihood(Body));
+
+  return Weights;
+}
