@@ -1913,6 +1913,10 @@ struct FormatStyle {
   /// line.
   unsigned PenaltyReturnTypeOnItsOwnLine;
 
+  /// Penalty for each character of whitespace indentation
+  /// (counted relative to leading non-whitespace column).
+  unsigned PenaltyIndentedWhitespace;
+
   /// The ``&`` and ``*`` alignment style.
   enum PointerAlignmentStyle {
     /// Align pointer to the left.

@@ -2301,6 +2301,10 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyExcessCharacter** (``unsigned``)
   The penalty for each character outside of the column limit.
 
+**PenaltyIndentedWhitespace** (``unsigned``)
+  Penalty for each character of whitespace indentation
+  (counted relative to leading non-whitespace column).
+
 **PenaltyReturnTypeOnItsOwnLine** (``unsigned``)
   Penalty for putting the return type of a function onto its own
   line.
