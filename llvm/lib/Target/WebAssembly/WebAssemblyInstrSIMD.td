@@ -641,6 +641,14 @@ foreach nodes = [[seteq, EQ_v2f64], [setne, NE_v2f64], [setlt, LT_v2f64],
 def : Pat<(v2i64 (nodes[0] (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
           (v2i64 (nodes[1] (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
 
+// Prototype i64x2.eq
+defm EQ_v2i64 :
+  SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
+         [(set (v2i64 V128:$dst),
+           (int_wasm_eq (v2i64 V128:$lhs), (v2i64 V128:$rhs))
+         )],
+         "i64x2.eq\t$dst, $lhs, $rhs", "i64x2.eq", 192>;
+
 
 //===----------------------------------------------------------------------===//
 // Bitwise operations
