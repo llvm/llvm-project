@@ -1177,7 +1177,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
 const char *SwiftLanguage::GetLanguageSpecificTypeLookupHelp() {
   return "\nFor Swift, in addition to a simple type name (such as String, Int, "
          "NSObject, ..), one can also provide:\n"
-         "- a mangled type name (e.g. _TtSi)\n"
+         "- a mangled type name (e.g. $sSiD)\n"
          "- the name of a function, even if multiple overloads of it exist\n"
          "- the name of an operator\n"
          "- the name of a module available in the current target, which will "
