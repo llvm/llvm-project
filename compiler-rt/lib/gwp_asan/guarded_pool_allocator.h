@@ -13,6 +13,8 @@
 #include "gwp_asan/definitions.h"
 #include "gwp_asan/mutex.h"
 #include "gwp_asan/options.h"
+#include "gwp_asan/platform_specific/guarded_pool_allocator_fuchsia.h"
+#include "gwp_asan/platform_specific/guarded_pool_allocator_posix.h"
 #include "gwp_asan/platform_specific/guarded_pool_allocator_tls.h"
 #include "gwp_asan/stack_trace_compressor.h"
 
@@ -206,6 +208,9 @@ private:
   // GWP-ASan is disabled, we wish to never spend wasted cycles recalculating
   // the sample rate.
   uint32_t AdjustedSampleRatePlusOne = 0;
+
+  // Additional platform specific data structure for the guarded pool mapping.
+  PlatformSpecificMapData GuardedPagePoolPlatformData = {};
 
   class ScopedRecursiveGuard {
   public:
