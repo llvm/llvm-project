@@ -2050,7 +2050,14 @@ public:
   ///
   /// The variant that accepts a FunctionDecl pointer will set that function
   /// declaration to the declaration that is a definition (if there is one).
-  bool isDefined(const FunctionDecl *&Definition) const;
+  ///
+  /// \param CheckForPendingFriendDefinition If \c true, also check for friend
+  ///        declarations that were instantiataed from function definitions.
+  ///        Such a declaration behaves as if it is a definition for the
+  ///        purpose of redefinition checking, but isn't actually a "real"
+  ///        definition until its body is instantiated.
+  bool isDefined(const FunctionDecl *&Definition,
+                 bool CheckForPendingFriendDefinition = false) const;
 
   bool isDefined() const {
     const FunctionDecl* Definition;
@@ -2095,6 +2102,11 @@ public:
            doesThisDeclarationHaveABody() || hasSkippedBody() ||
            willHaveBody() || hasDefiningAttr();
   }
+
+  /// Determine whether this specific declaration of the function is a friend
+  /// declaration that was instantiated from a function definition. Such
+  /// declarations behave like definitions in some contexts.
+  bool isThisDeclarationInstantiatedFromAFriendDefinition() const;
 
   /// Returns whether this specific declaration of the function has a body.
   bool doesThisDeclarationHaveABody() const {
