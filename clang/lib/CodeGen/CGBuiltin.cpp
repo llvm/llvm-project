@@ -16734,7 +16734,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_bitmask_i8x16:
   case WebAssembly::BI__builtin_wasm_bitmask_i16x8:
-  case WebAssembly::BI__builtin_wasm_bitmask_i32x4: {
+  case WebAssembly::BI__builtin_wasm_bitmask_i32x4:
+  case WebAssembly::BI__builtin_wasm_bitmask_i64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
     Function *Callee =
         CGM.getIntrinsic(Intrinsic::wasm_bitmask, Vec->getType());
