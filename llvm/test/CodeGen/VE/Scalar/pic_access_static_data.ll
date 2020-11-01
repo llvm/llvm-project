@@ -54,8 +54,7 @@ define i32 @main() {
 ; CHECK-NEXT:    st %s1, 184(, %s11)
 ; CHECK-NEXT:    lea %s0, .L.str@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s0, .L.str@gotoff_hi(, %s0)
-; CHECK-NEXT:    adds.l %s0, %s15, %s0
+; CHECK-NEXT:    lea.sl %s0, .L.str@gotoff_hi(%s0, %s15)
 ; CHECK-NEXT:    lea %s12, printf@plt_lo(-24)
 ; CHECK-NEXT:    and %s12, %s12, (32)0
 ; CHECK-NEXT:    sic %s16
