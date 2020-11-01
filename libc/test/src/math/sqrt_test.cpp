@@ -20,9 +20,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 constexpr UIntType HiddenBit =
     UIntType(1) << __llvm_libc::fputil::MantissaWidth<double>::value;
 
-double nan = FPBits::buildNaN(1);
-double inf = FPBits::inf();
-double negInf = FPBits::negInf();
+DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(SqrtTest, SpecialValues) {
   ASSERT_FP_EQ(nan, __llvm_libc::sqrt(nan));
