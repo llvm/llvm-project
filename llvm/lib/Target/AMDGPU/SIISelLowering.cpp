@@ -7986,6 +7986,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode *Load = cast<LoadSDNode>(Op);
   ISD::LoadExtType ExtType = Load->getExtensionType();
   EVT MemVT = Load->getMemoryVT();
+  MachineMemOperand *MMO = Load->getMemOperand();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
@@ -7996,7 +7997,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     SDValue Chain = Load->getChain();
     SDValue BasePtr = Load->getBasePtr();
-    MachineMemOperand *MMO = Load->getMemOperand();
 
     EVT RealMemVT = (MemVT == MVT::i1) ? MVT::i8 : MVT::i16;
 
@@ -8052,13 +8052,15 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
          AMDGPUAS::PRIVATE_ADDRESS : AMDGPUAS::GLOBAL_ADDRESS;
 
   unsigned NumElements = MemVT.getVectorNumElements();
+  bool Is16ByteKnownDereferenceable = MMO->getPointerInfo().isDereferenceable(
+      16, *DAG.getContext(), DAG.getDataLayout());
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     if (!Op->isDivergent() && Alignment >= 4 && NumElements < 32) {
       if (MemVT.isPow2VectorType())
         return SDValue();
-      if (NumElements == 3)
+      if (NumElements == 3 && (Alignment >= 8 || Is16ByteKnownDereferenceable))
         return WidenVectorLoad(Op, DAG);
       return SplitVectorLoad(Op, DAG);
     }
@@ -8076,7 +8078,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
         Alignment >= 4 && NumElements < 32) {
       if (MemVT.isPow2VectorType())
         return SDValue();
-      if (NumElements == 3)
+      if (NumElements == 3 && (Alignment >= 8 || Is16ByteKnownDereferenceable))
         return WidenVectorLoad(Op, DAG);
       return SplitVectorLoad(Op, DAG);
     }
@@ -8092,8 +8094,11 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (NumElements > 4)
       return SplitVectorLoad(Op, DAG);
     // v3 loads not supported on SI.
-    if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
-      return WidenVectorLoad(Op, DAG);
+    if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores()) {
+      if (Alignment >= 8 || Is16ByteKnownDereferenceable)
+        return WidenVectorLoad(Op, DAG);
+      return SplitVectorLoad(Op, DAG);
+    }
     // v3 and v4 loads are supported for private and global memory.
     return SDValue();
   }
@@ -8116,8 +8121,11 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       if (NumElements > 4)
         return SplitVectorLoad(Op, DAG);
       // v3 loads not supported on SI.
-      if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
-        return WidenVectorLoad(Op, DAG);
+      if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores()) {
+        if (Alignment >= 8 || Is16ByteKnownDereferenceable)
+          return WidenVectorLoad(Op, DAG);
+        return SplitVectorLoad(Op, DAG);
+      }
       return SDValue();
     default:
       llvm_unreachable("unsupported private_element_size");
