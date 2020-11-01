@@ -280,8 +280,8 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
-define signext i32 @rori_i32(i32 signext %a) nounwind {
-; RV64I-LABEL: rori_i32:
+define signext i32 @rori_i32_fshl(i32 signext %a) nounwind {
+; RV64I-LABEL: rori_i32_fshl:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 31
@@ -289,17 +289,17 @@ define signext i32 @rori_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
-; RV64IB-LABEL: rori_i32:
+; RV64IB-LABEL: rori_i32_fshl:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    roriw a0, a0, 1
 ; RV64IB-NEXT:    ret
 ;
-; RV64IBB-LABEL: rori_i32:
+; RV64IBB-LABEL: rori_i32_fshl:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    roriw a0, a0, 1
 ; RV64IBB-NEXT:    ret
 ;
-; RV64IBP-LABEL: rori_i32:
+; RV64IBP-LABEL: rori_i32_fshl:
 ; RV64IBP:       # %bb.0:
 ; RV64IBP-NEXT:    roriw a0, a0, 1
 ; RV64IBP-NEXT:    ret
@@ -307,29 +307,94 @@ define signext i32 @rori_i32(i32 signext %a) nounwind {
   ret i32 %1
 }
 
-define i64 @rori_i64(i64 %a) nounwind {
-; RV64I-LABEL: rori_i64:
+define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
+; RV64I-LABEL: rori_i32_fshr:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    srliw a0, a0, 31
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: rori_i32_fshr:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    slli a1, a0, 1
+; RV64IB-NEXT:    srliw a0, a0, 31
+; RV64IB-NEXT:    or a0, a0, a1
+; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: rori_i32_fshr:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    slli a1, a0, 1
+; RV64IBB-NEXT:    srliw a0, a0, 31
+; RV64IBB-NEXT:    or a0, a0, a1
+; RV64IBB-NEXT:    sext.w a0, a0
+; RV64IBB-NEXT:    ret
+;
+; RV64IBP-LABEL: rori_i32_fshr:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    slli a1, a0, 1
+; RV64IBP-NEXT:    srliw a0, a0, 31
+; RV64IBP-NEXT:    or a0, a0, a1
+; RV64IBP-NEXT:    sext.w a0, a0
+; RV64IBP-NEXT:    ret
+  %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
+  ret i32 %1
+}
+
+define i64 @rori_i64_fshl(i64 %a) nounwind {
+; RV64I-LABEL: rori_i64_fshl:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 63
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
-; RV64IB-LABEL: rori_i64:
+; RV64IB-LABEL: rori_i64_fshl:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    rori a0, a0, 1
 ; RV64IB-NEXT:    ret
 ;
-; RV64IBB-LABEL: rori_i64:
+; RV64IBB-LABEL: rori_i64_fshl:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    rori a0, a0, 1
 ; RV64IBB-NEXT:    ret
 ;
-; RV64IBP-LABEL: rori_i64:
+; RV64IBP-LABEL: rori_i64_fshl:
 ; RV64IBP:       # %bb.0:
 ; RV64IBP-NEXT:    rori a0, a0, 1
 ; RV64IBP-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)
+  ret i64 %1
+}
+
+define i64 @rori_i64_fshr(i64 %a) nounwind {
+; RV64I-LABEL: rori_i64_fshr:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    srli a0, a0, 63
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: rori_i64_fshr:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addi a1, zero, 63
+; RV64IB-NEXT:    ror a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: rori_i64_fshr:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    addi a1, zero, 63
+; RV64IBB-NEXT:    ror a0, a0, a1
+; RV64IBB-NEXT:    ret
+;
+; RV64IBP-LABEL: rori_i64_fshr:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    addi a1, zero, 63
+; RV64IBP-NEXT:    ror a0, a0, a1
+; RV64IBP-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
 }
 
