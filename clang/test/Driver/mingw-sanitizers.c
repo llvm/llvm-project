@@ -9,3 +9,5 @@
 // ASAN-X86_64: "{{[^"]*}}libclang_rt.asan_dynamic_runtime_thunk-x86_64.a"
 // ASAN-X86_64: "--require-defined" "__asan_seh_interceptor"
 // ASAN-X86_64: "--whole-archive" "{{.*}}libclang_rt.asan_dynamic_runtime_thunk-x86_64.a" "--no-whole-archive"
+
+// RUN: %clang -target x86_64-windows-gnu %s -### -fsanitize=vptr
