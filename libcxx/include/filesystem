@@ -1341,7 +1341,28 @@ public:
   }
 
   _LIBCPP_INLINE_VISIBILITY bool is_absolute() const {
+#if defined(_LIBCPP_WIN32API)
+    __string_view __root_name_str = __root_name();
+    __string_view __root_dir = __root_directory();
+    if (__root_name_str.size() == 2 && __root_name_str[1] == ':') {
+      // A drive letter with no root directory is relative, e.g. x:example.
+      return !__root_dir.empty();
+    }
+    // If no root name, it's relative, e.g. \example is relative to the current drive
+    if (__root_name_str.empty())
+      return false;
+    if (__root_name_str.size() < 3)
+      return false;
+    // A server root name, like \\server, is always absolute
+    if (__root_name_str[0] != '/' && __root_name_str[0] != '\\')
+      return false;
+    if (__root_name_str[1] != '/' && __root_name_str[1] != '\\')
+      return false;
+    // Seems to be a server root name
+    return true;
+#else
     return has_root_directory();
+#endif
   }
   _LIBCPP_INLINE_VISIBILITY bool is_relative() const { return !is_absolute(); }
 
