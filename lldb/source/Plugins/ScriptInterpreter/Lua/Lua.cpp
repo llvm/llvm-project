@@ -18,7 +18,7 @@ llvm::Error Lua::Run(llvm::StringRef buffer) {
   int error =
       luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer") ||
       lua_pcall(m_lua_state, 0, 0, 0);
-  if (!error)
+  if (error == LUA_OK)
     return llvm::Error::success();
 
   llvm::Error e = llvm::make_error<llvm::StringError>(
@@ -44,7 +44,7 @@ llvm::Error Lua::LoadModule(llvm::StringRef filename) {
 
   int error = luaL_loadfile(m_lua_state, filename.data()) ||
               lua_pcall(m_lua_state, 0, 1, 0);
-  if (error) {
+  if (error != LUA_OK) {
     llvm::Error e = llvm::make_error<llvm::StringError>(
         llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
         llvm::inconvertibleErrorCode());
