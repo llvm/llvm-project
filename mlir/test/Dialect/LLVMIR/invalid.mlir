@@ -317,7 +317,6 @@ func @extractvalue_wrong_nesting() {
 
 // -----
 
-// CHECK-LABEL: @invalid_vector_type_1
 func @invalid_vector_type_1(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.i32, %arg2: !llvm.float) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
   %0 = llvm.extractelement %arg2[%arg1 : !llvm.i32] : !llvm.float
@@ -325,7 +324,6 @@ func @invalid_vector_type_1(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.i32, %arg2
 
 // -----
 
-// CHECK-LABEL: @invalid_vector_type_2
 func @invalid_vector_type_2(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.i32, %arg2: !llvm.float) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : !llvm.i32] : !llvm.float
@@ -333,7 +331,6 @@ func @invalid_vector_type_2(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.i32, %arg2
 
 // -----
 
-// CHECK-LABEL: @invalid_vector_type_3
 func @invalid_vector_type_3(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.i32, %arg2: !llvm.float) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
   %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.float, !llvm.float
@@ -348,7 +345,6 @@ func @null_non_llvm_type() {
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_shfl_pred_1
 func @nvvm_invalid_shfl_pred_1(%arg0 : !llvm.i32, %arg1 : !llvm.i32, %arg2 : !llvm.i32, %arg3 : !llvm.i32) {
   // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
   %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : !llvm.i32
@@ -356,7 +352,6 @@ func @nvvm_invalid_shfl_pred_1(%arg0 : !llvm.i32, %arg1 : !llvm.i32, %arg2 : !ll
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_shfl_pred_2
 func @nvvm_invalid_shfl_pred_2(%arg0 : !llvm.i32, %arg1 : !llvm.i32, %arg2 : !llvm.i32, %arg3 : !llvm.i32) {
   // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
   %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : !llvm.struct<(i32)>
@@ -364,7 +359,6 @@ func @nvvm_invalid_shfl_pred_2(%arg0 : !llvm.i32, %arg1 : !llvm.i32, %arg2 : !ll
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_shfl_pred_3
 func @nvvm_invalid_shfl_pred_3(%arg0 : !llvm.i32, %arg1 : !llvm.i32, %arg2 : !llvm.i32, %arg3 : !llvm.i32) {
   // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
   %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : !llvm.struct<(i32, i32)>
@@ -372,7 +366,6 @@ func @nvvm_invalid_shfl_pred_3(%arg0 : !llvm.i32, %arg1 : !llvm.i32, %arg2 : !ll
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_0
 func @nvvm_invalid_mma_0(%a0 : !llvm.half, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -384,7 +377,6 @@ func @nvvm_invalid_mma_0(%a0 : !llvm.half, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_1
 func @nvvm_invalid_mma_1(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -396,7 +388,6 @@ func @nvvm_invalid_mma_1(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_2
 func @nvvm_invalid_mma_2(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -408,7 +399,6 @@ func @nvvm_invalid_mma_2(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_3
 func @nvvm_invalid_mma_3(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.vec<2 x half>, %c1 : !llvm.vec<2 x half>,
@@ -420,7 +410,6 @@ func @nvvm_invalid_mma_3(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_4
 func @nvvm_invalid_mma_4(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -432,7 +421,6 @@ func @nvvm_invalid_mma_4(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_5
 func @nvvm_invalid_mma_5(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -444,7 +432,6 @@ func @nvvm_invalid_mma_5(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_6
 func @nvvm_invalid_mma_6(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -456,7 +443,6 @@ func @nvvm_invalid_mma_6(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @nvvm_invalid_mma_7
 func @nvvm_invalid_mma_7(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
                          %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
@@ -468,7 +454,6 @@ func @nvvm_invalid_mma_7(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // -----
 
-// CHECK-LABEL: @atomicrmw_expected_ptr
 func @atomicrmw_expected_ptr(%f32 : !llvm.float) {
   // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM integer type}}
   %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (!llvm.float, !llvm.float) -> !llvm.float
@@ -477,7 +462,6 @@ func @atomicrmw_expected_ptr(%f32 : !llvm.float) {
 
 // -----
 
-// CHECK-LABEL: @atomicrmw_mismatched_operands
 func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<float>, %i32 : !llvm.i32) {
   // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for operand #1}}
   %0 = "llvm.atomicrmw"(%f32_ptr, %i32) {bin_op=11, ordering=1} : (!llvm.ptr<float>, !llvm.i32) -> !llvm.float
@@ -486,7 +470,6 @@ func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<float>, %i32 : !llvm.i3
 
 // -----
 
-// CHECK-LABEL: @atomicrmw_mismatched_result
 func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
   // expected-error@+1 {{expected LLVM IR result type to match type for operand #1}}
   %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr<float>, !llvm.float) -> !llvm.i32
@@ -495,7 +478,6 @@ func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.fl
 
 // -----
 
-// CHECK-LABEL: @atomicrmw_expected_float
 func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
   // expected-error@+1 {{expected LLVM IR floating point type}}
   %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.i32
@@ -504,7 +486,6 @@ func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
 
 // -----
 
-// CHECK-LABEL: @atomicrmw_unexpected_xchg_type
 func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr<i1>, %i1 : !llvm.i1) {
   // expected-error@+1 {{unexpected LLVM IR type for 'xchg' bin_op}}
   %0 = llvm.atomicrmw xchg %i1_ptr, %i1 unordered : !llvm.i1
@@ -513,7 +494,6 @@ func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr<i1>, %i1 : !llvm.i1) {
 
 // -----
 
-// CHECK-LABEL: @atomicrmw_expected_int
 func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.float
@@ -522,7 +502,6 @@ func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_expected_ptr
 func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
   // expected-error@+1 {{op operand #0 must be LLVM pointer to LLVM integer type or LLVM pointer type}}
   %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (!llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, i1)>
@@ -531,7 +510,6 @@ func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_mismatched_operands
 func @cmpxchg_mismatched_operands(%i64_ptr : !llvm.ptr<i64>, %i32 : !llvm.i32) {
   // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for all other operands}}
   %0 = "llvm.cmpxchg"(%i64_ptr, %i32, %i32) {success_ordering=2,failure_ordering=2} : (!llvm.ptr<i64>, !llvm.i32, !llvm.i32) -> !llvm.struct<(i32, i1)>
@@ -540,7 +518,6 @@ func @cmpxchg_mismatched_operands(%i64_ptr : !llvm.ptr<i64>, %i32 : !llvm.i32) {
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_unexpected_type
 func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr<i1>, %i1 : !llvm.i1) {
   // expected-error@+1 {{unexpected LLVM IR type}}
   %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : !llvm.i1
@@ -549,7 +526,6 @@ func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr<i1>, %i1 : !llvm.i1) {
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_at_least_monotonic_success
 func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
   // expected-error@+1 {{ordering must be at least 'monotonic'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 unordered monotonic : !llvm.i32
@@ -558,7 +534,6 @@ func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_at_least_monotonic_failure
 func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
   // expected-error@+1 {{ordering must be at least 'monotonic'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 monotonic unordered : !llvm.i32
@@ -567,7 +542,6 @@ func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_failure_release
 func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
   // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel release : !llvm.i32
@@ -576,7 +550,6 @@ func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
 
 // -----
 
-// CHECK-LABEL: @cmpxchg_failure_acq_rel
 func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr<i32>, %i32 : !llvm.i32) {
   // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel acq_rel : !llvm.i32
