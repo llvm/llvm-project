@@ -292,8 +292,8 @@ public:
     // apply the patterns
     target.addIllegalOp<ResultOp, DoLoopOp, IfOp, IterWhileOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-    if (mlir::failed(
-            mlir::applyPartialConversion(getFunction(), target, patterns))) {
+    if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
+                                                  std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "error in converting to CFG\n");
       signalPassFailure();
