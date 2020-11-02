@@ -110,47 +110,6 @@ future need:
 from _mlir import *
 ```
 
-### Limited use of globals
-
-For normal operations, parent-child constructor relationships are realized with
-constructor methods on a parent class as opposed to requiring
-invocation/creation from a global symbol.
-
-For example, consider two code fragments:
-
-```python
-
-op = build_my_op()
-
-region = mlir.Region(op)
-
-```
-
-vs
-
-```python
-
-op = build_my_op()
-
-region = op.new_region()
-
-```
-
-For tightly coupled data structures like `Operation`, the latter is generally
-preferred because:
-
-* It is syntactically less possible to create something that is going to access
-  illegal memory (less error handling in the bindings, less testing, etc).
-
-* It reduces the global-API surface area for creating related entities. This
-  makes it more likely that if constructing IR based on an Operation instance of
-  unknown providence, receiving code can just call methods on it to do what they
-  want versus needing to reach back into the global namespace and find the right
-  `Region` class.
-
-* It leaks fewer things that are in place for C++ convenience (i.e. default
-  constructors to invalid instances).
-
 ### Use the C-API
 
 The Python APIs should seek to layer on top of the C-API to the degree possible.
@@ -170,6 +129,20 @@ There are several top-level types in the core IR that are strongly owned by thei
 * `PyOperation` (`mlir.ir.Operation`) - but with caveats
 
 All other objects are dependent. All objects maintain a back-reference (keep-alive) to their closest containing top-level object. Further, dependent objects fall into two categories: a) uniqued (which live for the life-time of the context) and b) mutable. Mutable objects need additional machinery for keeping track of when the C++ instance that backs their Python object is no longer valid (typically due to some specific mutation of the IR, deletion, or bulk operation).
+
+### Optionality and argument ordering in the Core IR
+
+The following types support being bound to the current thread as a context manager:
+
+* `PyLocation` (`loc: mlir.ir.Location = None`)
+* `PyInsertionPoint` (`ip: mlir.ir.InsertionPoint = None`)
+* `PyMlirContext` (`context: mlir.ir.Context = None`)
+
+In order to support composability of function arguments, when these types appear as arguments, they should always be the last and appear in the above order and with the given names (which is generally the order in which they are expected to need to be expressed explicitly in special cases) as necessary. Each should carry a default value of `py::none()` and use either a manual or automatic conversion for resolving either with the explicit value or a value from the thread context manager (i.e. `DefaultingPyMlirContext` or `DefaultingPyLocation`).
+
+The rationale for this is that in Python, trailing keyword arguments to the *right* are the most composable, enabling a variety of strategies such as kwarg passthrough, default values, etc. Keeping function signatures composable increases the chances that interesting DSLs and higher level APIs can be constructed without a lot of exotic boilerplate.
+
+Used consistently, this enables a style of IR construction that rarely needs to use explicit contexts, locations, or insertion points but is free to do so when extra control is needed.
 
 #### Operation hierarchy
 
