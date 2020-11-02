@@ -67,7 +67,9 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   let VM_CNT = 1;
   let LGKM_CNT = !not(!or(is_flat_global, is_flat_scratch));
 
-  let IsNonFlatSeg = !or(is_flat_global, is_flat_scratch);
+  let IsFlatGlobal = is_flat_global;
+
+  let IsFlatScratch = is_flat_scratch;
 }
 
 class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :

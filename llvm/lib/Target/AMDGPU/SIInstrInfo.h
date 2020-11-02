@@ -504,21 +504,28 @@ public:
   // i.e. global_* or scratch_*.
   static bool isSegmentSpecificFLAT(const MachineInstr &MI) {
     auto Flags = MI.getDesc().TSFlags;
-    return (Flags & SIInstrFlags::FLAT) && !(Flags & SIInstrFlags::LGKM_CNT);
+    return Flags & (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch);
   }
 
   bool isSegmentSpecificFLAT(uint16_t Opcode) const {
     auto Flags = get(Opcode).TSFlags;
-    return (Flags & SIInstrFlags::FLAT) && !(Flags & SIInstrFlags::LGKM_CNT);
+    return Flags & (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch);
   }
 
-  // FIXME: Make this more precise
+  static bool isFLATGlobal(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsFlatGlobal;
+  }
+
+  bool isFLATGlobal(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsFlatGlobal;
+  }
+
   static bool isFLATScratch(const MachineInstr &MI) {
-    return isSegmentSpecificFLAT(MI);
+    return MI.getDesc().TSFlags & SIInstrFlags::IsFlatScratch;
   }
 
   bool isFLATScratch(uint16_t Opcode) const {
-    return isSegmentSpecificFLAT(Opcode);
+    return get(Opcode).TSFlags & SIInstrFlags::IsFlatScratch;
   }
 
   // Any FLAT encoded instruction, including global_* and scratch_*.
