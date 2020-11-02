@@ -427,8 +427,8 @@ bool RISCVDAGToDAGISel::SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
 // Check that it is a RORIW (i32 Right Rotate Immediate on RV64).
 // We first check that it is the right node tree:
 //
-//  (SIGN_EXTEND_INREG (OR (SHL (AsserSext RS1, i32), VC2),
-//                         (SRL (AND (AssertSext RS2, i32), VC3), VC1)))
+//  (SIGN_EXTEND_INREG (OR (SHL RS1, VC2),
+//                         (SRL (AND RS1, VC3), VC1)))
 //
 // Then we check that the constant operands respect these constraints:
 //
@@ -450,7 +450,8 @@ bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
         SDValue Srl = Or.getOperand(1);
         if (Srl.getOperand(0).getOpcode() == ISD::AND) {
           SDValue And = Srl.getOperand(0);
-          if (isa<ConstantSDNode>(Srl.getOperand(1)) &&
+          if (And.getOperand(0) == Shl.getOperand(0) &&
+              isa<ConstantSDNode>(Srl.getOperand(1)) &&
               isa<ConstantSDNode>(Shl.getOperand(1)) &&
               isa<ConstantSDNode>(And.getOperand(1))) {
             uint32_t VC1 = Srl.getConstantOperandVal(1);

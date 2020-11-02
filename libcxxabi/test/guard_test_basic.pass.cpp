@@ -12,6 +12,11 @@
 #include "../src/cxa_guard_impl.h"
 #include <cassert>
 
+// Disable GCC warning about tautological comparison of a function's address
+#if defined(__GNUC__) && !defined(__clang__)
+# pragma GCC diagnostic ignored "-Waddress"
+#endif
+
 using namespace __cxxabiv1;
 
 template <class GuardType, class Impl>

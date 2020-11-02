@@ -17,6 +17,11 @@
 
 #include <memory>
 
+// Disable warning about throw always calling terminate.
+#if defined(__GNUC__) && !defined(__clang__)
+# pragma GCC diagnostic ignored "-Wterminate"
+#endif
+
 // use dtors instead of try/catch
 namespace test1 {
     struct B {

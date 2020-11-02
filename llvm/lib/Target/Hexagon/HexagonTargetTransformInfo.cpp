@@ -242,13 +242,16 @@ unsigned HexagonTTIImpl::getInterleavedMemoryOpCost(
 }
 
 unsigned HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-      Type *CondTy, TTI::TargetCostKind CostKind, const Instruction *I) {
+                                            Type *CondTy,
+                                            CmpInst::Predicate VecPred,
+                                            TTI::TargetCostKind CostKind,
+                                            const Instruction *I) {
   if (ValTy->isVectorTy() && CostKind == TTI::TCK_RecipThroughput) {
     std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, ValTy);
     if (Opcode == Instruction::FCmp)
       return LT.first + FloatFactor * getTypeNumElements(ValTy);
   }
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
 unsigned HexagonTTIImpl::getArithmeticInstrCost(

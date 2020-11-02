@@ -307,7 +307,6 @@ class MockGDBServer:
     """
 
     responder = None
-    port = 0
     _socket = None
     _client = None
     _thread = None
@@ -315,26 +314,19 @@ class MockGDBServer:
     _receivedDataOffset = None
     _shouldSendAck = True
 
-    def __init__(self, port = 0):
+    def __init__(self):
         self.responder = MockGDBServerResponder()
-        self.port = port
-        try:
-            self._socket = socket.socket(family=socket.AF_INET)
-        except OSError as e:
-            if e.errno != errno.EAFNOSUPPORT:
-                raise
-            self._socket = socket.socket(family=socket.AF_INET6)
 
     def start(self):
-        # Block until the socket is up, so self.port is available immediately.
-        # Then start a thread that waits for a client connection.
-        if self._socket.family == socket.AF_INET:
-            addr = ("127.0.0.1", self.port)
-        elif self._socket.family == socket.AF_INET6:
-            addr = ("::1", self.port)
+        family, type, proto, _, addr = socket.getaddrinfo("localhost", 0,
+                proto=socket.IPPROTO_TCP)[0]
+        self._socket = socket.socket(family, type, proto)
+
+
         self._socket.bind(addr)
-        self.port = self._socket.getsockname()[1]
         self._socket.listen(1)
+
+        # Start a thread that waits for a client connection.
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
 
@@ -342,6 +334,9 @@ class MockGDBServer:
         self._socket.close()
         self._thread.join()
         self._thread = None
+
+    def get_connect_address(self):
+        return "[{}]:{}".format(*self._socket.getsockname())
 
     def _run(self):
         # For testing purposes, we only need to worry about one client
@@ -528,8 +523,8 @@ class GDBRemoteTestBase(TestBase):
         """
         listener = self.dbg.GetListener()
         error = lldb.SBError()
-        url = "connect://localhost:%d" % self.server.port
-        process = target.ConnectRemote(listener, url, "gdb-remote", error)
+        process = target.ConnectRemote(listener,
+                "connect://" + self.server.get_connect_address(), "gdb-remote", error)
         self.assertTrue(error.Success(), error.description)
         self.assertTrue(process, PROCESS_IS_VALID)
         return process

@@ -33,7 +33,7 @@ public:
 
   ~Lua() {
     assert(m_lua_state);
-    luaL_openlibs(m_lua_state);
+    lua_close(m_lua_state);
   }
 
   llvm::Error Run(llvm::StringRef buffer);
