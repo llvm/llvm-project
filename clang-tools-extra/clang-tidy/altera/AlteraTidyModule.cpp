@@ -9,7 +9,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "KernelNameRestrictionCheck.h"
 #include "StructPackAlignCheck.h"
 
 using namespace clang::ast_matchers;
@@ -21,8 +20,6 @@ namespace altera {
 class AlteraModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<KernelNameRestrictionCheck>(
-        "altera-kernel-name-restriction");
     CheckFactories.registerCheck<StructPackAlignCheck>(
         "altera-struct-pack-align");
   }
