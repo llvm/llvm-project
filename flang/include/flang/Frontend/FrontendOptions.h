@@ -91,18 +91,18 @@ public:
   FrontendInputFile(const llvm::MemoryBuffer *buffer, InputKind kind)
       : buffer_(buffer), kind_(kind) {}
 
-  InputKind GetKind() const { return kind_; }
+  InputKind kind() const { return kind_; }
 
   bool IsEmpty() const { return file_.empty() && buffer_ == nullptr; }
   bool IsFile() const { return !IsBuffer(); }
   bool IsBuffer() const { return buffer_ != nullptr; }
 
-  llvm::StringRef GetFile() const {
+  llvm::StringRef file() const {
     assert(IsFile());
     return file_;
   }
 
-  const llvm::MemoryBuffer *GetBuffer() const {
+  const llvm::MemoryBuffer *buffer() const {
     assert(IsBuffer() && "Requested buffer_, but it is empty!");
     return buffer_;
   }

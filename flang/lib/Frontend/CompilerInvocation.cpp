@@ -176,7 +176,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   }
 
   // Parse the frontend args
-  ParseFrontendArgs(res.GetFrontendOpts(), args, diags);
+  ParseFrontendArgs(res.frontendOpts(), args, diags);
 
   return success;
 }
