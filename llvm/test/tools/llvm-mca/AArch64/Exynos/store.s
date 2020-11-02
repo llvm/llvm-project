@@ -7,10 +7,10 @@ stur	x0, [sp, #8]
 strb	w0, [sp], #1
 strh	w0, [sp, #2]!
 str	x0, [sp, #8]
-strb	w0, [sp, x31]
-strh	w0, [sp, x31, lsl #1]
-str	w0, [sp, w31, sxtw]
-str	x0, [sp, w31, uxtw #3]
+strb	w0, [sp, xzr]
+strh	w0, [sp, xzr, lsl #1]
+str	w0, [sp, wzr, sxtw]
+str	x0, [sp, wzr, uxtw #3]
 stnp	w0, w1, [sp, #8]
 stp	x0, x1, [sp], #16
 stp	w0, w1, [sp, #8]!
