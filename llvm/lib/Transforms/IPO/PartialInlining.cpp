@@ -414,11 +414,6 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   std::unique_ptr<FunctionOutliningMultiRegionInfo> OutliningInfo =
       std::make_unique<FunctionOutliningMultiRegionInfo>();
 
-  auto IsSingleEntry = [](SmallVectorImpl<BasicBlock *> &BlockList) {
-    BasicBlock *Dom = BlockList.front();
-    return BlockList.size() > 1 && Dom->hasNPredecessors(1);
-  };
-
   auto IsSingleExit =
       [&ORE](SmallVectorImpl<BasicBlock *> &BlockList) -> BasicBlock * {
     BasicBlock *ExitBlock = nullptr;
@@ -502,15 +497,24 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
 
       SmallVector<BasicBlock *, 8> DominateVector;
       DT.getDescendants(*SI, DominateVector);
+      assert(!DominateVector.empty() &&
+             "SI should be reachable and have at least itself as descendant");
 
       // We can only outline single entry regions (for now).
-      if (!IsSingleEntry(DominateVector))
+      if (!DominateVector.front()->hasNPredecessors(1)) {
+        LLVM_DEBUG(dbgs() << "ABORT: Block " << SI->getName()
+                          << " doesn't have a single predecessor in the "
+                             "dominator tree\n";);
         continue;
+      }
 
       BasicBlock *ExitBlock = nullptr;
       // We can only outline single exit regions (for now).
-      if (!(ExitBlock = IsSingleExit(DominateVector)))
+      if (!(ExitBlock = IsSingleExit(DominateVector))) {
+        LLVM_DEBUG(dbgs() << "ABORT: Block " << SI->getName()
+                          << " doesn't have a unique successor\n";);
         continue;
+      }
 
       int OutlineRegionCost = 0;
       for (auto *BB : DominateVector)
@@ -519,7 +523,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
       LLVM_DEBUG(dbgs() << "OutlineRegionCost = " << OutlineRegionCost
                         << "\n";);
 
-      if (OutlineRegionCost < MinOutlineRegionCost) {
+      if (!SkipCostAnalysis && OutlineRegionCost < MinOutlineRegionCost) {
         ORE.emit([&]() {
           return OptimizationRemarkAnalysis(DEBUG_TYPE, "TooCostly",
                                             &SI->front())
@@ -527,8 +531,12 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
                  << " inline cost-savings smaller than "
                  << ore::NV("Cost", MinOutlineRegionCost);
         });
+
+        LLVM_DEBUG(dbgs() << "ABORT: Outline region cost is smaller than "
+                          << MinOutlineRegionCost << "\n";);
         continue;
       }
+
       // For now, ignore blocks that belong to a SISE region that is a
       // candidate for outlining.  In the future, we may want to look
       // at inner regions because the outer region may have live-exit
