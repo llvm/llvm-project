@@ -701,9 +701,11 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(double add
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-UNALIGNED-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
 ; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v2, s0, v2
+; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v3, 5, v2
+; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v2, 9, v2
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v2, v0, v1 offset0:1 offset1:2
-; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v2, v0, v1 offset0:2 offset1:3
+; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v3, v0, v1 offset1:1
+; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr double, double addrspace(1)* %in, i32 %x.i
