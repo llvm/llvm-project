@@ -37,7 +37,7 @@ using namespace clang;
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
-      Directory(), Umbrella(), ASTFile(nullptr),
+      Directory(), Umbrella(), ASTFile(None),
       VisibilityID(VisibilityID), IsUnimportable(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
       IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
