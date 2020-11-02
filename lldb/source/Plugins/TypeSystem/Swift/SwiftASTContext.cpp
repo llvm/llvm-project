@@ -5013,7 +5013,7 @@ bool SwiftASTContext::IsArrayType(opaque_compiler_type_t type,
     swift::StructDecl *struct_decl = struct_type->getDecl();
     llvm::StringRef name = struct_decl->getName().get();
     // This is sketchy, but it matches the behavior of GetArrayElementType().
-    if (name != "Array" && name != "NativeArray" && name != "ArraySlice")
+    if (name != "Array" && name != "ContiguousArray" && name != "ArraySlice")
       return false;
     if (!struct_decl->getModuleContext()->isStdlibModule())
       return false;
@@ -5631,7 +5631,7 @@ SwiftASTContext::GetArrayElementType(opaque_compiler_type_t type,
     swift::CanType swift_type(GetCanonicalSwiftType(type));
     // There are a couple of structs that mean "Array" in Swift:
     // Array<T>
-    // NativeArray<T>
+    // ContiguousArray<T>
     // Slice<T>
     // Treat them as arrays for convenience sake.
     swift::BoundGenericStructType *boundGenericStructType(
@@ -5641,7 +5641,7 @@ SwiftASTContext::GetArrayElementType(opaque_compiler_type_t type,
       swift::StructDecl *decl = boundGenericStructType->getDecl();
       if (args.size() == 1 && decl->getModuleContext()->isStdlibModule()) {
         const char *declname = decl->getName().get();
-        if (0 == strcmp(declname, "NativeArray") ||
+        if (0 == strcmp(declname, "ContiguousArray") ||
             0 == strcmp(declname, "Array") ||
             0 == strcmp(declname, "ArraySlice")) {
           assert(GetASTContext() == &args[0].getPointer()->getASTContext());

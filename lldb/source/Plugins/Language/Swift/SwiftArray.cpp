@@ -363,17 +363,15 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
   ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  if (valobj_typename.startswith("Swift.NativeArray<")) {
+  if (valobj_typename.startswith("Swift.ContiguousArray<")) {
     // Swift.NativeArray
-    static ConstString g_buffer("_buffer");
-    static ConstString g_base("base");
-    static ConstString g_storage("storage");
-    static ConstString g_some("Some");
+    static ConstString g__buffer("_buffer");
+    static ConstString g__storage("_storage");
 
-    ValueObjectSP some_sp(valobj.GetNonSyntheticValue()->GetChildAtNamePath(
-        {g_buffer, g_base, g_storage, g_some}));
+    ValueObjectSP storage_sp(valobj.GetNonSyntheticValue()->GetChildAtNamePath(
+        {g__buffer, g__storage}));
 
-    if (!some_sp)
+    if (!storage_sp)
       return nullptr;
 
     CompilerType elem_type(
@@ -381,7 +379,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
         new SwiftArrayNativeBufferHandler(
-            *some_sp, some_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS),
+            *storage_sp, storage_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS),
             elem_type));
     if (handler && handler->IsValid())
       return handler;
@@ -454,8 +452,6 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
           new SwiftArrayEmptyBufferHandler(elem_type));
     }
   }
-
-  return nullptr;
 }
 
 bool lldb_private::formatters::swift::Array_SummaryProvider(
