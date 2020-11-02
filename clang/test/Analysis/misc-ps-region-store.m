@@ -463,7 +463,7 @@ void element_region_with_symbolic_superregion(int* p) {
 
 static int test_cwe466_return_outofbounds_pointer_a[10];
 int *test_cwe466_return_outofbounds_pointer() {
-  int *p = test_cwe466_return_outofbounds_pointer_a+10;
+  int *p = test_cwe466_return_outofbounds_pointer_a+11;
   return p; // expected-warning{{Returned pointer value points outside the original object}}
 }
 
