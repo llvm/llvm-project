@@ -36,6 +36,7 @@ unittest("SupportTests") {
     "ErrorOrTest.cpp",
     "ErrorTest.cpp",
     "ExtensibleRTTITest.cpp",
+    "FSUniqueIDTest.cpp",
     "FileCollectorTest.cpp",
     "FileOutputBufferTest.cpp",
     "FileUtilitiesTest.cpp",
