@@ -63,7 +63,7 @@ llvm::Optional<std::string> getOtherRefFile(const Decl &D, StringRef MainFile,
   // tradeoff. We expect the number of symbol references in the current file
   // is smaller than the limit.
   Req.Limit = 100;
-  Req.IDs.insert(*getSymbolID(&D));
+  Req.IDs.insert(getSymbolID(&D));
   llvm::Optional<std::string> OtherFile;
   Index.refs(Req, [&](const Ref &R) {
     if (OtherFile)
@@ -244,7 +244,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
         return;
       for (const auto *Target : Ref.Targets) {
         auto ID = getSymbolID(Target);
-        if (!ID || TargetIDs.find(*ID) == TargetIDs.end())
+        if (!ID || TargetIDs.find(ID) == TargetIDs.end())
           return;
       }
       Results.push_back(Ref.NameLoc);
@@ -304,7 +304,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
                            size_t MaxLimitFiles) {
   trace::Span Tracer("FindOccurrencesOutsideFile");
   RefsRequest RQuest;
-  RQuest.IDs.insert(*getSymbolID(&RenameDecl));
+  RQuest.IDs.insert(getSymbolID(&RenameDecl));
 
   // Absolute file path => rename occurrences in that file.
   llvm::StringMap<std::vector<Range>> AffectedFiles;

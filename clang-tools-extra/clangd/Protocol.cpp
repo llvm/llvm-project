@@ -701,8 +701,8 @@ llvm::json::Value toJSON(const SymbolDetails &P) {
   if (!P.USR.empty())
     Result["usr"] = P.USR;
 
-  if (P.ID.hasValue())
-    Result["id"] = P.ID.getValue().str();
+  if (P.ID)
+    Result["id"] = P.ID.str();
 
   // FIXME: workaround for older gcc/clang
   return std::move(Result);
