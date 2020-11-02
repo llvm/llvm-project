@@ -23,6 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <immintrin.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -594,6 +595,25 @@ void ConstantInliner::initStack(unsigned Bytes) {
 
 namespace {
 
+class X86SavedState : public ExegesisTarget::SavedState {
+public:
+  X86SavedState() { _fxsave64(FPState); }
+
+  ~X86SavedState() {
+    // Restoring the X87 state does not flush pending exceptions, make sure
+    // these exceptions are flushed now.
+#if defined(_MSC_VER)
+    _clearfp();
+#elif defined(__GNUC__)
+    asm volatile("fwait");
+#endif
+    _fxrstor64(FPState);
+  }
+
+private:
+  alignas(16) char FPState[512];
+};
+
 class ExegesisX86Target : public ExegesisTarget {
 public:
   ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
@@ -689,6 +709,10 @@ private:
         "LBR not supported on this kernel and/or platform",
         llvm::errc::not_supported);
 #endif
+  }
+
+  std::unique_ptr<SavedState> withSavedState() const override {
+    return std::make_unique<X86SavedState>();
   }
 
   static const unsigned kUnavailableRegisters[4];

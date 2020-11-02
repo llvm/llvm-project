@@ -71,10 +71,10 @@ private:
     SmallVector<StringRef, 2> CounterNames;
     StringRef(Counters).split(CounterNames, '+');
     char *const ScratchPtr = Scratch->ptr();
+    const ExegesisTarget &ET = State.getExegesisTarget();
     for (auto &CounterName : CounterNames) {
       CounterName = CounterName.trim();
-      auto CounterOrError =
-          State.getExegesisTarget().createCounter(CounterName, State);
+      auto CounterOrError = ET.createCounter(CounterName, State);
 
       if (!CounterOrError)
         return CounterOrError.takeError();
@@ -93,6 +93,7 @@ private:
                 .concat(std::to_string(Reserved)));
       Scratch->clear();
       {
+        auto PS = ET.withSavedState();
         CrashRecoveryContext CRC;
         CrashRecoveryContext::Enable();
         const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
@@ -101,6 +102,7 @@ private:
           Counter->stop();
         });
         CrashRecoveryContext::Disable();
+        PS.reset();
         if (Crashed) {
           std::string Msg = "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
