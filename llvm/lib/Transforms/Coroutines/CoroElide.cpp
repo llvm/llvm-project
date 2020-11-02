@@ -366,7 +366,7 @@ static bool replaceDevirtTrigger(Function &F) {
 }
 
 static bool declaresCoroElideIntrinsics(Module &M) {
-  return coro::declaresIntrinsics(M, {"llvm.coro.id"});
+  return coro::declaresIntrinsics(M, {"llvm.coro.id", "llvm.coro.id.async"});
 }
 
 PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {

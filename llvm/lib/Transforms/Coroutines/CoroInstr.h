@@ -295,6 +295,11 @@ public:
   /// The async context parameter.
   Value *getStorage() const { return getArgOperand(StorageArg); }
 
+  unsigned getStorageArgumentIndex() const {
+    auto *Arg = cast<Argument>(getArgOperand(StorageArg)->stripPointerCasts());
+    return Arg->getArgNo();
+  }
+
   /// Return the async function pointer address. This should be the address of
   /// a async function pointer struct for the current async function.
   /// struct async_function_pointer {
@@ -504,11 +509,14 @@ inline CoroSaveInst *AnyCoroSuspendInst::getCoroSave() const {
 
 /// This represents the llvm.coro.suspend.async instruction.
 class LLVM_LIBRARY_VISIBILITY CoroSuspendAsyncInst : public AnyCoroSuspendInst {
-  enum { ResumeFunctionArg, AsyncContextArg, MustTailCallFuncArg };
+  enum { ResumeFunctionArg, AsyncContextProjectionArg, MustTailCallFuncArg };
 
 public:
-  Value *getAsyncContext() const {
-    return getArgOperand(AsyncContextArg)->stripPointerCasts();
+  void checkWellFormed() const;
+
+  Function *getAsyncContextProjectionFunction() const {
+    return cast<Function>(
+        getArgOperand(AsyncContextProjectionArg)->stripPointerCasts());
   }
 
   CoroAsyncResumeInst *getResumeFunction() const {
