@@ -54,11 +54,12 @@ DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
 
-DEFINE_C_API_STRUCT(MlirValue, const void);
 DEFINE_C_API_STRUCT(MlirAttribute, const void);
-DEFINE_C_API_STRUCT(MlirType, const void);
+DEFINE_C_API_STRUCT(MlirIdentifier, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
+DEFINE_C_API_STRUCT(MlirType, const void);
+DEFINE_C_API_STRUCT(MlirValue, const void);
 
 /** Named MLIR attribute.
  *
@@ -284,6 +285,9 @@ static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 /** Checks whether two operation handles point to the same operation. This does
  * not perform deep comparison. */
 int mlirOperationEqual(MlirOperation op, MlirOperation other);
+
+/** Gets the name of the operation as an identifier. */
+MlirIdentifier mlirOperationGetName(MlirOperation op);
 
 /** Gets the block that owns this operation, returning null if the operation is
  * not owned. */
@@ -551,6 +555,19 @@ void mlirAttributeDump(MlirAttribute attr);
 
 /** Associates an attribute with the name. Takes ownership of neither. */
 MlirNamedAttribute mlirNamedAttributeGet(const char *name, MlirAttribute attr);
+
+/*============================================================================*/
+/* Identifier API.                                                            */
+/*============================================================================*/
+
+/** Gets an identifier with the given string value. */
+MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str);
+
+/** Checks whether two identifiers are the same. */
+int mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other);
+
+/** Gets the string value of the identifier. */
+MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 
 #ifdef __cplusplus
 }
