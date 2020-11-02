@@ -190,7 +190,7 @@ public:
       const s32 Interval =
           Max(Min(static_cast<s32>(Value), MaxReleaseToOsIntervalMs),
               MinReleaseToOsIntervalMs);
-      atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
+      atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
     // Not supported by the Primary, but not an error either.
@@ -462,8 +462,7 @@ private:
     }
 
     if (!Force) {
-      const s32 IntervalMs =
-          atomic_load(&ReleaseToOsIntervalMs, memory_order_relaxed);
+      const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
       if (IntervalMs < 0)
         return 0;
       if (Sci->ReleaseInfo.LastReleaseAtNs +
