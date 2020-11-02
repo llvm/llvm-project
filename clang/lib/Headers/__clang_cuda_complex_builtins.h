@@ -16,7 +16,7 @@
 // to work with CUDA and OpenMP target offloading [in C and C++ mode].)
 
 #pragma push_macro("__DEVICE__")
-#ifdef __OPENMP_NVPTX__
+#if defined(__OPENMP_NVPTX__) || (defined(__OPENMP) && defined(__AMDGCN__))
 #pragma omp declare target
 #define __DEVICE__ __attribute__((noinline, nothrow, cold, weak))
 #else
@@ -26,7 +26,7 @@
 // To make the algorithms available for C and C++ in CUDA and OpenMP we select
 // different but equivalent function versions. TODO: For OpenMP we currently
 // select the native builtins as the overload support for templates is lacking.
-#if !defined(__OPENMP_NVPTX__)
+#if !defined(__OPENMP_NVPTX__) && (!defined(__OPENMP) || !defined(__AMDGCN__))
 #define _ISNANd std::isnan
 #define _ISNANf std::isnan
 #define _ISINFd std::isinf
@@ -81,7 +81,6 @@
 #define _fmaxd __ocml_fmax_f64
 #define _fmaxf __ocml_fmax_f32
 #endif
-#else  // OPENMP
 #ifdef __NVPTX__
 #define _ISNANd __nv_isnand
 #define _ISNANf __nv_isnanf
@@ -296,7 +295,7 @@ __DEVICE__ float _Complex __divsc3(float __a, float __b, float __c, float __d) {
 #undef _fmaxd
 #undef _fmaxf
 
-#ifdef __OPENMP_NVPTX__
+#if defined(__OPENMP_NVPTX__) || (defined(__OPENMP) && defined(__AMDGCN__))
 #pragma omp end declare target
 #endif
 

@@ -52,3 +52,5 @@
 #endif // _LIBCPP_STD_VER
 
 #endif // __cplusplus
+
+#endif //  __CLANG_OPENMP_COMPLEX__
