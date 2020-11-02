@@ -2299,10 +2299,10 @@ bool SCEVExpander::isHighCostExpansionHelper(
     case scSMinExpr:
     case scUMinExpr:
       PairCost = TTI.getCmpSelInstrCost(Instruction::ICmp, OpType,
-                                        CmpInst::makeCmpResultType(OpType),
+                                        CmpInst::makeCmpResultType(OpType), CmpInst::BAD_ICMP_PREDICATE,
                                         CostKind) +
                  TTI.getCmpSelInstrCost(Instruction::Select, OpType,
-                                        CmpInst::makeCmpResultType(OpType),
+                                        CmpInst::makeCmpResultType(OpType),CmpInst::BAD_ICMP_PREDICATE,
                                         CostKind);
       break;
     default:

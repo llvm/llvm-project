@@ -3447,16 +3447,17 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     case Instruction::ICmp:
     case Instruction::Select: {
       // Calculate the cost of this instruction.
-      int ScalarEltCost = TTI->getCmpSelInstrCost(E->getOpcode(), ScalarTy,
-                                                  Builder.getInt1Ty(),
-                                                  CostKind, VL0);
+      int ScalarEltCost =
+          TTI->getCmpSelInstrCost(E->getOpcode(), ScalarTy, Builder.getInt1Ty(),
+                                  CmpInst::BAD_ICMP_PREDICATE, CostKind, VL0);
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
       auto *MaskTy = FixedVectorType::get(Builder.getInt1Ty(), VL.size());
       int ScalarCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecCost = TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
-                                            CostKind, VL0);
+      int VecCost =
+          TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
+                                  CmpInst::BAD_ICMP_PREDICATE, CostKind, VL0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::FNeg:
