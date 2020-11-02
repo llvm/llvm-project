@@ -1433,7 +1433,7 @@ bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
         node->getChild(1)->getKind() != Node::Kind::Identifier ||
         !node->getChild(1)->hasText() ||
         (node->getChild(1)->getText() != "Array" &&
-         node->getChild(1)->getText() != "NativeArray" &&
+         node->getChild(1)->getText() != "ContiguousArray" &&
          node->getChild(1)->getText() != "ArraySlice"))
       return false;
 
