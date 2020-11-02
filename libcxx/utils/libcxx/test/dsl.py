@@ -335,6 +335,27 @@ class AddLinkFlag(ConfigAction):
     return 'add {} to %{{link_flags}}'.format(self._getFlag(config))
 
 
+class AddOptionalWarningFlag(ConfigAction):
+  """
+  This action adds the given warning flag to the %{compile_flags} substitution,
+  if it is supported by the compiler.
+
+  The flag can be a string or a callable, in which case it is called with the
+  configuration to produce the actual flag (as a string).
+  """
+  def __init__(self, flag):
+    self._getFlag = lambda config: flag(config) if callable(flag) else flag
+
+  def applyTo(self, config):
+    flag = self._getFlag(config)
+    # Use -Werror to make sure we see an error about the flag being unsupported.
+    if hasCompileFlag(config, '-Werror ' + flag):
+      config.substitutions = _addToSubstitution(config.substitutions, '%{compile_flags}', flag)
+
+  def pretty(self, config, litParams):
+    return 'add {} to %{{compile_flags}}'.format(self._getFlag(config))
+
+
 class Feature(object):
   """
   Represents a Lit available feature that is enabled whenever it is supported.
