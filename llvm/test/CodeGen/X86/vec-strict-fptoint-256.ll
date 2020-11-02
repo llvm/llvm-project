@@ -5,10 +5,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512F,AVX512F-64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512VL,AVX512VL-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512VL,AVX512VL-64
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512dq -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQ,AVX512DQ-32
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512dq -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQ,AVX512DQ-64
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512dq,avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQVL,AVX512DQVL-32
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512dq,avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQVL,AVX512DQVL-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512dq -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQ
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512dq -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQ
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=avx512dq,avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQVL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512dq,avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512DQVL
 
 
 declare <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f64(<4 x double>, metadata)
