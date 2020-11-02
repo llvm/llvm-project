@@ -43,7 +43,6 @@
 #include <stack>
 #include <string>
 #include <system_error>
-#include <tuple>
 #include <vector>
 
 #ifdef HAVE_SYS_STAT_H
