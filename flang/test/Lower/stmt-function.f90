@@ -92,7 +92,8 @@ integer function test_stmt_character(c, j)
    character(10) :: c, argc
    ! CHECK-DAG: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 :
    ! CHECK-DAG: %[[c10:.*]] = constant 10 :
-   ! CHECK: %[[c:.*]] = fir.emboxchar %[[unboxed]]#0, %[[c10]] 
+   ! CHECK: %[[addr:.*]] = fir.convert %[[unboxed]]#0 : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ref<!fir.char<1>>
+   ! CHECK: %[[c:.*]] = fir.emboxchar %[[addr]], %[[c10]] 
 
    func(argc, argj) = len_trim(argc, 4) + argj
    ! CHECK: addi %{{.*}}, %{{.*}} : i

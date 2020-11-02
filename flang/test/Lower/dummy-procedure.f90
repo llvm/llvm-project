@@ -147,6 +147,6 @@ end subroutine
   !CHECK: return %[[imag]] : f32
 
 !CHECK-LABEL: func @fir.len.i32.bc1(%arg0: !fir.boxchar<1>)
-  !CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, index)
+  !CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.array<?x!fir.char<1>>>, index)
   !CHECK: %[[len:.*]] = fir.convert %[[unboxed]]#1 : (index) -> i32
   !CHECK: return %[[len]] : i32

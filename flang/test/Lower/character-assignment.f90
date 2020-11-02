@@ -16,8 +16,7 @@ subroutine assign1(lhs, rhs)
 
   ! Copy of rhs into temp
   ! CHECK: fir.do_loop %[[i:.*]] =
-    ! CHECK: %[[rhs_addr2:.*]] = fir.convert %{{[0-9]+}}#0
-    ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs_addr2]], %[[i]]
+    ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs]]#0, %[[i]]
     ! CHECK-DAG: %[[rhs_elt:.*]] = fir.load %[[rhs_addr]]
     ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[i]]
     ! CHECK: fir.store %[[rhs_elt]] to %[[tmp_addr]]
@@ -27,8 +26,7 @@ subroutine assign1(lhs, rhs)
   ! CHECK: fir.do_loop %[[ii:.*]] =
     ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[ii]]
     ! CHECK-DAG: %[[tmp_elt:.*]] = fir.load %[[tmp_addr]]
-    ! CHECK-DAG: %[[lhs_addr2:.*]] = fir.convert %[[lhs]]#0
-    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[ii]]
+    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[ii]]
     ! CHECK: fir.store %[[tmp_elt]] to %[[lhs_addr]]
   ! CHECK-NEXT: }
 
@@ -36,8 +34,7 @@ subroutine assign1(lhs, rhs)
   ! CHECK-DAG: %[[c32:.*]] = constant 32 : i8
   ! CHECK-DAG: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[ij:.*]] =
-    ! CHECK: %[[lhs_addr2:.*]] = fir.convert %[[lhs]]#0
-    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[ij]]
+    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[ij]]
     ! CHECK: fir.store %[[blank]] to %[[lhs_addr]]
   ! CHECK-NEXT: }
 end subroutine
@@ -56,8 +53,7 @@ subroutine assign_substring1(str, rhs, lb, ub)
   ! CHECK-DAG: %[[lbi:.*]] = fir.convert %[[lb]] : (i64) -> index
   ! CHECK-DAG: %[[c1:.*]] = constant 1
   ! CHECK-DAG: %[[offset:.*]] = subi %[[lbi]], %[[c1]]
-  ! CHECK-DAG: %[[lhs_addr2:.*]] = fir.convert %[[str]]#0
-  ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[offset]]
+  ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[str]]#0, %[[offset]]
 
   ! Compute substring length
   ! CHECK-DAG: %[[ubi:.*]] = fir.convert %[[ub]] : (i64) -> index
@@ -96,8 +92,7 @@ subroutine assign_constant(lhs)
   ! CHECK-DAG: %[[c32:.*]] = constant 32 : i8
   ! CHECK-DAG: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[j:.*]] = %{{.*}} to %{{.*}} {
-    ! CHECK: %[[jhs_addr2:.*]] = fir.convert %[[lhs]]#0
-    ! CHECK: %[[jhs_addr:.*]] = fir.coordinate_of %[[jhs_addr2]], %[[j]]
+    ! CHECK: %[[jhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[j]]
     ! CHECK: fir.store %[[blank]] to %[[jhs_addr]]
   ! CHECK: }
 end subroutine
