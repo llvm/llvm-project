@@ -2309,6 +2309,8 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     }
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
+    tmp_result.SetInteractive(result.GetInteractive());
+
     // If override_context is not NULL, pass no_context_switching = true for
     // HandleCommand() since we updated our context already.
 

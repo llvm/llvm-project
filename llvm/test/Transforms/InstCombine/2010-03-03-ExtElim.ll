@@ -16,8 +16,8 @@ define i1 @PR6486() nounwind {
 ; CHECK: ret i1 true
 }
 
-@d = common global i32 0, align 4
-@a = common global [1 x i32] zeroinitializer, align 4
+@d = global i32 0, align 4
+@a = global [1 x i32] zeroinitializer, align 4
 
 define i1 @PR16462_1() nounwind {
 ; CHECK-LABEL: @PR16462_1(
