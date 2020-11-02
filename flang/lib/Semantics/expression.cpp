@@ -1184,15 +1184,24 @@ public:
   }
 
 private:
+  using ImpliedDoIntType = ResultType<ImpliedDoIndex>;
+
   void Push(MaybeExpr &&);
+  void Add(const parser::AcValue::Triplet &);
+  void Add(const parser::Expr &);
+  void Add(const parser::AcImpliedDo &);
+  void UnrollConstantImpliedDo(const parser::AcImpliedDo &,
+      parser::CharBlock name, std::int64_t lower, std::int64_t upper,
+      std::int64_t stride);
 
   template <int KIND, typename A>
   std::optional<Expr<Type<TypeCategory::Integer, KIND>>> GetSpecificIntExpr(
       const A &x) {
     if (MaybeExpr y{exprAnalyzer_.Analyze(x)}) {
       Expr<SomeInteger> *intExpr{UnwrapExpr<Expr<SomeInteger>>(*y)};
-      return ConvertToType<Type<TypeCategory::Integer, KIND>>(
-          std::move(DEREF(intExpr)));
+      return Fold(exprAnalyzer_.GetFoldingContext(),
+          ConvertToType<Type<TypeCategory::Integer, KIND>>(
+              std::move(DEREF(intExpr))));
     }
     return std::nullopt;
   }
@@ -1204,7 +1213,7 @@ private:
   bool explicitType_{type_.has_value()};
   std::optional<std::int64_t> constantLength_;
   ArrayConstructorValues<SomeType> values_;
-  bool messageDisplayedOnce{false};
+  std::uint64_t messageDisplayedSet_{0};
 };
 
 void ArrayConstructorContext::Push(MaybeExpr &&x) {
@@ -1238,9 +1247,12 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
           if (constantLength_) {
             if (exprAnalyzer_.context().warnOnNonstandardUsage() &&
                 *thisLen != *constantLength_) {
-              exprAnalyzer_.Say(
-                  "Character literal in array constructor without explicit "
-                  "type has different length than earlier element"_en_US);
+              if (!(messageDisplayedSet_ & 1)) {
+                exprAnalyzer_.Say(
+                    "Character literal in array constructor without explicit "
+                    "type has different length than earlier elements"_en_US);
+                messageDisplayedSet_ |= 1;
+              }
             }
             if (*thisLen > *constantLength_) {
               // Language extension: use the longest literal to determine the
@@ -1255,109 +1267,174 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
           }
         }
       } else {
-        if (!messageDisplayedOnce) {
+        if (!(messageDisplayedSet_ & 2)) {
           exprAnalyzer_.Say(
               "Values in array constructor must have the same declared type "
               "when no explicit type appears"_err_en_US); // C7110
-          messageDisplayedOnce = true;
+          messageDisplayedSet_ |= 2;
         }
       }
     } else {
       if (auto cast{ConvertToType(*type_, std::move(*x))}) {
         values_.Push(std::move(*cast));
-      } else {
+      } else if (!(messageDisplayedSet_ & 4)) {
         exprAnalyzer_.Say(
             "Value in array constructor of type '%s' could not "
             "be converted to the type of the array '%s'"_err_en_US,
             x->GetType()->AsFortran(), type_->AsFortran()); // C7111, C7112
+        messageDisplayedSet_ |= 4;
       }
     }
   }
 }
 
 void ArrayConstructorContext::Add(const parser::AcValue &x) {
-  using IntType = ResultType<ImpliedDoIndex>;
   std::visit(
       common::visitors{
-          [&](const parser::AcValue::Triplet &triplet) {
-            // Transform l:u(:s) into (_,_=l,u(,s)) with an anonymous index '_'
-            std::optional<Expr<IntType>> lower{
-                GetSpecificIntExpr<IntType::kind>(std::get<0>(triplet.t))};
-            std::optional<Expr<IntType>> upper{
-                GetSpecificIntExpr<IntType::kind>(std::get<1>(triplet.t))};
-            std::optional<Expr<IntType>> stride{
-                GetSpecificIntExpr<IntType::kind>(std::get<2>(triplet.t))};
-            if (lower && upper) {
-              if (!stride) {
-                stride = Expr<IntType>{1};
-              }
-              if (!type_) {
-                type_ = DynamicTypeWithLength{IntType::GetType()};
-              }
-              auto v{std::move(values_)};
-              parser::CharBlock anonymous;
-              Push(Expr<SomeType>{
-                  Expr<SomeInteger>{Expr<IntType>{ImpliedDoIndex{anonymous}}}});
-              std::swap(v, values_);
-              values_.Push(ImpliedDo<SomeType>{anonymous, std::move(*lower),
-                  std::move(*upper), std::move(*stride), std::move(v)});
-            }
-          },
+          [&](const parser::AcValue::Triplet &triplet) { Add(triplet); },
           [&](const common::Indirection<parser::Expr> &expr) {
-            auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(
-                expr.value().source)};
-            if (MaybeExpr v{exprAnalyzer_.Analyze(expr.value())}) {
-              if (auto exprType{v->GetType()}) {
-                if (exprType->IsUnlimitedPolymorphic()) {
-                  exprAnalyzer_.Say(
-                      "Cannot have an unlimited polymorphic value in an "
-                      "array constructor"_err_en_US); // C7113
-                }
-              }
-              Push(std::move(*v));
-            }
+            Add(expr.value());
           },
           [&](const common::Indirection<parser::AcImpliedDo> &impliedDo) {
-            const auto &control{
-                std::get<parser::AcImpliedDoControl>(impliedDo.value().t)};
-            const auto &bounds{
-                std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
-            exprAnalyzer_.Analyze(bounds.name);
-            parser::CharBlock name{bounds.name.thing.thing.source};
-            const Symbol *symbol{bounds.name.thing.thing.symbol};
-            int kind{IntType::kind};
-            if (const auto dynamicType{DynamicType::From(symbol)}) {
-              kind = dynamicType->kind();
-            }
-            if (exprAnalyzer_.AddImpliedDo(name, kind)) {
-              std::optional<Expr<IntType>> lower{
-                  GetSpecificIntExpr<IntType::kind>(bounds.lower)};
-              std::optional<Expr<IntType>> upper{
-                  GetSpecificIntExpr<IntType::kind>(bounds.upper)};
-              if (lower && upper) {
-                std::optional<Expr<IntType>> stride{
-                    GetSpecificIntExpr<IntType::kind>(bounds.step)};
-                auto v{std::move(values_)};
-                for (const auto &value :
-                    std::get<std::list<parser::AcValue>>(impliedDo.value().t)) {
-                  Add(value);
-                }
-                if (!stride) {
-                  stride = Expr<IntType>{1};
-                }
-                std::swap(v, values_);
-                values_.Push(ImpliedDo<SomeType>{name, std::move(*lower),
-                    std::move(*upper), std::move(*stride), std::move(v)});
-              }
-              exprAnalyzer_.RemoveImpliedDo(name);
-            } else {
-              exprAnalyzer_.SayAt(name,
-                  "Implied DO index is active in surrounding implied DO loop "
-                  "and may not have the same name"_err_en_US); // C7115
-            }
+            Add(impliedDo.value());
           },
       },
       x.u);
+}
+
+// Transforms l:u(:s) into (_,_=l,u(,s)) with an anonymous index '_'
+void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
+  std::optional<Expr<ImpliedDoIntType>> lower{
+      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<0>(triplet.t))};
+  std::optional<Expr<ImpliedDoIntType>> upper{
+      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<1>(triplet.t))};
+  std::optional<Expr<ImpliedDoIntType>> stride{
+      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<2>(triplet.t))};
+  if (lower && upper) {
+    if (!stride) {
+      stride = Expr<ImpliedDoIntType>{1};
+    }
+    if (!type_) {
+      type_ = DynamicTypeWithLength{ImpliedDoIntType::GetType()};
+    }
+    auto v{std::move(values_)};
+    parser::CharBlock anonymous;
+    Push(Expr<SomeType>{
+        Expr<SomeInteger>{Expr<ImpliedDoIntType>{ImpliedDoIndex{anonymous}}}});
+    std::swap(v, values_);
+    values_.Push(ImpliedDo<SomeType>{anonymous, std::move(*lower),
+        std::move(*upper), std::move(*stride), std::move(v)});
+  }
+}
+
+void ArrayConstructorContext::Add(const parser::Expr &expr) {
+  auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  if (MaybeExpr v{exprAnalyzer_.Analyze(expr)}) {
+    if (auto exprType{v->GetType()}) {
+      if (!(messageDisplayedSet_ & 8) && exprType->IsUnlimitedPolymorphic()) {
+        exprAnalyzer_.Say("Cannot have an unlimited polymorphic value in an "
+                          "array constructor"_err_en_US); // C7113
+        messageDisplayedSet_ |= 8;
+      }
+    }
+    Push(std::move(*v));
+  }
+}
+
+void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
+  const auto &control{std::get<parser::AcImpliedDoControl>(impliedDo.t)};
+  const auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
+  exprAnalyzer_.Analyze(bounds.name);
+  parser::CharBlock name{bounds.name.thing.thing.source};
+  const Symbol *symbol{bounds.name.thing.thing.symbol};
+  int kind{ImpliedDoIntType::kind};
+  if (const auto dynamicType{DynamicType::From(symbol)}) {
+    kind = dynamicType->kind();
+  }
+  if (!exprAnalyzer_.AddImpliedDo(name, kind)) {
+    if (!(messageDisplayedSet_ & 0x20)) {
+      exprAnalyzer_.SayAt(name,
+          "Implied DO index is active in surrounding implied DO loop "
+          "and may not have the same name"_err_en_US); // C7115
+      messageDisplayedSet_ |= 0x20;
+    }
+    return;
+  }
+  std::optional<Expr<ImpliedDoIntType>> lower{
+      GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.lower)};
+  std::optional<Expr<ImpliedDoIntType>> upper{
+      GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.upper)};
+  if (lower && upper) {
+    std::optional<Expr<ImpliedDoIntType>> stride{
+        GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.step)};
+    if (!stride) {
+      stride = Expr<ImpliedDoIntType>{1};
+    }
+    // Check for constant bounds; the loop may require complete unrolling
+    // of the parse tree if all bounds are constant in order to allow the
+    // implied DO loop index to qualify as a constant expression.
+    auto cLower{ToInt64(lower)};
+    auto cUpper{ToInt64(upper)};
+    auto cStride{ToInt64(stride)};
+    if (!(messageDisplayedSet_ & 0x10) && cStride && *cStride == 0) {
+      exprAnalyzer_.SayAt(bounds.step.value().thing.thing.value().source,
+          "The stride of an implied DO loop must not be zero"_err_en_US);
+      messageDisplayedSet_ |= 0x10;
+    }
+    bool isConstant{cLower && cUpper && cStride && *cStride != 0};
+    bool isNonemptyConstant{isConstant &&
+        ((*cStride > 0 && *cLower <= *cUpper) ||
+            (*cStride < 0 && *cLower >= *cUpper))};
+    bool unrollConstantLoop{false};
+    parser::Messages buffer;
+    auto saveMessagesDisplayed{messageDisplayedSet_};
+    {
+      auto messageRestorer{
+          exprAnalyzer_.GetContextualMessages().SetMessages(buffer)};
+      auto v{std::move(values_)};
+      for (const auto &value :
+          std::get<std::list<parser::AcValue>>(impliedDo.t)) {
+        Add(value);
+      }
+      std::swap(v, values_);
+      if (isNonemptyConstant && buffer.AnyFatalError()) {
+        unrollConstantLoop = true;
+      } else {
+        values_.Push(ImpliedDo<SomeType>{name, std::move(*lower),
+            std::move(*upper), std::move(*stride), std::move(v)});
+      }
+    }
+    if (unrollConstantLoop) {
+      messageDisplayedSet_ = saveMessagesDisplayed;
+      UnrollConstantImpliedDo(impliedDo, name, *cLower, *cUpper, *cStride);
+    } else if (auto *messages{
+                   exprAnalyzer_.GetContextualMessages().messages()}) {
+      messages->Annex(std::move(buffer));
+    }
+  }
+  exprAnalyzer_.RemoveImpliedDo(name);
+}
+
+// Fortran considers an implied DO index of an array constructor to be
+// a constant expression if the bounds of the implied DO loop are constant.
+// Usually this doesn't matter, but if we emitted spurious messages as a
+// result of not using constant values for the index while analyzing the
+// items, we need to do it again the "hard" way with multiple iterations over
+// the parse tree.
+void ArrayConstructorContext::UnrollConstantImpliedDo(
+    const parser::AcImpliedDo &impliedDo, parser::CharBlock name,
+    std::int64_t lower, std::int64_t upper, std::int64_t stride) {
+  auto &foldingContext{exprAnalyzer_.GetFoldingContext()};
+  auto restorer{exprAnalyzer_.DoNotUseSavedTypedExprs()};
+  for (auto &at{foldingContext.StartImpliedDo(name, lower)};
+       (stride > 0 && at <= upper) || (stride < 0 && at >= upper);
+       at += stride) {
+    for (const auto &value :
+        std::get<std::list<parser::AcValue>>(impliedDo.t)) {
+      Add(value);
+    }
+  }
+  foldingContext.EndImpliedDo(name);
 }
 
 MaybeExpr ArrayConstructorContext::ToExpr() {
@@ -2525,7 +2602,7 @@ static void FixMisparsedFunctionReference(
 // representation of the analyzed expression.
 template <typename PARSED>
 MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
-  if (x.typedExpr) {
+  if (useSavedTypedExprs_ && x.typedExpr) {
     return x.typedExpr->v;
   }
   if constexpr (std::is_same_v<PARSED, parser::Expr> ||
@@ -2546,7 +2623,6 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
     Say("Internal error: Expression analysis failed on: %s"_err_en_US,
         dump.str());
   }
-  fatalErrors_ = true;
   return std::nullopt;
 }
 
