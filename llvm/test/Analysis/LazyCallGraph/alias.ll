@@ -8,13 +8,13 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; CHECK:        Edges in function: bar
 ; CHECK:        Edges in function: baz
 
-; CHECK:        RefSCC with 1 call SCCs:
-; CHECK-NEXT:     SCC with 1 functions:
-; CHECK-NEXT:       bar
-
 ; CHECK:       RefSCC with 1 call SCCs:
 ; CHECK-NEXT:    SCC with 1 functions:
 ; CHECK-NEXT:      foo
+; CHECK-EMPTY:
+; CHECK:       RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      bar
 
 ; CHECK-NOT:       baz
 

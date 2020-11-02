@@ -12,8 +12,8 @@ target triple = "nvptx64-nvidia-cuda"
 @__omp_offloading_801_3022563__Z6maini1v_l17_exec_mode = weak constant i8 0
 @llvm.compiler.used = appending global [1 x i8*] [i8* @__omp_offloading_801_3022563__Z6maini1v_l17_exec_mode], section "llvm.metadata"
 
-; CHECK: remark: declare_target_codegen_globalization.cpp:10:1: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 ; CHECK: remark: declare_target_codegen_globalization.cpp:17:1: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
+; CHECK: remark: declare_target_codegen_globalization.cpp:10:1: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
 ; Function Attrs: norecurse nounwind
 define weak void @__omp_offloading_801_3022563__Z6maini1v_l17(i32* nonnull align 4 dereferenceable(4) %a) local_unnamed_addr #0 !dbg !10 {
