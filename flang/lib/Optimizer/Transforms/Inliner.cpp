@@ -18,7 +18,11 @@ static llvm::cl::opt<bool>
                        llvm::cl::init(false));
 
 /// Should we inline the callable `op` into region `reg`?
-bool fir::canLegallyInline(mlir::Operation *op, mlir::Region *reg,
-                           mlir::BlockAndValueMapping &map) {
+bool fir::canLegallyInline(mlir::Operation *, mlir::Region *, bool,
+                           mlir::BlockAndValueMapping &) {
+  return aggressivelyInline;
+}
+
+bool fir::canLegallyInline(mlir::Operation *, mlir::Operation *, bool) {
   return aggressivelyInline;
 }

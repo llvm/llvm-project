@@ -50,8 +50,9 @@ std::unique_ptr<mlir::Pass> createFirToCfgPass();
 std::unique_ptr<mlir::Pass> createMemToRegPass();
 
 /// Support for inlining on FIR.
-bool canLegallyInline(mlir::Operation *op, mlir::Region *reg,
+bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,
                       mlir::BlockAndValueMapping &map);
+bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

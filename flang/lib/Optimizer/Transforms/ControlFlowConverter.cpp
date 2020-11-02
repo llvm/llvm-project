@@ -153,8 +153,8 @@ public:
                            mlir::StandardOpsDialect>();
     target.addIllegalOp<fir::SelectTypeOp>();
 
-    if (mlir::failed(
-            mlir::applyPartialConversion(getFunction(), target, patterns)))
+    if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
+                                                  std::move(patterns))))
       signalPassFailure();
   }
 };
