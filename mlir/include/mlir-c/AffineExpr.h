@@ -17,7 +17,29 @@
 extern "C" {
 #endif
 
+/*============================================================================*/
+/** Opaque type declarations.
+ *
+ * Types are exposed to C bindings as structs containing opaque pointers. They
+ * are not supposed to be inspected from C. This allows the underlying
+ * representation to change without affecting the API users. The use of structs
+ * instead of typedefs enables some type safety as structs are not implicitly
+ * convertible to each other.
+ *
+ * Instances of these types may or may not own the underlying object. The
+ * ownership semantics is defined by how an instance of the type was obtained.
+ */
+/*============================================================================*/
+
+#define DEFINE_C_API_STRUCT(name, storage)                                     \
+  struct name {                                                                \
+    storage *ptr;                                                              \
+  };                                                                           \
+  typedef struct name name
+
 DEFINE_C_API_STRUCT(MlirAffineExpr, const void);
+
+#undef DEFINE_C_API_STRUCT
 
 /** Gets the context that owns the affine expression. */
 MlirContext mlirAffineExprGetContext(MlirAffineExpr affineExpr);
