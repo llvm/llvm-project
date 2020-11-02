@@ -14,7 +14,13 @@ import subprocess
 from socket import socket
 import sys
 import time
-import signal
+import threading
+
+
+def kill_server_after_delay(server_process):
+  time.sleep(10)
+  if server_process.poll() is None:
+    server_process.kill()
 
 
 def main():
@@ -36,11 +42,17 @@ def main():
   ],
                                           stderr=subprocess.PIPE)
 
+  # This will kill index_server_process if it hangs without printing init
+  # message.
+  shutdown_thread = threading.Thread(
+      target=kill_server_after_delay, args=(index_server_process,))
+  shutdown_thread.daemon = True
+  shutdown_thread.start()
+
   # Wait for the server to warm-up.
-  time.sleep(4)
   found_init_message = False
-  for line in index_server_process.stderr:
-    if b'Server listening' in line:
+  while index_server_process.poll() is None:
+    if b'Server listening' in index_server_process.stderr.readline():
       found_init_message = True
       break
 
@@ -56,7 +68,7 @@ def main():
                                     stdin=in_file)
 
   clangd_process.wait()
-  os.kill(index_server_process.pid, signal.SIGINT)
+  index_server_process.kill()
 
 
 if __name__ == '__main__':
