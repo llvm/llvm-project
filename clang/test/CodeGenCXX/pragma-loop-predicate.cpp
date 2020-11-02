@@ -58,19 +58,19 @@ void test5(int *List, int Length) {
     List[i] = i * 2;
 }
 
+// CHECK:      ![[LOOP0]] = distinct !{![[LOOP0]], [[MP:![0-9]+]], [[GEN3:![0-9]+]]}
+// CHECK:      [[MP]] = !{!"llvm.loop.mustprogress"}
+// CHECK-NEXT: [[GEN3]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
-// CHECK:      ![[LOOP0]] = distinct !{![[LOOP0]], !3}
-// CHECK-NEXT: !3 = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-NEXT: ![[LOOP1]] = distinct !{![[LOOP1]], [[MP]], [[GEN6:![0-9]+]], [[GEN3]]}
+// CHECK-NEXT: [[GEN6]] = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 
-// CHECK-NEXT: ![[LOOP1]] = distinct !{![[LOOP1]], !5, !3}
-// CHECK-NEXT: !5 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+// CHECK-NEXT: ![[LOOP2]] = distinct !{![[LOOP2]], [[MP]], [[GEN8:![0-9]+]], [[GEN3]]}
+// CHECK-NEXT: [[GEN8]] = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
 
-// CHECK-NEXT: ![[LOOP2]] = distinct !{![[LOOP2]], !7, !3}
-// CHECK-NEXT: !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
+// CHECK-NEXT: ![[LOOP3]] = distinct !{![[LOOP3]], [[MP]], [[GEN6]], [[GEN3]]}
 
-// CHECK-NEXT: ![[LOOP3]] = distinct !{![[LOOP3]], !5, !3}
+// CHECK-NEXT: ![[LOOP4]] = distinct !{![[LOOP4]], [[MP]], [[GEN10:![0-9]+]]}
+// CHECK-NEXT: [[GEN10]] = !{!"llvm.loop.vectorize.width", i32 1}
 
-// CHECK-NEXT: ![[LOOP4]] = distinct !{![[LOOP4]], !10}
-// CHECK-NEXT: !10 = !{!"llvm.loop.vectorize.width", i32 1}
-
-// CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], !10}
+// CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[GEN10]]}
