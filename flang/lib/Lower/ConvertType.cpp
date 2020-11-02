@@ -318,6 +318,20 @@ private:
     return seqShapeHelper(symbol, bounds);
   }
 
+  fir::SequenceType::Extent
+  getCharacterLength(const Fortran::semantics::Symbol &symbol) {
+    if (symbol.GetType()->category() !=
+        Fortran::semantics::DeclTypeSpec::Character)
+      llvm::report_fatal_error("not a character symbol");
+    const auto &lenParam = symbol.GetType()->characterTypeSpec().length();
+    if (auto expr = lenParam.GetExplicit()) {
+      auto len = Fortran::evaluate::AsGenericExpr(std::move(*expr));
+      if (auto asInt = Fortran::evaluate::ToInt64(len))
+        return *asInt;
+    }
+    return fir::SequenceType::getUnknownExtent();
+  }
+
   mlir::Type genSymbolHelper(const Fortran::semantics::Symbol &symbol,
                              bool isAlloc = false, bool isPtr = false) {
     mlir::Type ty;
@@ -377,18 +391,19 @@ private:
     if (symbol.IsObjectArray()) {
       if (symbol.GetType()->category() ==
           Fortran::semantics::DeclTypeSpec::Character) {
-        auto charLen = fir::SequenceType::getUnknownExtent();
-        const auto &lenParam = symbol.GetType()->characterTypeSpec().length();
-        if (auto expr = lenParam.GetExplicit()) {
-          auto len = Fortran::evaluate::AsGenericExpr(std::move(*expr));
-          auto asInt = Fortran::evaluate::ToInt64(len);
-          if (asInt)
-            charLen = *asInt;
-        }
-        return fir::SequenceType::get(genSeqShape(symbol, charLen), ty);
+        auto charLen = getCharacterLength(symbol);
+        ty = fir::SequenceType::get(genSeqShape(symbol, charLen), ty);
+      } else {
+        ty = fir::SequenceType::get(genSeqShape(symbol), ty);
       }
-      return fir::SequenceType::get(genSeqShape(symbol), ty);
     }
+
+    if (ty.isa<fir::CharacterType>()) {
+      auto charLen = getCharacterLength(symbol);
+      fir::SequenceType::Shape shape = {charLen};
+      ty = fir::SequenceType::get(shape, ty);
+    }
+
     if (isPtr || Fortran::semantics::IsPointer(symbol))
       ty = fir::PointerType::get(ty);
     else if (isAlloc || Fortran::semantics::IsAllocatable(symbol))

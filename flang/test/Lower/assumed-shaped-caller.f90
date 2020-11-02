@@ -34,8 +34,8 @@ subroutine foo_char(x)
     end subroutine
   end interface
   character(*) :: x(42, 55, 12)
-  ! CHECK-DAG: %[[x:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, index)
-  ! CHECK-DAG: %[[addr:.*]] = fir.convert %[[x]]#0 : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.array<?x42x55x12x!fir.char<1>>>
+  ! CHECK-DAG: %[[x:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.array<?x!fir.char<1>>>, index)
+  ! CHECK-DAG: %[[addr:.*]] = fir.convert %[[x]]#0 : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ref<!fir.array<?x42x55x12x!fir.char<1>>>
   ! CHECK-DAG: %[[c42:.*]] = constant 42 : index
   ! CHECK-DAG: %[[c55:.*]] = constant 55 : index
   ! CHECK-DAG: %[[c12:.*]] = constant 12 : index

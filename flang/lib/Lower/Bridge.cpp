@@ -291,22 +291,6 @@ public:
                                       bridge.getDefaultKinds(), tc);
   }
 
-  // FIXME: Should we fold the CHARACTER fixup into genType itself?
-  mlir::Type genTypeWithCharFixup(Fortran::lower::SymbolRef sym) {
-    auto symTy = genType(sym);
-    if (symTy.isa<fir::CharacterType>()) {
-      auto paramVal = sym->GetType()->characterTypeSpec().length();
-      auto expr = paramVal.GetExplicit();
-      assert(expr);
-      auto eval = Fortran::evaluate::AsGenericExpr(std::move(*expr));
-      auto lenVal = Fortran::evaluate::ToInt64(eval);
-      assert(lenVal);
-      fir::SequenceType::Shape len = {*lenVal};
-      symTy = fir::SequenceType::get(len, symTy);
-    }
-    return symTy;
-  }
-
   mlir::Location getCurrentLocation() override final { return toLocation(); }
 
   /// Generate a dummy location.
@@ -1867,7 +1851,7 @@ private:
               counter = mem->offset();
             }
             if (memDet->init()) {
-              auto memTy = genTypeWithCharFixup(*mem);
+              auto memTy = genType(*mem);
               members.push_back(memTy);
               counter = mem->offset() + mem->size();
             }
@@ -1956,8 +1940,8 @@ private:
     llvm::SmallVector<mlir::Value, 1> offs{
         builder->createIntegerConstant(loc, idxTy, sym.offset() - aliasOffset)};
     auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, store, offs);
-    auto preAlloc = builder->createConvert(
-        loc, builder->getRefType(genTypeWithCharFixup(sym)), ptr);
+    auto preAlloc =
+        builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
 
     mapSymbolAttributes(var, storeMap, preAlloc);
   }
@@ -2117,16 +2101,25 @@ private:
           auto charLen = x.charLen();
           if (replace) {
             auto symBox = lookupSymbol(sym);
-            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
-            auto boxAddr = unboxchar.first;
+            auto boxAddr = symBox.getAddr();
             mlir::Value len;
-            if (charLen) {
-              // Set/override LEN with an expression
-              len = createFIRExpr(loc, &*charLen);
+            auto addrTy = boxAddr.getType();
+            if (addrTy.isa<fir::BoxCharType>() || addrTy.isa<fir::BoxType>()) {
+              std::tie(boxAddr, len) =
+                  charHelp.createUnboxChar(symBox.getAddr());
             } else {
-              // LEN is from the boxchar
-              len = unboxchar.second;
+              // dummy from an other entry case: we cannot get a dynamic length
+              // for it, it's illegal for the user program to use it. However,
+              // since we are lowering all function unit statements regardless
+              // of whether the execution will reach them or not, we need to
+              // fill a value for the length here.
+              auto helper = Fortran::lower::CharacterExprHelper{*builder, loc};
+              len = builder->createIntegerConstant(loc, helper.getLengthType(),
+                                                   1);
             }
+            // Override LEN with an expression
+            if (charLen)
+              len = createFIRExpr(loc, &*charLen);
             addCharSymbol(sym, boxAddr, len, true);
             return;
           }
@@ -2577,7 +2570,7 @@ private:
                   counter = mem->offset();
                 }
                 if (memDet->init()) {
-                  auto memTy = genTypeWithCharFixup(*mem);
+                  auto memTy = genType(*mem);
                   members.push_back(memTy);
                   counter = mem->offset() + mem->size();
                 }
@@ -2654,7 +2647,7 @@ private:
     llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
         loc, builder->getIndexType(), byteOffset)};
     auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-    auto localTy = builder->getRefType(genTypeWithCharFixup(var.getSymbol()));
+    auto localTy = builder->getRefType(genType(var.getSymbol()));
     mlir::Value local = builder->createConvert(loc, localTy, varAddr);
     mapSymbolAttributes(var, storeMap, local);
   }

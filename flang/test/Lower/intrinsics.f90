@@ -185,8 +185,9 @@ subroutine ichar_test(c)
   ! CHECK-DAG: %[[unbox:.*]]:2 = fir.unboxchar
   ! CHECK-DAG: %[[J:.*]] = fir.alloca i32 {name = "{{.*}}Ej"}
   ! CHECK-DAG: %[[STR:.*]] = fir.alloca !fir.array{{.*}} {name = "{{.*}}Estr"}
-  ! CHECK: %[[BOX:.*]] = fir.load %[[unbox]]#0 : !fir.ref<!fir.char<1>>
-  ! CHECK: = fir.convert %[[BOX]] : (!fir.char<1>) -> i32
+  ! CHECK: %[[BOX:.*]] = fir.convert %[[unbox]]#0 : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ref<!fir.char<1>> 
+  ! CHECK: %[[CHAR:.*]] = fir.load %[[BOX]] : !fir.ref<!fir.char<1>>
+  ! CHECK: = fir.convert %[[CHAR]] : (!fir.char<1>) -> i32
   print *, ichar(c)
   ! CHECK: fir.call @{{.*}}EndIoStatement
 
