@@ -33,6 +33,9 @@
 ; NM-INDEX2: T _ZN1A1nEi.llvm.
 ; NM-INDEX2-NOT: U _ZN1A1nEi
 
+; The thin link devirtualizes all calls to _ZN1A1nEi.
+; PRINT: Devirtualized call to {{.*}} (_ZN1A1nEi)
+
 ; We should devirt call to _ZN1A1nEi once in importing module and once
 ; in original (exporting) module.
 ; REMARK-COUNT-2: single-impl: devirtualized a call to _ZN1A1nEi.llvm.
