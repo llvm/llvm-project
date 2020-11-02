@@ -4233,8 +4233,10 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
        (FalseRes.getOpcode() != ISD::SELECT_CC || CC != ISD::SETEQ)))
     return false;
 
-  bool InnerIsSel = FalseRes.getOpcode() == ISD::SELECT_CC;
-  SDValue SetOrSelCC = InnerIsSel ? FalseRes : FalseRes.getOperand(0);
+  SDValue SetOrSelCC = FalseRes.getOpcode() == ISD::SELECT_CC
+                           ? FalseRes
+                           : FalseRes.getOperand(0);
+  bool InnerIsSel = SetOrSelCC.getOpcode() == ISD::SELECT_CC;
   if (SetOrSelCC.getOpcode() != ISD::SETCC &&
       SetOrSelCC.getOpcode() != ISD::SELECT_CC)
     return false;
