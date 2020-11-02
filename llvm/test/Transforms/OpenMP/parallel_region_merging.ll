@@ -141,7 +141,6 @@ define internal void @merge_some..omp_par(i32* noalias nocapture readnone %0, i3
 ;   #pragma omp cancel parallel
 ;           }
 ;       }
-;   
 ;   #pragma omp parallel
 ;       {
 ;           if (cancel2) {
@@ -206,7 +205,7 @@ declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) local_unnamed_addr
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @merge_all..omp_par.3 to void (i32*, i32*, ...)*), i32* [[TMP2]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @merge_all..omp_par.2 to void (i32*, i32*, ...)*), i32* [[TMP2]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
 ; CHECK-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -216,7 +215,7 @@ declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) local_unnamed_addr
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define {{[^@]+}}@merge_all..omp_par.3
+; CHECK-LABEL: define {{[^@]+}}@merge_all..omp_par.2
 ; CHECK-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[TMP0:%.*]]) [[ATTR0:#.*]] {
 ; CHECK-NEXT:  omp.par.entry:
 ; CHECK-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
@@ -285,7 +284,7 @@ declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) local_unnamed_addr
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @merge_some..omp_par.2 to void (i32*, i32*, ...)*), i32* [[TMP2]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @merge_some..omp_par.5 to void (i32*, i32*, ...)*), i32* [[TMP2]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
 ; CHECK-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -295,7 +294,7 @@ declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) local_unnamed_addr
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define {{[^@]+}}@merge_some..omp_par.2
+; CHECK-LABEL: define {{[^@]+}}@merge_some..omp_par.5
 ; CHECK-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[TMP0:%.*]]) [[ATTR0]] {
 ; CHECK-NEXT:  omp.par.entry:
 ; CHECK-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
@@ -349,7 +348,7 @@ declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) local_unnamed_addr
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i32*)* @merge_cancellable_regions..omp_par.1 to void (i32*, i32*, ...)*), i32* [[TMP4]], i32* [[TMP5]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i32*)* @merge_cancellable_regions..omp_par.6 to void (i32*, i32*, ...)*), i32* [[TMP4]], i32* [[TMP5]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
 ; CHECK-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -359,7 +358,7 @@ declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) local_unnamed_addr
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define {{[^@]+}}@merge_cancellable_regions..omp_par.1
+; CHECK-LABEL: define {{[^@]+}}@merge_cancellable_regions..omp_par.6
 ; CHECK-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[TMP0:%.*]], i32* [[TMP1:%.*]]) [[ATTR0]] {
 ; CHECK-NEXT:  omp.par.entry:
 ; CHECK-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4

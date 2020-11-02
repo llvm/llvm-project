@@ -97,37 +97,21 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__TUNIT____:       exit:
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fn_no_null_opt
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) [[ATTR2:#.*]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[IF_END:%.*]]
-; IS__CGSCC_OPM:       for.cond1:
-; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__CGSCC_OPM:       if.end:
-; IS__CGSCC_OPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
-; IS__CGSCC_OPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND1]]
-; IS__CGSCC_OPM:       exit:
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn_no_null_opt
-; IS__CGSCC_NPM-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) [[ATTR2:#.*]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[IF_END:%.*]]
-; IS__CGSCC_NPM:       for.cond1:
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
-; IS__CGSCC_NPM:       if.end:
-; IS__CGSCC_NPM-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 536870912
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
-; IS__CGSCC_NPM-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND1]]
-; IS__CGSCC_NPM:       exit:
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
+; IS__CGSCC____-LABEL: define {{[^@]+}}@fn_no_null_opt
+; IS__CGSCC____-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) [[ATTR2:#.*]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    br label [[IF_END:%.*]]
+; IS__CGSCC____:       for.cond1:
+; IS__CGSCC____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
+; IS__CGSCC____:       if.end:
+; IS__CGSCC____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
+; IS__CGSCC____-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    br label [[FOR_COND1]]
+; IS__CGSCC____:       exit:
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   br label %if.end

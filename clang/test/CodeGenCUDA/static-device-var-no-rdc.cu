@@ -13,6 +13,8 @@
 
 // Test function scope static device variable, which should not be externalized.
 // DEV-DAG: @_ZZ6kernelPiPPKiE1w = internal addrspace(4) constant i32 1
+// DEV-DAG: @_ZZ6kernelPiPPKiE21local_static_constant = internal addrspace(4) constant i32 42
+// DEV-DAG: @_ZZ6kernelPiPPKiE19local_static_device = internal addrspace(1) constant i32 43
 
 // Check a static device variable referenced by host function is externalized.
 // DEV-DAG: @_ZL1x = addrspace(1) externally_initialized global i32 0
@@ -78,6 +80,8 @@ inline __device__ void devfun(const int ** b) {
 
 __global__ void kernel(int *a, const int **b) {
   const static int w = 1;
+  const static __constant__ int local_static_constant = 42;
+  const static __device__ int local_static_device = 43;
   a[0] = x;
   a[1] = y;
   a[2] = x2;
@@ -86,6 +90,8 @@ __global__ void kernel(int *a, const int **b) {
   a[5] = x5;
   b[0] = &w;
   b[1] = &z2;
+  b[2] = &local_static_constant;
+  b[3] = &local_static_device;
   devfun(b);
 }
 

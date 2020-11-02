@@ -231,3 +231,84 @@ func @memref_reshape_result_affine_map_is_not_identity(
   memref_reshape %buf(%shape)
     : (memref<4x4xf32>, memref<1xi32>) -> memref<8xf32, offset: 0, strides: [2]>
 }
+
+// -----
+
+// expected-error @+1 {{type should be static shaped memref}}
+global_memref @foo : i32
+
+// -----
+
+// expected-error @+1 {{type should be static shaped memref}}
+global_memref @foo : i32 = 5
+
+// -----
+
+// expected-error @+1 {{type should be static shaped memref}}
+global_memref @foo : memref<*xf32>
+
+// -----
+
+// expected-error @+1 {{type should be static shaped memref}}
+global_memref @foo : memref<?x?xf32>
+
+// -----
+
+// expected-error @+1 {{initial value should be a unit or elements attribute}}
+global_memref @foo : memref<2x2xf32>  = "foo"
+
+// -----
+
+// expected-error @+1 {{inferred shape of elements literal ([2]) does not match type ([2, 2])}}
+global_memref @foo : memref<2x2xf32> = dense<[0.0, 1.0]>
+
+// -----
+
+// expected-error @+1 {{expected valid '@'-identifier for symbol name}}
+global_memref "private" "public" @foo : memref<2x2xf32>  = "foo"
+
+// -----
+
+// expected-error @+1 {{expected valid '@'-identifier for symbol name}}
+global_memref constant external @foo : memref<2x2xf32>  = "foo"
+
+// -----
+
+// constant qualifier must be after visibility.
+// expected-error @+1 {{expected valid '@'-identifier for symbol name}}
+global_memref constant "private" @foo : memref<2x2xf32>  = "foo"
+
+
+// -----
+
+// expected-error @+1 {{op visibility expected to be one of ["public", "private", "nested"], but got "priate"}}
+global_memref "priate" constant @memref5 : memref<2xf32>  = uninitialized
+
+// -----
+
+func @nonexistent_global_memref() {
+  // expected-error @+1 {{'gv' does not reference a valid global memref}}
+  %0 = get_global_memref @gv : memref<3xf32>
+  return
+}
+
+// -----
+
+func @foo()
+
+func @nonexistent_global_memref() {
+  // expected-error @+1 {{'foo' does not reference a valid global memref}}
+  %0 = get_global_memref @foo : memref<3xf32>
+  return
+}
+
+// -----
+
+global_memref @gv : memref<3xi32>
+
+func @mismatched_types() {
+  // expected-error @+1 {{result type 'memref<3xf32>' does not match type 'memref<3xi32>' of the global memref @gv}}
+  %0 = get_global_memref @gv : memref<3xf32>
+  return
+}
+

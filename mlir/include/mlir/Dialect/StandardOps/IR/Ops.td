@@ -2006,6 +2006,97 @@ def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalMemrefOp
+//===----------------------------------------------------------------------===//
+
+def GlobalMemrefOp : Std_Op<"global_memref", [NoSideEffect, Symbol]> {
+  let summary = "declare or define a global memref variable";
+  let description = [{
+    The `global_memref` operation declares or defines a named global variable.
+    The backing memory for the variable is allocated statically and is described
+    by the type of the variable (which should be a statically shaped memref
+    type). The operation is a declaration if no `inital_value` is specified,
+    else it is a definition. The `initial_value` can either be a unit attribute
+    to represent a definition of an uninitialized global variable, or an
+    elements attribute to represent the definition of a global variable with an
+    initial value. The global variable can also be marked constant using the
+    `constant` unit attribute. Writing to such constant global variables is
+    undefined.
+
+    The global variable can be accessed by using the `get_global_memref` to
+    retrieve the memref for the global variable. Note that the memref
+    for such global variable itself is immutable (i.e., get_global_memref for a
+    given global variable will always return the same memref descriptor).
+
+    Example:
+
+    ```mlir
+    // Private variable with an initial value.
+    global_memref @x : memref<2xf32> { sym_visibility = "private",
+                         initial_value = dense<0.0,2.0> : tensor<2xf32> }
+
+    // External variable.
+    global_memref @y : memref<4xi32> { sym_visibility = "public" }
+
+    // Uninitialized externally visible variable.
+    global_memref @z : memref<3xf16> { sym_visibility = "public",
+                         initial_value }
+    ```
+  }];
+
+  let arguments = (ins
+      SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility,
+      TypeAttr:$type,
+      OptionalAttr<AnyAttr>:$initial_value,
+      UnitAttr:$constant
+  );
+
+  let assemblyFormat = [{
+       ($sym_visibility^)?
+       (`constant` $constant^)?
+       $sym_name `:`
+       custom<GlobalMemrefOpTypeAndInitialValue>($type, $initial_value)
+       attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+     bool isExternal() { return !initial_value(); }
+     bool isUnitialized() {
+       return !isExternal() && initial_value().getValue().isa<UnitAttr>();
+     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalMemrefOp
+//===----------------------------------------------------------------------===//
+
+def GetGlobalMemrefOp : Std_Op<"get_global_memref",
+    [NoSideEffect, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "get the memref pointing to a global variable";
+  let description = [{
+     The `get_global_memref` operation retrieves the memref pointing to a
+     named global variable. If the global variable is marked constant, writing
+     to the result memref (such as through a `std.store` operation) is
+     undefined.
+
+     Example:
+
+     ```mlir
+     %x = get_global_memref @foo : memref<2xf32>
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs AnyStaticShapeMemRef:$result);
+  let assemblyFormat = "$name `:` type($result) attr-dict";
+
+  // `GetGlobalMemrefOp` is fully verified by its traits.
+  let verifier = ?;
+}
+
+//===----------------------------------------------------------------------===//
 // ImOp
 //===----------------------------------------------------------------------===//
 
