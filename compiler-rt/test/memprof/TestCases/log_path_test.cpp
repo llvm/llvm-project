@@ -3,8 +3,8 @@
 //
 // RUN: %clangxx_memprof  %s -o %t
 
-// Regular run.
-// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-GOOD --dump-input=always
+// stderr log_path
+// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-GOOD --dump-input=always
 
 // Good log_path.
 // RUN: rm -f %t.log.*
