@@ -16,8 +16,8 @@ class TestGDBRemoteDiskFileCompletion(GDBRemoteTestBase):
 
         try:
             self.runCmd("platform select remote-gdb-server")
-            self.runCmd("platform connect connect://localhost:%d" %
-                        self.server.port)
+            self.runCmd("platform connect connect://" +
+                        self.server.get_connect_address())
             self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
 
             self.complete_from_to('platform get-size ', ['test', '123'])
