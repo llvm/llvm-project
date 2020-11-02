@@ -328,7 +328,9 @@ defm CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
 } // isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1
 
 def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
-          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC]>;
+          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
+def : Pat<(i64 (WebAssemblywrapper tglobaladdr:$addr)),
+          (CONST_I64 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
 def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
           (GLOBAL_GET_I32 tglobaladdr:$addr)>, Requires<[IsPIC]>;
