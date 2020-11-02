@@ -2734,7 +2734,11 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Left.is(TT_TemplateOpener))
     return 100;
   if (Left.opensScope()) {
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign)
+    // If we aren't aligning after opening parens/braces we can always break
+    // here unless the style does not want us to place all arguments on the
+    // next line.
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign &&
+        (Left.ParameterCount <= 1 || Style.AllowAllArgumentsOnNextLine))
       return 0;
     if (Left.is(tok::l_brace) && !Style.Cpp11BracedListStyle)
       return 19;

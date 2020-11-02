@@ -1973,15 +1973,6 @@ def fno_var_tracking : Flag<["-"], "fno-var-tracking">, Group<clang_ignored_f_Gr
 def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>,
   HelpText<"Generate verbose assembly output">;
 def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
-defm visibility_from_dllstorageclass : OptInFFlag<"visibility-from-dllstorageclass", "Set the visiblity of symbols in the generated code from their DLL storage class">;
-def fvisibility_dllexport_EQ : Joined<["-"], "fvisibility-dllexport=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"The visibility for dllexport defintions [-fvisibility-from-dllstorageclass]">, Values<"hidden,protected,default">;
-def fvisibility_nodllstorageclass_EQ : Joined<["-"], "fvisibility-nodllstorageclass=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"The visibility for defintiions without an explicit DLL export class [-fvisibility-from-dllstorageclass]">, Values<"hidden,protected,default">;
-def fvisibility_externs_dllimport_EQ : Joined<["-"], "fvisibility-externs-dllimport=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"The visibility for dllimport external declarations [-fvisibility-from-dllstorageclass]">, Values<"hidden,protected,default">;
-def fvisibility_externs_nodllstorageclass_EQ : Joined<["-"], "fvisibility-externs-nodllstorageclass=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"The visibility for external declarations without an explicit DLL dllstorageclass [-fvisibility-from-dllstorageclass]">, Values<"hidden,protected,default">;
 def fvisibility_EQ : Joined<["-"], "fvisibility=">, Group<f_Group>,
   HelpText<"Set the default symbol visibility for all global declarations">, Values<"hidden,default">;
 def fvisibility_inlines_hidden : Flag<["-"], "fvisibility-inlines-hidden">, Group<f_Group>,

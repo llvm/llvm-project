@@ -1972,7 +1972,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     if (ItemType) {
       ListRecTy *ListType = dyn_cast<ListRecTy>(ItemType);
       if (!ListType) {
-        TokError(Twine("Type mismatch for list, expected list type, got ") +
+        TokError(Twine("Encountered a list when expecting a ") +
                  ItemType->getAsString());
         return nullptr;
       }
@@ -2219,6 +2219,8 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       if (isa<ListRecTy>(LHS->getType())) {
         Lex.Lex();  // Eat the '#'.
 
+        assert(Mode == ParseValueMode && "encountered paste of lists in name");
+
         switch (Lex.getCode()) {
         case tgtok::colon:
         case tgtok::semi:
@@ -2226,7 +2228,7 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
           Result = LHS; // trailing paste, ignore.
           break;
         default:
-          Init *RHSResult = ParseValue(CurRec, ItemType, ParseNameMode);
+          Init *RHSResult = ParseValue(CurRec, ItemType, ParseValueMode);
           if (!RHSResult)
             return nullptr;
           Result = BinOpInit::getListConcat(LHS, RHSResult);

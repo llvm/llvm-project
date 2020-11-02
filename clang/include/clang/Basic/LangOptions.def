@@ -307,16 +307,6 @@ ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
              "default visibility for types [-ftype-visibility]")
 LANGOPT(SetVisibilityForExternDecls, 1, 0,
         "apply global symbol visibility to external declarations without an explicit visibility")
-LANGOPT(VisibilityFromDLLStorageClass, 1, 0,
-        "set the visiblity of globals from their DLL storage class [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(DLLExportVisibility, Visibility, 3, DefaultVisibility,
-             "visibility for functions and variables with dllexport annotations [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(NoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
-             "visibility for functions and variables without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(ExternDeclDLLImportVisibility, Visibility, 3, DefaultVisibility,
-             "visibility for external declarations with dllimport annotations [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
-             "visibility for external declarations without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
 BENIGN_LANGOPT(SemanticInterposition        , 1, 0, "semantic interposition")
 BENIGN_LANGOPT(ExplicitNoSemanticInterposition, 1, 0, "explicitly no semantic interposition")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,

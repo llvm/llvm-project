@@ -63,8 +63,8 @@ Some other common examples include:
   # Specify a custom compiler.
   $ <build>/bin/llvm-lit -sv libcxx/test/std --param=cxx_under_test=/opt/bin/g++
 
-  # Enable warnings in the test suite
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=enable_warnings=true
+  # Disable warnings in the test suite
+  $ <build>/bin/llvm-lit -sv libcxx/test --param=enable_warnings=False
 
   # Use UBSAN when running the tests.
   $ <build>/bin/llvm-lit -sv libcxx/test --param=use_sanitizer=Undefined
