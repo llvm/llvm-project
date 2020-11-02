@@ -343,6 +343,39 @@ define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
   ret i32 %1
 }
 
+; This test is similar to the type legalized versio of the fshl/fshr tests, but
+; instead of having the same input to both shifts it has different inputs. Make
+; sure we don't match it has a roriw.
+; FIXME: We're currently missing a check that the inputs are the same.
+define signext i32 @not_rori_i32(i32 signext %x, i32 signext %y) nounwind {
+; RV64I-LABEL: not_rori_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 31
+; RV64I-NEXT:    srliw a1, a1, 1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: not_rori_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    roriw a0, a0, 1
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: not_rori_i32:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    roriw a0, a0, 1
+; RV64IBB-NEXT:    ret
+;
+; RV64IBP-LABEL: not_rori_i32:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    roriw a0, a0, 1
+; RV64IBP-NEXT:    ret
+  %a = shl i32 %x, 31
+  %b = lshr i32 %y, 1
+  %c = or i32 %a, %b
+  ret i32 %c
+}
+
 define i64 @rori_i64_fshl(i64 %a) nounwind {
 ; RV64I-LABEL: rori_i64_fshl:
 ; RV64I:       # %bb.0:
