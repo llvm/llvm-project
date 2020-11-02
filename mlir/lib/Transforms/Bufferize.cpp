@@ -27,13 +27,13 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
   addConversion([](UnrankedTensorType type) -> Type {
     return UnrankedMemRefType::get(type.getElementType(), 0);
   });
-  addSourceMaterialization([](OpBuilder &builder, RankedTensorType type,
+  addSourceMaterialization([](OpBuilder &builder, TensorType type,
                               ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1);
     assert(inputs[0].getType().isa<BaseMemRefType>());
     return builder.create<TensorLoadOp>(loc, type, inputs[0]);
   });
-  addTargetMaterialization([](OpBuilder &builder, MemRefType type,
+  addTargetMaterialization([](OpBuilder &builder, BaseMemRefType type,
                               ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1);
     assert(inputs[0].getType().isa<TensorType>());
