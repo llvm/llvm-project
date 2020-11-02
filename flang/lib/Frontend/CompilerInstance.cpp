@@ -26,7 +26,7 @@ CompilerInstance::~CompilerInstance() {
   assert(outputFiles_.empty() && "Still output files in flight?");
 }
 
-void CompilerInstance::SetInvocation(
+void CompilerInstance::set_invocation(
     std::shared_ptr<CompilerInvocation> value) {
   invocation_ = std::move(value);
 }
@@ -69,7 +69,7 @@ CompilerInstance::CreateDefaultOutputFile(
 
   // Get the path of the output file
   std::string outputFilePath =
-      GetOutputFilePath(GetFrontendOpts().outputFile_, baseName, extension);
+      GetOutputFilePath(frontendOpts().outputFile_, baseName, extension);
 
   // Create the output file
   std::unique_ptr<llvm::raw_pwrite_stream> os =
@@ -120,7 +120,7 @@ void CompilerInstance::ClearOutputFiles(bool eraseFiles) {
 bool CompilerInstance::ExecuteAction(FrontendAction &act) {
 
   // Connect Input to a CompileInstance
-  for (const FrontendInputFile &fif : GetFrontendOpts().inputs_) {
+  for (const FrontendInputFile &fif : frontendOpts().inputs_) {
     if (act.BeginSourceFile(*this, fif)) {
       if (llvm::Error err = act.Execute()) {
         consumeError(std::move(err));
