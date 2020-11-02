@@ -11,7 +11,6 @@ class ConcurrentCrashWithWatchpointBreakpointSignal(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
     @add_test_categories(["watchpoint"])

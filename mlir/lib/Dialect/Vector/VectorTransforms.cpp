@@ -2178,7 +2178,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
 ///   2. else return a new MemRefType obtained by iterating over the shape and
 ///   strides and:
 ///     a. keeping the ones that are static and equal across `aT` and `bT`.
-///     b. using a dynamic shape and/or stride for the dimeniosns that don't
+///     b. using a dynamic shape and/or stride for the dimensions that don't
 ///        agree.
 static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
   if (MemRefCastOp::areCastCompatible(aT, bT))
@@ -2507,8 +2507,8 @@ mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
   DistributeOps ops;
   ops.extract =
       builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
-  ops.insert =
-      builder.create<vector::InsertMapOp>(loc, ops.extract, id, multiplicity);
+  ops.insert = builder.create<vector::InsertMapOp>(loc, ops.extract, result, id,
+                                                   multiplicity);
   return ops;
 }
 
@@ -2526,14 +2526,20 @@ struct TransferReadExtractPattern
       return failure();
     edsc::ScopedContext scope(rewriter, read.getLoc());
     using mlir::edsc::op::operator+;
+    using mlir::edsc::op::operator*;
     using namespace mlir::edsc::intrinsics;
     SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
-    indices.back() = indices.back() + extract.id();
+    indices.back() =
+        indices.back() +
+        (extract.id() *
+         std_constant_index(extract.getResultType().getDimSize(0)));
     Value newRead = vector_transfer_read(extract.getType(), read.memref(),
                                          indices, read.permutation_map(),
                                          read.padding(), ArrayAttr());
+    Value dest = rewriter.create<ConstantOp>(
+        read.getLoc(), read.getType(), rewriter.getZeroAttr(read.getType()));
     newRead = rewriter.create<vector::InsertMapOp>(
-        read.getLoc(), newRead, extract.id(), extract.multiplicity());
+        read.getLoc(), newRead, dest, extract.id(), extract.multiplicity());
     rewriter.replaceOp(read, newRead);
     return success();
   }
@@ -2550,10 +2556,14 @@ struct TransferWriteInsertPattern
       return failure();
     edsc::ScopedContext scope(rewriter, write.getLoc());
     using mlir::edsc::op::operator+;
+    using mlir::edsc::op::operator*;
     using namespace mlir::edsc::intrinsics;
     SmallVector<Value, 4> indices(write.indices().begin(),
                                   write.indices().end());
-    indices.back() = indices.back() + insert.id();
+    indices.back() =
+        indices.back() +
+        (insert.id() *
+         std_constant_index(insert.getSourceVectorType().getDimSize(0)));
     vector_transfer_write(insert.vector(), write.memref(), indices,
                           write.permutation_map(), ArrayAttr());
     rewriter.eraseOp(write);

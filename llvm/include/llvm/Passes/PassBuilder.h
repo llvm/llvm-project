@@ -118,6 +118,7 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
+  bool DebugLogging;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   Optional<PGOOptions> PGOOpt;
@@ -259,11 +260,10 @@ public:
     unsigned getSizeLevel() const { return SizeLevel; }
   };
 
-  explicit PassBuilder(TargetMachine *TM = nullptr,
+  explicit PassBuilder(bool DebugLogging = false, TargetMachine *TM = nullptr,
                        PipelineTuningOptions PTO = PipelineTuningOptions(),
                        Optional<PGOOptions> PGOOpt = None,
-                       PassInstrumentationCallbacks *PIC = nullptr)
-      : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {}
+                       PassInstrumentationCallbacks *PIC = nullptr);
 
   /// Cross register the analysis managers through their proxies.
   ///
@@ -321,8 +321,7 @@ public:
   /// \p Phase indicates the current ThinLTO phase.
   FunctionPassManager
   buildFunctionSimplificationPipeline(OptimizationLevel Level,
-                                      ThinLTOPhase Phase,
-                                      bool DebugLogging = false);
+                                      ThinLTOPhase Phase);
 
   /// Construct the core LLVM module canonicalization and simplification
   /// pipeline.
@@ -339,16 +338,13 @@ public:
   /// build them.
   ///
   /// \p Phase indicates the current ThinLTO phase.
-  ModulePassManager
-  buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                    ThinLTOPhase Phase,
-                                    bool DebugLogging = false);
+  ModulePassManager buildModuleSimplificationPipeline(OptimizationLevel Level,
+                                                      ThinLTOPhase Phase);
 
   /// Construct the module pipeline that performs inlining as well as
   /// the inlining-driven cleanups.
   ModuleInlinerWrapperPass buildInlinerPipeline(OptimizationLevel Level,
-                                                ThinLTOPhase Phase,
-                                                bool DebugLogging = false);
+                                                ThinLTOPhase Phase);
 
   /// Construct the core LLVM module optimization pipeline.
   ///
@@ -364,7 +360,6 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager buildModuleOptimizationPipeline(OptimizationLevel Level,
-                                                    bool DebugLogging = false,
                                                     bool LTOPreLink = false);
 
   /// Build a per-module default optimization pipeline.
@@ -379,7 +374,6 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                                  bool DebugLogging = false,
                                                   bool LTOPreLink = false);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
@@ -394,9 +388,7 @@ public:
   /// only intended for use when attempting to optimize code. If frontends
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
-  ModulePassManager
-  buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
-                                     bool DebugLogging = false);
+  ModulePassManager buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level);
 
   /// Build an ThinLTO default optimization pipeline to a pass manager.
   ///
@@ -410,7 +402,7 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager
-  buildThinLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
+  buildThinLTODefaultPipeline(OptimizationLevel Level,
                               const ModuleSummaryIndex *ImportSummary);
 
   /// Build a pre-link, LTO-targeting default optimization pipeline to a pass
@@ -425,8 +417,7 @@ public:
   /// only intended for use when attempting to optimize code. If frontends
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
-  ModulePassManager buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
-                                                   bool DebugLogging = false);
+  ModulePassManager buildLTOPreLinkDefaultPipeline(OptimizationLevel Level);
 
   /// Build an LTO default optimization pipeline to a pass manager.
   ///
@@ -440,7 +431,6 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
-                                            bool DebugLogging,
                                             ModuleSummaryIndex *ExportSummary);
 
   /// Build the default `AAManager` with the default alias analysis pipeline
@@ -487,8 +477,7 @@ public:
   /// specifically want the pass to run under a adaptor directly. This is
   /// preferred when a pipeline is largely of one type, but one or just a few
   /// passes are of different types(See PassBuilder.cpp for examples).
-  Error parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
-                          bool DebugLogging = false);
+  Error parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText);
 
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
   ///
@@ -497,12 +486,9 @@ public:
   /// this is the valid pipeline text:
   ///
   ///   function(lpass)
-  Error parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
-                          bool DebugLogging = false);
-  Error parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
-                          bool DebugLogging = false);
-  Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
-                          bool DebugLogging = false);
+  Error parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText);
+  Error parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText);
+  Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText);
   /// @}}
 
   /// Parse a textual alias analysis pipeline into the provided AA manager.
@@ -681,11 +667,9 @@ public:
                                bool DebugLogging)> &C);
 
   /// Add PGOInstrumenation passes for O0 only.
-  void addPGOInstrPassesForO0(ModulePassManager &MPM, bool DebugLogging,
-                              bool RunProfileGen, bool IsCS,
-                              std::string ProfileFile,
+  void addPGOInstrPassesForO0(ModulePassManager &MPM, bool RunProfileGen,
+                              bool IsCS, std::string ProfileFile,
                               std::string ProfileRemappingFile);
-
 
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
@@ -695,38 +679,30 @@ public:
 
 private:
   // O1 pass pipeline
-  FunctionPassManager buildO1FunctionSimplificationPipeline(
-      OptimizationLevel Level, ThinLTOPhase Phase, bool DebugLogging = false);
+  FunctionPassManager
+  buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
+                                        ThinLTOPhase Phase);
 
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
-  Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
-                        bool DebugLogging);
-  Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
-                       bool DebugLogging);
-  Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
-                          bool DebugLogging);
-  Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
-                      bool DebugLogging);
+  Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E);
+  Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E);
+  Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E);
+  Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E);
   bool parseAAPassName(AAManager &AA, StringRef Name);
 
   Error parseLoopPassPipeline(LoopPassManager &LPM,
-                              ArrayRef<PipelineElement> Pipeline,
-                              bool DebugLogging);
+                              ArrayRef<PipelineElement> Pipeline);
   Error parseFunctionPassPipeline(FunctionPassManager &FPM,
-                                  ArrayRef<PipelineElement> Pipeline,
-                                  bool DebugLogging);
+                                  ArrayRef<PipelineElement> Pipeline);
   Error parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
-                               ArrayRef<PipelineElement> Pipeline,
-                               bool DebugLogging);
+                               ArrayRef<PipelineElement> Pipeline);
   Error parseModulePassPipeline(ModulePassManager &MPM,
-                                ArrayRef<PipelineElement> Pipeline,
-                                bool DebugLogging);
+                                ArrayRef<PipelineElement> Pipeline);
 
-  void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
-                         OptimizationLevel Level, bool RunProfileGen, bool IsCS,
-                         std::string ProfileFile,
+  void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
+                         bool RunProfileGen, bool IsCS, std::string ProfileFile,
                          std::string ProfileRemappingFile);
   void invokePeepholeEPCallbacks(FunctionPassManager &, OptimizationLevel);
 

@@ -2866,11 +2866,11 @@ static bool isProfitableChain(IVChain &Chain,
     if (TTI.isProfitableLSRChainElement(Inc.UserInst))
       return true;
 
-  // If register number is the major cost, we cannot benefit from this
-  // profitable chain which is based on register number.
+  // If number of registers is not the major cost, we cannot benefit from this
+  // profitable chain which is based on number of registers.
   // FIXME: add profitable chain optimization for other kinds major cost, for
-  // example instruction number.
-  if (!TTI.isRegNumMajorCostOfLSR())
+  // example number of instructions.
+  if (!TTI.isNumRegsMajorCostOfLSR())
     return false;
 
   for (const IVInc &Inc : Chain) {

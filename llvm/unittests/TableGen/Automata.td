@@ -15,7 +15,7 @@ def SymKind : GenericEnum {
 
 // Define a transition implementation.
 class SimpleTransition<bits<2> State, SymKindTy A> : Transition {
-  let NewState{1-0} = State;
+  let NewState{1...0} = State;
   SymKindTy ActionSym = A;
 }
 
@@ -38,7 +38,7 @@ def SimpleAutomaton : GenericAutomaton {
 
 // Define a transition implementation.
 class TupleTransition<bits<2> State, SymKindTy s1, SymKindTy s2, string s3> : Transition {
-  let NewState{1-0} = State;
+  let NewState{1...0} = State;
   SymKindTy S1 = s1;
   SymKindTy S2 = s2;
   string S3 = s3;
@@ -59,7 +59,7 @@ def TupleAutomaton : GenericAutomaton {
 // NfaAutomaton test implementation
 
 class NfaTransition<bits<2> State, SymKindTy S> : Transition {
-  let NewState{1-0} = State;
+  let NewState{1...0} = State;
   SymKindTy A = S;
 }
 

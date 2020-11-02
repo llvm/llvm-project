@@ -1033,7 +1033,7 @@ bool Serializer::isInterfaceStructPtrType(Type type) const {
 LogicalResult Serializer::processType(Location loc, Type type,
                                       uint32_t &typeID) {
   // Maintains a set of names for nested identified struct types. This is used
-  // to properly seialize resursive references.
+  // to properly serialize resursive references.
   llvm::SetVector<StringRef> serializationCtx;
   return processTypeImpl(loc, type, typeID, serializationCtx);
 }
@@ -1170,7 +1170,7 @@ LogicalResult Serializer::prepareBasicType(
                             spirv::Opcode::OpTypeForwardPointer,
                             forwardPtrOperands);
 
-      // 2. Find the the pointee (enclosing) struct.
+      // 2. Find the pointee (enclosing) struct.
       auto structType = spirv::StructType::getIdentified(
           module.getContext(), pointeeStruct.getIdentifier());
 

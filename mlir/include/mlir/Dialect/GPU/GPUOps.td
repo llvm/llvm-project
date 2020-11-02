@@ -197,10 +197,10 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"StringRef name, "
-              "FunctionType type, TypeRange workgroupAttributions = {}, "
-              "TypeRange privateAttributions = {}, "
-              "ArrayRef<NamedAttribute> attrs = {}">
+    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+      CArg<"TypeRange", "{}">:$workgroupAttributions,
+      CArg<"TypeRange", "{}">:$privateAttributions,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let extraClassDeclaration = [{
@@ -291,12 +291,14 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let parser = [{ return parseGPUFuncOp(parser, result); }];
 }
 
-def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
-    Arguments<(ins SymbolRefAttr:$kernel,
+def GPU_LaunchFuncOp : GPU_Op<"launch_func",
+                              [GPU_AsyncOpInterface, AttrSizedOperandSegments]>,
+    Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+               SymbolRefAttr:$kernel,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Variadic<AnyType>:$operands)>,
-    Results<(outs)> {
+    Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "Launches a function as a GPU kernel";
 
   let description = [{
@@ -308,14 +310,22 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
     function is required to be a gpu.module. And finally, the module containing
     the kernel module (which thus cannot be the top-level module) is required
     to have the `gpu.container_module` attribute. The `gpu.launch_func`
-    operation has a symbol attribute named `kernel` to identify the fully 
+    operation has a symbol attribute named `kernel` to identify the fully
     specified kernel function to launch (both the gpu.module and func).
 
-    The operation takes at least six operands, with the first three operands
-    being grid sizes along x,y,z dimensions and the following three being block
-    sizes along x,y,z dimensions. When a lower-dimensional kernel is required,
-    unused sizes must be explicitly set to `1`. The remaining operands are
-    passed as arguments to the kernel function.
+    The `gpu.launch_func` supports async dependencies: the kernel does not start
+    executing until the ops producing those async dependencies have completed.
+
+    By the default, the host implicitly blocks until kernel execution has
+    completed. If the `async` keyword is present, the host does not block but
+    instead a `!gpu.async.token` is returned. Other async GPU ops can take this
+    token as dependency.
+
+    The operation requires at least the grid and block sizes along the x,y,z
+    dimensions as arguments. When a lower-dimensional kernel is required,
+    unused sizes must be explicitly set to `1`.
+
+    The remaining operands are passed as arguments to the kernel function.
 
     Example:
 
@@ -351,11 +361,15 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
         }
       }
 
+      %t0 = gpu.wait async
       gpu.launch_func
-          @kernels::@kernel_1                          // Kernel function.
-          blocks in (%cst, %cst, %cst)                 // Grid size.
-          threads in (%cst, %cst, %cst)                // Block size.
-          args(%arg0 : f32, %arg1 : memref<?xf32, 1>)  // Kernel arguments.
+          async                           // (Optional) Don't block host, return token.
+          [%t0]                           // (Optional) Execute only after %t0 has completed.
+          @kernels::@kernel_1             // Kernel function.
+          blocks in (%cst, %cst, %cst)    // Grid size.
+          threads in (%cst, %cst, %cst)   // Block size.
+          args(%arg0 : f32,               // (Optional) Kernel arguments.
+               %arg1 : memref<?xf32, 1>)
     }
     ```
   }];
@@ -363,9 +377,8 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"GPUFuncOp kernelFunc, "
-              "KernelDim3 gridSize, KernelDim3 blockSize, "
-              "ValueRange kernelOperands">
+    OpBuilderDAG<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
+      "KernelDim3":$blockSize, "ValueRange":$kernelOperands)>
   ];
 
   let extraClassDeclaration = [{
@@ -402,6 +415,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
 
   let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = [{
+      custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
       $kernel
       `blocks` `in` ` ` `(`$gridSizeX`,` $gridSizeY`,` $gridSizeZ`)`
       `threads` `in` ` ` `(`$blockSizeX`,` $blockSizeY`,` $blockSizeZ`)`
@@ -482,9 +496,9 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Value gridSizeX,"
-              "Value gridSizeY, Value gridSizeZ, Value blockSizeX,"
-              "Value blockSizeY, Value blockSizeZ">
+    OpBuilderDAG<(ins "Value":$gridSizeX, "Value":$gridSizeY,
+      "Value":$gridSizeZ, "Value":$blockSizeX, "Value":$blockSizeY,
+      "Value":$blockSizeZ)>
   ];
 
   let extraClassDeclaration = [{
@@ -529,7 +543,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
     by an invocation of the `gpu.func`.
   }];
 
-  let builders = [OpBuilder<"", " // empty">];
+  let builders = [OpBuilderDAG<(ins), [{ // empty}]>];
 
   let parser = [{ return parseReturnOp(parser, result); }];
   let printer = [{ p << getOperationName(); }];
@@ -708,7 +722,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilder<"StringRef name">];
+  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);

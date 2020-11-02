@@ -41,7 +41,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 
   /// Returns true if the given region 'src' can be inlined into the region
   /// 'dest' that is attached to an operation registered to the current dialect.
-  bool isLegalToInline(Region *dest, Region *src,
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                        BlockAndValueMapping &valueMapping) const final {
     // Conservatively don't allow inlining into affine structures.
     return false;
@@ -49,7 +49,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 
   /// Returns true if the given operation 'op', that is registered to this
   /// dialect, can be inlined into the given region, false otherwise.
-  bool isLegalToInline(Operation *op, Region *region,
+  bool isLegalToInline(Operation *op, Region *region, bool wouldBeCloned,
                        BlockAndValueMapping &valueMapping) const final {
     // Always allow inlining affine operations into the top-level region of a
     // function. There are some edge cases when inlining *into* affine

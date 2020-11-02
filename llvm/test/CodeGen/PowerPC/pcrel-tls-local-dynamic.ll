@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 \
-; RUN:   -ppc-asm-full-reg-names --relocation-model=pic -enable-ppc-pcrel-tls < %s | FileCheck %s --check-prefix=CHECK-S
+; RUN:   -ppc-asm-full-reg-names --relocation-model=pic < %s | FileCheck %s --check-prefix=CHECK-S
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 \
-; RUN:   -ppc-asm-full-reg-names --relocation-model=pic -enable-ppc-pcrel-tls --filetype=obj < %s | \
+; RUN:   -ppc-asm-full-reg-names --relocation-model=pic --filetype=obj < %s | \
 ; RUN:   llvm-objdump --mcpu=pwr10 --no-show-raw-insn -dr - | FileCheck %s --check-prefix=CHECK-O
 
 ; These test cases are to ensure that when using pc relative memory operations

@@ -1,4 +1,4 @@
-# RUN: llc -run-pass opt-phis -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass opt-phis -mtriple=x86_64-- -o - %s | FileCheck %s
 # All PHIs should be removed since they can be securely replaced
 # by %8 register.
 # CHECK-NOT: PHI

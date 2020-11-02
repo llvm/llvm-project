@@ -21,6 +21,7 @@ add_clang_unittest(FormatTests
   SortImportsTestJava.cpp
   SortIncludesTest.cpp
   UsingDeclarationsSorterTest.cpp
+  TokenAnnotatorTest.cpp
   )
 
 clang_target_link_libraries(FormatTests

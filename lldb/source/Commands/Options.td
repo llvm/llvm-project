@@ -704,6 +704,10 @@ let Command = "script import" in {
     Desc<"Allow the script to be loaded even if it was already loaded before. "
     "This argument exists for backwards compatibility, but reloading is always "
     "allowed, whether you specify it or not.">;
+  def relative_to_command_file : Option<"relative-to-command-file", "c">,
+    Group<1>, Desc<"Resolve non-absolute paths relative to the location of the "
+    "current command file. This argument can only be used when the command is "
+    "being sourced from a file.">;
 }
 
 let Command = "script add" in {

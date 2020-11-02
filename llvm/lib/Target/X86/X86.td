@@ -171,6 +171,9 @@ def FeaturePKU   : SubtargetFeature<"pku", "HasPKU", "true",
 def FeatureVNNI    : SubtargetFeature<"avx512vnni", "HasVNNI", "true",
                           "Enable AVX-512 Vector Neural Network Instructions",
                                       [FeatureAVX512]>;
+def FeatureAVXVNNI    : SubtargetFeature<"avxvnni", "HasAVXVNNI", "true",
+                           "Support AVX_VNNI encoding",
+                                      [FeatureAVX2]>;
 def FeatureBF16    : SubtargetFeature<"avx512bf16", "HasBF16", "true",
                            "Support bfloat16 floating point",
                                       [FeatureBWI]>;
@@ -769,6 +772,7 @@ def ProcessorFeatures {
                                                   FeatureCLDEMOTE,
                                                   FeatureWAITPKG,
                                                   FeaturePTWRITE,
+                                                  FeatureAVXVNNI,
                                                   FeatureTSXLDTRK,
                                                   FeatureENQCMD,
                                                   FeatureSHSTK,
@@ -781,7 +785,8 @@ def ProcessorFeatures {
     !listconcat(ICXFeatures, SPRAdditionalFeatures);
 
   // Alderlake
-  list<SubtargetFeature> ADLAdditionalFeatures = [FeatureCLDEMOTE,
+  list<SubtargetFeature> ADLAdditionalFeatures = [FeatureAVXVNNI,
+                                                  FeatureCLDEMOTE,
                                                   FeatureHRESET,
                                                   FeaturePTWRITE,
                                                   FeatureSERIALIZE,

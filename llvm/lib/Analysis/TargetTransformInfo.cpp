@@ -377,8 +377,8 @@ bool TargetTransformInfo::isLSRCostLess(LSRCost &C1, LSRCost &C2) const {
   return TTIImpl->isLSRCostLess(C1, C2);
 }
 
-bool TargetTransformInfo::isRegNumMajorCostOfLSR() const {
-  return TTIImpl->isRegNumMajorCostOfLSR();
+bool TargetTransformInfo::isNumRegsMajorCostOfLSR() const {
+  return TTIImpl->isNumRegsMajorCostOfLSR();
 }
 
 bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {

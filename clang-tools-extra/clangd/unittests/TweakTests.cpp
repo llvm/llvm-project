@@ -572,6 +572,8 @@ TEST_F(ExpandAutoTypeTest, Test) {
             R"cpp(const char * x = "test";)cpp");
 
   EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
+  // expanding types in structured bindings is syntactically invalid.
+  EXPECT_UNAVAILABLE("const ^auto &[x,y] = (int[]){1,2};");
 
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.

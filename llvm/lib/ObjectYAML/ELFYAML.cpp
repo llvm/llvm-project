@@ -1101,7 +1101,7 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   IO.mapRequired("Type", Section.Type);
   IO.mapOptional("Flags", Section.Flags);
   IO.mapOptional("Address", Section.Address);
-  IO.mapOptional("Link", Section.Link, StringRef());
+  IO.mapOptional("Link", Section.Link);
   IO.mapOptional("AddressAlign", Section.AddressAlign, Hex64(0));
   IO.mapOptional("EntSize", Section.EntSize);
   IO.mapOptional("Offset", Section.Offset);
@@ -1113,9 +1113,9 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   // are producing YAML, because yaml2obj sets appropriate values for them
   // automatically when they are not explicitly defined.
   assert(!IO.outputting() ||
-         (!Section.ShOffset.hasValue() && !Section.ShSize.hasValue() &&
-          !Section.ShName.hasValue() && !Section.ShFlags.hasValue() &&
-          !Section.ShType.hasValue()));
+         (!Section.ShOffset && !Section.ShSize && !Section.ShName &&
+          !Section.ShFlags && !Section.ShType && !Section.ShAddrAlign));
+  IO.mapOptional("ShAddrAlign", Section.ShAddrAlign);
   IO.mapOptional("ShName", Section.ShName);
   IO.mapOptional("ShOffset", Section.ShOffset);
   IO.mapOptional("ShSize", Section.ShSize);

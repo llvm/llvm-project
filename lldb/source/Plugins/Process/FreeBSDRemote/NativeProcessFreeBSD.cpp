@@ -217,10 +217,8 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
 
   if (info.pl_lwpid > 0) {
     for (const auto &t : m_threads) {
-      if (t->GetID() == static_cast<lldb::tid_t>(info.pl_lwpid)) {
+      if (t->GetID() == static_cast<lldb::tid_t>(info.pl_lwpid))
         thread = static_cast<NativeThreadFreeBSD *>(t.get());
-        break;
-      }
       static_cast<NativeThreadFreeBSD *>(t.get())->SetStoppedWithNoReason();
     }
     if (!thread)
@@ -240,8 +238,27 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
       SetState(StateType::eStateStopped, true);
       break;
     case TRAP_TRACE:
-      if (thread)
+      if (thread) {
+        auto &regctx = static_cast<NativeRegisterContextFreeBSD &>(
+            thread->GetRegisterContext());
+        uint32_t wp_index = LLDB_INVALID_INDEX32;
+        Status error =
+            regctx.GetWatchpointHitIndex(wp_index, LLDB_INVALID_ADDRESS);
+        if (error.Fail())
+          LLDB_LOG(log,
+                   "received error while checking for watchpoint hits, pid = "
+                   "{0}, LWP = {1}, error = {2}",
+                   pid, info.pl_lwpid, error);
+        if (wp_index != LLDB_INVALID_INDEX32) {
+          regctx.ClearWatchpointHit(wp_index);
+          thread->SetStoppedByWatchpoint(wp_index);
+          SetState(StateType::eStateStopped, true);
+          break;
+        }
+
         thread->SetStoppedByTrace();
+      }
+
       SetState(StateType::eStateStopped, true);
       break;
     }

@@ -32,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -45,6 +46,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "attributor"
+
+DEBUG_COUNTER(ManifestDBGCounter, "attributor-manifest",
+              "Determine what attributes are manifested in the IR");
 
 STATISTIC(NumFnDeleted, "Number of function deleted");
 STATISTIC(NumFnWithExactDefinition,
@@ -380,7 +384,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
         if (Argument *Arg = IRP.getAssociatedArgument())
           IRPositions.emplace_back(IRPosition::argument(*Arg));
         IRPositions.emplace_back(IRPosition::function(*Callee));
-    }
+      }
     }
     IRPositions.emplace_back(IRPosition::value(IRP.getAssociatedValue()));
     return;
@@ -1127,6 +1131,10 @@ ChangeStatus Attributor::manifestAttributes() {
     // Skip dead code.
     if (isAssumedDead(*AA, nullptr, /* CheckBBLivenessOnly */ true))
       continue;
+    // Check if the manifest debug counter that allows skipping manifestation of
+    // AAs
+    if (!DebugCounter::shouldExecute(ManifestDBGCounter))
+      continue;
     // Manifest the state and record if we changed the IR.
     ChangeStatus LocalChange = AA->manifest(*this);
     if (LocalChange == ChangeStatus::CHANGED && AreStatisticsEnabled())
@@ -1163,6 +1171,48 @@ ChangeStatus Attributor::manifestAttributes() {
                      "remain unchanged!");
   }
   return ManifestChange;
+}
+
+void Attributor::identifyDeadInternalFunctions() {
+  // Identify dead internal functions and delete them. This happens outside
+  // the other fixpoint analysis as we might treat potentially dead functions
+  // as live to lower the number of iterations. If they happen to be dead, the
+  // below fixpoint loop will identify and eliminate them.
+  SmallVector<Function *, 8> InternalFns;
+  for (Function *F : Functions)
+    if (F->hasLocalLinkage())
+      InternalFns.push_back(F);
+
+  SmallPtrSet<Function *, 8> LiveInternalFns;
+  bool FoundLiveInternal = true;
+  while (FoundLiveInternal) {
+    FoundLiveInternal = false;
+    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
+      Function *F = InternalFns[u];
+      if (!F)
+        continue;
+
+      bool AllCallSitesKnown;
+      if (checkForAllCallSites(
+              [&](AbstractCallSite ACS) {
+                Function *Callee = ACS.getInstruction()->getFunction();
+                return ToBeDeletedFunctions.count(Callee) ||
+                       (Functions.count(Callee) && Callee->hasLocalLinkage() &&
+                        !LiveInternalFns.count(Callee));
+              },
+              *F, true, nullptr, AllCallSitesKnown)) {
+        continue;
+      }
+
+      LiveInternalFns.insert(F);
+      InternalFns[u] = nullptr;
+      FoundLiveInternal = true;
+    }
+  }
+
+  for (unsigned u = 0, e = InternalFns.size(); u < e; ++u)
+    if (Function *F = InternalFns[u])
+      ToBeDeletedFunctions.insert(F);
 }
 
 ChangeStatus Attributor::cleanupIR() {
@@ -1277,43 +1327,14 @@ ChangeStatus Attributor::cleanupIR() {
     DetatchDeadBlocks(ToBeDeletedBBs, nullptr);
   }
 
-  // Identify dead internal functions and delete them. This happens outside
-  // the other fixpoint analysis as we might treat potentially dead functions
-  // as live to lower the number of iterations. If they happen to be dead, the
-  // below fixpoint loop will identify and eliminate them.
-  SmallVector<Function *, 8> InternalFns;
-  for (Function *F : Functions)
-    if (F->hasLocalLinkage())
-      InternalFns.push_back(F);
-
-  bool FoundDeadFn = true;
-  while (FoundDeadFn) {
-    FoundDeadFn = false;
-    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
-      Function *F = InternalFns[u];
-      if (!F)
-        continue;
-
-      bool AllCallSitesKnown;
-      if (!checkForAllCallSites(
-              [this](AbstractCallSite ACS) {
-                return ToBeDeletedFunctions.count(
-                    ACS.getInstruction()->getFunction());
-              },
-              *F, true, nullptr, AllCallSitesKnown))
-        continue;
-
-      ToBeDeletedFunctions.insert(F);
-      InternalFns[u] = nullptr;
-      FoundDeadFn = true;
-    }
-  }
+  identifyDeadInternalFunctions();
 
   // Rewrite the functions as requested during manifest.
   ChangeStatus ManifestChange = rewriteFunctionSignatures(CGModifiedFunctions);
 
   for (Function *Fn : CGModifiedFunctions)
-    CGUpdater.reanalyzeFunction(*Fn);
+    if (!ToBeDeletedFunctions.count(Fn))
+      CGUpdater.reanalyzeFunction(*Fn);
 
   for (Function *Fn : ToBeDeletedFunctions) {
     if (!Functions.count(Fn))
@@ -1344,7 +1365,7 @@ ChangeStatus Attributor::cleanupIR() {
 
   NumFnDeleted += ToBeDeletedFunctions.size();
 
-  LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << NumFnDeleted
+  LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << ToBeDeletedFunctions.size()
                     << " functions after manifest.\n");
 
 #ifdef EXPENSIVE_CHECKS
@@ -1384,7 +1405,9 @@ ChangeStatus Attributor::run() {
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
-  TimeTraceScope TimeScope(AA.getName() + "::updateAA");
+  TimeTraceScope TimeScope(
+      AA.getName() + std::to_string(AA.getIRPosition().getPositionKind()) +
+      "::updateAA");
   assert(Phase == AttributorPhase::UPDATE &&
          "We can update AA only in the update stage!");
 
@@ -2472,7 +2495,6 @@ struct AttributorLegacyPass : public ModulePass {
 };
 
 struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
-  CallGraphUpdater CGUpdater;
   static char ID;
 
   AttributorCGSCCLegacyPass() : CallGraphSCCPass(ID) {
@@ -2494,14 +2516,13 @@ struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
 
     AnalysisGetter AG;
     CallGraph &CG = const_cast<CallGraph &>(SCC.getCallGraph());
+    CallGraphUpdater CGUpdater;
     CGUpdater.initialize(CG, SCC);
     Module &M = *Functions.back()->getParent();
     BumpPtrAllocator Allocator;
     InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
   }
-
-  bool doFinalization(CallGraph &CG) override { return CGUpdater.finalize(); }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     // FIXME: Think about passes we will preserve and add them here.

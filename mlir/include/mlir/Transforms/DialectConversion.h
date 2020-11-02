@@ -13,9 +13,7 @@
 #ifndef MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 #define MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Rewrite/FrozenRewritePatternList.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -805,11 +803,11 @@ private:
 /// the `unconvertedOps` set will not necessarily be complete.)
 LLVM_NODISCARD LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                       const OwningRewritePatternList &patterns,
+                       const FrozenRewritePatternList &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LLVM_NODISCARD LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
-                       const OwningRewritePatternList &patterns,
+                       const FrozenRewritePatternList &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 
 /// Apply a complete conversion on the given operations, and all nested
@@ -818,10 +816,10 @@ applyPartialConversion(Operation *op, ConversionTarget &target,
 /// within 'ops'.
 LLVM_NODISCARD LogicalResult
 applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                    const OwningRewritePatternList &patterns);
+                    const FrozenRewritePatternList &patterns);
 LLVM_NODISCARD LogicalResult
 applyFullConversion(Operation *op, ConversionTarget &target,
-                    const OwningRewritePatternList &patterns);
+                    const FrozenRewritePatternList &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -833,11 +831,11 @@ applyFullConversion(Operation *op, ConversionTarget &target,
 /// the regions nested within 'ops'.
 LLVM_NODISCARD LogicalResult
 applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                        const OwningRewritePatternList &patterns,
+                        const FrozenRewritePatternList &patterns,
                         DenseSet<Operation *> &convertedOps);
 LLVM_NODISCARD LogicalResult
 applyAnalysisConversion(Operation *op, ConversionTarget &target,
-                        const OwningRewritePatternList &patterns,
+                        const FrozenRewritePatternList &patterns,
                         DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 

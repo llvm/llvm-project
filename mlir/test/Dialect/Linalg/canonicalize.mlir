@@ -43,6 +43,34 @@ func @collapsing_tensor_reshapes(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x?xf3
 
 // -----
 
+// -----
+
+func @collapsing_tensor_reshapes_to_zero_dim(%arg0 : tensor<1x1x1xf32>)
+                                             -> tensor<f32> {
+  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>] :
+       tensor<1x1x1xf32> into tensor<1xf32>
+  %1 = linalg.tensor_reshape %0 [] : tensor<1xf32> into tensor<f32>
+  return %1 : tensor<f32>
+}
+// CHECK-LABEL: collapsing_tensor_reshapes_to_zero
+//       CHECK:   linalg.tensor_reshape %{{.*}} []
+//  CHECK-SAME:     tensor<1x1x1xf32> into tensor<f32>
+
+// -----
+
+func @collapsing_memref_reshapes_to_zero_dim(%arg0 : memref<1x1x1xf32>)
+                                             -> memref<f32> {
+  %0 = linalg.reshape %arg0 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>] :
+       memref<1x1x1xf32> into memref<1xf32>
+  %1 = linalg.reshape %0 [] : memref<1xf32> into memref<f32>
+  return %1 : memref<f32>
+}
+// CHECK-LABEL: collapsing_memref_reshapes_to_zero
+//       CHECK:   linalg.reshape %{{.*}} []
+//  CHECK-SAME:     memref<1x1x1xf32> into memref<f32>
+
+// -----
+
 func @expanding_tensor_reshapes(%arg0 : tensor<?x?xf32>) -> tensor<?x?x?x?x?xf32>
 {
   %0 = linalg.tensor_reshape %arg0
@@ -103,6 +131,33 @@ func @expanding_memref_reshapes(%arg0 : memref<?x?xf32>) -> memref<?x?x?x?x?xf32
 // CHECK-LABEL: expanding_memref_reshapes
 //       CHECK:   linalg.reshape %{{.*}} [#[[$MAP0]], #[[$MAP1]]]
 //   CHECK-NOT:   linalg.reshape
+
+// -----
+
+func @expanding_tensor_reshapes_to_zero_dim(%arg0 : tensor<f32>)
+                                             -> tensor<1x1x1xf32> {
+  %0 = linalg.tensor_reshape %arg0 [] : tensor<f32> into tensor<1xf32>
+  %1 = linalg.tensor_reshape %0 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>] :
+       tensor<1xf32> into tensor<1x1x1xf32>
+  return %1 : tensor<1x1x1xf32>
+}
+// CHECK-LABEL: expanding_tensor_reshapes_to_zero
+//       CHECK:   linalg.tensor_reshape %{{.*}} []
+//  CHECK-SAME:     tensor<f32> into tensor<1x1x1xf32>
+
+// -----
+
+func @expanding_memref_reshapes_to_zero_dim(%arg0 : memref<f32>)
+                                             -> memref<1x1x1xf32> {
+  %0 = linalg.reshape %arg0 [] : memref<f32> into memref<1xf32>
+  %1 = linalg.reshape %0
+         [affine_map<(d0, d1, d2) -> (d0, d1, d2)>] :
+       memref<1xf32> into memref<1x1x1xf32>
+  return %1 : memref<1x1x1xf32>
+}
+// CHECK-LABEL: expanding_memref_reshapes_to_zero
+//       CHECK:   linalg.reshape %{{.*}} []
+//  CHECK-SAME:     memref<f32> into memref<1x1x1xf32>
 
 // -----
 

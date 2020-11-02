@@ -121,6 +121,7 @@ During this release ...
   the target CPU.
 * Support for ``HRESET`` instructions has been added.
 * Support for ``UINTR`` instructions has been added.
+* Support for ``AVXVNNI`` instructions has been added.
 
 Changes to the AMDGPU Target
 -----------------------------

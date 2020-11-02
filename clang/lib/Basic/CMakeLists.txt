@@ -33,9 +33,6 @@ set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
              HEADER_FILE_ONLY TRUE)
 
-set_property(SOURCE Version.cpp APPEND PROPERTY
-             COMPILE_DEFINITIONS "HAVE_VCS_VERSION_INC")
-
 add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp
@@ -46,6 +43,7 @@ add_clang_library(clangBasic
   DiagnosticIDs.cpp
   DiagnosticOptions.cpp
   ExpressionTraits.cpp
+  FileEntry.cpp
   FileManager.cpp
   FileSystemStatCache.cpp
   IdentifierTable.cpp

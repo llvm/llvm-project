@@ -11,8 +11,8 @@ define float @fdiv_f32(float %a, float %b) #0 {
   ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   %6:vgpr_32, %7:sreg_64 = nofpexcept V_DIV_SCALE_F32 [[COPY2]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-  ; GCN:   %8:vgpr_32, %9:sreg_64 = nofpexcept V_DIV_SCALE_F32 [[COPY1]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+  ; GCN:   %6:vgpr_32, %7:sreg_64 = nofpexcept V_DIV_SCALE_F32 0, [[COPY2]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+  ; GCN:   %8:vgpr_32, %9:sreg_64 = nofpexcept V_DIV_SCALE_F32 0, [[COPY1]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
   ; GCN:   %10:vgpr_32 = nofpexcept V_RCP_F32_e64 0, %8, 0, 0, implicit $mode, implicit $exec
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
@@ -44,8 +44,8 @@ define float @fdiv_nnan_f32(float %a, float %b) #0 {
   ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   %6:vgpr_32, %7:sreg_64 = nnan nofpexcept V_DIV_SCALE_F32 [[COPY2]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
-  ; GCN:   %8:vgpr_32, %9:sreg_64 = nnan nofpexcept V_DIV_SCALE_F32 [[COPY1]], [[COPY1]], [[COPY2]], implicit $mode, implicit $exec
+  ; GCN:   %6:vgpr_32, %7:sreg_64 = nnan nofpexcept V_DIV_SCALE_F32 0, [[COPY2]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+  ; GCN:   %8:vgpr_32, %9:sreg_64 = nnan nofpexcept V_DIV_SCALE_F32 0, [[COPY1]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
   ; GCN:   %10:vgpr_32 = nnan nofpexcept V_RCP_F32_e64 0, %8, 0, 0, implicit $mode, implicit $exec
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216

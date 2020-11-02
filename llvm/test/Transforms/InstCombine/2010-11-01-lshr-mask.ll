@@ -36,8 +36,8 @@ define i8 @foo(i8 %arg, i8 %arg1) {
 ; CHECK-NEXT:    [[T7:%.*]] = or i8 [[T4]], [[T6]]
 ; CHECK-NEXT:    [[T8:%.*]] = xor i8 [[T]], [[T3]]
 ; CHECK-NEXT:    [[T9:%.*]] = or i8 [[T7]], [[T8]]
-; CHECK-NEXT:    [[T10:%.*]] = lshr i8 [[T8]], 7
-; CHECK-NEXT:    [[T11:%.*]] = shl nuw nsw i8 [[T10]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[T8]], 2
+; CHECK-NEXT:    [[T11:%.*]] = and i8 [[TMP1]], 32
 ; CHECK-NEXT:    [[T12:%.*]] = xor i8 [[T11]], [[T9]]
 ; CHECK-NEXT:    ret i8 [[T12]]
 ;

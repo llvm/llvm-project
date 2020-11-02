@@ -90,7 +90,7 @@ def E_IntegerType : TestType<"Integer"> {
     let parameters = (
         ins
         "SignednessSemantics":$signedness,
-        TypeParameter<"unsigned", "Bitwdith of integer">:$width
+        TypeParameter<"unsigned", "Bitwidth of integer">:$width
     );
 
 // DECL-LABEL: IntegerType: public ::mlir::Type

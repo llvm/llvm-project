@@ -77,8 +77,8 @@
 // CHECK-DAG: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[KMP_TASK_T_WITH_PRIVATES:%.+]] = type { [[KMP_TASK_T:%.+]], [[KMP_PRIVATES_T:%.+]] }
 // CHECK-DAG: [[KMP_TASK_T]] = type { i8*, i32 (i32, i8*)*, i32, %{{[^,]+}}, %{{[^,]+}} }
-// CHECK-32-DAG: [[KMP_PRIVATES_T]] = type { [3 x i64], [3 x i8*], [3 x i8*], [3 x i8*], i16 }
-// CHECK-64-DAG: [[KMP_PRIVATES_T]] = type { [3 x i8*], [3 x i8*], [3 x i64], [3 x i8*], i16 }
+// CHECK-32-DAG: [[KMP_PRIVATES_T]] = type { [3 x i64], [3 x i8*], [3 x i8*], i16 }
+// CHECK-64-DAG: [[KMP_PRIVATES_T]] = type { [3 x i8*], [3 x i8*], [3 x i64], i16 }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
@@ -144,8 +144,8 @@ int foo(int n) {
   TT<long long, char> d;
 
   // CHECK-DAG:     call i32 @__kmpc_omp_task([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i8* [[TASK:%.+]])
-  // CHECK-32-DAG:  [[TASK]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i32 84, i32 12, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES]]*)* [[OMP_TASK_ENTRY:@.+]] to i32 (i32, i8*)*), i64 -1)
-  // CHECK-64-DAG:  [[TASK]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i64 144, i64 12, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES]]*)* [[OMP_TASK_ENTRY:@.+]] to i32 (i32, i8*)*), i64 -1)
+  // CHECK-32-DAG:  [[TASK]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i32 72, i32 12, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES]]*)* [[OMP_TASK_ENTRY:@.+]] to i32 (i32, i8*)*), i64 -1)
+  // CHECK-64-DAG:  [[TASK]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i64 120, i64 12, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES]]*)* [[OMP_TASK_ENTRY:@.+]] to i32 (i32, i8*)*), i64 -1)
   // CHECK-DAG:     [[TASK_CAST:%.+]] = bitcast i8* [[TASK]] to [[KMP_TASK_T_WITH_PRIVATES]]*
   // CHECK-DAG:     [[KMP_PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], [[KMP_TASK_T_WITH_PRIVATES]]* [[TASK_CAST]], i32 0, i32 1
   // CHECK-32-DAG:  [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[KMP_PRIVATES]], i32 0, i32 1
@@ -386,16 +386,14 @@ int foo(int n) {
 // CHECK-NEXT:  }
 
 // CHECK:       define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SIZE:%[^,]+]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT]], i32 0, i32 0), i8** [[MAPPER:%[^,]+]], i32 {{[^,]+}}, i32 {{[^)]+}})
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SIZE:%[^,]+]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT]], i32 0, i32 0), i8** null, i32 {{[^,]+}}, i32 {{[^)]+}})
 // CHECK-DAG:   [[BP]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BPADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
 // CHECK-DAG:   [[P]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
 // CHECK-DAG:   [[SIZE]] = getelementptr inbounds [3 x i64], [3 x i64]* [[SIZEADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
-// CHECK-DAG:   [[MAPPER]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[MAPPERADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
 // CHECK-DAG:   [[BPADDR]] = load [3 x i8*]*, [3 x i8*]** [[FPBPADDR:%[^,]+]], align
 // CHECK-DAG:   [[PADDR]] = load [3 x i8*]*, [3 x i8*]** [[FPPADDR:%[^,]+]], align
 // CHECK-DAG:   [[SIZEADDR]] = load [3 x i64]*, [3 x i64]** [[FPSIZEADDR:%[^,]+]], align
-// CHECK-DAG:   [[MAPPERADDR]] = load [3 x i8*]*, [3 x i8*]** [[FPMAPPERADDR:%[^,]+]], align
-// CHECK-DAG:   call void (i8*, ...) %{{.+}}(i8* %{{.+}}, i16** %{{.+}}, [3 x i8*]** [[FPBPADDR]], [3 x i8*]** [[FPPADDR]], [3 x i64]** [[FPSIZEADDR]], [3 x i8*]** [[FPMAPPERADDR]])
+// CHECK-DAG:   call void (i8*, ...) %{{.+}}(i8* %{{.+}}, i16** %{{.+}}, [3 x i8*]** [[FPBPADDR]], [3 x i8*]** [[FPPADDR]], [3 x i64]** [[FPSIZEADDR]])
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]

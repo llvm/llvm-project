@@ -139,16 +139,17 @@ struct scoped_test_env
     ~scoped_test_env() {
 #ifdef _WIN32
         std::string cmd = "rmdir /s /q " + test_root.string();
-        int ret;
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
 #else
         std::string cmd = "chmod -R 777 " + test_root.string();
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
 
         cmd = "rm -r " + test_root.string();
-#endif
         ret = std::system(cmd.c_str());
         assert(ret == 0);
+#endif
     }
 
     scoped_test_env(scoped_test_env const &) = delete;
@@ -598,19 +599,19 @@ struct ExceptionChecker {
   const char* func_name;
   std::string opt_message;
 
-  explicit ExceptionChecker(std::errc first_err, const char* func_name,
+  explicit ExceptionChecker(std::errc first_err, const char* fun_name,
                             std::string opt_msg = {})
-      : expected_err{first_err}, num_paths(0), func_name(func_name),
+      : expected_err{first_err}, num_paths(0), func_name(fun_name),
         opt_message(opt_msg) {}
   explicit ExceptionChecker(fs::path p, std::errc first_err,
-                            const char* func_name, std::string opt_msg = {})
+                            const char* fun_name, std::string opt_msg = {})
       : expected_err(first_err), expected_path1(p), num_paths(1),
-        func_name(func_name), opt_message(opt_msg) {}
+        func_name(fun_name), opt_message(opt_msg) {}
 
   explicit ExceptionChecker(fs::path p1, fs::path p2, std::errc first_err,
-                            const char* func_name, std::string opt_msg = {})
+                            const char* fun_name, std::string opt_msg = {})
       : expected_err(first_err), expected_path1(p1), expected_path2(p2),
-        num_paths(2), func_name(func_name), opt_message(opt_msg) {}
+        num_paths(2), func_name(fun_name), opt_message(opt_msg) {}
 
   void operator()(fs::filesystem_error const& Err) {
     TEST_CHECK(ErrorIsImp(Err.code(), {expected_err}));

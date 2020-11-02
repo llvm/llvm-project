@@ -59,8 +59,13 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1031 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1031 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1032 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1032 %s
 
+; ARCH-R600: Format: elf32-amdgpu
 ; ARCH-R600: Arch: r600
-; ARCH-GCN:  Arch: amdgcn
+; ARCH-R600: AddressSize: 32bit
+
+; ARCH-GCN: Format: elf64-amdgpu
+; ARCH-GCN: Arch: amdgcn
+; ARCH-GCN: AddressSize: 64bit
 
 ; ALL:         Flags [
 ; R600:          EF_AMDGPU_MACH_R600_R600     (0x1)

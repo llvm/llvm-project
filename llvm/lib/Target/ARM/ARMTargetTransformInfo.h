@@ -195,9 +195,8 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     switch (II->getIntrinsicID()) {
-    case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
-      // We don't have legalization support for ordered FP reductions.
+      // We don't have legalization support for ordered FMUL reductions.
       return !II->getFastMathFlags().allowReassoc();
     default:
       // Don't expand anything else, let legalization deal with it.

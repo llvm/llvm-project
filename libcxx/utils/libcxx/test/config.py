@@ -266,6 +266,21 @@ class Configuration(object):
             self.config.available_features.add('libcxx_gdb')
             self.cxx.libcxx_gdb = libcxx_gdb
 
+        target_triple = getattr(self.config, 'target_triple', None)
+        if target_triple:
+            if re.match(r'^x86_64.*-apple', target_triple):
+                self.config.available_features.add('x86_64-apple')
+            if re.match(r'^x86_64.*-linux', target_triple):
+                self.config.available_features.add('x86_64-linux')
+            if re.match(r'^i.86.*', target_triple):
+                self.config.available_features.add('target-x86')
+            elif re.match(r'^x86_64.*', target_triple):
+                self.config.available_features.add('target-x86_64')
+            elif re.match(r'^aarch64.*', target_triple):
+                self.config.available_features.add('target-aarch64')
+            elif re.match(r'^arm.*', target_triple):
+                self.config.available_features.add('target-arm')
+
     def configure_compile_flags(self):
         self.configure_default_compile_flags()
         # Configure extra flags
@@ -511,6 +526,11 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
         self.cxx.addWarningFlagIfSupported('-Wno-aligned-allocation-unavailable')
         self.cxx.addWarningFlagIfSupported('-Wno-atomic-alignment')
+
+        # GCC warns about places where we might want to add sized allocation/deallocation
+        # functions, but we know better what we're doing/testing in the test suite.
+        self.cxx.addWarningFlagIfSupported('-Wno-sized-deallocation')
+
         # These warnings should be enabled in order to support the MSVC
         # team using the test suite; They enable the warnings below and
         # expect the test suite to be clean.

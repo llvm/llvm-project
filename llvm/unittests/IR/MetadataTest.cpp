@@ -10,6 +10,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -1314,6 +1315,151 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
   EXPECT_NE(N, DISubrange::get(Context, nullptr, LVother, UE, SE));
 }
 
+typedef MetadataTest DIGenericSubrangeTest;
+
+TEST_F(DIGenericSubrangeTest, fortranAssumedRankInt) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *LI = DIExpression::get(
+      Context, {dwarf::DW_OP_consts, static_cast<uint64_t>(-10)});
+  auto *UI = DIExpression::get(Context, {dwarf::DW_OP_consts, 10});
+  auto *SI = DIExpression::get(Context, {dwarf::DW_OP_consts, 4});
+  auto *UIother = DIExpression::get(Context, {dwarf::DW_OP_consts, 20});
+  auto *UVother = DILocalVariable::get(Context, Scope, "ubother", File, 8, Type,
+                                       2, Flags, 8);
+  auto *UEother = DIExpression::get(Context, {5, 6});
+  auto *LIZero = DIExpression::get(Context, {dwarf::DW_OP_consts, 0});
+  auto *UIZero = DIExpression::get(Context, {dwarf::DW_OP_consts, 0});
+
+  auto *N = DIGenericSubrange::get(Context, nullptr, LI, UI, SI);
+
+  auto Lower = N->getLowerBound();
+  ASSERT_TRUE(Lower);
+  ASSERT_TRUE(Lower.is<DIExpression *>());
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(LI), Lower.get<DIExpression *>());
+
+  auto Upper = N->getUpperBound();
+  ASSERT_TRUE(Upper);
+  ASSERT_TRUE(Upper.is<DIExpression *>());
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(UI), Upper.get<DIExpression *>());
+
+  auto Stride = N->getStride();
+  ASSERT_TRUE(Stride);
+  ASSERT_TRUE(Stride.is<DIExpression *>());
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(SI), Stride.get<DIExpression *>());
+
+  EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LI, UI, SI));
+
+  EXPECT_NE(N, DIGenericSubrange::get(Context, nullptr, LI, UIother, SI));
+  EXPECT_NE(N, DIGenericSubrange::get(Context, nullptr, LI, UEother, SI));
+  EXPECT_NE(N, DIGenericSubrange::get(Context, nullptr, LI, UVother, SI));
+
+  auto *NZeroLower = DIGenericSubrange::get(Context, nullptr, LIZero, UI, SI);
+  EXPECT_NE(NZeroLower,
+            DIGenericSubrange::get(Context, nullptr, nullptr, UI, SI));
+
+  auto *NZeroUpper = DIGenericSubrange::get(Context, nullptr, LI, UIZero, SI);
+  EXPECT_NE(NZeroUpper,
+            DIGenericSubrange::get(Context, nullptr, LI, nullptr, SI));
+}
+
+TEST_F(DIGenericSubrangeTest, fortranAssumedRankVar) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *LV =
+      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8);
+  auto *UV =
+      DILocalVariable::get(Context, Scope, "ub", File, 8, Type, 2, Flags, 8);
+  auto *SV =
+      DILocalVariable::get(Context, Scope, "st", File, 8, Type, 2, Flags, 8);
+  auto *SVother = DILocalVariable::get(Context, Scope, "stother", File, 8, Type,
+                                       2, Flags, 8);
+  auto *SIother = DIExpression::get(
+      Context, {dwarf::DW_OP_consts, static_cast<uint64_t>(-1)});
+  auto *SEother = DIExpression::get(Context, {5, 6});
+
+  auto *N = DIGenericSubrange::get(Context, nullptr, LV, UV, SV);
+
+  auto Lower = N->getLowerBound();
+  ASSERT_TRUE(Lower);
+  ASSERT_TRUE(Lower.is<DIVariable *>());
+  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+
+  auto Upper = N->getUpperBound();
+  ASSERT_TRUE(Upper);
+  ASSERT_TRUE(Upper.is<DIVariable *>());
+  EXPECT_EQ(UV, Upper.get<DIVariable *>());
+
+  auto Stride = N->getStride();
+  ASSERT_TRUE(Stride);
+  ASSERT_TRUE(Stride.is<DIVariable *>());
+  EXPECT_EQ(SV, Stride.get<DIVariable *>());
+
+  EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LV, UV, SV));
+
+  EXPECT_NE(N, DIGenericSubrange::get(Context, nullptr, LV, UV, SVother));
+  EXPECT_NE(N, DIGenericSubrange::get(Context, nullptr, LV, UV, SEother));
+  EXPECT_NE(N, DIGenericSubrange::get(Context, nullptr, LV, UV, SIother));
+}
+
+TEST_F(DIGenericSubrangeTest, useDIBuilder) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *LV =
+      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8);
+  auto *UE = DIExpression::get(Context, {2, 3});
+  auto *SE = DIExpression::get(Context, {3, 4});
+
+  auto *LVother = DILocalVariable::get(Context, Scope, "lbother", File, 8, Type,
+                                       2, Flags, 8);
+  auto *LIother = DIExpression::get(
+      Context, {dwarf::DW_OP_consts, static_cast<uint64_t>(-1)});
+
+  Module M("M", Context);
+  DIBuilder DIB(M);
+
+  auto *N = DIB.getOrCreateGenericSubrange(
+      DIGenericSubrange::BoundType(nullptr), DIGenericSubrange::BoundType(LV),
+      DIGenericSubrange::BoundType(UE), DIGenericSubrange::BoundType(SE));
+
+  auto Lower = N->getLowerBound();
+  ASSERT_TRUE(Lower);
+  ASSERT_TRUE(Lower.is<DIVariable *>());
+  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+
+  auto Upper = N->getUpperBound();
+  ASSERT_TRUE(Upper);
+  ASSERT_TRUE(Upper.is<DIExpression *>());
+  EXPECT_EQ(UE, Upper.get<DIExpression *>());
+
+  auto Stride = N->getStride();
+  ASSERT_TRUE(Stride);
+  ASSERT_TRUE(Stride.is<DIExpression *>());
+  EXPECT_EQ(SE, Stride.get<DIExpression *>());
+
+  EXPECT_EQ(
+      N, DIB.getOrCreateGenericSubrange(DIGenericSubrange::BoundType(nullptr),
+                                        DIGenericSubrange::BoundType(LV),
+                                        DIGenericSubrange::BoundType(UE),
+                                        DIGenericSubrange::BoundType(SE)));
+
+  EXPECT_NE(
+      N, DIB.getOrCreateGenericSubrange(DIGenericSubrange::BoundType(nullptr),
+                                        DIGenericSubrange::BoundType(LVother),
+                                        DIGenericSubrange::BoundType(UE),
+                                        DIGenericSubrange::BoundType(SE)));
+  EXPECT_NE(
+      N, DIB.getOrCreateGenericSubrange(DIGenericSubrange::BoundType(nullptr),
+                                        DIGenericSubrange::BoundType(LIother),
+                                        DIGenericSubrange::BoundType(UE),
+                                        DIGenericSubrange::BoundType(SE)));
+}
 typedef MetadataTest DIEnumeratorTest;
 
 TEST_F(DIEnumeratorTest, get) {

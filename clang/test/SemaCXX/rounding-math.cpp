@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -verify=norounding %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=rounding %s -frounding-math
+// RUN: %clang_cc1 -triple x86_64-linux -verify=norounding -Wno-unknown-pragmas %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=rounding %s -frounding-math -Wno-unknown-pragmas
 // rounding-no-diagnostics
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
@@ -39,3 +39,40 @@ void g() {
 int *h() {
   return new int[int(-3 * (1.0 / 3.0))]; // norounding-error {{too large}}
 }
+
+
+// nextUp(1.F) == 0x1.000002p0F
+static_assert(1.0F + 0x0.000001p0F == 0x1.0p0F, "");
+
+char Arr01[1 + (1.0F + 0x0.000001p0F > 1.0F)];
+static_assert(sizeof(Arr01) == 1, "");
+
+struct S1 {
+  int : (1.0F + 0x0.000001p0F > 1.0F);
+  int f;
+};
+static_assert(sizeof(S1) == sizeof(int), "");
+
+#pragma STDC FENV_ROUND FE_UPWARD
+static_assert(1.0F + 0x0.000001p0F == 0x1.000002p0F, "");
+
+char Arr01u[1 + (1.0F + 0x0.000001p0F > 1.0F)];
+static_assert(sizeof(Arr01u) == 2, "");
+
+struct S1u {
+  int : (1.0F + 0x0.000001p0F > 1.0F);
+  int f;
+};
+static_assert(sizeof(S1u) > sizeof(int), "");
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+static_assert(1.0F + 0x0.000001p0F == 1.0F, "");
+
+char Arr01d[1 + (1.0F + 0x0.000001p0F > 1.0F)];
+static_assert(sizeof(Arr01d) == 1, "");
+
+struct S1d {
+  int : (1.0F + 0x0.000001p0F > 1.0F);
+  int f;
+};
+static_assert(sizeof(S1d) == sizeof(int), "");

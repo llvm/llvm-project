@@ -1,7 +1,14 @@
-; RUN: llc -ppc-gpr-icmps=all -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -ppc-gpr-icmps=all -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
-target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-unknown-linux-gnu"
+; RUN: llc -ppc-gpr-icmps=all -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:     -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -ppc-gpr-icmps=all -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:     -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false < %s | \
+; RUN:     FileCheck --check-prefix=CHECK-NO-ISEL %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -O2 \
+; RUN:     -ppc-asm-full-reg-names -mcpu=pwr10 -ppc-gpr-icmps=none < %s | \
+; RUN:     FileCheck %s --check-prefix=CHECK-P10
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
+; RUN:     -ppc-asm-full-reg-names -mcpu=pwr10 -ppc-gpr-icmps=none < %s | \
+; RUN:     FileCheck %s --check-prefix=CHECK-P10
 
 ; Function Attrs: nounwind readnone
 define zeroext i1 @test1(float %v1, float %v2) #0 {
@@ -27,6 +34,18 @@ entry:
 ; CHECK-NO-ISEL-NEXT: li 3, 0
 ; CHECK-NO-ISEL-NEXT: blr
 ; CHECK: blr
+
+; CHECK-P10-LABEL: test1:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    fcmpu cr0, f1, f2
+; CHECK-P10-NEXT:    xxlxor f0, f0, f0
+; CHECK-P10-NEXT:    fcmpu cr1, f2, f2
+; CHECK-P10-NEXT:    crnor 4*cr5+lt, un, lt
+; CHECK-P10-NEXT:    fcmpu cr0, f2, f0
+; CHECK-P10-NEXT:    crnor 4*cr5+gt, 4*cr1+un, gt
+; CHECK-P10-NEXT:    crand 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -47,6 +66,18 @@ entry:
 ; CHECK: creqv [[REG4:[0-9]+]],
 ; CHECK: isel 3, 0, [[REG1]], [[REG4]]
 ; CHECK: blr
+
+; CHECK-P10-LABEL: test2:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    fcmpu cr0, f1, f2
+; CHECK-P10-NEXT:    xxlxor f0, f0, f0
+; CHECK-P10-NEXT:    fcmpu cr1, f2, f2
+; CHECK-P10-NEXT:    crnor 4*cr5+lt, un, lt
+; CHECK-P10-NEXT:    fcmpu cr0, f2, f0
+; CHECK-P10-NEXT:    crnor 4*cr5+gt, 4*cr1+un, gt
+; CHECK-P10-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -70,6 +101,20 @@ entry:
 ; CHECK: creqv [[REG4:[0-9]+]],
 ; CHECK: isel 3, 0, [[REG1]], [[REG4]]
 ; CHECK: blr
+
+; CHECK-P10-LABEL: test3:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    fcmpu cr0, f1, f2
+; CHECK-P10-NEXT:    xxlxor f0, f0, f0
+; CHECK-P10-NEXT:    fcmpu cr1, f2, f2
+; CHECK-P10-NEXT:    crnor 4*cr5+lt, un, lt
+; CHECK-P10-NEXT:    fcmpu cr0, f2, f0
+; CHECK-P10-NEXT:    crnor 4*cr5+gt, 4*cr1+un, gt
+; CHECK-P10-NEXT:    cmpwi r5, -2
+; CHECK-P10-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
+; CHECK-P10-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -103,6 +148,15 @@ entry:
 ; CHECK: xori [[NE4:[0-9]+]], [[NE3]], 1
 ; CHECK: or 3, [[TRUNC]], [[NE4]]
 ; CHECK-NEXT: blr
+
+; CHECK-P10-LABEL: test5:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    and r3, r3, r4
+; CHECK-P10-NEXT:    cmpwi cr1, r5, -2
+; CHECK-P10-NEXT:    andi. r3, r3, 1
+; CHECK-P10-NEXT:    crorc 4*cr5+lt, gt, 4*cr1+eq
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -124,6 +178,17 @@ entry:
 ; CHECK: or [[OR:[0-9]+]], [[NE4]], [[CLR1]]
 ; CHECK: and 3, [[OR]], [[CLR2]]
 ; CHECK-NEXT: blr
+
+; CHECK-P10-LABEL: test6:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    andi. r3, r3, 1
+; CHECK-P10-NEXT:    cmpwi cr1, r5, -2
+; CHECK-P10-NEXT:    crmove 4*cr5+lt, gt
+; CHECK-P10-NEXT:    andi. r3, r4, 1
+; CHECK-P10-NEXT:    crorc 4*cr5+gt, gt, 4*cr1+eq
+; CHECK-P10-NEXT:    crand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -197,6 +262,14 @@ entry:
 ; CHECK: xori 3, 3, 1
 ; CHECK: and 3, 3, 4
 ; CHECK-NEXT: blr
+
+; CHECK-P10-LABEL: test10:
+; CHECK-P10:       # %bb.0: # %entry
+; CHECK-P10-NEXT:    cmpwi r3, 0
+; CHECK-P10-NEXT:    cmpwi cr1, r4, 0
+; CHECK-P10-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, eq
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    blr
 }
 
 attributes #0 = { nounwind readnone }

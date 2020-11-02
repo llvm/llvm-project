@@ -84,6 +84,10 @@ public:
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
+  virtual ~VPValue() {
+    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+  }
+
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
   /// for any other purpose, as the values may change as LLVM evolves.

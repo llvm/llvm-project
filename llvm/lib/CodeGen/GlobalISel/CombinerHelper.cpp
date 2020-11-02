@@ -2431,6 +2431,67 @@ bool CombinerHelper::matchSimplifyAddToSub(
   return CheckFold(LHS, RHS) || CheckFold(RHS, LHS);
 }
 
+bool CombinerHelper::matchCombineInsertVecElts(
+    MachineInstr &MI, SmallVectorImpl<Register> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT &&
+         "Invalid opcode");
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  assert(DstTy.isVector() && "Invalid G_INSERT_VECTOR_ELT?");
+  unsigned NumElts = DstTy.getNumElements();
+  // If this MI is part of a sequence of insert_vec_elts, then
+  // don't do the combine in the middle of the sequence.
+  if (MRI.hasOneUse(DstReg) && MRI.use_instr_begin(DstReg)->getOpcode() ==
+                                   TargetOpcode::G_INSERT_VECTOR_ELT)
+    return false;
+  MachineInstr *CurrInst = &MI;
+  MachineInstr *TmpInst;
+  int64_t IntImm;
+  Register TmpReg;
+  MatchInfo.resize(NumElts);
+  while (mi_match(
+      CurrInst->getOperand(0).getReg(), MRI,
+      m_GInsertVecElt(m_MInstr(TmpInst), m_Reg(TmpReg), m_ICst(IntImm)))) {
+    if (IntImm >= NumElts)
+      return false;
+    if (!MatchInfo[IntImm])
+      MatchInfo[IntImm] = TmpReg;
+    CurrInst = TmpInst;
+  }
+  // Variable index.
+  if (CurrInst->getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT)
+    return false;
+  if (TmpInst->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+    for (unsigned I = 1; I < TmpInst->getNumOperands(); ++I) {
+      if (!MatchInfo[I - 1].isValid())
+        MatchInfo[I - 1] = TmpInst->getOperand(I).getReg();
+    }
+    return true;
+  }
+  // If we didn't end in a G_IMPLICIT_DEF, bail out.
+  return TmpInst->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+}
+
+bool CombinerHelper::applyCombineInsertVecElts(
+    MachineInstr &MI, SmallVectorImpl<Register> &MatchInfo) {
+  Builder.setInstr(MI);
+  Register UndefReg;
+  auto GetUndef = [&]() {
+    if (UndefReg)
+      return UndefReg;
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    UndefReg = Builder.buildUndef(DstTy.getScalarType()).getReg(0);
+    return UndefReg;
+  };
+  for (unsigned I = 0; I < MatchInfo.size(); ++I) {
+    if (!MatchInfo[I])
+      MatchInfo[I] = GetUndef();
+  }
+  Builder.buildBuildVector(MI.getOperand(0).getReg(), MatchInfo);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::applySimplifyAddToSub(
     MachineInstr &MI, std::tuple<Register, Register> &MatchInfo) {
   Builder.setInstr(MI);

@@ -434,6 +434,9 @@ public:
 
   bool hasEHPadSuccessor() const;
 
+  /// Returns true if this is the entry block of the function.
+  bool isEntryBlock() const;
+
   /// Returns true if this is the entry block of an EH scope, i.e., the block
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
   bool isEHScopeEntry() const { return IsEHScopeEntry; }

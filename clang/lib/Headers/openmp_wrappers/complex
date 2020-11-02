@@ -18,17 +18,10 @@
 #ifdef __NVPTX__
 #include <cmath>
 #define __CUDA__
-#define __ARCHTYPES__ nvptx,nvptx64
-#endif // __NVPTX__
-
-#ifdef __AMDGCN__
-#include <__clang_hip_libdevice_declares.h>
-#define __HIP__
-#define __ARCHTYPES__ amdgcn
-#endif // __AMDGCN__
-
+#define __OPENMP_NVPTX__
 #include <__clang_cuda_complex_builtins.h>
-#endif //__CLANG_OPENMP_COMPLEX__
+#undef __OPENMP_NVPTX__
+#endif
 
 // Grab the host header too.
 #include_next <complex>
@@ -59,3 +52,5 @@
 #endif // _LIBCPP_STD_VER
 
 #endif // __cplusplus
+
+#endif //  __CLANG_OPENMP_COMPLEX__

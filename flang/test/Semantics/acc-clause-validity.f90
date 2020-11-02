@@ -31,7 +31,7 @@ program openacc_clause_validity
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
-  real(8), dimension(N) :: a
+  real(8), dimension(N) :: a, f, g, h
 
   !$acc init
   !$acc init if(.TRUE.)
@@ -45,8 +45,11 @@ program openacc_clause_validity
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data
 
-  !ERROR: Only the READONLY modifier is allowed for the COPYIN clause on the ENTER DATA directive
+  !ERROR: Modifier is not allowed for the COPYIN clause on the ENTER DATA directive
   !$acc enter data copyin(zero: i)
+
+  !ERROR: Modifier is not allowed for the COPYOUT clause on the EXIT DATA directive
+  !$acc exit data copyout(zero: i)
 
   !ERROR: Only the ZERO modifier is allowed for the CREATE clause on the ENTER DATA directive
   !$acc enter data create(readonly: i)
@@ -83,6 +86,8 @@ program openacc_clause_validity
   !ERROR: Unmatched PARALLEL directive
   !$acc end parallel
 
+  !$acc update self(a, f) host(g) device(h)
+
   !$acc update device(i) device_type(*) async
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the UPDATE directive
@@ -104,6 +109,21 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel loop tile(2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop self
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop self(.true.)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop self(ifCondition)
   do i = 1, N
     a(i) = 3.14
   end do

@@ -2236,6 +2236,14 @@ void JumpThreadingPass::ThreadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   DenseMap<Instruction *, Value *> ValueMapping =
       CloneInstructions(PredBB->begin(), PredBB->end(), NewBB, PredPredBB);
 
+  // Copy the edge probabilities from PredBB to NewBB.
+  if (HasProfileData) {
+    SmallVector<BranchProbability, 4> Probs;
+    for (BasicBlock *Succ : successors(PredBB))
+      Probs.push_back(BPI->getEdgeProbability(PredBB, Succ));
+    BPI->setEdgeProbability(NewBB, Probs);
+  }
+
   // Update the terminator of PredPredBB to jump to NewBB instead of PredBB.
   // This eliminates predecessors from PredPredBB, which requires us to simplify
   // any PHI nodes in PredBB.

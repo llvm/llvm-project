@@ -7,7 +7,7 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print -DKW=struct -DBASES= %s > %t.c
-//   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=struct -DBASES= \
+//   RUN: FileCheck --check-prefixes=CHECK,PRINT -DKW=struct -DBASES= \
 //   RUN:           %s --input-file %t.c
 //
 //   Now check compiling and printing of the printed file.
@@ -19,7 +19,7 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print %t.c \
-//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=struct \
+//   RUN: | FileCheck --check-prefixes=CHECK,PRINT -DKW=struct \
 //   RUN:             -DBASES= %s
 
 // Repeat for union:
@@ -31,7 +31,7 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print -DKW=union -DBASES= %s > %t.c
-//   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=union -DBASES= \
+//   RUN: FileCheck --check-prefixes=CHECK,PRINT -DKW=union -DBASES= \
 //   RUN:           %s --input-file %t.c
 //
 //   Now check compiling and printing of the printed file.
@@ -43,7 +43,7 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print %t.c \
-//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=union \
+//   RUN: | FileCheck --check-prefixes=CHECK,PRINT -DKW=union \
 //   RUN:             -DBASES= %s
 
 // Repeat for C++ (BASES helps ensure we're printing as C++ not as C):

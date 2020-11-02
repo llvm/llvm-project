@@ -15,7 +15,7 @@
 # RUN: not llvm-install-name-tool -add_rpath @executable_path/. %t.i386 2>&1 \
 # RUN: | FileCheck --check-prefix=DUPLICATE-RPATH %s
 
-# DUPLICATE-RPATH: duplicate load command
+# DUPLICATE-RPATH: rpath '@executable_path/.' would create a duplicate load command
 
 # RUN: not llvm-install-name-tool -add_rpath @executable_path/. 2>&1 \
 # RUN: | FileCheck --check-prefix=NO-INPUT %s
@@ -27,7 +27,7 @@
 # RUN:                            -add_rpath @executable_X %t.i386 2>&1 \
 # RUN: | FileCheck --check-prefix=DOUBLE %s
 
-# DOUBLE: duplicate load command
+# DOUBLE: rpath '@executable_X' would create a duplicate load command
 
 ## Check that cmdsize accounts for NULL terminator.
 # RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64

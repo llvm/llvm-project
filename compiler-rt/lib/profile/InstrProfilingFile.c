@@ -668,7 +668,8 @@ static void initializeProfileForContinuousMode(void) {
         FileOffsetToCounters);
   }
 
-  unlockProfile(&ProfileRequiresUnlock, File);
+  if (ProfileRequiresUnlock)
+    unlockProfile(&ProfileRequiresUnlock, File);
 #endif // defined(__Fuchsia__) || defined(_WIN32)
 }
 

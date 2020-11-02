@@ -290,7 +290,7 @@ public:
 
     ConversionTarget target(*context);
     target.addLegalDialect<LLVM::LLVMDialect>();
-    if (failed(applyPartialConversion(module, target, patterns)))
+    if (failed(applyPartialConversion(module, target, std::move(patterns))))
       signalPassFailure();
 
     // Finally, modify the kernel function in SPIR-V modules to avoid symbolic

@@ -42,7 +42,7 @@ public:
 
   bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
 
-  int32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
+  uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
 
   bool CanDebugProcess() override;
 

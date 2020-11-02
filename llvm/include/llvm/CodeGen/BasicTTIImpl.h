@@ -264,8 +264,8 @@ public:
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
-  bool isRegNumMajorCostOfLSR() {
-    return TargetTransformInfoImplBase::isRegNumMajorCostOfLSR();
+  bool isNumRegsMajorCostOfLSR() {
+    return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
   bool isProfitableLSRChainElement(Instruction *I) {
@@ -1205,18 +1205,12 @@ public:
     }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       IntrinsicCostAttributes Attrs(
-        IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, 1, I);
+          IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, 1, I);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];

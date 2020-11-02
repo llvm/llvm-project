@@ -167,7 +167,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   for (unsigned regionNo : llvm::seq(0U, op->getNumRegions())) {
     Region &region = op->getRegion(regionNo);
 
-    // Since the interface cannnot distinguish between different ReturnLike
+    // Since the interface cannot distinguish between different ReturnLike
     // ops within the region branching to different successors, all ReturnLike
     // ops in this region should have the same operand types. We will then use
     // one of them as the representative for type matching.

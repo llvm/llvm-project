@@ -2888,10 +2888,55 @@ bool FunctionDecl::hasTrivialBody() const {
   return false;
 }
 
-bool FunctionDecl::isDefined(const FunctionDecl *&Definition) const {
-  for (auto I : redecls()) {
-    if (I->isThisDeclarationADefinition()) {
-      Definition = I;
+bool FunctionDecl::isThisDeclarationInstantiatedFromAFriendDefinition() const {
+  if (!getFriendObjectKind())
+    return false;
+
+  // Check for a friend function instantiated from a friend function
+  // definition in a templated class.
+  if (const FunctionDecl *InstantiatedFrom =
+          getInstantiatedFromMemberFunction())
+    return InstantiatedFrom->getFriendObjectKind() &&
+           InstantiatedFrom->isThisDeclarationADefinition();
+
+  // Check for a friend function template instantiated from a friend
+  // function template definition in a templated class.
+  if (const FunctionTemplateDecl *Template = getDescribedFunctionTemplate()) {
+    if (const FunctionTemplateDecl *InstantiatedFrom =
+            Template->getInstantiatedFromMemberTemplate())
+      return InstantiatedFrom->getFriendObjectKind() &&
+             InstantiatedFrom->isThisDeclarationADefinition();
+  }
+
+  return false;
+}
+
+bool FunctionDecl::isDefined(const FunctionDecl *&Definition,
+                             bool CheckForPendingFriendDefinition) const {
+  for (const FunctionDecl *FD : redecls()) {
+    if (FD->isThisDeclarationADefinition()) {
+      Definition = FD;
+      return true;
+    }
+
+    // If this is a friend function defined in a class template, it does not
+    // have a body until it is used, nevertheless it is a definition, see
+    // [temp.inst]p2:
+    //
+    // ... for the purpose of determining whether an instantiated redeclaration
+    // is valid according to [basic.def.odr] and [class.mem], a declaration that
+    // corresponds to a definition in the template is considered to be a
+    // definition.
+    //
+    // The following code must produce redefinition error:
+    //
+    //     template<typename T> struct C20 { friend void func_20() {} };
+    //     C20<int> c20i;
+    //     void func_20() {}
+    //
+    if (CheckForPendingFriendDefinition &&
+        FD->isThisDeclarationInstantiatedFromAFriendDefinition()) {
+      Definition = FD;
       return true;
     }
   }
@@ -3641,7 +3686,13 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
     return getDefinitionOrSelf(getPrimaryTemplate()->getTemplatedDecl());
   }
 
-  if (MemberSpecializationInfo *Info = getMemberSpecializationInfo()) {
+  // Check for a declaration of this function that was instantiated from a
+  // friend definition.
+  const FunctionDecl *FD = nullptr;
+  if (!isDefined(FD, /*CheckForPendingFriendDefinition=*/true))
+    FD = this;
+
+  if (MemberSpecializationInfo *Info = FD->getMemberSpecializationInfo()) {
     if (ForDefinition &&
         !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
@@ -3961,6 +4012,9 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BIbzero:
     return Builtin::BIbzero;
 
+  case Builtin::BIfree:
+    return Builtin::BIfree;
+
   default:
     if (isExternC()) {
       if (FnInfo->isStr("memset"))
@@ -3989,6 +4043,9 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIstrlen;
       else if (FnInfo->isStr("bzero"))
         return Builtin::BIbzero;
+    } else if (isInStdNamespace()) {
+      if (FnInfo->isStr("free"))
+        return Builtin::BIfree;
     }
     break;
   }

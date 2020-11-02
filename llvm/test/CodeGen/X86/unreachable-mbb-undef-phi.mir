@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 %s -o - -run-pass=processimpdefs -run-pass=unreachable-mbb-elimination | FileCheck %s
+# RUN: llc -mtriple=x86_64-- %s -o - -run-pass=processimpdefs -run-pass=unreachable-mbb-elimination | FileCheck %s
 ---
 name:            f
 tracksRegLiveness: true

@@ -174,7 +174,7 @@ struct Section : public Chunk {
   ELF_SHT Type;
   Optional<ELF_SHF> Flags;
   Optional<llvm::yaml::Hex64> Address;
-  StringRef Link;
+  Optional<StringRef> Link;
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
 
@@ -202,6 +202,9 @@ struct Section : public Chunk {
 
   // The following members are used to override section fields which is
   // useful for creating invalid objects.
+
+  // This can be used to override the sh_addralign field.
+  Optional<llvm::yaml::Hex64> ShAddrAlign;
 
   // This can be used to override the offset stored in the sh_name field.
   // It does not affect the name stored in the string table.

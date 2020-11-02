@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-reduce
   TestRunner.cpp
   deltas/Delta.cpp
+  deltas/ReduceAliases.cpp
   deltas/ReduceArguments.cpp
   deltas/ReduceAttributes.cpp
   deltas/ReduceBasicBlocks.cpp

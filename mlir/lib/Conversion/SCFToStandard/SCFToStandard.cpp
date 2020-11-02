@@ -412,7 +412,8 @@ void SCFToStandardPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-  if (failed(applyPartialConversion(getOperation(), target, patterns)))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
 

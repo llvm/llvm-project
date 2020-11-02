@@ -5,7 +5,7 @@
 // RUN: %clang_pgogen -dynamiclib -o %t.dso1.dylib %t.dso1.c
 // RUN: %clang_pgogen -dynamiclib -o %t.dso2.dylib %t.dso2.c
 // RUN: %clang_pgogen -o %t.exe %s %t.dso1.dylib %t.dso2.dylib
-// RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe
+// RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe 2>&1 | count 0
 // RUN: llvm-profdata show --counts --all-functions %t.profraw | FileCheck %s
 
 // CHECK-LABEL: Counters:

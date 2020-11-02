@@ -100,9 +100,6 @@ class GdbRemoteTestCaseBase(TestBase):
         self.test_sequence = GdbRemoteTestSequence(self.logger)
         self.set_inferior_startup_launch()
         self.port = self.get_next_port()
-        self.named_pipe_path = None
-        self.named_pipe = None
-        self.named_pipe_fd = None
         self.stub_sends_two_stop_notifications_on_kill = False
         if configuration.lldb_platform_url:
             if configuration.lldb_platform_url.startswith('unix-'):
@@ -154,87 +151,12 @@ class GdbRemoteTestCaseBase(TestBase):
     def reset_test_sequence(self):
         self.test_sequence = GdbRemoteTestSequence(self.logger)
 
-    def create_named_pipe(self):
-        # Create a temp dir and name for a pipe.
-        temp_dir = tempfile.mkdtemp()
-        named_pipe_path = os.path.join(temp_dir, "stub_port_number")
 
-        # Create the named pipe.
-        os.mkfifo(named_pipe_path)
-
-        # Open the read side of the pipe in non-blocking mode.  This will
-        # return right away, ready or not.
-        named_pipe_fd = os.open(named_pipe_path, os.O_RDONLY | os.O_NONBLOCK)
-
-        # Create the file for the named pipe.  Note this will follow semantics of
-        # a non-blocking read side of a named pipe, which has different semantics
-        # than a named pipe opened for read in non-blocking mode.
-        named_pipe = os.fdopen(named_pipe_fd, "r")
-        self.assertIsNotNone(named_pipe)
-
-        def shutdown_named_pipe():
-            # Close the pipe.
-            try:
-                named_pipe.close()
-            except:
-                print("failed to close named pipe")
-                None
-
-            # Delete the pipe.
-            try:
-                os.remove(named_pipe_path)
-            except:
-                print("failed to delete named pipe: {}".format(named_pipe_path))
-                None
-
-            # Delete the temp directory.
-            try:
-                os.rmdir(temp_dir)
-            except:
-                print(
-                    "failed to delete temp dir: {}, directory contents: '{}'".format(
-                        temp_dir, os.listdir(temp_dir)))
-                None
-
-        # Add the shutdown hook to clean up the named pipe.
-        self.addTearDownHook(shutdown_named_pipe)
-
-        # Clear the port so the stub selects a port number.
-        self.port = 0
-
-        return (named_pipe_path, named_pipe, named_pipe_fd)
-
-    def get_stub_port_from_named_socket(self):
-        # Wait for something to read with a max timeout.
-        (ready_readers, _, _) = select.select(
-            [self.named_pipe_fd], [], [], self.DEFAULT_TIMEOUT)
-        self.assertIsNotNone(
-            ready_readers,
-            "write side of pipe has not written anything - stub isn't writing to pipe.")
-        self.assertNotEqual(
-            len(ready_readers),
-            0,
-            "write side of pipe has not written anything - stub isn't writing to pipe.")
-
-        # Read the port from the named pipe.
-        stub_port_raw = self.named_pipe.read()
-        self.assertIsNotNone(stub_port_raw)
-        self.assertNotEqual(
-            len(stub_port_raw),
-            0,
-            "no content to read on pipe")
-
-        # Trim null byte, convert to int.
-        stub_port_raw = stub_port_raw[:-1]
-        stub_port = int(stub_port_raw)
-        self.assertTrue(stub_port > 0)
-
-        return stub_port
-
-    def init_llgs_test(self, use_named_pipe=True):
+    def init_llgs_test(self):
+        reverse_connect = True
         if lldb.remote_platform:
-            # Remote platforms don't support named pipe based port negotiation
-            use_named_pipe = False
+            # Reverse connections may be tricky due to firewalls/NATs.
+            reverse_connect = False
 
             triple = self.dbg.GetSelectedPlatform().GetTriple()
             if re.match(".*-.*-windows", triple):
@@ -265,9 +187,9 @@ class GdbRemoteTestCaseBase(TestBase):
             # Remove if it's there.
             self.debug_monitor_exe = re.sub(r' \(deleted\)$', '', exe)
         else:
-            # Need to figure out how to create a named pipe on Windows.
+            # TODO: enable this
             if platform.system() == 'Windows':
-                use_named_pipe = False
+                reverse_connect = False
 
             self.debug_monitor_exe = get_lldb_server_exe()
             if not self.debug_monitor_exe:
@@ -276,18 +198,15 @@ class GdbRemoteTestCaseBase(TestBase):
         self.debug_monitor_extra_args = ["gdbserver"]
         self.setUpServerLogging(is_llgs=True)
 
-        if use_named_pipe:
-            (self.named_pipe_path, self.named_pipe,
-             self.named_pipe_fd) = self.create_named_pipe()
+        self.reverse_connect = reverse_connect
 
-    def init_debugserver_test(self, use_named_pipe=True):
+    def init_debugserver_test(self):
         self.debug_monitor_exe = get_debugserver_exe()
         if not self.debug_monitor_exe:
             self.skipTest("debugserver exe not found")
         self.setUpServerLogging(is_llgs=False)
-        if use_named_pipe:
-            (self.named_pipe_path, self.named_pipe,
-             self.named_pipe_fd) = self.create_named_pipe()
+        self.reverse_connect = True
+
         # The debugserver stub has a race on handling the 'k' command, so it sends an X09 right away, then sends the real X notification
         # when the process truly dies.
         self.stub_sends_two_stop_notifications_on_kill = True
@@ -380,17 +299,17 @@ class GdbRemoteTestCaseBase(TestBase):
         self._inferior_startup = self._STARTUP_ATTACH_MANUALLY
 
     def get_debug_monitor_command_line_args(self, attach_pid=None):
-        if lldb.remote_platform:
-            commandline_args = self.debug_monitor_extra_args + \
-                ["*:{}".format(self.port)]
-        else:
-            commandline_args = self.debug_monitor_extra_args + \
-                ["localhost:{}".format(self.port)]
-
+        commandline_args = self.debug_monitor_extra_args
         if attach_pid:
             commandline_args += ["--attach=%d" % attach_pid]
-        if self.named_pipe_path:
-            commandline_args += ["--named-pipe", self.named_pipe_path]
+        if self.reverse_connect:
+            commandline_args += ["--reverse-connect", self.connect_address]
+        else:
+            if lldb.remote_platform:
+                commandline_args += ["*:{}".format(self.port)]
+            else:
+                commandline_args += ["localhost:{}".format(self.port)]
+
         return commandline_args
 
     def get_target_byte_order(self):
@@ -399,6 +318,17 @@ class GdbRemoteTestCaseBase(TestBase):
         return target.GetByteOrder()
 
     def launch_debug_monitor(self, attach_pid=None, logfile=None):
+        if self.reverse_connect:
+            family, type, proto, _, addr = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0]
+            sock = socket.socket(family, type, proto)
+            sock.settimeout(self.DEFAULT_TIMEOUT)
+
+            sock.bind(addr)
+            sock.listen(1)
+            addr = sock.getsockname()
+            self.connect_address = "[{}]:{}".format(*addr)
+
+
         # Create the command line.
         commandline_args = self.get_debug_monitor_command_line_args(
             attach_pid=attach_pid)
@@ -410,15 +340,13 @@ class GdbRemoteTestCaseBase(TestBase):
             install_remote=False)
         self.assertIsNotNone(server)
 
-        # If we're receiving the stub's listening port from the named pipe, do
-        # that here.
-        if self.named_pipe:
-            self.port = self.get_stub_port_from_named_socket()
+        if self.reverse_connect:
+            self.sock = sock.accept()[0]
 
         return server
 
     def connect_to_debug_monitor(self, attach_pid=None):
-        if self.named_pipe:
+        if self.reverse_connect:
             # Create the stub.
             server = self.launch_debug_monitor(attach_pid=attach_pid)
             self.assertIsNotNone(server)
@@ -426,8 +354,6 @@ class GdbRemoteTestCaseBase(TestBase):
             # Schedule debug monitor to be shut down during teardown.
             logger = self.logger
 
-            # Attach to the stub and return a socket opened to it.
-            self.sock = self.create_socket()
             return server
 
         # We're using a random port algorithm to try not to collide with other ports,

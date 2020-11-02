@@ -96,7 +96,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     SPV_AnyPtr:$component_ptr
   );
 
-  let builders = [OpBuilder<[{Value basePtr, ValueRange indices}]>];
+  let builders = [OpBuilderDAG<(ins "Value":$basePtr, "ValueRange":$indices)>];
 
   let hasCanonicalizer = 1;
 }
@@ -272,9 +272,9 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{spirv::FuncOp function,
-                              spirv::ExecutionMode executionMode,
-                              ArrayRef<int32_t> params}]>];
+  let builders = [
+    OpBuilderDAG<(ins "spirv::FuncOp":$function,
+      "spirv::ExecutionMode":$executionMode, "ArrayRef<int32_t>":$params)>];
 }
 
 // -----
@@ -325,10 +325,9 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
   );
 
   let builders = [
-    OpBuilder<[{
-      Value basePtr, IntegerAttr memory_access = {},
-      IntegerAttr alignment = {}
-    }]>
+    OpBuilderDAG<(ins "Value":$basePtr,
+      CArg<"IntegerAttr", "{}">:$memory_access,
+      CArg<"IntegerAttr", "{}">:$alignment)>
   ];
 }
 
@@ -427,8 +426,9 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
   let results = (outs);
 
   let builders = [
-    OpBuilder<
-      "Value ptr, Value value, ArrayRef<NamedAttribute> namedAttrs = {}", [{
+    OpBuilderDAG<(ins "Value":$ptr, "Value":$value,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$namedAttrs),
+    [{
       $_state.addOperands(ptr);
       $_state.addOperands(value);
       $_state.addAttributes(namedAttrs);

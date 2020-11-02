@@ -254,7 +254,7 @@ public:
   typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      detail::walkOperations(&op, callback);
+      detail::walk(&op, callback);
   }
 
   /// Walk the operations in the specified [begin, end) range of this block in
@@ -265,7 +265,7 @@ public:
   typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      if (detail::walkOperations(&op, callback).wasInterrupted())
+      if (detail::walk(&op, callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }

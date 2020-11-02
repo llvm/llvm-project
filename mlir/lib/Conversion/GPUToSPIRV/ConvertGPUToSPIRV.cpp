@@ -34,7 +34,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern lowering subgoup size/id to loading SPIR-V invocation
+/// Pattern lowering subgroup size/id to loading SPIR-V invocation
 /// builtin variables.
 template <typename SourceOp, spirv::BuiltIn builtin>
 class SingleDimLaunchConfigConversion : public SPIRVOpLowering<SourceOp> {

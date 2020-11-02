@@ -24,5 +24,5 @@ int main(int argc, char **argv) {
   llvm::InitializeNativeTargetAsmPrinter();
   mlir::initializeLLVMPasses();
 
-  return mlir::JitRunnerMain(argc, argv, nullptr);
+  return mlir::JitRunnerMain(argc, argv);
 }

@@ -54,33 +54,6 @@ class EffectOpInterfaceBase<string name, string baseEffect>
          (ins "SmallVectorImpl<::mlir::SideEffects::EffectInstance<"
               # baseEffect # ">> &":$effects)
     >,
-    InterfaceMethod<[{
-        Collects all of the operation's effects into `effects`.
-      }],
-      "void", "getEffectsOnValue",
-         (ins "Value":$value,
-              "SmallVectorImpl<::mlir::SideEffects::EffectInstance<"
-              # baseEffect # ">> &":$effects), [{
-          $_op.getEffects(effects);
-          llvm::erase_if(effects, [&](auto &it) {
-            return it.getValue() != value;
-          });
-       }]
-    >,
-    InterfaceMethod<[{
-        Collects all of the effects that are exhibited by this operation on the
-        given resource and place them in 'effects'.
-      }],
-      "void", "getEffectsOnResource",
-         (ins "SideEffects::Resource *":$resource,
-              "SmallVectorImpl<::mlir::SideEffects::EffectInstance<"
-              # baseEffect # ">> &":$effects), [{
-          $_op.getEffects(effects);
-          llvm::erase_if(effects, [&](auto &it) {
-            return it.getResource() != resource;
-          });
-       }]
-    >
   ];
 
   let extraClassDeclaration = [{
@@ -125,6 +98,26 @@ class EffectOpInterfaceBase<string name, string baseEffect>
       if (auto interface = dyn_cast<}] # name # [{>(op))
         return interface.hasNoEffect();
       return op->hasTrait<::mlir::OpTrait::HasRecursiveSideEffects>();
+    }
+
+    /// Collect all of the effect instances that operate on the provided value
+    /// and place them in 'effects'.
+    void getEffectsOnValue(::mlir::Value value,
+              llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+              }] # baseEffect # [{>> & effects) {
+      getEffects(effects);
+      llvm::erase_if(effects, [&](auto &it) { return it.getValue() != value; });
+    }
+
+    /// Collect all of the effect instances that operate on the provided
+    /// resource and place them in 'effects'.
+    void getEffectsOnValue(::mlir::SideEffects::Resource *resource,
+              llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+              }] # baseEffect # [{>> & effects) {
+      getEffects(effects);
+      llvm::erase_if(effects, [&](auto &it) {
+        return it.getResource() != resource;
+      });
     }
   }];
 

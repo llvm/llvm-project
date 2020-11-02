@@ -54,12 +54,11 @@ def SPV_BranchOp : SPV_Op<"Branch", [
   let verifier = [{ return success(); }];
 
   let builders = [
-    OpBuilder<
-      "Block *successor, ValueRange arguments = {}", [{
-        $_state.addSuccessors(successor);
-        $_state.addOperands(arguments);
-      }]
-    >
+    OpBuilderDAG<(ins "Block *":$successor, CArg<"ValueRange", "{}">:$arguments),
+    [{
+      $_state.addSuccessors(successor);
+      $_state.addOperands(arguments);
+    }]>
   ];
 
   let skipDefaultBuilders = 1;
@@ -135,22 +134,20 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
                               AnySuccessor:$falseTarget);
 
   let builders = [
-    OpBuilder<
-      "Value condition, "
-      "Block *trueBlock, ValueRange trueArguments, "
-      "Block *falseBlock, ValueRange falseArguments, "
-      "Optional<std::pair<uint32_t, uint32_t>> weights = {}",
-      [{
-        ArrayAttr weightsAttr;
-        if (weights) {
-          weightsAttr =
-              $_builder.getI32ArrayAttr({static_cast<int32_t>(weights->first),
-                                       static_cast<int32_t>(weights->second)});
-        }
-        build($_builder, $_state, condition, trueArguments, falseArguments,
-              weightsAttr, trueBlock, falseBlock);
-      }]
-    >
+    OpBuilderDAG<(ins "Value":$condition, "Block *":$trueBlock,
+      "ValueRange":$trueArguments, "Block *":$falseBlock,
+      "ValueRange":$falseArguments,
+      CArg<"Optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights),
+    [{
+      ArrayAttr weightsAttr;
+      if (weights) {
+        weightsAttr =
+            $_builder.getI32ArrayAttr({static_cast<int32_t>(weights->first),
+                                     static_cast<int32_t>(weights->second)});
+      }
+      build($_builder, $_state, condition, trueArguments, falseArguments,
+            weightsAttr, trueBlock, falseBlock);
+    }]>
   ];
 
   let autogenSerialization = 0;
@@ -289,7 +286,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
 
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilder<"">];
+  let builders = [OpBuilderDAG<(ins)>];
 
   let extraClassDeclaration = [{
     // Returns the entry block.

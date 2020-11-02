@@ -53,18 +53,18 @@ static_assert(BlockSize<LargeT>::value == 16, "");
 
 const auto& AllocBytes = malloc_allocator_base::outstanding_bytes;
 
-template <class DT>
+template <class Deque>
 struct PrintOnFailure {
-   explicit PrintOnFailure(DT const& d) : d(&d) {}
+   explicit PrintOnFailure(Deque const& deque) : deque_(&deque) {}
 
   ~PrintOnFailure() {
     if (::rapid_cxx_test::get_reporter().current_failure().type
         != ::rapid_cxx_test::failure_type::none) {
-      print(*d);
+      print(*deque_);
     }
   }
 private:
-  const DT* d;
+  const Deque* deque_;
 
   PrintOnFailure(PrintOnFailure const&) = delete;
 };

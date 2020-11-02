@@ -8,13 +8,12 @@
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 
-#define DEBUG_TYPE "pattern-match"
+//===----------------------------------------------------------------------===//
+// PatternBenefit
+//===----------------------------------------------------------------------===//
 
 PatternBenefit::PatternBenefit(unsigned benefit) : representation(benefit) {
   assert(representation == benefit && benefit != ImpossibleToMatchSentinel &&
@@ -27,20 +26,35 @@ unsigned short PatternBenefit::getBenefit() const {
 }
 
 //===----------------------------------------------------------------------===//
-// Pattern implementation
+// Pattern
 //===----------------------------------------------------------------------===//
 
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
                  MLIRContext *context)
     : rootKind(OperationName(rootName, context)), benefit(benefit) {}
-Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag)
+Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
     : benefit(benefit) {}
-
-// Out-of-line vtable anchor.
-void Pattern::anchor() {}
+Pattern::Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
+                 PatternBenefit benefit, MLIRContext *context)
+    : Pattern(rootName, benefit, context) {
+  generatedOps.reserve(generatedNames.size());
+  std::transform(generatedNames.begin(), generatedNames.end(),
+                 std::back_inserter(generatedOps), [context](StringRef name) {
+                   return OperationName(name, context);
+                 });
+}
+Pattern::Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+                 MLIRContext *context, MatchAnyOpTypeTag tag)
+    : Pattern(benefit, tag) {
+  generatedOps.reserve(generatedNames.size());
+  std::transform(generatedNames.begin(), generatedNames.end(),
+                 std::back_inserter(generatedOps), [context](StringRef name) {
+                   return OperationName(name, context);
+                 });
+}
 
 //===----------------------------------------------------------------------===//
-// RewritePattern and PatternRewriter implementation
+// RewritePattern
 //===----------------------------------------------------------------------===//
 
 void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
@@ -52,26 +66,12 @@ LogicalResult RewritePattern::match(Operation *op) const {
   llvm_unreachable("need to implement either match or matchAndRewrite!");
 }
 
-RewritePattern::RewritePattern(StringRef rootName,
-                               ArrayRef<StringRef> generatedNames,
-                               PatternBenefit benefit, MLIRContext *context)
-    : Pattern(rootName, benefit, context) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
-RewritePattern::RewritePattern(ArrayRef<StringRef> generatedNames,
-                               PatternBenefit benefit, MLIRContext *context,
-                               MatchAnyOpTypeTag tag)
-    : Pattern(benefit, tag) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
+/// Out-of-line vtable anchor.
+void RewritePattern::anchor() {}
+
+//===----------------------------------------------------------------------===//
+// PatternRewriter
+//===----------------------------------------------------------------------===//
 
 PatternRewriter::~PatternRewriter() {
   // Out of line to provide a vtable anchor for the class.
@@ -140,7 +140,7 @@ void PatternRewriter::mergeBlockBefore(Block *source, Operation *op,
   assert(source->hasNoSuccessors() &&
          "expected 'source' to have no successors");
 
-  // Split the block containing 'op' into two, one containg all operations
+  // Split the block containing 'op' into two, one containing all operations
   // before 'op' (prologue) and another (epilogue) containing 'op' and all
   // operations after it.
   Block *prologue = op->getBlock();
@@ -200,135 +200,3 @@ void PatternRewriter::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
 }
 
-//===----------------------------------------------------------------------===//
-// PatternMatcher implementation
-//===----------------------------------------------------------------------===//
-
-void PatternApplicator::applyCostModel(CostModel model) {
-  // Separate patterns by root kind to simplify lookup later on.
-  patterns.clear();
-  anyOpPatterns.clear();
-  for (const auto &pat : owningPatternList) {
-    // If the pattern is always impossible to match, just ignore it.
-    if (pat->getBenefit().isImpossibleToMatch()) {
-      LLVM_DEBUG({
-        llvm::dbgs()
-            << "Ignoring pattern '" << pat->getRootKind()
-            << "' because it is impossible to match (by pattern benefit)\n";
-      });
-      continue;
-    }
-    if (Optional<OperationName> opName = pat->getRootKind())
-      patterns[*opName].push_back(pat.get());
-    else
-      anyOpPatterns.push_back(pat.get());
-  }
-
-  // Sort the patterns using the provided cost model.
-  llvm::SmallDenseMap<RewritePattern *, PatternBenefit> benefits;
-  auto cmp = [&benefits](RewritePattern *lhs, RewritePattern *rhs) {
-    return benefits[lhs] > benefits[rhs];
-  };
-  auto processPatternList = [&](SmallVectorImpl<RewritePattern *> &list) {
-    // Special case for one pattern in the list, which is the most common case.
-    if (list.size() == 1) {
-      if (model(*list.front()).isImpossibleToMatch()) {
-        LLVM_DEBUG({
-          llvm::dbgs() << "Ignoring pattern '" << list.front()->getRootKind()
-                       << "' because it is impossible to match or cannot lead "
-                          "to legal IR (by cost model)\n";
-        });
-        list.clear();
-      }
-      return;
-    }
-
-    // Collect the dynamic benefits for the current pattern list.
-    benefits.clear();
-    for (RewritePattern *pat : list)
-      benefits.try_emplace(pat, model(*pat));
-
-    // Sort patterns with highest benefit first, and remove those that are
-    // impossible to match.
-    std::stable_sort(list.begin(), list.end(), cmp);
-    while (!list.empty() && benefits[list.back()].isImpossibleToMatch()) {
-      LLVM_DEBUG({
-        llvm::dbgs() << "Ignoring pattern '" << list.back()->getRootKind()
-                     << "' because it is impossible to match or cannot lead to "
-                        "legal IR (by cost model)\n";
-      });
-      list.pop_back();
-    }
-  };
-  for (auto &it : patterns)
-    processPatternList(it.second);
-  processPatternList(anyOpPatterns);
-}
-
-void PatternApplicator::walkAllPatterns(
-    function_ref<void(const RewritePattern &)> walk) {
-  for (auto &it : owningPatternList)
-    walk(*it);
-}
-
-LogicalResult PatternApplicator::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter,
-    function_ref<bool(const RewritePattern &)> canApply,
-    function_ref<void(const RewritePattern &)> onFailure,
-    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
-  // Check to see if there are patterns matching this specific operation type.
-  MutableArrayRef<RewritePattern *> opPatterns;
-  auto patternIt = patterns.find(op->getName());
-  if (patternIt != patterns.end())
-    opPatterns = patternIt->second;
-
-  // Process the patterns for that match the specific operation type, and any
-  // operation type in an interleaved fashion.
-  // FIXME: It'd be nice to just write an llvm::make_merge_range utility
-  // and pass in a comparison function. That would make this code trivial.
-  auto opIt = opPatterns.begin(), opE = opPatterns.end();
-  auto anyIt = anyOpPatterns.begin(), anyE = anyOpPatterns.end();
-  while (opIt != opE && anyIt != anyE) {
-    // Try to match the pattern providing the most benefit.
-    RewritePattern *pattern;
-    if ((*opIt)->getBenefit() >= (*anyIt)->getBenefit())
-      pattern = *(opIt++);
-    else
-      pattern = *(anyIt++);
-
-    // Otherwise, try to match the generic pattern.
-    if (succeeded(matchAndRewrite(op, *pattern, rewriter, canApply, onFailure,
-                                  onSuccess)))
-      return success();
-  }
-  // If we break from the loop, then only one of the ranges can still have
-  // elements. Loop over both without checking given that we don't need to
-  // interleave anymore.
-  for (RewritePattern *pattern : llvm::concat<RewritePattern *>(
-           llvm::make_range(opIt, opE), llvm::make_range(anyIt, anyE))) {
-    if (succeeded(matchAndRewrite(op, *pattern, rewriter, canApply, onFailure,
-                                  onSuccess)))
-      return success();
-  }
-  return failure();
-}
-
-LogicalResult PatternApplicator::matchAndRewrite(
-    Operation *op, const RewritePattern &pattern, PatternRewriter &rewriter,
-    function_ref<bool(const RewritePattern &)> canApply,
-    function_ref<void(const RewritePattern &)> onFailure,
-    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
-  // Check that the pattern can be applied.
-  if (canApply && !canApply(pattern))
-    return failure();
-
-  // Try to match and rewrite this pattern. The patterns are sorted by
-  // benefit, so if we match we can immediately rewrite.
-  rewriter.setInsertionPoint(op);
-  if (succeeded(pattern.matchAndRewrite(op, rewriter)))
-    return success(!onSuccess || succeeded(onSuccess(pattern)));
-
-  if (onFailure)
-    onFailure(pattern);
-  return failure();
-}

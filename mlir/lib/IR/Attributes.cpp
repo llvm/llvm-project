@@ -1118,6 +1118,65 @@ DenseIntOrFPElementsAttr::getRawIntOrFloat(ShapedType type, ArrayRef<char> data,
   return getRaw(type, data, /*isSplat=*/numElements == 1);
 }
 
+void DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
+    const char *inRawData, char *outRawData, size_t elementBitWidth,
+    size_t numElements) {
+  using llvm::support::ulittle16_t;
+  using llvm::support::ulittle32_t;
+  using llvm::support::ulittle64_t;
+
+  assert(llvm::support::endian::system_endianness() == // NOLINT
+         llvm::support::endianness::big);              // NOLINT
+  // NOLINT to avoid warning message about replacing by static_assert()
+
+  // Following std::copy_n always converts endianness on BE machine.
+  switch (elementBitWidth) {
+  case 16: {
+    const ulittle16_t *inRawDataPos =
+        reinterpret_cast<const ulittle16_t *>(inRawData);
+    uint16_t *outDataPos = reinterpret_cast<uint16_t *>(outRawData);
+    std::copy_n(inRawDataPos, numElements, outDataPos);
+    break;
+  }
+  case 32: {
+    const ulittle32_t *inRawDataPos =
+        reinterpret_cast<const ulittle32_t *>(inRawData);
+    uint32_t *outDataPos = reinterpret_cast<uint32_t *>(outRawData);
+    std::copy_n(inRawDataPos, numElements, outDataPos);
+    break;
+  }
+  case 64: {
+    const ulittle64_t *inRawDataPos =
+        reinterpret_cast<const ulittle64_t *>(inRawData);
+    uint64_t *outDataPos = reinterpret_cast<uint64_t *>(outRawData);
+    std::copy_n(inRawDataPos, numElements, outDataPos);
+    break;
+  }
+  default: {
+    size_t nBytes = elementBitWidth / CHAR_BIT;
+    for (size_t i = 0; i < nBytes; i++)
+      std::copy_n(inRawData + (nBytes - 1 - i), numElements, outRawData + i);
+    break;
+  }
+  }
+}
+
+void DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+    ArrayRef<char> inRawData, MutableArrayRef<char> outRawData,
+    ShapedType type) {
+  size_t numElements = type.getNumElements();
+  Type elementType = type.getElementType();
+  if (ComplexType complexTy = elementType.dyn_cast<ComplexType>()) {
+    elementType = complexTy.getElementType();
+    numElements = numElements * 2;
+  }
+  size_t elementBitWidth = getDenseElementStorageWidth(elementType);
+  assert(numElements * elementBitWidth == inRawData.size() * CHAR_BIT &&
+         inRawData.size() <= outRawData.size());
+  convertEndianOfCharForBEmachine(inRawData.begin(), outRawData.begin(),
+                                  elementBitWidth, numElements);
+}
+
 //===----------------------------------------------------------------------===//
 // DenseFPElementsAttr
 //===----------------------------------------------------------------------===//

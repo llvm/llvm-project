@@ -192,7 +192,7 @@ define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK:         [[TMP45:%.*]] = fadd fast <4 x float> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x float> [[TMP45]], <4 x float> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP46]])
 ;
 entry:
   br label %for.body

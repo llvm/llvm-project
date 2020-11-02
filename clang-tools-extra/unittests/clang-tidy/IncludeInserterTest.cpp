@@ -133,7 +133,7 @@ public:
                                  utils::IncludeSorter::IS_Google_ObjC) {}
 
   std::vector<StringRef> headersToInclude() const override {
-    return {"clang_tidy/tests/insert_includes_test_header+foo.h"};
+    return {"top_level_test_header+foo.h"};
   }
 };
 
@@ -158,6 +158,10 @@ std::string runCheckOnCode(StringRef Code, StringRef Filename) {
                                       {"clang_tidy/tests/"
                                        "insert_includes_test_header.h",
                                        "\n"},
+                                      // Top-level main file include +
+                                      // category.
+                                      {"top_level_test_header.h", "\n"},
+                                      {"top_level_test_header+foo.h", "\n"},
                                       // ObjC category.
                                       {"clang_tidy/tests/"
                                        "insert_includes_test_header+foo.h",
@@ -708,23 +712,21 @@ void foo() {
 
 TEST(IncludeInserterTest, InsertCategoryHeaderObjectiveC) {
   const char *PreCode = R"(
-#import "clang_tidy/tests/insert_includes_test_header.h"
+#import "top_level_test_header.h"
 
 void foo() {
   int a = 0;
 })";
   const char *PostCode = R"(
-#import "clang_tidy/tests/insert_includes_test_header.h"
-#import "clang_tidy/tests/insert_includes_test_header+foo.h"
+#import "top_level_test_header.h"
+#import "top_level_test_header+foo.h"
 
 void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(
-      PostCode,
-      runCheckOnCode<ObjCCategoryHeaderInserterCheck>(
-          PreCode, "repo/clang_tidy/tests/insert_includes_test_header.mm"));
+  EXPECT_EQ(PostCode, runCheckOnCode<ObjCCategoryHeaderInserterCheck>(
+                          PreCode, "top_level_test_header.mm"));
 }
 
 TEST(IncludeInserterTest, InsertGeneratedHeaderObjectiveC) {

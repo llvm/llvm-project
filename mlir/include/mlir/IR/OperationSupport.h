@@ -257,6 +257,12 @@ public:
   void set(Identifier name, Attribute value);
   void set(StringRef name, Attribute value);
 
+  /// Erase the attribute with the given name from the list. Return the
+  /// attribute that was erased, or nullptr if there was no attribute with such
+  /// name.
+  Attribute erase(Identifier name);
+  Attribute erase(StringRef name);
+
   const_iterator begin() const { return attrs.begin(); }
   const_iterator end() const { return attrs.end(); }
 
@@ -267,6 +273,9 @@ public:
 private:
   /// Return whether the attributes are sorted.
   bool isSorted() const { return dictionarySorted.getInt(); }
+
+  /// Erase the attribute at the given iterator position.
+  Attribute eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it);
 
   // These are marked mutable as they may be modified (e.g., sorted)
   mutable SmallVector<NamedAttribute, 4> attrs;

@@ -9,24 +9,20 @@
 // test bitset(string, pos, n, zero, one);
 
 #include <bitset>
-#include <cassert>
 #include <algorithm> // for 'min' and 'max'
+#include <cassert>
 #include <stdexcept> // for 'invalid_argument'
+#include <string>
 
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_C1XX)
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#endif
-
 template <std::size_t N>
-void test_string_ctor()
-{
+void test_string_ctor() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         try {
-            std::string str("xxx1010101010xxxx");
-            std::bitset<N> v(str, str.size()+1, 10);
+            std::string s("xxx1010101010xxxx");
+            std::bitset<N> v(s, s.size()+1, 10);
             assert(false);
         }
         catch (std::out_of_range&)
@@ -35,8 +31,8 @@ void test_string_ctor()
     }
     {
         try {
-            std::string str("xxx1010101010xxxx");
-            std::bitset<N> v(str, 2, 10);
+            std::string s("xxx1010101010xxxx");
+            std::bitset<N> v(s, 2, 10);
             assert(false);
         }
         catch (std::invalid_argument&)
@@ -45,8 +41,8 @@ void test_string_ctor()
     }
     {
         try {
-            std::string str("xxxbababababaxxxx");
-            std::bitset<N> v(str, 2, 10, 'a', 'b');
+            std::string s("xxxbababababaxxxx");
+            std::bitset<N> v(s, 2, 10, 'a', 'b');
             assert(false);
         }
         catch (std::invalid_argument&)
@@ -55,21 +51,21 @@ void test_string_ctor()
     }
 #endif // TEST_HAS_NO_EXCEPTIONS
     {
-        std::string str("xxx1010101010xxxx");
-        std::bitset<N> v(str, 3, 10);
-        std::size_t M = std::min<std::size_t>(N, 10);
+        std::string s("xxx1010101010xxxx");
+        std::bitset<N> v(s, 3, 10);
+        std::size_t M = std::min<std::size_t>(v.size(), 10);
         for (std::size_t i = 0; i < M; ++i)
-            assert(v[i] == (str[3 + M - 1 - i] == '1'));
-        for (std::size_t i = 10; i < N; ++i)
+            assert(v[i] == (s[3 + M - 1 - i] == '1'));
+        for (std::size_t i = 10; i < v.size(); ++i)
             assert(v[i] == false);
     }
     {
-        std::string str("xxxbababababaxxxx");
-        std::bitset<N> v(str, 3, 10, 'a', 'b');
-        std::size_t M = std::min<std::size_t>(N, 10);
+        std::string s("xxxbababababaxxxx");
+        std::bitset<N> v(s, 3, 10, 'a', 'b');
+        std::size_t M = std::min<std::size_t>(v.size(), 10);
         for (std::size_t i = 0; i < M; ++i)
-            assert(v[i] == (str[3 + M - 1 - i] == 'b'));
-        for (std::size_t i = 10; i < N; ++i)
+            assert(v[i] == (s[3 + M - 1 - i] == 'b'));
+        for (std::size_t i = 10; i < v.size(); ++i)
             assert(v[i] == false);
     }
 }
@@ -86,8 +82,7 @@ void test_for_non_eager_instantiation() {
     static_assert(!std::is_constructible<std::bitset<3>, Nonsense*, size_t, Nonsense&, Nonsense&>::value, "");
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test_string_ctor<0>();
     test_string_ctor<1>();
     test_string_ctor<31>();
@@ -99,5 +94,5 @@ int main(int, char**)
     test_string_ctor<1000>();
     test_for_non_eager_instantiation();
 
-  return 0;
+    return 0;
 }

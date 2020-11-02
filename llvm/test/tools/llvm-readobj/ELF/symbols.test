@@ -78,9 +78,7 @@
 # RUN: llvm-readelf --symbols %t64 > %t.symbols.gnu
 # RUN: llvm-readelf --syms %t64 > %t.syms.gnu
 # RUN: cmp %t.symbols.gnu %t.syms.gnu
-## There is no -t option in llvm-readelf.
-# RUN: not llvm-readelf -t %t64 2>&1 | FileCheck %s --check-prefix=NO-T-ERR
-# NO-T-ERR: Unknown command line argument '-t'
+
 ## -s is an llvm-readobj option to dump sections.
 # RUN: llvm-readobj -s --elf-output-style=GNU %t64 | FileCheck %s --implicit-check-not="Symbol table"
 

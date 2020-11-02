@@ -100,8 +100,8 @@ define void @PR37005(i8* %base, i8** %in) {
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8*, i8** [[IN:%.*]], i64 undef
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds i8*, i8** [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x i8**> [[E4]] to <2 x i64>
-; CHECK-NEXT:    [[LR1:%.*]] = lshr <2 x i64> [[PI1]], <i64 21, i64 21>
-; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[LR1]], <i64 7, i64 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
+; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], <i64 1125899906842496, i64 1125899906842496>
 ; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], i64 80
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* [[E51]], <2 x i64> [[SL1]]
 ; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
@@ -132,8 +132,8 @@ define void @PR37005_2(i8* %base, i8** %in) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8*, i8** [[IN:%.*]], i64 undef
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint i8** [[E2]] to i64
-; CHECK-NEXT:    [[LR1:%.*]] = lshr i64 [[PI1]], 21
-; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw i64 [[LR1]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[PI1]], 14
+; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], 1125899906842496
 ; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], <2 x i64> <i64 80, i64 60>
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x i8*> [[E51]], i64 [[SL1]]
 ; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
@@ -162,8 +162,8 @@ define void @PR37005_3(<2 x i8*> %base, i8** %in) {
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8*, i8** [[IN:%.*]], i64 undef
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds i8*, i8** [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x i8**> [[E4]] to <2 x i64>
-; CHECK-NEXT:    [[LR1:%.*]] = lshr <2 x i64> [[PI1]], <i64 21, i64 21>
-; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[LR1]], <i64 7, i64 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
+; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], <i64 1125899906842496, i64 1125899906842496>
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, <2 x i8*> [[BASE:%.*]], i64 80
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x i8*> [[E5]], <2 x i64> [[SL1]]
 ; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])

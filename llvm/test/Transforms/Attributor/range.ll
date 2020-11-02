@@ -1876,6 +1876,154 @@ define i1 @propagate_range2(i32 %c) {
   ret i1 %true
 }
 
+define internal i1 @non_zero(i8 %v) {
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@non_zero
+; IS__TUNIT_OPM-SAME: (i8 [[V:%.*]]) [[ATTR2]] {
+; IS__TUNIT_OPM-NEXT:    [[R:%.*]] = icmp ne i8 [[V]], 0
+; IS__TUNIT_OPM-NEXT:    ret i1 [[R]]
+;
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@non_zero
+; IS__CGSCC_OPM-SAME: (i8 [[V:%.*]]) [[ATTR2]] {
+; IS__CGSCC_OPM-NEXT:    [[R:%.*]] = icmp ne i8 [[V]], 0
+; IS__CGSCC_OPM-NEXT:    ret i1 [[R]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@non_zero
+; IS__CGSCC_NPM-SAME: () [[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    ret i1 undef
+;
+  %r = icmp ne i8 %v, 0
+  ret i1 %r
+}
+
+; Avoid range metadata for %l below
+define i1 @context(i8* %p) {
+; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@context
+; IS__TUNIT_OPM-SAME: (i8* nocapture nofree nonnull readonly dereferenceable(1) [[P:%.*]]) [[ATTR0]] {
+; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i8, i8* [[P]], align 1
+; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = icmp slt i8 0, [[L]]
+; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_OPM:       t:
+; IS__TUNIT_OPM-NEXT:    [[R:%.*]] = call i1 @non_zero(i8 [[L]]) [[ATTR2]]
+; IS__TUNIT_OPM-NEXT:    ret i1 [[R]]
+; IS__TUNIT_OPM:       f:
+; IS__TUNIT_OPM-NEXT:    ret i1 false
+;
+; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@context
+; IS__TUNIT_NPM-SAME: (i8* nocapture nofree nonnull readonly dereferenceable(1) [[P:%.*]]) [[ATTR0]] {
+; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i8, i8* [[P]], align 1
+; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = icmp slt i8 0, [[L]]
+; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_NPM:       t:
+; IS__TUNIT_NPM-NEXT:    ret i1 true
+; IS__TUNIT_NPM:       f:
+; IS__TUNIT_NPM-NEXT:    ret i1 false
+;
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@context
+; IS__CGSCC_OPM-SAME: (i8* nocapture nofree nonnull readonly dereferenceable(1) [[P:%.*]]) [[ATTR0]] {
+; IS__CGSCC_OPM-NEXT:    [[L:%.*]] = load i8, i8* [[P]], align 1
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = icmp slt i8 0, [[L]]
+; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_OPM:       t:
+; IS__CGSCC_OPM-NEXT:    [[R:%.*]] = call i1 @non_zero(i8 [[L]]) [[ATTR4]]
+; IS__CGSCC_OPM-NEXT:    ret i1 [[R]]
+; IS__CGSCC_OPM:       f:
+; IS__CGSCC_OPM-NEXT:    ret i1 false
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@context
+; IS__CGSCC_NPM-SAME: (i8* nocapture nofree nonnull readonly dereferenceable(1) [[P:%.*]]) [[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = load i8, i8* [[P]], align 1
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = icmp slt i8 0, [[L]]
+; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_NPM:       t:
+; IS__CGSCC_NPM-NEXT:    ret i1 true
+; IS__CGSCC_NPM:       f:
+; IS__CGSCC_NPM-NEXT:    ret i1 false
+;
+  %l = load i8, i8* %p
+  %c = icmp slt i8 0, %l
+  br i1 %c, label %t, label %f
+t:
+  %r = call i1 @non_zero(i8 %l)
+  ret i1 %r
+f:
+  ret i1 false
+}
+
+
+define void @spam(i32* %arg, i32* %arg1) {
+; CHECK-LABEL: define {{[^@]+}}@spam
+; CHECK-SAME: (i32* nocapture nonnull readonly align 8 dereferenceable(4) [[ARG:%.*]], i32* nocapture nofree readnone [[ARG1:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP]], 4
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    call fastcc void @wobble(i32 signext [[TMP]])
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @ham(i32 [[TMP]])
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = load i32, i32* %arg, align 8
+  %tmp2 = icmp ult i32 %tmp, 4
+  br i1 %tmp2, label %bb3, label %bb4
+
+bb3:                                              ; preds = %bb
+  call fastcc void @wobble(i32 signext %tmp)
+  br label %bb5
+
+bb4:                                              ; preds = %bb
+  call void @ham(i32 %tmp)
+  br label %bb5
+
+bb5:                                              ; preds = %bb4, %bb3
+  ret void
+}
+
+define internal fastcc void @wobble(i32 signext %arg) {
+; CHECK-LABEL: define {{[^@]+}}@wobble
+; CHECK-SAME: (i32 signext [[ARG:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = icmp ult i32 [[ARG]], 2
+; CHECK-NEXT:    br i1 [[TMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @barney(i32 noundef signext 32, i32 noundef signext 0)
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = icmp ult i32 %arg, 2
+  br i1 %tmp, label %bb1, label %bb2
+
+bb1:                                              ; preds = %bb
+  call void @barney(i32 signext 32, i32 signext 0)
+  br label %bb3
+
+bb2:                                              ; preds = %bb
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1
+  ret void
+}
+
+declare void @ham(i32)
+
+declare void @barney(i32 signext, i32 signext)
+
+
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
 

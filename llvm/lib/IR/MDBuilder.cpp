@@ -151,24 +151,20 @@ MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
 }
 
 MDNode *MDBuilder::createAnonymousAARoot(StringRef Name, MDNode *Extra) {
-  // To ensure uniqueness the root node is self-referential.
-  auto Dummy = MDNode::getTemporary(Context, None);
-
-  SmallVector<Metadata *, 3> Args(1, Dummy.get());
+  SmallVector<Metadata *, 3> Args(1, nullptr);
   if (Extra)
     Args.push_back(Extra);
   if (!Name.empty())
     Args.push_back(createString(Name));
-  MDNode *Root = MDNode::get(Context, Args);
+  MDNode *Root = MDNode::getDistinct(Context, Args);
 
   // At this point we have
-  //   !0 = metadata !{}            <- dummy
-  //   !1 = metadata !{metadata !0} <- root
-  // Replace the dummy operand with the root node itself and delete the dummy.
+  //   !0 = distinct !{null} <- root
+  // Replace the reserved operand with the root node itself.
   Root->replaceOperandWith(0, Root);
 
   // We now have
-  //   !1 = metadata !{metadata !1} <- self-referential root
+  //   !0 = distinct !{!0} <- root
   return Root;
 }
 

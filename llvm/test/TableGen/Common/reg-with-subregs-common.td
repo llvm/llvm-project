@@ -19,7 +19,7 @@ class Indexes<int N> {
 #ifdef USE_NAMESPACE
   let Namespace = "TestNamespace" in {
 #endif
-foreach Index = 0-31 in {
+foreach Index = 0...31 in {
   def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
 }
 
@@ -35,7 +35,7 @@ foreach Size = {2,4,8,16} in {
   }
 }
 
-foreach Index = 0-255 in {
+foreach Index = 0...255 in {
   def R#Index : Register <"r"#Index>;
 }
 #ifdef USE_NAMESPACE

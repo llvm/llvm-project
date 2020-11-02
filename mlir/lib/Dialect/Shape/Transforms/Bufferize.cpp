@@ -26,7 +26,8 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
     populateShapeStructuralTypeConversionsAndLegality(&ctx, typeConverter,
                                                       patterns, target);
 
-    if (failed(applyPartialConversion(getFunction(), target, patterns)))
+    if (failed(
+            applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
   }
 };

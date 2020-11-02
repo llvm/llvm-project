@@ -953,13 +953,13 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
           FuncInfo->getSGPRToVGPRSpills(*RASaveIndex);
       assert(ReturnAddressSpill.size() == 2);
       BuildMI(MBB, MBBI, DL,
-              TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+              TII->get(AMDGPU::V_WRITELANE_B32),
               ReturnAddressSpill[0].VGPR)
           .addReg(TRI.getSubReg(RetAddrReg, AMDGPU::sub0))
           .addImm(ReturnAddressSpill[0].Lane)
           .addReg(ReturnAddressSpill[0].VGPR, RegState::Undef);
       BuildMI(MBB, MBBI, DL,
-              TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+              TII->get(AMDGPU::V_WRITELANE_B32),
               ReturnAddressSpill[1].VGPR)
           .addReg(TRI.getSubReg(RetAddrReg, AMDGPU::sub1))
           .addImm(ReturnAddressSpill[1].Lane)
@@ -976,7 +976,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
           FuncInfo->getSGPRToVGPRSpills(*EXECSaveIndex);
       assert(EXECSpill.size());
       BuildMI(MBB, MBBI, DL,
-              TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+              TII->get(AMDGPU::V_WRITELANE_B32),
               EXECSpill[0].VGPR)
           .addReg(AMDGPU::EXEC_LO)
           .addImm(EXECSpill[0].Lane)
@@ -984,7 +984,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
       if (!ST.isWave32()) {
         assert(EXECSpill.size() == 2);
         BuildMI(MBB, MBBI, DL,
-                TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+                TII->get(AMDGPU::V_WRITELANE_B32),
                 EXECSpill[1].VGPR)
             .addReg(AMDGPU::EXEC_HI)
             .addImm(EXECSpill[1].Lane)
@@ -1174,11 +1174,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save FP before setting it up.
     // FIXME: This should respect spillSGPRToVGPR;
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            Spill[0].VGPR)
-      .addReg(FramePtrReg)
-      .addImm(Spill[0].Lane)
-      .addReg(Spill[0].VGPR, RegState::Undef);
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
+        .addReg(FramePtrReg)
+        .addImm(Spill[0].Lane)
+        .addReg(Spill[0].VGPR, RegState::Undef);
 
     buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, FramePtrReg, Spill[0].VGPR,
                                Spill[0].Lane);
@@ -1196,8 +1195,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save BP before setting it up.
     // FIXME: This should respect spillSGPRToVGPR;
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            Spill[0].VGPR)
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(BasePtrReg)
         .addImm(Spill[0].Lane)
         .addReg(Spill[0].VGPR, RegState::Undef);
@@ -1346,8 +1344,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(FI);
       assert(Spill.size() == 1);
-      BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
-              FramePtrReg)
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), FramePtrReg)
           .addReg(Spill[0].VGPR)
           .addImm(Spill[0].Lane);
     }
@@ -1377,8 +1374,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(BasePtrFI);
       assert(Spill.size() == 1);
-      BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
-              BasePtrReg)
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), BasePtrReg)
           .addReg(Spill[0].VGPR)
           .addImm(Spill[0].Lane);
     }

@@ -81,7 +81,8 @@ struct ExpandAtomic : public ExpandAtomicBase<ExpandAtomic> {
       return op.kind() != AtomicRMWKind::maxf &&
              op.kind() != AtomicRMWKind::minf;
     });
-    if (failed(mlir::applyPartialConversion(getFunction(), target, patterns)))
+    if (failed(mlir::applyPartialConversion(getFunction(), target,
+                                            std::move(patterns))))
       signalPassFailure();
   }
 };

@@ -3172,10 +3172,23 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
 
   Type *Ty = II->getType();
   unsigned BitWidth = C.getBitWidth();
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
   switch (II->getIntrinsicID()) {
+  case Intrinsic::ctpop: {
+    // (ctpop X > BitWidth - 1) --> X == -1
+    Value *X = II->getArgOperand(0);
+    if (C == BitWidth - 1 && Pred == ICmpInst::ICMP_UGT)
+      return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, X,
+                             ConstantInt::getAllOnesValue(Ty));
+    // (ctpop X < BitWidth) --> X != -1
+    if (C == BitWidth && Pred == ICmpInst::ICMP_ULT)
+      return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, X,
+                             ConstantInt::getAllOnesValue(Ty));
+    break;
+  }
   case Intrinsic::ctlz: {
     // ctlz(0bXXXXXXXX) > 3 -> 0bXXXXXXXX < 0b00010000
-    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
       unsigned Num = C.getLimitedValue();
       APInt Limit = APInt::getOneBitSet(BitWidth, BitWidth - Num - 1);
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_ULT,
@@ -3183,8 +3196,7 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     }
 
     // ctlz(0bXXXXXXXX) < 3 -> 0bXXXXXXXX > 0b00011111
-    if (Cmp.getPredicate() == ICmpInst::ICMP_ULT &&
-        C.uge(1) && C.ule(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_ULT && C.uge(1) && C.ule(BitWidth)) {
       unsigned Num = C.getLimitedValue();
       APInt Limit = APInt::getLowBitsSet(BitWidth, BitWidth - Num);
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_UGT,
@@ -3198,7 +3210,7 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
       return nullptr;
 
     // cttz(0bXXXXXXXX) > 3 -> 0bXXXXXXXX & 0b00001111 == 0
-    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
       APInt Mask = APInt::getLowBitsSet(BitWidth, C.getLimitedValue() + 1);
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ,
                              Builder.CreateAnd(II->getArgOperand(0), Mask),
@@ -3206,8 +3218,7 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     }
 
     // cttz(0bXXXXXXXX) < 3 -> 0bXXXXXXXX & 0b00000111 != 0
-    if (Cmp.getPredicate() == ICmpInst::ICMP_ULT &&
-        C.uge(1) && C.ule(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_ULT && C.uge(1) && C.ule(BitWidth)) {
       APInt Mask = APInt::getLowBitsSet(BitWidth, C.getLimitedValue());
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE,
                              Builder.CreateAnd(II->getArgOperand(0), Mask),

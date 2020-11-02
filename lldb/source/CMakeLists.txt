@@ -26,9 +26,6 @@ set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
              HEADER_FILE_ONLY TRUE)
 
-set_property(SOURCE lldb.cpp APPEND PROPERTY
-             COMPILE_DEFINITIONS "HAVE_VCS_VERSION_INC")
-
 list(APPEND lldbBase_SOURCES ${version_inc})
 
 if(LLDB_VERSION_STRING)

@@ -5285,9 +5285,8 @@ void RewriteObjCFragileABI::RewriteObjCClassMetaData(ObjCImplementationDecl *IDe
   }
 
   // Build _objc_ivar_list metadata for classes ivars if needed
-  unsigned NumIvars = !IDecl->ivar_empty()
-  ? IDecl->ivar_size()
-  : (CDecl ? CDecl->ivar_size() : 0);
+  unsigned NumIvars =
+      !IDecl->ivar_empty() ? IDecl->ivar_size() : CDecl->ivar_size();
   if (NumIvars > 0) {
     static bool objc_ivar = false;
     if (!objc_ivar) {

@@ -39,7 +39,7 @@ void ReductionNode::measureAndTest(const Tester &test) {
   SmallString<128> filepath;
   int fd;
 
-  // Print module to temprary file.
+  // Print module to temporary file.
   std::error_code ec =
       llvm::sys::fs::createTemporaryFile("mlir-reduce", "mlir", fd, filepath);
 

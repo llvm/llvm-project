@@ -74,7 +74,7 @@
 # RUN:   FileCheck %s --check-prefix=EXISTING
 # RUN: cmp %t %t1
 
-# EXISTING: rpath ABCD would create a duplicate load command
+# EXISTING: rpath 'ABCD' would create a duplicate load command
 
 ## Duplicate RPath entries:
 # RUN: not llvm-install-name-tool -rpath DDD1/. @exec_d/. \
@@ -82,7 +82,7 @@
 # RUN:   FileCheck %s --check-prefix=DUPLICATE
 # RUN: cmp %t %t1
 
-# DUPLICATE: cannot specify both -rpath DDD1/. @exec_d/. and -rpath @exec_d/. DDD2/.
+# DUPLICATE: cannot specify both -rpath 'DDD1/.' '@exec_d/.' and -rpath '@exec_d/.' 'DDD2/.'
 
 ## Updating and deleting RPath at the same time:
 # RUN: not llvm-install-name-tool -rpath @executable_d/. DD/. \
@@ -90,7 +90,7 @@
 # RUN:   FileCheck %s --check-prefix=COMBINED-DELETE
 # RUN: cmp %t %t1
 
-# COMBINED-DELETE: cannot specify both -delete_rpath @executable_d/. and -rpath @executable_d/. DD/.
+# COMBINED-DELETE: cannot specify both -delete_rpath '@executable_d/.' and -rpath '@executable_d/.' 'DD/.'
 
 ## Updating and adding RPath at the same time:
 # RUN: not llvm-install-name-tool -rpath @executable_e/. EE/. \
@@ -98,7 +98,7 @@
 # RUN:   FileCheck %s --check-prefix=COMBINED-ADD
 # RUN: cmp %t %t1
 
-# COMBINED-ADD: cannot specify both -add_rpath @executable_e/. and -rpath @executable_e/. EE/.
+# COMBINED-ADD: cannot specify both -add_rpath '@executable_e/.' and -rpath '@executable_e/.' 'EE/.'
 
 ## Missing an RPath argument:
 # RUN: not llvm-install-name-tool %t -rpath @executable_e/. 2>&1 | \

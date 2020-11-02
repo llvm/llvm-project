@@ -9,22 +9,19 @@
 // test bool any() const;
 
 #include <bitset>
-#include <type_traits>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_any()
-{
+void test_any() {
     std::bitset<N> v;
     v.reset();
     assert(v.any() == false);
     v.set();
     assert(v.any() == (N != 0));
-    const bool greater_than_1 = std::integral_constant<bool, (N > 1)>::value; // avoid compiler warnings
-    if (greater_than_1)
-    {
+    if (v.size() > 1) {
         v[N/2] = false;
         assert(v.any() == true);
         v.reset();
@@ -33,8 +30,7 @@ void test_any()
     }
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test_any<0>();
     test_any<1>();
     test_any<31>();
@@ -45,5 +41,5 @@ int main(int, char**)
     test_any<65>();
     test_any<1000>();
 
-  return 0;
+    return 0;
 }

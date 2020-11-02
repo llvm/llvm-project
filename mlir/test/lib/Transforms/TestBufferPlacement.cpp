@@ -232,7 +232,8 @@ struct TestBufferPlacementPreparationPass
     OwningRewritePatternList patterns;
     populateTensorLinalgToBufferLinalgConversionPattern(&context, converter,
                                                         patterns);
-    if (failed(applyFullConversion(this->getOperation(), target, patterns)))
+    if (failed(applyFullConversion(this->getOperation(), target,
+                                   std::move(patterns))))
       this->signalPassFailure();
   };
 };

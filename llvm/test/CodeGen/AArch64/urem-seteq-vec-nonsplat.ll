@@ -118,9 +118,8 @@ define <4 x i32> @test_urem_even_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 4294967295, i32 14>
   %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
@@ -177,9 +176,8 @@ define <4 x i32> @test_urem_odd_even_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 4294967295, i32 100>
   %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>

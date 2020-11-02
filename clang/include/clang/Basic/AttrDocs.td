@@ -1738,7 +1738,8 @@ PGO (Profile-Guided Optimization) or at optimization level 0.
 
 In Clang, the attributes will be ignored if they're not placed on
 * the ``case`` or ``default`` label of a ``switch`` statement,
-* or on the substatement of an ``if`` or ``else`` statement.
+* or on the substatement of an ``if`` or ``else`` statement,
+* or on the substatement of an ``for`` or ``while`` statement.
 The C++ Standard recommends to honor them on every statement in the
 path of execution, but that can be confusing:
 
@@ -1769,8 +1770,7 @@ path of execution, but that can be confusing:
   }
 
 
-At the moment the attributes only have effect when used in an ``if``, ``else``,
-or ``switch`` statement.
+Below are some example usages of the likelihood attributes and their effects:
 
 .. code-block:: c++
 
@@ -1849,6 +1849,23 @@ or ``switch`` statement.
     [[unlikely]] default: // This value and code path are both unlikely
       break;
   }
+
+  for(int i = 0; i != size; ++i) [[likely]] {
+    ...               // The loop is the likely path of execution
+  }
+
+  for(const auto &E : Elements) [[likely]] {
+    ...               // The loop is the likely path of execution
+  }
+
+  while(i != size) [[unlikely]] {
+    ...               // The loop is the unlikely path of execution
+  }                   // The generated code will optimize to skip the loop body
+
+  while(true) [[unlikely]] {
+    ...               // The attribute has no effect
+  }                   // Clang elides the comparison and generates an infinite
+                      // loop
 
   }];
 }

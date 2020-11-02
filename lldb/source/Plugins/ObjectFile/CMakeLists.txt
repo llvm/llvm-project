@@ -1,6 +1,7 @@
 add_subdirectory(Breakpad)
 add_subdirectory(ELF)
 add_subdirectory(Mach-O)
+add_subdirectory(PDB)
 add_subdirectory(PECOFF)
 add_subdirectory(JIT)
 add_subdirectory(wasm)

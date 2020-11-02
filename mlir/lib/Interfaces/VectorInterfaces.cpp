@@ -14,5 +14,5 @@ using namespace mlir;
 // VectorUnroll Interfaces
 //===----------------------------------------------------------------------===//
 
-/// Include the definitions of the VectorUntoll interfaces.
+/// Include the definitions of the VectorUnroll interfaces.
 #include "mlir/Interfaces/VectorInterfaces.cpp.inc"

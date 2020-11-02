@@ -2,6 +2,7 @@
 add_mlir_library(MLIRTestTransforms
   TestAffineLoopParametricTiling.cpp
   TestBufferPlacement.cpp
+  TestExpandMemRefReshape.cpp
   TestExpandTanh.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp

@@ -5,7 +5,6 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/common_interface_defs.h
     sanitizer/coverage_interface.h
     sanitizer/dfsan_interface.h
-    sanitizer/memprof_interface.h
     sanitizer/hwasan_interface.h
     sanitizer/linux_syscall_hooks.h
     sanitizer/lsan_interface.h
@@ -20,6 +19,12 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     fuzzer/FuzzedDataProvider.h
     )
 endif(COMPILER_RT_BUILD_SANITIZERS)
+
+if (COMPILER_RT_BUILD_MEMPROF)
+  set(MEMPROF_HEADERS
+    sanitizer/memprof_interface.h
+    )
+endif(COMPILER_RT_BUILD_MEMPROF)
 
 if (COMPILER_RT_BUILD_XRAY)
   set(XRAY_HEADERS
@@ -38,6 +43,7 @@ endif(COMPILER_RT_BUILD_PROFILE)
 set(COMPILER_RT_HEADERS
   ${SANITIZER_HEADERS}
   ${FUZZER_HEADERS}
+  ${MEMPROF_HEADERS}
   ${XRAY_HEADERS}
   ${PROFILE_HEADERS})
 

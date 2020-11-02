@@ -132,7 +132,7 @@ endforeach()
 include_directories(..)
 include_directories(../../include)
 
-set(XRAY_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+set(XRAY_CFLAGS ${COMPILER_RT_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
 
 # We don't need RTTI in XRay, so turn that off.
@@ -149,6 +149,7 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
+# XRay uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(XRAY_DEPS cxx-headers)
 endif()

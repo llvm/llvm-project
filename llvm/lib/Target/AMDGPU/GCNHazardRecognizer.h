@@ -109,6 +109,7 @@ public:
   void AdvanceCycle() override;
   void RecedeCycle() override;
   bool ShouldPreferAnother(SUnit *SU) override;
+  void Reset() override;
 };
 
 } // end namespace llvm

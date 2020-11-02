@@ -26,7 +26,7 @@ func @test_norm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
     return
 }
 
-// Same test with op_nonnorm, with maps in the argmentets and the operations in the function.
+// Same test with op_nonnorm, with maps in the arguments and the operations in the function.
 
 // CHECK-LABEL: test_nonnorm
 // CHECK-SAME: (%[[ARG0:[a-z0-9]*]]: memref<1x16x14x14xf32, #map0>)

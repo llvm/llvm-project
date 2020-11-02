@@ -317,7 +317,7 @@ public:
 
   const llvm::opt::OptTable &getOpts() const { return getDriverOptTable(); }
 
-  const DiagnosticsEngine &getDiags() const { return Diags; }
+  DiagnosticsEngine &getDiags() const { return Diags; }
 
   llvm::vfs::FileSystem &getVFS() const { return *VFS; }
 

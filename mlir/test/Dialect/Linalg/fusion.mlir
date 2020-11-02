@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-greedy-fusion -split-input-file | FileCheck %s
 
 func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, 1]>,
@@ -98,6 +98,8 @@ func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 
 // -----
 
+// CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
+
 func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -137,9 +139,11 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f3
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK:  %[[D_0:.*]] = dim %[[D]], %c0{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[D_1:.*]] = dim %[[D]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[C_1:.*]] = dim %[[C]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
+// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK:  %[[D_0:.*]] = dim %[[D]], %[[C0]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[D_1:.*]] = dim %[[D]], %[[C1]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[C_1:.*]] = dim %[[C]], %[[C1]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  scf.for %{{.*}} = %{{.*}} to %[[D_0]] step %{{.*}} {
 // CHECK:    scf.for %{{.*}} = %{{.*}} to %[[C_1]] step %{{.*}} {
 // CHECK:      scf.for %{{.*}} = %{{.*}} to %[[D_1]] step %{{.*}} {
@@ -147,6 +151,8 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // CHECK:        linalg.matmul
 
 // -----
+
+// CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
 
 func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -190,9 +196,11 @@ func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f4
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK:  %[[C_0:.*]] = dim %[[C]], %c0{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[C_1:.*]] = dim %[[C]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[D_1:.*]] = dim %[[D]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
+// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK:  %[[C_0:.*]] = dim %[[C]], %[[C0:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[C_1:.*]] = dim %[[C]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[D_1:.*]] = dim %[[D]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  scf.for %{{.*}} = %{{.*}} to %[[C_0]] step %{{.*}} {
 // CHECK:    scf.for %{{.*}} = %{{.*}} to %[[D_1]] step %{{.*}} {
 // CHECK:      scf.for %{{.*}} = %{{.*}} to %[[C_1]] step %{{.*}} {
@@ -246,26 +254,24 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f5
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK-DAG:  %[[B_1:.*]] = dim %[[B]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK-DAG:  %[[D_0:.*]] = dim %[[D]], %c0{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK-DAG:  %[[D_1:.*]] = dim %[[D]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  scf.for %[[I:.*]] = %{{.*}} to %[[D_0]] step %{{.*}} {
-// CHECK:    scf.for %[[J:.*]] = %{{.*}} to %[[B_1]] step %{{.*}} {
-// CHECK:      scf.for %[[K:.*]] = %{{.*}} to %[[D_1]] step %{{.*}} {
-// CHECK-DAG:    %[[D_IK:.*]] = subview %[[D]][%[[I]], %[[K]]]
-// CHECK-DAG:    %[[B_KJ:.*]] = subview %[[B]][%[[K]], %[[J]]]
-// CHECK-DAG:    %[[E_IJ:.*]] = subview %[[E]][%[[I]], %[[J]]]
-// CHECK:        dim
-// CHECK-DAG:    %[[C_I0:.*]] = subview %[[C]][%[[I]], %{{.*}}]
-// CHECK-DAG:    %[[B_0K:.*]] = subview %[[B]][%{{.*}}, %[[K]]]
-// CHECK-DAG:    %[[D_IK_:.*]] = subview %[[D]][%[[I]], %[[K]]]
-// CHECK:        dim
-// CHECK-DAG:    %[[A_I0:.*]] = subview %[[A]][%[[I]], %{{.*}}]
-// CHECK-DAG:    %[[B_00:.*]] = subview %[[B]][%{{.*}}, %{{.*}}]
-// CHECK-DAG:    %[[C_I0_:.*]] = subview %[[C]][%[[I]], %{{.*}}]
-// CHECK:        linalg.matmul ins(%[[A_I0]], %[[B_00]]{{.*}} outs(%[[C_I0_]]
-// CHECK:        linalg.matmul ins(%[[C_I0]], %[[B_0K]]{{.*}} outs(%[[D_IK_]]
-// CHECK:        linalg.matmul ins(%[[D_IK]], %[[B_KJ]]{{.*}} outs(%[[E_IJ]]
+// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK-DAG:  %[[B_1:.*]] = dim %[[B]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK-DAG:  %[[D_0:.*]] = dim %[[D]], %[[C0:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK-DAG:  %[[D_1:.*]] = dim %[[D]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK-DAG:  %[[B_00:.*]] = subview %[[B]][0, 0]{{.*}}
+//     CHECK:  scf.for %[[I:.*]] = %{{.*}} to %[[D_0]] step %{{.*}} {
+// CHECK-DAG:    %[[A_I0:.*]] = subview %[[A]][%[[I]], 0]
+// CHECK-DAG:    %[[C_I0:.*]] = subview %[[C]][%[[I]], 0]
+//     CHECK:    scf.for %[[J:.*]] = %{{.*}} to %[[B_1]] step %{{.*}} {
+//     CHECK:      %[[E_IJ:.*]] = subview %[[E]][%[[I]], %[[J]]]
+//     CHECK:      scf.for %[[K:.*]] = %{{.*}} to %[[D_1]] step %{{.*}} {
+// CHECK-DAG:        %[[D_IK:.*]] = subview %[[D]][%[[I]], %[[K]]]
+// CHECK-DAG:        %[[B_0K:.*]] = subview %[[B]][0, %[[K]]]
+// CHECK-DAG:        %[[B_KJ:.*]] = subview %[[B]][%[[K]], %[[J]]]
+//     CHECK:        linalg.matmul ins(%[[A_I0]], %[[B_00]]{{.*}} outs(%[[C_I0]]
+//     CHECK:        linalg.matmul ins(%[[C_I0]], %[[B_0K]]{{.*}} outs(%[[D_IK]]
+//     CHECK:        linalg.matmul ins(%[[D_IK]], %[[B_KJ]]{{.*}} outs(%[[E_IJ]]
 
 // -----
 
@@ -390,11 +396,13 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 }
 // CHECK-LABEL: func @f7
 // CHECK:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
-// CHECK:  %[[A_0:.*]] = dim %[[A]], %c0{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[A_1:.*]] = dim %[[A]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[C_1:.*]] = dim %[[C]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[C_0:.*]] = dim %[[C]], %c0{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  %[[D_1:.*]] = dim %[[D]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
+// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:  %[[C1:.*]] = constant 1 : index
+// CHECK:  %[[A_0:.*]] = dim %[[A]], %[[C0:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[A_1:.*]] = dim %[[A]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[C_1:.*]] = dim %[[C]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[C_0:.*]] = dim %[[C]], %[[C0:.*]] : memref<?x?xf32, #[[$strided2D]]>
+// CHECK:  %[[D_1:.*]] = dim %[[D]], %[[C1:.*]] : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  linalg.matmul ins(%[[A]], %[[C]]{{.*}} outs(%[[E]]
 // CHECK:  scf.for %{{.*}} = %{{.*}} to %[[A_0]] step %{{.*}} {
 // CHECK:    scf.for %{{.*}} = %{{.*}} to %[[C_1]] step %{{.*}} {

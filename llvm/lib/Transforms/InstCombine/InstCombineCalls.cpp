@@ -2126,6 +2126,9 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (Call.isInAllocaArgument(i))
       return false;   // Cannot transform to and from inalloca.
 
+    if (CallerPAL.hasParamAttribute(i, Attribute::SwiftError))
+      return false;
+
     // If the parameter is passed as a byval argument, then we have to have a
     // sized type and the sized type has to have the same size as the old type.
     if (ParamTy != ActTy && CallerPAL.hasParamAttribute(i, Attribute::ByVal)) {

@@ -31,16 +31,44 @@ public:
       newResultTypes.push_back(newType);
     }
 
-    // Clone and replace.
-    ForOp newOp = cast<ForOp>(rewriter.clone(*op.getOperation()));
+    // Clone the op without the regions and inline the regions from the old op.
+    //
+    // This is a little bit tricky. We have two concerns here:
+    //
+    // 1. We cannot update the op in place because the dialect conversion
+    // framework does not track type changes for ops updated in place, so it
+    // won't insert appropriate materializations on the changed result types.
+    // PR47938 tracks this issue, but it seems hard to fix. Instead, we need to
+    // clone the op.
+    //
+    // 2. We cannot simply call `op.clone()` to get the cloned op. Besides being
+    // inefficient to recursively clone the regions, there is a correctness
+    // issue: if we clone with the regions, then the dialect conversion
+    // framework thinks that we just inserted all the cloned child ops. But what
+    // we want is to "take" the child regions and let the dialect conversion
+    // framework continue recursively into ops inside those regions (which are
+    // already in its worklist; inlining them into the new op's regions doesn't
+    // remove the child ops from the worklist).
+    ForOp newOp = cast<ForOp>(rewriter.cloneWithoutRegions(*op.getOperation()));
+    // Take the region from the old op and put it in the new op.
+    rewriter.inlineRegionBefore(op.getLoopBody(), newOp.getLoopBody(),
+                                newOp.getLoopBody().end());
+
+    // Now, update all the types.
+
+    // Convert the type of the entry block of the ForOp's body.
+    if (failed(rewriter.convertRegionTypes(&newOp.getLoopBody(),
+                                           *getTypeConverter()))) {
+      return rewriter.notifyMatchFailure(op, "could not convert body types");
+    }
+    // Change the clone to use the updated operands. We could have cloned with
+    // a BlockAndValueMapping, but this seems a bit more direct.
     newOp.getOperation()->setOperands(operands);
+    // Update the result types to the new converted types.
     for (auto t : llvm::zip(newOp.getResults(), newResultTypes))
       std::get<0>(t).setType(std::get<1>(t));
-    auto bodyArgs = newOp.getBody()->getArguments();
-    for (auto t : llvm::zip(llvm::drop_begin(bodyArgs, 1), newResultTypes))
-      std::get<0>(t).setType(std::get<1>(t));
-    rewriter.replaceOp(op, newOp.getResults());
 
+    rewriter.replaceOp(op, newOp.getResults());
     return success();
   }
 };
@@ -71,9 +99,15 @@ public:
       newResultTypes.push_back(newType);
     }
 
-    // TODO: Write this with updateRootInPlace once the conversion infra
-    // supports source materializations on ops updated in place.
-    IfOp newOp = cast<IfOp>(rewriter.clone(*op.getOperation()));
+    // See comments in the ForOp pattern for why we clone without regions and
+    // then inline.
+    IfOp newOp = cast<IfOp>(rewriter.cloneWithoutRegions(*op.getOperation()));
+    rewriter.inlineRegionBefore(op.thenRegion(), newOp.thenRegion(),
+                                newOp.thenRegion().end());
+    rewriter.inlineRegionBefore(op.elseRegion(), newOp.elseRegion(),
+                                newOp.elseRegion().end());
+
+    // Update the operands and types.
     newOp.getOperation()->setOperands(operands);
     for (auto t : llvm::zip(newOp.getResults(), newResultTypes))
       std::get<0>(t).setType(std::get<1>(t));

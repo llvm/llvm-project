@@ -797,14 +797,14 @@ A custom directive has two main parts: The `UserDirective` and the `Params`. A
 custom directive is transformed into a call to a `print*` and a `parse*` method
 when generating the C++ code for the format. The `UserDirective` is an
 identifier used as a suffix to these two calls, i.e., `custom<MyDirective>(...)`
-would result in calls to `parseMyDirective` and `printMyDirective` wihtin the
+would result in calls to `parseMyDirective` and `printMyDirective` within the
 parser and printer respectively. `Params` may be any combination of variables
-(i.e. Attribute, Operand, Successor, etc.) and type directives. The type
-directives must refer to a variable, but that variable need not also be a
-parameter to the custom directive.
+(i.e. Attribute, Operand, Successor, etc.), type directives, and `attr-dict`.
+The type directives must refer to a variable, but that variable need not also
+be a parameter to the custom directive.
 
-The arguments to the `parse<UserDirective>` method is firstly a reference to the
-`OpAsmParser`(`OpAsmParser &`), and secondly a set of output parameters
+The arguments to the `parse<UserDirective>` method are firstly a reference to
+the `OpAsmParser`(`OpAsmParser &`), and secondly a set of output parameters
 corresponding to the parameters specified in the format. The mapping of
 declarative parameter to `parse` method argument is detailed below:
 
@@ -829,12 +829,14 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `const SmallVectorImpl<Type> &`
+*   `attr-dict` Directive: `NamedAttrList &`
 
 When a variable is optional, the value should only be specified if the variable
 is present. Otherwise, the value should remain `None` or null.
 
-The arguments to the `print<UserDirective>` method is firstly a reference to the
-`OpAsmPrinter`(`OpAsmPrinter &`), and secondly a set of output parameters
+The arguments to the `print<UserDirective>` method is firstly a reference to
+the `OpAsmPrinter`(`OpAsmPrinter &`), second the op (e.g. `FooOp op` which
+can be `Operation *op` alternatively), and finally a set of output parameters
 corresponding to the parameters specified in the format. The mapping of
 declarative parameter to `print` method argument is detailed below:
 
@@ -859,6 +861,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
+*   `attr-dict` Directive: `const MutableDictionaryAttr&`
 
 When a variable is optional, the provided value may be null.
 
@@ -1512,7 +1515,7 @@ def IntegerType : Test_Type<"TestInteger"> {
 
 The name of the C++ class which gets generated defaults to
 `<classParamName>Type` (e.g. `TestIntegerType` in the above example). This
-can be overridden via the the `cppClassName` field. The field `mnemonic` is
+can be overridden via the `cppClassName` field. The field `mnemonic` is
 to specify the asm name for parsing. It is optional and not specifying it
 will imply that no parser or printer methods are attached to this class.
 
@@ -1551,7 +1554,7 @@ The default storage constructor blindly copies fields by value. It does not
 know anything about the types. In this case, the ArrayRef<int> requires
 allocation with `dims = allocator.copyInto(dims)`.
 
-You can specify the necessary constuctor by specializing the `TypeParameter`
+You can specify the necessary constructor by specializing the `TypeParameter`
 tblgen class:
 
 ```tablegen

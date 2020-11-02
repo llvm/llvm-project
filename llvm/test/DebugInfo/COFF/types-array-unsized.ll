@@ -12,14 +12,22 @@
 ; Foo f; // FIXME: only needed to force emit 'Foo'
 
 ; CHECK:      CodeViewTypes [
+; CHECK:        Array ([[ARRAY_COMPLETE:0x.*]]) {
+; CHECK-NEXT:     TypeLeafKind: LF_ARRAY (0x1503)
+; CHECK-NEXT:     ElementType: const char ({{.*}})
+; CHECK-NEXT:     IndexType: unsigned __int64 (0x23)
+; CHECK-NEXT:     SizeOf: 5
+; CHECK-NEXT:     Name:
+; CHECK-NEXT:   }
+; CHECK:      ]
 ; CHECK:        Array ([[ARRAY_FWD:0x.*]]) {
 ; CHECK-NEXT:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK-NEXT:     ElementType: const char ({{.*}})
 ; CHECK-NEXT:     IndexType: unsigned __int64 (0x23)
 ; CHECK-NEXT:     SizeOf: 0
-; CHECK-NEXT:     Name: 
+; CHECK-NEXT:     Name:
 ; CHECK-NEXT:   }
-; CHECK:        FieldList (0x1003) {
+; CHECK:        FieldList (0x1004) {
 ; CHECK-NEXT:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:     StaticDataMember {
 ; CHECK-NEXT:       TypeLeafKind: LF_STMEMBER (0x150E)
@@ -28,14 +36,6 @@
 ; CHECK-NEXT:       Name: str
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }
-; CHECK:        Array ([[ARRAY_COMPLETE:0x.*]]) {
-; CHECK-NEXT:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK-NEXT:     ElementType: const char ({{.*}})
-; CHECK-NEXT:     IndexType: unsigned __int64 (0x23)
-; CHECK-NEXT:     SizeOf: 5
-; CHECK-NEXT:     Name: 
-; CHECK-NEXT:   }
-; CHECK:      ]
 
 ; CHECK:          GlobalData {
 ; CHECK-NEXT:       Kind: S_GDATA32 (0x110D)
