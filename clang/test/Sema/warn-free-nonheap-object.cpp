@@ -13,9 +13,24 @@ int GI;
 struct S {
   operator char *() { return ptr; }
 
+  void CFree() {
+    ::free(&ptr); // expected-warning {{attempt to call free on non-heap object 'ptr'}}
+    ::free(&I);   // expected-warning {{attempt to call free on non-heap object 'I'}}
+    ::free(ptr);
+  }
+
+  void CXXFree() {
+    std::free(&ptr); // expected-warning {{attempt to call std::free on non-heap object 'ptr'}}
+    std::free(&I);   // expected-warning {{attempt to call std::free on non-heap object 'I'}}
+    std::free(ptr);
+  }
+
 private:
   char *ptr = (char *)std::malloc(10);
+  static int I;
 };
+
+int S::I = 0;
 
 void test1() {
   {
@@ -50,6 +65,10 @@ void test1() {
     S s;
     free(s);
     free(&s); // expected-warning {{attempt to call free on non-heap object 's'}}
+  }
+  {
+    S s;
+    s.CFree();
   }
 }
 
@@ -86,5 +105,9 @@ void test2() {
     S s;
     std::free(s);
     std::free(&s); // expected-warning {{attempt to call std::free on non-heap object 's'}}
+  }
+  {
+    S s;
+    s.CXXFree();
   }
 }
