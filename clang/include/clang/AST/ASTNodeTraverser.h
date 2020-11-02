@@ -101,6 +101,8 @@ public:
 
       // Decls within functions are visited by the body.
       if (!isa<FunctionDecl>(*D) && !isa<ObjCMethodDecl>(*D)) {
+        if (isa<ClassTemplateSpecializationDecl>(*D) && Traversal != TK_AsIs)
+          return;
         if (const auto *DC = dyn_cast<DeclContext>(D))
           dumpDeclContext(DC);
       }
