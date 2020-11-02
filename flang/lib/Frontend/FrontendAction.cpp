@@ -45,7 +45,15 @@ bool FrontendAction::ShouldEraseOutputFiles() {
 }
 
 llvm::Error FrontendAction::Execute() {
+  std::string currentInputPath{GetCurrentFileOrBufferName()};
+
+  Fortran::parser::Options parserOptions =
+      this->instance().invocation().fortranOpts();
+
+  this->instance().parsing().Prescan(currentInputPath, parserOptions);
+
   ExecuteAction();
+
   return llvm::Error::success();
 }
 
