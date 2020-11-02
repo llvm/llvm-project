@@ -7,6 +7,7 @@
 # The following check prefixes are used in this test:
 # CHECK-INST.....Match the canonical instr (tests alias to instr. mapping)
 # CHECK-EXPAND...Match canonical instr. unconditionally (tests alias expansion)
+# CHECK-INST: {{^}}
 
 # CHECK-EXPAND: c.li a0, 0
 li x10, 0

@@ -48,4 +48,6 @@ module attributes {gpu.container_module} {
   // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C0_I32]], [[STREAM]],
   // CHECK-SAME: [[PARAMS]], [[EXTRA_PARAMS]])
   // CHECK: llvm.call @mgpuStreamSynchronize
+  // CHECK: llvm.call @mgpuStreamDestroy
+  // CHECK: llvm.call @mgpuModuleUnload
 }

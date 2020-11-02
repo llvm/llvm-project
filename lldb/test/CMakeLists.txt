@@ -141,6 +141,7 @@ add_lldb_test_dependency(
   llvm-nm
   llvm-mc
   llvm-objcopy
+  llvm-pdbutil
   llvm-readobj
   )
 

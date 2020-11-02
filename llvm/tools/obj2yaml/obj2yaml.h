@@ -17,6 +17,7 @@
 #include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <system_error>
 
 std::error_code coff2yaml(llvm::raw_ostream &Out,
@@ -31,6 +32,7 @@ std::error_code xcoff2yaml(llvm::raw_ostream &Out,
                            const llvm::object::XCOFFObjectFile &Obj);
 std::error_code wasm2yaml(llvm::raw_ostream &Out,
                           const llvm::object::WasmObjectFile &Obj);
+llvm::Error archive2yaml(llvm::raw_ostream &Out, llvm::MemoryBufferRef Source);
 
 // Forward decls for dwarf2yaml
 namespace llvm {

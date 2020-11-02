@@ -262,7 +262,7 @@ void LowerABIAttributesPass::runOnOperation() {
     return op->getDialect()->getNamespace() ==
            spirv::SPIRVDialect::getDialectNamespace();
   });
-  if (failed(applyPartialConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     return signalPassFailure();
 
   // Walks over all the FuncOps in spirv::ModuleOp to lower the entry point

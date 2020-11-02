@@ -351,7 +351,7 @@ void Simplex::markEmpty() {
 }
 
 /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-/// is the curent number of variables, then the corresponding inequality is
+/// is the current number of variables, then the corresponding inequality is
 /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
 ///
 /// We add the inequality and mark it as restricted. We then try to make its
@@ -367,7 +367,7 @@ void Simplex::addInequality(ArrayRef<int64_t> coeffs) {
 }
 
 /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-/// is the curent number of variables, then the corresponding equality is
+/// is the current number of variables, then the corresponding equality is
 /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
 ///
 /// We simply add two opposing inequalities, which force the expression to
@@ -383,7 +383,7 @@ void Simplex::addEquality(ArrayRef<int64_t> coeffs) {
 unsigned Simplex::numVariables() const { return var.size(); }
 unsigned Simplex::numConstraints() const { return con.size(); }
 
-/// Return a snapshot of the curent state. This is just the current size of the
+/// Return a snapshot of the current state. This is just the current size of the
 /// undo log.
 unsigned Simplex::getSnapshot() const { return undoLog.size(); }
 

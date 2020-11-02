@@ -32,8 +32,8 @@ public:
       return true;
     for (auto D : DG)
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-        FD->addAttr(AnnotateAttr::CreateImplicit(FD->getASTContext(),
-                                                 "example_annotation"));
+        FD->addAttr(AnnotateAttr::CreateImplicit(
+            FD->getASTContext(), "example_annotation", nullptr, 0));
     return true;
   }
 };

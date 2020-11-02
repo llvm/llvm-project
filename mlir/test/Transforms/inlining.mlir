@@ -183,3 +183,9 @@ func @inline_simplify() -> i32 {
   %res = call_indirect %fn() : () -> i32
   return %res : i32
 }
+
+// CHECK-LABEL: func @no_inline_invalid_call
+func @no_inline_invalid_call() -> i32 {
+  %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock, noinline } : () -> (i32)
+  return %res : i32
+}

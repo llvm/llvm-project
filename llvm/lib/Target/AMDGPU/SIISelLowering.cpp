@@ -8058,9 +8058,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (!Op->isDivergent() && Alignment >= 4 && NumElements < 32) {
       if (MemVT.isPow2VectorType())
         return SDValue();
-      if (NumElements == 3)
-        return WidenVectorLoad(Op, DAG);
-      return SplitVectorLoad(Op, DAG);
+      return WidenOrSplitVectorLoad(Op, DAG);
     }
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private
@@ -8076,9 +8074,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
         Alignment >= 4 && NumElements < 32) {
       if (MemVT.isPow2VectorType())
         return SDValue();
-      if (NumElements == 3)
-        return WidenVectorLoad(Op, DAG);
-      return SplitVectorLoad(Op, DAG);
+      return WidenOrSplitVectorLoad(Op, DAG);
     }
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private
@@ -8093,7 +8089,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       return SplitVectorLoad(Op, DAG);
     // v3 loads not supported on SI.
     if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
-      return WidenVectorLoad(Op, DAG);
+      return WidenOrSplitVectorLoad(Op, DAG);
+
     // v3 and v4 loads are supported for private and global memory.
     return SDValue();
   }
@@ -8117,7 +8114,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
         return SplitVectorLoad(Op, DAG);
       // v3 loads not supported on SI.
       if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
-        return WidenVectorLoad(Op, DAG);
+        return WidenOrSplitVectorLoad(Op, DAG);
+
       return SDValue();
     default:
       llvm_unreachable("unsupported private_element_size");
@@ -11085,9 +11083,9 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     // Satisfy the operand register constraint when one of the inputs is
     // undefined. Ordinarily each undef value will have its own implicit_def of
     // a vreg, so force these to use a single register.
-    SDValue Src0 = Node->getOperand(0);
-    SDValue Src1 = Node->getOperand(1);
-    SDValue Src2 = Node->getOperand(2);
+    SDValue Src0 = Node->getOperand(1);
+    SDValue Src1 = Node->getOperand(3);
+    SDValue Src2 = Node->getOperand(5);
 
     if ((Src0.isMachineOpcode() &&
          Src0.getMachineOpcode() != AMDGPU::IMPLICIT_DEF) &&
@@ -11122,10 +11120,10 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 4> Ops = { Src0, Src1, Src2 };
-    for (unsigned I = 3, N = Node->getNumOperands(); I != N; ++I)
-      Ops.push_back(Node->getOperand(I));
-
+    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    Ops[1] = Src0;
+    Ops[3] = Src1;
+    Ops[5] = Src2;
     Ops.push_back(ImpDef.getValue(1));
     return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
   }

@@ -203,9 +203,8 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   if (DWARF && DWARF->getNonEmptySectionNames().count(SecName)) {
     if (const ELFYAML::RawContentSection *RawSec =
             dyn_cast<const ELFYAML::RawContentSection>(&S)) {
-      if (RawSec->Type != ELF::SHT_PROGBITS || !RawSec->Link.empty() ||
-          RawSec->Info || RawSec->AddressAlign != 1 || RawSec->Address ||
-          RawSec->EntSize)
+      if (RawSec->Type != ELF::SHT_PROGBITS || RawSec->Link || RawSec->Info ||
+          RawSec->AddressAlign != 1 || RawSec->Address || RawSec->EntSize)
         return true;
 
       ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));

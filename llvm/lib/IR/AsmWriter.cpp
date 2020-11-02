@@ -1910,6 +1910,57 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   Out << ")";
 }
 
+static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
+                                   TypePrinting *TypePrinter,
+                                   SlotTracker *Machine,
+                                   const Module *Context) {
+  Out << "!DIGenericSubrange(";
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+
+  auto IsConstant = [&](Metadata *Bound) -> bool {
+    if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
+      return BE->isSignedConstant();
+    }
+    return false;
+  };
+
+  auto GetConstant = [&](Metadata *Bound) -> int64_t {
+    assert(IsConstant(Bound) && "Expected constant");
+    auto *BE = dyn_cast_or_null<DIExpression>(Bound);
+    return static_cast<int64_t>(BE->getElement(1));
+  };
+
+  auto *Count = N->getRawCountNode();
+  if (IsConstant(Count))
+    Printer.printInt("count", GetConstant(Count),
+                     /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
+
+  auto *LBound = N->getRawLowerBound();
+  if (IsConstant(LBound))
+    Printer.printInt("lowerBound", GetConstant(LBound),
+                     /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
+
+  auto *UBound = N->getRawUpperBound();
+  if (IsConstant(UBound))
+    Printer.printInt("upperBound", GetConstant(UBound),
+                     /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
+
+  auto *Stride = N->getRawStride();
+  if (IsConstant(Stride))
+    Printer.printInt("stride", GetConstant(Stride),
+                     /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
+
+  Out << ")";
+}
+
 static void writeDIEnumerator(raw_ostream &Out, const DIEnumerator *N,
                               TypePrinting *, SlotTracker *, const Module *) {
   Out << "!DIEnumerator(";

@@ -92,3 +92,13 @@ v_interp_p1ll_f16 v5, v2, attr31.x v0
 v_interp_p2_f16 v5, v2, attr1.x, v3 mul:2
 // GFX67: error: instruction not supported on this GPU
 // GFX89: error: invalid operand for instruction
+
+//
+// v_div_scale_*
+//
+
+v_div_scale_f32  v24, vcc, v22, v22, |v20|
+// GCN: error: ABS not allowed in VOP3B instructions
+
+v_div_scale_f64  v[24:25], vcc, -|v[22:23]|, v[22:23], v[20:21]
+// GCN: error: ABS not allowed in VOP3B instructions

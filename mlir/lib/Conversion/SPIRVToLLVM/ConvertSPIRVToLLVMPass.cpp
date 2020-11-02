@@ -52,7 +52,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   // conversion.
   target.addLegalOp<ModuleOp>();
   target.addLegalOp<ModuleTerminatorOp>();
-  if (failed(applyPartialConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

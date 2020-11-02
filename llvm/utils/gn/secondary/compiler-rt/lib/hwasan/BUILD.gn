@@ -69,6 +69,7 @@ source_set("sources") {
 source_set("cxx_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  defines = [ "HWASAN_WITH_INTERCEPTORS=1" ]
   deps = [ "//compiler-rt/lib/ubsan:cxx_sources" ]
   sources = [ "hwasan_new_delete.cpp" ]
 }

@@ -8197,6 +8197,12 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("void f() { MACRO(A * B); }");
   verifyFormat("void f() { MACRO(A & B); }");
 
+  // This lambda was mis-formatted after D88956 (treating it as a binop):
+  verifyFormat("auto x = [](const decltype(x) &ptr) {};");
+  verifyFormat("auto x = [](const decltype(x) *ptr) {};");
+  verifyFormat("#define lambda [](const decltype(x) &ptr) {}");
+  verifyFormat("#define lambda [](const decltype(x) *ptr) {}");
+
   verifyFormat("DatumHandle const *operator->() const { return input_; }");
   verifyFormat("return options != nullptr && operator==(*options);");
 

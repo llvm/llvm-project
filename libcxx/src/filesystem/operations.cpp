@@ -534,7 +534,7 @@ path __canonical(path const& orig_p, error_code* ec) {
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
   path p = __do_absolute(orig_p, &cwd, ec);
-#if _POSIX_VERSION >= 200112
+#if defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112
   std::unique_ptr<char, decltype(&::free)>
     hold(::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)

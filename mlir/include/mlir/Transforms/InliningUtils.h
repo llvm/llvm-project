@@ -47,22 +47,39 @@ public:
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
+  /// Returns true if the given operation 'callable', that implements the
+  /// 'CallableOpInterface', can be inlined into the position given call
+  /// operation 'call', that is registered to the current dialect and implements
+  /// the `CallOpInterface`. 'wouldBeCloned' is set to true if the region of the
+  /// given 'callable' is set to be cloned during the inlining process, or false
+  /// if the region is set to be moved in-place(i.e. no duplicates would be
+  /// created).
+  virtual bool isLegalToInline(Operation *call, Operation *callable,
+                               bool wouldBeCloned) const {
+    return false;
+  }
+
   /// Returns true if the given region 'src' can be inlined into the region
   /// 'dest' that is attached to an operation registered to the current dialect.
-  /// 'valueMapping' contains any remapped values from within the 'src' region.
-  /// This can be used to examine what values will replace entry arguments into
-  /// the 'src' region for example.
-  virtual bool isLegalToInline(Region *dest, Region *src,
+  /// 'wouldBeCloned' is set to true if the given 'src' region is set to be
+  /// cloned during the inlining process, or false if the region is set to be
+  /// moved in-place(i.e. no duplicates would be created). 'valueMapping'
+  /// contains any remapped values from within the 'src' region. This can be
+  /// used to examine what values will replace entry arguments into the 'src'
+  /// region for example.
+  virtual bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                                BlockAndValueMapping &valueMapping) const {
     return false;
   }
 
   /// Returns true if the given operation 'op', that is registered to this
   /// dialect, can be inlined into the given region, false otherwise.
-  /// 'valueMapping' contains any remapped values from within the 'src' region.
-  /// This can be used to examine what values may potentially replace the
-  /// operands to 'op'.
-  virtual bool isLegalToInline(Operation *op, Region *dest,
+  /// 'wouldBeCloned' is set to true if the given 'op' is set to be cloned
+  /// during the inlining process, or false if the operation is set to be moved
+  /// in-place(i.e. no duplicates would be created). 'valueMapping' contains any
+  /// remapped values from within the 'src' region. This can be used to examine
+  /// what values may potentially replace the operands to 'op'.
+  virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
                                BlockAndValueMapping &valueMapping) const {
     return false;
   }
@@ -146,9 +163,11 @@ public:
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
-  virtual bool isLegalToInline(Region *dest, Region *src,
+  virtual bool isLegalToInline(Operation *call, Operation *callable,
+                               bool wouldBeCloned) const;
+  virtual bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                                BlockAndValueMapping &valueMapping) const;
-  virtual bool isLegalToInline(Operation *op, Region *dest,
+  virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
                                BlockAndValueMapping &valueMapping) const;
   virtual bool shouldAnalyzeRecursively(Operation *op) const;
 

@@ -333,6 +333,40 @@ bool ISD::matchBinaryPredicate(
   return true;
 }
 
+ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
+  switch (VecReduceOpcode) {
+  default:
+    llvm_unreachable("Expected VECREDUCE opcode");
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_SEQ_FADD:
+    return ISD::FADD;
+  case ISD::VECREDUCE_FMUL:
+    return ISD::FMUL;
+  case ISD::VECREDUCE_ADD:
+    return ISD::ADD;
+  case ISD::VECREDUCE_MUL:
+    return ISD::MUL;
+  case ISD::VECREDUCE_AND:
+    return ISD::AND;
+  case ISD::VECREDUCE_OR:
+    return ISD::OR;
+  case ISD::VECREDUCE_XOR:
+    return ISD::XOR;
+  case ISD::VECREDUCE_SMAX:
+    return ISD::SMAX;
+  case ISD::VECREDUCE_SMIN:
+    return ISD::SMIN;
+  case ISD::VECREDUCE_UMAX:
+    return ISD::UMAX;
+  case ISD::VECREDUCE_UMIN:
+    return ISD::UMIN;
+  case ISD::VECREDUCE_FMAX:
+    return ISD::FMAXNUM;
+  case ISD::VECREDUCE_FMIN:
+    return ISD::FMINNUM;
+  }
+}
+
 ISD::NodeType ISD::getExtForLoadExtType(bool IsFP, ISD::LoadExtType ExtType) {
   switch (ExtType) {
   case ISD::EXTLOAD:
@@ -10055,6 +10089,44 @@ SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
     Vals.emplace_back(NewTF);
   }
   return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
+}
+
+SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
+                                        EVT VT, SDNodeFlags Flags) {
+  switch (Opcode) {
+  default:
+    return SDValue();
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::UMAX:
+    return getConstant(0, DL, VT);
+  case ISD::MUL:
+    return getConstant(1, DL, VT);
+  case ISD::AND:
+  case ISD::UMIN:
+    return getAllOnesConstant(DL, VT);
+  case ISD::SMAX:
+    return getConstant(APInt::getSignedMinValue(VT.getSizeInBits()), DL, VT);
+  case ISD::SMIN:
+    return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
+  case ISD::FADD:
+    return getConstantFP(-0.0, DL, VT);
+  case ISD::FMUL:
+    return getConstantFP(1.0, DL, VT);
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM: {
+    // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+    const fltSemantics &Semantics = EVTToAPFloatSemantics(VT);
+    APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
+                        !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
+                        APFloat::getLargest(Semantics);
+    if (Opcode == ISD::FMAXNUM)
+      NeutralAF.changeSign();
+
+    return getConstantFP(NeutralAF, DL, VT);
+  }
+  }
 }
 
 #ifndef NDEBUG

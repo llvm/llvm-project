@@ -278,14 +278,13 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; CHECK-NEXT:    cmeq v1.4s, v2.4s, #0
 ; CHECK-NEXT:    sturh w8, [x0, #9]
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-NEXT:    strh w9, [x0, #6]
 ; CHECK-NEXT:    sturh w10, [x0, #3]
 ; CHECK-NEXT:    lsr w9, w9, #16
 ; CHECK-NEXT:    lsr w10, w10, #16
 ; CHECK-NEXT:    strb w8, [x0, #11]
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    orn v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    lsr w8, w11, #16
 ; CHECK-NEXT:    strh w11, [x0]
 ; CHECK-NEXT:    strb w9, [x0, #8]
@@ -314,15 +313,14 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    bfi w8, w9, #1, #1
 ; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    cmeq v1.4h, v1.4h, #0
 ; CHECK-NEXT:    ushr v2.4h, v0.4h, #1
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    bfi w8, w9, #2, #1
 ; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    mvn v0.8b, v1.8b
-; CHECK-NEXT:    cmeq v1.4h, v2.4h, #0
-; CHECK-NEXT:    mvn v1.8b, v1.8b
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    cmeq v0.4h, v2.4h, #0
+; CHECK-NEXT:    cmeq v1.4h, v1.4h, #0
+; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    orn v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    bfi w8, w9, #3, #29
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    and w8, w8, #0xf

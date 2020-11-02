@@ -632,7 +632,7 @@ public:
   /// Get an iterator over the pressure sets affected by the given physical or
   /// virtual register. If RegUnit is physical, it must be a register unit (from
   /// MCRegUnitIterator).
-  PSetIterator getPressureSets(unsigned RegUnit) const;
+  PSetIterator getPressureSets(Register RegUnit) const;
 
   //===--------------------------------------------------------------------===//
   // Virtual Register Info
@@ -907,7 +907,7 @@ public:
   ///
   /// Reserved registers may belong to an allocatable register class, but the
   /// target has explicitly requested that they are not used.
-  bool isReserved(Register PhysReg) const {
+  bool isReserved(MCRegister PhysReg) const {
     return getReservedRegs().test(PhysReg.id());
   }
 
@@ -1187,14 +1187,13 @@ class PSetIterator {
 public:
   PSetIterator() = default;
 
-  PSetIterator(unsigned RegUnit, const MachineRegisterInfo *MRI) {
+  PSetIterator(Register RegUnit, const MachineRegisterInfo *MRI) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-    if (Register::isVirtualRegister(RegUnit)) {
+    if (RegUnit.isVirtual()) {
       const TargetRegisterClass *RC = MRI->getRegClass(RegUnit);
       PSet = TRI->getRegClassPressureSets(RC);
       Weight = TRI->getRegClassWeight(RC).RegWeight;
-    }
-    else {
+    } else {
       PSet = TRI->getRegUnitPressureSets(RegUnit);
       Weight = TRI->getRegUnitWeight(RegUnit);
     }
@@ -1216,8 +1215,8 @@ public:
   }
 };
 
-inline PSetIterator MachineRegisterInfo::
-getPressureSets(unsigned RegUnit) const {
+inline PSetIterator
+MachineRegisterInfo::getPressureSets(Register RegUnit) const {
   return PSetIterator(RegUnit, this);
 }
 

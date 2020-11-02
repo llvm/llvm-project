@@ -261,7 +261,6 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:8
 ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s33 offset:8
 ; GCN: ;;#ASMSTART
-; GCN-COUNT-63: v_readlane_b32 s{{[0-9]+}}, v1
 
 ; MUBUF:    s_sub_u32 s32, s32, 0x300
 ; FLATSCR:  s_sub_u32 s32, s32, 12
@@ -289,18 +288,18 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN: s_waitcnt
 ; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
-; MUBUF:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
-; FLATSCR: scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
 ; MUBUF:   s_add_u32 s32, s32, 0x300
+; MUBUF:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FLATSCR: s_add_u32 s32, s32, 12
+; FLATSCR: scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
 ; GCN-COUNT-62: v_writelane_b32 v1,
 ; GCN: v_writelane_b32 v1,
 ; MUBUF:   buffer_store_dword
 ; FLATSCR: scratch_store_dword
 ; GCN: ;;#ASMSTART
-; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v1
 ; MUBUF:   buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; FLATSCR: scratch_load_dword v41, off, s33 ; 4-byte Folded Reload
+; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v1
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x300
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 12
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
@@ -395,8 +394,8 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; MUBUF:       s_add_u32 s32, s32, 0x300{{$}}
 ; FLATSCR:     s_add_u32 s32, s32, 12{{$}}
 
-; GCN: ;;#ASMSTART
-; GCN:          v_readlane_b32 s4, [[CSR_VGPR]], 0
+; GCN-DAG:      ;;#ASMSTART
+; GCN-DAG:      v_readlane_b32 s4, [[CSR_VGPR]], 0
 ; GCN:          v_readlane_b32 s5, [[CSR_VGPR]], 1
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x300{{$}}
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 12{{$}}
@@ -447,7 +446,6 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; FLATSCR-DAG: scratch_store_dword
 
 ; GCN: ;;#ASMSTART
-; GCN: v_readlane_b32 s4, [[CSR_VGPR]], 0
 ; GCN: v_readlane_b32 s5, [[CSR_VGPR]], 1
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x40300{{$}}
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 0x100c{{$}}

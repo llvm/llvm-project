@@ -175,6 +175,9 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
 /** Gets the context that a module was created with. */
 MlirContext mlirModuleGetContext(MlirModule module);
 
+/** Gets the body of the module, i.e. the only block it contains. */
+MlirBlock mlirModuleGetBody(MlirModule module);
+
 /** Checks whether a module is null. */
 static inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 
@@ -281,6 +284,14 @@ static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 /** Checks whether two operation handles point to the same operation. This does
  * not perform deep comparison. */
 int mlirOperationEqual(MlirOperation op, MlirOperation other);
+
+/** Gets the block that owns this operation, returning null if the operation is
+ * not owned. */
+MlirBlock mlirOperationGetBlock(MlirOperation op);
+
+/** Gets the operation that owns this operation, returning null if the operation
+ * is not owned. */
+MlirOperation mlirOperationGetParentOperation(MlirOperation op);
 
 /** Returns the number of regions attached to the given operation. */
 intptr_t mlirOperationGetNumRegions(MlirOperation op);
@@ -404,6 +415,9 @@ MlirBlock mlirBlockGetNextInRegion(MlirBlock block);
 
 /** Returns the first operation in the block. */
 MlirOperation mlirBlockGetFirstOperation(MlirBlock block);
+
+/** Returns the terminator operation in the block or null if no terminator. */
+MlirOperation mlirBlockGetTerminator(MlirBlock block);
 
 /** Takes an operation owned by the caller and appends it to the block. */
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);

@@ -216,6 +216,8 @@ class VectorType;
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
 
+      VQDMULH,      // MVE vqdmulh instruction
+
       // MVE reductions
       VADDVs,       // sign- or zero-extend the elements of a vector to i32,
       VADDVu,       //   add them all together, and return an i32 of their sum

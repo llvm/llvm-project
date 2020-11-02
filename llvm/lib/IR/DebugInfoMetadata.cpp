@@ -435,6 +435,84 @@ DISubrange::BoundType DISubrange::getStride() const {
   return BoundType();
 }
 
+DIGenericSubrange *DIGenericSubrange::getImpl(LLVMContext &Context,
+                                              Metadata *CountNode, Metadata *LB,
+                                              Metadata *UB, Metadata *Stride,
+                                              StorageType Storage,
+                                              bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIGenericSubrange, (CountNode, LB, UB, Stride));
+  Metadata *Ops[] = {CountNode, LB, UB, Stride};
+  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIGenericSubrange, Ops);
+}
+
+DIGenericSubrange::BoundType DIGenericSubrange::getCount() const {
+  Metadata *CB = getRawCountNode();
+  if (!CB)
+    return BoundType();
+
+  assert((isa<DIVariable>(CB) || isa<DIExpression>(CB)) &&
+         "Count must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<DIVariable>(CB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(CB))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
+DIGenericSubrange::BoundType DIGenericSubrange::getLowerBound() const {
+  Metadata *LB = getRawLowerBound();
+  if (!LB)
+    return BoundType();
+
+  assert((isa<DIVariable>(LB) || isa<DIExpression>(LB)) &&
+         "LowerBound must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<DIVariable>(LB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(LB))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
+DIGenericSubrange::BoundType DIGenericSubrange::getUpperBound() const {
+  Metadata *UB = getRawUpperBound();
+  if (!UB)
+    return BoundType();
+
+  assert((isa<DIVariable>(UB) || isa<DIExpression>(UB)) &&
+         "UpperBound must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<DIVariable>(UB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(UB))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
+DIGenericSubrange::BoundType DIGenericSubrange::getStride() const {
+  Metadata *ST = getRawStride();
+  if (!ST)
+    return BoundType();
+
+  assert((isa<DIVariable>(ST) || isa<DIExpression>(ST)) &&
+         "Stride must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<DIVariable>(ST))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(ST))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
 DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
                                     bool IsUnsigned, MDString *Name,
                                     StorageType Storage, bool ShouldCreate) {
@@ -1061,6 +1139,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_bregx:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_consts:
       break;
     }
   }
@@ -1330,6 +1409,15 @@ bool DIExpression::isConstant() const {
       getElement(2) != dwarf::DW_OP_stack_value)
     return false;
   if (getNumElements() == 6 && getElement(3) != dwarf::DW_OP_LLVM_fragment)
+    return false;
+  return true;
+}
+
+bool DIExpression::isSignedConstant() const {
+  // Recognize DW_OP_consts C
+  if (getNumElements() != 2)
+    return false;
+  if (getElement(0) != dwarf::DW_OP_consts)
     return false;
   return true;
 }

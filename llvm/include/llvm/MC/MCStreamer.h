@@ -508,8 +508,8 @@ public:
   virtual void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol);
 
   /// Add the given \p Attribute to \p Symbol.
-  virtual bool emitSymbolAttribute(MCSymbol *Symbol,
-                                   MCSymbolAttr Attribute) = 0;
+  virtual bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute,
+                                   SMLoc Loc = SMLoc()) = 0;
 
   /// Set the \p DescValue for the \p Symbol.
   ///

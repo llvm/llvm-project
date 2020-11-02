@@ -1149,7 +1149,7 @@ ctype<char>::__classic_upper_table() _NOEXCEPT
 {
     return _LIBCPP_GET_C_LOCALE->__ctype_toupper;
 }
-#elif __NetBSD__
+#elif defined(__NetBSD__)
 const short*
 ctype<char>::__classic_lower_table() _NOEXCEPT
 {

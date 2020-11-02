@@ -147,13 +147,9 @@ LinalgDependenceGraph::getDependencesInto(
 }
 
 void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
-  assert(src.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(dst.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
   for (auto srcView : src.getOutputBuffers()) { // W
     // RAW graph
-    for (auto dstView : dst.getInputs()) {   // R
+    for (auto dstView : dst.getInputBuffers()) { // R
       if (aliases.alias(srcView, dstView)) { // if alias, fill RAW
         addDependenceElem(DependenceType::RAW,
                           LinalgOpView{src.getOperation(), srcView},
@@ -169,9 +165,9 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
       }
     }
   }
-  for (auto srcView : src.getInputs()) { // R
+  for (auto srcView : src.getInputBuffers()) { // R
     // RAR graph
-    for (auto dstView : dst.getInputs()) {   // R
+    for (auto dstView : dst.getInputBuffers()) { // R
       if (aliases.alias(srcView, dstView)) { // if alias, fill RAR
         addDependenceElem(DependenceType::RAR,
                           LinalgOpView{src.getOperation(), srcView},

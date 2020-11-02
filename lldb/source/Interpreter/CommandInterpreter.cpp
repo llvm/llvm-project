@@ -2307,6 +2307,8 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     }
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
+    tmp_result.SetInteractive(result.GetInteractive());
+
     // If override_context is not NULL, pass no_context_switching = true for
     // HandleCommand() since we updated our context already.
 
@@ -2554,11 +2556,15 @@ void CommandInterpreter::HandleCommandsFromFile(
     debugger.SetAsyncExecution(false);
 
   m_command_source_depth++;
+  m_command_source_dirs.push_back(cmd_file.CopyByRemovingLastPathComponent());
 
   debugger.RunIOHandlerSync(io_handler_sp);
   if (!m_command_source_flags.empty())
     m_command_source_flags.pop_back();
+
+  m_command_source_dirs.pop_back();
   m_command_source_depth--;
+
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   debugger.SetAsyncExecution(old_async_execution);
 }
@@ -2962,6 +2968,12 @@ bool CommandInterpreter::SaveTranscript(
                                  output_file->c_str());
 
   return true;
+}
+
+FileSpec CommandInterpreter::GetCurrentSourceDir() {
+  if (m_command_source_dirs.empty())
+    return {};
+  return m_command_source_dirs.back();
 }
 
 void CommandInterpreter::GetLLDBCommandsFromIOHandler(

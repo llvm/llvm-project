@@ -93,11 +93,10 @@ main_body:
 ;CHECK-NEXT: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
 ;CHECK-NEXT: s_wqm_b64 exec, exec
 ;CHECK: v_mul_lo_u32 [[MUL:v[0-9]+]], v0, v1
+;CHECK: image_sample
 ;CHECK: s_and_b64 exec, exec, [[ORIG]]
+;CHECK: image_sample
 ;CHECK: store
-;CHECK: s_wqm_b64 exec, exec
-;CHECK: image_sample
-;CHECK: image_sample
 define amdgpu_ps <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %d, float %data) {
 main_body:
   %c.1 = mul i32 %c, %d
@@ -578,10 +577,10 @@ END:
 ;CHECK: buffer_store_dword
 ;CHECK: s_wqm_b64 exec, exec
 ;CHECK: v_cmpx_
-;CHECK: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]]
-;CHECK: buffer_store_dword
-;CHECK: s_mov_b64 exec, [[SAVE]]
 ;CHECK: image_sample
+;CHECK: s_and_b64 exec, exec, [[ORIG]]
+;CHECK: image_sample
+;CHECK: buffer_store_dword
 define amdgpu_ps <4 x float> @test_kill_0(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <2 x i32> %idx, <2 x float> %data, float %coord, float %coord2, float %z) {
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0

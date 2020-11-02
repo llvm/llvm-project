@@ -66,9 +66,9 @@ using llvm::object::coff_section;
 static ExitOnError exitOnErr;
 
 static Timer totalPdbLinkTimer("PDB Emission (Cumulative)", Timer::root());
-Timer lld::coff::loadGHashTimer("Global Type Hashing", totalPdbLinkTimer);
-Timer lld::coff::mergeGHashTimer("GHash Type Merging", totalPdbLinkTimer);
 static Timer addObjectsTimer("Add Objects", totalPdbLinkTimer);
+Timer lld::coff::loadGHashTimer("Global Type Hashing", addObjectsTimer);
+Timer lld::coff::mergeGHashTimer("GHash Type Merging", addObjectsTimer);
 static Timer typeMergingTimer("Type Merging", addObjectsTimer);
 static Timer symbolMergingTimer("Symbol Merging", addObjectsTimer);
 static Timer publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer);

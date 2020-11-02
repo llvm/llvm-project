@@ -670,6 +670,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
   unsigned BitWidth = Known.getBitWidth();
 
+  // Refine Known set if the pointer alignment is set by assume bundles.
+  if (V->getType()->isPointerTy()) {
+    if (RetainedKnowledge RK = getKnowledgeValidInContext(
+            V, {Attribute::Alignment}, Q.CxtI, Q.DT, Q.AC)) {
+      Known.Zero.setLowBits(Log2_32(RK.ArgValue));
+    }
+  }
+
   // Note that the patterns below need to be kept in sync with the code
   // in AssumptionCache::updateAffectedValues.
 
@@ -1995,7 +2003,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   // Aligned pointers have trailing zeros - refine Known.Zero set
   if (isa<PointerType>(V->getType())) {
     Align Alignment = V->getPointerAlignment(Q.DL);
-    Known.Zero.setLowBits(countTrailingZeros(Alignment.value()));
+    Known.Zero.setLowBits(Log2(Alignment));
   }
 
   // computeKnownBitsFromAssume strictly refines Known.
@@ -5981,6 +5989,46 @@ SelectPatternFlavor llvm::getInverseMinMaxFlavor(SelectPatternFlavor SPF) {
 
 CmpInst::Predicate llvm::getInverseMinMaxPred(SelectPatternFlavor SPF) {
   return getMinMaxPred(getInverseMinMaxFlavor(SPF));
+}
+
+std::pair<Intrinsic::ID, bool>
+llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
+  // Check if VL contains select instructions that can be folded into a min/max
+  // vector intrinsic and return the intrinsic if it is possible.
+  // TODO: Support floating point min/max.
+  bool AllCmpSingleUse = true;
+  SelectPatternResult SelectPattern;
+  SelectPattern.Flavor = SPF_UNKNOWN;
+  if (all_of(VL, [&SelectPattern, &AllCmpSingleUse](Value *I) {
+        Value *LHS, *RHS;
+        auto CurrentPattern = matchSelectPattern(I, LHS, RHS);
+        if (!SelectPatternResult::isMinOrMax(CurrentPattern.Flavor) ||
+            CurrentPattern.Flavor == SPF_FMINNUM ||
+            CurrentPattern.Flavor == SPF_FMAXNUM ||
+            !I->getType()->isIntOrIntVectorTy())
+          return false;
+        if (SelectPattern.Flavor != SPF_UNKNOWN &&
+            SelectPattern.Flavor != CurrentPattern.Flavor)
+          return false;
+        SelectPattern = CurrentPattern;
+        AllCmpSingleUse &=
+            match(I, m_Select(m_OneUse(m_Value()), m_Value(), m_Value()));
+        return true;
+      })) {
+    switch (SelectPattern.Flavor) {
+    case SPF_SMIN:
+      return {Intrinsic::smin, AllCmpSingleUse};
+    case SPF_UMIN:
+      return {Intrinsic::umin, AllCmpSingleUse};
+    case SPF_SMAX:
+      return {Intrinsic::smax, AllCmpSingleUse};
+    case SPF_UMAX:
+      return {Intrinsic::umax, AllCmpSingleUse};
+    default:
+      llvm_unreachable("unexpected select pattern flavor");
+    }
+  }
+  return {Intrinsic::not_intrinsic, false};
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.

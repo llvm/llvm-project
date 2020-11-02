@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_PS4CPU_H
 
 #include "Gnu.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -73,8 +74,9 @@ public:
   bool HasNativeLLVMSupport() const override;
   bool isPICDefault() const override;
 
-  unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
-    return 2; // SSPStrong
+  LangOptions::StackProtectorMode
+  GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
+    return LangOptions::SSPStrong;
   }
 
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {

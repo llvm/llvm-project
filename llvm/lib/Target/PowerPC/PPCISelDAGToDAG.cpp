@@ -3599,6 +3599,12 @@ bool PPCDAGToDAGISel::tryIntCompareInGPR(SDNode *N) {
   if (TM.getOptLevel() == CodeGenOpt::None || !TM.isPPC64())
     return false;
 
+  // For POWER10, it is more profitable to use the set boolean extension
+  // instructions rather than the integer compare elimination codegen.
+  // Users can override this via the command line option, `--ppc-gpr-icmps`.
+  if (!(CmpInGPR.getNumOccurrences() > 0) && Subtarget->isISA3_1())
+    return false;
+
   switch (N->getOpcode()) {
   default: break;
   case ISD::ZERO_EXTEND:
@@ -4227,8 +4233,10 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
        (FalseRes.getOpcode() != ISD::SELECT_CC || CC != ISD::SETEQ)))
     return false;
 
-  bool InnerIsSel = FalseRes.getOpcode() == ISD::SELECT_CC;
-  SDValue SetOrSelCC = InnerIsSel ? FalseRes : FalseRes.getOperand(0);
+  SDValue SetOrSelCC = FalseRes.getOpcode() == ISD::SELECT_CC
+                           ? FalseRes
+                           : FalseRes.getOperand(0);
+  bool InnerIsSel = SetOrSelCC.getOpcode() == ISD::SELECT_CC;
   if (SetOrSelCC.getOpcode() != ISD::SETCC &&
       SetOrSelCC.getOpcode() != ISD::SELECT_CC)
     return false;

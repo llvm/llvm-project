@@ -48,24 +48,22 @@ TEST(ImmutableMapTest, MultiElemIntMapTest) {
 
 TEST(ImmutableMapTest, EmptyIntMapRefTest) {
   using int_int_map = ImmutableMapRef<int, int>;
-  ImmutableMapRef<int, int>::FactoryTy *f =
-    new ImmutableMapRef<int, int>::FactoryTy();
+  ImmutableMapRef<int, int>::FactoryTy f;
 
-  EXPECT_TRUE(int_int_map::getEmptyMap(f) == int_int_map::getEmptyMap(f));
-  EXPECT_FALSE(int_int_map::getEmptyMap(f) != int_int_map::getEmptyMap(f));
-  EXPECT_TRUE(int_int_map::getEmptyMap(f).isEmpty());
+  EXPECT_TRUE(int_int_map::getEmptyMap(&f) == int_int_map::getEmptyMap(&f));
+  EXPECT_FALSE(int_int_map::getEmptyMap(&f) != int_int_map::getEmptyMap(&f));
+  EXPECT_TRUE(int_int_map::getEmptyMap(&f).isEmpty());
 
-  int_int_map S = int_int_map::getEmptyMap(f);
+  int_int_map S = int_int_map::getEmptyMap(&f);
   EXPECT_EQ(0u, S.getHeight());
   EXPECT_TRUE(S.begin() == S.end());
   EXPECT_FALSE(S.begin() != S.end());
 }
 
 TEST(ImmutableMapTest, MultiElemIntMapRefTest) {
-  ImmutableMapRef<int, int>::FactoryTy *f =
-    new ImmutableMapRef<int, int>::FactoryTy();
+  ImmutableMapRef<int, int>::FactoryTy f;
 
-  ImmutableMapRef<int, int> S = ImmutableMapRef<int, int>::getEmptyMap(f);
+  ImmutableMapRef<int, int> S = ImmutableMapRef<int, int>::getEmptyMap(&f);
 
   ImmutableMapRef<int, int> S2 = S.add(3, 10).add(4, 11).add(5, 12);
 

@@ -47,9 +47,9 @@ define amdgpu_ps float @valley_partially_undef_copy() #0 {
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], 0
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], 0
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v1
 ; CHECK-NEXT:  BB1_1: ; %bb9
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

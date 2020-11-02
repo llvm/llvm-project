@@ -187,7 +187,7 @@ few requirements to the test suite. Here's some stuff you should know:
 - All tests are run in a temporary directory that is unique to that test and
   cleaned up after the test is done.
 - When a test needs data files as inputs, these data files can be saved in the
-  repository (when reasonable) and referrenced by the test as
+  repository (when reasonable) and referenced by the test as
   ``// FILE_DEPENDENCIES: <path-to-dependencies>``. Copies of these files or
   directories will be made available to the test in the temporary directory
   where it is run.

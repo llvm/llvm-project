@@ -53,13 +53,24 @@ REGISTER_TWEAK(ExpandAutoType)
 
 std::string ExpandAutoType::title() const { return "Expand auto type"; }
 
+// Structured bindings must use auto, e.g. `const auto& [a,b,c] = ...;`.
+// Return whether N (an AutoTypeLoc) is such an auto that must not be expanded.
+bool isStructuredBindingType(const SelectionTree::Node *N) {
+  // Walk up the TypeLoc chain, because auto may be qualified.
+  while (N && N->ASTNode.get<TypeLoc>())
+    N = N->Parent;
+  // The relevant type is the only direct type child of a Decomposition.
+  return N && N->ASTNode.get<DecompositionDecl>();
+}
+
 bool ExpandAutoType::prepare(const Selection& Inputs) {
   CachedLocation = llvm::None;
   if (auto *Node = Inputs.ASTSelection.commonAncestor()) {
     if (auto *TypeNode = Node->ASTNode.get<TypeLoc>()) {
       if (const AutoTypeLoc Result = TypeNode->getAs<AutoTypeLoc>()) {
         // Code in apply() does handle 'decltype(auto)' yet.
-        if (!Result.getTypePtr()->isDecltypeAuto())
+        if (!Result.getTypePtr()->isDecltypeAuto() &&
+            !isStructuredBindingType(Node))
           CachedLocation = Result;
       }
     }

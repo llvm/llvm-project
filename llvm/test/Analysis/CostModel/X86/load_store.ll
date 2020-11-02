@@ -129,8 +129,8 @@ define i32 @loads(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %13 = load <3 x double>, <3 x double>* undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %14 = load <3 x i32>, <3 x i32>* undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %15 = load <3 x i64>, <3 x i64>* undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %16 = load <5 x i32>, <5 x i32>* undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %17 = load <5 x i64>, <5 x i64>* undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %16 = load <5 x i32>, <5 x i32>* undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %17 = load <5 x i64>, <5 x i64>* undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'loads'
@@ -149,8 +149,8 @@ define i32 @loads(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %13 = load <3 x double>, <3 x double>* undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %14 = load <3 x i32>, <3 x i32>* undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %15 = load <3 x i64>, <3 x i64>* undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %16 = load <5 x i32>, <5 x i32>* undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %17 = load <5 x i64>, <5 x i64>* undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %16 = load <5 x i32>, <5 x i32>* undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %17 = load <5 x i64>, <5 x i64>* undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   load i8, i8* undef, align 4

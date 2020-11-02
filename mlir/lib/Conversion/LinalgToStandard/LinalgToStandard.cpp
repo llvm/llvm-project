@@ -211,7 +211,7 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   target.addLegalOp<linalg::ReshapeOp, linalg::RangeOp>();
   OwningRewritePatternList patterns;
   populateLinalgToStandardConversionPatterns(patterns, &getContext());
-  if (failed(applyFullConversion(module, target, patterns)))
+  if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -place-safepoints | FileCheck %s
+; RUN: opt < %s -S -place-safepoints -enable-new-pm=0 | FileCheck %s
 
 ; Basic test to make sure that safepoints are placed
 ; for CoreCLR GC

@@ -9,29 +9,25 @@
 // test bool all() const;
 
 #include <bitset>
-#include <type_traits>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_all()
-{
+void test_all() {
     std::bitset<N> v;
     v.reset();
     assert(v.all() == (N == 0));
     v.set();
     assert(v.all() == true);
-    const bool greater_than_1 = std::integral_constant<bool, (N > 1)>::value; // avoid compiler warnings
-    if (greater_than_1)
-    {
+    if (v.size() > 1) {
         v[N/2] = false;
         assert(v.all() == false);
     }
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test_all<0>();
     test_all<1>();
     test_all<31>();
@@ -42,5 +38,5 @@ int main(int, char**)
     test_all<65>();
     test_all<1000>();
 
-  return 0;
+    return 0;
 }

@@ -396,8 +396,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
 
   // Don't generate type units for unsupported object file formats.
-  GenerateTypeUnits =
-      A->TM.getTargetTriple().isOSBinFormatELF() && GenerateDwarfTypeUnits;
+  GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
+                       A->TM.getTargetTriple().isOSBinFormatWasm()) &&
+                      GenerateDwarfTypeUnits;
 
   TheAccelTableKind = computeAccelTableKind(
       DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
@@ -2486,8 +2487,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && (AP.getDwarfDebug()->tuneForGDB() ||
-                                      AP.getDwarfDebug()->tuneForLLDB())) {
+    if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE()) {
       DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
       return;
     } else if (Value.getConstantFP()

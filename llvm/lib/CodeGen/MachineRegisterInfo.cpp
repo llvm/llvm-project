@@ -660,7 +660,7 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
     bool IsRootReserved = true;
     for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
          Super.isValid(); ++Super) {
-      unsigned Reg = *Super;
+      MCRegister Reg = *Super;
       if (!isReserved(Reg)) {
         IsRootReserved = false;
         break;

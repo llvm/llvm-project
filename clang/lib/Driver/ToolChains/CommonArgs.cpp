@@ -82,6 +82,62 @@ static bool needFortranMain(const Driver &D, const ArgList &Args) {
            !Args.hasArg(options::OPT_no_fortran_main)));
 }
 
+static void renderRpassOptions(const ArgList &Args, ArgStringList &CmdArgs) {
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
+    CmdArgs.push_back(Args.MakeArgString(Twine("--plugin-opt=-pass-remarks=") +
+                                         A->getValue()));
+
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--plugin-opt=-pass-remarks-missed=") + A->getValue()));
+
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--plugin-opt=-pass-remarks-analysis=") + A->getValue()));
+}
+
+static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                 const llvm::Triple &Triple,
+                                 const InputInfo &Input,
+                                 const InputInfo &Output) {
+  StringRef Format = "yaml";
+  if (const Arg *A = Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+    Format = A->getValue();
+
+  SmallString<128> F;
+  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (A)
+    F = A->getValue();
+  else if (Output.isFilename())
+    F = Output.getFilename();
+
+  assert(!F.empty() && "Cannot determine remarks output name.");
+  // Append "opt.ld.<format>" to the end of the file name.
+  CmdArgs.push_back(
+      Args.MakeArgString(Twine("--plugin-opt=opt-remarks-filename=") + F +
+                         Twine(".opt.ld.") + Format));
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_passes_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--plugin-opt=opt-remarks-passes=") + A->getValue()));
+
+  CmdArgs.push_back(Args.MakeArgString(
+      Twine("--plugin-opt=opt-remarks-format=") + Format.data()));
+}
+
+static void renderRemarksHotnessOptions(const ArgList &Args,
+                                        ArgStringList &CmdArgs) {
+  if (Args.hasFlag(options::OPT_fdiagnostics_show_hotness,
+                   options::OPT_fno_diagnostics_show_hotness, false))
+    CmdArgs.push_back("--plugin-opt=opt-remarks-with-hotness");
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--plugin-opt=opt-remarks-hotness-threshold=") + A->getValue()));
+}
+
 void tools::addPathIfExists(const Driver &D, const Twine &Path,
                             ToolChain::path_list &Paths) {
   if (D.getVFS().exists(Path))
@@ -584,6 +640,18 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString(Twine("-plugin-opt=stats-file=") + StatsFile));
 
   addX86AlignBranchArgs(D, Args, CmdArgs, /*IsLTO=*/true);
+
+  // Handle remark diagnostics on screen options: '-Rpass-*'.
+  renderRpassOptions(Args, CmdArgs);
+
+  // Handle serialized remarks options: '-fsave-optimization-record'
+  // and '-foptimization-record-*'.
+  if (willEmitRemarks(Args))
+    renderRemarksOptions(Args, CmdArgs, ToolChain.getEffectiveTriple(), Input,
+                         Output);
+
+  // Handle remarks hotness/threshold related options.
+  renderRemarksHotnessOptions(Args, CmdArgs);
 }
 
 std::string tools::FindDebugInLibraryPath() {
@@ -906,8 +974,15 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.needsFuzzerInterceptors())
       addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
                           true);
-    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
+    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx)) {
+      bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
+                                 !Args.hasArg(options::OPT_static);
+      if (OnlyLibstdcxxStatic)
+        CmdArgs.push_back("-Bstatic");
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (OnlyLibstdcxxStatic)
+        CmdArgs.push_back("-Bdynamic");
+    }
   }
 
   for (auto RT : SharedRuntimes)

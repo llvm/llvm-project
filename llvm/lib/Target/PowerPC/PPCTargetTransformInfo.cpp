@@ -1204,7 +1204,7 @@ bool PPCTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }
 
-bool PPCTTIImpl::isRegNumMajorCostOfLSR() {
+bool PPCTTIImpl::isNumRegsMajorCostOfLSR() {
   return false;
 }
 

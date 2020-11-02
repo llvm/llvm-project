@@ -1645,8 +1645,8 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-NEXT:    flat_load_dword v4, v[0:1]
 ; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; CI-NEXT:    s_mov_b32 s2, 0xffff
 ; CI-NEXT:    s_mov_b32 s3, 0
+; CI-NEXT:    s_mov_b32 s2, 0xffff
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    s_lshl_b32 s1, s4, 16
 ; CI-NEXT:    s_and_b32 s4, s4, s2

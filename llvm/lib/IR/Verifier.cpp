@@ -926,6 +926,30 @@ void Verifier::visitDISubrange(const DISubrange &N) {
            "Stride must be signed constant or DIVariable or DIExpression", &N);
 }
 
+void Verifier::visitDIGenericSubrange(const DIGenericSubrange &N) {
+  AssertDI(N.getTag() == dwarf::DW_TAG_generic_subrange, "invalid tag", &N);
+  AssertDI(N.getRawCountNode() || N.getRawUpperBound(),
+           "GenericSubrange must contain count or upperBound", &N);
+  AssertDI(!N.getRawCountNode() || !N.getRawUpperBound(),
+           "GenericSubrange can have any one of count or upperBound", &N);
+  auto *CBound = N.getRawCountNode();
+  AssertDI(!CBound || isa<DIVariable>(CBound) || isa<DIExpression>(CBound),
+           "Count must be signed constant or DIVariable or DIExpression", &N);
+  auto *LBound = N.getRawLowerBound();
+  AssertDI(LBound, "GenericSubrange must contain lowerBound", &N);
+  AssertDI(isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
+           "LowerBound must be signed constant or DIVariable or DIExpression",
+           &N);
+  auto *UBound = N.getRawUpperBound();
+  AssertDI(!UBound || isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
+           "UpperBound must be signed constant or DIVariable or DIExpression",
+           &N);
+  auto *Stride = N.getRawStride();
+  AssertDI(Stride, "GenericSubrange must contain stride", &N);
+  AssertDI(isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
+           "Stride must be signed constant or DIVariable or DIExpression", &N);
+}
+
 void Verifier::visitDIEnumerator(const DIEnumerator &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_enumerator, "invalid tag", &N);
 }

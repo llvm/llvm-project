@@ -10,6 +10,9 @@ syntax = "proto2";
 
 package clang.clangd.remote;
 
+// Common final result for streaming requests.
+message FinalResult { optional bool has_more = 1; }
+
 message LookupRequest { repeated string ids = 1; }
 
 // The response is a stream of symbol messages and the terminating message
@@ -17,7 +20,7 @@ message LookupRequest { repeated string ids = 1; }
 message LookupReply {
   oneof kind {
     Symbol stream_result = 1;
-    bool final_result = 2;
+    FinalResult final_result = 2;
   }
 }
 
@@ -36,7 +39,7 @@ message FuzzyFindRequest {
 message FuzzyFindReply {
   oneof kind {
     Symbol stream_result = 1;
-    bool final_result = 2; // HasMore
+    FinalResult final_result = 2;
   }
 }
 
@@ -51,7 +54,7 @@ message RefsRequest {
 message RefsReply {
   oneof kind {
     Ref stream_result = 1;
-    bool final_result = 2; // HasMore
+    FinalResult final_result = 2;
   }
 }
 
@@ -116,7 +119,7 @@ message RelationsRequest {
 message RelationsReply {
   oneof kind {
     Relation stream_result = 1;
-    bool final_result = 2; // HasMore
+    FinalResult final_result = 2;
   }
 }
 

@@ -214,15 +214,15 @@ entry:
 
 ; GCN: s_swappc_b64
 
-; GCN-DAG: v_readlane_b32 s34, v42, 0
-; GCN-DAG: v_readlane_b32 s35, v42, 1
-
-; GCN: buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN-DAG: buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-DAG: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, sibling_call_i32_fastcc_i32_i32@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
+
+; GCN-DAG: v_readlane_b32 s34, v42, 0
+; GCN-DAG: v_readlane_b32 s35, v42, 1
 
 ; GCN: s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT: v_readlane_b32 s33,

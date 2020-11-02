@@ -53,7 +53,7 @@ static cl::opt<unsigned> LbrSamplingPeriod(
 static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   switch (Instr.Description.TSFlags & X86II::FormMask) {
   default:
-    llvm_unreachable("Unknown FormMask value");
+    return "Unknown FormMask value";
   // These have no memory access.
   case X86II::Pseudo:
   case X86II::RawFrm:

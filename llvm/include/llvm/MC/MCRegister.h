@@ -20,6 +20,7 @@ using MCPhysReg = uint16_t;
 
 /// Wrapper class representing physical registers. Should be passed by value.
 class MCRegister {
+  friend hash_code hash_value(const MCRegister &);
   unsigned Reg;
 
 public:
@@ -105,6 +106,9 @@ template<> struct DenseMapInfo<MCRegister> {
   }
 };
 
+inline hash_code hash_value(const MCRegister &Reg) {
+  return hash_value(Reg.id());
+}
 }
 
 #endif // ifndef LLVM_MC_REGISTER_H

@@ -2088,6 +2088,98 @@ void actual_template_test() {
 
   EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                                      staticAssertDecl(has(integerLiteral())))));
+
+  Code = R"cpp(
+
+struct OneParamCtor {
+  explicit OneParamCtor(int);
+};
+struct TwoParamCtor {
+  explicit TwoParamCtor(int, int);
+};
+
+void varDeclCtors() {
+  {
+  auto var1 = OneParamCtor(5);
+  auto var2 = TwoParamCtor(6, 7);
+  }
+  {
+  OneParamCtor var3(5);
+  TwoParamCtor var4(6, 7);
+  }
+  int i = 0;
+  {
+  auto var5 = OneParamCtor(i);
+  auto var6 = TwoParamCtor(i, 7);
+  }
+  {
+  OneParamCtor var7(i);
+  TwoParamCtor var8(i, 7);
+  }
+}
+
+)cpp";
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_AsIs, varDecl(hasName("var1"), hasInitializer(hasDescendant(
+                                                     cxxConstructExpr()))))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_AsIs, varDecl(hasName("var2"), hasInitializer(hasDescendant(
+                                                     cxxConstructExpr()))))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_AsIs, varDecl(hasName("var3"),
+                                      hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_AsIs, varDecl(hasName("var4"),
+                                      hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_AsIs, varDecl(hasName("var5"), hasInitializer(hasDescendant(
+                                                     cxxConstructExpr()))))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_AsIs, varDecl(hasName("var6"), hasInitializer(hasDescendant(
+                                                     cxxConstructExpr()))))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_AsIs, varDecl(hasName("var7"),
+                                      hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_AsIs, varDecl(hasName("var8"),
+                                      hasInitializer(cxxConstructExpr())))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var1"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var2"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var3"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var4"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var5"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var6"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var7"), hasInitializer(cxxConstructExpr())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               varDecl(hasName("var8"), hasInitializer(cxxConstructExpr())))));
 }
 
 template <typename MatcherT>
@@ -2293,21 +2385,20 @@ void func14() {
                              forFunction(functionDecl(hasName("func2"))))))))),
       langCxx20OrLater()));
 
-  EXPECT_TRUE(matches(
-      Code,
-      traverse(
-          TK_IgnoreUnlessSpelledInSource,
-          returnStmt(forFunction(functionDecl(hasName("func3"))),
-                     hasReturnValue(cxxFunctionalCastExpr(
-                         hasSourceExpression(integerLiteral(equals(42))))))),
-      langCxx20OrLater()));
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func3"))),
+                                  hasReturnValue(cxxConstructExpr(hasArgument(
+                                      0, integerLiteral(equals(42))))))),
+              langCxx20OrLater()));
 
   EXPECT_TRUE(matches(
       Code,
       traverse(
           TK_IgnoreUnlessSpelledInSource,
           integerLiteral(equals(42),
-                         hasParent(cxxFunctionalCastExpr(hasParent(returnStmt(
+                         hasParent(cxxConstructExpr(hasParent(returnStmt(
                              forFunction(functionDecl(hasName("func3"))))))))),
       langCxx20OrLater()));
 

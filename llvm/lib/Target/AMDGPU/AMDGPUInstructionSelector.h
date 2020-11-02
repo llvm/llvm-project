@@ -145,8 +145,8 @@ private:
   bool selectGlobalAtomicFaddIntrinsic(MachineInstr &I) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
 
-  std::pair<Register, unsigned>
-  selectVOP3ModsImpl(MachineOperand &Root) const;
+  std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
+                                                   bool AllowAbs = true) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
@@ -157,9 +157,13 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectVOP3BMods0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3BMods(MachineOperand &Root) const;
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
 

@@ -73,6 +73,9 @@ public:
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
 
+  // Returns the record name.
+  const StringRef getRecordName() const { return Def->getName(); }
+
 protected:
   const llvm::Record *Def;
 };

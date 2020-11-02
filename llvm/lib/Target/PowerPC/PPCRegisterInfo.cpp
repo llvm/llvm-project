@@ -827,6 +827,16 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
     SpillsKnownBit = true;
     break;
   default:
+    // On Power10, we can use SETNBC to spill all CR bits. SETNBC will set all
+    // bits (specifically, it produces a -1 if the CR bit is set). Ultimately,
+    // the bit that is of importance to us is bit 32 (bit 0 of a 32-bit
+    // register), and SETNBC will set this.
+    if (Subtarget.isISA3_1()) {
+      BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETNBC8 : PPC::SETNBC), Reg)
+          .addReg(SrcReg, RegState::Undef);
+      break;
+    }
+
     // On Power9, we can use SETB to extract the LT bit. This only works for
     // the LT bit since SETB produces -1/1/0 for LT/GT/<neither>. So the value
     // of the bit we care about (32-bit sign bit) will be set to the value of

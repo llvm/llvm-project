@@ -33,7 +33,14 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
                                                          *ObjectFile.FatMachO);
   } else {
     Input &In = (Input &)IO;
-    if (IO.mapTag("!ELF")) {
+    if (IO.mapTag("!Arch")) {
+      ObjectFile.Arch.reset(new ArchYAML::Archive());
+      MappingTraits<ArchYAML::Archive>::mapping(IO, *ObjectFile.Arch);
+      std::string Err =
+          MappingTraits<ArchYAML::Archive>::validate(IO, *ObjectFile.Arch);
+      if (!Err.empty())
+        IO.setError(Err);
+    } else if (IO.mapTag("!ELF")) {
       ObjectFile.Elf.reset(new ELFYAML::Object());
       MappingTraits<ELFYAML::Object>::mapping(IO, *ObjectFile.Elf);
     } else if (IO.mapTag("!COFF")) {

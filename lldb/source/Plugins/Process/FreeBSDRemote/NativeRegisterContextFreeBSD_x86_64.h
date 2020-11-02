@@ -20,6 +20,7 @@
 
 #include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "Plugins/Process/Utility/NativeRegisterContextWatchpoint_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 #define LLDB_INVALID_XSAVE_OFFSET UINT32_MAX
@@ -30,7 +31,8 @@ namespace process_freebsd {
 class NativeProcessFreeBSD;
 
 class NativeRegisterContextFreeBSD_x86_64
-    : public NativeRegisterContextFreeBSD {
+    : public NativeRegisterContextFreeBSD,
+      public NativeRegisterContextWatchpoint_x86 {
 public:
   NativeRegisterContextFreeBSD_x86_64(const ArchSpec &target_arch,
                                       NativeThreadProtocol &native_thread);
@@ -47,33 +49,6 @@ public:
   Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
-
-  Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
-
-  Status GetWatchpointHitIndex(uint32_t &wp_index,
-                               lldb::addr_t trap_addr) override;
-
-  Status IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
-
-  bool ClearHardwareWatchpoint(uint32_t wp_index) override;
-
-  Status ClearWatchpointHit(uint32_t wp_index) override;
-
-  Status ClearAllHardwareWatchpoints() override;
-
-  Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags,
-                                        uint32_t wp_index);
-
-  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
-
-  lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
-
-  uint32_t NumSupportedHardwareWatchpoints() override;
-
-  Status
-  CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) override;
 
 private:
   // Private member types.

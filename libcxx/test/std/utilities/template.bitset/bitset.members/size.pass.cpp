@@ -14,14 +14,12 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_size()
-{
+void test_size() {
     const std::bitset<N> v;
     assert(v.size() == N);
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test_size<0>();
     test_size<1>();
     test_size<31>();
@@ -32,5 +30,5 @@ int main(int, char**)
     test_size<65>();
     test_size<1000>();
 
-  return 0;
+    return 0;
 }

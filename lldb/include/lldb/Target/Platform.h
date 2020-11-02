@@ -301,11 +301,10 @@ public:
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream *feedback_stream);
 
-  virtual Status GetSharedModule(const ModuleSpec &module_spec,
-                                 Process *process, lldb::ModuleSP &module_sp,
-                                 const FileSpecList *module_search_paths_ptr,
-                                 lldb::ModuleSP *old_module_sp_ptr,
-                                 bool *did_create_ptr);
+  virtual Status GetSharedModule(
+      const ModuleSpec &module_spec, Process *process,
+      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
@@ -651,7 +650,7 @@ public:
   virtual bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
                             uint64_t &high);
 
-  virtual int32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
+  virtual uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
   }
 

@@ -203,6 +203,14 @@ add_compile_flags_if_supported(-Wundef)
 
 add_compile_flags_if_supported(-Wno-suggest-override)
 
+if (WIN32)
+  # The headers lack matching dllexport attributes (_LIBUNWIND_EXPORT);
+  # silence the warning instead of cluttering the headers (which aren't
+  # necessarily the ones that the callers will use anyway) with the
+  # attributes.
+  add_compile_flags_if_supported(-Wno-dll-attribute-on-redeclaration)
+endif()
+
 if (LIBUNWIND_ENABLE_WERROR)
   add_compile_flags_if_supported(-Werror)
   add_compile_flags_if_supported(-WX)

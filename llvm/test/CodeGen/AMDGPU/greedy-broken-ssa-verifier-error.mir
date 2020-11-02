@@ -1,0 +1,40 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
+
+# Make sure there's no verifier error after register allocation
+# introduces vreg defs when the MIR parser infers SSA.
+
+---
+name: ra_introduces_vreg_def
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+body:             |
+  ; GCN-LABEL: name: ra_introduces_vreg_def
+  ; GCN: [[COPY_V0:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN: [[COPY_V0]]:vgpr_32 =
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+
+  bb.1:
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+
+  bb.2:
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+
+  bb.3:
+    $exec_lo = S_OR_B32 $exec_lo, undef $sgpr4, implicit-def $scc
+    $vgpr0 = COPY %0
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
+
+...

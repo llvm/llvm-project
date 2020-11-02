@@ -34,12 +34,11 @@ define amdgpu_kernel void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
 
 ; VI-LABEL: {{^}}dpp_first_in_bb:
 ; VI: ; %endif
-; PREGFX10-OPT: s_mov_b32
-; PREGFX10-OPT: s_mov_b32
 ; PREGFX10-NOOPT: s_waitcnt
 ; PREGFX10-NOOPT: v_mov_b32_e32
 ; VI: v_mov_b32_dpp [[VGPR0:v[0-9]+]], v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
-; PREGFX10: s_nop 1
+; PREGFX10-OPT: s_mov_b32
+; PREGFX10-OPT: s_mov_b32
 ; VI: v_mov_b32_dpp [[VGPR1:v[0-9]+]], [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
 ; PREGFX10: s_nop 1
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR1]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0

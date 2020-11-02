@@ -16,6 +16,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Endian.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -410,22 +411,16 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
 // TensorLiteralParser
 //===----------------------------------------------------------------------===//
 
-/// Parse elements values stored within a hex etring. On success, the values are
+/// Parse elements values stored within a hex string. On success, the values are
 /// stored into 'result'.
 static ParseResult parseElementAttrHexValues(Parser &parser, Token tok,
                                              std::string &result) {
-  std::string val = tok.getStringValue();
-  if (val.size() < 2 || val[0] != '0' || val[1] != 'x')
-    return parser.emitError(tok.getLoc(),
-                            "elements hex string should start with '0x'");
-
-  StringRef hexValues = StringRef(val).drop_front(2);
-  if (!llvm::all_of(hexValues, llvm::isHexDigit))
-    return parser.emitError(tok.getLoc(),
-                            "elements hex string only contains hex digits");
-
-  result = llvm::fromHex(hexValues);
-  return success();
+  if (Optional<std::string> value = tok.getHexStringValue()) {
+    result = std::move(*value);
+    return success();
+  }
+  return parser.emitError(
+      tok.getLoc(), "expected string containing hex digits starting with `0x`");
 }
 
 namespace {
@@ -700,6 +695,20 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
     p.emitError(loc) << "elements hex data size is invalid for provided type: "
                      << type;
     return nullptr;
+  }
+
+  if (llvm::support::endian::system_endianness() ==
+      llvm::support::endianness::big) {
+    // Convert endianess in big-endian(BE) machines. `rawData` is
+    // little-endian(LE) because HEX in raw data of dense element attribute
+    // is always LE format. It is converted into BE here to be used in BE
+    // machines.
+    SmallVector<char, 64> outDataVec(rawData.size());
+    MutableArrayRef<char> convRawData(outDataVec);
+    DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+        rawData, convRawData, type);
+    return DenseElementsAttr::getFromRawBuffer(type, convRawData,
+                                               detectedSplat);
   }
 
   return DenseElementsAttr::getFromRawBuffer(type, rawData, detectedSplat);

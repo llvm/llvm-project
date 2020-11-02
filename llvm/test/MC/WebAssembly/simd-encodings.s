@@ -511,6 +511,9 @@ main:
     # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xba,0x01]
     i32x4.dot_i16x8_s
 
+    # CHECK: i64x2.eq # encoding: [0xfd,0xc0,0x01]
+    i64x2.eq
+
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg
 
@@ -519,6 +522,21 @@ main:
 
     # CHECK: i64x2.all_true # encoding: [0xfd,0xc3,0x01]
     i64x2.all_true
+
+    # CHECK: i64x2.bitmask # encoding: [0xfd,0xc4,0x01]
+    i64x2.bitmask
+
+    # CHECK: i64x2.widen_low_i32x4_s # encoding: [0xfd,0xc7,0x01]
+    i64x2.widen_low_i32x4_s
+
+    # CHECK: i64x2.widen_high_i32x4_s # encoding: [0xfd,0xc8,0x01]
+    i64x2.widen_high_i32x4_s
+
+    # CHECK: i64x2.widen_low_i32x4_u # encoding: [0xfd,0xc9,0x01]
+    i64x2.widen_low_i32x4_u
+
+    # CHECK: i64x2.widen_high_i32x4_u # encoding: [0xfd,0xca,0x01]
+    i64x2.widen_high_i32x4_u
 
     # CHECK: i64x2.shl # encoding: [0xfd,0xcb,0x01]
     i64x2.shl
@@ -657,5 +675,53 @@ main:
 
     # CHECK: f64x2.qfms # encoding: [0xfd,0xff,0x01]
     f64x2.qfms
+
+    # CHECK: i16x8.extmul_low_i8x16_s # encoding: [0xfd,0x9a,0x01]
+    i16x8.extmul_low_i8x16_s
+
+    # CHECK: i16x8.extmul_high_i8x16_s # encoding: [0xfd,0x9d,0x01]
+    i16x8.extmul_high_i8x16_s
+
+    # CHECK: i16x8.extmul_low_i8x16_u # encoding: [0xfd,0x9e,0x01]
+    i16x8.extmul_low_i8x16_u
+
+    # CHECK: i16x8.extmul_high_i8x16_u # encoding: [0xfd,0x9f,0x01]
+    i16x8.extmul_high_i8x16_u
+
+    # CHECK: i32x4.extmul_low_i16x8_s # encoding: [0xfd,0xbb,0x01]
+    i32x4.extmul_low_i16x8_s
+
+    # CHECK: i32x4.extmul_high_i16x8_s # encoding: [0xfd,0xbd,0x01]
+    i32x4.extmul_high_i16x8_s
+
+    # CHECK: i32x4.extmul_low_i16x8_u # encoding: [0xfd,0xbe,0x01]
+    i32x4.extmul_low_i16x8_u
+
+    # CHECK: i32x4.extmul_high_i16x8_u # encoding: [0xfd,0xbf,0x01]
+    i32x4.extmul_high_i16x8_u
+
+    # CHECK: i64x2.extmul_low_i32x4_s # encoding: [0xfd,0xd2,0x01]
+    i64x2.extmul_low_i32x4_s
+
+    # CHECK: i64x2.extmul_high_i32x4_s # encoding: [0xfd,0xd3,0x01]
+    i64x2.extmul_high_i32x4_s
+
+    # CHECK: i64x2.extmul_low_i32x4_u # encoding: [0xfd,0xd6,0x01]
+    i64x2.extmul_low_i32x4_u
+
+    # CHECK: i64x2.extmul_high_i32x4_u # encoding: [0xfd,0xd7,0x01]
+    i64x2.extmul_high_i32x4_u
+
+    # CHECK: i8x16.signselect # encoding: [0xfd,0x7d]
+    i8x16.signselect
+
+    # CHECK: i16x8.signselect # encoding: [0xfd,0x7e]
+    i16x8.signselect
+
+    # CHECK: i32x4.signselect # encoding: [0xfd,0x7f]
+    i32x4.signselect
+
+    # CHECK: i64x2.signselect # encoding: [0xfd,0x94,0x01]
+    i64x2.signselect
 
     end_function

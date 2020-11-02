@@ -193,12 +193,8 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProf
 }
 
 class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
-  // v_div_scale_{f32|f64} do not support input modifiers.
-  let HasModifiers = 0;
-  let HasClamp = 0;
-  let HasOMod = 0;
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
-  let Asm64 = " $vdst, $sdst, $src0, $src1, $src2";
+  let Asm64 = " $vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod";
 }
 
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32> {
@@ -388,13 +384,11 @@ def V_LDEXP_F64 : VOP3Inst <"v_ldexp_f64", VOP3_Profile<VOP_F64_F64_I32>, AMDGPU
 let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it does.
 def V_DIV_SCALE_F32 : VOP3_Pseudo <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32, [], 1> {
   let SchedRW = [WriteFloatFMA, WriteSALU];
-  let AsmMatchConverter = "";
 }
 
 // Double precision division pre-scale.
 def V_DIV_SCALE_F64 : VOP3_Pseudo <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64, [], 1> {
   let SchedRW = [WriteDouble, WriteSALU];
-  let AsmMatchConverter = "";
   let FPDPRounding = 1;
 }
 } // End mayRaiseFPException = 0

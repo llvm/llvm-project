@@ -551,6 +551,8 @@ public:
   bool SaveTranscript(CommandReturnObject &result,
                       llvm::Optional<std::string> output_file = llvm::None);
 
+  FileSpec GetCurrentSourceDir();
+
 protected:
   friend class Debugger;
 
@@ -637,7 +639,13 @@ private:
   ChildrenTruncatedWarningStatus m_truncation_warning; // Whether we truncated
                                                        // children and whether
                                                        // the user has been told
+
+  // FIXME: Stop using this to control adding to the history and then replace
+  // this with m_command_source_dirs.size().
   uint32_t m_command_source_depth;
+  /// A stack of directory paths. When not empty, the last one is the directory
+  /// of the file that's currently sourced.
+  std::vector<FileSpec> m_command_source_dirs;
   std::vector<uint32_t> m_command_source_flags;
   CommandInterpreterRunResult m_result;
 

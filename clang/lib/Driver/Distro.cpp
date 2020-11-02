@@ -87,6 +87,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("eoan", Distro::UbuntuEoan)
                     .Case("focal", Distro::UbuntuFocal)
                     .Case("groovy", Distro::UbuntuGroovy)
+                    .Case("hirsute", Distro::UbuntuHirsute)
                     .Default(Distro::UnknownDistro);
   return Version;
 }

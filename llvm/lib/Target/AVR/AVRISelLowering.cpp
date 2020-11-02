@@ -1458,9 +1458,11 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
 
   // Create loop block.
   MachineBasicBlock *LoopBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *CheckBB = F->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *RemBB = F->CreateMachineBasicBlock(LLVM_BB);
 
   F->insert(I, LoopBB);
+  F->insert(I, CheckBB);
   F->insert(I, RemBB);
 
   // Update machine-CFG edges by transferring all successors of the current
@@ -1469,14 +1471,14 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
                 BB->end());
   RemBB->transferSuccessorsAndUpdatePHIs(BB);
 
-  // Add adges BB => LoopBB => RemBB, BB => RemBB, LoopBB => LoopBB.
-  BB->addSuccessor(LoopBB);
-  BB->addSuccessor(RemBB);
-  LoopBB->addSuccessor(RemBB);
-  LoopBB->addSuccessor(LoopBB);
+  // Add edges BB => LoopBB => CheckBB => RemBB, CheckBB => LoopBB.
+  BB->addSuccessor(CheckBB);
+  LoopBB->addSuccessor(CheckBB);
+  CheckBB->addSuccessor(LoopBB);
+  CheckBB->addSuccessor(RemBB);
 
-  Register ShiftAmtReg = RI.createVirtualRegister(&AVR::LD8RegClass);
-  Register ShiftAmtReg2 = RI.createVirtualRegister(&AVR::LD8RegClass);
+  Register ShiftAmtReg = RI.createVirtualRegister(&AVR::GPR8RegClass);
+  Register ShiftAmtReg2 = RI.createVirtualRegister(&AVR::GPR8RegClass);
   Register ShiftReg = RI.createVirtualRegister(RC);
   Register ShiftReg2 = RI.createVirtualRegister(RC);
   Register ShiftAmtSrcReg = MI.getOperand(2).getReg();
@@ -1484,43 +1486,40 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
 
   // BB:
-  // cpi N, 0
-  // breq RemBB
-  BuildMI(BB, dl, TII.get(AVR::CPIRdK)).addReg(ShiftAmtSrcReg).addImm(0);
-  BuildMI(BB, dl, TII.get(AVR::BREQk)).addMBB(RemBB);
+  // rjmp CheckBB
+  BuildMI(BB, dl, TII.get(AVR::RJMPk)).addMBB(CheckBB);
 
   // LoopBB:
-  // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
-  // ShiftAmt = phi [%N, BB],      [%ShiftAmt2, LoopBB]
   // ShiftReg2 = shift ShiftReg
-  // ShiftAmt2 = ShiftAmt - 1;
-  BuildMI(LoopBB, dl, TII.get(AVR::PHI), ShiftReg)
-      .addReg(SrcReg)
-      .addMBB(BB)
-      .addReg(ShiftReg2)
-      .addMBB(LoopBB);
-  BuildMI(LoopBB, dl, TII.get(AVR::PHI), ShiftAmtReg)
-      .addReg(ShiftAmtSrcReg)
-      .addMBB(BB)
-      .addReg(ShiftAmtReg2)
-      .addMBB(LoopBB);
-
   auto ShiftMI = BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2).addReg(ShiftReg);
   if (HasRepeatedOperand)
     ShiftMI.addReg(ShiftReg);
 
-  BuildMI(LoopBB, dl, TII.get(AVR::SUBIRdK), ShiftAmtReg2)
-      .addReg(ShiftAmtReg)
-      .addImm(1);
-  BuildMI(LoopBB, dl, TII.get(AVR::BRNEk)).addMBB(LoopBB);
-
-  // RemBB:
-  // DestReg = phi [%SrcReg, BB], [%ShiftReg, LoopBB]
-  BuildMI(*RemBB, RemBB->begin(), dl, TII.get(AVR::PHI), DstReg)
+  // CheckBB:
+  // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
+  // ShiftAmt = phi [%N,      BB], [%ShiftAmt2, LoopBB]
+  // DestReg  = phi [%SrcReg, BB], [%ShiftReg,  LoopBB]
+  // ShiftAmt2 = ShiftAmt - 1;
+  // if (ShiftAmt2 >= 0) goto LoopBB;
+  BuildMI(CheckBB, dl, TII.get(AVR::PHI), ShiftReg)
       .addReg(SrcReg)
       .addMBB(BB)
       .addReg(ShiftReg2)
       .addMBB(LoopBB);
+  BuildMI(CheckBB, dl, TII.get(AVR::PHI), ShiftAmtReg)
+      .addReg(ShiftAmtSrcReg)
+      .addMBB(BB)
+      .addReg(ShiftAmtReg2)
+      .addMBB(LoopBB);
+  BuildMI(CheckBB, dl, TII.get(AVR::PHI), DstReg)
+      .addReg(SrcReg)
+      .addMBB(BB)
+      .addReg(ShiftReg2)
+      .addMBB(LoopBB);
+
+  BuildMI(CheckBB, dl, TII.get(AVR::DECRd), ShiftAmtReg2)
+      .addReg(ShiftAmtReg);
+  BuildMI(CheckBB, dl, TII.get(AVR::BRPLk)).addMBB(LoopBB);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return RemBB;

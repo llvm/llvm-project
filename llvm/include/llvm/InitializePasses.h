@@ -409,7 +409,7 @@ void initializeStackProtectorPass(PassRegistry&);
 void initializeStackSafetyGlobalInfoWrapperPassPass(PassRegistry &);
 void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
 void initializeStackSlotColoringPass(PassRegistry&);
-void initializeStraightLineStrengthReducePass(PassRegistry&);
+void initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
 void initializeStripDeadDebugInfoPass(PassRegistry&);
 void initializeStripDeadPrototypesLegacyPassPass(PassRegistry&);
 void initializeStripDebugDeclarePass(PassRegistry&);

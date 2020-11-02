@@ -963,9 +963,14 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::ELF:
     return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
                               utostr(Hash));
+  case Triple::Wasm:
+    // FIXME: When using dwarf 5, the .debug_info section is used for type units
+    // but that section already exists, so attempting to get it as a comdate
+    // section triggers an assert.
+    return Ctx->getWasmSection(Name, SectionKind::getMetadata(), utostr(Hash),
+                               MCContext::GenericSectionID);
   case Triple::MachO:
   case Triple::COFF:
-  case Triple::Wasm:
   case Triple::GOFF:
   case Triple::XCOFF:
   case Triple::UnknownObjectFormat:

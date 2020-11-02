@@ -826,7 +826,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   Environment::Envp envp =
       (args->m_env.empty() ? Host::GetEnvironment() : args->m_env).getEnvp();
 
-  Expected<lldb::pid_t> pid = terminal.Fork();
+  llvm::Expected<lldb::pid_t> pid = terminal.Fork();
   if (!pid) {
     args->m_error = pid.takeError();
     goto FINISH;

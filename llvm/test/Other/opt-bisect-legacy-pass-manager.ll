@@ -16,19 +16,19 @@
 ; skippable passes skipped.
 
 ; REQUIRES: default_triple
-; RUN: opt -O3 -opt-bisect-limit=0 < %s | llc -O3 -opt-bisect-limit=0
+; RUN: opt -O3 -opt-bisect-limit=0 -enable-new-pm=0 < %s | llc -O3 -opt-bisect-limit=0
 
 
 ; Verify that no skippable passes are run with -opt-bisect-limit=0.
 
-; RUN: opt -disable-output -disable-verify -O3 -opt-bisect-limit=0 %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -O3 -opt-bisect-limit=0 %s -enable-new-pm=0 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SKIP-ALL
 ; CHECK-SKIP-ALL: BISECT: NOT running pass ({{[0-9]+}})
 ; CHECK-SKIP-ALL-NOT: BISECT: running pass ({{[0-9]+}})
 
 
 ; Verify that no passes run at -O0 are skipped
-; RUN: opt -opt-bisect-limit=0 < %s 2>&1 | FileCheck %s --check-prefix=OPTBISECT-O0
+; RUN: opt -opt-bisect-limit=0 < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefix=OPTBISECT-O0
 ; OPTBISECT-O0-NOT: BISECT: NOT running
 
 ; FIXME: There are still some AMDGPU passes being skipped that run at -O0.
@@ -51,18 +51,18 @@
 
 ; Test a module pass.
 
-; RUN: opt -disable-output -disable-verify -deadargelim -opt-bisect-limit=-1 %s \
+; RUN: opt -disable-output -disable-verify -deadargelim -opt-bisect-limit=-1 %s -enable-new-pm=0 \
 ; RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-DEADARG
 ; CHECK-DEADARG: BISECT: running pass ({{[0-9]+}}) Dead Argument Elimination on module
 
-; RUN: opt -disable-output -disable-verify -deadargelim -opt-bisect-limit=0 %s \
+; RUN: opt -disable-output -disable-verify -deadargelim -opt-bisect-limit=0 %s -enable-new-pm=0 \
 ; RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-NOT-DEADARG
 ; CHECK-NOT-DEADARG: BISECT: NOT running pass ({{[0-9]+}}) Dead Argument Elimination on module
 
 
 ; Test an SCC pass.
 
-; RUN: opt -disable-output -disable-verify -inline -opt-bisect-limit=-1 %s \
+; RUN: opt -disable-output -disable-verify -inline -opt-bisect-limit=-1 %s -enable-new-pm=0 \
 ; RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 ; CHECK-INLINE: BISECT: running pass ({{[0-9]+}}) Function Integration/Inlining on SCC (<<null function>>)
 ; CHECK-INLINE: BISECT: running pass ({{[0-9]+}}) Function Integration/Inlining on SCC (g)
@@ -71,7 +71,7 @@
 ; CHECK-INLINE: BISECT: running pass ({{[0-9]+}}) Function Integration/Inlining on SCC (f3)
 ; CHECK-INLINE: BISECT: running pass ({{[0-9]+}}) Function Integration/Inlining on SCC (<<null function>>)
 
-; RUN: opt -disable-output -disable-verify -inline -opt-bisect-limit=0 %s \
+; RUN: opt -disable-output -disable-verify -inline -opt-bisect-limit=0 %s -enable-new-pm=0 \
 ; RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-NOT-INLINE
 ; CHECK-NOT-INLINE: BISECT: NOT running pass ({{[0-9]+}}) Function Integration/Inlining on SCC (<<null function>>)
 ; CHECK-NOT-INLINE: BISECT: NOT running pass ({{[0-9]+}}) Function Integration/Inlining on SCC (g)
@@ -83,13 +83,13 @@
 
 ; Test a function pass.
 
-; RUN: opt -disable-output -disable-verify -early-cse -earlycse-debug-hash -opt-bisect-limit=-1 \
+; RUN: opt -disable-output -disable-verify -early-cse -earlycse-debug-hash -opt-bisect-limit=-1 -enable-new-pm=0 \
 ; RUN:     %s 2>&1 | FileCheck %s --check-prefix=CHECK-EARLY-CSE
 ; CHECK-EARLY-CSE: BISECT: running pass ({{[0-9]+}}) Early CSE on function (f1)
 ; CHECK-EARLY-CSE: BISECT: running pass ({{[0-9]+}}) Early CSE on function (f2)
 ; CHECK-EARLY-CSE: BISECT: running pass ({{[0-9]+}}) Early CSE on function (f3)
 
-; RUN: opt -disable-output -disable-verify -early-cse -earlycse-debug-hash -opt-bisect-limit=0 \
+; RUN: opt -disable-output -disable-verify -early-cse -earlycse-debug-hash -opt-bisect-limit=0 -enable-new-pm=0 \
 ; RUN:     %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-EARLY-CSE
 ; CHECK-NOT-EARLY-CSE: BISECT: NOT running pass ({{[0-9]+}}) Early CSE on function (f1)
 ; CHECK-NOT-EARLY-CSE: BISECT: NOT running pass ({{[0-9]+}}) Early CSE on function (f2)
@@ -98,7 +98,7 @@
 
 ; Test a loop pass.
 
-; RUN: opt -disable-output -disable-verify -loop-reduce -opt-bisect-limit=-1 \
+; RUN: opt -disable-output -disable-verify -loop-reduce -opt-bisect-limit=-1 -enable-new-pm=0 \
 ; RUN:      %s 2>&1 | FileCheck %s --check-prefix=CHECK-LOOP-REDUCE
 ; CHECK-LOOP-REDUCE: BISECT: running pass ({{[0-9]+}}) Loop Strength Reduction on loop
 ; CHECK-LOOP-REDUCE: BISECT: running pass ({{[0-9]+}}) Loop Strength Reduction on loop
@@ -106,7 +106,7 @@
 ; CHECK-LOOP-REDUCE: BISECT: running pass ({{[0-9]+}}) Loop Strength Reduction on loop
 ; CHECK-LOOP-REDUCE: BISECT: running pass ({{[0-9]+}}) Loop Strength Reduction on loop
 
-; RUN: opt -disable-output -disable-verify -loop-reduce -opt-bisect-limit=0 \
+; RUN: opt -disable-output -disable-verify -loop-reduce -opt-bisect-limit=0 -enable-new-pm=0 \
 ; RUN:     %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-LOOP-REDUCE
 ; CHECK-NOT-LOOP-REDUCE: BISECT: NOT running pass ({{[0-9]+}}) Loop Strength Reduction on loop
 ; CHECK-NOT-LOOP-REDUCE: BISECT: NOT running pass ({{[0-9]+}}) Loop Strength Reduction on loop

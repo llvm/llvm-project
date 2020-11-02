@@ -1,8 +1,8 @@
 // Check atexit option.
 
 // RUN: %clangxx_memprof -O0 %s -o %t
-// RUN: %env_memprof_opts=atexit=1 %run %t 2>&1 | FileCheck %s
-// RUN: %env_memprof_opts=atexit=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOATEXIT
+// RUN: %env_memprof_opts=log_path=stderr:atexit=1 %run %t 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=log_path=stderr:atexit=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOATEXIT
 
 // CHECK: MemProfiler exit stats:
 // CHECK: Stats: {{[0-9]+}}M malloced ({{[0-9]+}}M for overhead) by {{[0-9]+}} calls

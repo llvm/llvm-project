@@ -36,6 +36,47 @@ func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 
 // -----
 
+#accesses = [
+  affine_map<(i, j, k, l, m) -> (i, k, m)>,
+  affine_map<(i, j, k, l, m) -> (i, k, j, l, m)>
+]
+
+#trait = {
+  iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"],
+  indexing_maps = #accesses,
+  library_call = "some_external_func"
+}
+
+func @drop_one_trip_loops_indexed_generic
+  (%arg0 : tensor<?x1x?xi32>) -> tensor<?x1x?x1x?xi32>
+{
+  %0 = linalg.indexed_generic #trait
+    ins(%arg0 : tensor<?x1x?xi32>) {
+       ^bb0(%arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index,
+            %arg5 : index, %arg6 : i32) :
+	 %1 = addi %arg1, %arg2 : index
+	 %2 = addi %1, %arg3 : index
+	 %3 = addi %2, %arg4 : index
+	 %4 = addi %3, %arg5 : index
+	 %5 = index_cast %4 : index to i32
+	 %6 = addi %5, %arg6 : i32
+         linalg.yield %6 : i32
+       } -> tensor<?x1x?x1x?xi32>
+  return %0 : tensor<?x1x?x1x?xi32>
+}
+// CHECK-LABEL: func @drop_one_trip_loops_indexed_generic
+//       CHECK:   linalg.indexed_generic
+//       CHECK:   ^{{.+}}(
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index, %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index, %[[ARG4:[a-zA-Z0-9]+]]: i32)
+//       CHECK:     %[[T3:.+]] = addi %[[ARG1]], %[[ARG2]]
+//       CHECK:     %[[T4:.+]] = addi %[[T3]], %[[ARG3]]
+//       CHECK:     %[[T5:.+]] = index_cast %[[T4]] : index to i32
+//       CHECK:     %[[T6:.+]] = addi %[[T5]], %[[ARG4]] : i32
+//       CHECK:     linalg.yield %[[T6]] : i32
+
+// -----
+
 #map0 = affine_map<(i, j) -> (i, j)>
 #access = [#map0, #map0]
 #trait = {
@@ -59,6 +100,35 @@ func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
 //       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
 //  CHECK-SAME:     iterator_types = []
+
+// -----
+
+#map0 = affine_map<(i, j) -> (i, j)>
+#access = [#map0, #map0]
+#trait = {
+  iterator_types = ["parallel", "parallel"],
+  indexing_maps = #access,
+  library_call = "some_external_func"
+}
+
+func @drop_all_loops_indexed_generic
+  (%arg0 : tensor<1x1xi32>) -> tensor<1x1xi32>
+{
+  %0 = linalg.indexed_generic #trait
+    ins(%arg0 : tensor<1x1xi32>) {
+       ^bb0(%arg1 : index, %arg2 : index, %arg3: i32) :
+         %1 = addi %arg1, %arg2 : index
+	 %2 = index_cast %1 : index to i32
+	 %3 = addi %2, %arg3 : i32
+         linalg.yield %3 : i32
+       } -> tensor<1x1xi32>
+  return %0 : tensor<1x1xi32>
+}
+
+// CHECK-LABEL: func @drop_all_loops_indexed_generic
+//       CHECK:   linalg.indexed_generic
+//       CHECK:   ^{{.+}}(%[[ARG1:.+]]: i32)
+//       CHECK:     linalg.yield %[[ARG1]] : i32
 
 // -----
 

@@ -72,7 +72,8 @@ public:
   virtual void printNotes() {}
   virtual void printELFLinkerOptions() {}
   virtual void printStackSizes() {}
-  virtual void printArchSpecificInfo() { }
+  virtual void printSectionDetails() {}
+  virtual void printArchSpecificInfo() {}
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }

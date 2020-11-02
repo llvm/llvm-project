@@ -26,14 +26,6 @@ Add <dir> to search path for binaries and object files used implicitly
 
 Add directory to framework include search path
 
-.. option:: -Mallocatable=<arg>
-
-Select semantics for assignments to allocatables (F03 or F95)
-
-.. option:: -Minform=<arg>
-
-Set error level of messages to display
-
 .. option:: -ObjC
 
 Treat source input files as Objective-C inputs
@@ -489,10 +481,6 @@ CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID i
 .. option:: -p, --profile
 
 .. option:: -pagezero\_size<arg>
-
-.. option:: -parallel-jobs=<arg>
-
-Number of parallel jobs
 
 .. option:: -pg
 
@@ -1653,6 +1641,10 @@ Sets various macros to claim compatibility with the given GCC version (default i
 
 Allow device side init function in HIP
 
+.. option:: -fgpu-defer-diag, -fno-gpu-defer-diag
+
+Defer host/device related diagnostic messages for CUDA/HIP
+
 .. option:: -fgpu-rdc, -fcuda-rdc, -fno-gpu-rdc
 
 Generate relocatable device code, also known as separate compilation mode
@@ -2669,7 +2661,7 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcode-object-v3, -mno-code-object-v3
 
-Legacy option to specify code object v3 (AMDGPU only)
+Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
 
 .. option:: -mconsole<arg>
 
@@ -2847,6 +2839,18 @@ Enable stack probes
 
 Set the stack probe size
 
+.. option:: -mstack-protector-guard-offset=<arg>
+
+Use the given offset for addressing the stack-protector guard
+
+.. option:: -mstack-protector-guard-reg=<arg>
+
+Use the given reg for addressing the stack-protector guard
+
+.. option:: -mstack-protector-guard=<arg>
+
+Use the given guard (global, tls) for addressing the stack-protector guard
+
 .. option:: -mstackrealign, -mno-stackrealign
 
 Force realign the stack at entry to every function
@@ -2875,7 +2879,7 @@ Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) \| 24
 .. option:: -mtune=<arg>
 .. program:: clang
 
-Only supported on X86. Otherwise accepted for compatibility with GCC.
+Only supported on X86 and RISC-V. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 
@@ -2889,7 +2893,7 @@ Only supported on X86. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mwavefrontsize64, -mno-wavefrontsize64
 
-Wavefront size 64 is used
+Specify wavefront size 64 mode (AMDGPU only)
 
 .. option:: -mwindows<arg>
 
@@ -2953,15 +2957,15 @@ AMDGPU
 ------
 .. option:: -mcumode, -mno-cumode
 
-CU wavefront execution mode is used (AMDGPU only)
+Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
 
 .. option:: -msram-ecc, -mno-sram-ecc
 
-Enable SRAM ECC (AMDGPU only)
+Specify SRAM ECC mode (AMDGPU only)
 
 .. option:: -mxnack, -mno-xnack
 
-Enable XNACK (AMDGPU only)
+Specify XNACK mode (AMDGPU only)
 
 ARM
 ---
@@ -3249,6 +3253,8 @@ X86
 
 .. option:: -mavx512vpopcntdq, -mno-avx512vpopcntdq
 
+.. option:: -mavxvnni, -mno-avxvnni
+
 .. option:: -mbmi, -mno-bmi
 
 .. option:: -mbmi2, -mno-bmi2
@@ -3506,13 +3512,7 @@ Set DWARF fission mode to either 'split' or 'single'
 
 .. option:: -gstrict-dwarf, -gno-strict-dwarf
 
-.. option:: -gz
-
-DWARF debug sections compression type
-
-.. program:: clang1
-.. option:: -gz=<arg>
-.. program:: clang
+.. option:: -gz=<arg>, -gz (equivalent to -gz=zlib)
 
 DWARF debug sections compression type
 
@@ -3537,10 +3537,6 @@ a Fortran input.
 
 .. option:: -J<arg>
 
-.. option:: -byteswapio
-
-Swap byte-order for unformatted input/output
-
 .. option:: -cpp
 
 .. option:: -faggressive-function-elimination, -fno-aggressive-function-elimination
@@ -3549,15 +3545,9 @@ Swap byte-order for unformatted input/output
 
 .. option:: -fall-intrinsics, -fno-all-intrinsics
 
-.. option:: -fallow-fortran-gnu-ext, -fno-allow-fortran-gnu-ext
-
-Allow Fortran GNU extensions
-
 .. option:: -fautomatic, -fno-automatic
 
 .. option:: -fbackslash, -fno-backslash
-
-Treat backslash as C-style escape character
 
 .. option:: -fbacktrace, -fno-backtrace
 
@@ -3597,17 +3587,17 @@ Treat backslash as C-style escape character
 
 .. option:: -ff2c, -fno-f2c
 
+.. option:: -ffixed-form, -fno-fixed-form
+
 .. option:: -ffixed-line-length-<arg>
 
 .. option:: -ffpe-trap=<arg>
 
+.. option:: -ffree-form, -fno-free-form
+
 .. option:: -ffree-line-length-<arg>
 
 .. option:: -ffrontend-optimize, -fno-frontend-optimize
-
-.. option:: -ffunc-args-alias, -fno-func-args-alias
-
-Function argument may alias (equivalent to ansi alias)
 
 .. option:: -fimplicit-none, -fno-implicit-none
 
@@ -3636,10 +3626,6 @@ Function argument may alias (equivalent to ansi alias)
 .. option:: -fmax-subrecord-length=<arg>
 
 .. option:: -fmodule-private, -fno-module-private
-
-.. option:: -fno-fortran-main
-
-Don't link in Fortran main
 
 .. option:: -fpack-derived, -fno-pack-derived
 
@@ -3675,10 +3661,6 @@ Don't link in Fortran main
 
 .. option:: -funderscoring, -fno-underscoring
 
-.. option:: -fuse-flang-math-libs, -fno-use-flang-math-libs
-
-Use Flang internal runtime math library instead of LLVM math intrinsics.
-
 .. option:: -fwhole-file, -fno-whole-file
 
 .. option:: -imultilib <arg>
@@ -3686,26 +3668,6 @@ Use Flang internal runtime math library instead of LLVM math intrinsics.
 .. option:: -nocpp
 
 .. option:: -static-libgfortran
-
-Fortran format Group
-~~~~~~~~~~~~~~~~~~~~
-.. option:: -ffixed-form, -fno-fixed-form
-
-Enable fixed-form format for Fortran
-
-.. option:: -ffree-form, -fno-free-form
-
-Enable free-form format for Fortran
-
-Flang runtime library Group
-===========================
-.. option:: -no-flang-libs
-
-Do not link against Flang libraries
-
-.. option:: -static-flang-libs
-
-Link using static Flang libraries
 
 Linker flags
 ============
@@ -3802,4 +3764,3 @@ undef all system defines
 .. option:: -z <arg>
 
 Pass -z <arg> to the linker
-

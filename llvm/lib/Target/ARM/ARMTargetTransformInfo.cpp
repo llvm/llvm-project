@@ -1341,7 +1341,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   unsigned ScalarCost =
       NumElems * LT.first + BaseT::getScalarizationOverhead(VTy, {});
 
-  if (Alignment < EltSize / 8)
+  if (EltSize < 8 || Alignment < EltSize / 8)
     return ScalarCost;
 
   unsigned ExtSize = EltSize;

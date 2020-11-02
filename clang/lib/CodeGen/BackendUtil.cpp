@@ -687,7 +687,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   if (LangOpts.Coroutines)
     addCoroutinePassesToExtensionPoints(PMBuilder);
 
-  if (CodeGenOpts.MemProf) {
+  if (!CodeGenOpts.MemoryProfileOutput.empty()) {
     PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                            addMemProfilerPasses);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
@@ -1203,7 +1203,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(CodeGenOpts.DebugPassManager);
   SI.registerCallbacks(PIC);
-  PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
+  PassBuilder PB(CodeGenOpts.DebugPassManager, TM.get(), PTO, PGOOpt, &PIC);
 
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &PluginFN : CodeGenOpts.PassPlugins) {
@@ -1241,9 +1241,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  if (TM)
-    TM->registerPassBuilderCallbacks(PB, CodeGenOpts.DebugPassManager);
-
   ModulePassManager MPM(CodeGenOpts.DebugPassManager);
 
   if (!CodeGenOpts.DisableLLVMPasses) {
@@ -1280,7 +1277,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
                      PGOOpt->Action == PGOOptions::IRUse))
         PB.addPGOInstrPassesForO0(
-            MPM, CodeGenOpts.DebugPassManager,
+            MPM,
             /* RunProfileGen */ (PGOOpt->Action == PGOOptions::IRInstr),
             /* IsCS */ false, PGOOpt->ProfileFile,
             PGOOpt->ProfileRemappingFile);
@@ -1407,18 +1404,15 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         });
 
       if (IsThinLTO) {
-        MPM = PB.buildThinLTOPreLinkDefaultPipeline(
-            Level, CodeGenOpts.DebugPassManager);
+        MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);
         MPM.addPass(CanonicalizeAliasesPass());
         MPM.addPass(NameAnonGlobalPass());
       } else if (IsLTO) {
-        MPM = PB.buildLTOPreLinkDefaultPipeline(Level,
-                                                CodeGenOpts.DebugPassManager);
+        MPM = PB.buildLTOPreLinkDefaultPipeline(Level);
         MPM.addPass(CanonicalizeAliasesPass());
         MPM.addPass(NameAnonGlobalPass());
       } else {
-        MPM = PB.buildPerModuleDefaultPipeline(Level,
-                                               CodeGenOpts.DebugPassManager);
+        MPM = PB.buildPerModuleDefaultPipeline(Level);
       }
     }
 
@@ -1427,7 +1421,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     if (CodeGenOpts.UniqueInternalLinkageNames)
       MPM.addPass(UniqueInternalLinkageNamesPass());
 
-    if (CodeGenOpts.MemProf) {
+    if (!CodeGenOpts.MemoryProfileOutput.empty()) {
       MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
       MPM.addPass(ModuleMemProfilerPass());
     }
@@ -1625,7 +1619,7 @@ static void runThinLTOBackend(
   if (Error E =
           thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
                       ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-                      ModuleMap, &CGOpts.CmdArgs)) {
+                      ModuleMap, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });
@@ -1709,5 +1703,5 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
   llvm::EmbedBitcodeInModule(
       *M, Buf, CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Marker,
       CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Bitcode,
-      &CGOpts.CmdArgs);
+      CGOpts.CmdArgs);
 }

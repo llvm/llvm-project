@@ -24,7 +24,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -228,6 +228,7 @@ void AffineDataCopyGeneration::runOnFunction() {
   OwningRewritePatternList patterns;
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
+  FrozenRewritePatternList frozenPatterns(std::move(patterns));
   for (Operation *op : copyOps)
-    applyOpPatternsAndFold(op, std::move(patterns));
+    applyOpPatternsAndFold(op, frozenPatterns);
 }

@@ -77,7 +77,8 @@ void MCWasmStreamer::emitWeakReference(MCSymbol *Alias,
   Alias->setVariableValue(Value);
 }
 
-bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
+bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute,
+                                         SMLoc) {
   assert(Attribute != MCSA_IndirectSymbol && "indirect symbols not supported");
 
   auto *Symbol = cast<MCSymbolWasm>(S);

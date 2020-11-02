@@ -41,5 +41,5 @@ HELP: OPTIONS:
 OBJ: -s - Alias for --section-headers
 OBJ: -t - Alias for --symbols
 ELF: -s - Alias for --symbols
-ELF-NOT: {{ }}-t{{ }}
+ELF: -t - Alias for --section-details
 HELP: @FILE

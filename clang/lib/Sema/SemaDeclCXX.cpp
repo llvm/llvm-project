@@ -694,6 +694,17 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
     Invalid = true;
   }
 
+  // C++11 [temp.friend]p4 (DR329):
+  //   When a function is defined in a friend function declaration in a class
+  //   template, the function is instantiated when the function is odr-used.
+  //   The same restrictions on multiple declarations and definitions that
+  //   apply to non-template function declarations and definitions also apply
+  //   to these implicit definitions.
+  const FunctionDecl *OldDefinition = nullptr;
+  if (New->isThisDeclarationInstantiatedFromAFriendDefinition() &&
+      Old->isDefined(OldDefinition, true))
+    CheckForFunctionRedefinition(New, OldDefinition);
+
   return Invalid;
 }
 
@@ -14811,9 +14822,13 @@ void Sema::DefineImplicitLambdaToFunctionPointerConversion(
   SynthesizedFunctionScope Scope(*this, Conv);
   assert(!Conv->getReturnType()->isUndeducedType());
 
+  QualType ConvRT = Conv->getType()->getAs<FunctionType>()->getReturnType();
+  CallingConv CC =
+      ConvRT->getPointeeType()->getAs<FunctionType>()->getCallConv();
+
   CXXRecordDecl *Lambda = Conv->getParent();
   FunctionDecl *CallOp = Lambda->getLambdaCallOperator();
-  FunctionDecl *Invoker = Lambda->getLambdaStaticInvoker();
+  FunctionDecl *Invoker = Lambda->getLambdaStaticInvoker(CC);
 
   if (auto *TemplateArgs = Conv->getTemplateSpecializationArgs()) {
     CallOp = InstantiateFunctionDeclaration(

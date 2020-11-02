@@ -14,6 +14,7 @@ include(CheckCXXCompilerFlag)
 include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
+include(CheckSymbolExists)
 include(LibompCheckLinkerFlag)
 include(LibompCheckFortranFlag)
 
@@ -93,6 +94,14 @@ else()
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
+endif()
+
+# Check for Unix shared memory
+check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)
+if (NOT LIBOMP_HAVE_SHM_OPEN_NO_LRT)
+  set(CMAKE_REQUIRED_LIBRARIES -lrt)
+  check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_WITH_LRT)
+  set(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
 # Check linker flags

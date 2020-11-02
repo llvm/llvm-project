@@ -42,5 +42,4 @@ static_library("Common") {
     "Timer.cpp",
     "Version.cpp",
   ]
-  defines = [ "HAVE_VCS_VERSION_INC" ]  # For Version.cpp
 }

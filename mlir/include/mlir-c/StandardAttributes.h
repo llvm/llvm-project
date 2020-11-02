@@ -203,7 +203,7 @@ MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length,
  * live as long as the context in which the attribute lives. */
 MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr);
 
-/** Returns the stirng reference to the leaf referenced symbol. The data remains
+/** Returns the string reference to the leaf referenced symbol. The data remains
  * live as long as the context in which the attribute lives. */
 MlirStringRef mlirSymbolRefAttrGetLeafReference(MlirAttribute attr);
 

@@ -205,11 +205,10 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
 // subscripts are in hand.
 MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
   const Symbol &symbol{ref.GetLastSymbol().GetUltimate()};
-  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
   int symbolRank{symbol.Rank()};
   int subscripts{static_cast<int>(ref.size())};
   if (subscripts == 0) {
-    // nothing to check
+    return std::nullopt; // error recovery
   } else if (subscripts != symbolRank) {
     if (symbolRank != 0) {
       Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
@@ -230,7 +229,8 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
         return std::nullopt;
       }
     }
-  } else if (object) {
+  } else if (const auto *object{
+                 symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     // C928 & C1002
     if (Triplet * last{std::get_if<Triplet>(&ref.subscript().back().u)}) {
       if (!last->upper() && object->IsAssumedSize()) {
@@ -240,6 +240,11 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
         return std::nullopt;
       }
     }
+  } else {
+    // Shouldn't get here from Analyze(ArrayElement) without a valid base,
+    // which, if not an object, must be a construct entity from
+    // SELECT TYPE/RANK or ASSOCIATE.
+    CHECK(symbol.has<semantics::AssocEntityDetails>());
   }
   return Designate(DataRef{std::move(ref)});
 }
@@ -247,6 +252,9 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
 // Applies subscripts to a data reference.
 MaybeExpr ExpressionAnalyzer::ApplySubscripts(
     DataRef &&dataRef, std::vector<Subscript> &&subscripts) {
+  if (subscripts.empty()) {
+    return std::nullopt; // error recovery
+  }
   return std::visit(
       common::visitors{
           [&](SymbolRef &&symbol) {
@@ -902,7 +910,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
   if (baseExpr) {
     if (ae.subscripts.empty()) {
       // will be converted to function call later or error reported
-      return std::nullopt;
     } else if (baseExpr->Rank() == 0) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {

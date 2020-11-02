@@ -72,7 +72,7 @@ struct ShapeInlinerInterface : public DialectInlinerInterface {
 
   // Returns true if the given region 'src' can be inlined into the region
   // 'dest' that is attached to an operation registered to the current dialect.
-  bool isLegalToInline(Region *dest, Region *src,
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                        BlockAndValueMapping &) const final {
     return true;
   }
@@ -80,7 +80,7 @@ struct ShapeInlinerInterface : public DialectInlinerInterface {
   // Returns true if the given operation 'op', that is registered to this
   // dialect, can be inlined into the region 'dest' that is attached to an
   // operation registered to the current dialect.
-  bool isLegalToInline(Operation *op, Region *dest,
+  bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
                        BlockAndValueMapping &) const final {
     return true;
   }

@@ -22,6 +22,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <list>
+#include <set>
 #include <tuple>
 #include <utility>
 
@@ -1825,8 +1826,10 @@ bool FileCheck::readCheckFile(
   // found.
   unsigned LineNumber = 1;
 
-  bool FoundUsedCheckPrefix = false;
-  while (1) {
+  std::set<StringRef> PrefixesNotFound(Req.CheckPrefixes.begin(),
+                                       Req.CheckPrefixes.end());
+  const size_t DistinctPrefixes = PrefixesNotFound.size();
+  while (true) {
     Check::FileCheckType CheckTy;
 
     // See if a prefix occurs in the memory buffer.
@@ -1837,7 +1840,7 @@ bool FileCheck::readCheckFile(
     if (UsedPrefix.empty())
       break;
     if (CheckTy != Check::CheckComment)
-      FoundUsedCheckPrefix = true;
+      PrefixesNotFound.erase(UsedPrefix);
 
     assert(UsedPrefix.data() == Buffer.data() &&
            "Failed to move Buffer's start forward, or pointed prefix outside "
@@ -1930,14 +1933,19 @@ bool FileCheck::readCheckFile(
 
   // When there are no used prefixes we report an error except in the case that
   // no prefix is specified explicitly but -implicit-check-not is specified.
-  if (!FoundUsedCheckPrefix &&
+  const bool NoPrefixesFound = PrefixesNotFound.size() == DistinctPrefixes;
+  const bool SomePrefixesUnexpectedlyNotUsed =
+      !Req.AllowUnusedPrefixes && !PrefixesNotFound.empty();
+  if ((NoPrefixesFound || SomePrefixesUnexpectedlyNotUsed) &&
       (ImplicitNegativeChecks.empty() || !Req.IsDefaultCheckPrefix)) {
     errs() << "error: no check strings found with prefix"
-           << (Req.CheckPrefixes.size() > 1 ? "es " : " ");
-    for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
-      if (I != 0)
+           << (PrefixesNotFound.size() > 1 ? "es " : " ");
+    bool First = true;
+    for (StringRef MissingPrefix : PrefixesNotFound) {
+      if (!First)
         errs() << ", ";
-      errs() << "\'" << Req.CheckPrefixes[I] << ":'";
+      errs() << "\'" << MissingPrefix << ":'";
+      First = false;
     }
     errs() << '\n';
     return true;

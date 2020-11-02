@@ -2016,7 +2016,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           "__kmp_dispatch_next: T#%%d serialized case: p_lb:%%%s "
           "p_ub:%%%s p_st:%%%s p_last:%%p %%d  returning:%%d\n",
           traits_t<T>::spec, traits_t<T>::spec, traits_t<ST>::spec);
-      KD_TRACE(10, (buff, gtid, *p_lb, *p_ub, *p_st, p_last, *p_last, status));
+      KD_TRACE(10, (buff, gtid, *p_lb, *p_ub, *p_st, p_last,
+                    (p_last ? *p_last : 0), status));
       __kmp_str_free(&buff);
     }
 #endif

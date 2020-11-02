@@ -51,6 +51,47 @@
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "textDocument/codeAction",
+  "params": {
+    "textDocument": { "uri": "test:///main.cpp" },
+        "range": {
+            "start": {"line": 0, "character": 0},
+            "end": {"line": 0, "character": 4}
+        },
+        "context": {
+            "diagnostics": [],
+            "only": ["quickfix"]
+        }
+    }
+}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": []
+---
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "textDocument/codeAction",
+  "params": {
+    "textDocument": { "uri": "test:///main.cpp" },
+        "range": {
+            "start": {"line": 0, "character": 0},
+            "end": {"line": 0, "character": 4}
+        },
+        "context": {
+            "diagnostics": [],
+            "only": ["refactor"]
+        }
+    }
+}
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+---
 {"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandAutoType"}]}}
 #      CHECK:    "newText": "int",
 # CHECK-NEXT:    "range": {
@@ -64,7 +105,7 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    }
 ---
-{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
 ---

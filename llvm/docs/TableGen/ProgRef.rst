@@ -21,8 +21,11 @@ and generate one or more output files. These output files are typically
 developer needs.
 
 This document describes the LLVM TableGen facility in detail. It is intended
-for the programmer who is using TableGen to produce tables for a project. If
-you are looking for a simple overview, check out :doc:`TableGen Overview <./index>`.
+for the programmer who is using TableGen to produce code for a project. If
+you are looking for a simple overview, check out the :doc:`TableGen Overview
+<./index>`.  The various ``xxx-tblgen`` commands used to invoke TableGen are
+described in :doc:`xxx-tblgen: Target Description to C++ Code
+<../CommandGuide/tblgen>`.
 
 An example of a backend is ``RegisterInfo``, which generates the register
 file information for a particular target machine, for use by the LLVM
@@ -211,8 +214,8 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !getdagop   !gt          !head        !if          !isa
                : !le         !listconcat  !listsplat   !lt          !mul
                : !ne         !not         !or          !setdagop    !shl
-               : !size       !sra         !srl         !strconcat   !subst
-               : !tail       !xor
+               : !size       !sra         !srl         !strconcat   !sub
+               : !subst      !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1660,11 +1663,15 @@ and non-0 as true.
     are not strings, in which
     case an implicit ``!cast<string>`` is done on those operands.
 
+``!sub(``\ *a*\ ``,`` *b*\ ``)``
+    This operator subtracts *b* from *a* and produces the arithmetic difference.
+
 ``!subst(``\ *target*\ ``,`` *repl*\ ``,`` *value*\ ``)``
     This operator replaces all occurrences of the *target* in the *value* with
-    the *repl* and produces the resulting value. For strings, this is straightforward.
+    the *repl* and produces the resulting value. The *value* can
+    be a string, in which case substring substitution is performed.
 
-    If the arguments are record names, the function produces the *repl*
+    The *value* can be a record name, in which case the operator produces the *repl*
     record if the *target* record name equals the *value* record name; otherwise it
     produces the *value*.
 

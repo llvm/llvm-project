@@ -5,6 +5,7 @@
   pld [pc, #8]
   pldw [pc, #-128]
   pldw [pc, r0, lsl #2]
+  pldw [pc, r0, lsl #4]
   pldw [pc, -r0]
   ldr	r5, [r7]
   ldr	r6, [r3, #63]
@@ -176,6 +177,7 @@
 # CHECK-NEXT:  1      4     1.00    *      *            pld	[pc, #8]
 # CHECK-NEXT:  1      4     1.00    *      *            pldw	[pc, #-128]
 # CHECK-NEXT:  1      4     1.00    *      *            pldw	[pc, r0, lsl #2]
+# CHECK-NEXT:  2      5     1.00    *      *            pldw	[pc, r0, lsl #4]
 # CHECK-NEXT:  2      5     1.00    *      *            pldw	[pc, -r0]
 # CHECK-NEXT:  1      4     1.00    *                   ldr	r5, [r7]
 # CHECK-NEXT:  1      4     1.00    *                   ldr	r6, [r3, #63]
@@ -184,11 +186,11 @@
 # CHECK-NEXT:  2      4     1.00    *                   ldr	r3, [r1], #-30
 # CHECK-NEXT:  1      4     1.00    *                   ldr	r3, [r8, r1]
 # CHECK-NEXT:  1      4     1.00    *                   ldr	r3, [r8, r1, lsl #2]
-# CHECK-NEXT:  1      4     1.00    *                   ldr	r3, [r8, r1, asr #2]
+# CHECK-NEXT:  2      5     1.00    *                   ldr	r3, [r8, r1, asr #2]
 # CHECK-NEXT:  2      5     1.00    *                   ldr	r2, [r5, -r3]
 # CHECK-NEXT:  2      4     1.00    *                   ldr	r1, [r5, r9]!
 # CHECK-NEXT:  2      4     1.00    *                   ldr	r6, [r7, -r8]!
-# CHECK-NEXT:  2      4     1.00    *                   ldr	r1, [r0, r2, lsr #3]!
+# CHECK-NEXT:  2      5     1.00    *                   ldr	r1, [r0, r2, lsr #3]!
 # CHECK-NEXT:  2      4     1.00    *                   ldr	r5, [r9], r2
 # CHECK-NEXT:  2      4     1.00    *                   ldr	r4, [r3], -r6
 # CHECK-NEXT:  2      5     1.00    *                   ldr	r3, [r8, -r2, lsl #15]
@@ -202,7 +204,7 @@
 # CHECK-NEXT:  2      5     1.00    *                   ldrb	r1, [r5, -r1]
 # CHECK-NEXT:  2      4     1.00    *                   ldrb	r3, [r5, r2]!
 # CHECK-NEXT:  2      4     1.00    *                   ldrb	r3, [r5, r2, lsl #2]!
-# CHECK-NEXT:  2      4     1.00    *                   ldrb	r3, [r5, r2, asr #2]!
+# CHECK-NEXT:  2      5     1.00    *                   ldrb	r3, [r5, r2, asr #2]!
 # CHECK-NEXT:  2      4     1.00    *                   ldrb	r6, [r9, -r3]!
 # CHECK-NEXT:  2      4     1.00    *                   ldrb	r2, [r1], r4
 # CHECK-NEXT:  2      4     1.00    *                   ldrb	r8, [r4], -r5
@@ -347,13 +349,14 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -     70.50  70.50  173.00 10.00  57.00   -      -
+# CHECK-NEXT:  -     71.50  71.50  174.00 10.00  57.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pld	[pc, #8]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pldw	[pc, #-128]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pldw	[pc, r0, lsl #2]
+# CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     pldw	[pc, r0, lsl #4]
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     pldw	[pc, -r0]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r5, [r7]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r6, [r3, #63]
@@ -362,7 +365,7 @@
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldr	r3, [r1], #-30
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r3, [r8, r1]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r3, [r8, r1, lsl #2]
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r3, [r8, r1, asr #2]
+# CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldr	r3, [r8, r1, asr #2]
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldr	r2, [r5, -r3]
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldr	r1, [r5, r9]!
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldr	r6, [r7, -r8]!

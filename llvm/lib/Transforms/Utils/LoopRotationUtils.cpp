@@ -578,7 +578,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // connected by an unconditional branch.  This is just a cleanup so the
     // emitted code isn't too gross in this common case.
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-    MergeBlockIntoPredecessor(OrigHeader, &DTU, LI, MSSAU);
+    BasicBlock *PredBB = OrigHeader->getUniquePredecessor();
+    bool DidMerge = MergeBlockIntoPredecessor(OrigHeader, &DTU, LI, MSSAU);
+    if (DidMerge)
+      RemoveRedundantDbgInstrs(PredBB);
 
     if (MSSAU && VerifyMemorySSA)
       MSSAU->getMemorySSA()->verifyMemorySSA();

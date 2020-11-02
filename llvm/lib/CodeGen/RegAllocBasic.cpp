@@ -111,6 +111,11 @@ public:
         MachineFunctionProperties::Property::NoPHIs);
   }
 
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+      MachineFunctionProperties::Property::IsSSA);
+  }
+
   // Helper for spilling all live virtual registers currently unified under preg
   // that interfere with the most recently queried lvr.  Return true if spilling
   // was successful, and append any new spilled/split intervals to splitLVRs.

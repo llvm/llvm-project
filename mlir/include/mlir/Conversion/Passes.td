@@ -221,6 +221,16 @@ def ConvertOpenMPToLLVM : Pass<"convert-openmp-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// PDLToPDLInterp
+//===----------------------------------------------------------------------===//
+
+def ConvertPDLToPDLInterp : Pass<"convert-pdl-to-pdl-interp", "ModuleOp"> {
+  let summary = "Convert PDL ops to PDL interpreter ops";
+  let constructor = "mlir::createPDLToPDLInterpPass()";
+  let dependentDialects = ["pdl_interp::PDLInterpDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // SCFToStandard
 //===----------------------------------------------------------------------===//
 

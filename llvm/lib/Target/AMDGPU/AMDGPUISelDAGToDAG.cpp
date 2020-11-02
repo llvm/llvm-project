@@ -256,11 +256,15 @@ private:
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3Mods_NNaN(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-  bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods) const;
+  bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
+                          bool AllowAbs = true) const;
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                        SDValue &Clamp, SDValue &Omod) const;
+  bool SelectVOP3BMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
+                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3NoMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                          SDValue &Clamp, SDValue &Omod) const;
 
@@ -1129,7 +1133,12 @@ void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
   unsigned Opc
     = (VT == MVT::f64) ? AMDGPU::V_DIV_SCALE_F64 : AMDGPU::V_DIV_SCALE_F32;
 
-  SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2) };
+  // src0_modifiers, src0, src1_modifiers, src1, src2_modifiers, src2, clamp,
+  // omod
+  SDValue Ops[8];
+  SelectVOP3BMods0(N->getOperand(0), Ops[1], Ops[0], Ops[6], Ops[7]);
+  SelectVOP3BMods(N->getOperand(1), Ops[3], Ops[2]);
+  SelectVOP3BMods(N->getOperand(2), Ops[5], Ops[4]);
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
 
@@ -2498,15 +2507,11 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   SDValue Chain = N->getOperand(0);
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
-  // TODO: Can this just be removed from the instruction?
-  SDValue GDS = CurDAG->getTargetConstant(1, SL, MVT::i1);
-
   const unsigned Opc = gwsIntrinToOpcode(IntrID);
   SmallVector<SDValue, 5> Ops;
   if (HasVSrc)
     Ops.push_back(N->getOperand(2));
   Ops.push_back(OffsetField);
-  Ops.push_back(GDS);
   Ops.push_back(Chain);
 
   SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
@@ -2630,7 +2635,8 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
-                                            unsigned &Mods) const {
+                                            unsigned &Mods,
+                                            bool AllowAbs) const {
   Mods = 0;
   Src = In;
 
@@ -2639,7 +2645,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
-  if (Src.getOpcode() == ISD::FABS) {
+  if (AllowAbs && Src.getOpcode() == ISD::FABS) {
     Mods |= SISrcMods::ABS;
     Src = Src.getOperand(0);
   }
@@ -2651,6 +2657,17 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
                                         SDValue &SrcMods) const {
   unsigned Mods;
   if (SelectVOP3ModsImpl(In, Src, Mods)) {
+    SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3BMods(SDValue In, SDValue &Src,
+                                         SDValue &SrcMods) const {
+  unsigned Mods;
+  if (SelectVOP3ModsImpl(In, Src, Mods, /* AllowAbs */ false)) {
     SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
     return true;
   }
@@ -2680,6 +2697,16 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0(SDValue In, SDValue &Src,
   Omod = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
   return SelectVOP3Mods(In, Src, SrcMods);
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3BMods0(SDValue In, SDValue &Src,
+                                          SDValue &SrcMods, SDValue &Clamp,
+                                          SDValue &Omod) const {
+  SDLoc DL(In);
+  Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
+  Omod = CurDAG->getTargetConstant(0, DL, MVT::i1);
+
+  return SelectVOP3BMods(In, Src, SrcMods);
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OMods(SDValue In, SDValue &Src,

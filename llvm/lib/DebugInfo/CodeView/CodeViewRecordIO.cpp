@@ -273,7 +273,6 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value,
 
 void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
                                                 const Twine &Comment) {
-  assert(Value < 0 && "Encoded integer is not signed!");
   if (Value >= std::numeric_limits<int8_t>::min()) {
     Streamer->emitIntValue(LF_CHAR, 2);
     emitComment(Comment);
@@ -322,7 +321,6 @@ void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
 }
 
 Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
-  assert(Value < 0 && "Encoded integer is not signed!");
   if (Value >= std::numeric_limits<int8_t>::min()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_CHAR))
       return EC;

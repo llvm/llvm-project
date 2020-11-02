@@ -91,22 +91,10 @@ public:
   /// This is a special trait that registers a given interface with an object.
   template <typename ConcreteT>
   struct Trait : public BaseTrait<ConcreteT, Trait> {
+    using ModelT = Model<ConcreteT>;
+
     /// Define an accessor for the ID of this interface.
     static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
-
-    /// Provide an accessor to a static instance of the interface model for the
-    /// concrete T type.
-    /// The implementation is inspired from Sean Parent's concept-based
-    /// polymorphism. A key difference is that the set of classes erased is
-    /// statically known, which alleviates the need for using dynamic memory
-    /// allocation.
-    /// We use a zero-sized templated class `Model<ConcreteT>` to emit the
-    /// virtual table and generate a singleton object for each instantiation of
-    /// this class.
-    static Concept &instance() {
-      static Model<ConcreteT> singleton;
-      return singleton;
-    }
   };
 
 protected:
@@ -144,60 +132,65 @@ struct FilterTypes {
 /// This class provides an efficient mapping between a given `Interface` type,
 /// and a particular implementation of its concept.
 class InterfaceMap {
+  /// Trait to check if T provides a static 'getInterfaceID' method.
+  template <typename T, typename... Args>
+  using has_get_interface_id = decltype(T::getInterfaceID());
+  template <typename T>
+  using detect_get_interface_id = llvm::is_detected<has_get_interface_id, T>;
+  template <typename... Types>
+  using num_interface_types = typename std::tuple_size<
+      typename FilterTypes<detect_get_interface_id, Types...>::type>;
+
 public:
+  InterfaceMap(InterfaceMap &&) = default;
+  ~InterfaceMap() {
+    if (interfaces) {
+      for (auto &it : *interfaces)
+        free(it.second);
+    }
+  }
+
   /// Construct an InterfaceMap with the given set of template types. For
   /// convenience given that object trait lists may contain other non-interface
   /// types, not all of the types need to be interfaces. The provided types that
   /// do not represent interfaces are not added to the interface map.
-  template <typename... Types> static InterfaceMap get() {
-    return InterfaceMap(MapBuilder::create<Types...>());
+  template <typename... Types>
+  static std::enable_if_t<num_interface_types<Types...>::value != 0,
+                          InterfaceMap>
+  get() {
+    // Filter the provided types for those that are interfaces.
+    using FilteredTupleType =
+        typename FilterTypes<detect_get_interface_id, Types...>::type;
+    return getImpl((FilteredTupleType *)nullptr);
+  }
+
+  template <typename... Types>
+  static std::enable_if_t<num_interface_types<Types...>::value == 0,
+                          InterfaceMap>
+  get() {
+    return InterfaceMap();
   }
 
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this map, null otherwise.
   template <typename T> typename T::Concept *lookup() const {
-    if (!interfaces)
-      return nullptr;
-    return reinterpret_cast<typename T::Concept *>(
-        interfaces->lookup(T::getInterfaceID()));
+    void *inst = interfaces ? interfaces->lookup(T::getInterfaceID()) : nullptr;
+    return reinterpret_cast<typename T::Concept *>(inst);
   }
 
 private:
-  /// This struct provides support for building a map of interfaces.
-  class MapBuilder {
-  public:
-    template <typename... Types>
-    static std::unique_ptr<llvm::SmallDenseMap<TypeID, void *>> create() {
-      // Filter the provided types for those that are interfaces. This reduces
-      // the amount of maps that are generated.
-      return createImpl((typename FilterTypes<detect_get_interface_id,
-                                              Types...>::type *)nullptr);
-    }
+  InterfaceMap() = default;
+  InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements)
+      : interfaces(std::make_unique<llvm::SmallDenseMap<TypeID, void *>>(
+            elements.begin(), elements.end())) {}
 
-  private:
-    /// Trait to check if T provides a static 'getInterfaceID' method.
-    template <typename T, typename... Args>
-    using has_get_interface_id = decltype(T::getInterfaceID());
-    template <typename T>
-    using detect_get_interface_id = llvm::is_detected<has_get_interface_id, T>;
-
-    template <typename... Ts>
-    static std::unique_ptr<llvm::SmallDenseMap<TypeID, void *>>
-    createImpl(std::tuple<Ts...> *) {
-      // Only create an instance of the map if there are any interface types.
-      if (sizeof...(Ts) == 0)
-        return std::unique_ptr<llvm::SmallDenseMap<TypeID, void *>>();
-
-      auto map = std::make_unique<llvm::SmallDenseMap<TypeID, void *>>();
-      (void)std::initializer_list<int>{
-          0, (map->try_emplace(Ts::getInterfaceID(), &Ts::instance()), 0)...};
-      return map;
-    }
-  };
-
-private:
-  InterfaceMap(std::unique_ptr<llvm::SmallDenseMap<TypeID, void *>> interfaces)
-      : interfaces(std::move(interfaces)) {}
+  template <typename... Ts>
+  static InterfaceMap getImpl(std::tuple<Ts...> *) {
+    std::pair<TypeID, void *> elements[] = {std::make_pair(
+        Ts::getInterfaceID(),
+        new (malloc(sizeof(typename Ts::ModelT))) typename Ts::ModelT())...};
+    return InterfaceMap(elements);
+  }
 
   /// The internal map of interfaces. This is constructed statically for each
   /// set of interfaces.

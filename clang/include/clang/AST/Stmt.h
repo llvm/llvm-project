@@ -1183,6 +1183,9 @@ public:
   /// \returns the likelihood of a statement.
   static Likelihood getLikelihood(const Stmt *S);
 
+  /// \returns the likelihood attribute of a statement.
+  static const Attr *getLikelihoodAttr(const Stmt *S);
+
   /// \returns the likelihood of the 'then' branch of an 'if' statement. The
   /// 'else' branch is required to determine whether both branches specify the
   /// same likelihood, which affects the result.

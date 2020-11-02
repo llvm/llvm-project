@@ -26,14 +26,14 @@ void test()
     ASSERT_NOEXCEPT(       std::chrono::duration_values<typename D::rep>::zero());
 #endif
     {
-    typedef typename D::rep Rep;
-    Rep zero_rep = std::chrono::duration_values<Rep>::zero();
+    typedef typename D::rep DRep;
+    DRep zero_rep = std::chrono::duration_values<DRep>::zero();
     assert(D::zero().count() == zero_rep);
     }
 #if TEST_STD_VER >= 11
     {
-    typedef typename D::rep Rep;
-    constexpr Rep zero_rep = std::chrono::duration_values<Rep>::zero();
+    typedef typename D::rep DRep;
+    constexpr DRep zero_rep = std::chrono::duration_values<DRep>::zero();
     static_assert(D::zero().count() == zero_rep, "");
     }
 #endif

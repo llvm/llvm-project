@@ -142,8 +142,8 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
-; GCN-NEXT:    v_readlane_b32 s5, v40, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v4
+; GCN-NEXT:    v_readlane_b32 s5, v40, 1
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT:    v_readlane_b32 s33, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1

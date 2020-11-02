@@ -62,7 +62,8 @@ public:
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
+      : Probs(std::move(Arg.Probs)), MaxSuccIdx(std::move(Arg.MaxSuccIdx)),
+        LastF(Arg.LastF),
         PostDominatedByUnreachable(std::move(Arg.PostDominatedByUnreachable)),
         PostDominatedByColdCall(std::move(Arg.PostDominatedByColdCall)) {}
 
@@ -72,6 +73,7 @@ public:
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
     Probs = std::move(RHS.Probs);
+    MaxSuccIdx = std::move(RHS.MaxSuccIdx);
     PostDominatedByColdCall = std::move(RHS.PostDominatedByColdCall);
     PostDominatedByUnreachable = std::move(RHS.PostDominatedByUnreachable);
     return *this;
@@ -272,6 +274,9 @@ private:
   static const uint32_t DEFAULT_WEIGHT = 16;
 
   DenseMap<Edge, BranchProbability> Probs;
+
+  // The maximum successor index ever entered for a given basic block.
+  DenseMap<const BasicBlock *, unsigned> MaxSuccIdx;
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;

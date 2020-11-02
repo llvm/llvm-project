@@ -8,4 +8,37 @@
 # and arbitrate any one-time initialization needed in various shared-library
 # scenarios.
 
-from _mlir import *
+__all__ = [
+  "ir",
+]
+
+# Expose the corresponding C-Extension module with a well-known name at this
+# top-level module. This allows relative imports like the following to
+# function:
+#   from .. import _cext
+# This reduces coupling, allowing embedding of the python sources into another
+# project that can just vary based on this top-level loader module.
+import _mlir as _cext
+
+def _reexport_cext(cext_module_name, target_module_name):
+  """Re-exports a named sub-module of the C-Extension into another module.
+
+  Typically:
+    from . import _reexport_cext
+    _reexport_cext("ir", __name__)
+    del _reexport_cext
+  """
+  import sys
+  target_module = sys.modules[target_module_name]
+  source_module = getattr(_cext, cext_module_name)
+  for attr_name in dir(source_module):
+    if not attr_name.startswith("__"):
+      setattr(target_module, attr_name, getattr(source_module, attr_name))
+
+
+# Import sub-modules. Since these may import from here, this must come after
+# any exported definitions.
+from . import ir
+
+# Add our 'dialects' parent module to the search path for implementations.
+_cext.globals.append_dialect_search_prefix("mlir.dialects")

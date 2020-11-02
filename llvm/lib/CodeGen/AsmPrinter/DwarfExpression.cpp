@@ -541,6 +541,11 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       assert(!isRegisterLocation());
       emitConstu(Op->getArg(0));
       break;
+    case dwarf::DW_OP_consts:
+      assert(!isRegisterLocation());
+      emitOp(dwarf::DW_OP_consts);
+      emitSigned(Op->getArg(0));
+      break;
     case dwarf::DW_OP_LLVM_convert: {
       unsigned BitSize = Op->getArg(0);
       dwarf::TypeKind Encoding = static_cast<dwarf::TypeKind>(Op->getArg(1));

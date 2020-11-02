@@ -512,6 +512,7 @@ public:
   const SCEV *getConstant(ConstantInt *V);
   const SCEV *getConstant(const APInt &Val);
   const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
+  const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
@@ -939,17 +940,23 @@ public:
   bool isKnownOnEveryIteration(ICmpInst::Predicate Pred,
                                const SCEVAddRecExpr *LHS, const SCEV *RHS);
 
-  /// Return true if, for all loop invariant X, the predicate "LHS `Pred` X"
-  /// is monotonically increasing or decreasing.  In the former case set
-  /// `Increasing` to true and in the latter case set `Increasing` to false.
-  ///
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
   /// around.  A predicate is said to be monotonically decreasing if may go
   /// from being true to being false as the loop iterates, but never the other
   /// way around.
-  bool isMonotonicPredicate(const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
-                            bool &Increasing);
+  enum MonotonicPredicateType {
+    MonotonicallyIncreasing,
+    MonotonicallyDecreasing
+  };
+
+  /// If, for all loop invariant X, the predicate "LHS `Pred` X" is
+  /// monotonically increasing or decreasing, returns
+  /// Some(MonotonicallyIncreasing) and Some(MonotonicallyDecreasing)
+  /// respectively. If we could not prove either of these facts, returns None.
+  Optional<MonotonicPredicateType>
+  getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
+                            ICmpInst::Predicate Pred);
 
   /// Return true if the result of the predicate LHS `Pred` RHS is loop
   /// invariant with respect to L.  Set InvariantPred, InvariantLHS and
@@ -960,6 +967,17 @@ public:
                                 ICmpInst::Predicate &InvariantPred,
                                 const SCEV *&InvariantLHS,
                                 const SCEV *&InvariantRHS);
+
+  /// Return true if the result of the predicate LHS `Pred` RHS is loop
+  /// invariant with respect to L at given Context during at least first
+  /// MaxIter iterations.  Set InvariantPred, InvariantLHS and InvariantLHS so
+  /// that InvariantLHS `InvariantPred` InvariantRHS is the loop invariant form
+  /// of LHS `Pred` RHS. The predicate should be the loop's exit condition.
+  bool isLoopInvariantExitCondDuringFirstIterations(
+      ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
+      const Instruction *Context, const SCEV *MaxIter,
+      ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
+      const SCEV *&InvariantRHS);
 
   /// Simplify LHS and RHS in a comparison with predicate Pred. Return true
   /// iff any changes were made. If the operands are provably equal or
@@ -1507,6 +1525,13 @@ private:
   ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Stop,
                                     const SCEV *MaxBECount, unsigned BitWidth);
 
+  /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
+  /// Start,+,\p Stop}<nw>.
+  ConstantRange getRangeForAffineNoSelfWrappingAR(const SCEVAddRecExpr *AddRec,
+                                                  const SCEV *MaxBECount,
+                                                  unsigned BitWidth,
+                                                  RangeSignHint SignHint);
+
   /// Try to compute a range for the affine SCEVAddRecExpr {\p Start,+,\p
   /// Stop} by "factoring out" a ternary expression from the add recurrence.
   /// Helper called by \c getRange.
@@ -1863,8 +1888,9 @@ private:
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
-  bool isMonotonicPredicateImpl(const SCEVAddRecExpr *LHS,
-                                ICmpInst::Predicate Pred, bool &Increasing);
+  Optional<MonotonicPredicateType>
+  getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
+                                ICmpInst::Predicate Pred);
 
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)

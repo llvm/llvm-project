@@ -142,6 +142,10 @@ OPTIONS
  When used with :option:`--sections`, display section data for each section
  shown. This option has no effect for GNU style output.
 
+.. option:: --section-details, -t
+
+ Display all section details. Used as an alternative to :option:`--sections`.
+
 .. option:: --section-mapping
 
  Display the section to segment mapping.

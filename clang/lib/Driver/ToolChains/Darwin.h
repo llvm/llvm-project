@@ -11,6 +11,7 @@
 
 #include "Cuda.h"
 #include "ROCm.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Driver/DarwinSDKInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -491,17 +492,18 @@ public:
     return !(isTargetMacOS() && isMacosxVersionLT(10, 6));
   }
 
-  unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
+  LangOptions::StackProtectorMode
+  GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     // Stack protectors default to on for user code on 10.5,
     // and for everything in 10.6 and beyond
     if (isTargetIOSBased() || isTargetWatchOSBased())
-      return 1;
+      return LangOptions::SSPOn;
     else if (isTargetMacOS() && !isMacosxVersionLT(10, 6))
-      return 1;
+      return LangOptions::SSPOn;
     else if (isTargetMacOS() && !isMacosxVersionLT(10, 5) && !KernelOrKext)
-      return 1;
+      return LangOptions::SSPOn;
 
-    return 0;
+    return LangOptions::SSPOff;
   }
 
   void CheckObjCARC() const override;

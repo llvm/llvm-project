@@ -544,3 +544,17 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-uintr -x c -E -dM -o - %s | FileCheck -check-prefix=NOUINTR %s
 
 // NOUINTR-NOT: #define __UINTR__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnni -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNI %s
+
+// AVXVNNI: #define __AVX2__ 1
+// AVXVNNI: #define __AVXVNNI__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mno-avxvnni -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOAVXVNNI %s
+
+// NOAVXVNNI-NOT: #define __AVXVNNI__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnni -mno-avx2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNINOAVX2 %s
+
+// AVXVNNINOAVX2-NOT: #define __AVX2__ 1
+// AVXVNNINOAVX2-NOT: #define __AVXVNNI__ 1

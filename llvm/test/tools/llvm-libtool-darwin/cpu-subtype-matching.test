@@ -1,22 +1,26 @@
 ## This test checks that the CPU subtype matching logic is handled correctly.
 
-# RUN: yaml2obj %s --docnum=1 -o %t.armv6
-# RUN: yaml2obj %s --docnum=2 -o %t.armv7
+# RUN: yaml2obj %s --docnum=1 -o %t-armv6.obj
+# RUN: yaml2obj %s --docnum=2 -o %t-armv7.obj
+# RUN: llvm-as %p/Inputs/arm64-ios.ll -o %t-arm64.bc
+# RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-armv7.bc
 
-# RUN: llvm-libtool-darwin -static -o %t.lib %t.armv6 %t.armv7 -arch_only armv7
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-armv6.obj %t-armv7.obj %t-arm64.bc %t-armv7.bc -arch_only armv7
 
 ## Check that only armv7 binary is present:
 # RUN: llvm-ar t %t.lib | \
 # RUN:   FileCheck %s --check-prefix=ARM-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
 
-# ARM-NAMES: [[PREFIX]].armv7
+# ARM-NAMES: [[PREFIX]]-armv7.obj
+# ARM-NAMES-NEXT: [[PREFIX]]-armv7.bc
 
 ## Check that only armv7 symbol is present:
 # RUN: llvm-nm --print-armap %t.lib | \
 # RUN:   FileCheck %s --check-prefix=ARM-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
 # ARM-SYMBOLS:      Archive map
-# ARM-SYMBOLS-NEXT: _armv7 in [[PREFIX]].armv7
+# ARM-SYMBOLS-NEXT: _armv7 in [[PREFIX]]-armv7.obj
+# ARM-SYMBOLS-NEXT: _armv7 in [[PREFIX]]-armv7.bc
 # ARM-SYMBOLS-EMPTY:
 
 ## armv6.yaml
@@ -133,23 +137,27 @@ LinkEditData:
     - ''
 ...
 
-# RUN: yaml2obj %s --docnum=3 -o %t.x86_64
-# RUN: yaml2obj %s --docnum=4 -o %t.x86_64_h
+# RUN: yaml2obj %s --docnum=3 -o %t-x86_64.obj
+# RUN: yaml2obj %s --docnum=4 -o %t-x86_64_h.obj
+# RUN: llvm-as %p/Inputs/x86_64-osx.ll -o %t-x86_64.bc
+# RUN: llvm-as %p/Inputs/x86_64h-osx.ll -o %t-x86_64_h.bc
 
-# RUN: llvm-libtool-darwin -static -o %t.lib %t.x86_64 %t.x86_64_h -arch_only x86_64
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-x86_64.obj %t-x86_64_h.obj %t-x86_64.bc %t-x86_64_h.bc -arch_only x86_64
 
 ## Check that only x86_64 binary is present:
 # RUN: llvm-ar t %t.lib | \
 # RUN:   FileCheck %s --check-prefix=X86-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
 
-# X86-NAMES: [[PREFIX]].x86_64
+# X86-NAMES: [[PREFIX]]-x86_64.obj
+# X86-NAMES-NEXT: [[PREFIX]]-x86_64.bc
 
 ## Check that only x86_64 symbol is present:
 # RUN: llvm-nm --print-armap %t.lib | \
 # RUN:   FileCheck %s --check-prefix=X86-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
 # X86-SYMBOLS:      Archive map
-# X86-SYMBOLS-NEXT: _x86_64 in [[PREFIX]].x86_64
+# X86-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.obj
+# X86-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
 # X86-SYMBOLS-EMPTY:
 
 ## x86_64.yaml

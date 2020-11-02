@@ -17,7 +17,7 @@ using namespace mlir;
 /// Return true if the given operation is unknown and may potentially define a
 /// symbol table.
 static bool isPotentiallyUnknownSymbolTable(Operation *op) {
-  return !op->getDialect() && op->getNumRegions() == 1;
+  return op->getNumRegions() == 1 && !op->getDialect();
 }
 
 /// Returns the string name of the given symbol, or None if this is not a
@@ -25,6 +25,11 @@ static bool isPotentiallyUnknownSymbolTable(Operation *op) {
 static Optional<StringRef> getNameIfSymbol(Operation *symbol) {
   auto nameAttr =
       symbol->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
+  return nameAttr ? nameAttr.getValue() : Optional<StringRef>();
+}
+static Optional<StringRef> getNameIfSymbol(Operation *symbol,
+                                           Identifier symbolAttrNameId) {
+  auto nameAttr = symbol->getAttrOfType<StringAttr>(symbolAttrNameId);
   return nameAttr ? nameAttr.getValue() : Optional<StringRef>();
 }
 
@@ -49,12 +54,15 @@ collectValidReferencesFor(Operation *symbol, StringRef symbolName,
 
   // Collect references until 'symbolTableOp' reaches 'within'.
   SmallVector<FlatSymbolRefAttr, 1> nestedRefs(1, leafRef);
+  Identifier symbolNameId =
+      Identifier::get(SymbolTable::getSymbolAttrName(), ctx);
   do {
     // Each parent of 'symbol' should define a symbol table.
     if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
     // Each parent of 'symbol' should also be a symbol.
-    Optional<StringRef> symbolTableName = getNameIfSymbol(symbolTableOp);
+    Optional<StringRef> symbolTableName =
+        getNameIfSymbol(symbolTableOp, symbolNameId);
     if (!symbolTableName)
       return failure();
     results.push_back(SymbolRefAttr::get(*symbolTableName, nestedRefs, ctx));
@@ -106,8 +114,10 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
   assert(llvm::hasSingleElement(symbolTableOp->getRegion(0)) &&
          "expected operation to have a single block");
 
+  Identifier symbolNameId = Identifier::get(SymbolTable::getSymbolAttrName(),
+                                            symbolTableOp->getContext());
   for (auto &op : symbolTableOp->getRegion(0).front()) {
-    Optional<StringRef> name = getNameIfSymbol(&op);
+    Optional<StringRef> name = getNameIfSymbol(&op, symbolNameId);
     if (!name)
       continue;
 
@@ -269,8 +279,10 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Look for a symbol with the given name.
+  Identifier symbolNameId = Identifier::get(SymbolTable::getSymbolAttrName(),
+                                            symbolTableOp->getContext());
   for (auto &op : symbolTableOp->getRegion(0).front().without_terminator())
-    if (getNameIfSymbol(&op) == symbol)
+    if (getNameIfSymbol(&op, symbolNameId) == symbol)
       return &op;
   return nullptr;
 }
@@ -430,9 +442,9 @@ static WalkResult walkSymbolRefs(
     Operation *op,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   // Check to see if the operation has any attributes.
-  if (op->getMutableAttrDict().empty())
+  DictionaryAttr attrDict = op->getMutableAttrDict().getDictionaryOrNull();
+  if (!attrDict)
     return WalkResult::advance();
-  DictionaryAttr attrDict = op->getAttrDictionary();
 
   // A worklist of a container attribute and the current index into the held
   // attribute list.

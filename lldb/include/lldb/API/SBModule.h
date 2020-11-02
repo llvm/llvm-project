@@ -300,6 +300,7 @@ private:
   friend class SBSection;
   friend class SBSymbolContext;
   friend class SBTarget;
+  friend class SBType;
 
   explicit SBModule(const lldb::ModuleSP &module_sp);
 

@@ -20,11 +20,6 @@ using namespace lldb_private::process_freebsd;
 #include <sys/ptrace.h>
 // clang-format on
 
-NativeRegisterContextFreeBSD::NativeRegisterContextFreeBSD(
-    NativeThreadProtocol &native_thread,
-    RegisterInfoInterface *reg_info_interface_p)
-    : NativeRegisterContextRegisterInfo(native_thread, reg_info_interface_p) {}
-
 NativeProcessFreeBSD &NativeRegisterContextFreeBSD::GetProcess() {
   return static_cast<NativeProcessFreeBSD &>(m_thread.GetProcess());
 }

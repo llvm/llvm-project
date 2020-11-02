@@ -705,16 +705,16 @@ cond.end:                                               ; preds = %cond.if, %con
 @a2 = common global i8 0, align 16
 
 define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@f1
-; CHECK-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* @f2(i8* nonnull @a1)
-; CHECK-NEXT:    br label [[TMP5]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
-; CHECK-NEXT:    ret i8* [[TMP6]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f1
+; IS__CGSCC____-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS__CGSCC____:       3:
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = tail call i8* @f2(i8* nonnull @a1)
+; IS__CGSCC____-NEXT:    br label [[TMP5]]
+; IS__CGSCC____:       5:
+; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[TMP6]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -729,19 +729,19 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 }
 
 define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@f2
-; CHECK-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull [[TMP0]])
-; CHECK-NEXT:    br label [[TMP7:%.*]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i8* @f3(i8* nonnull @a2)
-; CHECK-NEXT:    br label [[TMP7]]
-; CHECK:       7:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
-; CHECK-NEXT:    ret i8* [[TMP8]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
+; IS__CGSCC____-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
+; IS__CGSCC____:       3:
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull [[TMP0]])
+; IS__CGSCC____-NEXT:    br label [[TMP7:%.*]]
+; IS__CGSCC____:       5:
+; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = tail call i8* @f3(i8* nonnull @a2)
+; IS__CGSCC____-NEXT:    br label [[TMP7]]
+; IS__CGSCC____:       7:
+; IS__CGSCC____-NEXT:    [[TMP8:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[TMP8]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -761,16 +761,16 @@ define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
 }
 
 define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@f3
-; CHECK-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull @a2)
-; CHECK-NEXT:    br label [[TMP5]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ @a1, [[TMP1:%.*]] ]
-; CHECK-NEXT:    ret i8* [[TMP6]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f3
+; IS__CGSCC____-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS__CGSCC____:       3:
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull @a2)
+; IS__CGSCC____-NEXT:    br label [[TMP5]]
+; IS__CGSCC____:       5:
+; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ @a1, [[TMP1:%.*]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[TMP6]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5

@@ -405,14 +405,21 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
         ConsumeAnyToken();
     } else if (HasUnparsed) {
       assert(Param->hasInheritedDefaultArg());
-      FunctionDecl *Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
-      ParmVarDecl *OldParam = Old->getParamDecl(I);
-      assert (!OldParam->hasUnparsedDefaultArg());
-      if (OldParam->hasUninstantiatedDefaultArg())
-        Param->setUninstantiatedDefaultArg(
-            OldParam->getUninstantiatedDefaultArg());
+      const FunctionDecl *Old;
+      if (const auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
+        Old =
+            cast<FunctionDecl>(FunTmpl->getTemplatedDecl())->getPreviousDecl();
       else
-        Param->setDefaultArg(OldParam->getInit());
+        Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
+      if (Old) {
+        ParmVarDecl *OldParam = const_cast<ParmVarDecl*>(Old->getParamDecl(I));
+        assert(!OldParam->hasUnparsedDefaultArg());
+        if (OldParam->hasUninstantiatedDefaultArg())
+          Param->setUninstantiatedDefaultArg(
+              OldParam->getUninstantiatedDefaultArg());
+        else
+          Param->setDefaultArg(OldParam->getInit());
+      }
     }
   }
 

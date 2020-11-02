@@ -4,7 +4,7 @@
 // RUN: FileCheck %s
 
 // NOTE: This is similar to test-create-mask.mlir, but with a different length,
-//       because the v4i1 vector specifially exposed bugs in the LLVM backend.
+//       because the v4i1 vector specifically exposed bugs in the LLVM backend.
 
 func @entry() {
   %c0 = constant 0 : index

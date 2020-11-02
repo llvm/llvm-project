@@ -151,7 +151,7 @@ Sections:
                0x000F0501, 0x50400009 ]
     EntSize: [[ENTSIZE=<none>]]
     ShType:  [[SHTYPE=<none>]]
-    Link:    [[LINK=""]]
+    Link:    [[LINK=<none>]]
 
 ## Check we report a warning when we are unable to dump relocations
 ## for a SHT_RELR/SHT_ANDROID_RELR section.

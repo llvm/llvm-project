@@ -109,7 +109,18 @@ void NativeThreadFreeBSD::SetStoppedByExec() {
 }
 
 void NativeThreadFreeBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
+  lldbassert(wp_index != LLDB_INVALID_INDEX32 && "wp_index cannot be invalid");
+
+  std::ostringstream ostr;
+  ostr << GetRegisterContext().GetWatchpointAddress(wp_index) << " ";
+  ostr << wp_index;
+
+  ostr << " " << GetRegisterContext().GetWatchpointHitAddress(wp_index);
+
   SetStopped();
+  m_stop_description = ostr.str();
+  m_stop_info.reason = StopReason::eStopReasonWatchpoint;
+  m_stop_info.details.signal.signo = SIGTRAP;
 }
 
 void NativeThreadFreeBSD::SetStoppedWithNoReason() {
@@ -176,26 +187,45 @@ NativeRegisterContextFreeBSD &NativeThreadFreeBSD::GetRegisterContext() {
 
 Status NativeThreadFreeBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
                                           uint32_t watch_flags, bool hardware) {
-  return Status("not implemented");
+  assert(m_state == eStateStopped);
+  if (!hardware)
+    return Status("not implemented");
+  Status error = RemoveWatchpoint(addr);
+  if (error.Fail())
+    return error;
+  uint32_t wp_index =
+      GetRegisterContext().SetHardwareWatchpoint(addr, size, watch_flags);
+  if (wp_index == LLDB_INVALID_INDEX32)
+    return Status("Setting hardware watchpoint failed.");
+  m_watchpoint_index_map.insert({addr, wp_index});
+  return Status();
 }
 
 Status NativeThreadFreeBSD::RemoveWatchpoint(lldb::addr_t addr) {
   auto wp = m_watchpoint_index_map.find(addr);
   if (wp == m_watchpoint_index_map.end())
     return Status();
-  return Status("not implemented");
+  uint32_t wp_index = wp->second;
+  m_watchpoint_index_map.erase(wp);
+  if (GetRegisterContext().ClearHardwareWatchpoint(wp_index))
+    return Status();
+  return Status("Clearing hardware watchpoint failed.");
 }
 
 Status NativeThreadFreeBSD::SetHardwareBreakpoint(lldb::addr_t addr,
                                                   size_t size) {
-  if (m_state == eStateLaunching)
-    return Status();
-
+  assert(m_state == eStateStopped);
   Status error = RemoveHardwareBreakpoint(addr);
   if (error.Fail())
     return error;
 
-  return Status("not implemented");
+  uint32_t bp_index = GetRegisterContext().SetHardwareBreakpoint(addr, size);
+
+  if (bp_index == LLDB_INVALID_INDEX32)
+    return Status("Setting hardware breakpoint failed.");
+
+  m_hw_break_index_map.insert({addr, bp_index});
+  return Status();
 }
 
 Status NativeThreadFreeBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
@@ -203,9 +233,11 @@ Status NativeThreadFreeBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   if (bp == m_hw_break_index_map.end())
     return Status();
 
-  return Status("not implemented");
-}
+  uint32_t bp_index = bp->second;
+  if (GetRegisterContext().ClearHardwareBreakpoint(bp_index)) {
+    m_hw_break_index_map.erase(bp);
+    return Status();
+  }
 
-Status NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
-  return Status("not implemented");
+  return Status("Clearing hardware breakpoint failed.");
 }

@@ -14,6 +14,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -59,6 +60,8 @@ void TestConvVectorization::runOnOperation() {
 
   SmallVector<OwningRewritePatternList, 4> stage1Patterns;
   linalg::populateConvVectorizationPatterns(context, stage1Patterns, tileSizes);
+  SmallVector<FrozenRewritePatternList, 4> frozenStage1Patterns;
+  llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
 
   OwningRewritePatternList stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
@@ -77,8 +80,8 @@ void TestConvVectorization::runOnOperation() {
     return success();
   };
 
-  linalg::applyStagedPatterns(module, stage1Patterns, stage2Patterns,
-                              stage3Transforms);
+  linalg::applyStagedPatterns(module, frozenStage1Patterns,
+                              std::move(stage2Patterns), stage3Transforms);
 
   //===--------------------------------------------------------------------===//
   // Post staged patterns transforms
@@ -93,7 +96,7 @@ void TestConvVectorization::runOnOperation() {
   // VectorTransforms.cpp
   vectorTransferPatterns.insert<VectorTransferFullPartialRewriter>(
       context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(module, vectorTransferPatterns);
+  applyPatternsAndFoldGreedily(module, std::move(vectorTransferPatterns));
 
   // Programmatic controlled lowering of linalg.copy and linalg.fill.
   PassManager pm(context);
@@ -105,13 +108,14 @@ void TestConvVectorization::runOnOperation() {
   OwningRewritePatternList vectorContractLoweringPatterns;
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
                                          context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(module, vectorContractLoweringPatterns);
+  applyPatternsAndFoldGreedily(module,
+                               std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
   OwningRewritePatternList vectorToLoopsPatterns;
   populateVectorToSCFConversionPatterns(vectorToLoopsPatterns, context,
                                         VectorTransferToSCFOptions());
-  applyPatternsAndFoldGreedily(module, vectorToLoopsPatterns);
+  applyPatternsAndFoldGreedily(module, std::move(vectorToLoopsPatterns));
 
   // Ensure we drop the marker in the end.
   module.walk([](linalg::LinalgOp op) {

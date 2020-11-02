@@ -37,7 +37,6 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
              {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
               "capture": {1: "register_bank"}}],
             True)
-        self.connect_to_debug_monitor()
         context = self.expect_gdbremote_sequence()
         register_bank = context.get("register_bank")
         self.assertNotEqual(register_bank[0], 'E')

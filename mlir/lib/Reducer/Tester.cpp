@@ -9,7 +9,7 @@
 // This file defines the Tester class used in the MLIR Reduce tool.
 //
 // A Tester object is passed as an argument to the reduction passes and it is
-// used to run the interestigness testing script on the different generated
+// used to run the interestingness testing script on the different generated
 // reduced variants of the test case.
 //
 //===----------------------------------------------------------------------===//

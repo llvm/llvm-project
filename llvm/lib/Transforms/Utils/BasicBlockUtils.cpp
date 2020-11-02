@@ -285,11 +285,6 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Add unreachable to now empty BB.
   new UnreachableInst(BB->getContext(), BB);
 
-  // Eliminate duplicate/redundant dbg.values. This seems to be a good place to
-  // do that since we might end up with redundant dbg.values describing the
-  // entry PHI node post-splice.
-  RemoveRedundantDbgInstrs(PredBB);
-
   // Inherit predecessors name if it exists.
   if (!PredBB->hasName())
     PredBB->takeName(BB);

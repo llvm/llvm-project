@@ -18,11 +18,9 @@ namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD : public NativeRegisterContextRegisterInfo {
+class NativeRegisterContextFreeBSD
+    : public virtual NativeRegisterContextRegisterInfo {
 public:
-  NativeRegisterContextFreeBSD(NativeThreadProtocol &native_thread,
-                               RegisterInfoInterface *reg_info_interface_p);
-
   // This function is implemented in the NativeRegisterContextFreeBSD_*
   // subclasses to create a new instance of the host specific
   // NativeRegisterContextFreeBSD. The implementations can't collide as only one
@@ -31,10 +29,6 @@ public:
   static NativeRegisterContextFreeBSD *
   CreateHostNativeRegisterContextFreeBSD(const ArchSpec &target_arch,
                                          NativeThreadProtocol &native_thread);
-  virtual Status
-  CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) = 0;
-
-  virtual Status ClearWatchpointHit(uint32_t wp_index) = 0;
 
 protected:
   virtual NativeProcessFreeBSD &GetProcess();

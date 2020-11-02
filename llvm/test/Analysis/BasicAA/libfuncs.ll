@@ -106,13 +106,14 @@ entry:
 declare i8* @memccpy(i8*, i8*, i32, i64)
 
 ; CHECK-LABEL: Function: test_memccpy_const_size
-; CHECK:      Both ModRef:  Ptr: i8* %a     <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK:      Just Mod:  Ptr: i8* %a        <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
 ; CHECK-NEXT: Just Ref:  Ptr: i8* %b        <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
-; CHECK-NEXT: Both ModRef:  Ptr: i8* %res   <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
-; CHECK-NEXT: Both ModRef:  Ptr: i8* %a.gep.1       <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: Just Mod:  Ptr: i8* %res      <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: Just Mod:  Ptr: i8* %a.gep.1  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
 ; CHECK-NEXT: NoModRef:  Ptr: i8* %a.gep.5  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
 ; CHECK-NEXT: Just Ref:  Ptr: i8* %b.gep.1  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
 ; CHECK-NEXT: NoModRef:  Ptr: i8* %b.gep.5  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+
 define i8* @test_memccpy_const_size(i8* noalias %a, i8* noalias %b) {
 entry:
   %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)

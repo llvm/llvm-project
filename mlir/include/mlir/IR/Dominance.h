@@ -10,46 +10,7 @@
 #define MLIR_IR_DOMINANCE_H
 
 #include "mlir/IR/RegionGraphTraits.h"
-#include "llvm/Support/CfgTraits.h"
 #include "llvm/Support/GenericDomTree.h"
-
-namespace mlir {
-
-/// Partial CFG traits for MLIR's CFG, without a value type.
-class CfgTraitsBase : public llvm::CfgTraitsBase {
-public:
-  using ParentType = Region;
-  using BlockRef = Block *;
-  using ValueRef = void;
-
-  static llvm::CfgBlockRef wrapRef(BlockRef block) {
-    return makeOpaque<llvm::CfgBlockRefTag>(block);
-  }
-  static BlockRef unwrapRef(llvm::CfgBlockRef block) {
-    return static_cast<BlockRef>(getOpaque(block));
-  }
-};
-
-class CfgTraits : public llvm::CfgTraits<CfgTraitsBase, CfgTraits> {
-public:
-  static Region *getBlockParent(Block *block) { return block->getParent(); }
-
-  static auto predecessors(Block *block) {
-    return llvm::inverse_children<Block *>(block);
-  }
-
-  static auto successors(Block *block) {
-    return llvm::children<Block *>(block);
-  }
-};
-
-} // namespace mlir
-
-namespace llvm {
-template <> struct CfgTraitsFor<mlir::Block> {
-  using CfgTraits = mlir::CfgTraits;
-};
-} // namespace llvm
 
 extern template class llvm::DominatorTreeBase<mlir::Block, false>;
 extern template class llvm::DominatorTreeBase<mlir::Block, true>;

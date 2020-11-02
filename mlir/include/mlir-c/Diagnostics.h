@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-/** An opaque reference to a dignostic, always owned by the diagnostics engine
+/** An opaque reference to a diagnostic, always owned by the diagnostics engine
  * (context). Must not be stored outside of the diagnostic handler. */
 struct MlirDiagnostic {
   void *ptr;

@@ -37,10 +37,10 @@ class MachineRegisterInfo;
 class RegisterClassInfo;
 
 struct RegisterMaskPair {
-  unsigned RegUnit; ///< Virtual register or register unit.
+  Register RegUnit; ///< Virtual register or register unit.
   LaneBitmask LaneMask;
 
-  RegisterMaskPair(unsigned RegUnit, LaneBitmask LaneMask)
+  RegisterMaskPair(Register RegUnit, LaneBitmask LaneMask)
       : RegUnit(RegUnit), LaneMask(LaneMask) {}
 };
 
@@ -157,7 +157,7 @@ public:
   const_iterator begin() const { return &PressureChanges[0]; }
   const_iterator end() const { return &PressureChanges[MaxPSets]; }
 
-  void addPressureChange(unsigned RegUnit, bool IsDec,
+  void addPressureChange(Register RegUnit, bool IsDec,
                          const MachineRegisterInfo *MRI);
 
   void dump(const TargetRegisterInfo &TRI) const;
@@ -275,24 +275,24 @@ private:
   RegSet Regs;
   unsigned NumRegUnits;
 
-  unsigned getSparseIndexFromReg(unsigned Reg) const {
-    if (Register::isVirtualRegister(Reg))
+  unsigned getSparseIndexFromReg(Register Reg) const {
+    if (Reg.isVirtual())
       return Register::virtReg2Index(Reg) + NumRegUnits;
     assert(Reg < NumRegUnits);
     return Reg;
   }
 
-  unsigned getRegFromSparseIndex(unsigned SparseIndex) const {
+  Register getRegFromSparseIndex(unsigned SparseIndex) const {
     if (SparseIndex >= NumRegUnits)
-      return Register::index2VirtReg(SparseIndex-NumRegUnits);
-    return SparseIndex;
+      return Register::index2VirtReg(SparseIndex - NumRegUnits);
+    return Register(SparseIndex);
   }
 
 public:
   void clear();
   void init(const MachineRegisterInfo &MRI);
 
-  LaneBitmask contains(unsigned Reg) const {
+  LaneBitmask contains(Register Reg) const {
     unsigned SparseIndex = getSparseIndexFromReg(Reg);
     RegSet::const_iterator I = Regs.find(SparseIndex);
     if (I == Regs.end())
@@ -332,7 +332,7 @@ public:
   template<typename ContainerT>
   void appendTo(ContainerT &To) const {
     for (const IndexMaskPair &P : Regs) {
-      unsigned Reg = getRegFromSparseIndex(P.Index);
+      Register Reg = getRegFromSparseIndex(P.Index);
       if (P.LaneMask.any())
         To.push_back(RegisterMaskPair(Reg, P.LaneMask));
     }
@@ -390,7 +390,7 @@ class RegPressureTracker {
   LiveRegSet LiveRegs;
 
   /// Set of vreg defs that start a live range.
-  SparseSet<unsigned, VirtReg2IndexFunctor> UntiedDefs;
+  SparseSet<Register, VirtReg2IndexFunctor> UntiedDefs;
   /// Live-through pressure.
   std::vector<unsigned> LiveThruPressure;
 
@@ -532,7 +532,7 @@ public:
     return getDownwardPressure(MI, PressureResult, MaxPressureResult);
   }
 
-  bool hasUntiedDef(unsigned VirtReg) const {
+  bool hasUntiedDef(Register VirtReg) const {
     return UntiedDefs.count(VirtReg);
   }
 
@@ -548,9 +548,9 @@ protected:
   /// after the current position.
   SlotIndex getCurrSlot() const;
 
-  void increaseRegPressure(unsigned RegUnit, LaneBitmask PreviousMask,
+  void increaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
                            LaneBitmask NewMask);
-  void decreaseRegPressure(unsigned RegUnit, LaneBitmask PreviousMask,
+  void decreaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
                            LaneBitmask NewMask);
 
   void bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs);
@@ -561,9 +561,9 @@ protected:
   void discoverLiveInOrOut(RegisterMaskPair Pair,
                            SmallVectorImpl<RegisterMaskPair> &LiveInOrOut);
 
-  LaneBitmask getLastUsedLanes(unsigned RegUnit, SlotIndex Pos) const;
-  LaneBitmask getLiveLanesAt(unsigned RegUnit, SlotIndex Pos) const;
-  LaneBitmask getLiveThroughAt(unsigned RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLiveLanesAt(Register RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLiveThroughAt(Register RegUnit, SlotIndex Pos) const;
 };
 
 void dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
