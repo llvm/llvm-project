@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -force-fast-cluster -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-FAST
 
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: stp_i64_scale:%bb.0
@@ -227,6 +228,10 @@ entry:
 ; CHECK:SU(7):   %5:gpr32 = LDRWui %1:gpr64common, 1 ::
 ; CHECK:Predecessors:
 ; CHECK:SU(6): Ord  Latency=1 Memory
+; CHECK-FAST: cluster_with_different_preds:%bb.0
+; CHECK-FAST-NOT: Cluster ld/st
+; CHECK-FAST:SU(3):   STRWui %2:gpr32, %0:gpr64common, 0 ::
+; CHECK-FAST:SU(4):   %3:gpr32 = LDRWui %1:gpr64common, 0 ::
 define i32 @cluster_with_different_preds(i32* %p, i32* %q) {
 entry:
   store i32 3, i32* %p, align 4
