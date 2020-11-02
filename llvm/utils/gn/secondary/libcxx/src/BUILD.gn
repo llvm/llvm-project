@@ -130,6 +130,7 @@ cxx_sources = [
   "include/config_elast.h",
   "include/refstring.h",
   "ios.cpp",
+  "ios.instantiations.cpp",
   "iostream.cpp",
   "locale.cpp",
   "memory.cpp",
