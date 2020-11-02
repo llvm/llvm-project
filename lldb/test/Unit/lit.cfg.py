@@ -14,6 +14,13 @@ config.name = 'lldb-unit'
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes =  []
 
+# Begin Swift mod.
+# Swift's libReflection builds without ASAN, which causes a known
+# false positive in std::vector. We also want to support testing a sanitized
+# lldb using unsanitized llvm, clang, and swift libraries.
+config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
+# End Swift mod.
+
 # test_source_root: The root path where unit test binaries are located.
 # test_exec_root: The root path where tests should be run.
 config.test_source_root = os.path.join(config.lldb_obj_root, 'unittests')
