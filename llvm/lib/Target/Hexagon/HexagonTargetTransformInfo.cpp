@@ -47,21 +47,6 @@ bool HexagonTTIImpl::useHVX() const {
   return ST.useHVXOps() && HexagonAutoHVX;
 }
 
-bool HexagonTTIImpl::isTypeForHVX(Type *VecTy) const {
-  if (!VecTy->isVectorTy() || isa<ScalableVectorType>(VecTy))
-    return false;
-  // Avoid types like <2 x i32*>.
-  if (!cast<VectorType>(VecTy)->getElementType()->isIntegerTy())
-    return false;
-  EVT VecVT = EVT::getEVT(VecTy);
-  if (!VecVT.isSimple() || VecVT.getSizeInBits() <= 64)
-    return false;
-  if (ST.isHVXVectorType(VecVT.getSimpleVT()))
-    return true;
-  auto Action = TLI.getPreferredVectorAction(VecVT.getSimpleVT());
-  return Action == TargetLoweringBase::TypeWidenVector;
-}
-
 unsigned HexagonTTIImpl::getTypeNumElements(Type *Ty) const {
   if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
     return VTy->getNumElements();
@@ -171,7 +156,7 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (Src->isVectorTy()) {
     VectorType *VecTy = cast<VectorType>(Src);
     unsigned VecWidth = VecTy->getPrimitiveSizeInBits().getFixedSize();
-    if (useHVX() && isTypeForHVX(VecTy)) {
+    if (useHVX() && ST.isTypeForHVX(VecTy)) {
       unsigned RegWidth = getRegisterBitWidth(true);
       assert(RegWidth && "Non-zero vector register width expected");
       // Cost of HVX loads.
@@ -314,11 +299,11 @@ unsigned HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/) {
-  return HexagonMaskedVMem && isTypeForHVX(DataType);
+  return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
 }
 
 bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/) {
-  return HexagonMaskedVMem && isTypeForHVX(DataType);
+  return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
 }
 
 /// --- Vector TTI end ---

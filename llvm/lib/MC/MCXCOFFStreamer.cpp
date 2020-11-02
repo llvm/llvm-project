@@ -29,8 +29,8 @@ MCXCOFFStreamer::MCXCOFFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                        std::move(Emitter)) {}
 
-bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym, MCSymbolAttr Attribute,
-                                          SMLoc) {
+bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
+                                          MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolXCOFF>(Sym);
   getAssembler().registerSymbol(*Symbol);
 

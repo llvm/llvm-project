@@ -97,7 +97,7 @@ void RecordStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
 }
 
 bool RecordStreamer::emitSymbolAttribute(MCSymbol *Symbol,
-                                         MCSymbolAttr Attribute, SMLoc) {
+                                         MCSymbolAttr Attribute) {
   if (Attribute == MCSA_Global || Attribute == MCSA_Weak)
     markGlobal(*Symbol, Attribute);
   if (Attribute == MCSA_LazyReference)
@@ -226,7 +226,7 @@ void RecordStreamer::flushSymverDirectives() {
       // Don't use EmitAssignment override as it always marks alias as defined.
       MCStreamer::emitAssignment(Alias, Value);
       if (Attr != MCSA_Invalid)
-        emitSymbolAttribute(Alias, Attr, SMLoc());
+        emitSymbolAttribute(Alias, Attr);
     }
   }
 }

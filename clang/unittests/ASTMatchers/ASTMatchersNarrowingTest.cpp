@@ -1613,6 +1613,26 @@ TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
                  Constructor1Arg));
 }
 
+TEST(ASTMatchersTest, ArgumentCountIs_CXXUnresolvedConstructExpr) {
+  const auto *Code =
+      "template <typename T> struct S{}; template <typename T> void "
+      "x() { auto s = S<T>(); }";
+
+  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(argumentCountIs(0))));
+  EXPECT_TRUE(notMatches(Code, cxxUnresolvedConstructExpr(argumentCountIs(1))));
+}
+
+TEST(ASTMatchersTest, HasArgument_CXXUnresolvedConstructExpr) {
+  const auto *Code =
+      "template <typename T> struct S{ S(int){} }; template <typename "
+      "T> void x() { int y; auto s = S<T>(y); }";
+  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(hasArgument(
+                                0, declRefExpr(to(varDecl(hasName("y"))))))));
+  EXPECT_TRUE(
+      notMatches(Code, cxxUnresolvedConstructExpr(hasArgument(
+                           0, declRefExpr(to(varDecl(hasName("x"))))))));
+}
+
 TEST_P(ASTMatchersTest, IsListInitialization) {
   if (!GetParam().isCXX11OrLater()) {
     return;

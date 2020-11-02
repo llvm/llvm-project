@@ -157,8 +157,7 @@ public:
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute,
-                           SMLoc) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override;
@@ -636,7 +635,7 @@ void MCAsmStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
 }
 
 bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
-                                        MCSymbolAttr Attribute, SMLoc) {
+                                        MCSymbolAttr Attribute) {
   switch (Attribute) {
   case MCSA_Invalid: llvm_unreachable("Invalid symbol attribute");
   case MCSA_ELF_TypeFunction:    /// .type _foo, STT_FUNC  # aka @function

@@ -275,42 +275,9 @@ public:
     return makeArrayRef(Types);
   }
 
-  bool isHVXElementType(MVT Ty, bool IncludeBool = false) const {
-    if (!useHVXOps())
-      return false;
-    if (Ty.isVector())
-      Ty = Ty.getVectorElementType();
-    if (IncludeBool && Ty == MVT::i1)
-      return true;
-    ArrayRef<MVT> ElemTypes = getHVXElementTypes();
-    return llvm::find(ElemTypes, Ty) != ElemTypes.end();
-  }
-
-  bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const {
-    if (!VecTy.isVector() || !useHVXOps() || VecTy.isScalableVector())
-      return false;
-    MVT ElemTy = VecTy.getVectorElementType();
-    if (!IncludeBool && ElemTy == MVT::i1)
-      return false;
-
-    unsigned HwLen = getVectorLength();
-    unsigned NumElems = VecTy.getVectorNumElements();
-    ArrayRef<MVT> ElemTypes = getHVXElementTypes();
-
-    if (IncludeBool && ElemTy == MVT::i1) {
-      // Boolean HVX vector types are formed from regular HVX vector types
-      // by replacing the element type with i1.
-      for (MVT T : ElemTypes)
-        if (NumElems * T.getSizeInBits() == 8*HwLen)
-          return true;
-      return false;
-    }
-
-    unsigned VecWidth = VecTy.getSizeInBits();
-    if (VecWidth != 8*HwLen && VecWidth != 16*HwLen)
-      return false;
-    return llvm::find(ElemTypes, ElemTy) != ElemTypes.end();
-  }
+  bool isHVXElementType(MVT Ty, bool IncludeBool = false) const;
+  bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const;
+  bool isTypeForHVX(Type *VecTy, bool IncludeBool = false) const;
 
   unsigned getTypeAlignment(MVT Ty) const {
     if (isHVXVectorType(Ty, true))

@@ -10107,19 +10107,9 @@ void Sema::CheckStrncatArguments(const CallExpr *CE,
 }
 
 namespace {
-void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
-                                 const UnaryOperator *UnaryExpr) {
-  if (UnaryExpr->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
-    return;
-
-  const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr());
-  if (Lvalue == nullptr)
-    return;
-
-  const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl());
-  if (Var == nullptr)
-    return;
-
+void CheckFreeArgumentsOnLvalue(Sema &S, const std::string &CalleeName,
+                                const UnaryOperator *UnaryExpr,
+                                const VarDecl *Var) {
   StorageClass Class = Var->getStorageClass();
   if (Class == StorageClass::SC_Extern ||
       Class == StorageClass::SC_PrivateExtern ||
@@ -10128,6 +10118,27 @@ void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
 
   S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
       << CalleeName << Var;
+}
+
+void CheckFreeArgumentsOnLvalue(Sema &S, const std::string &CalleeName,
+                                const UnaryOperator *UnaryExpr, const Decl *D) {
+  if (const auto *Field = dyn_cast<FieldDecl>(D))
+    S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
+        << CalleeName << Field;
+}
+
+void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
+                                 const UnaryOperator *UnaryExpr) {
+  if (UnaryExpr->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
+    return;
+
+  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr()))
+    if (const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl()))
+      return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, Var);
+
+  if (const auto *Lvalue = dyn_cast<MemberExpr>(UnaryExpr->getSubExpr()))
+    return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr,
+                                      Lvalue->getMemberDecl());
 }
 
 void CheckFreeArgumentsStackArray(Sema &S, const std::string &CalleeName,

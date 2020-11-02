@@ -1,3 +1,4 @@
+# for %resource_dir: REQUIRES: clang
 # %resource_dir actually points at builtin_include_dir, go up one directory.
 # RUN: clangd -lit-test -resource-dir=%resource_dir/.. < %s | FileCheck -strict-whitespace %s
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
