@@ -303,9 +303,8 @@ define void @forward_dep(i32* noalias %arg) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[DOT013:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB25:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV22:%.*]] = phi i64 [ 0, [[BB]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[BB25]] ]
-; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB25]] ], [ 0, [[BB]] ]
+; CHECK-NEXT:    [[DOT013:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB14:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV22:%.*]] = phi i64 [ 0, [[BB]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[DOT013]], -3
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[INDVARS_IV22]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
@@ -314,8 +313,16 @@ define void @forward_dep(i32* noalias %arg) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = srem i32 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[ARG:%.*]], i64 [[INDVARS_IV22]]
 ; CHECK-NEXT:    store i32 [[TMP12]], i32* [[TMP13]], align 4
-; CHECK-NEXT:    br label [[BB14:%.*]]
+; CHECK-NEXT:    br label [[BB14]]
 ; CHECK:       bb14:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV22]], 1
+; CHECK-NEXT:    [[TMP15]] = add nuw nsw i32 [[DOT013]], 1
+; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[BB7]], label [[BB19_PREHEADER:%.*]]
+; CHECK:       bb19.preheader:
+; CHECK-NEXT:    br label [[BB19:%.*]]
+; CHECK:       bb19:
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB25:%.*]] ], [ 0, [[BB19_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add nsw i64 [[INDVARS_IV1]], -3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP21]], align 4
@@ -324,12 +331,9 @@ define void @forward_dep(i32* noalias %arg) {
 ; CHECK-NEXT:    store i32 [[TMP23]], i32* [[TMP24]], align 4
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb25:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV22]], 1
-; CHECK-NEXT:    [[TMP15]] = add nuw nsw i32 [[DOT013]], 1
-; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], 100
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB7]], label [[BB26:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB19]], label [[BB26:%.*]]
 ; CHECK:       bb26:
 ; CHECK-NEXT:    ret void
 ;

@@ -10,7 +10,7 @@ define i8* @FSE_decompress_usingDTable(i8* %arg, i32 %arg1, i32 %arg2, i32 %arg3
 ; CHECK-LABEL: 'FSE_decompress_usingDTable'
 ; CHECK-NEXT:  Classifying expressions for: @FSE_decompress_usingDTable
 ; CHECK-NEXT:    %i = getelementptr inbounds i8, i8* %arg, i32 %arg2
-; CHECK-NEXT:    --> (%arg2 + %arg)<nsw> U: full-set S: full-set
+; CHECK-NEXT:    --> (%arg2 + %arg) U: full-set S: full-set
 ; CHECK-NEXT:    %i4 = sub nsw i32 0, %arg1
 ; CHECK-NEXT:    --> (-1 * %arg1) U: full-set S: full-set
 ; CHECK-NEXT:    %i5 = getelementptr inbounds i8, i8* %i, i32 %i4

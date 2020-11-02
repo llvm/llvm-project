@@ -19,7 +19,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:    %idxprom = sext i32 %rem to i64
 ; CHECK-NEXT:    --> (zext i1 {false,+,true}<%for.cond> to i64) U: [0,2) S: [0,2) Exits: (zext i1 (trunc i32 %width to i1) to i64) LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %storage, i64 0, i64 %idxprom
-; CHECK-NEXT:    --> ((4 * (zext i1 {false,+,true}<%for.cond> to i64))<nuw><nsw> + %storage)<nsw> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: ((4 * (zext i1 (trunc i32 %width to i1) to i64))<nuw><nsw> + %storage)<nsw> LoopDispositions: { %for.cond: Computable }
+; CHECK-NEXT:    --> ((4 * (zext i1 {false,+,true}<%for.cond> to i64))<nuw><nsw> + %storage)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: ((4 * (zext i1 (trunc i32 %width to i1) to i64))<nuw><nsw> + %storage)<nuw> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %1 = load i32, i32* %arrayidx, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %call = call i32 @_Z3adji(i32 %1)
