@@ -23,25 +23,29 @@ Sections:
   - Name: .strtab
     Type: SHT_STRTAB
     Flags: [[STRTABFLAGS=<none>]]
+    Offset: [[STRTABOFFSET=<none>]]
   - Name: .shstrtab
     Type: SHT_STRTAB
     Flags: [[SHSTRTABFLAGS=<none>]]
+    Offset: [[SHSTRTABOFFSET=<none>]]
   - Name: .dynstr
     Type: SHT_STRTAB
     Flags: [[DYNSTRFLAGS=<none>]]
+    Offset: [[DYNSTROFFSET=<none>]]
 
-## Check we can set arbitrary flags for .strtab/.dynstr.
+## Check we can set arbitrary flags and offsets for
+## implicit string table sections.
 
 # RUN: yaml2obj --docnum=1 \
-# RUN:   -DSTRTABFLAGS="[ SHF_ALLOC, SHF_STRINGS ]" \
-# RUN:     -DSHSTRTABFLAGS="[ SHF_ALLOC, SHF_WRITE ]" \
-# RUN:       -DDYNSTRFLAGS="[ SHF_STRINGS ]" %s -o %t2
+# RUN:   -DSTRTABFLAGS="[ SHF_ALLOC, SHF_STRINGS ]" -DSTRTABOFFSET=0x100 \
+# RUN:     -DSHSTRTABFLAGS="[ SHF_ALLOC, SHF_WRITE ]" -DSHSTRTABOFFSET=0x200 \
+# RUN:       -DDYNSTRFLAGS="[ SHF_STRINGS ]" -DDYNSTROFFSET=0x300 %s -o %t2
 # RUN: llvm-readelf %t2 --sections | FileCheck %s --check-prefix=CASE2
 
-#      CASE2: [Nr] Name      Type   {{.*}} Flg Lk
-#      CASE2: [ 1] .strtab   STRTAB {{.*}}  AS 0 
-# CASE2-NEXT: [ 2] .shstrtab STRTAB {{.*}}  WA 0 
-# CASE2-NEXT: [ 3] .dynstr   STRTAB {{.*}}   S 0 
+#      CASE2: [Nr] Name      Type   Address          Off    {{.*}} Flg Lk
+#      CASE2: [ 1] .strtab   STRTAB 0000000000000000 000100 {{.*}}  AS 0
+# CASE2-NEXT: [ 2] .shstrtab STRTAB 0000000000000001 000200 {{.*}}  WA 0
+# CASE2-NEXT: [ 3] .dynstr   STRTAB 0000000000000000 000300 {{.*}}   S 0
 
 ## Check no flags are set by default for implicit string table sections
 ## when they are not described in the YAML.

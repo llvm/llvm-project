@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
 
   std::thread HotReloadThread([&Index, &Status, &FS]() {
     llvm::vfs::Status LastStatus = *Status;
-    static constexpr auto RefreshFrequency = std::chrono::seconds(90);
+    static constexpr auto RefreshFrequency = std::chrono::seconds(30);
     while (!clang::clangd::shutdownRequested()) {
       hotReload(*Index, llvm::StringRef(IndexPath), LastStatus, FS);
       std::this_thread::sleep_for(RefreshFrequency);

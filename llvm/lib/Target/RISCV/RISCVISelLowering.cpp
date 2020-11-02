@@ -2674,7 +2674,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // official names. However, other frontends like `rustc` do not. This allows
   // users of these frontends to use the ABI names for registers in LLVM-style
   // register constraints.
-  Register XRegFromAlias = StringSwitch<Register>(Constraint.lower())
+  unsigned XRegFromAlias = StringSwitch<unsigned>(Constraint.lower())
                                .Case("{zero}", RISCV::X0)
                                .Case("{ra}", RISCV::X1)
                                .Case("{sp}", RISCV::X2)
@@ -2719,8 +2719,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // The second case is the ABI name of the register, so that frontends can also
   // use the ABI names in register constraint lists.
   if (Subtarget.hasStdExtF() || Subtarget.hasStdExtD()) {
-    std::pair<Register, Register> FReg =
-        StringSwitch<std::pair<Register, Register>>(Constraint.lower())
+    std::pair<unsigned, unsigned> FReg =
+        StringSwitch<std::pair<unsigned, unsigned>>(Constraint.lower())
             .Cases("{f0}", "{ft0}", {RISCV::F0_F, RISCV::F0_D})
             .Cases("{f1}", "{ft1}", {RISCV::F1_F, RISCV::F1_D})
             .Cases("{f2}", "{ft2}", {RISCV::F2_F, RISCV::F2_D})

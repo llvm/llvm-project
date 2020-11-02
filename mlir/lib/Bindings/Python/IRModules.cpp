@@ -28,30 +28,6 @@ using llvm::SmallVector;
 // Docstrings (trivial, non-duplicated docstrings are included inline).
 //------------------------------------------------------------------------------
 
-static const char kContextCreateOperationDocstring[] =
-    R"(Creates a new operation.
-
-Args:
-  name: Operation name (e.g. "dialect.operation").
-  location: A Location object.
-  results: Sequence of Type representing op result types.
-  attributes: Dict of str:Attribute.
-  successors: List of Block for the operation's successors.
-  regions: Number of regions to create.
-
-Returns:
-  A new "detached" Operation object. Detached operations can be added
-  to blocks, which causes them to become "attached."
-)";
-
-static const char kContextParseDocstring[] =
-    R"(Parses a module's assembly format from a string.
-
-Returns a new MlirModule or raises a ValueError if the parsing fails.
-
-See also: https://mlir.llvm.org/docs/LangRef/
-)";
-
 static const char kContextParseTypeDocstring[] =
     R"(Parses the assembly form of a type.
 
@@ -60,11 +36,34 @@ Returns a Type object or raises a ValueError if the type cannot be parsed.
 See also: https://mlir.llvm.org/docs/LangRef/#type-system
 )";
 
-static const char kContextGetUnknownLocationDocstring[] =
-    R"(Gets a Location representing an unknown location)";
-
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
+
+static const char kModuleParseDocstring[] =
+    R"(Parses a module's assembly format from a string.
+
+Returns a new MlirModule or raises a ValueError if the parsing fails.
+
+See also: https://mlir.llvm.org/docs/LangRef/
+)";
+
+static const char kOperationCreateDocstring[] =
+    R"(Creates a new operation.
+
+Args:
+  name: Operation name (e.g. "dialect.operation").
+  results: Sequence of Type representing op result types.
+  attributes: Dict of str:Attribute.
+  successors: List of Block for the operation's successors.
+  regions: Number of regions to create.
+  location: A Location object (defaults to resolve from context manager).
+  ip: An InsertionPoint (defaults to resolve from context manager or set to
+    False to disable insertion, even with an insertion point set in the
+    context manager).
+Returns:
+  A new "detached" Operation object. Detached operations can be added
+  to blocks, which causes them to become "attached."
+)";
 
 static const char kOperationPrintDocstring[] =
     R"(Prints the assembly form of the operation to a file like object.
@@ -545,108 +544,26 @@ size_t PyMlirContext::getLiveOperationCount() { return liveOperations.size(); }
 
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
 
-py::object PyMlirContext::createOperation(
-    std::string name, PyLocation location,
-    llvm::Optional<std::vector<PyValue *>> operands,
-    llvm::Optional<std::vector<PyType *>> results,
-    llvm::Optional<py::dict> attributes,
-    llvm::Optional<std::vector<PyBlock *>> successors, int regions) {
-  llvm::SmallVector<MlirValue, 4> mlirOperands;
-  llvm::SmallVector<MlirType, 4> mlirResults;
-  llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
-  llvm::SmallVector<std::pair<std::string, MlirAttribute>, 4> mlirAttributes;
+pybind11::object PyMlirContext::contextEnter() {
+  return PyThreadContextEntry::pushContext(*this);
+}
 
-  // General parameter validation.
-  if (regions < 0)
-    throw SetPyError(PyExc_ValueError, "number of regions must be >= 0");
+void PyMlirContext::contextExit(pybind11::object excType,
+                                pybind11::object excVal,
+                                pybind11::object excTb) {
+  PyThreadContextEntry::popContext(*this);
+}
 
-  // Unpack/validate operands.
-  if (operands) {
-    mlirOperands.reserve(operands->size());
-    for (PyValue *operand : *operands) {
-      if (!operand)
-        throw SetPyError(PyExc_ValueError, "operand value cannot be None");
-      mlirOperands.push_back(operand->get());
-    }
+PyMlirContext &DefaultingPyMlirContext::resolve() {
+  PyMlirContext *context = PyThreadContextEntry::getDefaultContext();
+  if (!context) {
+    throw SetPyError(
+        PyExc_RuntimeError,
+        "An MLIR function requires a Context but none was provided in the call "
+        "or from the surrounding environment. Either pass to the function with "
+        "a 'context=' argument or establish a default using 'with Context():'");
   }
-
-  // Unpack/validate results.
-  if (results) {
-    mlirResults.reserve(results->size());
-    for (PyType *result : *results) {
-      // TODO: Verify result type originate from the same context.
-      if (!result)
-        throw SetPyError(PyExc_ValueError, "result type cannot be None");
-      mlirResults.push_back(result->type);
-    }
-  }
-  // Unpack/validate attributes.
-  if (attributes) {
-    mlirAttributes.reserve(attributes->size());
-    for (auto &it : *attributes) {
-
-      auto name = it.first.cast<std::string>();
-      auto &attribute = it.second.cast<PyAttribute &>();
-      // TODO: Verify attribute originates from the same context.
-      mlirAttributes.emplace_back(std::move(name), attribute.attr);
-    }
-  }
-  // Unpack/validate successors.
-  if (successors) {
-    llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
-    mlirSuccessors.reserve(successors->size());
-    for (auto *successor : *successors) {
-      // TODO: Verify successor originate from the same context.
-      if (!successor)
-        throw SetPyError(PyExc_ValueError, "successor block cannot be None");
-      mlirSuccessors.push_back(successor->get());
-    }
-  }
-
-  // Apply unpacked/validated to the operation state. Beyond this
-  // point, exceptions cannot be thrown or else the state will leak.
-  MlirOperationState state = mlirOperationStateGet(name.c_str(), location.loc);
-  if (!mlirOperands.empty())
-    mlirOperationStateAddOperands(&state, mlirOperands.size(),
-                                  mlirOperands.data());
-  if (!mlirResults.empty())
-    mlirOperationStateAddResults(&state, mlirResults.size(),
-                                 mlirResults.data());
-  if (!mlirAttributes.empty()) {
-    // Note that the attribute names directly reference bytes in
-    // mlirAttributes, so that vector must not be changed from here
-    // on.
-    llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
-    mlirNamedAttributes.reserve(mlirAttributes.size());
-    for (auto &it : mlirAttributes)
-      mlirNamedAttributes.push_back(
-          mlirNamedAttributeGet(it.first.c_str(), it.second));
-    mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
-                                    mlirNamedAttributes.data());
-  }
-  if (!mlirSuccessors.empty())
-    mlirOperationStateAddSuccessors(&state, mlirSuccessors.size(),
-                                    mlirSuccessors.data());
-  if (regions) {
-    llvm::SmallVector<MlirRegion, 4> mlirRegions;
-    mlirRegions.resize(regions);
-    for (int i = 0; i < regions; ++i)
-      mlirRegions[i] = mlirRegionCreate();
-    mlirOperationStateAddOwnedRegions(&state, mlirRegions.size(),
-                                      mlirRegions.data());
-  }
-
-  // Construct the operation.
-  MlirOperation operation = mlirOperationCreate(&state);
-  PyOperationRef created = PyOperation::createDetached(getRef(), operation);
-
-  // InsertPoint active?
-  PyInsertionPoint *ip =
-      PyThreadContextEntry::getDefaultInsertionPoint(/*required=*/false);
-  if (ip)
-    ip->insert(*created.get());
-
-  return created.releaseObject();
+  return *context;
 }
 
 //------------------------------------------------------------------------------
@@ -658,17 +575,33 @@ std::vector<PyThreadContextEntry> &PyThreadContextEntry::getStack() {
   return stack;
 }
 
-PyThreadContextEntry *PyThreadContextEntry::getTos() {
+PyThreadContextEntry *PyThreadContextEntry::getTopOfStack() {
   auto &stack = getStack();
   if (stack.empty())
     return nullptr;
   return &stack.back();
 }
 
-void PyThreadContextEntry::push(pybind11::object context,
-                                pybind11::object insertionPoint) {
+void PyThreadContextEntry::push(FrameKind frameKind, py::object context,
+                                py::object insertionPoint,
+                                py::object location) {
   auto &stack = getStack();
-  stack.emplace_back(std::move(context), std::move(insertionPoint));
+  stack.emplace_back(frameKind, std::move(context), std::move(insertionPoint),
+                     std::move(location));
+  // If the new stack has more than one entry and the context of the new top
+  // entry matches the previous, copy the insertionPoint and location from the
+  // previous entry if missing from the new top entry.
+  if (stack.size() > 1) {
+    auto &prev = *(stack.rbegin() + 1);
+    auto &current = stack.back();
+    if (current.context.is(prev.context)) {
+      // Default non-context objects from the previous entry.
+      if (!current.insertionPoint)
+        current.insertionPoint = prev.insertionPoint;
+      if (!current.location)
+        current.location = prev.location;
+    }
+  }
 }
 
 PyMlirContext *PyThreadContextEntry::getContext() {
@@ -683,30 +616,87 @@ PyInsertionPoint *PyThreadContextEntry::getInsertionPoint() {
   return py::cast<PyInsertionPoint *>(insertionPoint);
 }
 
-PyMlirContext *PyThreadContextEntry::getDefaultContext(bool required) {
-  auto *tos = getTos();
-  PyMlirContext *context = tos ? tos->getContext() : nullptr;
-  if (required && !context) {
-    throw SetPyError(
-        PyExc_RuntimeError,
-        "A default context is required for this call but is not provided. "
-        "Establish a default by surrounding the code with "
-        "'with context:'");
-  }
-  return context;
+PyLocation *PyThreadContextEntry::getLocation() {
+  if (!location)
+    return nullptr;
+  return py::cast<PyLocation *>(location);
 }
 
-PyInsertionPoint *
-PyThreadContextEntry::getDefaultInsertionPoint(bool required) {
-  auto *tos = getTos();
-  PyInsertionPoint *ip = tos ? tos->getInsertionPoint() : nullptr;
-  if (required && !ip)
+PyMlirContext *PyThreadContextEntry::getDefaultContext() {
+  auto *tos = getTopOfStack();
+  return tos ? tos->getContext() : nullptr;
+}
+
+PyInsertionPoint *PyThreadContextEntry::getDefaultInsertionPoint() {
+  auto *tos = getTopOfStack();
+  return tos ? tos->getInsertionPoint() : nullptr;
+}
+
+PyLocation *PyThreadContextEntry::getDefaultLocation() {
+  auto *tos = getTopOfStack();
+  return tos ? tos->getLocation() : nullptr;
+}
+
+py::object PyThreadContextEntry::pushContext(PyMlirContext &context) {
+  py::object contextObj = py::cast(context);
+  push(FrameKind::Context, /*context=*/contextObj,
+       /*insertionPoint=*/py::object(),
+       /*location=*/py::object());
+  return contextObj;
+}
+
+void PyThreadContextEntry::popContext(PyMlirContext &context) {
+  auto &stack = getStack();
+  if (stack.empty())
+    throw SetPyError(PyExc_RuntimeError, "Unbalanced Context enter/exit");
+  auto &tos = stack.back();
+  if (tos.frameKind != FrameKind::Context && tos.getContext() != &context)
+    throw SetPyError(PyExc_RuntimeError, "Unbalanced Context enter/exit");
+  stack.pop_back();
+}
+
+py::object
+PyThreadContextEntry::pushInsertionPoint(PyInsertionPoint &insertionPoint) {
+  py::object contextObj =
+      insertionPoint.getBlock().getParentOperation()->getContext().getObject();
+  py::object insertionPointObj = py::cast(insertionPoint);
+  push(FrameKind::InsertionPoint,
+       /*context=*/contextObj,
+       /*insertionPoint=*/insertionPointObj,
+       /*location=*/py::object());
+  return insertionPointObj;
+}
+
+void PyThreadContextEntry::popInsertionPoint(PyInsertionPoint &insertionPoint) {
+  auto &stack = getStack();
+  if (stack.empty())
     throw SetPyError(PyExc_RuntimeError,
-                     "A default insertion point is required for this call but "
-                     "is not provided. "
-                     "Establish a default by surrounding the code with "
-                     "'with InsertionPoint(...):'");
-  return ip;
+                     "Unbalanced InsertionPoint enter/exit");
+  auto &tos = stack.back();
+  if (tos.frameKind != FrameKind::InsertionPoint &&
+      tos.getInsertionPoint() != &insertionPoint)
+    throw SetPyError(PyExc_RuntimeError,
+                     "Unbalanced InsertionPoint enter/exit");
+  stack.pop_back();
+}
+
+py::object PyThreadContextEntry::pushLocation(PyLocation &location) {
+  py::object contextObj = location.getContext().getObject();
+  py::object locationObj = py::cast(location);
+  push(FrameKind::Location, /*context=*/contextObj,
+       /*insertionPoint=*/py::object(),
+       /*location=*/locationObj);
+  return locationObj;
+}
+
+void PyThreadContextEntry::popLocation(PyLocation &location) {
+  auto &stack = getStack();
+  if (stack.empty())
+    throw SetPyError(PyExc_RuntimeError, "Unbalanced Location enter/exit");
+  auto &tos = stack.back();
+  if (tos.frameKind != FrameKind::Location && tos.getLocation() != &location)
+    throw SetPyError(PyExc_RuntimeError, "Unbalanced Location enter/exit");
+  stack.pop_back();
 }
 
 //------------------------------------------------------------------------------
@@ -725,6 +715,31 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
                      llvm::Twine("Dialect '") + key + "' not found");
   }
   return dialect;
+}
+
+//------------------------------------------------------------------------------
+// PyLocation
+//------------------------------------------------------------------------------
+
+py::object PyLocation::contextEnter() {
+  return PyThreadContextEntry::pushLocation(*this);
+}
+
+void PyLocation::contextExit(py::object excType, py::object excVal,
+                             py::object excTb) {
+  PyThreadContextEntry::popLocation(*this);
+}
+
+PyLocation &DefaultingPyLocation::resolve() {
+  auto *location = PyThreadContextEntry::getDefaultLocation();
+  if (!location) {
+    throw SetPyError(
+        PyExc_RuntimeError,
+        "An MLIR function requires a Location but none was provided in the "
+        "call or from the surrounding environment. Either pass to the function "
+        "with a 'loc=' argument or establish a default using 'with loc:'");
+  }
+  return *location;
 }
 
 //------------------------------------------------------------------------------
@@ -911,6 +926,117 @@ PyBlock PyOperation::getBlock() {
   return PyBlock{std::move(parentOperation), block};
 }
 
+py::object PyOperation::create(
+    std::string name, llvm::Optional<std::vector<PyValue *>> operands,
+    llvm::Optional<std::vector<PyType *>> results,
+    llvm::Optional<py::dict> attributes,
+    llvm::Optional<std::vector<PyBlock *>> successors, int regions,
+    DefaultingPyLocation location, py::object maybeIp) {
+  llvm::SmallVector<MlirValue, 4> mlirOperands;
+  llvm::SmallVector<MlirType, 4> mlirResults;
+  llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
+  llvm::SmallVector<std::pair<std::string, MlirAttribute>, 4> mlirAttributes;
+
+  // General parameter validation.
+  if (regions < 0)
+    throw SetPyError(PyExc_ValueError, "number of regions must be >= 0");
+
+  // Unpack/validate operands.
+  if (operands) {
+    mlirOperands.reserve(operands->size());
+    for (PyValue *operand : *operands) {
+      if (!operand)
+        throw SetPyError(PyExc_ValueError, "operand value cannot be None");
+      mlirOperands.push_back(operand->get());
+    }
+  }
+
+  // Unpack/validate results.
+  if (results) {
+    mlirResults.reserve(results->size());
+    for (PyType *result : *results) {
+      // TODO: Verify result type originate from the same context.
+      if (!result)
+        throw SetPyError(PyExc_ValueError, "result type cannot be None");
+      mlirResults.push_back(result->type);
+    }
+  }
+  // Unpack/validate attributes.
+  if (attributes) {
+    mlirAttributes.reserve(attributes->size());
+    for (auto &it : *attributes) {
+
+      auto name = it.first.cast<std::string>();
+      auto &attribute = it.second.cast<PyAttribute &>();
+      // TODO: Verify attribute originates from the same context.
+      mlirAttributes.emplace_back(std::move(name), attribute.attr);
+    }
+  }
+  // Unpack/validate successors.
+  if (successors) {
+    llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
+    mlirSuccessors.reserve(successors->size());
+    for (auto *successor : *successors) {
+      // TODO: Verify successor originate from the same context.
+      if (!successor)
+        throw SetPyError(PyExc_ValueError, "successor block cannot be None");
+      mlirSuccessors.push_back(successor->get());
+    }
+  }
+
+  // Apply unpacked/validated to the operation state. Beyond this
+  // point, exceptions cannot be thrown or else the state will leak.
+  MlirOperationState state = mlirOperationStateGet(name.c_str(), location->loc);
+  if (!mlirOperands.empty())
+    mlirOperationStateAddOperands(&state, mlirOperands.size(),
+                                  mlirOperands.data());
+  if (!mlirResults.empty())
+    mlirOperationStateAddResults(&state, mlirResults.size(),
+                                 mlirResults.data());
+  if (!mlirAttributes.empty()) {
+    // Note that the attribute names directly reference bytes in
+    // mlirAttributes, so that vector must not be changed from here
+    // on.
+    llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
+    mlirNamedAttributes.reserve(mlirAttributes.size());
+    for (auto &it : mlirAttributes)
+      mlirNamedAttributes.push_back(
+          mlirNamedAttributeGet(it.first.c_str(), it.second));
+    mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
+                                    mlirNamedAttributes.data());
+  }
+  if (!mlirSuccessors.empty())
+    mlirOperationStateAddSuccessors(&state, mlirSuccessors.size(),
+                                    mlirSuccessors.data());
+  if (regions) {
+    llvm::SmallVector<MlirRegion, 4> mlirRegions;
+    mlirRegions.resize(regions);
+    for (int i = 0; i < regions; ++i)
+      mlirRegions[i] = mlirRegionCreate();
+    mlirOperationStateAddOwnedRegions(&state, mlirRegions.size(),
+                                      mlirRegions.data());
+  }
+
+  // Construct the operation.
+  MlirOperation operation = mlirOperationCreate(&state);
+  PyOperationRef created =
+      PyOperation::createDetached(location->getContext(), operation);
+
+  // InsertPoint active?
+  if (!maybeIp.is(py::cast(false))) {
+    PyInsertionPoint *ip;
+    if (maybeIp.is_none()) {
+      ip = PyThreadContextEntry::getDefaultInsertionPoint();
+    } else {
+      ip = py::cast<PyInsertionPoint *>(maybeIp);
+    }
+    if (ip)
+      ip->insert(*created.get());
+  }
+
+  return created.releaseObject();
+}
+
 PyOpView::PyOpView(py::object operation)
     : operationObject(std::move(operation)),
       operation(py::cast<PyOperation *>(this->operationObject)) {}
@@ -998,26 +1124,13 @@ PyInsertionPoint PyInsertionPoint::atBlockTerminator(PyBlock &block) {
 }
 
 py::object PyInsertionPoint::contextEnter() {
-  auto context = block.getParentOperation()->getContext().getObject();
-  py::object self = py::cast(this);
-  PyThreadContextEntry::push(/*context=*/std::move(context),
-                             /*insertionPoint=*/self);
-  return self;
+  return PyThreadContextEntry::pushInsertionPoint(*this);
 }
 
 void PyInsertionPoint::contextExit(pybind11::object excType,
                                    pybind11::object excVal,
                                    pybind11::object excTb) {
-  auto &stack = PyThreadContextEntry::getStack();
-  if (stack.empty())
-    throw SetPyError(PyExc_RuntimeError,
-                     "Unbalanced insertion point enter/exit");
-  auto &tos = stack.back();
-  PyInsertionPoint *current = tos.getInsertionPoint();
-  if (current != this)
-    throw SetPyError(PyExc_RuntimeError,
-                     "Unbalanced insertion point enter/exit");
-  stack.pop_back();
+  PyThreadContextEntry::popInsertionPoint(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -1299,10 +1412,9 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        // TODO: Make the location optional and create a default location.
-        [](PyType &type, double value, PyLocation &loc) {
+        [](PyType &type, double value, DefaultingPyLocation loc) {
           MlirAttribute attr =
-              mlirFloatAttrDoubleGetChecked(type.type, value, loc.loc);
+              mlirFloatAttrDoubleGetChecked(type.type, value, loc->loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirAttributeIsNull(attr)) {
@@ -1313,25 +1425,25 @@ public:
           }
           return PyFloatAttribute(type.getContext(), attr);
         },
-        py::arg("type"), py::arg("value"), py::arg("loc"),
+        py::arg("type"), py::arg("value"), py::arg("loc") = py::none(),
         "Gets an uniqued float point attribute associated to a type");
     c.def_static(
         "get_f32",
-        [](PyMlirContext &context, double value) {
+        [](double value, DefaultingPyMlirContext context) {
           MlirAttribute attr = mlirFloatAttrDoubleGet(
-              context.get(), mlirF32TypeGet(context.get()), value);
-          return PyFloatAttribute(context.getRef(), attr);
+              context->get(), mlirF32TypeGet(context->get()), value);
+          return PyFloatAttribute(context->getRef(), attr);
         },
-        py::arg("context"), py::arg("value"),
+        py::arg("value"), py::arg("context") = py::none(),
         "Gets an uniqued float point attribute associated to a f32 type");
     c.def_static(
         "get_f64",
-        [](PyMlirContext &context, double value) {
+        [](double value, DefaultingPyMlirContext context) {
           MlirAttribute attr = mlirFloatAttrDoubleGet(
-              context.get(), mlirF64TypeGet(context.get()), value);
-          return PyFloatAttribute(context.getRef(), attr);
+              context->get(), mlirF64TypeGet(context->get()), value);
+          return PyFloatAttribute(context->getRef(), attr);
         },
-        py::arg("context"), py::arg("value"),
+        py::arg("value"), py::arg("context") = py::none(),
         "Gets an uniqued float point attribute associated to a f64 type");
     c.def_property_readonly(
         "value",
@@ -1377,11 +1489,12 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context, bool value) {
-          MlirAttribute attr = mlirBoolAttrGet(context.get(), value);
-          return PyBoolAttribute(context.getRef(), attr);
+        [](bool value, DefaultingPyMlirContext context) {
+          MlirAttribute attr = mlirBoolAttrGet(context->get(), value);
+          return PyBoolAttribute(context->getRef(), attr);
         },
-        py::arg("context"), py::arg("value"), "Gets an uniqued bool attribute");
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets an uniqued bool attribute");
     c.def_property_readonly(
         "value",
         [](PyBoolAttribute &self) { return mlirBoolAttrGetValue(self.attr); },
@@ -1398,11 +1511,12 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context, std::string value) {
+        [](std::string value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
-              mlirStringAttrGet(context.get(), value.size(), &value[0]);
-          return PyStringAttribute(context.getRef(), attr);
+              mlirStringAttrGet(context->get(), value.size(), &value[0]);
+          return PyStringAttribute(context->getRef(), attr);
         },
+        py::arg("value"), py::arg("context") = py::none(),
         "Gets a uniqued string attribute");
     c.def_static(
         "get_typed",
@@ -1432,9 +1546,9 @@ public:
   static constexpr const char *pyClassName = "DenseElementsAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
 
-  static PyDenseElementsAttribute getFromBuffer(PyMlirContext &contextWrapper,
-                                                py::buffer array,
-                                                bool signless) {
+  static PyDenseElementsAttribute
+  getFromBuffer(py::buffer array, bool signless,
+                DefaultingPyMlirContext contextWrapper) {
     // Request a contiguous view. In exotic cases, this will cause a copy.
     int flags = PyBUF_C_CONTIGUOUS | PyBUF_FORMAT;
     Py_buffer *view = new Py_buffer();
@@ -1444,21 +1558,21 @@ public:
     }
     py::buffer_info arrayInfo(view);
 
-    MlirContext context = contextWrapper.get();
+    MlirContext context = contextWrapper->get();
     // Switch on the types that can be bulk loaded between the Python and
     // MLIR-C APIs.
     if (arrayInfo.format == "f") {
       // f32
       assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
       return PyDenseElementsAttribute(
-          contextWrapper.getRef(),
+          contextWrapper->getRef(),
           bulkLoad(context, mlirDenseElementsAttrFloatGet,
                    mlirF32TypeGet(context), arrayInfo));
     } else if (arrayInfo.format == "d") {
       // f64
       assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
       return PyDenseElementsAttribute(
-          contextWrapper.getRef(),
+          contextWrapper->getRef(),
           bulkLoad(context, mlirDenseElementsAttrDoubleGet,
                    mlirF64TypeGet(context), arrayInfo));
     } else if (arrayInfo.format == "i") {
@@ -1466,7 +1580,7 @@ public:
       assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
       MlirType elementType = signless ? mlirIntegerTypeGet(context, 32)
                                       : mlirIntegerTypeSignedGet(context, 32);
-      return PyDenseElementsAttribute(contextWrapper.getRef(),
+      return PyDenseElementsAttribute(contextWrapper->getRef(),
                                       bulkLoad(context,
                                                mlirDenseElementsAttrInt32Get,
                                                elementType, arrayInfo));
@@ -1475,7 +1589,7 @@ public:
       assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
       MlirType elementType = signless ? mlirIntegerTypeGet(context, 32)
                                       : mlirIntegerTypeUnsignedGet(context, 32);
-      return PyDenseElementsAttribute(contextWrapper.getRef(),
+      return PyDenseElementsAttribute(contextWrapper->getRef(),
                                       bulkLoad(context,
                                                mlirDenseElementsAttrUInt32Get,
                                                elementType, arrayInfo));
@@ -1484,7 +1598,7 @@ public:
       assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
       MlirType elementType = signless ? mlirIntegerTypeGet(context, 64)
                                       : mlirIntegerTypeSignedGet(context, 64);
-      return PyDenseElementsAttribute(contextWrapper.getRef(),
+      return PyDenseElementsAttribute(contextWrapper->getRef(),
                                       bulkLoad(context,
                                                mlirDenseElementsAttrInt64Get,
                                                elementType, arrayInfo));
@@ -1493,7 +1607,7 @@ public:
       assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
       MlirType elementType = signless ? mlirIntegerTypeGet(context, 64)
                                       : mlirIntegerTypeUnsignedGet(context, 64);
-      return PyDenseElementsAttribute(contextWrapper.getRef(),
+      return PyDenseElementsAttribute(contextWrapper->getRef(),
                                       bulkLoad(context,
                                                mlirDenseElementsAttrUInt64Get,
                                                elementType, arrayInfo));
@@ -1540,8 +1654,9 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", PyDenseElementsAttribute::getFromBuffer,
-                 py::arg("context"), py::arg("array"),
-                 py::arg("signless") = true, "Gets from a buffer or ndarray")
+                 py::arg("array"), py::arg("signless") = true,
+                 py::arg("context") = py::none(),
+                 "Gets from a buffer or ndarray")
         .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                     py::arg("shaped_type"), py::arg("element_attr"),
                     "Gets a DenseElementsAttr where all values are the same")
@@ -1624,24 +1739,27 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_signless",
-        [](PyMlirContext &context, unsigned width) {
-          MlirType t = mlirIntegerTypeGet(context.get(), width);
-          return PyIntegerType(context.getRef(), t);
+        [](unsigned width, DefaultingPyMlirContext context) {
+          MlirType t = mlirIntegerTypeGet(context->get(), width);
+          return PyIntegerType(context->getRef(), t);
         },
+        py::arg("width"), py::arg("context") = py::none(),
         "Create a signless integer type");
     c.def_static(
         "get_signed",
-        [](PyMlirContext &context, unsigned width) {
-          MlirType t = mlirIntegerTypeSignedGet(context.get(), width);
-          return PyIntegerType(context.getRef(), t);
+        [](unsigned width, DefaultingPyMlirContext context) {
+          MlirType t = mlirIntegerTypeSignedGet(context->get(), width);
+          return PyIntegerType(context->getRef(), t);
         },
+        py::arg("width"), py::arg("context") = py::none(),
         "Create a signed integer type");
     c.def_static(
         "get_unsigned",
-        [](PyMlirContext &context, unsigned width) {
-          MlirType t = mlirIntegerTypeUnsignedGet(context.get(), width);
-          return PyIntegerType(context.getRef(), t);
+        [](unsigned width, DefaultingPyMlirContext context) {
+          MlirType t = mlirIntegerTypeUnsignedGet(context->get(), width);
+          return PyIntegerType(context->getRef(), t);
         },
+        py::arg("width"), py::arg("context") = py::none(),
         "Create an unsigned integer type");
     c.def_property_readonly(
         "width",
@@ -1678,11 +1796,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context) {
-          MlirType t = mlirIndexTypeGet(context.get());
-          return PyIndexType(context.getRef(), t);
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirIndexTypeGet(context->get());
+          return PyIndexType(context->getRef(), t);
         },
-        "Create a index type.");
+        py::arg("context") = py::none(), "Create a index type.");
   }
 };
 
@@ -1696,11 +1814,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context) {
-          MlirType t = mlirBF16TypeGet(context.get());
-          return PyBF16Type(context.getRef(), t);
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirBF16TypeGet(context->get());
+          return PyBF16Type(context->getRef(), t);
         },
-        "Create a bf16 type.");
+        py::arg("context") = py::none(), "Create a bf16 type.");
   }
 };
 
@@ -1714,11 +1832,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context) {
-          MlirType t = mlirF16TypeGet(context.get());
-          return PyF16Type(context.getRef(), t);
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirF16TypeGet(context->get());
+          return PyF16Type(context->getRef(), t);
         },
-        "Create a f16 type.");
+        py::arg("context") = py::none(), "Create a f16 type.");
   }
 };
 
@@ -1732,11 +1850,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context) {
-          MlirType t = mlirF32TypeGet(context.get());
-          return PyF32Type(context.getRef(), t);
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirF32TypeGet(context->get());
+          return PyF32Type(context->getRef(), t);
         },
-        "Create a f32 type.");
+        py::arg("context") = py::none(), "Create a f32 type.");
   }
 };
 
@@ -1750,11 +1868,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context) {
-          MlirType t = mlirF64TypeGet(context.get());
-          return PyF64Type(context.getRef(), t);
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirF64TypeGet(context->get());
+          return PyF64Type(context->getRef(), t);
         },
-        "Create a f64 type.");
+        py::arg("context") = py::none(), "Create a f64 type.");
   }
 };
 
@@ -1768,11 +1886,11 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context) {
-          MlirType t = mlirNoneTypeGet(context.get());
-          return PyNoneType(context.getRef(), t);
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirNoneTypeGet(context->get());
+          return PyNoneType(context->getRef(), t);
         },
-        "Create a none type.");
+        py::arg("context") = py::none(), "Create a none type.");
   }
 };
 
@@ -1892,10 +2010,10 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        // TODO: Make the location optional and create a default location.
-        [](std::vector<int64_t> shape, PyType &elementType, PyLocation &loc) {
+        [](std::vector<int64_t> shape, PyType &elementType,
+           DefaultingPyLocation loc) {
           MlirType t = mlirVectorTypeGetChecked(shape.size(), shape.data(),
-                                                elementType.type, loc.loc);
+                                                elementType.type, loc->loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
@@ -1907,6 +2025,7 @@ public:
           }
           return PyVectorType(elementType.getContext(), t);
         },
+        py::arg("shape"), py::arg("elementType"), py::arg("loc") = py::none(),
         "Create a vector type");
   }
 };
@@ -1922,10 +2041,10 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        // TODO: Make the location optional and create a default location.
-        [](std::vector<int64_t> shape, PyType &elementType, PyLocation &loc) {
+        [](std::vector<int64_t> shape, PyType &elementType,
+           DefaultingPyLocation loc) {
           MlirType t = mlirRankedTensorTypeGetChecked(
-              shape.size(), shape.data(), elementType.type, loc.loc);
+              shape.size(), shape.data(), elementType.type, loc->loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
@@ -1939,6 +2058,7 @@ public:
           }
           return PyRankedTensorType(elementType.getContext(), t);
         },
+        py::arg("shape"), py::arg("element_type"), py::arg("loc") = py::none(),
         "Create a ranked tensor type");
   }
 };
@@ -1954,10 +2074,9 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        // TODO: Make the location optional and create a default location.
-        [](PyType &elementType, PyLocation &loc) {
+        [](PyType &elementType, DefaultingPyLocation loc) {
           MlirType t =
-              mlirUnrankedTensorTypeGetChecked(elementType.type, loc.loc);
+              mlirUnrankedTensorTypeGetChecked(elementType.type, loc->loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
@@ -1971,6 +2090,7 @@ public:
           }
           return PyUnrankedTensorType(elementType.getContext(), t);
         },
+        py::arg("element_type"), py::arg("loc") = py::none(),
         "Create a unranked tensor type");
   }
 };
@@ -1989,10 +2109,10 @@ public:
          "get_contiguous_memref",
          // TODO: Make the location optional and create a default location.
          [](PyType &elementType, std::vector<int64_t> shape,
-            unsigned memorySpace, PyLocation &loc) {
+            unsigned memorySpace, DefaultingPyLocation loc) {
            MlirType t = mlirMemRefTypeContiguousGetChecked(
                elementType.type, shape.size(), shape.data(), memorySpace,
-               loc.loc);
+               loc->loc);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
@@ -2006,7 +2126,8 @@ public:
            }
            return PyMemRefType(elementType.getContext(), t);
          },
-         "Create a memref type")
+         py::arg("element_type"), py::arg("shape"), py::arg("memory_space"),
+         py::arg("loc") = py::none(), "Create a memref type")
         .def_property_readonly(
             "num_affine_maps",
             [](PyMemRefType &self) -> intptr_t {
@@ -2034,10 +2155,10 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
          "get",
-         // TODO: Make the location optional and create a default location.
-         [](PyType &elementType, unsigned memorySpace, PyLocation &loc) {
+         [](PyType &elementType, unsigned memorySpace,
+            DefaultingPyLocation loc) {
            MlirType t = mlirUnrankedMemRefTypeGetChecked(elementType.type,
-                                                         memorySpace, loc.loc);
+                                                         memorySpace, loc->loc);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
@@ -2051,7 +2172,8 @@ public:
            }
            return PyUnrankedMemRefType(elementType.getContext(), t);
          },
-         "Create a unranked memref type")
+         py::arg("element_type"), py::arg("memory_space"),
+         py::arg("loc") = py::none(), "Create a unranked memref type")
         .def_property_readonly(
             "memory_space",
             [](PyUnrankedMemRefType &self) -> unsigned {
@@ -2071,15 +2193,16 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_tuple",
-        [](PyMlirContext &context, py::list elementList) {
+        [](py::list elementList, DefaultingPyMlirContext context) {
           intptr_t num = py::len(elementList);
           // Mapping py::list to SmallVector.
           SmallVector<MlirType, 4> elements;
           for (auto element : elementList)
             elements.push_back(element.cast<PyType>().type);
-          MlirType t = mlirTupleTypeGet(context.get(), num, elements.data());
-          return PyTupleType(context.getRef(), t);
+          MlirType t = mlirTupleTypeGet(context->get(), num, elements.data());
+          return PyTupleType(context->getRef(), t);
         },
+        py::arg("elements"), py::arg("context") = py::none(),
         "Create a tuple type");
     c.def(
         "get_type",
@@ -2107,16 +2230,16 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyMlirContext &context, std::vector<PyType> inputs,
-           std::vector<PyType> results) {
+        [](std::vector<PyType> inputs, std::vector<PyType> results,
+           DefaultingPyMlirContext context) {
           SmallVector<MlirType, 4> inputsRaw(inputs.begin(), inputs.end());
           SmallVector<MlirType, 4> resultsRaw(results.begin(), results.end());
-          MlirType t = mlirFunctionTypeGet(context.get(), inputsRaw.size(),
+          MlirType t = mlirFunctionTypeGet(context->get(), inputsRaw.size(),
                                            inputsRaw.data(), resultsRaw.size(),
                                            resultsRaw.data());
-          return PyFunctionType(context.getRef(), t);
+          return PyFunctionType(context->getRef(), t);
         },
-        py::arg("context"), py::arg("inputs"), py::arg("results"),
+        py::arg("inputs"), py::arg("results"), py::arg("context") = py::none(),
         "Gets a FunctionType from a list of input and result types");
     c.def_property_readonly(
         "inputs",
@@ -2170,6 +2293,17 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyMlirContext::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyMlirContext::createFromCapsule)
+      .def("__enter__", &PyMlirContext::contextEnter)
+      .def("__exit__", &PyMlirContext::contextExit)
+      .def_property_readonly_static(
+          "current",
+          [](py::object & /*class*/) {
+            auto *context = PyThreadContextEntry::getDefaultContext();
+            if (!context)
+              throw SetPyError(PyExc_ValueError, "No current Context");
+            return context;
+          },
+          "Gets the Context bound to the current thread or raises ValueError")
       .def_property_readonly(
           "dialects",
           [](PyMlirContext &self) { return PyDialects(self.getRef()); },
@@ -2196,79 +2330,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           },
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
-          })
-      .def("create_operation", &PyMlirContext::createOperation, py::arg("name"),
-           py::arg("location"), py::arg("operands") = py::none(),
-           py::arg("results") = py::none(), py::arg("attributes") = py::none(),
-           py::arg("successors") = py::none(), py::arg("regions") = 0,
-           kContextCreateOperationDocstring)
-      .def(
-          "parse_module",
-          [](PyMlirContext &self, const std::string moduleAsm) {
-            MlirModule module =
-                mlirModuleCreateParse(self.get(), moduleAsm.c_str());
-            // TODO: Rework error reporting once diagnostic engine is exposed
-            // in C API.
-            if (mlirModuleIsNull(module)) {
-              throw SetPyError(
-                  PyExc_ValueError,
-                  "Unable to parse module assembly (see diagnostics)");
-            }
-            return PyModule::forModule(module).releaseObject();
-          },
-          kContextParseDocstring)
-      .def(
-          "create_module",
-          [](PyMlirContext &self, PyLocation &loc) {
-            MlirModule module = mlirModuleCreateEmpty(loc.loc);
-            return PyModule::forModule(module).releaseObject();
-          },
-          py::arg("loc"), "Creates an empty module")
-      .def(
-          "parse_attr",
-          [](PyMlirContext &self, std::string attrSpec) {
-            MlirAttribute type =
-                mlirAttributeParseGet(self.get(), attrSpec.c_str());
-            // TODO: Rework error reporting once diagnostic engine is exposed
-            // in C API.
-            if (mlirAttributeIsNull(type)) {
-              throw SetPyError(PyExc_ValueError,
-                               llvm::Twine("Unable to parse attribute: '") +
-                                   attrSpec + "'");
-            }
-            return PyAttribute(self.getRef(), type);
-          },
-          py::keep_alive<0, 1>())
-      .def(
-          "parse_type",
-          [](PyMlirContext &self, std::string typeSpec) {
-            MlirType type = mlirTypeParseGet(self.get(), typeSpec.c_str());
-            // TODO: Rework error reporting once diagnostic engine is exposed
-            // in C API.
-            if (mlirTypeIsNull(type)) {
-              throw SetPyError(PyExc_ValueError,
-                               llvm::Twine("Unable to parse type: '") +
-                                   typeSpec + "'");
-            }
-            return PyType(self.getRef(), type);
-          },
-          kContextParseTypeDocstring)
-      .def(
-          "get_unknown_location",
-          [](PyMlirContext &self) {
-            return PyLocation(self.getRef(),
-                              mlirLocationUnknownGet(self.get()));
-          },
-          kContextGetUnknownLocationDocstring)
-      .def(
-          "get_file_location",
-          [](PyMlirContext &self, std::string filename, int line, int col) {
-            return PyLocation(self.getRef(),
-                              mlirLocationFileLineColGet(
-                                  self.get(), filename.c_str(), line, col));
-          },
-          kContextGetFileLocationDocstring, py::arg("filename"),
-          py::arg("line"), py::arg("col"));
+          });
 
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor
@@ -2327,6 +2389,35 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   // Mapping of Location
   //----------------------------------------------------------------------------
   py::class_<PyLocation>(m, "Location")
+      .def("__enter__", &PyLocation::contextEnter)
+      .def("__exit__", &PyLocation::contextExit)
+      .def_property_readonly_static(
+          "current",
+          [](py::object & /*class*/) {
+            auto *loc = PyThreadContextEntry::getDefaultLocation();
+            if (!loc)
+              throw SetPyError(PyExc_ValueError, "No current Location");
+            return loc;
+          },
+          "Gets the Location bound to the current thread or raises ValueError")
+      .def_static(
+          "unknown",
+          [](DefaultingPyMlirContext context) {
+            return PyLocation(context->getRef(),
+                              mlirLocationUnknownGet(context->get()));
+          },
+          py::arg("context") = py::none(),
+          "Gets a Location representing an unknown location")
+      .def_static(
+          "file",
+          [](std::string filename, int line, int col,
+             DefaultingPyMlirContext context) {
+            return PyLocation(context->getRef(),
+                              mlirLocationFileLineColGet(
+                                  context->get(), filename.c_str(), line, col));
+          },
+          py::arg("filename"), py::arg("line"), py::arg("col"),
+          py::arg("context") = py::none(), kContextGetFileLocationDocstring)
       .def_property_readonly(
           "context",
           [](PyLocation &self) { return self.getContext().getObject(); },
@@ -2344,6 +2435,29 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   py::class_<PyModule>(m, "Module")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyModule::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule)
+      .def_static(
+          "parse",
+          [](const std::string moduleAsm, DefaultingPyMlirContext context) {
+            MlirModule module =
+                mlirModuleCreateParse(context->get(), moduleAsm.c_str());
+            // TODO: Rework error reporting once diagnostic engine is exposed
+            // in C API.
+            if (mlirModuleIsNull(module)) {
+              throw SetPyError(
+                  PyExc_ValueError,
+                  "Unable to parse module assembly (see diagnostics)");
+            }
+            return PyModule::forModule(module).releaseObject();
+          },
+          py::arg("asm"), py::arg("context") = py::none(),
+          kModuleParseDocstring)
+      .def_static(
+          "create",
+          [](DefaultingPyLocation loc) {
+            MlirModule module = mlirModuleCreateEmpty(loc->loc);
+            return PyModule::forModule(module).releaseObject();
+          },
+          py::arg("loc") = py::none(), "Creates an empty module")
       .def_property_readonly(
           "context",
           [](PyModule &self) { return self.getContext().getObject(); },
@@ -2388,6 +2502,13 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   // Mapping of Operation.
   //----------------------------------------------------------------------------
   py::class_<PyOperation>(m, "Operation")
+      .def_static("create", &PyOperation::create, py::arg("name"),
+                  py::arg("operands") = py::none(),
+                  py::arg("results") = py::none(),
+                  py::arg("attributes") = py::none(),
+                  py::arg("successors") = py::none(), py::arg("regions") = 0,
+                  py::arg("loc") = py::none(), py::arg("ip") = py::none(),
+                  kOperationCreateDocstring)
       .def_property_readonly(
           "context",
           [](PyOperation &self) { return self.getContext().getObject(); },
@@ -2520,6 +2641,16 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            "Inserts after the last operation but still inside the block.")
       .def("__enter__", &PyInsertionPoint::contextEnter)
       .def("__exit__", &PyInsertionPoint::contextExit)
+      .def_property_readonly_static(
+          "current",
+          [](py::object & /*class*/) {
+            auto *ip = PyThreadContextEntry::getDefaultInsertionPoint();
+            if (!ip)
+              throw SetPyError(PyExc_ValueError, "No current InsertionPoint");
+            return ip;
+          },
+          "Gets the InsertionPoint bound to the current thread or raises "
+          "ValueError if none has been set")
       .def(py::init<PyOperation &>(), py::arg("beforeOperation"),
            "Inserts before a referenced operation.")
       .def_static("at_block_begin", &PyInsertionPoint::atBlockBegin,
@@ -2533,6 +2664,22 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   // Mapping of PyAttribute.
   //----------------------------------------------------------------------------
   py::class_<PyAttribute>(m, "Attribute")
+      .def_static(
+          "parse",
+          [](std::string attrSpec, DefaultingPyMlirContext context) {
+            MlirAttribute type =
+                mlirAttributeParseGet(context->get(), attrSpec.c_str());
+            // TODO: Rework error reporting once diagnostic engine is exposed
+            // in C API.
+            if (mlirAttributeIsNull(type)) {
+              throw SetPyError(PyExc_ValueError,
+                               llvm::Twine("Unable to parse attribute: '") +
+                                   attrSpec + "'");
+            }
+            return PyAttribute(context->getRef(), type);
+          },
+          py::arg("asm"), py::arg("context") = py::none(),
+          "Parses an attribute from an assembly form")
       .def_property_readonly(
           "context",
           [](PyAttribute &self) { return self.getContext().getObject(); },
@@ -2628,6 +2775,21 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   // Mapping of PyType.
   //----------------------------------------------------------------------------
   py::class_<PyType>(m, "Type")
+      .def_static(
+          "parse",
+          [](std::string typeSpec, DefaultingPyMlirContext context) {
+            MlirType type = mlirTypeParseGet(context->get(), typeSpec.c_str());
+            // TODO: Rework error reporting once diagnostic engine is exposed
+            // in C API.
+            if (mlirTypeIsNull(type)) {
+              throw SetPyError(PyExc_ValueError,
+                               llvm::Twine("Unable to parse type: '") +
+                                   typeSpec + "'");
+            }
+            return PyType(context->getRef(), type);
+          },
+          py::arg("asm"), py::arg("context") = py::none(),
+          kContextParseTypeDocstring)
       .def_property_readonly(
           "context", [](PyType &self) { return self.getContext().getObject(); },
           "Context that owns the Type")

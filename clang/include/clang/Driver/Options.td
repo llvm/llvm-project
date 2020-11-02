@@ -1017,6 +1017,9 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Flags<[CC1Option]>;
 
 defm memory_profile : OptInFFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
+def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
+    Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<directory>">,
+    HelpText<"Enable heap memory profiling and dump results into <directory>">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.

@@ -101,9 +101,19 @@ private:
           Counter->stop();
         });
         CrashRecoveryContext::Disable();
-        // FIXME: Better diagnosis.
-        if (Crashed)
-          return make_error<SnippetCrash>("snippet crashed while running");
+        if (Crashed) {
+          std::string Msg = "snippet crashed while running";
+#ifdef LLVM_ON_UNIX
+          // See "Exit Status for Commands":
+          // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
+          constexpr const int kSigOffset = 128;
+          if (const char *const SigName = strsignal(CRC.RetCode - kSigOffset)) {
+            Msg += ": ";
+            Msg += SigName;
+          }
+#endif
+          return make_error<SnippetCrash>(std::move(Msg));
+        }
       }
 
       auto ValueOrError = Counter->readOrError(Function.getFunctionBytes());
