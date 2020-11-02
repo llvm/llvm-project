@@ -444,10 +444,14 @@ bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
       cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
     if (N.getOperand(0).getOpcode() == ISD::OR) {
       SDValue Or = N.getOperand(0);
-      if (Or.getOperand(0).getOpcode() == ISD::SHL &&
-          Or.getOperand(1).getOpcode() == ISD::SRL) {
-        SDValue Shl = Or.getOperand(0);
-        SDValue Srl = Or.getOperand(1);
+      SDValue Shl = Or.getOperand(0);
+      SDValue Srl = Or.getOperand(1);
+
+      // OR is commutable so canonicalize SHL to LHS.
+      if (Srl.getOpcode() == ISD::SHL)
+        std::swap(Shl, Srl);
+
+      if (Shl.getOpcode() == ISD::SHL && Srl.getOpcode() == ISD::SRL) {
         if (Srl.getOperand(0).getOpcode() == ISD::AND) {
           SDValue And = Srl.getOperand(0);
           if (And.getOperand(0) == Shl.getOperand(0) &&
