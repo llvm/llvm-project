@@ -30,6 +30,13 @@ if (EXISTS "${ABILIST_FILE}"
                 $<TARGET_SONAME_FILE:cxx_shared>
             DEPENDS cxx_shared
             COMMENT "Testing ABI compatibility...")
+
+    add_custom_target(generate-cxx-abilist
+        COMMAND ${Python3_EXECUTABLE} "${LIBCXX_SOURCE_DIR}/utils/generate_abi_list.py"
+                 --output "${ABILIST_FILE}"
+                 "$<TARGET_SONAME_FILE:cxx_shared>"
+        DEPENDS cxx_shared
+        COMMENT "Generating the ABI list for the current configuration")
 else()
     message(STATUS "there is no pre-generated ABI list for the requested libc++ configuration. "
             "check-cxx-abilist target is not supported")
