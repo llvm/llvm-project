@@ -656,6 +656,93 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(double addrspace
   ret void
 }
 
+define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(double addrspace(1)* %C, double addrspace(1)* %in, double addrspace(3)* %lds) #0 {
+; CI-LABEL: unaligned_offset_simple_write2_one_val_f64:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
+; CI-NEXT:    s_load_dword s0, s[0:1], 0xd
+; CI-NEXT:    s_mov_b32 s7, 0xf000
+; CI-NEXT:    s_mov_b32 s6, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[0:1], s[4:7], 0 addr64
+; CI-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
+; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 24, v1
+; CI-NEXT:    ds_write_b8 v0, v1 offset:5
+; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
+; CI-NEXT:    ds_write_b8 v0, v2 offset:13
+; CI-NEXT:    ds_write_b8 v0, v1 offset:9
+; CI-NEXT:    v_lshrrev_b32_e32 v1, 24, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
+; CI-NEXT:    ds_write_b8 v0, v3 offset:8
+; CI-NEXT:    ds_write_b8 v0, v4 offset:7
+; CI-NEXT:    ds_write_b8 v0, v5 offset:6
+; CI-NEXT:    ds_write_b8 v0, v1 offset:16
+; CI-NEXT:    ds_write_b8 v0, v6 offset:15
+; CI-NEXT:    ds_write_b8 v0, v2 offset:14
+; CI-NEXT:    ds_write_b8 v0, v3 offset:12
+; CI-NEXT:    ds_write_b8 v0, v4 offset:11
+; CI-NEXT:    ds_write_b8 v0, v5 offset:10
+; CI-NEXT:    s_endpgm
+;
+; GFX9-ALIGNED-LABEL: unaligned_offset_simple_write2_one_val_f64:
+; GFX9-ALIGNED:       ; %bb.0:
+; GFX9-ALIGNED-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX9-ALIGNED-NEXT:    s_load_dword s0, s[0:1], 0x34
+; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-ALIGNED-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX9-ALIGNED-NEXT:    v_add_u32_e32 v2, s0, v2
+; GFX9-ALIGNED-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
+; GFX9-ALIGNED-NEXT:    ds_write_b8_d16_hi v2, v0 offset:7
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:5
+; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
+; GFX9-ALIGNED-NEXT:    ds_write_b8_d16_hi v2, v1 offset:15
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v1 offset:13
+; GFX9-ALIGNED-NEXT:    ds_write_b8_d16_hi v2, v0 offset:11
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:9
+; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v0, 24, v1
+; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v3 offset:8
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v4 offset:6
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:16
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v1 offset:14
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v3 offset:12
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v4 offset:10
+; GFX9-ALIGNED-NEXT:    s_endpgm
+;
+; GFX9-UNALIGNED-LABEL: unaligned_offset_simple_write2_one_val_f64:
+; GFX9-UNALIGNED:       ; %bb.0:
+; GFX9-UNALIGNED-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX9-UNALIGNED-NEXT:    s_load_dword s0, s[0:1], 0x34
+; GFX9-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX9-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-UNALIGNED-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v2, s0, v2
+; GFX9-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v2, v0, v1 offset0:1 offset1:2
+; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v2, v0, v1 offset0:2 offset1:3
+; GFX9-UNALIGNED-NEXT:    s_endpgm
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %in.gep = getelementptr double, double addrspace(1)* %in, i32 %x.i
+  %val = load double, double addrspace(1)* %in.gep, align 8
+  %base = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
+  %base.i8 = bitcast double addrspace(3)* %base to i8 addrspace(3)*
+  %addr0.i8 = getelementptr inbounds i8, i8 addrspace(3)* %base.i8, i32 5
+  %addr0 = bitcast i8 addrspace(3)* %addr0.i8 to double addrspace(3)*
+  store double %val, double addrspace(3)* %addr0, align 1
+  %addr1.i8 = getelementptr inbounds i8, i8 addrspace(3)* %base.i8, i32 9
+  %addr1 = bitcast i8 addrspace(3)* %addr1.i8 to double addrspace(3)*
+  store double %val, double addrspace(3)* %addr1, align 1
+  ret void
+}
+
 define amdgpu_kernel void @simple_write2_two_val_f64(double addrspace(1)* %C, double addrspace(1)* %in) #0 {
 ; CI-LABEL: simple_write2_two_val_f64:
 ; CI:       ; %bb.0:
