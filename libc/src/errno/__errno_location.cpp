@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/llvmlibc_errno.h"
+#include "src/errno/__errno_location.h"
 
 #include "src/__support/common.h"
 
