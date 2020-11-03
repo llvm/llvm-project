@@ -461,6 +461,13 @@ public:
 
   bool canIgnoreChildDeclWhileTraversingDeclContext(const Decl *Child);
 
+#define DEF_TRAVERSE_TMPL_INST(TMPLDECLKIND)                                   \
+  bool TraverseTemplateInstantiations(TMPLDECLKIND##TemplateDecl *D);
+  DEF_TRAVERSE_TMPL_INST(Class)
+  DEF_TRAVERSE_TMPL_INST(Var)
+  DEF_TRAVERSE_TMPL_INST(Function)
+#undef DEF_TRAVERSE_TMPL_INST
+
 private:
   // These are helper methods used by more than one Traverse* method.
   bool TraverseTemplateParameterListHelper(TemplateParameterList *TPL);
@@ -469,12 +476,6 @@ private:
   template <typename T>
   bool TraverseDeclTemplateParameterLists(T *D);
 
-#define DEF_TRAVERSE_TMPL_INST(TMPLDECLKIND)                                   \
-  bool TraverseTemplateInstantiations(TMPLDECLKIND##TemplateDecl *D);
-  DEF_TRAVERSE_TMPL_INST(Class)
-  DEF_TRAVERSE_TMPL_INST(Var)
-  DEF_TRAVERSE_TMPL_INST(Function)
-#undef DEF_TRAVERSE_TMPL_INST
   bool TraverseTemplateArgumentLocsHelper(const TemplateArgumentLoc *TAL,
                                           unsigned Count);
   bool TraverseArrayTypeLocHelper(ArrayTypeLoc TL);
