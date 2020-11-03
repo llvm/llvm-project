@@ -34,7 +34,6 @@ import optparse
 import os
 import platform
 import plistlib
-import pprint  # pp = pprint.PrettyPrinter(indent=4); pp.pprint(command_args)
 import re
 import shlex
 import string
@@ -141,7 +140,6 @@ class CrashLog(symbolication.Symbolicator):
                     return
 
             print("%s" % self)
-            #prev_frame_index = -1
             display_frame_idx = -1
             for frame_idx, frame in enumerate(self.frames):
                 disassemble = (
@@ -395,7 +393,6 @@ class CrashLog(symbolication.Symbolicator):
                     if len(self.info_lines) > 0 and len(self.info_lines[-1]):
                         self.info_lines.append(line)
                 parse_mode = CrashLogParseMode.NORMAL
-                # print 'CrashLogParseMode.NORMAL'
             elif parse_mode == CrashLogParseMode.NORMAL:
                 if line.startswith('Process:'):
                     (self.process_name, pid_with_brackets) = line[
@@ -525,10 +522,7 @@ class CrashLog(symbolication.Symbolicator):
                 reg_values = re.findall(
                     '([a-zA-Z0-9]+: 0[Xx][0-9a-fA-F]+) *', stripped_line)
                 for reg_value in reg_values:
-                    # print 'reg_value = "%s"' % reg_value
                     (reg, value) = reg_value.split(': ')
-                    # print 'reg = "%s"' % reg
-                    # print 'value = "%s"' % value
                     thread.registers[reg.strip()] = int(value, 0)
             elif parse_mode == CrashLogParseMode.SYSTEM:
                 self.system_profile.append(line)
@@ -561,7 +555,6 @@ class CrashLog(symbolication.Symbolicator):
         return None
 
     def create_target(self):
-        # print 'crashlog.create_target()...'
         if self.target is None:
             self.target = symbolication.Symbolicator.create_target(self)
             if self.target:
@@ -709,7 +702,6 @@ def interactive_crashlogs(options, args):
 
     crash_logs = list()
     for crash_log_file in crash_log_files:
-        # print 'crash_log_file = "%s"' % crash_log_file
         crash_log = CrashLog(crash_log_file, options.verbose)
         if crash_log.error:
             print(crash_log.error)
@@ -898,7 +890,6 @@ def SymbolicateCrashLog(crash_log, options):
             if err:
                 print(err)
             else:
-                # print 'loaded %s' % image
                 loaded_images.append(image)
 
     if crash_log.backtraces:
