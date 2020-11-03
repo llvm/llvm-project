@@ -43,49 +43,35 @@ import sys
 import time
 import uuid
 
+try:
+    # First try for LLDB in case PYTHONPATH is already correctly setup.
+    import lldb
+except ImportError:
+    # Ask the command line driver for the path to the lldb module. Copy over
+    # the environment so that SDKROOT is propagated to xcrun.
+    env = os.environ.copy()
+    env['LLDB_DEFAULT_PYTHON_VERSION'] = str(sys.version_info.major)
+    command =  ['xcrun', 'lldb', '-P'] if platform.system() == 'Darwin' else ['lldb', '-P']
+    # Extend the PYTHONPATH if the path exists and isn't already there.
+    lldb_python_path = subprocess.check_output(command, env=env).decode("utf-8").strip()
+    if os.path.exists(lldb_python_path) and not sys.path.__contains__(lldb_python_path):
+        sys.path.append(lldb_python_path)
+    # Try importing LLDB again.
+    try:
+        import lldb
+    except ImportError:
+        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
+        sys.exit(1)
+
+from lldb.utils import symbolication
+
+
 def read_plist(s):
     if sys.version_info.major == 3:
         return plistlib.loads(s)
     else:
         return plistlib.readPlistFromString(s)
 
-try:
-    # Just try for LLDB in case PYTHONPATH is already correctly setup
-    import lldb
-except ImportError:
-    lldb_python_dirs = list()
-    # lldb is not in the PYTHONPATH, try some defaults for the current platform
-    platform_system = platform.system()
-    if platform_system == 'Darwin':
-        # On Darwin, try the currently selected Xcode directory
-        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True).decode("utf-8")
-        if xcode_dir:
-            lldb_python_dirs.append(
-                os.path.realpath(
-                    xcode_dir +
-                    '/../SharedFrameworks/LLDB.framework/Resources/Python'))
-            lldb_python_dirs.append(
-                xcode_dir + '/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
-        lldb_python_dirs.append(
-            '/System/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
-    success = False
-    for lldb_python_dir in lldb_python_dirs:
-        if os.path.exists(lldb_python_dir):
-            if not (sys.path.__contains__(lldb_python_dir)):
-                sys.path.append(lldb_python_dir)
-                try:
-                    import lldb
-                except ImportError:
-                    pass
-                else:
-                    print('imported lldb from: "%s"' % (lldb_python_dir))
-                    success = True
-                    break
-    if not success:
-        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
-        sys.exit(1)
-
-from lldb.utils import symbolication
 
 PARSE_MODE_NORMAL = 0
 PARSE_MODE_THREAD = 1
@@ -442,13 +428,13 @@ class CrashLog(symbolication.Symbolicator):
                     continue
                 elif line.startswith('Exception Subtype:'): # iOS
                     self.thread_exception_data = line[18:].strip()
-                    continue                                                          
+                    continue
                 elif line.startswith('Crashed Thread:'):
                     self.crashed_thread_idx = int(line[15:].strip().split()[0])
                     continue
                 elif line.startswith('Triggered by Thread:'): # iOS
                     self.crashed_thread_idx = int(line[20:].strip().split()[0])
-                    continue                    
+                    continue
                 elif line.startswith('Report Version:'):
                     self.version = int(line[15:].strip())
                     continue
