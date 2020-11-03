@@ -181,6 +181,8 @@ public:
 
   int getMemcpyCost(const Instruction *I);
 
+  int getNumMemOps(const IntrinsicInst *I) const;
+
   int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
                      VectorType *SubTp);
 
