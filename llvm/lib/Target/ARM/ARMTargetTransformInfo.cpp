@@ -969,7 +969,6 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
     const unsigned Size = C->getValue().getZExtValue();
     const Align DstAlign = *MC->getDestAlign();
     const Align SrcAlign = *MC->getSourceAlign();
-    const Function *F = I->getParent()->getParent();
     std::vector<EVT> MemOps;
 
     MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
