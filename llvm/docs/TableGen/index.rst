@@ -11,7 +11,6 @@ TableGen Overview
    BackEnds
    BackGuide
    ProgRef
-   Deficiencies
 
 Introduction
 ============
