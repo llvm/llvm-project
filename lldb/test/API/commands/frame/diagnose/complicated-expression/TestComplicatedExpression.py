@@ -25,4 +25,4 @@ class TestDiagnoseDereferenceArgument(TestBase):
         self.expect(
             "frame diagnose",
             "Crash diagnosis was accurate",
-            substrs=["f->b->d"])
+            "f->b->d")
