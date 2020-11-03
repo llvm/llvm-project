@@ -1149,12 +1149,6 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     }
   }
 
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Opd1PropInfo,
-                                         Opd2PropInfo, Args, CxtI);
-
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->hasNEON()) {
@@ -1249,9 +1243,12 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   if (LooksLikeAFreeShift())
     return 0;
 
-  int BaseCost = ST->hasMVEIntegerOps() && Ty->isVectorTy()
-                     ? ST->getMVEVectorCostFactor()
-                     : 1;
+  // Default to cheap (throughput/size of 1 instruction) but adjust throughput
+  // for "multiple beats" potentially needed by MVE instructions.
+  int BaseCost = 1;
+  if (CostKind != TTI::TCK_CodeSize && ST->hasMVEIntegerOps() &&
+      Ty->isVectorTy())
+    BaseCost = ST->getMVEVectorCostFactor();
 
   // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
   // without treating floats as more expensive that scalars or increasing the
