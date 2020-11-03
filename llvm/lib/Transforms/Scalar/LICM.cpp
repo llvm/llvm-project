@@ -1106,6 +1106,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               bool TargetExecutesOncePerLoop,
                               SinkAndHoistLICMFlags *Flags,
                               OptimizationRemarkEmitter *ORE) {
+  assert(((CurAST != nullptr) ^ (MSSAU != nullptr)) &&
+         "Either AliasSetTracker or MemorySSA should be initialized.");
+
   // If we don't understand the instruction, bail early.
   if (!isHoistableAndSinkableInst(I))
     return false;
