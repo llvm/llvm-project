@@ -140,5 +140,4 @@ print("in top_level") // break_7
 
         for breakpoint in breakpoints:
             threads = lldbutil.continue_to_breakpoint(process, breakpoint)
-            self.expect("expr -d no-run-target -- f()", "can call")
-
+            self.expect("expr -d no-run-target -- f()", substrs=["can call"])

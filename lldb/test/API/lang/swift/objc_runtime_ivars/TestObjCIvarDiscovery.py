@@ -73,11 +73,11 @@ class TestObjCIVarDiscovery(TestBase):
 
         if dbg:
             self.expect(
-                "image list", "Contents/Resources/DWARF/aTestFramework")
+                "image list", substrs=["Contents/Resources/DWARF/aTestFramework"])
         else:
             self.expect(
                 "image list",
-                "Contents/Resources/DWARF/aTestFramework",
+                substrs=["Contents/Resources/DWARF/aTestFramework"],
                 matching=False)
 
         self.runCmd("frame variable -d run --show-types --ptr-depth=1")

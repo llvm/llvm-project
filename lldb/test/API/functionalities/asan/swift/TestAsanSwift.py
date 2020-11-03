@@ -93,7 +93,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
         for i in range(0, thread.GetNumFrames()):
             frame = thread.GetFrameAtIndex(i)
             if frame.GetFunctionName() == "main":
-                self.expect("frame select %d" % i, "at main.swift")
+                self.expect("frame select %d" % i, substrs=["at main.swift"])
                 break
 
         self.expect(
