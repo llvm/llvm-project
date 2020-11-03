@@ -399,6 +399,65 @@ public:
                            LLVMTypeConverter &typeConverter,
                            ArrayRef<UnrankedMemRefDescriptor> values,
                            SmallVectorImpl<Value> &sizes);
+
+  /// TODO: The following accessors don't take alignment rules between elements
+  /// of the descriptor struct into account. For some architectures, it might be
+  /// necessary to extend them and to use `llvm::DataLayout` contained in
+  /// `LLVMTypeConverter`.
+
+  /// Builds IR extracting the allocated pointer from the descriptor.
+  static Value allocatedPtr(OpBuilder &builder, Location loc,
+                            Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR inserting the allocated pointer into the descriptor.
+  static void setAllocatedPtr(OpBuilder &builder, Location loc,
+                              Value memRefDescPtr,
+                              LLVM::LLVMType elemPtrPtrType,
+                              Value allocatedPtr);
+
+  /// Builds IR extracting the aligned pointer from the descriptor.
+  static Value alignedPtr(OpBuilder &builder, Location loc,
+                          LLVMTypeConverter &typeConverter, Value memRefDescPtr,
+                          LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR inserting the aligned pointer into the descriptor.
+  static void setAlignedPtr(OpBuilder &builder, Location loc,
+                            LLVMTypeConverter &typeConverter,
+                            Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType,
+                            Value alignedPtr);
+
+  /// Builds IR extracting the offset from the descriptor.
+  static Value offset(OpBuilder &builder, Location loc,
+                      LLVMTypeConverter &typeConverter, Value memRefDescPtr,
+                      LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR inserting the offset into the descriptor.
+  static void setOffset(OpBuilder &builder, Location loc,
+                        LLVMTypeConverter &typeConverter, Value memRefDescPtr,
+                        LLVM::LLVMType elemPtrPtrType, Value offset);
+
+  /// Builds IR extracting the pointer to the first element of the size array.
+  static Value sizeBasePtr(OpBuilder &builder, Location loc,
+                           LLVMTypeConverter &typeConverter,
+                           Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR extracting the size[index] from the descriptor.
+  static Value size(OpBuilder &builder, Location loc,
+                    LLVMTypeConverter typeConverter, Value sizeBasePtr,
+                    Value index);
+  /// Builds IR inserting the size[index] into the descriptor.
+  static void setSize(OpBuilder &builder, Location loc,
+                      LLVMTypeConverter typeConverter, Value sizeBasePtr,
+                      Value index, Value size);
+
+  /// Builds IR extracting the pointer to the first element of the stride array.
+  static Value strideBasePtr(OpBuilder &builder, Location loc,
+                             LLVMTypeConverter &typeConverter,
+                             Value sizeBasePtr, Value rank);
+  /// Builds IR extracting the stride[index] from the descriptor.
+  static Value stride(OpBuilder &builder, Location loc,
+                      LLVMTypeConverter typeConverter, Value strideBasePtr,
+                      Value index, Value stride);
+  /// Builds IR inserting the stride[index] into the descriptor.
+  static void setStride(OpBuilder &builder, Location loc,
+                        LLVMTypeConverter typeConverter, Value strideBasePtr,
+                        Value index, Value stride);
 };
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
