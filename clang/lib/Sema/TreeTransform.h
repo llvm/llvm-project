@@ -12745,12 +12745,12 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
 
   bool ArgumentChanged = false;
   SmallVector<Expr*, 8> Args;
-  Args.reserve(E->arg_size());
+  Args.reserve(E->getNumArgs());
   {
     EnterExpressionEvaluationContext Context(
         getSema(), EnterExpressionEvaluationContext::InitList,
         E->isListInitialization());
-    if (getDerived().TransformExprs(E->arg_begin(), E->arg_size(), true, Args,
+    if (getDerived().TransformExprs(E->arg_begin(), E->getNumArgs(), true, Args,
                                     &ArgumentChanged))
       return ExprError();
   }
