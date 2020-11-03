@@ -395,7 +395,7 @@ public:
 
     // Parse any kind of attribute.
     Attribute attr;
-    if (parseAttribute(attr))
+    if (parseAttribute(attr, type))
       return failure();
 
     // Check for the right kind of attribute.
@@ -433,6 +433,10 @@ public:
   /// Specialized variants of `parseOptionalAttribute` that remove potential
   /// ambiguities in syntax.
   virtual OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                                     Type type,
+                                                     StringRef attrName,
+                                                     NamedAttrList &attrs) = 0;
+  virtual OptionalParseResult parseOptionalAttribute(StringAttr &result,
                                                      Type type,
                                                      StringRef attrName,
                                                      NamedAttrList &attrs) = 0;

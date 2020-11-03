@@ -188,6 +188,7 @@ public:
   OptionalParseResult parseOptionalAttribute(Attribute &attribute,
                                              Type type = {});
   OptionalParseResult parseOptionalAttribute(ArrayAttr &attribute, Type type);
+  OptionalParseResult parseOptionalAttribute(StringAttr &attribute, Type type);
 
   /// Parse an optional attribute that is demarcated by a specific token.
   template <typename AttributeT>
