@@ -2302,17 +2302,25 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-// Returns true if the condition of \p BI being checked is invariant and can be
-// proved to be trivially true during at least first \p MaxIter iterations.
-static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
-                          bool ProvingLoopExit, const SCEV *MaxIter) {
+enum ExitCondAnalysisResult {
+  CanBeRemoved,
+  CannotOptimize
+};
+
+/// If the condition of BI is trivially true during at least first MaxIter
+/// iterations, return CanBeRemoved.
+/// Otherwise, return CannotOptimize.
+static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
+                                          ScalarEvolution *SE,
+                                          bool ProvingLoopExit,
+                                          const SCEV *MaxIter) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   using namespace PatternMatch;
   BasicBlock *TrueSucc, *FalseSucc;
   if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
-    return false;
+    return CannotOptimize;
 
   assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
          "Not a loop exit!");
@@ -2329,10 +2337,10 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
-    return true;
+    return CanBeRemoved;
 
   if (ProvingLoopExit)
-    return false;
+    return CannotOptimize;
 
   ICmpInst::Predicate InvariantPred;
   const SCEV *InvariantLHS, *InvariantRHS;
@@ -2341,10 +2349,12 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   if (!SE->isLoopInvariantExitCondDuringFirstIterations(
            Pred, LHSS, RHSS, L, BI, MaxIter, InvariantPred, InvariantLHS,
            InvariantRHS))
-    return false;
+    return CannotOptimize;
 
   // Can we prove it to be trivially true?
-  return SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI);
+  if (SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI))
+    return CanBeRemoved;
+  return CannotOptimize;
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -2438,11 +2448,14 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
           const SCEV *One = SE->getOne(MaxIter->getType());
           MaxIter = SE->getMinusSCEV(MaxIter, One);
         }
-        if (isTrivialCond(L, BI, SE, Inverted, MaxIter)) {
+        switch (analyzeCond(L, BI, SE, Inverted, MaxIter)) {
+        case CanBeRemoved:
           FoldExit(ExitingBB, Inverted);
           return true;
+        case CannotOptimize:
+          return false;
         }
-        return false;
+        llvm_unreachable("Unknown case!");
       };
 
       // TODO: We might have proved that we can skip the last iteration for
