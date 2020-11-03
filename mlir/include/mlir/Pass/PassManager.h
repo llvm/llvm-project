@@ -48,8 +48,8 @@ struct PassExecutionState;
 /// other OpPassManagers or the top-level PassManager.
 class OpPassManager {
 public:
-  OpPassManager(Identifier name, bool verifyPasses);
-  OpPassManager(StringRef name, bool verifyPasses);
+  OpPassManager(Identifier name);
+  OpPassManager(StringRef name);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -149,8 +149,7 @@ enum class PassDisplayMode {
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
 public:
-  // If verifyPasses is true, the verifier is run after each pass.
-  PassManager(MLIRContext *ctx, bool verifyPasses = true);
+  PassManager(MLIRContext *ctx);
   ~PassManager();
 
   /// Run the passes within this manager on the provided module.
@@ -167,6 +166,9 @@ public:
   /// smallest pipeline.
   void enableCrashReproducerGeneration(StringRef outputFile,
                                        bool genLocalReproducer = false);
+
+  /// Runs the verifier after each individual pass.
+  void enableVerifier(bool enabled = true);
 
   //===--------------------------------------------------------------------===//
   // Instrumentations
@@ -330,6 +332,9 @@ private:
 
   /// Flag that specifies if the generated crash reproducer should be local.
   bool localReproducer : 1;
+
+  /// A flag that indicates if the IR should be verified in between passes.
+  bool verifyPasses : 1;
 };
 
 /// Register a set of useful command-line options that can be used to configure
