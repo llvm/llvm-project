@@ -38,7 +38,7 @@ class Reference;
 } // namespace common
 
 namespace evaluate {
-struct DataRef;
+class DataRef;
 template <typename>
 class Designator;
 template <typename>
@@ -101,16 +101,14 @@ mlir::Type translateSomeExprToFIRType(mlir::MLIRContext *ctxt,
                                       const SomeExpr *expr);
 
 /// Translate a Fortran::semantics::Symbol to an mlir::Type.
-mlir::Type
-translateSymbolToFIRType(mlir::MLIRContext *ctxt,
-                         common::IntrinsicTypeDefaultKinds const &defaults,
-                         const SymbolRef symbol);
+mlir::Type translateSymbolToFIRType(mlir::MLIRContext *ctxt,
+                                    Fortran::evaluate::FoldingContext &,
+                                    const SymbolRef symbol);
 
 /// Translate a Fortran::lower::pft::Variable to an mlir::Type.
-mlir::Type
-translateVariableToFIRType(mlir::MLIRContext *ctxt,
-                           common::IntrinsicTypeDefaultKinds const &defaults,
-                           const pft::Variable &variable);
+mlir::Type translateVariableToFIRType(mlir::MLIRContext *ctxt,
+                                      Fortran::evaluate::FoldingContext &,
+                                      const pft::Variable &variable);
 
 /// Translate a REAL of KIND to the mlir::Type.
 mlir::Type convertReal(mlir::MLIRContext *ctxt, int KIND);
