@@ -469,6 +469,8 @@ protected:
 public:
   CodeViewDebug(AsmPrinter *AP);
 
+  void beginModule(Module *M) override;
+
   void setSymbolSize(const MCSymbol *, uint64_t) override {}
 
   /// Emit the COFF section that holds the line table information.

@@ -12,10 +12,13 @@
 using namespace llvm;
 
 class Poly3D;
-template <> struct llvm::LinearPolyBaseTypeTraits<Poly3D> {
+
+namespace llvm {
+template <> struct LinearPolyBaseTypeTraits<Poly3D> {
   using ScalarTy = int64_t;
   static const unsigned Dimensions = 3;
 };
+}
 
 using Poly3DBase = LinearPolyBase<Poly3D>;
 class Poly3D : public Poly3DBase {
@@ -80,10 +83,12 @@ TEST(LinearPolyBase, Poly3D_Invert) {
 }
 
 class Univariate3D;
-template <> struct llvm::LinearPolyBaseTypeTraits<Univariate3D> {
+namespace llvm {
+template <> struct LinearPolyBaseTypeTraits<Univariate3D> {
   using ScalarTy = int64_t;
   static const unsigned Dimensions = 3;
 };
+}
 
 using Univariate3DBase = UnivariateLinearPolyBase<Univariate3D>;
 class Univariate3D : public Univariate3DBase {

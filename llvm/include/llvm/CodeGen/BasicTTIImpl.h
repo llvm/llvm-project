@@ -1587,10 +1587,10 @@ public:
       unsigned Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost += 3 * thisT()->getCmpSelInstrCost(
-                      BinaryOperator::ICmp, SumTy, OverflowTy,
+                      Instruction::ICmp, SumTy, OverflowTy,
                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Cost += 2 * thisT()->getCmpSelInstrCost(
-                      BinaryOperator::ICmp, OverflowTy, OverflowTy,
+                      Instruction::Select, OverflowTy, OverflowTy,
                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, OverflowTy,
                                               CostKind);

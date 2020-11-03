@@ -155,10 +155,6 @@ static cl::opt<LinkageNameOption>
                                             "Abstract subprograms")),
                       cl::init(DefaultLinkageNames));
 
-static const char *const DWARFGroupName = "dwarf";
-static const char *const DWARFGroupDescription = "DWARF Emission";
-static const char *const DbgTimerName = "writer";
-static const char *const DbgTimerDescription = "DWARF Debug Writer";
 static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
@@ -337,7 +333,7 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
   return AccelTableKind::None;
 }
 
-DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
+DwarfDebug::DwarfDebug(AsmPrinter *A)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
       InfoHolder(A, "info_string", DIEValueAllocator),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
@@ -1123,21 +1119,17 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
 // Emit all Dwarf sections that should come prior to the content. Create
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
-void DwarfDebug::beginModule() {
-  NamedRegionTimer T(DbgTimerName, DbgTimerDescription, DWARFGroupName,
-                     DWARFGroupDescription, TimePassesIsEnabled);
-  if (DisableDebugInfoPrinting) {
-    MMI->setDebugInfoAvailability(false);
-    return;
-  }
+void DwarfDebug::beginModule(Module *M) {
+  DebugHandlerBase::beginModule(M);
 
-  const Module *M = MMI->getModule();
+  if (!Asm || !MMI->hasDebugInfo() || DisableDebugInfoPrinting)
+    return;
 
   unsigned NumDebugCUs = std::distance(M->debug_compile_units_begin(),
                                        M->debug_compile_units_end());
-  // Tell MMI whether we have debug info.
-  assert(MMI->hasDebugInfo() == (NumDebugCUs > 0) &&
-         "DebugInfoAvailabilty initialized unexpectedly");
+  assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
+  assert(MMI->hasDebugInfo() &&
+         "DebugInfoAvailabilty unexpectedly not initialized");
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
@@ -1400,7 +1392,7 @@ void DwarfDebug::endModule() {
   // If we aren't actually generating debug info (check beginModule -
   // conditionalized on !DisableDebugInfoPrinting and the presence of the
   // llvm.dbg.cu metadata node)
-  if (!MMI->hasDebugInfo())
+  if (!Asm || !MMI->hasDebugInfo() || DisableDebugInfoPrinting)
     return;
 
   // Finalize the debug info for the module.
@@ -1911,7 +1903,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   }
 
   DebugHandlerBase::beginInstruction(MI);
-  assert(CurMI);
+  if (!CurMI)
+    return;
 
   if (NoDebug)
     return;
