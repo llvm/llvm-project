@@ -537,12 +537,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Swift.CountableClosedRange summary provider",
       ConstString("Swift.CountableClosedRange<.+>$"), summary_flags, true);
 
-  AddCXXSummary(
-      swift_category_sp,
-      lldb_private::formatters::swift::StridedRangeGenerator_SummaryProvider,
-      "Swift.StridedRangeGenerator summary provider",
-      ConstString("Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
-
   TypeSummaryImpl::Flags simd_summary_flags;
   simd_summary_flags.SetCascades(true)
       .SetDontShowChildren(true)
