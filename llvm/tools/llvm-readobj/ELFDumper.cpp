@@ -2026,7 +2026,10 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
       }
       break;
     case ELF::SHT_SYMTAB_SHNDX:
-      ShndxTable = unwrapOrError(ObjF.getFileName(), Obj.getSHNDXTable(Sec));
+      if (Expected<ArrayRef<Elf_Word>> ShndxTableOrErr = Obj.getSHNDXTable(Sec))
+        ShndxTable = *ShndxTableOrErr;
+      else
+        this->reportUniqueWarning(ShndxTableOrErr.takeError());
       break;
     case ELF::SHT_GNU_versym:
       if (!SymbolVersionSection)
