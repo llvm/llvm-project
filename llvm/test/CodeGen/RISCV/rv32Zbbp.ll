@@ -663,20 +663,17 @@ define i32 @rori_i32_fshr(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: rori_i32_fshr:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    addi a1, zero, 31
-; RV32IB-NEXT:    ror a0, a0, a1
+; RV32IB-NEXT:    rori a0, a0, 31
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: rori_i32_fshr:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    addi a1, zero, 31
-; RV32IBB-NEXT:    ror a0, a0, a1
+; RV32IBB-NEXT:    rori a0, a0, 31
 ; RV32IBB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: rori_i32_fshr:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    addi a1, zero, 31
-; RV32IBP-NEXT:    ror a0, a0, a1
+; RV32IBP-NEXT:    rori a0, a0, 31
 ; RV32IBP-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
   ret i32 %1

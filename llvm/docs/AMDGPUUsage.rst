@@ -4328,7 +4328,7 @@ For GFX6-GFX9:
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
-address space and global address space for program scope const variables.
+address space and global address space for program scope ``const`` variables.
 Therefore, the kernel machine code does not have to maintain the scalar cache to
 ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
@@ -4402,8 +4402,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
      ------------------------------------------------------------------------------------
      load atomic  unordered    *any*          *any*      *Same as non-atomic*.
      store atomic unordered    *any*          *any*      *Same as non-atomic*.
-     atomicrmw    unordered    *any*          *any*      *Same as monotonic
-                                                         atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic atomic*.
      **Monotonic Atomic**
      ------------------------------------------------------------------------------------
      load atomic  monotonic    - singlethread - global   1. buffer/global/ds/flat_load
@@ -5581,7 +5580,7 @@ For GFX10:
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
-address space and global address space for program scope const variables.
+address space and global address space for program scope ``const`` variables.
 Therefore, the kernel machine code does not have to maintain the scalar cache to
 ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
@@ -5675,8 +5674,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
      ------------------------------------------------------------------------------------
      load atomic  unordered    *any*          *any*      *Same as non-atomic*.
      store atomic unordered    *any*          *any*      *Same as non-atomic*.
-     atomicrmw    unordered    *any*          *any*      *Same as monotonic
-                                                         atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic atomic*.
      **Monotonic Atomic**
      ------------------------------------------------------------------------------------
      load atomic  monotonic    - singlethread - global   1. buffer/global/flat_load
