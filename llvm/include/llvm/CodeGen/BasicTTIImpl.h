@@ -1135,6 +1135,11 @@ public:
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
       return 0;
 
+    // Assume that target intrinsics are cheap.
+    Intrinsic::ID IID = ICA.getID();
+    if (Function::isTargetIntrinsic(IID))
+      return TargetTransformInfo::TCC_Basic;
+
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
@@ -1151,7 +1156,6 @@ public:
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
-    Intrinsic::ID IID = ICA.getID();
     switch (IID) {
     default:
       // FIXME: all cost kinds should default to the same thing?

@@ -9,7 +9,7 @@ define void @intrinsics() {
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t1 = call i32 @llvm.arm.ssat(i32 undef, i32 undef)
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t2 = tail call { <8 x half>, <8 x half> } @llvm.arm.mve.vld2q.v8f16.p0f16(half* undef)
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t3 = call { i32, i32 } @llvm.arm.mve.sqrshrl(i32 undef, i32 undef, i32 undef, i32 48)
-; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %t4 = tail call { i32, i32 } @llvm.arm.mve.vmlldava.v8i16(i32 0, i32 0, i32 0, i32 0, i32 0, <8 x i16> undef, <8 x i16> undef)
+; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t4 = tail call { i32, i32 } @llvm.arm.mve.vmlldava.v8i16(i32 0, i32 0, i32 0, i32 0, i32 0, <8 x i16> undef, <8 x i16> undef)
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-THUMB2-LAT-LABEL: 'intrinsics'
