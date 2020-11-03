@@ -849,8 +849,8 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
 def Symbolicate(debugger, command, result, dict):
     try:
         SymbolicateCrashLogs(shlex.split(command))
-    except:
-        result.PutCString("error: python exception %s" % sys.exc_info()[0])
+    except Exception as e:
+        result.PutCString("error: python exception: %s" % e)
 
 
 def SymbolicateCrashLog(crash_log, options):
