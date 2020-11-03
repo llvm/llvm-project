@@ -581,29 +581,6 @@ bool lldb_private::formatters::swift::CountableClosedRange_SummaryProvider(
   return RangeFamily_SummaryProvider(valobj, stream, options, false);
 }
 
-bool lldb_private::formatters::swift::StridedRangeGenerator_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g__bounds("_bounds");
-  static ConstString g__stride("_stride");
-
-  ValueObjectSP bounds_sp(valobj.GetChildMemberWithName(g__bounds, true));
-  ValueObjectSP stride_sp(valobj.GetChildMemberWithName(g__stride, true));
-
-  if (!bounds_sp || !stride_sp)
-    return false;
-
-  auto bounds_summary = bounds_sp->GetSummaryAsCString();
-  auto stride_summary = stride_sp->GetValueAsCString();
-
-  if (!bounds_summary || !bounds_summary[0] || !stride_summary ||
-      !stride_summary[0])
-    return false;
-
-  stream.Printf("(%s).by(%s)", bounds_summary, stride_summary);
-
-  return true;
-}
-
 bool lldb_private::formatters::swift::BuiltinObjC_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   stream.Printf("0x%" PRIx64 " ", valobj.GetValueAsUnsigned(0));
