@@ -523,7 +523,7 @@ def PrintCFG : FunctionPass<"print-cfg-graph"> {
   let constructor = "mlir::createPrintCFGGraphPass()";
 }
 
-def PrintOpStats : Pass<"print-op-stats", "ModuleOp"> {
+def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
 }
