@@ -66,6 +66,7 @@ class SetupConfigs(unittest.TestCase):
         self.config = lit.TestingConfig.TestingConfig.fromdefaults(self.litConfig)
         self.config.test_source_root = SOURCE_ROOT
         self.config.test_exec_root = EXEC_PATH
+        self.config.recursiveExpansionLimit = 10
         base64Decode = lambda s: lit.util.to_string(base64.b64decode(s))
         self.config.substitutions = [
             ('%{cxx}', base64Decode(CXX)),
