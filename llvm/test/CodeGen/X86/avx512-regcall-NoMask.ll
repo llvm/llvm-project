@@ -49,6 +49,8 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN64-NEXT:    incb %al
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargReti1:
@@ -115,6 +117,8 @@ define x86_regcallcc i8 @test_CallargReti8(i8 %a)  {
 ; WIN64-NEXT:    incb %al
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargReti8:
@@ -183,6 +187,8 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; WIN64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargReti16:
@@ -245,6 +251,8 @@ define x86_regcallcc i32 @test_CallargReti32(i32 %a)  {
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargReti32:
@@ -310,6 +318,8 @@ define x86_regcallcc i64 @test_CallargReti64(i64 %a)  {
 ; WIN64-NEXT:    incq %rax
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargReti64:
@@ -382,6 +392,8 @@ define x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; WIN64-NEXT:    addq $16, %rsp
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRetFloat:
@@ -462,6 +474,8 @@ define x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; WIN64-NEXT:    addq $16, %rsp
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRetDouble:
@@ -561,6 +575,8 @@ define x86_regcallcc x86_fp80 @test_CallargRetf80(x86_fp80 %a)  {
 ; WIN64-NEXT:    fadd %st, %st(0)
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRetf80:
@@ -600,6 +616,8 @@ define x86_regcallcc double @test_CallargParamf80(x86_fp80 %a)  {
 ; WIN64-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargParamf80:
@@ -662,6 +680,8 @@ define x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRetPointer:
@@ -754,6 +774,8 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i1> %x, <4 x i32> 
 ; WIN64-NEXT:    addq $32, %rsp
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRet128Vector:
@@ -844,6 +866,8 @@ define x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i1> %x, <8 x i32> 
 ; WIN64-NEXT:    addq $80, %rsp
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRet256Vector:
@@ -930,6 +954,8 @@ define x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x, <16 x i3
 ; WIN64-NEXT:    addq $176, %rsp
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRet512Vector:
