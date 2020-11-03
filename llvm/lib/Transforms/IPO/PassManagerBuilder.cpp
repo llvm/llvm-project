@@ -1055,7 +1055,6 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // Unroll small loops
   PM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
                                     ForgetAllSCEVInLoopUnroll));
-  PM.add(createLoopDistributePass());
   PM.add(createLoopVectorizePass(true, !LoopVectorize));
   // The vectorizer may have significantly shortened a loop body; unroll again.
   PM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
