@@ -3,6 +3,7 @@ add_entrypoint_object(
   SRCS
     __assert_fail.cpp
   HDRS
+    __assert_fail.h
     assert.h
   DEPENDS
     # These two dependencies are temporary and should be replaced by fprintf

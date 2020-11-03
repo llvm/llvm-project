@@ -29,7 +29,7 @@ DEFINE_C_API_PTR_METHODS(MlirOpPrintingFlags, mlir::OpPrintingFlags)
 DEFINE_C_API_PTR_METHODS(MlirRegion, mlir::Region)
 
 DEFINE_C_API_METHODS(MlirAttribute, mlir::Attribute)
-DEFINE_C_API_METHODS(MlirIdentifier, mlir::Identifier);
+DEFINE_C_API_METHODS(MlirIdentifier, mlir::Identifier)
 DEFINE_C_API_METHODS(MlirLocation, mlir::Location)
 DEFINE_C_API_METHODS(MlirModule, mlir::ModuleOp)
 DEFINE_C_API_METHODS(MlirType, mlir::Type)

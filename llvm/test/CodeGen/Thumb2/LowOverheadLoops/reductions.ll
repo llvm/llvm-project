@@ -641,63 +641,53 @@ define i32 @wrongop(%struct.date* nocapture readonly %pd) {
 ; CHECK-LABEL: wrongop:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr.w r2, [r12, #8]
-; CHECK-NEXT:    lsls r3, r2, #30
-; CHECK-NEXT:    bne .LBB8_3
-; CHECK-NEXT:  @ %bb.1: @ %entry
-; CHECK-NEXT:    movw r3, #34079
-; CHECK-NEXT:    movt r3, #20971
-; CHECK-NEXT:    smmul r3, r2, r3
-; CHECK-NEXT:    asrs r1, r3, #5
-; CHECK-NEXT:    add.w r1, r1, r3, lsr #31
-; CHECK-NEXT:    movs r3, #100
-; CHECK-NEXT:    mls r1, r1, r3, r2
-; CHECK-NEXT:    cbz r1, .LBB8_3
-; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    b .LBB8_4
-; CHECK-NEXT:  .LBB8_3: @ %lor.rhs
-; CHECK-NEXT:    movw r1, #47184
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    movw r12, #47184
 ; CHECK-NEXT:    movw r3, #23593
-; CHECK-NEXT:    movt r1, #1310
+; CHECK-NEXT:    ldrd r2, lr, [r1, #4]
+; CHECK-NEXT:    movt r12, #1310
 ; CHECK-NEXT:    movt r3, #49807
-; CHECK-NEXT:    mla r1, r2, r3, r1
-; CHECK-NEXT:    movw r2, #55051
-; CHECK-NEXT:    movt r2, #163
-; CHECK-NEXT:    ror.w r1, r1, #4
-; CHECK-NEXT:    cmp r1, r2
-; CHECK-NEXT:    cset r4, lo
-; CHECK-NEXT:  .LBB8_4: @ %lor.end
-; CHECK-NEXT:    ldr.w r1, [r12, #4]
-; CHECK-NEXT:    cmp r1, #1
+; CHECK-NEXT:    mla r3, lr, r3, r12
+; CHECK-NEXT:    movw r1, #55051
+; CHECK-NEXT:    movw r4, #23593
+; CHECK-NEXT:    movt r1, #163
+; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    movt r4, #655
+; CHECK-NEXT:    ror.w r12, r3, #4
+; CHECK-NEXT:    cmp r12, r1
+; CHECK-NEXT:    cset r1, lo
+; CHECK-NEXT:    ror.w r3, r3, #2
+; CHECK-NEXT:    mov.w r12, #1
+; CHECK-NEXT:    cmp r3, r4
+; CHECK-NEXT:    csel r3, r1, r12, lo
+; CHECK-NEXT:    lsls.w r4, lr, #30
+; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
-; CHECK-NEXT:  .LBB8_5: @ %vector.ph
-; CHECK-NEXT:    adds r3, r1, #3
-; CHECK-NEXT:    movs r2, #1
+; CHECK-NEXT:  .LBB8_1: @ %vector.ph
+; CHECK-NEXT:    adds r3, r2, #3
+; CHECK-NEXT:    movs r4, #52
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    add.w lr, r2, r3, lsr #2
-; CHECK-NEXT:    movw r2, :lower16:days
-; CHECK-NEXT:    movt r2, :upper16:days
-; CHECK-NEXT:    movs r3, #52
-; CHECK-NEXT:    mla r2, r4, r3, r2
+; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
+; CHECK-NEXT:    movw r3, :lower16:days
+; CHECK-NEXT:    movt r3, :upper16:days
+; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    mla r1, r1, r4, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:  .LBB8_6: @ %vector.body
+; CHECK-NEXT:  .LBB8_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r1
+; CHECK-NEXT:    vctp.32 r2
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q0, [r2], #16
-; CHECK-NEXT:    subs r1, #4
+; CHECK-NEXT:    vldrwt.u32 q0, [r1], #16
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    le lr, .LBB8_6
-; CHECK-NEXT:  @ %bb.7: @ %middle.block
+; CHECK-NEXT:    le lr, .LBB8_2
+; CHECK-NEXT:  @ %bb.3: @ %middle.block
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    pop {r4, pc}

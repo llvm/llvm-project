@@ -25,9 +25,6 @@ class AvoidsFdLeakTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")
     # The check for descriptor leakage needs to be implemented differently
     # here.
     @skipIfWindows

@@ -106,17 +106,6 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
   StringRef dbgPref = "\n[" DEBUG_TYPE "]: ";
   (void)dbgPref;
   edsc::ScopedContext scope(builder, op->getLoc());
-  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
-    // Vectorize fill as a vector.broadcast.
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
-    Value memref = vector_type_cast(fillOp.getOutputBuffer(0));
-    Value dst = std_load(memref);
-    Value res = vector_broadcast(dst.getType(), fillOp.value());
-    std_store(res, memref);
-    return;
-  }
-
   // In the case of 0-D memrefs, return null and special case to scalar load or
   // store later.
   auto extractVectorTypeFromScalarView = [](Value v) {
@@ -125,7 +114,24 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
                ? VectorType()
                : VectorType::get(mt.getShape(), mt.getElementType());
   };
-
+  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
+    // Vectorize fill as a vector.broadcast.
+    LLVM_DEBUG(dbgs() << dbgPref
+                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
+    Value viewOutput = fillOp.output();
+    if (VectorType outputType = extractVectorTypeFromScalarView(viewOutput)) {
+      auto vecType =
+          VectorType::get(fillOp.getOutputBufferType(0).getShape(),
+                          fillOp.getOutputBufferType(0).getElementType());
+      Value vector = vector_broadcast(vecType, fillOp.value());
+      Value zero = std_constant_index(0);
+      SmallVector<Value, 4> indicesOutput(outputType.getRank(), zero);
+      vector_transfer_write(vector, viewOutput, indicesOutput);
+    } else {
+      std_store(fillOp.value(), viewOutput);
+    }
+    return;
+  }
   if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
     // Vectorize copy as a vector.transfer_read+vector.transfer_write.
     LLVM_DEBUG(dbgs() << dbgPref
