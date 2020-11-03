@@ -16,14 +16,14 @@ struct A<T> {
     }
 
     mutating func a() -> T? {
-        var adict : [String: Any]  //% self.expect("frame variable adict", "Frame variable of an uninitialized dict returns")
+        var adict : [String: Any]  //% self.expect("frame variable adict", substrs=["Frame variable of an uninitialized dict returns"])
         adict = [String: Any]() 
         adict["key1"] = 1.0
         var t : T? = nil
         let c = cs[0]
 
         let k1 = b(t:c)
-        let k2 = b(t:c) //% self.expect("expr -d run -- c", "Unreadable variable is ignored", substrs = ["= 3"])
+        let k2 = b(t:c) //% self.expect("expr -d run -- c", "Unreadable variable is ignored", substrs=["= 3"])
         let k3 = b(t:c)
 
         if let maybeT = process(i : adict.count, k1:k1, k2:k2, k3:k3) {
