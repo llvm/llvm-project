@@ -33,8 +33,10 @@ int main(int argc, char *argv[]) {
   // that do not support requires.
   __tgt_register_requires(8);
 
-  // CHECK: Initial device: -10
+  // CHECK: Initial device: [[INITIAL_DEVICE:[0-9]+]]
   printf("Initial device: %d\n", omp_get_initial_device());
+  // CHECK: Num devices: [[INITIAL_DEVICE]]
+  printf("Num devices: %d\n", omp_get_num_devices());
 
   //
   // Target alloc & target memcpy

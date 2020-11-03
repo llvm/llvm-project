@@ -15,6 +15,7 @@ entry:
 ; CHECK: .seh_proc use_gxx_seh
 ; CHECK-NOT: .seh_handler __gxx_personality_seh0
 ; CHECK: callq throwit
+; CHECK: .seh_handlerdata
 ; CHECK: .seh_endproc
 
 define void @use_gcc_seh()
@@ -28,5 +29,6 @@ entry:
 ; CHECK: .seh_proc use_gcc_seh
 ; CHECK-NOT: .seh_handler __gcc_personality_seh0
 ; CHECK: callq throwit
+; CHECK: .seh_handlerdata
 ; CHECK: .seh_endproc
 

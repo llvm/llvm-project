@@ -73,6 +73,8 @@
 # ASM: .seh_endepilogue
 
 # ASM: .seh_endfunclet
+# ASM: .seh_handlerdata
+# ASM: .text
 # ASM: .seh_endproc
 
 ...
