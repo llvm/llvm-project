@@ -485,8 +485,8 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 // No-op Hazard Detection
 //===----------------------------------------------------------------------===//
 
-static void addRegUnits(const SIRegisterInfo &TRI,
-                        BitVector &BV, unsigned Reg) {
+static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
+                        MCRegister Reg) {
   for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI)
     BV.set(*RUI);
 }
@@ -496,7 +496,7 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
                          BitVector &Set) {
   for (const MachineOperand &Op : Ops) {
     if (Op.isReg())
-      addRegUnits(TRI, Set, Op.getReg());
+      addRegUnits(TRI, Set, Op.getReg().asMCReg());
   }
 }
 
