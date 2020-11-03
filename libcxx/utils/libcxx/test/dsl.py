@@ -168,6 +168,18 @@ def hasCompileFlag(config, flag):
     ])
     return exitCode == 0
 
+@_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
+def runScriptExitCode(config, script):
+  """
+  Runs the given script as a Lit test, and returns the exit code of the execution.
+
+  The script must be a list of commands, each of which being something that
+  could appear on the right-hand-side of a `RUN:` keyword.
+  """
+  with _makeConfigTest(config) as test:
+    _, _, exitCode, _ = _executeScriptInternal(test, script)
+    return exitCode
+
 @_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
 def hasAnyLocale(config, locales):
   """

@@ -72,6 +72,11 @@ DEFAULT_FEATURES = [
             void f() { new int(3); }
           """, ['-shared'])),
 
+  # Whether Bash can run on the executor.
+  # This is not always the case, for example when running on embedded systems.
+  Feature(name='executor-has-no-bash',
+          when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash --version']) != 0),
+
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}.{__clang_minor__}'.format(**compilerMacros(cfg)),                        when=_isAppleClang),
