@@ -32,23 +32,14 @@ class Type;
 
 namespace Fortran {
 namespace common {
-class IntrinsicTypeDefaultKinds;
 template <typename>
 class Reference;
 } // namespace common
 
 namespace evaluate {
-class DataRef;
-template <typename>
-class Designator;
 template <typename>
 class Expr;
-template <common::TypeCategory>
-struct SomeKind;
 struct SomeType;
-template <common::TypeCategory, int>
-class Type;
-class FoldingContext;
 } // namespace evaluate
 
 namespace semantics {
@@ -56,6 +47,7 @@ class Symbol;
 } // namespace semantics
 
 namespace lower {
+class AbstractConverter;
 namespace pft {
 struct Variable;
 }
@@ -64,61 +56,23 @@ using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using SymbolRef = common::Reference<const semantics::Symbol>;
 
 /// Get a FIR type based on a category and kind.
-mlir::Type getFIRType(mlir::MLIRContext *ctxt,
-                      common::IntrinsicTypeDefaultKinds const &defaults,
-                      common::TypeCategory tc, int kind);
-
-/// Get a FIR type based on a category.
-mlir::Type getFIRType(mlir::MLIRContext *ctxt,
-                      common::IntrinsicTypeDefaultKinds const &defaults,
-                      common::TypeCategory tc);
-
-/// Translate a Fortran::evaluate::DataRef to an mlir::Type.
-mlir::Type
-translateDataRefToFIRType(mlir::MLIRContext *ctxt,
-                          common::IntrinsicTypeDefaultKinds const &defaults,
-                          const evaluate::DataRef &dataRef);
-
-/// Translate a Fortran::evaluate::Designator<> to an mlir::Type.
-template <common::TypeCategory TC, int KIND>
-inline mlir::Type translateDesignatorToFIRType(
-    mlir::MLIRContext *ctxt, common::IntrinsicTypeDefaultKinds const &defaults,
-    const evaluate::Designator<evaluate::Type<TC, KIND>> &) {
-  return getFIRType(ctxt, defaults, TC, KIND);
-}
-
-/// Translate a Fortran::evaluate::Designator<> to an mlir::Type.
-template <common::TypeCategory TC>
-inline mlir::Type translateDesignatorToFIRType(
-    mlir::MLIRContext *ctxt, common::IntrinsicTypeDefaultKinds const &defaults,
-    const evaluate::Designator<evaluate::SomeKind<TC>> &) {
-  return getFIRType(ctxt, defaults, TC);
-}
+mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
+                      int kind);
 
 /// Translate a SomeExpr to an mlir::Type.
-mlir::Type translateSomeExprToFIRType(mlir::MLIRContext *ctxt,
-                                      evaluate::FoldingContext &,
-                                      const SomeExpr *expr);
+mlir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,
+                                      const SomeExpr &expr);
 
 /// Translate a Fortran::semantics::Symbol to an mlir::Type.
-mlir::Type translateSymbolToFIRType(mlir::MLIRContext *ctxt,
-                                    Fortran::evaluate::FoldingContext &,
+mlir::Type translateSymbolToFIRType(Fortran::lower::AbstractConverter &,
                                     const SymbolRef symbol);
 
 /// Translate a Fortran::lower::pft::Variable to an mlir::Type.
-mlir::Type translateVariableToFIRType(mlir::MLIRContext *ctxt,
-                                      Fortran::evaluate::FoldingContext &,
+mlir::Type translateVariableToFIRType(Fortran::lower::AbstractConverter &,
                                       const pft::Variable &variable);
 
 /// Translate a REAL of KIND to the mlir::Type.
 mlir::Type convertReal(mlir::MLIRContext *ctxt, int KIND);
-
-// Given a ReferenceType of a base type, returns the ReferenceType to
-// the SequenceType of this base type.
-// The created SequenceType has one dimension of unknown extent.
-// This is useful to do pointer arithmetic using fir::CoordinateOp that requires
-// a memory reference to a sequence type.
-mlir::Type getSequenceRefType(mlir::Type referenceType);
 
 } // namespace lower
 } // namespace Fortran

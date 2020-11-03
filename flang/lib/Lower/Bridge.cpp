@@ -265,30 +265,22 @@ public:
     return foldingContext;
   }
 
-  mlir::Type genType(const Fortran::evaluate::DataRef &data) override final {
-    return Fortran::lower::translateDataRefToFIRType(
-        &getMLIRContext(), bridge.getDefaultKinds(), data);
-  }
   mlir::Type genType(const Fortran::lower::SomeExpr &expr) override final {
-    return Fortran::lower::translateSomeExprToFIRType(&getMLIRContext(),
-                                                      foldingContext, &expr);
+    return Fortran::lower::translateSomeExprToFIRType(*this, expr);
   }
   mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
-    return Fortran::lower::translateVariableToFIRType(&getMLIRContext(),
-                                                      foldingContext, var);
+    return Fortran::lower::translateVariableToFIRType(*this, var);
   }
   mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
-    return Fortran::lower::translateSymbolToFIRType(&getMLIRContext(),
-                                                    foldingContext, sym);
+    return Fortran::lower::translateSymbolToFIRType(*this, sym);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc,
                      int kind) override final {
-    return Fortran::lower::getFIRType(&getMLIRContext(),
-                                      bridge.getDefaultKinds(), tc, kind);
+    return Fortran::lower::getFIRType(&getMLIRContext(), tc, kind);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
-    return Fortran::lower::getFIRType(&getMLIRContext(),
-                                      bridge.getDefaultKinds(), tc);
+    return Fortran::lower::getFIRType(
+        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc));
   }
 
   mlir::Location getCurrentLocation() override final { return toLocation(); }
