@@ -881,6 +881,7 @@ public:
   }
 
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                              CmpInst::Predicate VecPred,
                               TTI::TargetCostKind CostKind,
                               const Instruction *I = nullptr) {
     const TargetLoweringBase *TLI = getTLI();
@@ -889,7 +890,8 @@ public:
 
     // TODO: Handle other cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
-      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                       I);
 
     // Selects on vectors are actually vector selects.
     if (ISD == ISD::SELECT) {
@@ -914,7 +916,7 @@ public:
       if (CondTy)
         CondTy = CondTy->getScalarType();
       unsigned Cost = thisT()->getCmpSelInstrCost(
-          Opcode, ValVTy->getScalarType(), CondTy, CostKind, I);
+          Opcode, ValVTy->getScalarType(), CondTy, VecPred, CostKind, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -1133,6 +1135,11 @@ public:
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
       return 0;
 
+    // Assume that target intrinsics are cheap.
+    Intrinsic::ID IID = ICA.getID();
+    if (Function::isTargetIntrinsic(IID))
+      return TargetTransformInfo::TCC_Basic;
+
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
@@ -1149,7 +1156,6 @@ public:
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
-    Intrinsic::ID IID = ICA.getID();
     switch (IID) {
     default:
       // FIXME: all cost kinds should default to the same thing?
@@ -1241,10 +1247,12 @@ public:
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                            CostKind);
-        Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
-                                            CondTy, CostKind);
+        Cost +=
+            thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                        CmpInst::BAD_ICMP_PREDICATE, CostKind);
+        Cost +=
+            thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                        CmpInst::BAD_ICMP_PREDICATE, CostKind);
       }
       return Cost;
     }
@@ -1483,10 +1491,12 @@ public:
       Type *CondTy = RetTy->getWithNewBitWidth(1);
       unsigned Cost = 0;
       // TODO: Ideally getCmpSelInstrCost would accept an icmp condition code.
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                          CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       // TODO: Should we add an OperandValueProperties::OP_Zero property?
       if (IID == Intrinsic::abs)
         Cost += thisT()->getArithmeticInstrCost(
@@ -1508,10 +1518,12 @@ public:
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
                                     ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
-                                              CondTy, CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      Cost += 2 * thisT()->getCmpSelInstrCost(
+                      BinaryOperator::Select, RetTy, CondTy,
+                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       return Cost;
     }
     case Intrinsic::uadd_sat:
@@ -1527,8 +1539,9 @@ public:
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
                                     ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                          CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       return Cost;
     }
     case Intrinsic::smul_fix:
@@ -1573,10 +1586,12 @@ public:
       //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
       unsigned Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost += 3 * thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy,
-                                              OverflowTy, CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, OverflowTy,
-                                              OverflowTy, CostKind);
+      Cost += 3 * thisT()->getCmpSelInstrCost(
+                      BinaryOperator::ICmp, SumTy, OverflowTy,
+                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      Cost += 2 * thisT()->getCmpSelInstrCost(
+                      BinaryOperator::ICmp, OverflowTy, OverflowTy,
+                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, OverflowTy,
                                               CostKind);
       return Cost;
@@ -1591,8 +1606,9 @@ public:
 
       unsigned Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy,
-                                          OverflowTy, CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy, OverflowTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       return Cost;
     }
     case Intrinsic::smul_with_overflow:
@@ -1621,8 +1637,9 @@ public:
                                                 CostKind, TTI::OK_AnyValue,
                                                 TTI::OK_UniformConstantValue);
 
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, MulTy,
-                                          OverflowTy, CostKind);
+      Cost +=
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, MulTy, OverflowTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       return Cost;
     }
     case Intrinsic::ctpop:
@@ -1864,9 +1881,10 @@ public:
           (IsPairwise + 1) * thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
                                                      Ty, NumVecElts, SubTy);
       MinMaxCost +=
-          thisT()->getCmpSelInstrCost(CmpOpcode, SubTy, CondTy, CostKind) +
+          thisT()->getCmpSelInstrCost(CmpOpcode, SubTy, CondTy,
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind) +
           thisT()->getCmpSelInstrCost(Instruction::Select, SubTy, CondTy,
-                                      CostKind);
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
     }
@@ -1888,9 +1906,10 @@ public:
                    thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, 0, Ty);
     MinMaxCost +=
         NumReduxLevels *
-        (thisT()->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, CostKind) +
+        (thisT()->getCmpSelInstrCost(CmpOpcode, Ty, CondTy,
+                                     CmpInst::BAD_ICMP_PREDICATE, CostKind) +
          thisT()->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
-                                     CostKind));
+                                     CmpInst::BAD_ICMP_PREDICATE, CostKind));
     // The last min/max should be in vector registers and we counted it above.
     // So just need a single extractelement.
     return ShuffleCost + MinMaxCost +

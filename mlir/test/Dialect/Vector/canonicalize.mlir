@@ -160,20 +160,20 @@ func @extract_strided_fold_negative(%a: vector<4x4xf32>, %b: vector<8x16xf32>)
 
 // Case where we need to go through 2 level of insert element.
 // CHECK-LABEL: extract_strided_fold_insert
-//  CHECK-SAME: (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<1x4xf32>,
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<2x8xf32>, %[[ARG1:.*]]: vector<1x4xf32>,
 //  CHECK-NEXT:   %[[EXT:.*]] = vector.extract_strided_slice %[[ARG1]]
-//  CHECK-SAME:     {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
+//  CHECK-SAME:     {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]}
 //  CHECK-SAME:       : vector<1x4xf32> to vector<1x1xf32>
 //  CHECK-NEXT:   return %[[EXT]] : vector<1x1xf32>
-func @extract_strided_fold_insert(%a: vector<2x4xf32>, %b: vector<1x4xf32>,
+func @extract_strided_fold_insert(%a: vector<2x8xf32>, %b: vector<1x4xf32>,
                                   %c : vector<1x4xf32>) -> (vector<1x1xf32>) {
-  %0 = vector.insert_strided_slice %b, %a {offsets = [0, 0], strides = [1, 1]}
-    : vector<1x4xf32> into vector<2x4xf32>
+  %0 = vector.insert_strided_slice %b, %a {offsets = [0, 1], strides = [1, 1]}
+    : vector<1x4xf32> into vector<2x8xf32>
   %1 = vector.insert_strided_slice %c, %0 {offsets = [1, 0], strides = [1, 1]}
-    : vector<1x4xf32> into vector<2x4xf32>
+    : vector<1x4xf32> into vector<2x8xf32>
   %2 = vector.extract_strided_slice %1
       {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
-        : vector<2x4xf32> to vector<1x1xf32>
+        : vector<2x8xf32> to vector<1x1xf32>
   return %2 : vector<1x1xf32>
 }
 

@@ -641,6 +641,14 @@ foreach nodes = [[seteq, EQ_v2f64], [setne, NE_v2f64], [setlt, LT_v2f64],
 def : Pat<(v2i64 (nodes[0] (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
           (v2i64 (nodes[1] (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
 
+// Prototype i64x2.eq
+defm EQ_v2i64 :
+  SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
+         [(set (v2i64 V128:$dst),
+           (int_wasm_eq (v2i64 V128:$lhs), (v2i64 V128:$rhs))
+         )],
+         "i64x2.eq\t$dst, $lhs, $rhs", "i64x2.eq", 192>;
+
 
 //===----------------------------------------------------------------------===//
 // Bitwise operations
@@ -747,6 +755,23 @@ def : Pat<(select
           )>;
 } // foreach vec_t
 
+// Sign select
+multiclass SIMDSignSelect<ValueType vec_t, string vec, bits<32> simdop> {
+  defm SIGNSELECT_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins),
+           [(set (vec_t V128:$dst),
+             (vec_t (int_wasm_signselect
+               (vec_t V128:$v1), (vec_t V128:$v2), (vec_t V128:$c)
+             ))
+           )],
+           vec#".signselect\t$dst, $v1, $v2, $c", vec#".signselect", simdop>;
+}
+
+defm : SIMDSignSelect<v16i8, "i8x16", 125>;
+defm : SIMDSignSelect<v8i16, "i16x8", 126>;
+defm : SIMDSignSelect<v4i32, "i32x4", 127>;
+defm : SIMDSignSelect<v2i64, "i64x2", 148>;
+
 //===----------------------------------------------------------------------===//
 // Integer unary arithmetic
 //===----------------------------------------------------------------------===//
@@ -823,6 +848,7 @@ multiclass SIMDBitmask<ValueType vec_t, string vec, bits<32> simdop> {
 defm BITMASK : SIMDBitmask<v16i8, "i8x16", 100>;
 defm BITMASK : SIMDBitmask<v8i16, "i16x8", 132>;
 defm BITMASK : SIMDBitmask<v4i32, "i32x4", 164>;
+defm BITMASK : SIMDBitmask<v2i64, "i64x2", 196>;
 
 //===----------------------------------------------------------------------===//
 // Bit shifts
@@ -1098,6 +1124,15 @@ multiclass SIMDWiden<ValueType vec_t, string vec, ValueType arg_t, string arg,
 
 defm "" : SIMDWiden<v8i16, "i16x8", v16i8, "i8x16", 135>;
 defm "" : SIMDWiden<v4i32, "i32x4", v8i16, "i16x8", 167>;
+
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_low_signed,
+                      "i64x2.widen_low_i32x4_s", 199>;
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_high_signed,
+                      "i64x2.widen_high_i32x4_s", 200>;
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_low_unsigned,
+                      "i64x2.widen_low_i32x4_u", 201>;
+defm "" : SIMDConvert<v2i64, v4i32, int_wasm_widen_high_unsigned,
+                      "i64x2.widen_high_i32x4_u", 202>;
 
 // Narrowing operations
 multiclass SIMDNarrow<ValueType vec_t, string vec, ValueType arg_t, string arg,

@@ -1,6 +1,9 @@
 ; RUN: opt -debugify-each -O3 -S -o /dev/null < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
+; RUN: opt -disable-output -debugify-each -passes='default<O3>' %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
+; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 
 ; RUN: opt -enable-debugify -debugify-each -O3 -S -o /dev/null < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS

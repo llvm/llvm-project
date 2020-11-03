@@ -1421,9 +1421,9 @@
 # CHECK-NEXT:  1      3     1.00                        smladeq	r2, r3, r5, r8
 # CHECK-NEXT:  1      3     1.00                        smladxhi	r2, r3, r5, r8
 # CHECK-NEXT:  2      4     2.00                        smlal	r2, r3, r5, r8
-# CHECK-NEXT:  2      4     2.00                        smlals	r2, r3, r5, r8
+# CHECK-NEXT:  4      5     2.00                        smlals	r2, r3, r5, r8
 # CHECK-NEXT:  2      4     2.00                        smlaleq	r2, r3, r5, r8
-# CHECK-NEXT:  2      4     2.00                        smlalshi	r2, r3, r5, r8
+# CHECK-NEXT:  4      5     2.00                        smlalshi	r2, r3, r5, r8
 # CHECK-NEXT:  2      4     2.00                        smlalbb	r3, r1, r9, r0
 # CHECK-NEXT:  2      4     2.00                        smlalbt	r5, r6, r4, r1
 # CHECK-NEXT:  2      4     2.00                        smlaltb	r4, r2, r3, r2
@@ -1634,12 +1634,12 @@
 # CHECK-NEXT:  2      4     2.00                        umaallt	r3, r4, r5, r6
 # CHECK-NEXT:  2      4     2.00                        umlal	r2, r4, r6, r8
 # CHECK-NEXT:  2      4     2.00                        umlalgt	r6, r1, r2, r6
-# CHECK-NEXT:  2      4     2.00                        umlals	r2, r9, r2, r3
-# CHECK-NEXT:  2      4     2.00                        umlalseq	r3, r5, r1, r2
+# CHECK-NEXT:  4      5     2.00                        umlals	r2, r9, r2, r3
+# CHECK-NEXT:  4      5     2.00                        umlalseq	r3, r5, r1, r2
 # CHECK-NEXT:  2      4     2.00                        umull	r2, r4, r6, r8
 # CHECK-NEXT:  2      4     2.00                        umullgt	r6, r1, r2, r6
-# CHECK-NEXT:  2      4     2.00                        umulls	r2, r9, r2, r3
-# CHECK-NEXT:  2      4     2.00                        umullseq	r3, r5, r1, r2
+# CHECK-NEXT:  4      5     2.00                        umulls	r2, r9, r2, r3
+# CHECK-NEXT:  4      5     2.00                        umullseq	r3, r5, r1, r2
 # CHECK-NEXT:  1      2     1.00                        uqadd16	r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                        uqadd16gt	r4, r7, r9
 # CHECK-NEXT:  1      2     1.00                        uqadd8	r3, r4, r8
@@ -1719,7 +1719,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 8.00   133.00 133.00 53.00  522.00 12.00   -      -
+# CHECK-NEXT: 8.00   139.00 139.00 53.00  522.00 12.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -2285,9 +2285,9 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     smladeq	r2, r3, r5, r8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     smladxhi	r2, r3, r5, r8
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlal	r2, r3, r5, r8
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlals	r2, r3, r5, r8
+# CHECK-NEXT:  -     1.00   1.00    -     2.00    -      -      -     smlals	r2, r3, r5, r8
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlaleq	r2, r3, r5, r8
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlalshi	r2, r3, r5, r8
+# CHECK-NEXT:  -     1.00   1.00    -     2.00    -      -      -     smlalshi	r2, r3, r5, r8
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlalbb	r3, r1, r9, r0
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlalbt	r5, r6, r4, r1
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     smlaltb	r4, r2, r3, r2
@@ -2498,12 +2498,12 @@
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umaallt	r3, r4, r5, r6
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umlal	r2, r4, r6, r8
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umlalgt	r6, r1, r2, r6
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umlals	r2, r9, r2, r3
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umlalseq	r3, r5, r1, r2
+# CHECK-NEXT:  -     1.00   1.00    -     2.00    -      -      -     umlals	r2, r9, r2, r3
+# CHECK-NEXT:  -     1.00   1.00    -     2.00    -      -      -     umlalseq	r3, r5, r1, r2
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umull	r2, r4, r6, r8
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umullgt	r6, r1, r2, r6
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umulls	r2, r9, r2, r3
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -     umullseq	r3, r5, r1, r2
+# CHECK-NEXT:  -     1.00   1.00    -     2.00    -      -      -     umulls	r2, r9, r2, r3
+# CHECK-NEXT:  -     1.00   1.00    -     2.00    -      -      -     umullseq	r3, r5, r1, r2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uqadd16	r1, r2, r3
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uqadd16gt	r4, r7, r9
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uqadd8	r3, r4, r8

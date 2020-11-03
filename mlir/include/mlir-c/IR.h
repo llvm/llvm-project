@@ -54,11 +54,14 @@ DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
 
-DEFINE_C_API_STRUCT(MlirValue, const void);
 DEFINE_C_API_STRUCT(MlirAttribute, const void);
-DEFINE_C_API_STRUCT(MlirType, const void);
+DEFINE_C_API_STRUCT(MlirIdentifier, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
+DEFINE_C_API_STRUCT(MlirType, const void);
+DEFINE_C_API_STRUCT(MlirValue, const void);
+
+#undef DEFINE_C_API_STRUCT
 
 /** Named MLIR attribute.
  *
@@ -285,6 +288,17 @@ static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
  * not perform deep comparison. */
 int mlirOperationEqual(MlirOperation op, MlirOperation other);
 
+/** Gets the name of the operation as an identifier. */
+MlirIdentifier mlirOperationGetName(MlirOperation op);
+
+/** Gets the block that owns this operation, returning null if the operation is
+ * not owned. */
+MlirBlock mlirOperationGetBlock(MlirOperation op);
+
+/** Gets the operation that owns this operation, returning null if the operation
+ * is not owned. */
+MlirOperation mlirOperationGetParentOperation(MlirOperation op);
+
 /** Returns the number of regions attached to the given operation. */
 intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
@@ -407,6 +421,9 @@ MlirBlock mlirBlockGetNextInRegion(MlirBlock block);
 
 /** Returns the first operation in the block. */
 MlirOperation mlirBlockGetFirstOperation(MlirBlock block);
+
+/** Returns the terminator operation in the block or null if no terminator. */
+MlirOperation mlirBlockGetTerminator(MlirBlock block);
 
 /** Takes an operation owned by the caller and appends it to the block. */
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);
@@ -540,6 +557,19 @@ void mlirAttributeDump(MlirAttribute attr);
 
 /** Associates an attribute with the name. Takes ownership of neither. */
 MlirNamedAttribute mlirNamedAttributeGet(const char *name, MlirAttribute attr);
+
+/*============================================================================*/
+/* Identifier API.                                                            */
+/*============================================================================*/
+
+/** Gets an identifier with the given string value. */
+MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str);
+
+/** Checks whether two identifiers are the same. */
+int mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other);
+
+/** Gets the string value of the identifier. */
+MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 
 #ifdef __cplusplus
 }

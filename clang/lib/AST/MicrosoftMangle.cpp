@@ -2260,10 +2260,20 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       return;
     }
     Out << '@';
+  } else if (IsInLambda && D && isa<CXXConversionDecl>(D)) {
+    // The only lambda conversion operators are to function pointers, which
+    // can differ by their calling convention and are typically deduced.  So
+    // we make sure that this type gets mangled properly.
+    mangleType(T->getReturnType(), Range, QMM_Result);
   } else {
     QualType ResultType = T->getReturnType();
-    if (const auto *AT =
-            dyn_cast_or_null<AutoType>(ResultType->getContainedAutoType())) {
+    if (IsInLambda && isa<CXXConversionDecl>(D)) {
+      // The only lambda conversion operators are to function pointers, which
+      // can differ by their calling convention and are typically deduced.  So
+      // we make sure that this type gets mangled properly.
+      mangleType(ResultType, Range, QMM_Result);
+    } else if (const auto *AT = dyn_cast_or_null<AutoType>(
+                   ResultType->getContainedAutoType())) {
       Out << '?';
       mangleQualifiers(ResultType.getLocalQualifiers(), /*IsMember=*/false);
       Out << '?';

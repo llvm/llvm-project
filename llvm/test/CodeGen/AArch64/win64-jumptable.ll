@@ -44,6 +44,8 @@ declare void @g(i32, i32)
 ; CHECK:    .word .LBB0_3-.Ltmp0
 ; CHECK:    .word .LBB0_4-.Ltmp0
 ; CHECK:    .word .LBB0_5-.Ltmp0
+; CHECK:    .seh_handlerdata
+; CHECK:    .text
 ; CHECK:    .seh_endproc
 
 ; Check that we can emit an object file with correct unwind info.

@@ -305,6 +305,7 @@ bool syntax::List::classof(const syntax::Node *N) {
   case syntax::NodeKind::NestedNameSpecifier:
   case syntax::NodeKind::CallArguments:
   case syntax::NodeKind::ParameterDeclarationList:
+  case syntax::NodeKind::DeclaratorList:
     return true;
   default:
     return false;
@@ -405,6 +406,7 @@ clang::tok::TokenKind syntax::List::getDelimiterTokenKind() const {
     return clang::tok::coloncolon;
   case NodeKind::CallArguments:
   case NodeKind::ParameterDeclarationList:
+  case NodeKind::DeclaratorList:
     return clang::tok::comma;
   default:
     llvm_unreachable("This is not a subclass of List, thus "
@@ -418,6 +420,7 @@ syntax::List::TerminationKind syntax::List::getTerminationKind() const {
     return TerminationKind::Terminated;
   case NodeKind::CallArguments:
   case NodeKind::ParameterDeclarationList:
+  case NodeKind::DeclaratorList:
     return TerminationKind::Separated;
   default:
     llvm_unreachable("This is not a subclass of List, thus "
@@ -432,6 +435,8 @@ bool syntax::List::canBeEmpty() const {
   case NodeKind::CallArguments:
     return true;
   case NodeKind::ParameterDeclarationList:
+    return true;
+  case NodeKind::DeclaratorList:
     return true;
   default:
     llvm_unreachable("This is not a subclass of List, thus canBeEmpty() "

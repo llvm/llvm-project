@@ -114,7 +114,7 @@
 // CHECK-LD-STATIC-GOMP: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-STATIC-GOMP: "-Bstatic" "-lgomp" "-Bdynamic"
 // CHECK-LD-STATIC-GOMP-RT: "-lrt"
-// CHECK-LD-STATIC-NO-GOMP-RT-NOT: "-lrt"
+// CHECK-LD-STATIC-GOMP-NO-RT-NOT: "-lrt"
 //
 // CHECK-LD-STATIC-IOMP5: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-STATIC-IOMP5: "-Bstatic" "-liomp5" "-Bdynamic"

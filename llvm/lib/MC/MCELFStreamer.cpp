@@ -225,17 +225,33 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_Global:
+    // For `.weak x; .global x`, GNU as sets the binding to STB_WEAK while we
+    // traditionally set the binding to STB_GLOBAL. This is error-prone, so we
+    // error on such cases. Note, we also disallow changed binding from .local.
+    if (Symbol->isBindingSet() && Symbol->getBinding() != ELF::STB_GLOBAL)
+      getContext().reportError(getStartTokLoc(),
+                               Symbol->getName() +
+                                   " changed binding to STB_GLOBAL");
     Symbol->setBinding(ELF::STB_GLOBAL);
     Symbol->setExternal(true);
     break;
 
   case MCSA_WeakReference:
   case MCSA_Weak:
+    // For `.global x; .weak x`, both MC and GNU as set the binding to STB_WEAK.
+    // We emit a warning for now but may switch to an error in the future.
+    if (Symbol->isBindingSet() && Symbol->getBinding() != ELF::STB_WEAK)
+      getContext().reportWarning(
+          getStartTokLoc(), Symbol->getName() + " changed binding to STB_WEAK");
     Symbol->setBinding(ELF::STB_WEAK);
     Symbol->setExternal(true);
     break;
 
   case MCSA_Local:
+    if (Symbol->isBindingSet() && Symbol->getBinding() != ELF::STB_LOCAL)
+      getContext().reportError(getStartTokLoc(),
+                               Symbol->getName() +
+                                   " changed binding to STB_LOCAL");
     Symbol->setBinding(ELF::STB_LOCAL);
     Symbol->setExternal(false);
     break;

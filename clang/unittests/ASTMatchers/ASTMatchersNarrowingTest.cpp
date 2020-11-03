@@ -142,6 +142,22 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_NotMatchesDifferentInstances) {
   EXPECT_TRUE(notMatches(input, binaryOperator(isExpandedFromMacro("FOUR"))));
 }
 
+TEST(IsExpandedFromMacro, IsExpandedFromMacro_MatchesDecls) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) int i = a;
+    void Test() { MY_MACRO(4); }
+  )cc";
+  EXPECT_TRUE(matches(input, varDecl(isExpandedFromMacro("MY_MACRO"))));
+}
+
+TEST(IsExpandedFromMacro, IsExpandedFromMacro_MatchesTypelocs) {
+  StringRef input = R"cc(
+#define MY_TYPE int
+    void Test() { MY_TYPE i = 4; }
+  )cc";
+  EXPECT_TRUE(matches(input, typeLoc(isExpandedFromMacro("MY_TYPE"))));
+}
+
 TEST_P(ASTMatchersTest, AllOf) {
   const char Program[] = "struct T { };"
                          "int f(int, struct T*, int, int);"
@@ -1611,6 +1627,26 @@ TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
   EXPECT_TRUE(
       notMatches("class X { public: X(int, int); }; void x() { X x(0, 0); }",
                  Constructor1Arg));
+}
+
+TEST(ASTMatchersTest, ArgumentCountIs_CXXUnresolvedConstructExpr) {
+  const auto *Code =
+      "template <typename T> struct S{}; template <typename T> void "
+      "x() { auto s = S<T>(); }";
+
+  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(argumentCountIs(0))));
+  EXPECT_TRUE(notMatches(Code, cxxUnresolvedConstructExpr(argumentCountIs(1))));
+}
+
+TEST(ASTMatchersTest, HasArgument_CXXUnresolvedConstructExpr) {
+  const auto *Code =
+      "template <typename T> struct S{ S(int){} }; template <typename "
+      "T> void x() { int y; auto s = S<T>(y); }";
+  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(hasArgument(
+                                0, declRefExpr(to(varDecl(hasName("y"))))))));
+  EXPECT_TRUE(
+      notMatches(Code, cxxUnresolvedConstructExpr(hasArgument(
+                           0, declRefExpr(to(varDecl(hasName("x"))))))));
 }
 
 TEST_P(ASTMatchersTest, IsListInitialization) {

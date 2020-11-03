@@ -119,7 +119,7 @@ public:
   // Helper for spilling all live virtual registers currently unified under preg
   // that interfere with the most recently queried lvr.  Return true if spilling
   // was successful, and append any new spilled/split intervals to splitLVRs.
-  bool spillInterferences(LiveInterval &VirtReg, Register PhysReg,
+  bool spillInterferences(LiveInterval &VirtReg, MCRegister PhysReg,
                           SmallVectorImpl<Register> &SplitVRegs);
 
   static char ID;
@@ -206,7 +206,7 @@ void RABasic::releaseMemory() {
 // Spill or split all live virtual registers currently unified under PhysReg
 // that interfere with VirtReg. The newly spilled or split live intervals are
 // returned by appending them to SplitVRegs.
-bool RABasic::spillInterferences(LiveInterval &VirtReg, Register PhysReg,
+bool RABasic::spillInterferences(LiveInterval &VirtReg, MCRegister PhysReg,
                                  SmallVectorImpl<Register> &SplitVRegs) {
   // Record each interference and determine if all are spillable before mutating
   // either the union or live intervals.

@@ -8,6 +8,8 @@
 
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -291,9 +293,38 @@ TEST(ELFObjectFileTest, MachineTestForCSKY) {
     checkFormatAndArch(D, Formats[I++], Triple::csky);
 }
 
-
-
 // ELF relative relocation type test.
 TEST(ELFObjectFileTest, RelativeRelocationTypeTest) {
   EXPECT_EQ(ELF::R_CKCORE_RELATIVE, getELFRelativeRelocationType(ELF::EM_CSKY));
+}
+
+template <class ELFT>
+static Expected<ELFObjectFile<ELFT>> toBinary(SmallVectorImpl<char> &Storage,
+                                              StringRef Yaml) {
+  raw_svector_ostream OS(Storage);
+  yaml::Input YIn(Yaml);
+  if (!yaml::convertYAML(YIn, OS, [](const Twine &Msg) {}))
+    return createStringError(std::errc::invalid_argument,
+                             "unable to convert YAML");
+  return ELFObjectFile<ELFT>::create(MemoryBufferRef(OS.str(), "dummyELF"));
+}
+
+// Check we are able to create an ELFObjectFile even when the content of the
+// SHT_SYMTAB_SHNDX section can't be read properly.
+TEST(ELFObjectFileTest, InvalidSymtabShndxTest) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ExpectedFile = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0 ]
+    ShSize: 0xFFFFFFFF
+)");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
 }

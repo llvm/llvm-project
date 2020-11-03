@@ -503,20 +503,19 @@ private:
 };
 
 // Determine the symbol ID for a Sema code completion result, if possible.
-llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R,
-                                     const SourceManager &SM) {
+SymbolID getSymbolID(const CodeCompletionResult &R, const SourceManager &SM) {
   switch (R.Kind) {
   case CodeCompletionResult::RK_Declaration:
   case CodeCompletionResult::RK_Pattern: {
     // Computing USR caches linkage, which may change after code completion.
     if (hasUnstableLinkage(R.Declaration))
-      return llvm::None;
+      return {};
     return clang::clangd::getSymbolID(R.Declaration);
   }
   case CodeCompletionResult::RK_Macro:
     return clang::clangd::getSymbolID(R.Macro->getName(), R.MacroDefInfo, SM);
   case CodeCompletionResult::RK_Keyword:
-    return None;
+    return {};
   }
   llvm_unreachable("unknown CodeCompletionResult kind");
 }
@@ -1586,7 +1585,7 @@ private:
         [&](const CodeCompletionResult &SemaResult) -> const Symbol * {
       if (auto SymID =
               getSymbolID(SemaResult, Recorder->CCSema->getSourceManager())) {
-        auto I = IndexResults.find(*SymID);
+        auto I = IndexResults.find(SymID);
         if (I != IndexResults.end()) {
           UsedIndexResults.insert(&*I);
           return &*I;
@@ -1644,19 +1643,10 @@ private:
       return Scores;
 
     case RM::DecisionForest:
-      Scores.Quality = 0;
-      Scores.Relevance = 0;
-      // Exponentiating DecisionForest prediction makes the score of each tree a
-      // multiplciative boost (like NameMatch). This allows us to weigh the
-      // prediciton score and NameMatch appropriately.
-      Scores.ExcludingName = pow(Opts.DecisionForestBase,
-                                 evaluateDecisionForest(Quality, Relevance));
-      // NeedsFixIts is not part of the DecisionForest as generating training
-      // data that needs fixits is not-feasible.
-      if (Relevance.NeedsFixIts)
-        Scores.ExcludingName *= 0.5;
-      // NameMatch should be a multiplier on total score to support rescoring.
-      Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
+      DecisionForestScores DFScores = Opts.DecisionForestScorer(
+          Quality, Relevance, Opts.DecisionForestBase);
+      Scores.ExcludingName = DFScores.ExcludingName;
+      Scores.Total = DFScores.Total;
       return Scores;
     }
     llvm_unreachable("Unhandled CodeCompletion ranking model.");

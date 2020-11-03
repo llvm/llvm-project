@@ -1071,9 +1071,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue RHS = N->getOperand(1);
     APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
     APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 5);
-    if ((SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI)) ||
-        (SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)))
-      return SDValue();
+    if (SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI) ||
+        SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)) {
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
+      return SDValue(N, 0);
+    }
     break;
   }
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
@@ -1083,9 +1086,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // conversion is unnecessary and can be replaced with an ANY_EXTEND
     // of the FMV_W_X_RV64 operand.
     if (Op0->getOpcode() == RISCVISD::FMV_W_X_RV64) {
-      SDValue AExtOp =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0.getOperand(0));
-      return DCI.CombineTo(N, AExtOp);
+      assert(Op0.getOperand(0).getValueType() == MVT::i64 &&
+             "Unexpected value type!");
+      return Op0.getOperand(0);
     }
 
     // This is a target-specific version of a DAGCombine performed in
@@ -1098,15 +1101,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue NewFMV = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64,
                                  Op0.getOperand(0));
     APInt SignBit = APInt::getSignMask(32).sext(64);
-    if (Op0.getOpcode() == ISD::FNEG) {
-      return DCI.CombineTo(N,
-                           DAG.getNode(ISD::XOR, DL, MVT::i64, NewFMV,
-                                       DAG.getConstant(SignBit, DL, MVT::i64)));
-    }
+    if (Op0.getOpcode() == ISD::FNEG)
+      return DAG.getNode(ISD::XOR, DL, MVT::i64, NewFMV,
+                         DAG.getConstant(SignBit, DL, MVT::i64));
+
     assert(Op0.getOpcode() == ISD::FABS);
-    return DCI.CombineTo(N,
-                         DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
-                                     DAG.getConstant(~SignBit, DL, MVT::i64)));
+    return DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
+                       DAG.getConstant(~SignBit, DL, MVT::i64));
   }
   }
 
@@ -2673,7 +2674,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // official names. However, other frontends like `rustc` do not. This allows
   // users of these frontends to use the ABI names for registers in LLVM-style
   // register constraints.
-  Register XRegFromAlias = StringSwitch<Register>(Constraint.lower())
+  unsigned XRegFromAlias = StringSwitch<unsigned>(Constraint.lower())
                                .Case("{zero}", RISCV::X0)
                                .Case("{ra}", RISCV::X1)
                                .Case("{sp}", RISCV::X2)
@@ -2718,45 +2719,49 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // The second case is the ABI name of the register, so that frontends can also
   // use the ABI names in register constraint lists.
   if (Subtarget.hasStdExtF() || Subtarget.hasStdExtD()) {
-    std::pair<Register, Register> FReg =
-        StringSwitch<std::pair<Register, Register>>(Constraint.lower())
-            .Cases("{f0}", "{ft0}", {RISCV::F0_F, RISCV::F0_D})
-            .Cases("{f1}", "{ft1}", {RISCV::F1_F, RISCV::F1_D})
-            .Cases("{f2}", "{ft2}", {RISCV::F2_F, RISCV::F2_D})
-            .Cases("{f3}", "{ft3}", {RISCV::F3_F, RISCV::F3_D})
-            .Cases("{f4}", "{ft4}", {RISCV::F4_F, RISCV::F4_D})
-            .Cases("{f5}", "{ft5}", {RISCV::F5_F, RISCV::F5_D})
-            .Cases("{f6}", "{ft6}", {RISCV::F6_F, RISCV::F6_D})
-            .Cases("{f7}", "{ft7}", {RISCV::F7_F, RISCV::F7_D})
-            .Cases("{f8}", "{fs0}", {RISCV::F8_F, RISCV::F8_D})
-            .Cases("{f9}", "{fs1}", {RISCV::F9_F, RISCV::F9_D})
-            .Cases("{f10}", "{fa0}", {RISCV::F10_F, RISCV::F10_D})
-            .Cases("{f11}", "{fa1}", {RISCV::F11_F, RISCV::F11_D})
-            .Cases("{f12}", "{fa2}", {RISCV::F12_F, RISCV::F12_D})
-            .Cases("{f13}", "{fa3}", {RISCV::F13_F, RISCV::F13_D})
-            .Cases("{f14}", "{fa4}", {RISCV::F14_F, RISCV::F14_D})
-            .Cases("{f15}", "{fa5}", {RISCV::F15_F, RISCV::F15_D})
-            .Cases("{f16}", "{fa6}", {RISCV::F16_F, RISCV::F16_D})
-            .Cases("{f17}", "{fa7}", {RISCV::F17_F, RISCV::F17_D})
-            .Cases("{f18}", "{fs2}", {RISCV::F18_F, RISCV::F18_D})
-            .Cases("{f19}", "{fs3}", {RISCV::F19_F, RISCV::F19_D})
-            .Cases("{f20}", "{fs4}", {RISCV::F20_F, RISCV::F20_D})
-            .Cases("{f21}", "{fs5}", {RISCV::F21_F, RISCV::F21_D})
-            .Cases("{f22}", "{fs6}", {RISCV::F22_F, RISCV::F22_D})
-            .Cases("{f23}", "{fs7}", {RISCV::F23_F, RISCV::F23_D})
-            .Cases("{f24}", "{fs8}", {RISCV::F24_F, RISCV::F24_D})
-            .Cases("{f25}", "{fs9}", {RISCV::F25_F, RISCV::F25_D})
-            .Cases("{f26}", "{fs10}", {RISCV::F26_F, RISCV::F26_D})
-            .Cases("{f27}", "{fs11}", {RISCV::F27_F, RISCV::F27_D})
-            .Cases("{f28}", "{ft8}", {RISCV::F28_F, RISCV::F28_D})
-            .Cases("{f29}", "{ft9}", {RISCV::F29_F, RISCV::F29_D})
-            .Cases("{f30}", "{ft10}", {RISCV::F30_F, RISCV::F30_D})
-            .Cases("{f31}", "{ft11}", {RISCV::F31_F, RISCV::F31_D})
-            .Default({RISCV::NoRegister, RISCV::NoRegister});
-    if (FReg.first != RISCV::NoRegister)
-      return Subtarget.hasStdExtD()
-                 ? std::make_pair(FReg.second, &RISCV::FPR64RegClass)
-                 : std::make_pair(FReg.first, &RISCV::FPR32RegClass);
+    unsigned FReg = StringSwitch<unsigned>(Constraint.lower())
+                        .Cases("{f0}", "{ft0}", RISCV::F0_F)
+                        .Cases("{f1}", "{ft1}", RISCV::F1_F)
+                        .Cases("{f2}", "{ft2}", RISCV::F2_F)
+                        .Cases("{f3}", "{ft3}", RISCV::F3_F)
+                        .Cases("{f4}", "{ft4}", RISCV::F4_F)
+                        .Cases("{f5}", "{ft5}", RISCV::F5_F)
+                        .Cases("{f6}", "{ft6}", RISCV::F6_F)
+                        .Cases("{f7}", "{ft7}", RISCV::F7_F)
+                        .Cases("{f8}", "{fs0}", RISCV::F8_F)
+                        .Cases("{f9}", "{fs1}", RISCV::F9_F)
+                        .Cases("{f10}", "{fa0}", RISCV::F10_F)
+                        .Cases("{f11}", "{fa1}", RISCV::F11_F)
+                        .Cases("{f12}", "{fa2}", RISCV::F12_F)
+                        .Cases("{f13}", "{fa3}", RISCV::F13_F)
+                        .Cases("{f14}", "{fa4}", RISCV::F14_F)
+                        .Cases("{f15}", "{fa5}", RISCV::F15_F)
+                        .Cases("{f16}", "{fa6}", RISCV::F16_F)
+                        .Cases("{f17}", "{fa7}", RISCV::F17_F)
+                        .Cases("{f18}", "{fs2}", RISCV::F18_F)
+                        .Cases("{f19}", "{fs3}", RISCV::F19_F)
+                        .Cases("{f20}", "{fs4}", RISCV::F20_F)
+                        .Cases("{f21}", "{fs5}", RISCV::F21_F)
+                        .Cases("{f22}", "{fs6}", RISCV::F22_F)
+                        .Cases("{f23}", "{fs7}", RISCV::F23_F)
+                        .Cases("{f24}", "{fs8}", RISCV::F24_F)
+                        .Cases("{f25}", "{fs9}", RISCV::F25_F)
+                        .Cases("{f26}", "{fs10}", RISCV::F26_F)
+                        .Cases("{f27}", "{fs11}", RISCV::F27_F)
+                        .Cases("{f28}", "{ft8}", RISCV::F28_F)
+                        .Cases("{f29}", "{ft9}", RISCV::F29_F)
+                        .Cases("{f30}", "{ft10}", RISCV::F30_F)
+                        .Cases("{f31}", "{ft11}", RISCV::F31_F)
+                        .Default(RISCV::NoRegister);
+    if (FReg != RISCV::NoRegister) {
+      assert(RISCV::F0_F <= FReg && FReg <= RISCV::F31_F && "Unknown fp-reg");
+      if (Subtarget.hasStdExtD()) {
+        unsigned RegNo = FReg - RISCV::F0_F;
+        unsigned DReg = RISCV::F0_D + RegNo;
+        return std::make_pair(DReg, &RISCV::FPR64RegClass);
+      }
+      return std::make_pair(FReg, &RISCV::FPR32RegClass);
+    }
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);

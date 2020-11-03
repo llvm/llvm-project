@@ -452,6 +452,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 let DecoderNamespace = "MipsFP64" in {
   let AdditionalPredicates = [NotInMicroMips] in {
+    def FADD_PS64   : ADDS_FT<"add.ps", FGR64Opnd, II_ADD_PS, 0>,
+                      ADDS_FM<0x0, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def FMUL_PS64   : ADDS_FT<"mul.ps", FGR64Opnd, II_MUL_PS, 0>,
+                      ADDS_FM<0x2, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
     def PLL_PS64    : ADDS_FT<"pll.ps", FGR64Opnd, II_CVT, 0>,
                       ADDS_FM<0x2C, 22>,
                       ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
@@ -463,6 +469,9 @@ let DecoderNamespace = "MipsFP64" in {
                       ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
     def PUU_PS64    : ADDS_FT<"puu.ps", FGR64Opnd, II_CVT, 0>,
                       ADDS_FM<0x2F, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def FSUB_PS64   : ADDS_FT<"sub.ps", FGR64Opnd, II_SUB_PS, 0>,
+                      ADDS_FM<0x1, 22>,
                       ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
 
     def CVT_S_PU64  : ABSS_FT<"cvt.s.pu", FGR32Opnd, FGR64Opnd, II_CVT>,

@@ -1428,10 +1428,10 @@ Consider this example when compiled with ``-frounding-math``
 
    .. code-block:: console
 
-constexpr float func_01(float x, float y) {
-  return x + y;
-}
-float V1 = func_01(1.0F, 0x0.000001p0F);
+     constexpr float func_01(float x, float y) {
+       return x + y;
+     }
+     float V1 = func_01(1.0F, 0x0.000001p0F);
 
 The C++ rule is that initializers for static storage duration variables are
 first evaluated during translation (therefore, in the default rounding mode),
@@ -2552,8 +2552,7 @@ Differences between ``*94`` and ``*99`` modes:
    This can be overridden for individual functions with the ``__gnu_inline__``
    attribute.
 -  The scope of names defined inside a ``for``, ``if``, ``switch``, ``while``,
-  or ``do`` statement is different. (example: ``if ((struct x {int x;}*)0)
-  {}``.)
+   or ``do`` statement is different. (example: ``if ((struct x {int x;}*)0) {}``.)
 -  ``__STDC_VERSION__`` is not defined in ``*89`` modes.
 -  ``inline`` is not recognized as a keyword in ``c89`` mode.
 -  ``restrict`` is not recognized as a keyword in ``*89`` modes.

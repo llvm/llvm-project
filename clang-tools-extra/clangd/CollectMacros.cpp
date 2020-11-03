@@ -26,7 +26,7 @@ void CollectMainFileMacros::add(const Token &MacroNameTok,
   auto Range = halfOpenToRange(
       SM, CharSourceRange::getCharRange(Loc, MacroNameTok.getEndLoc()));
   if (auto SID = getSymbolID(Name, MI, SM))
-    Out.MacroRefs[*SID].push_back(Range);
+    Out.MacroRefs[SID].push_back(Range);
   else
     Out.UnknownMacros.push_back(Range);
 }

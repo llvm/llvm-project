@@ -462,7 +462,7 @@ func @should_not_fuse_if_inst_in_loop_nest() {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.if #set0(%{{.*}}) {
+  // CHECK-NEXT:   affine.if #set(%{{.*}}) {
   // CHECK-NEXT:   }
   // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT: }

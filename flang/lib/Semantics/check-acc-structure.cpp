@@ -44,82 +44,18 @@ static constexpr inline AccClauseSet routineOnlyAllowedAfterDeviceTypeClauses{
     llvm::acc::Clause::ACCC_bind, llvm::acc::Clause::ACCC_gang,
     llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_worker};
 
-class NoBranchingEnforce {
-public:
-  NoBranchingEnforce(SemanticsContext &context,
-      parser::CharBlock sourcePosition, llvm::acc::Directive directive)
-      : context_{context}, sourcePosition_{sourcePosition}, currentDirective_{
-                                                                directive} {}
-  template <typename T> bool Pre(const T &) { return true; }
-  template <typename T> void Post(const T &) {}
-
-  template <typename T> bool Pre(const parser::Statement<T> &statement) {
-    currentStatementSourcePosition_ = statement.source;
+bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
+  if (GetContext().directive == llvm::acc::ACCD_enter_data ||
+      GetContext().directive == llvm::acc::ACCD_exit_data) {
+    context_.Say(GetContext().clauseSource,
+        "Modifier is not allowed for the %s clause "
+        "on the %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(getClauseName(clause).str()),
+        ContextDirectiveAsFortran());
     return true;
   }
-
-  void Post(const parser::ReturnStmt &) { EmitBranchOutError("RETURN"); }
-  void Post(const parser::ExitStmt &exitStmt) {
-    if (const auto &exitName{exitStmt.v}) {
-      CheckConstructNameBranching("EXIT", exitName.value());
-    }
-  }
-  void Post(const parser::StopStmt &) { EmitBranchOutError("STOP"); }
-
-private:
-  parser::MessageFormattedText GetEnclosingMsg() const {
-    return {"Enclosing %s construct"_en_US,
-        parser::ToUpperCaseLetters(
-            llvm::acc::getOpenACCDirectiveName(currentDirective_).str())};
-  }
-
-  void EmitBranchOutError(const char *stmt) const {
-    context_
-        .Say(currentStatementSourcePosition_,
-            "%s statement is not allowed in a %s construct"_err_en_US, stmt,
-            parser::ToUpperCaseLetters(
-                llvm::acc::getOpenACCDirectiveName(currentDirective_).str()))
-        .Attach(sourcePosition_, GetEnclosingMsg());
-  }
-
-  void EmitBranchOutErrorWithName(
-      const char *stmt, const parser::Name &toName) const {
-    const std::string branchingToName{toName.ToString()};
-    const auto upperCaseConstructName{parser::ToUpperCaseLetters(
-        llvm::acc::getOpenACCDirectiveName(currentDirective_).str())};
-    context_
-        .Say(currentStatementSourcePosition_,
-            "%s to construct '%s' outside of %s construct is not allowed"_err_en_US,
-            stmt, branchingToName, upperCaseConstructName)
-        .Attach(sourcePosition_, GetEnclosingMsg());
-  }
-
-  // Current semantic checker is not following OpenACC constructs as they are
-  // not Fortran constructs. Hence the ConstructStack doesn't capture OpenACC
-  // constructs. Apply an inverse way to figure out if a construct-name is
-  // branching out of an OpenACC construct. The control flow goes out of an
-  // OpenACC construct, if a construct-name from statement is found in
-  // ConstructStack.
-  void CheckConstructNameBranching(
-      const char *stmt, const parser::Name &stmtName) {
-    const ConstructStack &stack{context_.constructStack()};
-    for (auto iter{stack.cend()}; iter-- != stack.cbegin();) {
-      const ConstructNode &construct{*iter};
-      const auto &constructName{MaybeGetNodeName(construct)};
-      if (constructName) {
-        if (stmtName.source == constructName->source) {
-          EmitBranchOutErrorWithName(stmt, stmtName);
-          return;
-        }
-      }
-    }
-  }
-
-  SemanticsContext &context_;
-  parser::CharBlock currentStatementSourcePosition_;
-  parser::CharBlock sourcePosition_;
-  llvm::acc::Directive currentDirective_;
-};
+  return false;
+}
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
   SetContextClause(x);
@@ -171,13 +107,6 @@ void AccStructureChecker::Leave(const parser::OpenACCBlockConstruct &x) {
     break;
   }
   dirContext_.pop_back();
-}
-
-void AccStructureChecker::CheckNoBranching(const parser::Block &block,
-    const llvm::acc::Directive directive,
-    const parser::CharBlock &directiveSource) const {
-  NoBranchingEnforce noBranchingEnforce{context_, directiveSource, directive};
-  parser::Walk(block, noBranchingEnforce);
 }
 
 void AccStructureChecker::Enter(
@@ -375,6 +304,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyin &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
+    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyin))
+      return;
     if (modifier->v != parser::AccDataModifier::Modifier::ReadOnly) {
       context_.Say(GetContext().clauseSource,
           "Only the READONLY modifier is allowed for the %s clause "
@@ -392,6 +323,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
+    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyout))
+      return;
     if (modifier->v != parser::AccDataModifier::Modifier::Zero) {
       context_.Say(GetContext().clauseSource,
           "Only the ZERO modifier is allowed for the %s clause "

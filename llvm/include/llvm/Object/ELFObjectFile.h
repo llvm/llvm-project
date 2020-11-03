@@ -249,14 +249,14 @@ public:
 private:
   ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
                 const Elf_Shdr *DotDynSymSec, const Elf_Shdr *DotSymtabSec,
-                ArrayRef<Elf_Word> ShndxTable);
+                const Elf_Shdr *DotSymtabShndxSec);
 
 protected:
   ELFFile<ELFT> EF;
 
   const Elf_Shdr *DotDynSymSec = nullptr; // Dynamic symbol table section.
   const Elf_Shdr *DotSymtabSec = nullptr; // Symbol table section.
-  ArrayRef<Elf_Word> ShndxTable;
+  const Elf_Shdr *DotSymtabShndxSec = nullptr; // SHT_SYMTAB_SHNDX section.
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
@@ -538,6 +538,16 @@ ELFObjectFile<ELFT>::getSymbolAddress(DataRefImpl Symb) const {
     return SymTabOrErr.takeError();
 
   if (EF.getHeader().e_type == ELF::ET_REL) {
+    ArrayRef<Elf_Word> ShndxTable;
+    if (DotSymtabShndxSec) {
+      // TODO: Test this error.
+      if (Expected<ArrayRef<Elf_Word>> ShndxTableOrErr =
+              EF.getSHNDXTable(*DotSymtabShndxSec))
+        ShndxTable = *ShndxTableOrErr;
+      else
+        return ShndxTableOrErr.takeError();
+    }
+
     Expected<const Elf_Shdr *> SectionOrErr =
         EF.getSection(*ESym, *SymTabOrErr, ShndxTable);
     if (!SectionOrErr)
@@ -684,6 +694,16 @@ template <class ELFT>
 Expected<section_iterator>
 ELFObjectFile<ELFT>::getSymbolSection(const Elf_Sym *ESym,
                                       const Elf_Shdr *SymTab) const {
+  ArrayRef<Elf_Word> ShndxTable;
+  if (DotSymtabShndxSec) {
+    // TODO: Test this error.
+    Expected<ArrayRef<Elf_Word>> ShndxTableOrErr =
+        EF.getSHNDXTable(*DotSymtabShndxSec);
+    if (!ShndxTableOrErr)
+      return ShndxTableOrErr.takeError();
+    ShndxTable = *ShndxTableOrErr;
+  }
+
   auto ESecOrErr = EF.getSection(*ESym, SymTab, ShndxTable);
   if (!ESecOrErr)
     return ESecOrErr.takeError();
@@ -984,7 +1004,7 @@ ELFObjectFile<ELFT>::create(MemoryBufferRef Object) {
 
   const Elf_Shdr *DotDynSymSec = nullptr;
   const Elf_Shdr *DotSymtabSec = nullptr;
-  ArrayRef<Elf_Word> ShndxTable;
+  const Elf_Shdr *DotSymtabShndxSec = nullptr;
   for (const Elf_Shdr &Sec : *SectionsOrErr) {
     switch (Sec.sh_type) {
     case ELF::SHT_DYNSYM: {
@@ -998,33 +1018,31 @@ ELFObjectFile<ELFT>::create(MemoryBufferRef Object) {
       break;
     }
     case ELF::SHT_SYMTAB_SHNDX: {
-      auto TableOrErr = EF.getSHNDXTable(Sec);
-      if (!TableOrErr)
-        return TableOrErr.takeError();
-      ShndxTable = *TableOrErr;
+      if (!DotSymtabShndxSec)
+        DotSymtabShndxSec = &Sec;
       break;
     }
     }
   }
   return ELFObjectFile<ELFT>(Object, EF, DotDynSymSec, DotSymtabSec,
-                             ShndxTable);
+                             DotSymtabShndxSec);
 }
 
 template <class ELFT>
 ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
                                    const Elf_Shdr *DotDynSymSec,
                                    const Elf_Shdr *DotSymtabSec,
-                                   ArrayRef<Elf_Word> ShndxTable)
+                                   const Elf_Shdr *DotSymtabShndx)
     : ELFObjectFileBase(
           getELFType(ELFT::TargetEndianness == support::little, ELFT::Is64Bits),
           Object),
       EF(EF), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
-      ShndxTable(ShndxTable) {}
+      DotSymtabShndxSec(DotSymtabShndx) {}
 
 template <class ELFT>
 ELFObjectFile<ELFT>::ELFObjectFile(ELFObjectFile<ELFT> &&Other)
     : ELFObjectFile(Other.Data, Other.EF, Other.DotDynSymSec,
-                    Other.DotSymtabSec, Other.ShndxTable) {}
+                    Other.DotSymtabSec, Other.DotSymtabShndxSec) {}
 
 template <class ELFT>
 basic_symbol_iterator ELFObjectFile<ELFT>::symbol_begin() const {

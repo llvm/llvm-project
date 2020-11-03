@@ -23,7 +23,7 @@ func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
 // CHECK:           [[CST_0:%.*]] = constant 0 : index
 // CHECK:           [[CST_1:%.*]] = constant 1 : index
 // CHECK:           [[DIM_0:%.*]] = dim [[ARG1]], [[CST_0]] : memref<?xf32>
-// CHECK:           [[MIN:%.*]] = affine.min #map0(){{\[}}[[DIM_0]], [[ARG0]]]
+// CHECK:           [[MIN:%.*]] = affine.min #map(){{\[}}[[DIM_0]], [[ARG0]]]
 // CHECK:           [[CST_1024:%.*]] = constant 1024 : index
 // CHECK:           [[PRED:%.*]] = cmpi "eq", [[MIN]], [[CST_1024]] : index
 // CHECK:           scf.if [[PRED]] {

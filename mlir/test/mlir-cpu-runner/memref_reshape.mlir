@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-std-to-llvm --print-ir-after-all \
+// RUN: mlir-opt %s -convert-scf-to-std -convert-std-to-llvm \
 // RUN: | mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s
@@ -39,6 +39,10 @@ func @main() -> () {
     : (memref<2x3xf32>, memref<2xindex>) -> ()
   call @reshape_unranked_memref_to_ranked(%input, %shape)
     : (memref<2x3xf32>, memref<2xindex>) -> ()
+  call @reshape_ranked_memref_to_unranked(%input, %shape)
+    : (memref<2x3xf32>, memref<2xindex>) -> ()
+  call @reshape_unranked_memref_to_unranked(%input, %shape)
+    : (memref<2x3xf32>, memref<2xindex>) -> ()
   return
 }
 
@@ -50,9 +54,9 @@ func @reshape_ranked_memref_to_ranked(%input : memref<2x3xf32>,
   %unranked_output = memref_cast %output : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1] data =
-  // CHECK: [0,   1],                          
-  // CHECK: [2,   3],                          
-  // CHECK: [4,   5]  
+  // CHECK: [0,   1],
+  // CHECK: [2,   3],
+  // CHECK: [4,   5]
   return
 }
 
@@ -65,8 +69,37 @@ func @reshape_unranked_memref_to_ranked(%input : memref<2x3xf32>,
   %unranked_output = memref_cast %output : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1] data =
-  // CHECK: [0,   1],                          
-  // CHECK: [2,   3],                          
-  // CHECK: [4,   5]  
+  // CHECK: [0,   1],
+  // CHECK: [2,   3],
+  // CHECK: [4,   5]
+  return
+}
+
+func @reshape_ranked_memref_to_unranked(%input : memref<2x3xf32>,
+                                        %shape : memref<2xindex>) {
+  %dyn_size_shape = memref_cast %shape : memref<2xindex> to memref<?xindex>
+  %output = memref_reshape %input(%dyn_size_shape)
+                : (memref<2x3xf32>, memref<?xindex>) -> memref<*xf32>
+
+  call @print_memref_f32(%output) : (memref<*xf32>) -> ()
+  // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1] data =
+  // CHECK: [0,   1],
+  // CHECK: [2,   3],
+  // CHECK: [4,   5]
+  return
+}
+
+func @reshape_unranked_memref_to_unranked(%input : memref<2x3xf32>,
+                                          %shape : memref<2xindex>) {
+  %unranked_input = memref_cast %input : memref<2x3xf32> to memref<*xf32>
+  %dyn_size_shape = memref_cast %shape : memref<2xindex> to memref<?xindex>
+  %output = memref_reshape %input(%dyn_size_shape)
+                : (memref<2x3xf32>, memref<?xindex>) -> memref<*xf32>
+
+  call @print_memref_f32(%output) : (memref<*xf32>) -> ()
+  // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1] data =
+  // CHECK: [0,   1],
+  // CHECK: [2,   3],
+  // CHECK: [4,   5]
   return
 }

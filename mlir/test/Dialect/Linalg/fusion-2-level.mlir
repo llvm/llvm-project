@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-greedy-fusion | FileCheck %s
 
 func @f1(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>, %B: memref<?x?xf32, offset: ?, strides: [?, 1]>, %C: memref<?x?xf32, offset: ?, strides: [?, 1]>, %D: memref<?x?xf32, offset: ?, strides: [?, 1]>, %E: memref<?x?xf32, offset: ?, strides: [?, 1]>) -> memref<?x?xf32, offset: ?, strides: [?, 1]> {
   %c1 = constant 1 : index

@@ -2027,7 +2027,10 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
       }
       break;
     case ELF::SHT_SYMTAB_SHNDX:
-      ShndxTable = unwrapOrError(ObjF.getFileName(), Obj.getSHNDXTable(Sec));
+      if (Expected<ArrayRef<Elf_Word>> ShndxTableOrErr = Obj.getSHNDXTable(Sec))
+        ShndxTable = *ShndxTableOrErr;
+      else
+        this->reportUniqueWarning(ShndxTableOrErr.takeError());
       break;
     case ELF::SHT_GNU_versym:
       if (!SymbolVersionSection)
@@ -4494,7 +4497,8 @@ template <class ELFT>
 RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> &Obj, StringRef FileName,
                                   const ELFDumper<ELFT> &Dumper,
                                   const Relocation<ELFT> &Reloc) {
-  auto WarnAndReturn = [&](const typename ELFT::Sym *Sym,
+  using Elf_Sym = typename ELFT::Sym;
+  auto WarnAndReturn = [&](const Elf_Sym *Sym,
                            const Twine &Reason) -> RelSymbol<ELFT> {
     reportWarning(
         createError("unable to get name of the dynamic symbol with index " +
@@ -4503,8 +4507,8 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> &Obj, StringRef FileName,
     return {Sym, "<corrupt>"};
   };
 
-  ArrayRef<typename ELFT::Sym> Symbols = Dumper.dynamic_symbols();
-  const typename ELFT::Sym *FirstSym = Symbols.begin();
+  ArrayRef<Elf_Sym> Symbols = Dumper.dynamic_symbols();
+  const Elf_Sym *FirstSym = Symbols.begin();
   if (!FirstSym)
     return WarnAndReturn(nullptr, "no dynamic symbol table found");
 
@@ -4517,7 +4521,15 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> &Obj, StringRef FileName,
         "index is greater than or equal to the number of dynamic symbols (" +
             Twine(Symbols.size()) + ")");
 
-  const typename ELFT::Sym *Sym = FirstSym + Reloc.Symbol;
+  const uint64_t FileSize = Obj.getBufSize();
+  const uint64_t SymOffset = ((const uint8_t *)FirstSym - Obj.base()) +
+                             (uint64_t)Reloc.Symbol * sizeof(Elf_Sym);
+  if (SymOffset + sizeof(Elf_Sym) > FileSize)
+    return WarnAndReturn(nullptr, "symbol at 0x" + Twine::utohexstr(SymOffset) +
+                                      " goes past the end of the file (0x" +
+                                      Twine::utohexstr(FileSize) + ")");
+
+  const Elf_Sym *Sym = FirstSym + Reloc.Symbol;
   Expected<StringRef> ErrOrName = Sym->getName(Dumper.getDynamicStringTable());
   if (!ErrOrName)
     return WarnAndReturn(Sym, toString(ErrOrName.takeError()));

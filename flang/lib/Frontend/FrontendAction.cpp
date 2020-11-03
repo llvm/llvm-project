@@ -13,7 +13,7 @@
 
 using namespace Fortran::frontend;
 
-void FrontendAction::SetCurrentInput(const FrontendInputFile &currentInput) {
+void FrontendAction::set_currentInput(const FrontendInputFile &currentInput) {
   this->currentInput_ = currentInput;
 }
 
@@ -21,8 +21,8 @@ void FrontendAction::SetCurrentInput(const FrontendInputFile &currentInput) {
 // Deallocate compiler instance, input and output descriptors
 static void BeginSourceFileCleanUp(FrontendAction &fa, CompilerInstance &ci) {
   ci.ClearOutputFiles(/*EraseFiles=*/true);
-  fa.SetCurrentInput(FrontendInputFile());
-  fa.SetCompilerInstance(nullptr);
+  fa.set_currentInput(FrontendInputFile());
+  fa.set_instance(nullptr);
 }
 
 bool FrontendAction::BeginSourceFile(
@@ -31,8 +31,8 @@ bool FrontendAction::BeginSourceFile(
   FrontendInputFile input(realInput);
   assert(!instance_ && "Already processing a source file!");
   assert(!realInput.IsEmpty() && "Unexpected empty filename!");
-  SetCurrentInput(realInput);
-  SetCompilerInstance(&ci);
+  set_currentInput(realInput);
+  set_instance(&ci);
   if (!ci.HasAllSources()) {
     BeginSourceFileCleanUp(*this, ci);
     return false;
@@ -41,21 +41,29 @@ bool FrontendAction::BeginSourceFile(
 }
 
 bool FrontendAction::ShouldEraseOutputFiles() {
-  return GetCompilerInstance().getDiagnostics().hasErrorOccurred();
+  return instance().diagnostics().hasErrorOccurred();
 }
 
 llvm::Error FrontendAction::Execute() {
+  std::string currentInputPath{GetCurrentFileOrBufferName()};
+
+  Fortran::parser::Options parserOptions =
+      this->instance().invocation().fortranOpts();
+
+  this->instance().parsing().Prescan(currentInputPath, parserOptions);
+
   ExecuteAction();
+
   return llvm::Error::success();
 }
 
 void FrontendAction::EndSourceFile() {
-  CompilerInstance &ci = GetCompilerInstance();
+  CompilerInstance &ci = instance();
 
   // Cleanup the output streams, and erase the output files if instructed by the
   // FrontendAction.
   ci.ClearOutputFiles(/*EraseFiles=*/ShouldEraseOutputFiles());
 
-  SetCompilerInstance(nullptr);
-  SetCurrentInput(FrontendInputFile());
+  set_instance(nullptr);
+  set_currentInput(FrontendInputFile());
 }

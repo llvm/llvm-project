@@ -16,6 +16,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <regex>
@@ -224,6 +225,48 @@ void ErrorHandler::error(const Twine &msg) {
 
   if (exit)
     exitLld(1);
+}
+
+void ErrorHandler::error(const Twine &msg, ErrorTag tag,
+                         ArrayRef<StringRef> args) {
+  if (errorHandlingScript.empty()) {
+    error(msg);
+    return;
+  }
+  SmallVector<StringRef, 4> scriptArgs;
+  scriptArgs.push_back(errorHandlingScript);
+  switch (tag) {
+  case ErrorTag::LibNotFound:
+    scriptArgs.push_back("missing-lib");
+    break;
+  }
+  scriptArgs.insert(scriptArgs.end(), args.begin(), args.end());
+  int res = llvm::sys::ExecuteAndWait(errorHandlingScript, scriptArgs);
+  if (res == 0) {
+    return error(msg);
+  } else {
+    // Temporarily disable error limit to make sure the two calls to error(...)
+    // only count as one.
+    uint64_t currentErrorLimit = errorLimit;
+    errorLimit = 0;
+    error(msg);
+    errorLimit = currentErrorLimit;
+    --errorCount;
+
+    switch (res) {
+    case -1:
+      error("error handling script '" + errorHandlingScript +
+            "' failed to execute");
+      break;
+    case -2:
+      error("error handling script '" + errorHandlingScript +
+            "' crashed or timeout");
+      break;
+    default:
+      error("error handling script '" + errorHandlingScript +
+            "' exited with code " + Twine(res));
+    }
+  }
 }
 
 void ErrorHandler::fatal(const Twine &msg) {

@@ -7,6 +7,14 @@ TableGen Programmer's Reference
 .. contents::
    :local:
 
+.. toctree::
+   :hidden:
+
+   BackEnds
+   BackGuide
+   Index
+   ../CommandGuide/tblgen
+
 Introduction
 ============
 
@@ -106,7 +114,7 @@ multiple concrete records all at once. A multiclass can inherit from other
 multiclasses, which means that the multiclass inherits all the definitions
 from its parent multiclasses.
 
-`Appendix B: Sample Record`_ illustrates a complex record in the Intel X86
+`Appendix C: Sample Record`_ illustrates a complex record in the Intel X86
 target and the simple way in which it is defined.
 
 Source Files
@@ -316,8 +324,9 @@ Values and Expressions
 There are many contexts in TableGen statements where a value is required. A
 common example is in the definition of a record, where each field is
 specified by a name and an optional value. TableGen allows for a reasonable
-number of different forms when building up values. These forms allow the
-TableGen file to be written in a syntax that is natural for the application.
+number of different forms when building up value expressions. These forms
+allow the TableGen file to be written in a syntax that is natural for the
+application.
 
 Note that all of the values have rules for converting them from one type to
 another. For example, these rules allow you to assign a value like ``7``
@@ -325,6 +334,7 @@ to an entity of type ``bits<4>``.
 
 .. productionlist::
    Value: `SimpleValue` `ValueSuffix`*
+        :| `Value` "#" `Value`
    ValueSuffix: "{" `RangeList` "}"
               :| "[" `RangeList` "]"
               :| "." `TokIdentifier`
@@ -493,6 +503,28 @@ primary value. Here are the possible suffixes for some primary *value*.
     The final value is the value of the specified *field* in the specified
     record *value*.
 
+The paste operator
+------------------
+
+The paste operator (``#``) is the only infix operator availabe in TableGen
+expressions. It allows you to concatenate strings or lists, but has a few
+unusual features.
+
+The paste operator can be used when specifying the record name in a
+:token:`Def` or :token:`Defm` statement, in which case it must construct a
+string. If an operand is an undefined name (:token:`TokIdentifier`) or the
+name of a global :token:`Defvar` or :token:`Defset`, it is treated as a
+verbatim string of characters. The value of a global name is not used.
+
+The paste operator can be used in all other value expressions, in which case
+it can construct a string or a list. Rather oddly, but consistent with the
+previous case, if the *right-hand-side* operand is an undefined name or a
+global name, it is treated as a verbatim string of characters. The
+left-hand-side operand is treated normally.
+
+`Appendix B: Paste Operator Examples`_ presents examples of the behavior of
+the paste operator.
+
 Statements
 ==========
 
@@ -614,11 +646,11 @@ A ``def`` statement defines a new concrete record.
 
 .. productionlist::
    Def: "def" [`NameValue`] `RecordBody`
-   NameValue: `Value`
+   NameValue: `Value` (parsed in a special manner)
 
 The name value is optional. If specified, it is parsed in a special mode
 where undefined (unrecognized) identifiers are interpreted as literal
-strings.  In particular, global identifiers are considered unrecognized.
+strings. In particular, global identifiers are considered unrecognized.
 These include global variables defined by ``defvar`` and ``defset``.
 
 If no name value is given, the record is *anonymous*. The final name of an
@@ -1657,12 +1689,6 @@ and non-0 as true.
     This operator concatenates the string arguments *str1*, *str2*, etc., and
     produces the resulting string.
 
-*str1*\ ``#``\ *str2*
-    The paste operator (``#``) is a shorthand for
-    ``!strconcat`` with two arguments.  It can be used to concatenate operands that
-    are not strings, in which
-    case an implicit ``!cast<string>`` is done on those operands.
-
 ``!sub(``\ *a*\ ``,`` *b*\ ``)``
     This operator subtracts *b* from *a* and produces the arithmetic difference.
 
@@ -1684,8 +1710,61 @@ and non-0 as true.
     the result. A logical XOR can be performed if all the arguments are either
     0 or 1.
 
+Appendix B: Paste Operator Examples
+===================================
 
-Appendix B: Sample Record
+Here is an example illustrating the use of the paste operator in record names.
+
+.. code-block:: text
+
+  defvar suffix = "_suffstring";
+  defvar some_ints = [0, 1, 2, 3];
+
+  def name # suffix {
+  }
+
+  foreach i = [1, 2] in {
+  def rec # i {
+  }
+  }
+
+The first ``def`` does not use the value of the ``suffix`` variable. The
+second def does use the value of the ``i`` iterator variable, because it is not a
+global name. The following records are produced.
+
+.. code-block:: text
+
+  def namesuffix {
+  }
+  def rec1 {
+  }
+  def rec2 {
+  }
+
+Here is a second example illustrating the paste operator in field value expressions.
+
+.. code-block:: text
+
+  def test {
+    string strings = suffix # suffix;
+    list<int> integers = some_ints # [4, 5, 6];
+  }
+
+The ``strings`` field expression uses ``suffix`` on both sides of the paste
+operator. It is evaluated normally on the left hand side, but taken verbatim
+on the right hand side. The ``integers`` field expression uses the value of
+the ``some_ints`` variable and a literal list. The following record is
+produced.
+
+.. code-block:: text
+
+  def test {
+    string strings = "_suffstringsuffix";
+    list<int> ints = [0, 1, 2, 3, 4, 5, 6];
+  }
+
+
+Appendix C: Sample Record
 =========================
 
 One target machine supported by LLVM is the Intel x86. The following output

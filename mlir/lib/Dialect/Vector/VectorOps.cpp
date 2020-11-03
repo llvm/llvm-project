@@ -850,10 +850,12 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
     return Value();
   // Get the nth dimension size starting from lowest dimension.
   auto getDimReverse = [](VectorType type, int64_t n) {
-    return type.getDimSize(type.getRank() - n - 1);
+    return type.getShape().take_back(n+1).front();
   };
   int64_t destinationRank =
-      extractOp.getVectorType().getRank() - extractOp.position().size();
+      extractOp.getType().isa<VectorType>()
+          ? extractOp.getType().cast<VectorType>().getRank()
+          : 0;
   if (destinationRank > shapeCastOp.getSourceVectorType().getRank())
     return Value();
   if (destinationRank > 0) {
@@ -861,6 +863,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
     for (int64_t i = 0; i < destinationRank; i++) {
       // The lowest dimension of of the destination must match the lowest
       // dimension of the shapecast op source.
+      // TODO: This case could be support in a canonicalization pattern.
       if (getDimReverse(shapeCastOp.getSourceVectorType(), i) !=
           getDimReverse(destinationType, i))
         return Value();
@@ -891,6 +894,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   }
   std::reverse(newStrides.begin(), newStrides.end());
   SmallVector<int64_t, 4> newPosition = delinearize(newStrides, position);
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
   extractOp.setAttr(ExtractOp::getPositionAttrName(),
                     b.getI64ArrayAttr(newPosition));
@@ -1632,8 +1636,8 @@ static LogicalResult verify(ExtractStridedSliceOp op) {
 }
 
 // When the source of ExtractStrided comes from a chain of InsertStrided ops try
-// to use the source o the InsertStrided ops if we can detect that the extracted
-// vector is a subset of one of the vector inserted.
+// to use the source of the InsertStrided ops if we can detect that the
+// extracted vector is a subset of one of the vector inserted.
 static LogicalResult
 foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
   // Helper to extract integer out of ArrayAttr.

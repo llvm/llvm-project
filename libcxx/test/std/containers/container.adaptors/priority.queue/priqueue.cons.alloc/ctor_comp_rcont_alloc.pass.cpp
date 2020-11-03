@@ -37,13 +37,13 @@ struct test
     typedef typename base::value_compare value_compare;
 
     explicit test(const test_allocator<int>& a) : base(a) {}
-    test(const value_compare& comp, const test_allocator<int>& a)
-        : base(comp, a) {}
-    test(const value_compare& comp, const container_type& c,
-        const test_allocator<int>& a) : base(comp, c, a) {}
+    test(const value_compare& compare, const test_allocator<int>& a)
+        : base(compare, a) {}
+    test(const value_compare& compare, const container_type& container,
+        const test_allocator<int>& a) : base(compare, container, a) {}
 #if TEST_STD_VER >= 11 // testing rvalue ctor
-    test(const value_compare& comp, container_type&& c,
-         const test_allocator<int>& a) : base(comp, std::move(c), a) {}
+    test(const value_compare& compare, container_type&& container,
+         const test_allocator<int>& a) : base(compare, std::move(container), a) {}
     test(test&& q, const test_allocator<int>& a) : base(std::move(q), a) {}
 #endif
     test_allocator<int> get_allocator() {return c.get_allocator();}

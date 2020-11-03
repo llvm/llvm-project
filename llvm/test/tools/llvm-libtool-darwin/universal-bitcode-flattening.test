@@ -1,0 +1,86 @@
+## This test checks that a universal bitcode file is flattened correctly.
+
+# RUN: llvm-as %S/Inputs/arm64-ios.ll -o %t-arm64.bc
+# RUN: llvm-as %S/Inputs/x86_64-osx.ll -o %t-x86_64.bc
+# RUN: llvm-as %S/Inputs/x86_64-osx-2.ll -o %t-x86_64-2.bc
+# RUN: llvm-lipo %t-arm64.bc %t-x86_64.bc -create -output %t-universal.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only arm64
+
+## Check that the binary is present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# CHECK-NAMES: [[PREFIX]]-universal.o
+
+## Check that symbols are present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _arm64 in [[PREFIX]]-universal.o
+# CHECK-SYMBOLS-EMPTY:
+
+## Check that the output archive is in Darwin format:
+# RUN: llvm-objdump --macho --archive-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DPREFIX=%basename_t.tmp -DARCHIVE=%t.lib
+
+# FORMAT:      Archive : [[ARCHIVE]]
+# FORMAT-NEXT: __.SYMDEF
+# FORMAT-NEXT: [[PREFIX]]-universal.o
+# FORMAT-NOT:  {{.}}
+
+## Passing both a universal file and a bitcode file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o %t-x86_64-2.bc -arch_only x86_64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=BOTH-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=BOTH-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# BOTH-NAMES:      [[PREFIX]]-universal.o
+# BOTH-NAMES-NEXT: [[PREFIX]]-x86_64-2.bc
+
+# BOTH-SYMBOLS:      Archive map
+# BOTH-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-universal.o
+# BOTH-SYMBOLS-NEXT: _x86_64_2 in [[PREFIX]]-x86_64-2.bc
+# BOTH-SYMBOLS-EMPTY:
+
+## Passing both a universal file and a bitcode file but filtering out the object file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o %t-x86_64.bc -arch_only arm64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+## Universal file containing an archive:
+# RUN: rm -f %t.ar
+# RUN: llvm-ar cr %t.ar %t-x86_64.bc %t-x86_64-2.bc
+# RUN: llvm-lipo %t.ar -create -output %t-fat-with-archive.o
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-fat-with-archive.o
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHIVE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHIVE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# ARCHIVE-NAMES:      [[PREFIX]]-x86_64.bc
+# ARCHIVE-NAMES-NEXT: [[PREFIX]]-x86_64-2.bc
+
+# ARCHIVE-SYMBOLS:      Archive map
+# ARCHIVE-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
+# ARCHIVE-SYMBOLS-NEXT: _x86_64_2 in [[PREFIX]]-x86_64-2.bc
+# ARCHIVE-SYMBOLS-EMPTY:
+
+## Allow arch_only to be specified more than once (pick the last one):
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only arm64 -arch_only x86_64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DOUBLE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DOUBLE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# DOUBLE-NAMES: [[PREFIX]]-universal.o
+
+# DOUBLE-SYMBOLS:      Archive map
+# DOUBLE-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-universal.o
+# DOUBLE-SYMBOLS-EMPTY:
+
+

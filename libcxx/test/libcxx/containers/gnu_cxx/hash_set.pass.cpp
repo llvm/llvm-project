@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Prevent emission of the deprecated warning.
-#ifdef __clang__
-#pragma clang diagnostic ignored "-W#warnings"
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wcpp"
+// Prevent <ext/hash_set> from generating deprecated warnings for this test.
+#if defined(__DEPRECATED)
+#   undef __DEPRECATED
 #endif
 
 #include <ext/hash_set>
@@ -35,4 +32,5 @@ void test_default_does_not_allocate() {
 
 int main(int, char**) {
   test_default_does_not_allocate();
+  return 0;
 }

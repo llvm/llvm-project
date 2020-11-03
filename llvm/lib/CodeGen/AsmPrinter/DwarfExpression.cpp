@@ -543,6 +543,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       break;
     case dwarf::DW_OP_consts:
       assert(!isRegisterLocation());
+      emitOp(dwarf::DW_OP_consts);
       emitSigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_LLVM_convert: {

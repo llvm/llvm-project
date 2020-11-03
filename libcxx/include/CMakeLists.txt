@@ -224,7 +224,7 @@ if(LIBCXX_HEADER_DIR)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
       COMMENT "Copying CXX __config")
   list(APPEND out_files ${dst})
-  add_custom_target(generate-cxx-headers DEPENDS ${out_files})
+  add_custom_target(generate-cxx-headers ALL DEPENDS ${out_files})
 
   add_library(cxx-headers INTERFACE)
   add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})

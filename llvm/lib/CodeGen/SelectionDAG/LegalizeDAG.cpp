@@ -1165,6 +1165,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(0).getValueType());
     break;
+  case ISD::VECREDUCE_SEQ_FADD:
+    Action = TLI.getOperationAction(
+        Node->getOpcode(), Node->getOperand(1).getValueType());
+    break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TargetLowering::Legal;

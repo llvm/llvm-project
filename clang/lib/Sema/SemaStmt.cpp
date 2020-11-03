@@ -600,16 +600,31 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
     DiagnoseEmptyStmtBody(CondExpr->getEndLoc(), thenStmt,
                           diag::warn_empty_if_body);
 
-  std::tuple<bool, const Attr *, const Attr *> LHC =
-      Stmt::determineLikelihoodConflict(thenStmt, elseStmt);
-  if (std::get<0>(LHC)) {
-    const Attr *ThenAttr = std::get<1>(LHC);
-    const Attr *ElseAttr = std::get<2>(LHC);
-    Diags.Report(ThenAttr->getLocation(),
-                 diag::warn_attributes_likelihood_ifstmt_conflict)
-        << ThenAttr << ThenAttr->getRange();
-    Diags.Report(ElseAttr->getLocation(), diag::note_conflicting_attribute)
-        << ElseAttr << ElseAttr->getRange();
+  if (IsConstexpr) {
+    auto DiagnoseLikelihood = [&](const Stmt *S) {
+      if (const Attr *A = Stmt::getLikelihoodAttr(S)) {
+        Diags.Report(A->getLocation(),
+                     diag::warn_attribute_has_no_effect_on_if_constexpr)
+            << A << A->getRange();
+        Diags.Report(IfLoc,
+                     diag::note_attribute_has_no_effect_on_if_constexpr_here)
+            << SourceRange(IfLoc, LParenLoc.getLocWithOffset(-1));
+      }
+    };
+    DiagnoseLikelihood(thenStmt);
+    DiagnoseLikelihood(elseStmt);
+  } else {
+    std::tuple<bool, const Attr *, const Attr *> LHC =
+        Stmt::determineLikelihoodConflict(thenStmt, elseStmt);
+    if (std::get<0>(LHC)) {
+      const Attr *ThenAttr = std::get<1>(LHC);
+      const Attr *ElseAttr = std::get<2>(LHC);
+      Diags.Report(ThenAttr->getLocation(),
+                   diag::warn_attributes_likelihood_ifstmt_conflict)
+          << ThenAttr << ThenAttr->getRange();
+      Diags.Report(ElseAttr->getLocation(), diag::note_conflicting_attribute)
+          << ElseAttr << ElseAttr->getRange();
+    }
   }
 
   return BuildIfStmt(IfLoc, IsConstexpr, LParenLoc, InitStmt, Cond, RParenLoc,

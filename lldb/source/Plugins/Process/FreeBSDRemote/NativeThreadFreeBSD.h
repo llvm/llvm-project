@@ -74,6 +74,7 @@ private:
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;
   WatchpointIndexMap m_hw_break_index_map;
+  llvm::Optional<std::string> m_thread_name;
 };
 
 typedef std::shared_ptr<NativeThreadFreeBSD> NativeThreadFreeBSDSP;

@@ -321,7 +321,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
 
     // Record SymbolID for index lookup later.
     if (auto ID = getSymbolID(D))
-      ResultIndex[*ID] = Result.size() - 1;
+      ResultIndex[ID] = Result.size() - 1;
   };
 
   // Emit all symbol locations (declaration or definition) from AST.
@@ -1154,7 +1154,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     if (auto MacroSID = getSymbolID(Macro->Name, Macro->Info, SM)) {
       // Collect macro references from main file.
       const auto &IDToRefs = AST.getMacros().MacroRefs;
-      auto Refs = IDToRefs.find(*MacroSID);
+      auto Refs = IDToRefs.find(MacroSID);
       if (Refs != IDToRefs.end()) {
         for (const auto &Ref : Refs->second) {
           Location Result;
@@ -1163,7 +1163,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
           Results.References.push_back(std::move(Result));
         }
       }
-      Req.IDs.insert(*MacroSID);
+      Req.IDs.insert(MacroSID);
     }
   } else {
     // Handle references to Decls.
@@ -1200,7 +1200,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
         if (D->getParentFunctionOrMethod())
           continue;
         if (auto ID = getSymbolID(D))
-          Req.IDs.insert(*ID);
+          Req.IDs.insert(ID);
       }
     }
   }
@@ -1332,9 +1332,8 @@ declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND) {
   // This allows typeHierarchy/resolve to be used to
   // resolve children of items returned in a previous request
   // for parents.
-  if (auto ID = getSymbolID(&ND)) {
-    THI.data = ID->str();
-  }
+  if (auto ID = getSymbolID(&ND))
+    THI.data = ID.str();
 
   return THI;
 }
@@ -1539,8 +1538,8 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
     Result->children.emplace();
 
     if (Index) {
-      if (Optional<SymbolID> ID = getSymbolID(CXXRD))
-        fillSubTypes(*ID, *Result->children, Index, ResolveLevels, TUPath);
+      if (auto ID = getSymbolID(CXXRD))
+        fillSubTypes(ID, *Result->children, Index, ResolveLevels, TUPath);
     }
   }
 

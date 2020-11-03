@@ -163,6 +163,22 @@ use omp_lib
   !ERROR: Unmatched END TARGET directive
   !$omp end target
 
+  ! OMP 5.0 - 2.6 Restriction point 1
+  outofparallel: do k =1, 10
+  !$omp parallel
+  !$omp do
+  outer: do i=0, 10
+    inner: do j=1, 10
+      exit
+      exit outer
+      !ERROR: EXIT to construct 'outofparallel' outside of PARALLEL construct is not allowed
+      exit outofparallel
+    end do inner
+  end do outer
+  !$end omp do
+  !$omp end parallel
+  end do outofparallel
+
 ! 2.7.1  do-clause -> private-clause |
 !                     firstprivate-clause |
 !                     lastprivate-clause |

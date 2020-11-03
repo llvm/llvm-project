@@ -84,8 +84,10 @@ endif()
 # Proto headers are generated in ${CMAKE_CURRENT_BINARY_DIR}.
 # Libraries that use these headers should adjust the include path.
 # If the "GRPC" argument is given, services are also generated.
+# The DEPENDS list should name *.proto source files that are imported.
+# They may be relative to the source dir or absolute (for generated protos).
 function(generate_protos LibraryName ProtoFile)
-  cmake_parse_arguments(PARSE_ARGV 2 PROTO "GRPC" "" "")
+  cmake_parse_arguments(PARSE_ARGV 2 PROTO "GRPC" "" "DEPENDS")
   get_filename_component(ProtoSourceAbsolutePath "${CMAKE_CURRENT_SOURCE_DIR}/${ProtoFile}" ABSOLUTE)
   get_filename_component(ProtoSourcePath ${ProtoSourceAbsolutePath} PATH)
   get_filename_component(Basename ${ProtoSourceAbsolutePath} NAME_WLE)
@@ -111,4 +113,23 @@ function(generate_protos LibraryName ProtoFile)
   add_clang_library(${LibraryName} ${GeneratedProtoSource}
     PARTIAL_SOURCES_INTENDED
     LINK_LIBS grpc++ protobuf)
+
+  # Ensure dependency headers are generated before dependent protos are built.
+  # DEPENDS arg is a list of "Foo.proto". While they're logically relative to
+  # the source dir, the generated headers we need are in the binary dir.
+  foreach(ImportedProto IN LISTS PROTO_DEPENDS)
+    # Foo.proto -> Foo.pb.h
+    STRING(REGEX REPLACE "\\.proto$" ".pb.h" ImportedHeader "${ImportedProto}")
+    # Foo.pb.h -> ${CMAKE_CURRENT_BINARY_DIR}/Foo.pb.h
+    get_filename_component(ImportedHeader "${ImportedHeader}"
+      ABSOLUTE
+      BASE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+    # Compilation of each generated source depends on ${BINARY}/Foo.pb.h.
+    foreach(Generated IN LISTS GeneratedProtoSource)
+      # FIXME: CMake docs suggest OBJECT_DEPENDS isn't needed, but I can't get
+      #        the recommended add_dependencies() approach to work.
+      set_source_files_properties("${Generated}"
+        PROPERTIES OBJECT_DEPENDS "${ImportedHeader}")
+    endforeach(Generated)
+  endforeach(ImportedProto)
 endfunction()

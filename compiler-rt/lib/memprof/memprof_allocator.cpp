@@ -27,9 +27,9 @@
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
-#include <ctime>
 #include <sched.h>
 #include <stdlib.h>
+#include <time.h>
 
 namespace __memprof {
 

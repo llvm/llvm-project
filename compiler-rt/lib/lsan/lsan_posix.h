@@ -27,7 +27,7 @@ struct DTLS;
 
 namespace __lsan {
 
-class ThreadContext : public ThreadContextLsanBase {
+class ThreadContext final : public ThreadContextLsanBase {
  public:
   explicit ThreadContext(int tid);
   void OnStarted(void *arg) override;

@@ -19,13 +19,21 @@ define i32 @f32(i32 %arg) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; AVX-LABEL: 'f32'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = call float @llvm.maxnum.f32(float undef, float undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16F32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; AVX1-LABEL: 'f32'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = call float @llvm.maxnum.f32(float undef, float undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16F32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX2-LABEL: 'f32'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = call float @llvm.maxnum.f32(float undef, float undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8F32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16F32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'f32'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.maxnum.f32(float undef, float undef)
@@ -51,6 +59,14 @@ define i32 @f32(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; BTVER2-LABEL: 'f32'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = call float @llvm.maxnum.f32(float undef, float undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16F32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
   %F32 = call float @llvm.maxnum.f32(float undef, float undef)
   %V2F32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
   %V4F32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
@@ -68,13 +84,21 @@ define i32 @f64(i32 %arg) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; AVX-LABEL: 'f64'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %f64 = call double @llvm.maxnum.f64(double undef, double undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2f64 = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4f64 = call <4 x double> @llvm.maxnum.v4f64(<4 x double> undef, <4 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8f64 = call <8 x double> @llvm.maxnum.v8f64(<8 x double> undef, <8 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; AVX1-LABEL: 'f64'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %f64 = call double @llvm.maxnum.f64(double undef, double undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2f64 = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4f64 = call <4 x double> @llvm.maxnum.v4f64(<4 x double> undef, <4 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8f64 = call <8 x double> @llvm.maxnum.v8f64(<8 x double> undef, <8 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX2-LABEL: 'f64'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %f64 = call double @llvm.maxnum.f64(double undef, double undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2f64 = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4f64 = call <4 x double> @llvm.maxnum.v4f64(<4 x double> undef, <4 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8f64 = call <8 x double> @llvm.maxnum.v8f64(<8 x double> undef, <8 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'f64'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.maxnum.f64(double undef, double undef)
@@ -99,6 +123,14 @@ define i32 @f64(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8f64 = call <8 x double> @llvm.maxnum.v8f64(<8 x double> undef, <8 x double> undef)
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; BTVER2-LABEL: 'f64'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %f64 = call double @llvm.maxnum.f64(double undef, double undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2f64 = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4f64 = call <4 x double> @llvm.maxnum.v4f64(<4 x double> undef, <4 x double> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8f64 = call <8 x double> @llvm.maxnum.v8f64(<8 x double> undef, <8 x double> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %f64 = call double @llvm.maxnum.f64(double undef, double undef)
   %V2f64 = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> undef)

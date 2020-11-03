@@ -214,14 +214,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
 static void insertNoopsInBundle(MachineInstr *MI, const SIInstrInfo &TII,
                                 unsigned Quantity) {
   while (Quantity > 0) {
-    unsigned Arg;
-    if (Quantity >= 8)
-      Arg = 7;
-    else
-      Arg = Quantity - 1;
-    Quantity -= Arg + 1;
+    unsigned Arg = std::min(Quantity, 8u);
+    Quantity -= Arg;
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
-        .addImm(Arg);
+        .addImm(Arg - 1);
   }
 }
 
@@ -961,7 +957,6 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   unsigned SDSTName;
   switch (MI->getOpcode()) {
   case AMDGPU::V_READLANE_B32:
-  case AMDGPU::V_READLANE_B32_gfx10:
   case AMDGPU::V_READFIRSTLANE_B32:
     SDSTName = AMDGPU::OpName::vdst;
     break;

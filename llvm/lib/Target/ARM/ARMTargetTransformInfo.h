@@ -181,6 +181,8 @@ public:
 
   int getMemcpyCost(const Instruction *I);
 
+  int getNumMemOps(const IntrinsicInst *I) const;
+
   int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
                      VectorType *SubTp);
 
@@ -195,9 +197,8 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     switch (II->getIntrinsicID()) {
-    case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
-      // We don't have legalization support for ordered FP reductions.
+      // We don't have legalization support for ordered FMUL reductions.
       return !II->getFastMathFlags().allowReassoc();
     default:
       // Don't expand anything else, let legalization deal with it.
@@ -213,6 +214,7 @@ public:
                        const Instruction *I = nullptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         CmpInst::Predicate VecPred,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
 

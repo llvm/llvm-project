@@ -13,9 +13,9 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -1691,6 +1691,81 @@ def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
 def SideEffectOp : TEST_Op<"side_effect_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let results = (outs AnyType:$result);
+}
+
+//===----------------------------------------------------------------------===//
+// Test CopyOpInterface
+//===----------------------------------------------------------------------===//
+
+def CopyOp : TEST_Op<"copy", [CopyOpInterface]> {
+  let description = [{
+    Represents a copy operation.
+  }];
+  let arguments = (ins Res<AnyMemRef, "", [MemRead]>:$source,
+                   Res<AnyMemRef, "", [MemWrite]>:$target);
+  let assemblyFormat = [{
+    `(` $source `,` $target `)` `:` `(` type($source) `,` type($target) `)`
+     attr-dict
+  }];
+  let extraClassDeclaration = [{
+    Value getSource() { return source(); }
+    Value getTarget() { return target(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test Buffer/Tensor
+//===----------------------------------------------------------------------===//
+
+def RegionYieldOp : TEST_Op<"region_yield",
+      [NoSideEffect, ReturnLike, Terminator]> {
+  let description = [{
+    This operation is used in a region and yields the corresponding type for
+    that operation.
+  }];
+  let arguments = (ins AnyType:$result);
+  let assemblyFormat = [{
+    $result `:` type($result) attr-dict
+  }];
+  let builders = [OpBuilderDAG<(ins),
+    [{ build($_builder, $_state, {}); }]>
+  ];
+}
+
+class BufferBasedOpBase<string mnemonic, list<OpTrait> traits>
+    : TEST_Op<mnemonic, traits> {
+  let description = [{
+    A buffer based operation, that uses memRefs as input and output.
+  }];
+  let arguments = (ins AnyMemRef:$input, AnyMemRef:$output);
+}
+
+def BufferBasedOp : BufferBasedOpBase<"buffer_based", []>{
+  let assemblyFormat = [{
+    `in` `(` $input`:` type($input) `)` `out` `(` $output`:` type($output) `)`
+    attr-dict
+  }];
+}
+
+def RegionBufferBasedOp : BufferBasedOpBase<"region_buffer_based",
+      [SingleBlockImplicitTerminator<"RegionYieldOp">]> {
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    `in` `(` $input`:` type($input) `)` `out` `(` $output`:` type($output) `)`
+    $region attr-dict
+  }];
+}
+
+def TensorBasedOp : TEST_Op<"tensor_based", []> {
+  let description = [{
+    A tensor based operation, that uses a tensor as an input and results in a
+    tensor again.
+  }];
+  let arguments = (ins AnyRankedTensor:$input);
+  let results = (outs AnyRankedTensor:$result);
+  let assemblyFormat = [{
+    `in` `(` $input`:` type($input) `)` `->` type($result) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//

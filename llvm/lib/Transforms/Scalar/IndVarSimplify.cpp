@@ -1132,18 +1132,14 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
 
-  if (ExtKind == SignExtended) {
-    for (Use &U : NarrowUse->uses()) {
-      SExtInst *User = dyn_cast<SExtInst>(U.getUser());
-      if (!User || User->getType() != WideType)
-        return false;
-    }
-  } else { // ExtKind == ZeroExtended
-    for (Use &U : NarrowUse->uses()) {
-      ZExtInst *User = dyn_cast<ZExtInst>(U.getUser());
-      if (!User || User->getType() != WideType)
-        return false;
-    }
+  for (Use &U : NarrowUse->uses()) {
+    Instruction *User = nullptr;
+    if (ExtKind == SignExtended)
+      User = dyn_cast<SExtInst>(U.getUser());
+    else
+      User = dyn_cast<ZExtInst>(U.getUser());
+    if (!User || User->getType() != WideType)
+      return false;
   }
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
@@ -2306,17 +2302,25 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-// Returns true if the condition of \p BI being checked is invariant and can be
-// proved to be trivially true during at least first \p MaxIter iterations.
-static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
-                          bool ProvingLoopExit, const SCEV *MaxIter) {
+enum ExitCondAnalysisResult {
+  CanBeRemoved,
+  CannotOptimize
+};
+
+/// If the condition of BI is trivially true during at least first MaxIter
+/// iterations, return CanBeRemoved.
+/// Otherwise, return CannotOptimize.
+static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
+                                          ScalarEvolution *SE,
+                                          bool ProvingLoopExit,
+                                          const SCEV *MaxIter) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   using namespace PatternMatch;
   BasicBlock *TrueSucc, *FalseSucc;
   if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
-    return false;
+    return CannotOptimize;
 
   assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
          "Not a loop exit!");
@@ -2333,10 +2337,10 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
-    return true;
+    return CanBeRemoved;
 
   if (ProvingLoopExit)
-    return false;
+    return CannotOptimize;
 
   ICmpInst::Predicate InvariantPred;
   const SCEV *InvariantLHS, *InvariantRHS;
@@ -2345,10 +2349,12 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   if (!SE->isLoopInvariantExitCondDuringFirstIterations(
            Pred, LHSS, RHSS, L, BI, MaxIter, InvariantPred, InvariantLHS,
            InvariantRHS))
-    return false;
+    return CannotOptimize;
 
   // Can we prove it to be trivially true?
-  return SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI);
+  if (SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI))
+    return CanBeRemoved;
+  return CannotOptimize;
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -2410,18 +2416,24 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   }
 #endif
 
+  auto ReplaceExitCond = [&](BranchInst *BI, Value *NewCond) {
+    auto *OldCond = BI->getCondition();
+    BI->setCondition(NewCond);
+    if (OldCond->use_empty())
+      DeadInsts.emplace_back(OldCond);
+  };
+
   auto FoldExit = [&](BasicBlock *ExitingBB, bool IsTaken) {
     BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
     bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
     auto *OldCond = BI->getCondition();
     auto *NewCond = ConstantInt::get(OldCond->getType(),
                                      IsTaken ? ExitIfTrue : !ExitIfTrue);
-    BI->setCondition(NewCond);
-    if (OldCond->use_empty())
-      DeadInsts.emplace_back(OldCond);
+    ReplaceExitCond(BI, NewCond);
   };
 
   bool Changed = false;
+  bool SkipLastIter = false;
   SmallSet<const SCEV*, 8> DominatingExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
@@ -2429,17 +2441,51 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      auto OptimizeCond = [&](bool Inverted) {
-        if (isTrivialCond(L, BI, SE, Inverted, MaxExitCount)) {
+      auto OptimizeCond = [this, L, BI, ExitingBB, MaxExitCount, &FoldExit](
+          bool Inverted, bool SkipLastIter) {
+        const SCEV *MaxIter = MaxExitCount;
+        if (SkipLastIter) {
+          const SCEV *One = SE->getOne(MaxIter->getType());
+          MaxIter = SE->getMinusSCEV(MaxIter, One);
+        }
+        switch (analyzeCond(L, BI, SE, Inverted, MaxIter)) {
+        case CanBeRemoved:
           FoldExit(ExitingBB, Inverted);
           return true;
+        case CannotOptimize:
+          return false;
         }
-        return false;
+        llvm_unreachable("Unknown case!");
       };
-      if (OptimizeCond(false) || OptimizeCond(true))
+
+      // TODO: We might have proved that we can skip the last iteration for
+      // this check. In this case, we only want to check the condition on the
+      // pre-last iteration (MaxExitCount - 1). However, there is a nasty
+      // corner case:
+      //
+      //   for (i = len; i != 0; i--) { ... check (i ult X) ... }
+      //
+      // If we could not prove that len != 0, then we also could not prove that
+      // (len - 1) is not a UINT_MAX. If we simply query (len - 1), then
+      // OptimizeCond will likely not prove anything for it, even if it could
+      // prove the same fact for len.
+      //
+      // As a temporary solution, we query both last and pre-last iterations in
+      // hope that we will be able to prove triviality for at least one of
+      // them. We can stop querying MaxExitCount for this case once SCEV
+      // understands that (MaxExitCount - 1) will not overflow here.
+      if (OptimizeCond(false, false) || OptimizeCond(true, false))
         Changed = true;
+      else if (SkipLastIter)
+        if (OptimizeCond(false, true) || OptimizeCond(true, true))
+          Changed = true;
       continue;
     }
+
+    if (MaxExitCount == ExitCount)
+      // If the loop has more than 1 iteration, all further checks will be
+      // executed 1 iteration less.
+      SkipLastIter = true;
 
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this

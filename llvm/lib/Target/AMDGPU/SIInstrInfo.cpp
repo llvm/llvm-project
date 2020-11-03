@@ -1543,13 +1543,9 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
                               unsigned Quantity) const {
   DebugLoc DL = MBB.findDebugLoc(MI);
   while (Quantity > 0) {
-    unsigned Arg;
-    if (Quantity >= 8)
-      Arg = 7;
-    else
-      Arg = Quantity - 1;
-    Quantity -= Arg + 1;
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg);
+    unsigned Arg = std::min(Quantity, 8u);
+    Quantity -= Arg;
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg - 1);
   }
 }
 
@@ -3132,7 +3128,8 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //
   // However, executing them with EXEC = 0 causes them to operate on undefined
   // data, which we avoid by returning true here.
-  if (Opcode == AMDGPU::V_READFIRSTLANE_B32 || Opcode == AMDGPU::V_READLANE_B32)
+  if (Opcode == AMDGPU::V_READFIRSTLANE_B32 ||
+      Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32)
     return true;
 
   return false;
@@ -3526,14 +3523,7 @@ static bool shouldReadExec(const MachineInstr &MI) {
   if (SIInstrInfo::isVALU(MI)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
-    case AMDGPU::V_READLANE_B32_gfx6_gfx7:
-    case AMDGPU::V_READLANE_B32_gfx10:
-    case AMDGPU::V_READLANE_B32_vi:
     case AMDGPU::V_WRITELANE_B32:
-    case AMDGPU::V_WRITELANE_B32_gfx6_gfx7:
-    case AMDGPU::V_WRITELANE_B32_gfx10:
-        //TODO-GFX11
-    case AMDGPU::V_WRITELANE_B32_vi:
       return false;
     }
 

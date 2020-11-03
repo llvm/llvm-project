@@ -520,8 +520,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
-  // Close Streamer first.
-  // It might have a reference to the output stream.
+  // Parser has a reference to the output stream (Str), so close Parser first.
+  Parser.reset();
   Str.reset();
   // Close the output stream early.
   BOS.reset();
