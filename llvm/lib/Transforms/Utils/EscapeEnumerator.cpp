@@ -41,27 +41,9 @@ IRBuilder<> *EscapeEnumerator::Next() {
     if (!isa<ReturnInst>(TI) && !isa<ResumeInst>(TI))
       continue;
 
-    // If the ret instruction is followed by a musttaill call,
-    // or a bitcast instruction and then a musttail call, we should return
-    // the musttail call as the insertion point to not break the musttail
-    // contract.
-    auto AdjustMustTailCall = [&](Instruction *I) -> Instruction * {
-      auto *RI = dyn_cast<ReturnInst>(I);
-      if (!RI || !RI->getPrevNode())
-        return I;
-      auto *CI = dyn_cast<CallInst>(RI->getPrevNode());
-      if (CI && CI->isMustTailCall())
-        return CI;
-      auto *BI = dyn_cast<BitCastInst>(RI->getPrevNode());
-      if (!BI || !BI->getPrevNode())
-        return I;
-      CI = dyn_cast<CallInst>(BI->getPrevNode());
-      if (CI && CI->isMustTailCall())
-        return CI;
-      return I;
-    };
-
-    Builder.SetInsertPoint(AdjustMustTailCall(TI));
+    if (CallInst *CI = CurBB->getTerminatingMustTailCall())
+      TI = CI;
+    Builder.SetInsertPoint(TI);
     return &Builder;
   }
 
