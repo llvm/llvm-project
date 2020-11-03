@@ -25,7 +25,6 @@ class Reference;
 }
 
 namespace evaluate {
-struct DataRef;
 template <typename>
 class Expr;
 class FoldingContext;
@@ -99,8 +98,6 @@ public:
   // Types
   //===--------------------------------------------------------------------===//
 
-  /// Generate the type of a DataRef
-  virtual mlir::Type genType(const Fortran::evaluate::DataRef &) = 0;
   /// Generate the type of an Expr
   virtual mlir::Type genType(const SomeExpr &) = 0;
   /// Generate the type of a Symbol
