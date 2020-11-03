@@ -59,7 +59,6 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -fno-rtti
   -O2
   -Werror=sign-compare
-  -Wno-non-virtual-dtor
   -Wno-gnu-zero-variadic-macro-arguments
   )
 
