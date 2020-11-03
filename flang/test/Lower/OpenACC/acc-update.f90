@@ -14,6 +14,15 @@ subroutine acc_update
   !$acc update host(a)
 !CHECK: acc.update host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
+  !$acc update host(a) if(.true.)
+!CHECK: [[IF1:%.*]] = constant true
+!CHECK: acc.update if([[IF1]]) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
+
+  !$acc update host(a) if(ifCondition)
+!CHECK: [[IFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
+!CHECK: [[IF2:%.*]] = fir.convert [[IFCOND]] : (!fir.logical<4>) -> i1
+!CHECK: acc.update if([[IF2]]) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
+
   !$acc update host(a) host(b) host(c)
 !CHECK: acc.update host([[A]], [[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>){{$}}
 
@@ -52,4 +61,12 @@ subroutine acc_update
 !CHECK: [[WAIT6:%.*]] = constant 1 : i32
 !CHECK: acc.update wait_devnum([[WAIT6]] : i32) wait([[WAIT4]], [[WAIT5]] : i32, i32) host([[A]] : !fir.ref<!fir.array<10x10xf32>>)
 
+  !$acc update host(a) device_type(1, 2)
+!CHECK: [[DEVTYPE1:%.*]] = constant 1 : i32
+!CHECK: [[DEVTYPE2:%.*]] = constant 2 : i32
+!CHECK: acc.update device_type([[DEVTYPE1]], [[DEVTYPE2]] : i32, i32) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
+
+  !$acc update host(a) device_type(*)
+!CHECK: [[DEVTYPE3:%.*]] = constant -1 : i32
+!CHECK: acc.update device_type([[DEVTYPE3]] : i32) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 end subroutine acc_update
