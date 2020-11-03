@@ -165,19 +165,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of umin.
+; There is no <2 x i64> version of umin, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_umin_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umin_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp ult i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -305,19 +304,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of umin.
+; There is no <2 x i64> version of umin, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_umin_ule_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umin_ule_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp ule i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ule i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -444,19 +442,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of smin.
+; There is no <2 x i64> version of smin, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_smin_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smin_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp slt i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp slt i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -583,19 +580,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of smin.
+; There is no <2 x i64> version of smin, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_smin_sle_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smin_sle_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp sle i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sle i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -721,19 +717,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of umax.
+; There is no <2 x i64> version of umax, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_umax_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umax_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp ugt i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -860,19 +855,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of umax.
+; There is no <2 x i64> version of umax, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_umax_uge_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_umax_uge_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp uge i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -999,19 +993,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of smax.
+; There is no <2 x i64> version of smax, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_smax_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smax_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp sgt i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1139,19 +1132,18 @@ entry:
   ret void
 }
 
-; There is no <2 x i64> version of smax.
+; There is no <2 x i64> version of smax, but we can efficiently lower
+; compare/select pairs with uniform predicates.
 define void @select_smax_sge_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_smax_sge_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_0:%.*]] = load i64, i64* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp sge i64 [[L_0]], 16383
-; CHECK-NEXT:    [[S_0:%.*]] = select i1 [[CMP_0]], i64 [[L_0]], i64 16383
-; CHECK-NEXT:    store i64 [[S_0]], i64* [[PTR]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[L_1:%.*]] = load i64, i64* [[GEP_1]], align 8
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sge i64 [[L_1]], 16383
-; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[CMP_1]], i64 [[L_1]], i64 16383
-; CHECK-NEXT:    store i64 [[S_1]], i64* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <2 x i64> [[TMP1]], <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> <i64 16383, i64 16383>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

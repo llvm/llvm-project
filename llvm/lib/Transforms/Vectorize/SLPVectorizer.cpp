@@ -3547,9 +3547,26 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       }
       auto *MaskTy = FixedVectorType::get(Builder.getInt1Ty(), VL.size());
       int ScalarCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecCost =
-          TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
-                                  CmpInst::BAD_ICMP_PREDICATE, CostKind, VL0);
+
+      // Check if all entries in VL are either compares or selects with compares
+      // as condition that have the same predicates.
+      CmpInst::Predicate VecPred = CmpInst::BAD_ICMP_PREDICATE;
+      bool First = true;
+      for (auto *V : VL) {
+        CmpInst::Predicate CurrentPred;
+        auto MatchCmp = m_Cmp(CurrentPred, m_Value(), m_Value());
+        if ((!match(V, m_Select(MatchCmp, m_Value(), m_Value())) &&
+             !match(V, MatchCmp)) ||
+            (!First && VecPred != CurrentPred)) {
+          VecPred = CmpInst::BAD_ICMP_PREDICATE;
+          break;
+        }
+        First = false;
+        VecPred = CurrentPred;
+      }
+
+      int VecCost = TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
+                                            VecPred, CostKind, VL0);
       // Check if it is possible and profitable to use min/max for selects in
       // VL.
       //
