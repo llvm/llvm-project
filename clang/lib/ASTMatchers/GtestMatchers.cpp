@@ -89,14 +89,14 @@ static llvm::StringRef getExpectMacro(GtestCmp Cmp) {
 internal::BindableMatcher<Stmt> gtestAssert(GtestCmp Cmp, StatementMatcher Left,
                                             StatementMatcher Right) {
   return callExpr(callee(getComparisonDecl(Cmp)),
-                  isExpandedFromMacro(getAssertMacro(Cmp)),
+                  isExpandedFromMacro(getAssertMacro(Cmp).str()),
                   hasArgument(2, Left), hasArgument(3, Right));
 }
 
 internal::BindableMatcher<Stmt> gtestExpect(GtestCmp Cmp, StatementMatcher Left,
                                             StatementMatcher Right) {
   return callExpr(callee(getComparisonDecl(Cmp)),
-                  isExpandedFromMacro(getExpectMacro(Cmp)),
+                  isExpandedFromMacro(getExpectMacro(Cmp).str()),
                   hasArgument(2, Left), hasArgument(3, Right));
 }
 
