@@ -44,6 +44,7 @@ Using Clang as a Compiler
    OpenCLSupport
    OpenMPSupport
    ThinLTO
+   APINotes
    CommandGuide/index
    FAQ
 
