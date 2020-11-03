@@ -23,6 +23,14 @@
 #undef __OPENMP_NVPTX__
 #endif
 
+#ifdef __AMDGCN__
+#include <__clang_hip_libdevice_declares.h>
+#define __ARCHTYPES__ amdgcn
+#include <__clang_cuda_complex_builtins.h>
+#endif // __AMDGCN__
+
+#endif //__CLANG_OPENMP_COMPLEX__
+
 // Grab the host header too.
 #include_next <complex>
 
@@ -53,4 +61,3 @@
 
 #endif // __cplusplus
 
-#endif //  __CLANG_OPENMP_COMPLEX__
