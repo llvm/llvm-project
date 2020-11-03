@@ -65,3 +65,15 @@ namespace PR42513 {
 
   void use() { f<X1>(); }
 }
+
+namespace ReferenceToConstexpr {
+  struct A { const char *str = "hello"; };
+  constexpr A a;
+  template<const A &r, typename T> struct B {
+    static_assert(__builtin_strcmp(r.str, "hello") == 0, "");
+  };
+  template<const A &r> struct C {
+    template<typename T> void f(B<r, T>, T) {}
+  };
+  void f(C<a> ca) { ca.f({}, 0); }
+}
