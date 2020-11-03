@@ -142,6 +142,22 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_NotMatchesDifferentInstances) {
   EXPECT_TRUE(notMatches(input, binaryOperator(isExpandedFromMacro("FOUR"))));
 }
 
+TEST(IsExpandedFromMacro, IsExpandedFromMacro_MatchesDecls) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) int i = a;
+    void Test() { MY_MACRO(4); }
+  )cc";
+  EXPECT_TRUE(matches(input, varDecl(isExpandedFromMacro("MY_MACRO"))));
+}
+
+TEST(IsExpandedFromMacro, IsExpandedFromMacro_MatchesTypelocs) {
+  StringRef input = R"cc(
+#define MY_TYPE int
+    void Test() { MY_TYPE i = 4; }
+  )cc";
+  EXPECT_TRUE(matches(input, typeLoc(isExpandedFromMacro("MY_TYPE"))));
+}
+
 TEST_P(ASTMatchersTest, AllOf) {
   const char Program[] = "struct T { };"
                          "int f(int, struct T*, int, int);"
