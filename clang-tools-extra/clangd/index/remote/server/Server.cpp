@@ -12,6 +12,7 @@
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/remote/marshalling/Marshalling.h"
+#include "support/Context.h"
 #include "support/Logger.h"
 #include "support/Shutdown.h"
 #include "support/ThreadsafeFS.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -58,6 +60,12 @@ llvm::cl::opt<Logger::Level> LogLevel{
     llvm::cl::init(Logger::Info),
 };
 
+llvm::cl::opt<bool> LogPublic{
+    "log-public",
+    llvm::cl::desc("Avoid logging potentially-sensitive request details"),
+    llvm::cl::init(false),
+};
+
 llvm::cl::opt<std::string> TraceFile(
     "trace-file",
     llvm::cl::desc("Path to the file where tracer logs will be stored"));
@@ -71,6 +79,8 @@ llvm::cl::opt<bool> PrettyPrint{
 llvm::cl::opt<std::string> ServerAddress(
     "server-address", llvm::cl::init("0.0.0.0:50051"),
     llvm::cl::desc("Address of the invoked server. Defaults to 0.0.0.0:50051"));
+
+static Key<grpc::ServerContext *> CurrentRequest;
 
 class RemoteIndexServer final : public v1::SymbolIndex::Service {
 public:
@@ -87,6 +97,7 @@ private:
   grpc::Status Lookup(grpc::ServerContext *Context,
                       const LookupRequest *Request,
                       grpc::ServerWriter<LookupReply> *Reply) override {
+    WithContextValue(CurrentRequest, Context);
     trace::Span Tracer("LookupRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
@@ -119,6 +130,7 @@ private:
   grpc::Status FuzzyFind(grpc::ServerContext *Context,
                          const FuzzyFindRequest *Request,
                          grpc::ServerWriter<FuzzyFindReply> *Reply) override {
+    WithContextValue(CurrentRequest, Context);
     trace::Span Tracer("FuzzyFindRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
@@ -151,6 +163,7 @@ private:
 
   grpc::Status Refs(grpc::ServerContext *Context, const RefsRequest *Request,
                     grpc::ServerWriter<RefsReply> *Reply) override {
+    WithContextValue(CurrentRequest, Context);
     trace::Span Tracer("RefsRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
@@ -183,6 +196,7 @@ private:
   grpc::Status Relations(grpc::ServerContext *Context,
                          const RelationsRequest *Request,
                          grpc::ServerWriter<RelationsReply> *Reply) override {
+    WithContextValue(CurrentRequest, Context);
     trace::Span Tracer("RelationsRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
@@ -229,8 +243,8 @@ void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
                       LastStatus.getLastModificationTime() &&
                   Status->getSize() == LastStatus.getSize()))
     return;
-  vlog("Found different index version: existing index was modified at {0}, new "
-       "index was modified at {1}. Attempting to reload.",
+  vlog("Found different index version: existing index was modified at "
+       "{0}, new index was modified at {1}. Attempting to reload.",
        LastStatus.getLastModificationTime(), Status->getLastModificationTime());
   LastStatus = *Status;
   std::unique_ptr<clang::clangd::SymbolIndex> NewIndex = loadIndex(IndexPath);
@@ -266,6 +280,29 @@ void runServerAndWait(clangd::SymbolIndex &Index, llvm::StringRef ServerAddress,
   ServerShutdownWatcher.join();
 }
 
+std::unique_ptr<Logger> makeLogger(llvm::raw_ostream &OS) {
+  if (!LogPublic)
+    return std::make_unique<StreamLogger>(OS, LogLevel);
+  // Redacted mode:
+  //  - messages outside the scope of a request: log fully
+  //  - messages tagged [public]: log fully
+  //  - errors: log the format string
+  //  - others: drop
+  class RedactedLogger : public StreamLogger {
+  public:
+    using StreamLogger::StreamLogger;
+    void log(Level L, const char *Fmt,
+             const llvm::formatv_object_base &Message) override {
+      if (Context::current().get(CurrentRequest) == nullptr ||
+          llvm::StringRef(Fmt).startswith("[public]"))
+        return StreamLogger::log(L, Fmt, Message);
+      if (L >= Error)
+        return StreamLogger::log(L, Fmt, llvm::formatv("[redacted] {0}", Fmt));
+    }
+  };
+  return std::make_unique<RedactedLogger>(OS, LogLevel);
+}
+
 } // namespace
 } // namespace remote
 } // namespace clangd
@@ -287,8 +324,8 @@ int main(int argc, char *argv[]) {
   llvm::errs().SetBuffered();
   // Don't flush stdout when logging for thread safety.
   llvm::errs().tie(nullptr);
-  clang::clangd::StreamLogger Logger(llvm::errs(), LogLevel);
-  clang::clangd::LoggingSession LoggingSession(Logger);
+  auto Logger = makeLogger(llvm::errs());
+  clang::clangd::LoggingSession LoggingSession(*Logger);
 
   llvm::Optional<llvm::raw_fd_ostream> TracerStream;
   std::unique_ptr<clang::clangd::trace::EventTracer> Tracer;

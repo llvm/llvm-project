@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-buffer-placement-preparation-with-allowed-memref-results -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-finalizing-bufferize-with-allowed-memref-results -split-input-file %s | FileCheck %s
 
 // Since allowMemrefEscaping is on for Buffer Placement in this test pass, all
 // tensor typed function results are converted to memref and remain as function
@@ -18,21 +18,12 @@ func @void_function_signature_conversion(%arg0: tensor<4x8xf32>) {
 // CHECK-LABEL: func @complex_signature_conversion
 func @complex_signature_conversion(%arg0: tensor<5xf32>, %arg1: memref<10xf32>, %arg2: i1, %arg3: f16) -> (i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16) {
   %0 = alloc() : memref<15xf32>
-  %1 = linalg.generic {
-          indexing_maps = [#map0, #map0],
-          iterator_types = ["parallel"]}
-          ins(%arg0 : tensor<5xf32>) {
-        ^bb0(%gen1_arg0: f32):
-          %tmp1 = exp %gen1_arg0 : f32
-          linalg.yield %tmp1 : f32
-        } -> tensor<5xf32>
-  return %arg2, %1, %arg1, %0, %arg3 : i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16
+  return %arg2, %arg0, %arg1, %0, %arg3 : i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16
 }
 //      CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>, %[[ARG2:.*]]: i1, %[[ARG3:.*]]: f16)
 // CHECK-SAME: (i1, memref<5xf32>, memref<10xf32>, memref<15xf32>, f16)
 //      CHECK: %[[FIRST_ALLOC:.*]] = alloc()
-//      CHECK: %[[LINALG_ALLOC:.*]] = alloc()
-//      CHECK: return %[[ARG2]], %[[LINALG_ALLOC]], %[[ARG1]], %[[FIRST_ALLOC]], %[[ARG3]]
+//      CHECK: return %[[ARG2]], %[[ARG0]], %[[ARG1]], %[[FIRST_ALLOC]], %[[ARG3]]
 
 // -----
 
@@ -111,9 +102,9 @@ func @caller(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 
 // -----
 
-// Test case: Testing BufferAssignmentCallOpConverter to see if it matches with the
+// Test case: Testing BufferizeCallOpConverter to see if it matches with the
 // signature of the new signature of the callee function when there are tuple typed
-// args and results. BufferAssignmentTypeConverter is set to flatten tuple typed
+// args and results. BufferizeTypeConverter is set to flatten tuple typed
 // arguments. The tuple typed values should be decomposed and composed using
 // get_tuple_element and make_tuple operations of test dialect. Tensor types are
 // converted to Memref. Memref typed function results remain as function results.
@@ -158,10 +149,10 @@ func @caller(%arg0: tuple<tensor<2xf32>,i1, tensor<5xf32>>) -> tuple<tensor<2xf3
 
 // -----
 
-// Test case: Testing BufferAssignmentFuncOpConverter and
-// BufferAssignmentReturnOpConverter to see if the return operation matches with
+// Test case: Testing BufferizeFuncOpConverter and
+// BufferizeReturnOpConverter to see if the return operation matches with
 // the new function signature when there are tuple typed args and results.
-// BufferAssignmentTypeConverter is set to flatten tuple typed arguments. The tuple
+// BufferizeTypeConverter is set to flatten tuple typed arguments. The tuple
 // typed values should be decomposed and composed using get_tuple_element and
 // make_tuple operations of test dialect. Tensor types are converted to Memref.
 // Memref typed function results remain as function results.

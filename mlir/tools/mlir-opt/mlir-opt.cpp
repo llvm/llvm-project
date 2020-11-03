@@ -44,7 +44,6 @@ void registerTestAffineDataCopyPass();
 void registerTestAffineLoopParametricTilingPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAllReduceLoweringPass();
-void registerTestBufferPlacementPreparationPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
 void registerTestConvVectorization();
@@ -55,6 +54,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDynamicPipelinePass();
 void registerTestExpandMemRefReshapePass();
 void registerTestExpandTanhPass();
+void registerTestFinalizingBufferizePass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestGpuParallelLoopMappingPass();
@@ -113,9 +113,9 @@ void registerTestPasses() {
   registerTestConvertGPUKernelToHsacoPass();
 #endif
   registerTestAffineLoopParametricTilingPass();
-  registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
   registerTestDynamicPipelinePass();
+  registerTestFinalizingBufferizePass();
   registerTestFunc();
   registerTestExpandTanhPass();
   registerTestExpandMemRefReshapePass();

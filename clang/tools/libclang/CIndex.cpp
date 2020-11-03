@@ -8400,7 +8400,9 @@ CXFile clang_Module_getASTFile(CXModule CXMod) {
   if (!CXMod)
     return nullptr;
   Module *Mod = static_cast<Module *>(CXMod);
-  return const_cast<FileEntry *>(Mod->getASTFile());
+  if (auto File = Mod->getASTFile())
+    return const_cast<FileEntry *>(&File->getFileEntry());
+  return nullptr;
 }
 
 CXModule clang_Module_getParent(CXModule CXMod) {

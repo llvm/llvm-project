@@ -3565,7 +3565,7 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
   // For FLAT segment the offset must be positive;
   // MSB is ignored and forced to zero.
   unsigned OffsetSize = isGFX9() ? 13 : 12;
-  if (TSFlags & SIInstrFlags::IsNonFlatSeg) {
+  if (TSFlags & (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch)) {
     if (!isIntN(OffsetSize, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
             isGFX9() ? "expected a 13-bit signed offset" :

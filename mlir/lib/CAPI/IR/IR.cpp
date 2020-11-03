@@ -249,6 +249,10 @@ int mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
+MlirIdentifier mlirOperationGetName(MlirOperation op) {
+  return wrap(unwrap(op)->getName().getIdentifier());
+}
+
 MlirBlock mlirOperationGetBlock(MlirOperation op) {
   return wrap(unwrap(op)->getBlock());
 }
@@ -575,4 +579,20 @@ void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
 
 MlirNamedAttribute mlirNamedAttributeGet(const char *name, MlirAttribute attr) {
   return MlirNamedAttribute{name, attr};
+}
+
+/*============================================================================*/
+/* Identifier API.                                                            */
+/*============================================================================*/
+
+MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
+  return wrap(Identifier::get(unwrap(str), unwrap(context)));
+}
+
+int mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
+  return unwrap(ident) == unwrap(other);
+}
+
+MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
+  return wrap(unwrap(ident).strref());
 }

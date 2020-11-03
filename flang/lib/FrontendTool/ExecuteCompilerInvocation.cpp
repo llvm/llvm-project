@@ -29,6 +29,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case InputOutputTest:
     return std::make_unique<InputOutputTestAction>();
     break;
+  case PrintPreprocessedInput:
+    return std::make_unique<PrintPreprocessedAction>();
+    break;
   default:
     break;
     // TODO:

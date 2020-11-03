@@ -12,24 +12,26 @@
 ! RUN: %flang-new -fc1 -help 2>&1 | FileCheck %s --check-prefix=HELP-FC1
 ! RUN: not %flang-new -fc1 -helps 2>&1 | FileCheck %s --check-prefix=ERROR
 
-!-----------------------------
-! EXPECTED OUTPUT (flang-new)
-!-----------------------------
+!----------------------------------------------------
+! EXPECTED OUTPUT FOR FLANG DRIVER (flang-new)
+!----------------------------------------------------
 ! HELP:USAGE: flang-new
 ! HELP-EMPTY:
 ! HELP-NEXT:OPTIONS:
+! HELP-NEXT: -E                     Only run the preprocessor
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: --version              Print version information
 
-!----------------------------------
-! EXPECTED OUTPUT (flang-new -fc1)
-!----------------------------------
+!-------------------------------------------------------------
+! EXPECTED OUTPUT FOR FLANG FRONTEND DRIVER (flang-new -fc1)
+!-------------------------------------------------------------
 ! HELP-FC1:USAGE: flang-new
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
+! HELP-FC1-NEXT: -E        Only run the preprocessor
 ! HELP-FC1-NEXT: -help     Display available options
 ! HELP-FC1-NEXT: -o <file> Write output to <file>
 ! HELP-FC1-NEXT: --version Print version information

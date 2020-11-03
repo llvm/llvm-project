@@ -212,6 +212,7 @@ public:
                        const Instruction *I = nullptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         CmpInst::Predicate VecPred,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
 

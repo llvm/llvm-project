@@ -649,7 +649,7 @@ ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 // The fallback for the printer is to print in the generic assembly form.
-void OpState::print(OpAsmPrinter &p) { p.printGenericOp(getOperation()); }
+void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
 
 /// Emit an error about fatal conditions with this operation, reporting up to
 /// any diagnostic handlers that may be listening.

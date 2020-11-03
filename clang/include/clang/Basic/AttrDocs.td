@@ -377,7 +377,7 @@ that appears to be capable of returning to its caller.
 }
 
 def NoMergeDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocCatStmt;
   let Content = [{
 If a statement is marked ``nomerge`` and contains call expressions, those call
 expressions inside the statement will not be merged during optimization. This 

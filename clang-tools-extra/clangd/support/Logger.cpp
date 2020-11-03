@@ -28,10 +28,10 @@ LoggingSession::LoggingSession(clangd::Logger &Instance) {
 
 LoggingSession::~LoggingSession() { L = nullptr; }
 
-void detail::log(Logger::Level Level,
-                 const llvm::formatv_object_base &Message) {
+void detail::logImpl(Logger::Level Level, const char *Fmt,
+                     const llvm::formatv_object_base &Message) {
   if (L)
-    L->log(Level, Message);
+    L->log(Level, Fmt, Message);
   else {
     static std::mutex Mu;
     std::lock_guard<std::mutex> Guard(Mu);
@@ -47,7 +47,7 @@ const char *detail::debugType(const char *Filename) {
   return Filename;
 }
 
-void StreamLogger::log(Logger::Level Level,
+void StreamLogger::log(Logger::Level Level, const char *Fmt,
                        const llvm::formatv_object_base &Message) {
   if (Level < MinLevel)
     return;

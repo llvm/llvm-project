@@ -246,6 +246,18 @@ static bool areVectorCastSimpleCompatible(
 }
 
 //===----------------------------------------------------------------------===//
+// Helpers for Tensor[Load|Store]Op, TensorToMemrefOp, and GlobalMemrefOp
+//===----------------------------------------------------------------------===//
+
+static Type getTensorTypeFromMemRefType(Type type) {
+  if (auto memref = type.dyn_cast<MemRefType>())
+    return RankedTensorType::get(memref.getShape(), memref.getElementType());
+  if (auto memref = type.dyn_cast<UnrankedMemRefType>())
+    return UnrankedTensorType::get(memref.getElementType());
+  return NoneType::get(type.getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // AddFOp
 //===----------------------------------------------------------------------===//
 
@@ -2141,6 +2153,106 @@ bool FPTruncOp::areCastCompatible(Type a, Type b) {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalMemrefOp
+//===----------------------------------------------------------------------===//
+
+static void printGlobalMemrefOpTypeAndInitialValue(OpAsmPrinter &p,
+                                                   GlobalMemrefOp op,
+                                                   TypeAttr type,
+                                                   Attribute initialValue) {
+  p << type;
+  if (!op.isExternal()) {
+    p << " = ";
+    if (op.isUnitialized())
+      p << "uninitialized";
+    else
+      p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static ParseResult
+parseGlobalMemrefOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                       Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  auto memrefType = type.dyn_cast<MemRefType>();
+  if (!memrefType || !memrefType.hasStaticShape())
+    return parser.emitError(parser.getNameLoc())
+           << "type should be static shaped memref, but got " << type;
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (succeeded(parser.parseOptionalKeyword("uninitialized"))) {
+    initialValue = UnitAttr::get(parser.getBuilder().getContext());
+    return success();
+  }
+
+  Type tensorType = getTensorTypeFromMemRefType(memrefType);
+  if (parser.parseAttribute(initialValue, tensorType))
+    return failure();
+  if (!initialValue.isa<ElementsAttr>())
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a unit or elements attribute";
+  return success();
+}
+
+static LogicalResult verify(GlobalMemrefOp op) {
+  auto memrefType = op.type().dyn_cast<MemRefType>();
+  if (!memrefType || !memrefType.hasStaticShape())
+    return op.emitOpError("type should be static shaped memref, but got ")
+           << op.type();
+
+  // Verify that the initial value, if present, is either a unit attribute or
+  // an elements attribute.
+  if (op.initial_value().hasValue()) {
+    Attribute initValue = op.initial_value().getValue();
+    if (!initValue.isa<UnitAttr>() && !initValue.isa<ElementsAttr>())
+      return op.emitOpError("initial value should be a unit or elements "
+                            "attribute, but got ")
+             << initValue;
+
+    // Check that the type of the initial value is compatible with the type of
+    // the global variable.
+    if (initValue.isa<ElementsAttr>()) {
+      Type initType = initValue.getType();
+      Type tensorType = getTensorTypeFromMemRefType(memrefType);
+      if (initType != tensorType)
+        return op.emitOpError("initial value expected to be of type ")
+               << tensorType << ", but was of type " << initType;
+    }
+  }
+
+  // TODO: verify visibility for declarations.
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalMemrefOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GetGlobalMemrefOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the result type is same as the type of the referenced
+  // global_memref op.
+  auto global =
+      symbolTable.lookupNearestSymbolFrom<GlobalMemrefOp>(*this, nameAttr());
+  if (!global)
+    return emitOpError("'")
+           << name() << "' does not reference a valid global memref";
+
+  Type resultType = result().getType();
+  if (global.type() != resultType)
+    return emitOpError("result type ")
+           << resultType << " does not match type " << global.type()
+           << " of the global memref @" << name();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
@@ -3889,18 +4001,6 @@ struct ChainedTensorCast : public OpRewritePattern<TensorCastOp> {
 void TensorCastOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<ChainedTensorCast>(context);
-}
-
-//===----------------------------------------------------------------------===//
-// Helpers for Tensor[Load|Store]Op and TensorToMemrefOp
-//===----------------------------------------------------------------------===//
-
-static Type getTensorTypeFromMemRefType(Type type) {
-  if (auto memref = type.dyn_cast<MemRefType>())
-    return RankedTensorType::get(memref.getShape(), memref.getElementType());
-  if (auto memref = type.dyn_cast<UnrankedMemRefType>())
-    return UnrankedTensorType::get(memref.getElementType());
-  return NoneType::get(type.getContext());
 }
 
 //===----------------------------------------------------------------------===//

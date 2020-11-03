@@ -33,6 +33,11 @@ set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
              HEADER_FILE_ONLY TRUE)
 
+if(CLANG_VENDOR)
+  set_source_files_properties(Version.cpp
+    PROPERTIES COMPILE_DEFINITIONS "CLANG_VENDOR=\"${CLANG_VENDOR} \"")
+endif()
+
 add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp

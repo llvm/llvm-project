@@ -110,9 +110,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is a D16 buffer instruction.
   field bit D16Buf = 0;
 
-  // This field indicates that FLAT instruction accesses FLAT_GLBL or
-  // FLAT_SCRATCH segment. Must be 0 for non-FLAT instructions.
-  field bit IsNonFlatSeg = 0;
+  // This field indicates that FLAT instruction accesses FLAT_GLBL segment.
+  // Must be 0 for non-FLAT instructions.
+  field bit IsFlatGlobal = 0;
 
   // Reads the mode register, usually for FP environment.
   field bit ReadsModeReg = 0;
@@ -129,6 +129,10 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // This bit indicates that this is one of DOT instructions.
   field bit IsDOT = 0;
+
+  // This field indicates that FLAT instruction accesses FLAT_SCRATCH segment.
+  // Must be 0 for non-FLAT instructions.
+  field bit IsFlatScratch = 0;
 
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
@@ -187,7 +191,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{50} = D16Buf;
 
-  let TSFlags{51} = IsNonFlatSeg;
+  let TSFlags{51} = IsFlatGlobal;
 
   let TSFlags{52} = FPDPRounding;
 
@@ -196,6 +200,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{54} = IsMAI;
 
   let TSFlags{55} = IsDOT;
+
+  let TSFlags{56} = IsFlatScratch;
 
   let SchedRW = [Write32Bit];
 

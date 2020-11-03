@@ -67,7 +67,7 @@ class TestTypeGetModule(TestBase):
         exe_module = self.find_module(target, 'a.out')
 
         num_comp_units = exe_module.GetNumCompileUnits()
-        self.assertEqual(num_comp_units, 3)
+        self.assertGreaterEqual(num_comp_units, 3)
 
         comp_unit = self.find_comp_unit(exe_module, 'compile_unit1.c')
         cu_type = self.find_type(comp_unit.GetTypes(), 'compile_unit1_type')

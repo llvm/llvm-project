@@ -31,6 +31,11 @@
 #    define _PSTL_USAGE_WARNINGS 0
 #endif
 
+#if !defined(_PSTL_ASSERT)
+#    include <cassert>
+#    define _PSTL_ASSERT(pred) (assert((pred)))
+#endif
+
 // Portability "#pragma" definition
 #ifdef _MSC_VER
 #    define _PSTL_PRAGMA(x) __pragma(x)

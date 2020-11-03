@@ -7539,7 +7539,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXUnresolvedConstructExpr(
   if (Err)
     return std::move(Err);
 
-  SmallVector<Expr *, 8> ToArgs(E->arg_size());
+  SmallVector<Expr *, 8> ToArgs(E->getNumArgs());
   if (Error Err =
       ImportArrayChecked(E->arg_begin(), E->arg_end(), ToArgs.begin()))
     return std::move(Err);

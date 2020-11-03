@@ -285,7 +285,7 @@ if (LIBCXXABI_ENABLE_STATIC)
   # Merge the libc++abi.a and libunwind.a into one.
   if(LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
     add_custom_command(TARGET cxxabi_static POST_BUILD
-      COMMAND ${PYTHON_EXECUTABLE} ${LIBCXXABI_LIBCXX_PATH}/utils/merge_archives.py
+      COMMAND ${Python3_EXECUTABLE} ${LIBCXXABI_LIBCXX_PATH}/utils/merge_archives.py
       ARGS
         -o "$<TARGET_LINKER_FILE:cxxabi_static>"
         --ar "${CMAKE_AR}"

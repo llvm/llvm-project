@@ -3921,7 +3921,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     // Don't emit module relocation error if we have -fno-validate-pch
     if (!PP.getPreprocessorOpts().DisablePCHValidation && !ModMap) {
       if ((ClientLoadCapabilities & ARR_OutOfDate) == 0) {
-        if (auto *ASTFE = M ? M->getASTFile() : nullptr) {
+        if (auto ASTFE = M ? M->getASTFile() : None) {
           // This module was defined by an imported (explicit) module.
           Diag(diag::err_module_file_conflict) << F.ModuleName << F.FileName
                                                << ASTFE->getName();

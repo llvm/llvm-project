@@ -21,6 +21,10 @@ class InputOutputTestAction : public FrontendAction {
   void ExecuteAction() override;
 };
 
+class PrintPreprocessedAction : public FrontendAction {
+  void ExecuteAction() override;
+};
+
 } // namespace Fortran::frontend
 
 #endif // LLVM_FLANG_FRONTEND_FRONTENDACTIONS_H
