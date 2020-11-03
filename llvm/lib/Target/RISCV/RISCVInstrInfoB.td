@@ -46,6 +46,14 @@ def ImmSub32 : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+
+// Convert rotl immediate to a rotr immediate.
+def ImmROTL2R : SDNodeXForm<imm, [{
+  uint64_t XLen = Subtarget->getXLen();
+  return CurDAG->getTargetConstant(XLen - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -644,7 +652,6 @@ def : CompressPat<(PACK GPRC:$rs1, GPRC:$rs1, X0),
 //===----------------------------------------------------------------------===//
 def SLOIPat   : ComplexPattern<XLenVT, 2, "SelectSLOI", [or]>;
 def SROIPat   : ComplexPattern<XLenVT, 2, "SelectSROI", [or]>;
-def RORIPat   : ComplexPattern<XLenVT, 2, "SelectRORI", [rotl]>;
 def SLLIUWPat : ComplexPattern<i64, 2, "SelectSLLIUW", [and]>;
 def SLOIWPat  : ComplexPattern<i64, 2, "SelectSLOIW", [sext_inreg]>;
 def SROIWPat  : ComplexPattern<i64, 2, "SelectSROIW", [or]>;
@@ -709,10 +716,12 @@ def : Pat<(SROIPat GPR:$rs1, uimmlog2xlen:$shamt),
 
 // There's no encoding for roli in the current version of the 'B' extension
 // (v0.92) as it can be implemented with rori by negating the immediate.
-// For this reason we pattern-match only against rori[w].
-let Predicates = [HasStdExtZbbOrZbp] in
-def : Pat<(RORIPat GPR:$rs1, uimmlog2xlen:$shamt),
+let Predicates = [HasStdExtZbbOrZbp] in {
+def : Pat<(rotr GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, uimmlog2xlen:$shamt)>;
+def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
+          (RORI GPR:$rs1, (ImmROTL2R uimmlog2xlen:$shamt))>;
+}
 
 // We don't pattern-match sbclri[w], sbseti[w], sbinvi[w] because they are
 // pattern-matched by simple andi, ori, and xori.
@@ -778,9 +787,9 @@ def : Pat<(or (and (shl GPR:$rs1, (i32 8)), (i32 0xFF00FF00)),
               (and (srl GPR:$rs1, (i32 8)), (i32 0x00FF00FF))),
           (GREVI GPR:$rs1, (i32 8))>;
 def : Pat<(rotr (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, (i32 8))>;
-def : Pat<(or (shl GPR:$rs1, (i32 16)), (srl GPR:$rs1, (i32 16))),
-          (GREVI GPR:$rs1, (i32 16))>;
+// FIXME: Is grev better than rori?
 def : Pat<(rotl GPR:$rs1, (i32 16)), (GREVI GPR:$rs1, (i32 16))>;
+def : Pat<(rotr GPR:$rs1, (i32 16)), (GREVI GPR:$rs1, (i32 16))>;
 def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i32 24))>;
 def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i32 31))>;
 } // Predicates = [HasStdExtZbp, IsRV32]
@@ -801,9 +810,9 @@ def : Pat<(or (and (shl GPR:$rs1, (i64 8)), (i64 0xFF00FF00FF00FF00)),
 def : Pat<(or (and (shl GPR:$rs1, (i64 16)), (i64 0xFFFF0000FFFF0000)),
               (and (srl GPR:$rs1, (i64 16)), (i64 0x0000FFFF0000FFFF))),
           (GREVI GPR:$rs1, (i64 16))>;
-def : Pat<(or (shl GPR:$rs1, (i64 32)), (srl GPR:$rs1, (i64 32))),
-          (GREVI GPR:$rs1, (i64 32))>;
+// FIXME: Is grev better than rori?
 def : Pat<(rotl GPR:$rs1, (i64 32)), (GREVI GPR:$rs1, (i64 32))>;
+def : Pat<(rotr GPR:$rs1, (i64 32)), (GREVI GPR:$rs1, (i64 32))>;
 def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i64 56))>;
 def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i64 63))>;
 } // Predicates = [HasStdExtZbp, IsRV64]

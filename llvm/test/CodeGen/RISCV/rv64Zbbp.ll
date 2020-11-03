@@ -456,20 +456,17 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: rori_i64_fshr:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 63
-; RV64IB-NEXT:    ror a0, a0, a1
+; RV64IB-NEXT:    rori a0, a0, 63
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: rori_i64_fshr:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addi a1, zero, 63
-; RV64IBB-NEXT:    ror a0, a0, a1
+; RV64IBB-NEXT:    rori a0, a0, 63
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: rori_i64_fshr:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    addi a1, zero, 63
-; RV64IBP-NEXT:    ror a0, a0, a1
+; RV64IBP-NEXT:    rori a0, a0, 63
 ; RV64IBP-NEXT:    ret
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
