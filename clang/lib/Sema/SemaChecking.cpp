@@ -3167,6 +3167,62 @@ bool Sema::CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
          SemaBuiltinConstantArgMultiple(TheCall, i, m);
 }
 
+/// DecodePPCMMATypeFromStr - This decodes one PPC MMA type descriptor from Str,
+/// advancing the pointer over the consumed characters. The decoded type is
+/// returned. If the decoded type represents a constant integer with a
+/// constraint on its value then Mask is set to that value. The type descriptors
+/// used in Str are specific to PPC MMA builtins and are documented in the file
+/// defining the PPC builtins.
+static QualType DecodePPCMMATypeFromStr(ASTContext &Context, const char *&Str,
+                                        unsigned &Mask) {
+  bool RequireICE = false;
+  ASTContext::GetBuiltinTypeError Error = ASTContext::GE_None;
+  switch (*Str++) {
+  case 'V':
+    return Context.getVectorType(Context.UnsignedCharTy, 16,
+                                 VectorType::VectorKind::AltiVecVector);
+  case 'i': {
+    char *End;
+    unsigned size = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing constant parameter constraint");
+    Str = End;
+    Mask = size;
+    return Context.IntTy;
+  }
+  case 'W': {
+    char *End;
+    unsigned size = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing PowerPC MMA type size");
+    Str = End;
+    QualType Type;
+    switch (size) {
+  #define PPC_MMA_VECTOR_TYPE(typeName, Id, size) \
+    case size: Type = Context.Id##Ty; break;
+  #include "clang/Basic/PPCTypes.def"
+    default: llvm_unreachable("Invalid PowerPC MMA vector type");
+    }
+    bool CheckVectorArgs = false;
+    while (!CheckVectorArgs) {
+      switch (*Str++) {
+      case '*':
+        Type = Context.getPointerType(Type);
+        break;
+      case 'C':
+        Type = Type.withConst();
+        break;
+      default:
+        CheckVectorArgs = true;
+        --Str;
+        break;
+      }
+    }
+    return Type;
+  }
+  default:
+    return Context.DecodeTypeStr(--Str, Context, Error, RequireICE, true);
+  }
+}
+
 bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                        CallExpr *TheCall) {
   unsigned i = 0, l = 0, u = 0;
@@ -3243,6 +3299,10 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
      return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
+#define MMA_BUILTIN(Name, Types, Acc) \
+  case PPC::BI__builtin_mma_##Name: \
+    return SemaBuiltinPPCMMACall(TheCall, Types);
+#include "clang/Basic/BuiltinsPPC.def"
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }
@@ -6724,6 +6784,64 @@ bool Sema::SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
 
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
   }
+
+  return false;
+}
+
+/// SemaBuiltinPPCMMACall - Check the call to a PPC MMA builtin for validity.
+/// Emit an error and return true on failure; return false on success.
+/// TypeStr is a string containing the type descriptor of the value returned by
+/// the builtin and the descriptors of the expected type of the arguments.
+bool Sema::SemaBuiltinPPCMMACall(CallExpr *TheCall, const char *TypeStr) {
+
+  assert((TypeStr[0] != '\0') &&
+         "Invalid types in PPC MMA builtin declaration");
+
+  unsigned Mask = 0;
+  unsigned ArgNum = 0;
+
+  // The first type in TypeStr is the type of the value returned by the
+  // builtin. So we first read that type and change the type of TheCall.
+  QualType type = DecodePPCMMATypeFromStr(Context, TypeStr, Mask);
+  TheCall->setType(type);
+
+  while (*TypeStr != '\0') {
+    Mask = 0;
+    QualType ExpectedType = DecodePPCMMATypeFromStr(Context, TypeStr, Mask);
+    if (ArgNum >= TheCall->getNumArgs()) {
+      ArgNum++;
+      break;
+    }
+
+    Expr *Arg = TheCall->getArg(ArgNum);
+    QualType ArgType = Arg->getType();
+
+    if ((ExpectedType->isVoidPointerType() && !ArgType->isPointerType()) ||
+        (!ExpectedType->isVoidPointerType() &&
+           ArgType.getCanonicalType() != ExpectedType))
+      return Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+             << ArgType << ExpectedType << 1 << 0 << 0;
+
+    // If the value of the Mask is not 0, we have a constraint in the size of
+    // the integer argument so here we ensure the argument is a constant that
+    // is in the valid range.
+    if (Mask != 0 &&
+        SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, Mask, true))
+      return true;
+
+    ArgNum++;
+  }
+
+  // In case we exited early from the previous loop, there are other types to
+  // read from TypeStr. So we need to read them all to ensure we have the right
+  // number of arguments in TheCall and if it is not the case, to display a
+  // better error message.
+  while (*TypeStr != '\0') {
+    (void) DecodePPCMMATypeFromStr(Context, TypeStr, Mask);
+    ArgNum++;
+  }
+  if (checkArgCount(*this, TheCall, ArgNum))
+    return true;
 
   return false;
 }

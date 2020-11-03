@@ -2047,6 +2047,10 @@ public:
     GE_Missing_ucontext
   };
 
+  QualType DecodeTypeStr(const char *&Str, const ASTContext &Context,
+                         ASTContext::GetBuiltinTypeError &Error,
+                         bool &RequireICE, bool AllowTypeModifiers) const;
+
   /// Return the type for the specified builtin.
   ///
   /// If \p IntegerConstantArgs is non-null, it is filled in with a bitmask of
