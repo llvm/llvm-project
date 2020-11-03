@@ -131,3 +131,16 @@ class TypeAndTypeListTestCase(TestBase):
         # (lldb-enumerations.h).
         int_type = id_type.GetBasicType(lldb.eBasicTypeInt)
         self.assertTrue(id_type == int_type)
+
+        # Find 'myint_arr' and check the array element type.
+        myint_arr = frame0.FindVariable('myint_arr')
+        self.assertTrue(myint_arr, VALID_VARIABLE)
+        self.DebugSBValue(myint_arr)
+        myint_arr_type = myint_arr.GetType()
+        self.DebugSBType(myint_arr_type)
+        self.assertTrue(myint_arr_type.IsArrayType())
+        myint_arr_element_type = myint_arr_type.GetArrayElementType()
+        self.DebugSBType(myint_arr_element_type)
+        myint_type = target.FindFirstType('myint')
+        self.DebugSBType(myint_type)
+        self.assertTrue(myint_arr_element_type == myint_type)
