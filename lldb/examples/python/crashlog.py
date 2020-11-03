@@ -72,13 +72,13 @@ def read_plist(s):
     else:
         return plistlib.readPlistFromString(s)
 
-
-PARSE_MODE_NORMAL = 0
-PARSE_MODE_THREAD = 1
-PARSE_MODE_IMAGES = 2
-PARSE_MODE_THREGS = 3
-PARSE_MODE_SYSTEM = 4
-PARSE_MODE_INSTRS = 5
+class CrashLogParseMode:
+    NORMAL = 0
+    THREAD = 1
+    IMAGES = 2
+    THREGS = 3
+    SYSTEM = 4
+    INSTRS = 5
 
 
 class CrashLog(symbolication.Symbolicator):
@@ -369,7 +369,7 @@ class CrashLog(symbolication.Symbolicator):
             return
 
         self.file_lines = f.read().splitlines()
-        parse_mode = PARSE_MODE_NORMAL
+        parse_mode = CrashLogParseMode.NORMAL
         thread = None
         app_specific_backtrace = False
         for line in self.file_lines:
@@ -377,7 +377,7 @@ class CrashLog(symbolication.Symbolicator):
             line_len = len(line)
             if line_len == 0:
                 if thread:
-                    if parse_mode == PARSE_MODE_THREAD:
+                    if parse_mode == CrashLogParseMode.THREAD:
                         if thread.index == self.crashed_thread_idx:
                             thread.reason = ''
                             if self.thread_exception:
@@ -394,9 +394,9 @@ class CrashLog(symbolication.Symbolicator):
                     # in the info_lines wasn't empty
                     if len(self.info_lines) > 0 and len(self.info_lines[-1]):
                         self.info_lines.append(line)
-                parse_mode = PARSE_MODE_NORMAL
-                # print 'PARSE_MODE_NORMAL'
-            elif parse_mode == PARSE_MODE_NORMAL:
+                parse_mode = CrashLogParseMode.NORMAL
+                # print 'CrashLogParseMode.NORMAL'
+            elif parse_mode == CrashLogParseMode.NORMAL:
                 if line.startswith('Process:'):
                     (self.process_name, pid_with_brackets) = line[
                         8:].strip().split(' [')
@@ -439,7 +439,7 @@ class CrashLog(symbolication.Symbolicator):
                     self.version = int(line[15:].strip())
                     continue
                 elif line.startswith('System Profile:'):
-                    parse_mode = PARSE_MODE_SYSTEM
+                    parse_mode = CrashLogParseMode.SYSTEM
                     continue
                 elif (line.startswith('Interval Since Last Report:') or
                       line.startswith('Crashes Since Last Report:') or
@@ -455,38 +455,38 @@ class CrashLog(symbolication.Symbolicator):
                         app_specific_backtrace = False
                         thread_state_match = self.thread_regex.search(line)
                         thread_idx = int(thread_state_match.group(1))
-                        parse_mode = PARSE_MODE_THREGS
+                        parse_mode = CrashLogParseMode.THREGS
                         thread = self.threads[thread_idx]
                         continue
                     thread_insts_match  = self.thread_instrs_regex.search(line)
                     if thread_insts_match:
-                        parse_mode = PARSE_MODE_INSTRS
+                        parse_mode = CrashLogParseMode.INSTRS
                         continue
                     thread_match = self.thread_regex.search(line)
                     if thread_match:
                         app_specific_backtrace = False
-                        parse_mode = PARSE_MODE_THREAD
+                        parse_mode = CrashLogParseMode.THREAD
                         thread_idx = int(thread_match.group(1))
                         thread = CrashLog.Thread(thread_idx, False)
                         continue
                     continue
                 elif line.startswith('Binary Images:'):
-                    parse_mode = PARSE_MODE_IMAGES
+                    parse_mode = CrashLogParseMode.IMAGES
                     continue
                 elif line.startswith('Application Specific Backtrace'):
                     app_backtrace_match = self.app_backtrace_regex.search(line)
                     if app_backtrace_match:
-                        parse_mode = PARSE_MODE_THREAD
+                        parse_mode = CrashLogParseMode.THREAD
                         app_specific_backtrace = True
                         idx = int(app_backtrace_match.group(1))
                         thread = CrashLog.Thread(idx, True)
                 elif line.startswith('Last Exception Backtrace:'): # iOS
-                    parse_mode = PARSE_MODE_THREAD
+                    parse_mode = CrashLogParseMode.THREAD
                     app_specific_backtrace = True
                     idx = 1
                     thread = CrashLog.Thread(idx, True)
                 self.info_lines.append(line.strip())
-            elif parse_mode == PARSE_MODE_THREAD:
+            elif parse_mode == CrashLogParseMode.THREAD:
                 if line.startswith('Thread'):
                     continue
                 if self.null_frame_regex.search(line):
@@ -504,7 +504,7 @@ class CrashLog(symbolication.Symbolicator):
                         frame_addr, 0), frame_ofs))
                 else:
                     print('error: frame regex failed for line: "%s"' % line)
-            elif parse_mode == PARSE_MODE_IMAGES:
+            elif parse_mode == CrashLogParseMode.IMAGES:
                 image_match = self.image_regex_uuid.search(line)
                 if image_match:
                     (img_lo, img_hi, img_name, _, img_version, _,
@@ -519,7 +519,7 @@ class CrashLog(symbolication.Symbolicator):
                 else:
                     print("error: image regex failed for: %s" % line)
 
-            elif parse_mode == PARSE_MODE_THREGS:
+            elif parse_mode == CrashLogParseMode.THREGS:
                 stripped_line = line.strip()
                 # "r12: 0x00007fff6b5939c8  r13: 0x0000000007000006  r14: 0x0000000000002a03  r15: 0x0000000000000c00"
                 reg_values = re.findall(
@@ -530,9 +530,9 @@ class CrashLog(symbolication.Symbolicator):
                     # print 'reg = "%s"' % reg
                     # print 'value = "%s"' % value
                     thread.registers[reg.strip()] = int(value, 0)
-            elif parse_mode == PARSE_MODE_SYSTEM:
+            elif parse_mode == CrashLogParseMode.SYSTEM:
                 self.system_profile.append(line)
-            elif parse_mode == PARSE_MODE_INSTRS:
+            elif parse_mode == CrashLogParseMode.INSTRS:
                 pass
         f.close()
 
