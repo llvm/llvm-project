@@ -25,7 +25,7 @@ class TestDynamicPipelinePass
     : public PassWrapper<TestDynamicPipelinePass, OperationPass<>> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
-    OpPassManager pm(ModuleOp::getOperationName(), false);
+    OpPassManager pm(ModuleOp::getOperationName());
     parsePassPipeline(pipeline, pm, llvm::errs());
     pm.getDependentDialects(registry);
   }
@@ -54,7 +54,7 @@ public:
     }
     if (!pm) {
       pm = std::make_unique<OpPassManager>(
-          getOperation()->getName().getIdentifier(), false);
+          getOperation()->getName().getIdentifier());
       parsePassPipeline(pipeline, *pm, llvm::errs());
     }
 

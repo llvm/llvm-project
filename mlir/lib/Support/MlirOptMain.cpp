@@ -58,7 +58,8 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
     return failure();
 
   // Apply any pass manager command line options.
-  PassManager pm(context, verifyPasses);
+  PassManager pm(context);
+  pm.enableVerifier(verifyPasses);
   applyPassManagerCLOptions(pm);
 
   // Build the provided pipeline.
