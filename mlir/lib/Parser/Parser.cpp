@@ -846,6 +846,15 @@ public:
   ParseResult parseOperation(OperationState &opState) {
     if (opDefinition->parseAssembly(*this, opState))
       return failure();
+    // Verify that the parsed attributes does not have duplicate attributes.
+    // This can happen if an attribute set during parsing is also specified in
+    // the attribute dictionary in the assembly, or the attribute is set
+    // multiple during parsing.
+    Optional<NamedAttribute> duplicate = opState.attributes.findDuplicate();
+    if (duplicate)
+      return emitError(getNameLoc(), "attribute '")
+             << duplicate->first
+             << "' occurs more than once in the attribute list";
     return success();
   }
 
