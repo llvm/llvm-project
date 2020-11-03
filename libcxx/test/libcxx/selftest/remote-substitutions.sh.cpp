@@ -17,7 +17,7 @@
 
 // RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe 0
-// RUN: %{exec} ! %t.exe 1
+// RUN: %{exec} bash -c '! %t.exe 1'
 
 #include <cassert>
 #include <cstdlib>
