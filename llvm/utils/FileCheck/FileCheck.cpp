@@ -77,6 +77,10 @@ static cl::opt<bool> AllowEmptyInput(
     cl::desc("Allow the input file to be empty. This is useful when making\n"
              "checks that some error message does not occur, for example."));
 
+static cl::opt<bool> AllowUnusedPrefixes(
+    "allow-unused-prefixes", cl::init(true),
+    cl::desc("Allow prefixes to be specified but not appear in the test."));
+
 static cl::opt<bool> MatchFullLines(
     "match-full-lines", cl::init(false),
     cl::desc("Require all positive matches to cover an entire input line.\n"
@@ -771,6 +775,7 @@ int main(int argc, char **argv) {
     return 2;
 
   Req.AllowEmptyInput = AllowEmptyInput;
+  Req.AllowUnusedPrefixes = AllowUnusedPrefixes;
   Req.EnableVarScope = EnableVarScope;
   Req.AllowDeprecatedDagOverlap = AllowDeprecatedDagOverlap;
   Req.Verbose = Verbose;

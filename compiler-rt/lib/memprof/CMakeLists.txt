@@ -64,10 +64,6 @@ append_list_if(COMPILER_RT_HAS_LIBM m MEMPROF_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread MEMPROF_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log MEMPROF_DYNAMIC_LIBS)
 
-if (TARGET cxx-headers OR HAVE_LIBCXX)
-  set(MEMPROF_DEPS cxx-headers)
-endif()
-
 # Compile MemProf sources into an object library.
 
 add_compiler_rt_object_libraries(RTMemprof_dynamic

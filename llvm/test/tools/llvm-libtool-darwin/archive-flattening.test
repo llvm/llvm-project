@@ -2,17 +2,19 @@
 
 # RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
 # RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+# RUN: llvm-as %S/Inputs/x86_64-osx.ll -o %t-x86_64.bc
 
 ## Input a correct archive:
 # RUN: rm -f %t.correct.ar
-# RUN: llvm-ar cr %t.correct.ar %t-input1.o %t-input2.o
+# RUN: llvm-ar cr %t.correct.ar %t-x86_64.bc %t-input1.o %t-input2.o
 # RUN: llvm-libtool-darwin -static -o %t.lib %t.correct.ar
 
 ## Check that binaries are present:
 # RUN: llvm-ar t %t.lib | \
 # RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
 
-# CHECK-NAMES:      [[PREFIX]]-input1.o
+# CHECK-NAMES: [[PREFIX]]-x86_64.bc
+# CHECK-NAMES-NEXT: [[PREFIX]]-input1.o
 # CHECK-NAMES-NEXT: [[PREFIX]]-input2.o
 
 ## Check that symbols are present:
@@ -20,6 +22,7 @@
 # RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
 # CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
 # CHECK-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
 # CHECK-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
 # CHECK-SYMBOLS-EMPTY:
@@ -30,24 +33,27 @@
 
 # FORMAT:      Archive : [[ARCHIVE]]
 # FORMAT-NEXT: __.SYMDEF
+# FORMAT-NEXT: [[PREFIX]]-x86_64.bc
 # FORMAT-NEXT: [[PREFIX]]-input1.o
 # FORMAT-NEXT: [[PREFIX]]-input2.o
 # FORMAT-NOT:  {{.}}
 
-## Passing both archive and object file:
-# RUN: llvm-libtool-darwin -static -o %t.lib %t-input2.o %t.correct.ar %t-input1.o
+## Passing both archive, bitcode and object file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-x86_64.bc %t.correct.ar %t-input1.o
 # RUN: llvm-ar t %t.lib | \
 # RUN:   FileCheck %s --check-prefix=BOTH-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
 # RUN: llvm-nm --print-armap %t.lib | \
 # RUN:   FileCheck %s --check-prefix=BOTH-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
-# BOTH-NAMES:      [[PREFIX]]-input2.o
+# BOTH-NAMES:      [[PREFIX]]-x86_64.bc
+# BOTH-NAMES-NEXT: [[PREFIX]]-x86_64.bc
 # BOTH-NAMES-NEXT: [[PREFIX]]-input1.o
 # BOTH-NAMES-NEXT: [[PREFIX]]-input2.o
 # BOTH-NAMES-NEXT: [[PREFIX]]-input1.o
 
 # BOTH-SYMBOLS:      Archive map
-# BOTH-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# BOTH-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
+# BOTH-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
 # BOTH-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
 # BOTH-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
 # BOTH-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o

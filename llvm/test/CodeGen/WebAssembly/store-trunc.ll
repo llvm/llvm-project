@@ -1,5 +1,5 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck --check-prefixes CHECK,CHK32 %s
-; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck --check-prefixes CHECK,CHK64 %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test that truncating stores are assembled properly.
 

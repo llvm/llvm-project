@@ -103,6 +103,12 @@ struct PragmaSTDC_FENV_ACCESSHandler : public PragmaHandler {
 
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &Tok) override {
+    Token PragmaName = Tok;
+    if (!PP.getTargetInfo().hasStrictFP() && !PP.getLangOpts().ExpStrictFP) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_fp_ignored)
+          << PragmaName.getIdentifierInfo()->getName();
+      return;
+    }
     tok::OnOffSwitch OOS;
     if (PP.LexOnOffSwitch(OOS))
      return;
@@ -2553,6 +2559,12 @@ void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
                                              Token &Tok) {
   Sema::PragmaMsStackAction Action = Sema::PSK_Set;
   SourceLocation FloatControlLoc = Tok.getLocation();
+  Token PragmaName = Tok;
+  if (!PP.getTargetInfo().hasStrictFP() && !PP.getLangOpts().ExpStrictFP) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_fp_ignored)
+        << PragmaName.getIdentifierInfo()->getName();
+    return;
+  }
   PP.Lex(Tok);
   if (Tok.isNot(tok::l_paren)) {
     PP.Diag(FloatControlLoc, diag::err_expected) << tok::l_paren;
@@ -2846,11 +2858,12 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
 namespace {
 /// Used as the annotation value for tok::annot_pragma_fp.
 struct TokFPAnnotValue {
-  enum FlagKinds { Contract, Reassociate };
+  enum FlagKinds { Contract, Reassociate, Exceptions };
   enum FlagValues { On, Off, Fast };
 
-  FlagKinds FlagKind;
-  FlagValues FlagValue;
+  llvm::Optional<LangOptions::FPModeKind> ContractValue;
+  llvm::Optional<LangOptions::FPModeKind> ReassociateValue;
+  llvm::Optional<LangOptions::FPExceptionModeKind> ExceptionsValue;
 };
 } // end anonymous namespace
 
@@ -2867,6 +2880,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
+  auto *AnnotValue = new (PP.getPreprocessorAllocator()) TokFPAnnotValue;
   while (Tok.is(tok::identifier)) {
     IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
 
@@ -2875,6 +2889,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
             OptionInfo->getName())
             .Case("contract", TokFPAnnotValue::Contract)
             .Case("reassociate", TokFPAnnotValue::Reassociate)
+            .Case("exceptions", TokFPAnnotValue::Exceptions)
             .Default(None);
     if (!FlagKind) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_option)
@@ -2893,25 +2908,49 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
     if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
           << PP.getSpelling(Tok) << OptionInfo->getName()
-          << (FlagKind == TokFPAnnotValue::Reassociate);
+          << static_cast<int>(*FlagKind);
       return;
     }
     const IdentifierInfo *II = Tok.getIdentifierInfo();
 
-    auto FlagValue =
-        llvm::StringSwitch<llvm::Optional<TokFPAnnotValue::FlagValues>>(
-            II->getName())
-            .Case("on", TokFPAnnotValue::On)
-            .Case("off", TokFPAnnotValue::Off)
-            .Case("fast", TokFPAnnotValue::Fast)
-            .Default(llvm::None);
-
-    if (!FlagValue || (FlagKind == TokFPAnnotValue::Reassociate &&
-                       FlagValue == TokFPAnnotValue::Fast)) {
-      PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
-          << PP.getSpelling(Tok) << OptionInfo->getName()
-          << (FlagKind == TokFPAnnotValue::Reassociate);
-      return;
+    if (FlagKind == TokFPAnnotValue::Contract) {
+      AnnotValue->ContractValue =
+          llvm::StringSwitch<llvm::Optional<LangOptions::FPModeKind>>(
+              II->getName())
+              .Case("on", LangOptions::FPModeKind::FPM_On)
+              .Case("off", LangOptions::FPModeKind::FPM_Off)
+              .Case("fast", LangOptions::FPModeKind::FPM_Fast)
+              .Default(llvm::None);
+      if (!AnnotValue->ContractValue) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
+            << PP.getSpelling(Tok) << OptionInfo->getName() << *FlagKind;
+        return;
+      }
+    } else if (FlagKind == TokFPAnnotValue::Reassociate) {
+      AnnotValue->ReassociateValue =
+          llvm::StringSwitch<llvm::Optional<LangOptions::FPModeKind>>(
+              II->getName())
+              .Case("on", LangOptions::FPModeKind::FPM_On)
+              .Case("off", LangOptions::FPModeKind::FPM_Off)
+              .Default(llvm::None);
+      if (!AnnotValue->ReassociateValue) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
+            << PP.getSpelling(Tok) << OptionInfo->getName() << *FlagKind;
+        return;
+      }
+    } else if (FlagKind == TokFPAnnotValue::Exceptions) {
+      AnnotValue->ExceptionsValue =
+          llvm::StringSwitch<llvm::Optional<LangOptions::FPExceptionModeKind>>(
+              II->getName())
+              .Case("ignore", LangOptions::FPE_Ignore)
+              .Case("maytrap", LangOptions::FPE_MayTrap)
+              .Case("strict", LangOptions::FPE_Strict)
+              .Default(llvm::None);
+      if (!AnnotValue->ExceptionsValue) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
+            << PP.getSpelling(Tok) << OptionInfo->getName() << *FlagKind;
+        return;
+      }
     }
     PP.Lex(Tok);
 
@@ -2921,17 +2960,6 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
       return;
     }
     PP.Lex(Tok);
-
-    auto *AnnotValue = new (PP.getPreprocessorAllocator())
-        TokFPAnnotValue{*FlagKind, *FlagValue};
-    // Generate the fp annotation token.
-    Token FPTok;
-    FPTok.startToken();
-    FPTok.setKind(tok::annot_pragma_fp);
-    FPTok.setLocation(PragmaName.getLocation());
-    FPTok.setAnnotationEndLoc(PragmaName.getLocation());
-    FPTok.setAnnotationValue(reinterpret_cast<void *>(AnnotValue));
-    TokenList.push_back(FPTok);
   }
 
   if (Tok.isNot(tok::eod)) {
@@ -2939,6 +2967,14 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
         << "clang fp";
     return;
   }
+
+  Token FPTok;
+  FPTok.startToken();
+  FPTok.setKind(tok::annot_pragma_fp);
+  FPTok.setLocation(PragmaName.getLocation());
+  FPTok.setAnnotationEndLoc(PragmaName.getLocation());
+  FPTok.setAnnotationValue(reinterpret_cast<void *>(AnnotValue));
+  TokenList.push_back(FPTok);
 
   auto TokenArray = std::make_unique<Token[]>(TokenList.size());
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
@@ -2952,6 +2988,11 @@ void PragmaSTDC_FENV_ROUNDHandler::HandlePragma(Preprocessor &PP,
                                                 Token &Tok) {
   Token PragmaName = Tok;
   SmallVector<Token, 1> TokenList;
+  if (!PP.getTargetInfo().hasStrictFP() && !PP.getLangOpts().ExpStrictFP) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_fp_ignored)
+        << PragmaName.getIdentifierInfo()->getName();
+    return;
+  }
 
   PP.Lex(Tok);
   if (Tok.isNot(tok::identifier)) {
@@ -3002,24 +3043,16 @@ void Parser::HandlePragmaFP() {
   auto *AnnotValue =
       reinterpret_cast<TokFPAnnotValue *>(Tok.getAnnotationValue());
 
-  if (AnnotValue->FlagKind == TokFPAnnotValue::Reassociate)
-    Actions.ActOnPragmaFPReassociate(
-        Tok.getLocation(), AnnotValue->FlagValue == TokFPAnnotValue::On);
-  else {
-    LangOptions::FPModeKind FPC;
-    switch (AnnotValue->FlagValue) {
-    case TokFPAnnotValue::Off:
-      FPC = LangOptions::FPM_Off;
-      break;
-    case TokFPAnnotValue::On:
-      FPC = LangOptions::FPM_On;
-      break;
-    case TokFPAnnotValue::Fast:
-      FPC = LangOptions::FPM_Fast;
-      break;
-    }
-    Actions.ActOnPragmaFPContract(Tok.getLocation(), FPC);
-  }
+  if (AnnotValue->ReassociateValue)
+    Actions.ActOnPragmaFPReassociate(Tok.getLocation(),
+                                     *AnnotValue->ReassociateValue ==
+                                         LangOptions::FPModeKind::FPM_On);
+  if (AnnotValue->ContractValue)
+    Actions.ActOnPragmaFPContract(Tok.getLocation(),
+                                  *AnnotValue->ContractValue);
+  if (AnnotValue->ExceptionsValue)
+    Actions.ActOnPragmaFPExceptions(Tok.getLocation(),
+                                    *AnnotValue->ExceptionsValue);
   ConsumeAnnotationToken();
 }
 

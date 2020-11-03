@@ -146,6 +146,10 @@ public:
     return common::ScopedSet(isWholeAssumedSizeArrayOk_, true);
   }
 
+  common::Restorer<bool> DoNotUseSavedTypedExprs() {
+    return common::ScopedSet(useSavedTypedExprs_, false);
+  }
+
   Expr<SubscriptInteger> AnalyzeKindSelector(common::TypeCategory category,
       const std::optional<parser::KindSelector> &);
 
@@ -322,7 +326,8 @@ private:
   // Analysis subroutines
   int AnalyzeKindParam(
       const std::optional<parser::KindParam> &, int defaultKind);
-  template <typename PARSED> MaybeExpr ExprOrVariable(const PARSED &);
+  template <typename PARSED>
+  MaybeExpr ExprOrVariable(const PARSED &, parser::CharBlock source);
   template <typename PARSED> MaybeExpr IntLiteralConstant(const PARSED &);
   MaybeExpr AnalyzeString(std::string &&, int kind);
   std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
@@ -378,8 +383,8 @@ private:
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};
   std::map<parser::CharBlock, int> impliedDos_; // values are INTEGER kinds
-  bool fatalErrors_{false};
   bool isWholeAssumedSizeArrayOk_{false};
+  bool useSavedTypedExprs_{true};
   friend class ArgumentAnalyzer;
 };
 

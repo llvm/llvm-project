@@ -21,6 +21,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "C++11"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx11"
@@ -28,6 +32,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "C++14"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx14"
@@ -35,6 +43,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "C++17"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx17"
@@ -42,6 +54,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
@@ -49,6 +65,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot.sh generic-noexceptions"
@@ -56,6 +76,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "GCC/C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-gcc"
@@ -63,6 +87,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "ASAN"
     command: "libcxx/utils/ci/run-buildbot.sh generic-asan"
@@ -70,6 +98,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "TSAN"
     command: "libcxx/utils/ci/run-buildbot.sh generic-tsan"
@@ -77,6 +109,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "UBSAN"
     command: "libcxx/utils/ci/run-buildbot.sh generic-ubsan"
@@ -84,6 +120,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "With LLVM's libunwind"
     command: "libcxx/utils/ci/run-buildbot.sh generic-with_llvm_unwinder"
@@ -91,6 +131,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "Single-threaded"
     command: "libcxx/utils/ci/run-buildbot.sh generic-singlethreaded"
@@ -98,6 +142,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "No debug mode"
     command: "libcxx/utils/ci/run-buildbot.sh generic-nodebug"
@@ -105,6 +153,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "No random device"
     command: "libcxx/utils/ci/run-buildbot.sh generic-no-random_device"
@@ -112,6 +164,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "No locale"
     command: "libcxx/utils/ci/run-buildbot.sh generic-no-localization"
@@ -119,6 +175,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "MacOS C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
@@ -126,6 +186,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-macos-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "Benchmarks"
     command: "libcxx/utils/ci/run-buildbot.sh benchmarks"
@@ -133,6 +197,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "Legacy standalone build"
     command: "libcxx/utils/ci/run-buildbot.sh legacy-standalone"
@@ -140,6 +208,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "Unified standalone build"
     command: "libcxx/utils/ci/run-buildbot.sh unified-standalone"
@@ -147,6 +219,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
@@ -155,6 +231,10 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-macos-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "Apple system -fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot.sh x86_64-apple-system-noexceptions"
@@ -162,3 +242,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-macos-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2

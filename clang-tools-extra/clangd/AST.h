@@ -64,19 +64,18 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND);
 /// string if decl is not a template specialization.
 std::string printTemplateSpecializationArgs(const NamedDecl &ND);
 
-/// Gets the symbol ID for a declaration, if possible.
-llvm::Optional<SymbolID> getSymbolID(const Decl *D);
+/// Gets the symbol ID for a declaration. Returned SymbolID might be null.
+SymbolID getSymbolID(const Decl *D);
 
-/// Gets the symbol ID for a macro, if possible.
+/// Gets the symbol ID for a macro. Returned SymbolID might be null.
 /// Currently, this is an encoded USR of the macro, which incorporates macro
 /// locations (e.g. file name, offset in file).
 /// FIXME: the USR semantics might not be stable enough as the ID for index
 /// macro (e.g. a change in definition offset can result in a different USR). We
 /// could change these semantics in the future by reimplementing this funcure
 /// (e.g. avoid USR for macros).
-llvm::Optional<SymbolID> getSymbolID(const llvm::StringRef MacroName,
-                                     const MacroInfo *MI,
-                                     const SourceManager &SM);
+SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
+                     const SourceManager &SM);
 
 /// Returns a QualType as string. The result doesn't contain unwritten scopes
 /// like anonymous/inline namespace.

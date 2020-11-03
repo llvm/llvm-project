@@ -13,18 +13,17 @@ define void @foo(i64 %x) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl d, %eax
+; X86-NEXT:    movl d+4, %eax
 ; X86-NEXT:    notl %eax
-; X86-NEXT:    movl d+4, %ecx
+; X86-NEXT:    movl d, %ecx
 ; X86-NEXT:    notl %ecx
-; X86-NEXT:    andl $701685459, %ecx # imm = 0x29D2DED3
-; X86-NEXT:    andl $-566231040, %eax # imm = 0xDE400000
-; X86-NEXT:    shrdl $21, %ecx, %eax
-; X86-NEXT:    shrl $21, %ecx
-; X86-NEXT:    addl $7, %eax
-; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    andl $-566231040, %ecx # imm = 0xDE400000
+; X86-NEXT:    andl $701685459, %eax # imm = 0x29D2DED3
+; X86-NEXT:    shrdl $21, %eax, %ecx
+; X86-NEXT:    shrl $21, %eax
+; X86-NEXT:    addl $7, %ecx
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __divdi3

@@ -27,7 +27,7 @@ typedef struct {
   thread_t thread;
 } SuspendedThreadInfo;
 
-class SuspendedThreadsListMac : public SuspendedThreadsList {
+class SuspendedThreadsListMac final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListMac() : threads_(1024) {}
 

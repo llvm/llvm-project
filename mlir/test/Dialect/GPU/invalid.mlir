@@ -37,6 +37,7 @@ func @launch_requires_gpu_return(%sz : index) {
 func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
+      {operand_segment_sizes = dense<[0, 1, 1, 1, 1, 1, 0, 0]> : vector<8xi32>}
       : (index, index, index, index, index) -> ()
   return
 }
@@ -55,6 +56,7 @@ module attributes {gpu.container_module} {
   func @launch_func_missing_callee_attribute(%sz : index) {
     // expected-error@+1 {{'gpu.launch_func' op requires attribute 'kernel'}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
+        {operand_segment_sizes = dense<[0, 1, 1, 1, 1, 1, 1, 0]> : vector<8xi32>}
         : (index, index, index, index, index, index) -> ()
     return
   }

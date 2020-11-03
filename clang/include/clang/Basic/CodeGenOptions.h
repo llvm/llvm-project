@@ -231,6 +231,9 @@ public:
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;
 
+  /// Name of the profile file to use as output for with -fmemory-profile.
+  std::string MemoryProfileOutput;
+
   /// Name of the profile file to use as input for -fprofile-instr-use
   std::string ProfileInstrumentUsePath;
 

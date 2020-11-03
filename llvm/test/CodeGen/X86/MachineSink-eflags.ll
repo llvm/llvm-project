@@ -16,31 +16,30 @@ define void @foo(i8* nocapture %_stubArgs) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $152, %rsp
 ; CHECK-NEXT:    movq 48(%rdi), %rax
-; CHECK-NEXT:    movl 64(%rdi), %edx
+; CHECK-NEXT:    movl 64(%rdi), %ecx
 ; CHECK-NEXT:    movl $200, %esi
 ; CHECK-NEXT:    addl 68(%rdi), %esi
-; CHECK-NEXT:    imull $46, %edx, %ecx
-; CHECK-NEXT:    addq %rsi, %rcx
-; CHECK-NEXT:    shlq $4, %rcx
-; CHECK-NEXT:    imull $47, %edx, %edx
+; CHECK-NEXT:    imull $46, %ecx, %edx
 ; CHECK-NEXT:    addq %rsi, %rdx
 ; CHECK-NEXT:    shlq $4, %rdx
-; CHECK-NEXT:    movaps (%rax,%rdx), %xmm0
+; CHECK-NEXT:    imull $47, %ecx, %ecx
+; CHECK-NEXT:    addq %rsi, %rcx
+; CHECK-NEXT:    shlq $4, %rcx
 ; CHECK-NEXT:    cmpl $0, (%rdi)
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    movaps (%rax,%rcx), %xmm1
-; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    jne .LBB0_5
-; CHECK-NEXT:  .LBB0_4: # %entry
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:  .LBB0_5: # %entry
+; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    movaps (%rax,%rdx), %xmm0
+; CHECK-NEXT:  .LBB0_3: # %entry
+; CHECK-NEXT:    movaps (%rax,%rcx), %xmm1
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:  # %bb.4: # %entry
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:  .LBB0_5: # %entry
+; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq $152, %rsp
 ; CHECK-NEXT:    retq
 entry:

@@ -30,6 +30,12 @@ public:
   /// Initialize from a StringRef.
   SmallString(StringRef S) : SmallVector<char, InternalLen>(S.begin(), S.end()) {}
 
+  /// Initialize by concatenating a list of StringRefs.
+  SmallString(std::initializer_list<StringRef> Refs)
+      : SmallVector<char, InternalLen>() {
+    this->append(Refs);
+  }
+
   /// Initialize with a range.
   template<typename ItTy>
   SmallString(ItTy S, ItTy E) : SmallVector<char, InternalLen>(S, E) {}
@@ -65,6 +71,12 @@ public:
     SmallVectorImpl<char>::append(RHS.begin(), RHS.end());
   }
 
+  /// Assign from a list of StringRefs.
+  void assign(std::initializer_list<StringRef> Refs) {
+    this->clear();
+    append(Refs);
+  }
+
   /// @}
   /// @name String Concatenation
   /// @{
@@ -87,6 +99,20 @@ public:
   /// Append from a SmallVector.
   void append(const SmallVectorImpl<char> &RHS) {
     SmallVectorImpl<char>::append(RHS.begin(), RHS.end());
+  }
+
+  /// Append from a list of StringRefs.
+  void append(std::initializer_list<StringRef> Refs) {
+    size_t SizeNeeded = this->size();
+    for (const StringRef &Ref : Refs)
+      SizeNeeded += Ref.size();
+    this->reserve(SizeNeeded);
+    auto CurEnd = this->end();
+    for (const StringRef &Ref : Refs) {
+      this->uninitialized_copy(Ref.begin(), Ref.end(), CurEnd);
+      CurEnd += Ref.size();
+    }
+    this->set_size(SizeNeeded);
   }
 
   /// @}
@@ -280,9 +306,9 @@ public:
   }
 
   // Extra operators.
-  const SmallString &operator=(StringRef RHS) {
-    this->clear();
-    return *this += RHS;
+  SmallString &operator=(StringRef RHS) {
+    this->assign(RHS);
+    return *this;
   }
 
   SmallString &operator+=(StringRef RHS) {

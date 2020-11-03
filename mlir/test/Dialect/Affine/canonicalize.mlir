@@ -423,7 +423,7 @@ func @fold_empty_loop() {
 
 // -----
 
-// CHECK-DAG: [[$SET:#set[0-9]+]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
+// CHECK-DAG: [[$SET:#set[0-9]*]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
 
 // CHECK-LABEL: func @canonicalize_affine_if
 // CHECK-SAME: [[M:%.*]]: index,

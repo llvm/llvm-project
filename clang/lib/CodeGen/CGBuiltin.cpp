@@ -14750,6 +14750,22 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
       llvm::MDNode::get(CGF.getLLVMContext(), None));
   return LD;
 }
+
+// \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
+Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
+  const unsigned XOffset = 12;
+  auto *DP = EmitAMDGPUDispatchPtr(CGF);
+  // Indexing the HSA kernel_dispatch_packet struct.
+  auto *Offset = llvm::ConstantInt::get(CGF.Int32Ty, XOffset + Index * 4);
+  auto *GEP = CGF.Builder.CreateGEP(DP, Offset);
+  auto *DstTy =
+      CGF.Int32Ty->getPointerTo(GEP->getType()->getPointerAddressSpace());
+  auto *Cast = CGF.Builder.CreateBitCast(GEP, DstTy);
+  auto *LD = CGF.Builder.CreateLoad(Address(Cast, CharUnits::fromQuantity(4)));
+  LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                  llvm::MDNode::get(CGF.getLLVMContext(), None));
+  return LD;
+}
 } // namespace
 
 // For processing memory ordering and memory scope arguments of various
@@ -15009,6 +15025,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return EmitAMDGPUWorkGroupSize(*this, 1);
   case AMDGPU::BI__builtin_amdgcn_workgroup_size_z:
     return EmitAMDGPUWorkGroupSize(*this, 2);
+
+  // amdgcn grid size
+  case AMDGPU::BI__builtin_amdgcn_grid_size_x:
+    return EmitAMDGPUGridSize(*this, 0);
+  case AMDGPU::BI__builtin_amdgcn_grid_size_y:
+    return EmitAMDGPUGridSize(*this, 1);
+  case AMDGPU::BI__builtin_amdgcn_grid_size_z:
+    return EmitAMDGPUGridSize(*this, 2);
 
   // r600 intrinsics
   case AMDGPU::BI__builtin_r600_recipsqrt_ieee:
@@ -16651,6 +16675,17 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_bitselect, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {V1, V2, C});
   }
+  case WebAssembly::BI__builtin_wasm_signselect_i8x16:
+  case WebAssembly::BI__builtin_wasm_signselect_i16x8:
+  case WebAssembly::BI__builtin_wasm_signselect_i32x4:
+  case WebAssembly::BI__builtin_wasm_signselect_i64x2: {
+    Value *V1 = EmitScalarExpr(E->getArg(0));
+    Value *V2 = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_signselect, ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {V1, V2, C});
+  }
   case WebAssembly::BI__builtin_wasm_dot_s_i32x4_i16x8: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
@@ -16661,6 +16696,12 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Vec = EmitScalarExpr(E->getArg(0));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_popcnt);
     return Builder.CreateCall(Callee, {Vec});
+  }
+  case WebAssembly::BI__builtin_wasm_eq_i64x2: {
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_eq);
+    return Builder.CreateCall(Callee, {LHS, RHS});
   }
   case WebAssembly::BI__builtin_wasm_any_true_i8x16:
   case WebAssembly::BI__builtin_wasm_any_true_i16x8:
@@ -16693,7 +16734,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_bitmask_i8x16:
   case WebAssembly::BI__builtin_wasm_bitmask_i16x8:
-  case WebAssembly::BI__builtin_wasm_bitmask_i32x4: {
+  case WebAssembly::BI__builtin_wasm_bitmask_i32x4:
+  case WebAssembly::BI__builtin_wasm_bitmask_i64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
     Function *Callee =
         CGM.getIntrinsic(Intrinsic::wasm_bitmask, Vec->getType());
@@ -16756,6 +16798,29 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee =
         CGM.getIntrinsic(IntNo, {ConvertType(E->getType()), Low->getType()});
     return Builder.CreateCall(Callee, {Low, High});
+  }
+  case WebAssembly::BI__builtin_wasm_widen_low_s_i32x4_i64x2:
+  case WebAssembly::BI__builtin_wasm_widen_high_s_i32x4_i64x2:
+  case WebAssembly::BI__builtin_wasm_widen_low_u_i32x4_i64x2:
+  case WebAssembly::BI__builtin_wasm_widen_high_u_i32x4_i64x2: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_widen_low_s_i32x4_i64x2:
+      IntNo = Intrinsic::wasm_widen_low_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_widen_high_s_i32x4_i64x2:
+      IntNo = Intrinsic::wasm_widen_high_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_widen_low_u_i32x4_i64x2:
+      IntNo = Intrinsic::wasm_widen_low_unsigned;
+      break;
+    case WebAssembly::BI__builtin_wasm_widen_high_u_i32x4_i64x2:
+      IntNo = Intrinsic::wasm_widen_high_unsigned;
+      break;
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo);
+    return Builder.CreateCall(Callee, Vec);
   }
   case WebAssembly::BI__builtin_wasm_load32_zero: {
     Value *Ptr = EmitScalarExpr(E->getArg(0));

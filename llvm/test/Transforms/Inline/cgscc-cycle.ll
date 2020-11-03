@@ -153,59 +153,6 @@ bb2:
 @a = global i64 0
 @b = global i64 0
 
-define void @test3_c(i32 %i) {
-entry:
-  %cmp = icmp eq i32 %i, 5
-  br i1 %cmp, label %if.end, label %if.then
-
-if.then:                                          ; preds = %entry
-  %call = tail call i64 @random()
-  %t0 = load i64, i64* @a
-  %add = add nsw i64 %t0, %call
-  store i64 %add, i64* @a
-  br label %if.end
-
-if.end:                                           ; preds = %entry, %if.then
-  tail call void @test3_d(i32 %i)
-  %t6 = load i64, i64* @a
-  %add85 = add nsw i64 %t6, 1
-  store i64 %add85, i64* @a
-  ret void
-}
-
-declare i64 @random()
-
-define void @test3_d(i32 %i) {
-entry:
-  %cmp = icmp eq i32 %i, 5
-  br i1 %cmp, label %if.end, label %if.then
-
-if.then:                                          ; preds = %entry
-  %call = tail call i64 @random()
-  %t0 = load i64, i64* @a
-  %add = add nsw i64 %t0, %call
-  store i64 %add, i64* @a
-  br label %if.end
-
-if.end:                                           ; preds = %entry, %if.then
-  tail call void @test3_c(i32 %i)
-  tail call void @test3_b()
-  %t6 = load i64, i64* @a
-  %add79 = add nsw i64 %t6, 3
-  store i64 %add79, i64* @a
-  ret void
-}
-
-; Function Attrs: noinline
-define void @test3_b() #0 {
-entry:
-  tail call void @test3_a()
-  %t0 = load i64, i64* @a
-  %add = add nsw i64 %t0, 2
-  store i64 %add, i64* @a
-  ret void
-}
-
 ; Check test3_c is inlined into test3_a once and only once.
 ; CHECK-LABEL: @test3_a(
 ; CHECK: tail call void @test3_b()
@@ -228,5 +175,58 @@ entry:
   store i64 %add, i64* @b
   ret void
 }
+
+; Function Attrs: noinline
+define void @test3_b() #0 {
+entry:
+  tail call void @test3_a()
+  %t0 = load i64, i64* @a
+  %add = add nsw i64 %t0, 2
+  store i64 %add, i64* @a
+  ret void
+}
+
+define void @test3_d(i32 %i) {
+entry:
+  %cmp = icmp eq i32 %i, 5
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %call = tail call i64 @random()
+  %t0 = load i64, i64* @a
+  %add = add nsw i64 %t0, %call
+  store i64 %add, i64* @a
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  tail call void @test3_c(i32 %i)
+  tail call void @test3_b()
+  %t6 = load i64, i64* @a
+  %add79 = add nsw i64 %t6, 3
+  store i64 %add79, i64* @a
+  ret void
+}
+
+define void @test3_c(i32 %i) {
+entry:
+  %cmp = icmp eq i32 %i, 5
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %call = tail call i64 @random()
+  %t0 = load i64, i64* @a
+  %add = add nsw i64 %t0, %call
+  store i64 %add, i64* @a
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  tail call void @test3_d(i32 %i)
+  %t6 = load i64, i64* @a
+  %add85 = add nsw i64 %t6, 1
+  store i64 %add85, i64* @a
+  ret void
+}
+
+declare i64 @random()
 
 attributes #0 = { noinline }

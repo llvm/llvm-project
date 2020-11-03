@@ -5480,6 +5480,11 @@ private:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override {
+    llvm::Type *BaseTy = CGF.ConvertType(Ty);
+    if (isa<llvm::ScalableVectorType>(BaseTy))
+      llvm::report_fatal_error("Passing SVE types to variadic functions is "
+                               "currently not supported");
+
     return Kind == Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
                          : isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
                                          : EmitAAPCSVAArg(VAListAddr, Ty, CGF);

@@ -29,7 +29,7 @@ int main(int, char**)
     static_assert(std::money_base::sign == 3, "");
     static_assert(std::money_base::value == 4, "");
     static_assert(sizeof(std::money_base::pattern) == 4, "");
-    std::money_base::pattern p;
+    std::money_base::pattern p; (void)p;
     p.field[0] = std::money_base::none;
 
   return 0;

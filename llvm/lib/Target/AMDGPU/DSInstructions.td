@@ -53,7 +53,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
 }
 
 class DS_Real <DS_Pseudo ds> :
-  InstSI <ds.OutOperandList, ds.InOperandList, ds.Mnemonic # " " # ds.AsmOperands, []>,
+  InstSI <ds.OutOperandList, ds.InOperandList, ds.Mnemonic # ds.AsmOperands, []>,
   Enc64 {
 
   let isPseudo = 0;
@@ -87,7 +87,7 @@ class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
   (ins rc:$data0, offset:$offset, gds:$gds),
-  "$data0$offset$gds"> {
+  " $data0$offset$gds"> {
 
   let has_addr = 0;
   let has_data1 = 0;
@@ -98,7 +98,7 @@ class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, rc:$data0, offset:$offset, gds:$gds),
-  "$addr, $data0$offset$gds"> {
+  " $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
   let has_vdst = 0;
@@ -118,7 +118,7 @@ class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, rc:$data0, rc:$data1, offset:$offset, gds:$gds),
-  "$addr, $data0, $data1$offset$gds"> {
+  " $addr, $data0, $data1$offset$gds"> {
 
   let has_vdst = 0;
 }
@@ -138,7 +138,7 @@ class DS_1A2D_Off8_NORET <string opName, RegisterClass rc = VGPR_32>
   (outs),
   (ins VGPR_32:$addr, rc:$data0, rc:$data1,
        offset0:$offset0, offset1:$offset1, gds:$gds),
-  "$addr, $data0, $data1$offset0$offset1$gds"> {
+  " $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_vdst = 0;
   let has_offset = 0;
@@ -157,7 +157,7 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
   (ins VGPR_32:$addr, rc:$data0, offset:$offset, gds:$gds),
-  "$vdst, $addr, $data0$offset$gds"> {
+  " $vdst, $addr, $data0$offset$gds"> {
 
   let hasPostISelHook = 1;
   let has_data1 = 0;
@@ -181,7 +181,7 @@ class DS_1A2D_RET<string opName,
 : DS_Pseudo<opName,
   (outs rc:$vdst),
   (ins VGPR_32:$addr, src:$data0, src:$data1, offset:$offset, gds:$gds),
-  "$vdst, $addr, $data0, $data1$offset$gds"> {
+  " $vdst, $addr, $data0, $data1$offset$gds"> {
 
   let hasPostISelHook = 1;
 }
@@ -205,7 +205,7 @@ class DS_1A2D_Off8_RET<string opName,
 : DS_Pseudo<opName,
   (outs rc:$vdst),
   (ins VGPR_32:$addr, src:$data0, src:$data1, offset0:$offset0, offset1:$offset1, gds:$gds),
-  "$vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
+  " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
   let AsmMatchConverter = "cvtDSOffset01";
@@ -230,7 +230,7 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
   !if(HasTiedOutput,
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds, rc:$vdst_in),
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
-  "$vdst, $addr$offset$gds"> {
+  " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
   let has_data0 = 0;
@@ -252,7 +252,7 @@ class DS_1A_Off8_RET <string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
   (ins VGPR_32:$addr, offset0:$offset0, offset1:$offset1, gds:$gds),
-  "$vdst, $addr$offset0$offset1$gds"> {
+  " $vdst, $addr$offset0$offset1$gds"> {
 
   let has_offset = 0;
   let has_data0 = 0;
@@ -271,7 +271,7 @@ multiclass DS_1A_Off8_RET_mc <string opName, RegisterClass rc = VGPR_32> {
 class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   (outs VGPR_32:$vdst),
   (ins VGPR_32:$addr, offset:$offset),
-  "$vdst, $addr$offset gds"> {
+  " $vdst, $addr$offset gds"> {
 
   let has_data0 = 0;
   let has_data1 = 0;
@@ -283,7 +283,7 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
   (outs VGPR_32:$vdst),
   (ins offset:$offset, gds:$gds),
-  "$vdst$offset$gds"> {
+  " $vdst$offset$gds"> {
 
   let mayLoad = 1;
   let mayStore = 1;
@@ -296,7 +296,7 @@ class DS_0A_RET <string opName> : DS_Pseudo<opName,
 class DS_1A <string opName> : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, offset:$offset, gds:$gds),
-  "$addr$offset$gds"> {
+  " $addr$offset$gds"> {
 
   let mayLoad = 1;
   let mayStore = 1;
@@ -330,13 +330,13 @@ class DS_GWS <string opName, dag ins, string asmOps>
 
 class DS_GWS_0D <string opName>
 : DS_GWS<opName,
-  (ins offset:$offset, gds:$gds), "$offset gds"> {
+  (ins offset:$offset), "$offset gds"> {
   let hasSideEffects = 1;
 }
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins VGPR_32:$data0, offset:$offset, gds:$gds), "$data0$offset gds"> {
+  (ins VGPR_32:$data0, offset:$offset), " $data0$offset gds"> {
 
   let has_gws_data0 = 1;
   let hasSideEffects = 1;
@@ -364,7 +364,7 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag>
 : DS_Pseudo<opName,
   (outs VGPR_32:$vdst),
   (ins VGPR_32:$addr, VGPR_32:$data0, offset:$offset),
-  "$vdst, $addr, $data0$offset",
+  " $vdst, $addr, $data0$offset",
   [(set i32:$vdst,
    (node (DS1Addr1Offset i32:$addr, i16:$offset), i32:$data0))] > {
 

@@ -92,6 +92,12 @@ struct NewPMCheckDebugifyPass
   llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
+struct DebugifyEachInstrumentation {
+  DebugifyStatsMap StatsMap;
+
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
 /// DebugifyCustomPassManager wraps each pass with the debugify passes if
 /// needed.
 /// NOTE: We support legacy custom pass manager only.

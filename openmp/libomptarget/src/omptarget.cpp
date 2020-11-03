@@ -59,11 +59,11 @@ static int InitLibrary(DeviceTy& Device) {
   int rc = OFFLOAD_SUCCESS;
 
   Device.PendingGlobalsMtx.lock();
-  TrlTblMtx->lock();
-  for (HostEntriesBeginToTransTableTy::iterator
-      ii = HostEntriesBeginToTransTable->begin();
-      ii != HostEntriesBeginToTransTable->end(); ++ii) {
-    TranslationTable *TransTable = &ii->second;
+  PM->TrlTblMtx.lock();
+  for (HostEntriesBeginToTransTableTy::iterator entry_it =
+           PM->HostEntriesBeginToTransTable.begin();
+       entry_it != PM->HostEntriesBeginToTransTable.end(); ++entry_it) {
+    TranslationTable *TransTable = &entry_it->second;
     if (TransTable->HostTable.EntriesBegin ==
         TransTable->HostTable.EntriesEnd) {
       // No host entry so no need to proceed
@@ -141,7 +141,7 @@ static int InitLibrary(DeviceTy& Device) {
     }
     Device.DataMapMtx.unlock();
   }
-  TrlTblMtx->unlock();
+  PM->TrlTblMtx.unlock();
 
   if (rc != OFFLOAD_SUCCESS) {
     Device.PendingGlobalsMtx.unlock();
@@ -188,7 +188,7 @@ int CheckDeviceAndCtors(int64_t device_id) {
   }
 
   // Get device info.
-  DeviceTy &Device = Devices[device_id];
+  DeviceTy &Device = PM->Devices[device_id];
 
   // Check whether global data has been mapped for this device
   Device.PendingGlobalsMtx.lock();
@@ -368,7 +368,7 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
       bool copy = false;
-      if (!(RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+      if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
           HasCloseModifier) {
         if (IsNew || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
           copy = true;
@@ -537,7 +537,7 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
         bool Always = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
         bool CopyMember = false;
-        if (!(RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+        if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
             HasCloseModifier) {
           if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
               !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
@@ -551,7 +551,7 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
         }
 
         if ((DelEntry || Always || CopyMember) &&
-            !(RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+            !(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
               TgtPtrBegin == HstPtrBegin)) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
              DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
@@ -684,7 +684,7 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
       continue;
     }
 
-    if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+    if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
         TgtPtrBegin == HstPtrBegin) {
       DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
          DPxPTR(HstPtrBegin));
@@ -765,18 +765,19 @@ namespace {
 /// Find the table information in the map or look it up in the translation
 /// tables.
 TableMap *getTableMap(void *HostPtr) {
-  std::lock_guard<std::mutex> TblMapLock(*TblMapMtx);
-  HostPtrToTableMapTy::iterator TableMapIt = HostPtrToTableMap->find(HostPtr);
+  std::lock_guard<std::mutex> TblMapLock(PM->TblMapMtx);
+  HostPtrToTableMapTy::iterator TableMapIt =
+      PM->HostPtrToTableMap.find(HostPtr);
 
-  if (TableMapIt != HostPtrToTableMap->end())
+  if (TableMapIt != PM->HostPtrToTableMap.end())
     return &TableMapIt->second;
 
   // We don't have a map. So search all the registered libraries.
   TableMap *TM = nullptr;
-  std::lock_guard<std::mutex> TrlTblLock(*TrlTblMtx);
+  std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
   for (HostEntriesBeginToTransTableTy::iterator Itr =
-           HostEntriesBeginToTransTable->begin();
-       Itr != HostEntriesBeginToTransTable->end(); ++Itr) {
+           PM->HostEntriesBeginToTransTable.begin();
+       Itr != PM->HostEntriesBeginToTransTable.end(); ++Itr) {
     // get the translation table (which contains all the good info).
     TranslationTable *TransTable = &Itr->second;
     // iterate over all the host table entries to see if we can locate the
@@ -787,7 +788,7 @@ TableMap *getTableMap(void *HostPtr) {
         continue;
       // we got a match, now fill the HostPtrToTableMap so that we
       // may avoid this search next time.
-      TM = &(*HostPtrToTableMap)[HostPtr];
+      TM = &(PM->HostPtrToTableMap)[HostPtr];
       TM->Table = TransTable;
       TM->Index = I;
       return TM;
@@ -802,11 +803,11 @@ TableMap *getTableMap(void *HostPtr) {
 /// __kmpc_push_target_tripcount in one thread but doing offloading in another
 /// thread, which might occur when we call task yield.
 uint64_t getLoopTripCount(int64_t DeviceId) {
-  DeviceTy &Device = Devices[DeviceId];
+  DeviceTy &Device = PM->Devices[DeviceId];
   uint64_t LoopTripCount = 0;
 
   {
-    std::lock_guard<std::mutex> TblMapLock(*TblMapMtx);
+    std::lock_guard<std::mutex> TblMapLock(PM->TblMapMtx);
     auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
     if (I != Device.LoopTripCnt.end()) {
       LoopTripCount = I->second;
@@ -989,7 +990,7 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                       std::vector<ptrdiff_t> &TgtOffsets,
                       PrivateArgumentManagerTy &PrivateArgumentManager,
                       __tgt_async_info *AsyncInfo) {
-  DeviceTy &Device = Devices[DeviceId];
+  DeviceTy &Device = PM->Devices[DeviceId];
   int Ret = targetDataBegin(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
                             ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
@@ -1028,7 +1029,7 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
              DPxPTR(HstPtrVal));
           continue;
         }
-        if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+        if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
             TgtPtrBegin == HstPtrBegin) {
           DP("Unified memory is active, no need to map lambda captured"
              "variable (" DPxMOD ")\n",
@@ -1107,7 +1108,7 @@ int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                      int64_t *ArgTypes, void **ArgMappers,
                      PrivateArgumentManagerTy &PrivateArgumentManager,
                      __tgt_async_info *AsyncInfo) {
-  DeviceTy &Device = Devices[DeviceId];
+  DeviceTy &Device = PM->Devices[DeviceId];
 
   // Move data from device.
   int Ret = targetDataEnd(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
@@ -1137,7 +1138,7 @@ int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
 int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
            void **Args, int64_t *ArgSizes, int64_t *ArgTypes, void **ArgMappers,
            int32_t TeamNum, int32_t ThreadLimit, int IsTeamConstruct) {
-  DeviceTy &Device = Devices[DeviceId];
+  DeviceTy &Device = PM->Devices[DeviceId];
 
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
@@ -1150,7 +1151,7 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
   // get target table.
   __tgt_target_table *TargetTable = nullptr;
   {
-    std::lock_guard<std::mutex> TrlTblLock(*TrlTblMtx);
+    std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
     assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
            "Not expecting a device ID outside the table's bounds!");
     TargetTable = TM->Table->TargetsTable[DeviceId];

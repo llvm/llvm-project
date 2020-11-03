@@ -293,7 +293,7 @@ public:
   common::Restorer<Messages *> SetMessages(Messages &buffer) {
     return common::ScopedSet(messages_, &buffer);
   }
-  // Discard messages; destination restored when the returned value is deleted.
+  // Discard future messages until the returned value is deleted.
   common::Restorer<Messages *> DiscardMessages() {
     return common::ScopedSet(messages_, nullptr);
   }

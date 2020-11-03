@@ -504,8 +504,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
 
 Status PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
+    const FileSpecList *module_search_paths_ptr,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   // For iOS, the SDK files are all cached locally on the host system. So first
   // we ask for the file in the cached SDK, then we attempt to get a shared
   // module for the right architecture with the right UUID.
@@ -608,24 +608,25 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // This may not be an SDK-related module.  Try whether we can bring in the
   // thing to our local cache.
   error = GetSharedModuleWithLocalCache(module_spec, module_sp,
-                                        module_search_paths_ptr,
-                                        old_module_sp_ptr, did_create_ptr);
+                                        module_search_paths_ptr, old_modules,
+                                        did_create_ptr);
   if (error.Success())
     return error;
 
   // See if the file is present in any of the module_search_paths_ptr
   // directories.
   if (!module_sp)
-    error = PlatformDarwin::FindBundleBinaryInExecSearchPaths (module_spec, process, module_sp,
-            module_search_paths_ptr, old_module_sp_ptr, did_create_ptr);
+    error = PlatformDarwin::FindBundleBinaryInExecSearchPaths(
+        module_spec, process, module_sp, module_search_paths_ptr, old_modules,
+        did_create_ptr);
 
   if (error.Success())
     return error;
 
   const bool always_create = false;
-  error = ModuleList::GetSharedModule(
-      module_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
-      did_create_ptr, always_create);
+  error = ModuleList::GetSharedModule(module_spec, module_sp,
+                                      module_search_paths_ptr, old_modules,
+                                      did_create_ptr, always_create);
 
   if (module_sp)
     module_sp->SetPlatformFileSpec(platform_file);

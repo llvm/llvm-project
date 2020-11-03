@@ -10,11 +10,8 @@
 // PIPELINE: 'func' Pipeline
 // PIPELINE-NEXT:   TestStatisticPass
 // PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
-// PIPELINE-NEXT:   Verifier
 // PIPELINE-NEXT:   TestStatisticPass
 // PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
-// PIPELINE-NEXT:   Verifier
-// PIPELINE-NEXT: Verifier
 
 func @foo() {
   return

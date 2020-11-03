@@ -211,9 +211,9 @@ Sections:
 ## sizeof(.symtab_shndx) = (sizeof(.symtab) / entsize(.symtab)) * entsize(.symtab_shndx)
 
 # RUN: yaml2obj %s --docnum=11 -o %t11
-# RUN: not llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
+# RUN: llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 
-# INVALID-XINDEX-SIZE: error: {{.*}}: SHT_SYMTAB_SHNDX has 2 entries, but the symbol table associated has 1
+# INVALID-XINDEX-SIZE: warning: {{.*}}: SHT_SYMTAB_SHNDX has 2 entries, but the symbol table associated has 1
 
 --- !ELF
 FileHeader:

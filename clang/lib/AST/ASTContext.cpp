@@ -8514,7 +8514,11 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       First->getVectorKind() != VectorType::AltiVecPixel &&
       First->getVectorKind() != VectorType::AltiVecBool &&
       Second->getVectorKind() != VectorType::AltiVecPixel &&
-      Second->getVectorKind() != VectorType::AltiVecBool)
+      Second->getVectorKind() != VectorType::AltiVecBool &&
+      First->getVectorKind() != VectorType::SveFixedLengthDataVector &&
+      First->getVectorKind() != VectorType::SveFixedLengthPredicateVector &&
+      Second->getVectorKind() != VectorType::SveFixedLengthDataVector &&
+      Second->getVectorKind() != VectorType::SveFixedLengthPredicateVector)
     return true;
 
   return false;

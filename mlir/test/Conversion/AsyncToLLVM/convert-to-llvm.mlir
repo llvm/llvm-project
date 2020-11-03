@@ -15,7 +15,7 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 }
 
 // Function outlined from the async.execute operation.
-// CHECK: func @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>)
+// CHECK-LABEL: func @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>)
 // CHECK-SAME: -> !llvm.ptr<i8> attributes {sym_visibility = "private"}
 
 // Create token for return op, and mark a function as a coroutine.
@@ -79,7 +79,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 }
 
 // Function outlined from the inner async.execute operation.
-// CHECK: func @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>, %arg2: index)
+// CHECK-LABEL: func @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>, %arg2: index)
 // CHECK-SAME: -> !llvm.ptr<i8> attributes {sym_visibility = "private"}
 // CHECK: %[[RET_0:.*]] = call @mlirAsyncRuntimeCreateToken()
 // CHECK: %[[HDL_0:.*]] = llvm.call @llvm.coro.begin
@@ -89,7 +89,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_0]])
 
 // Function outlined from the outer async.execute operation.
-// CHECK: func @async_execute_fn_0(%arg0: f32, %arg1: memref<1xf32>, %arg2: f32)
+// CHECK-LABEL: func @async_execute_fn_0(%arg0: f32, %arg1: memref<1xf32>, %arg2: f32)
 // CHECK-SAME: -> !llvm.ptr<i8> attributes {sym_visibility = "private"}
 // CHECK: %[[RET_1:.*]] = call @mlirAsyncRuntimeCreateToken()
 // CHECK: %[[HDL_1:.*]] = llvm.call @llvm.coro.begin
@@ -106,6 +106,54 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 
 // Emplace result token after second resumption.
 // CHECK: store %arg2, %arg1[%c0] : memref<1xf32>
+// CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_1]])
+
+// -----
+
+// CHECK-LABEL: async_execute_token_dependency
+func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
+  // CHECK: %0 = call @async_execute_fn(%arg0, %arg1)
+  %token = async.execute {
+    %c0 = constant 0 : index
+    store %arg0, %arg1[%c0] : memref<1xf32>
+    async.yield
+  }
+  // CHECK: %1 = call @async_execute_fn_0(%0, %arg0, %arg1)
+  %token_0 = async.execute [%token] {
+    %c0 = constant 0 : index
+    store %arg0, %arg1[%c0] : memref<1xf32>
+    async.yield
+  }
+  return
+}
+
+// Function outlined from the first async.execute operation.
+// CHECK-LABEL: func @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>)
+// CHECK-SAME: -> !llvm.ptr<i8> attributes {sym_visibility = "private"}
+// CHECK: %[[RET_0:.*]] = call @mlirAsyncRuntimeCreateToken()
+// CHECK: %[[HDL_0:.*]] = llvm.call @llvm.coro.begin
+// CHECK: call @mlirAsyncRuntimeExecute
+// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: store %arg0, %arg1[%c0] : memref<1xf32>
+// CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_0]])
+
+// Function outlined from the second async.execute operation with dependency.
+// CHECK-LABEL: func @async_execute_fn_0(%arg0: !llvm.ptr<i8>, %arg1: f32, %arg2: memref<1xf32>)
+// CHECK-SAME: -> !llvm.ptr<i8> attributes {sym_visibility = "private"}
+// CHECK: %[[RET_1:.*]] = call @mlirAsyncRuntimeCreateToken()
+// CHECK: %[[HDL_1:.*]] = llvm.call @llvm.coro.begin
+
+// Suspend coroutine in the beginning.
+// CHECK: call @mlirAsyncRuntimeExecute(%[[HDL_1]],
+// CHECK: llvm.call @llvm.coro.suspend
+
+// Suspend coroutine second time waiting for the completion of token dependency.
+// CHECK: llvm.call @llvm.coro.save
+// CHECK: call @mlirAsyncRuntimeAwaitTokenAndExecute(%arg0, %[[HDL_1]],
+// CHECK: llvm.call @llvm.coro.suspend
+
+// Emplace result token after second resumption.
+// CHECK: store %arg1, %arg2[%c0] : memref<1xf32>
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_1]])
 
 

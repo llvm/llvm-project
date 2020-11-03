@@ -49,6 +49,11 @@ getRewrittenOverloadedOperator(OverloadedOperatorKind Kind) {
   }
 }
 
+/// Determine if this is a compound assignment operator.
+inline bool isCompoundAssignmentOperator(OverloadedOperatorKind Kind) {
+  return Kind >= OO_PlusEqual && Kind <= OO_PipeEqual;
+}
+
 } // end namespace clang
 
 #endif

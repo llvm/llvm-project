@@ -177,19 +177,15 @@ void doit() {
     sample::X cx{5};
     auto L = [=](auto a) { 
       const int z = 3;
-      // FIXME: The warning below is correct but for some reason doesn't show
-      // up in C++17 mode.
       return [&,a](auto b) {
-#if __cplusplus > 201702L
-        // expected-warning@-2 {{address of stack memory associated with local variable 'z' returned}}
+        // expected-warning@-1 {{address of stack memory associated with local variable 'z' returned}}
         // expected-note@#call {{in instantiation of}}
-#endif
-        const int y = 5;    
-        return [=](auto c) { 
+        const int y = 5;
+        return [=](auto c) {
           int d[sizeof(a) == sizeof(c) || sizeof(c) == sizeof(b) ? 2 : 1];
           f(x, d);
           f(y, d);
-          f(z, d);
+          f(z, d); // expected-note {{implicitly captured by reference due to use here}}
           decltype(a) A = a;
           decltype(b) B = b;
           const int &i = cx.i;

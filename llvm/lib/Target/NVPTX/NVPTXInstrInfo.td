@@ -137,7 +137,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 
-def true : Predicate<"true">;
+def True : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
@@ -1022,12 +1022,12 @@ multiclass FMA_F16<string OpcStr, RegisterClass RC, Predicate Pred> {
 }
 
 defm FMA16_ftz : FMA_F16<"fma.rn.ftz.f16", Float16Regs, doF32FTZ>;
-defm FMA16     : FMA_F16<"fma.rn.f16", Float16Regs, true>;
+defm FMA16     : FMA_F16<"fma.rn.f16", Float16Regs, True>;
 defm FMA16x2_ftz : FMA_F16<"fma.rn.ftz.f16x2", Float16x2Regs, doF32FTZ>;
-defm FMA16x2     : FMA_F16<"fma.rn.f16x2", Float16x2Regs, true>;
+defm FMA16x2     : FMA_F16<"fma.rn.f16x2", Float16x2Regs, True>;
 defm FMA32_ftz : FMA<"fma.rn.ftz.f32", Float32Regs, f32imm, doF32FTZ>;
-defm FMA32     : FMA<"fma.rn.f32", Float32Regs, f32imm, true>;
-defm FMA64     : FMA<"fma.rn.f64", Float64Regs, f64imm, true>;
+defm FMA32     : FMA<"fma.rn.f32", Float32Regs, f32imm, True>;
+defm FMA64     : FMA<"fma.rn.f64", Float64Regs, f64imm, True>;
 
 // sin/cos
 def SINF:  NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src),

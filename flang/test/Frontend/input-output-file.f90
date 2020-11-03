@@ -6,20 +6,19 @@
 ! FLANG DRIVER (flang-new)
 !--------------------------
 ! TEST 1: Print to stdout (implicit)
-! RUN: %flang-new -test-io %s  2>&1 | FileCheck %s
+! RUN: %flang-new -test-io %s  2>&1 | FileCheck %s --match-full-lines
 ! TEST 2: Print to stdout (explicit)
-! RUN: %flang-new -test-io -o - %s  2>&1 | FileCheck %s
+! RUN: %flang-new -test-io -o - %s  2>&1 | FileCheck %s --match-full-lines
 ! TEST 3: Print to a file
-! RUN: %flang-new -test-io -o %t %s 2>&1 && FileCheck %s --input-file=%t
+! RUN: %flang-new -test-io -o %t %s 2>&1 && FileCheck %s --match-full-lines --input-file=%t
 
 !----------------------------------------
 ! FLANG FRONTEND DRIVER (flang-new -fc1)
 !----------------------------------------
 ! TEST 4: Write to a file (implicit)
-! RUN: %flang-new -fc1 -test-io  %s 2>&1 && FileCheck %s --input-file=%S/input-output-file.txt
+! RUN: %flang-new -fc1 -test-io  %s 2>&1 && FileCheck %s --match-full-lines --input-file=%S/input-output-file.txt
 ! TEST 5: Write to a file (explicit)
-! RUN: %flang-new -fc1 -test-io  -o %t %s 2>&1 && FileCheck %s --input-file=%t
-
+! RUN: %flang-new -fc1 -test-io  -o %t %s 2>&1 && FileCheck %s --match-full-lines --input-file=%t
 
 !-----------------------
 ! EXPECTED OUTPUT

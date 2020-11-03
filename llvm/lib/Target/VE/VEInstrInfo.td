@@ -205,6 +205,12 @@ def mimm : Operand<i32>, PatLeaf<(imm), [{
   let PrintMethod = "printMImmOperand";
 }
 
+// zerofp - Generic fp immediate zero value.
+def zerofp : Operand<i32>, PatLeaf<(fpimm), [{
+    return getFpImmVal(N) == 0; }]> {
+  let ParserMatchClass = ZeroAsmOperand;
+}
+
 // simm7fp - Generic fp immediate value.
 def simm7fp : Operand<i32>, PatLeaf<(fpimm), [{
     return isInt<7>(getFpImmVal(N));
@@ -827,10 +833,17 @@ multiclass BCRbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond> {
               !strconcat(opcStr, ".t ", cmpStr, "$imm32")>;
 }
 multiclass BCRm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
-               RegisterClass RC, Operand immOp> {
+               RegisterClass RC, Operand immOp, Operand zeroOp> {
   defm rr : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, RC:$sy, RC:$sz)>;
   let cy = 0 in
-  defm ir : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, immOp:$sy, RC:$sz)>;
+  defm ir : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, immOp:$sy,
+                                                    RC:$sz)>;
+  let cz = 0 in
+  defm rz : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, RC:$sy,
+                                                    zeroOp:$sz)>;
+  let cy = 0, cz = 0 in
+  defm iz : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, immOp:$sy,
+                                                    zeroOp:$sz)>;
   let cy = 0, sy = 0, cz = 0, sz = 0, cf = 15 /* AT */, isBarrier = 1 in
   defm a : BCRbpfm<opcStrAt, "", opc, (ins)>;
   let cy = 0, sy = 0, cz = 0, sz = 0, cf = 0 /* AF */ in
@@ -1409,13 +1422,13 @@ defm BCFS : BCm<"b${cond}.s", "b.s", "baf.s", 0x1C, F32, simm7fp>;
 
 // Section 8.8.4 - BCR (Branch on Condition Relative)
 let cx = 0, cx2 = 0 in
-defm BRCFL : BCRm<"br${cf}.l", "br.l", "braf.l", 0x18, I64, simm7>;
+defm BRCFL : BCRm<"br${cf}.l", "br.l", "braf.l", 0x18, I64, simm7, zero>;
 let cx = 1, cx2 = 0 in
-defm BRCFW : BCRm<"br${cf}.w", "br.w", "braf.w", 0x18, I32, simm7>;
+defm BRCFW : BCRm<"br${cf}.w", "br.w", "braf.w", 0x18, I32, simm7, zero>;
 let cx = 0, cx2 = 1 in
-defm BRCFD : BCRm<"br${cf}.d", "br.d", "braf.d", 0x18, I64, simm7fp>;
+defm BRCFD : BCRm<"br${cf}.d", "br.d", "braf.d", 0x18, I64, simm7fp, zerofp>;
 let cx = 1, cx2 = 1 in
-defm BRCFS : BCRm<"br${cf}.s", "br.s", "braf.s", 0x18, F32, simm7fp>;
+defm BRCFS : BCRm<"br${cf}.s", "br.s", "braf.s", 0x18, F32, simm7fp, zerofp>;
 
 // Section 8.8.5 - BSIC (Branch and Save IC)
 let isCall = 1, hasSideEffects = 0, DecoderMethod = "DecodeCall" in

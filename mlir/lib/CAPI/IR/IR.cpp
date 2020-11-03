@@ -249,6 +249,18 @@ int mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
+MlirIdentifier mlirOperationGetName(MlirOperation op) {
+  return wrap(unwrap(op)->getName().getIdentifier());
+}
+
+MlirBlock mlirOperationGetBlock(MlirOperation op) {
+  return wrap(unwrap(op)->getBlock());
+}
+
+MlirOperation mlirOperationGetParentOperation(MlirOperation op) {
+  return wrap(unwrap(op)->getParentOp());
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -401,6 +413,16 @@ MlirOperation mlirBlockGetFirstOperation(MlirBlock block) {
   if (cppBlock->empty())
     return wrap(static_cast<Operation *>(nullptr));
   return wrap(&cppBlock->front());
+}
+
+MlirOperation mlirBlockGetTerminator(MlirBlock block) {
+  Block *cppBlock = unwrap(block);
+  if (cppBlock->empty())
+    return wrap(static_cast<Operation *>(nullptr));
+  Operation &back = cppBlock->back();
+  if (!back.isKnownTerminator())
+    return wrap(static_cast<Operation *>(nullptr));
+  return wrap(&back);
 }
 
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation) {
@@ -557,4 +579,20 @@ void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
 
 MlirNamedAttribute mlirNamedAttributeGet(const char *name, MlirAttribute attr) {
   return MlirNamedAttribute{name, attr};
+}
+
+/*============================================================================*/
+/* Identifier API.                                                            */
+/*============================================================================*/
+
+MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
+  return wrap(Identifier::get(unwrap(str), unwrap(context)));
+}
+
+int mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
+  return unwrap(ident) == unwrap(other);
+}
+
+MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
+  return wrap(unwrap(ident).strref());
 }

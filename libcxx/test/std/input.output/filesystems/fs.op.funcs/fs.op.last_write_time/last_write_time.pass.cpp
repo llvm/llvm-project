@@ -17,10 +17,11 @@
 //                      std::error_code& ec) noexcept;
 
 #include "filesystem_include.h"
-#include <type_traits>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
@@ -32,8 +33,8 @@
 
 using namespace fs;
 
-using TimeSpec = struct ::timespec;
-using StatT = struct ::stat;
+using TimeSpec = timespec;
+using StatT = struct stat;
 
 using Sec = std::chrono::duration<file_time_type::rep>;
 using Hours = std::chrono::hours;

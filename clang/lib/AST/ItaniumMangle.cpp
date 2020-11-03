@@ -4175,7 +4175,7 @@ recurse:
 
   case Expr::CXXUnresolvedConstructExprClass: {
     const CXXUnresolvedConstructExpr *CE = cast<CXXUnresolvedConstructExpr>(E);
-    unsigned N = CE->arg_size();
+    unsigned N = CE->getNumArgs();
 
     if (CE->isListInitialization()) {
       assert(N == 1 && "unexpected form for list initialization");

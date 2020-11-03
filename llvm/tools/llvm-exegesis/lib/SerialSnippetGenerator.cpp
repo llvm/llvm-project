@@ -140,7 +140,7 @@ static void appendCodeTemplates(const LLVMState &State,
       InstructionTemplate OtherIT(OtherInstr);
       if (!Forward.hasImplicitAliasing())
         setRandomAliasing(Forward, ThisIT, OtherIT);
-      if (!Back.hasImplicitAliasing())
+      else if (!Back.hasImplicitAliasing())
         setRandomAliasing(Back, OtherIT, ThisIT);
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;

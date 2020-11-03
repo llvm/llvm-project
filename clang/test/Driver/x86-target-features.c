@@ -288,3 +288,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-uintr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-UINTR %s
 // UINTR: "-target-feature" "+uintr"
 // NO-UINTR: "-target-feature" "-uintr"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavxvnni %s -### -o %t.o 2>&1 | FileCheck --check-prefix=AVX-VNNI %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avxvnni %s -### -o %t.o 2>&1 | FileCheck --check-prefix=NO-AVX-VNNI %s
+// AVX-VNNI: "-target-feature" "+avxvnni"
+// NO-AVX-VNNI: "-target-feature" "-avxvnni"

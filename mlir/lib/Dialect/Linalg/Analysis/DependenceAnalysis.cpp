@@ -251,13 +251,64 @@ bool LinalgDependenceGraph::hasDependenceFrom(
   return false;
 }
 
-bool LinalgDependenceGraph::hasDependentOperations(
+bool LinalgDependenceGraph::hasDependentOperationsFrom(
     LinalgOp linalgOp,
     ArrayRef<LinalgDependenceGraph::DependenceType> depTypes) const {
   for (auto dep : depTypes) {
-    if (!getDependencesFrom(linalgOp, dep).empty() ||
-        !getDependencesInto(linalgOp, dep).empty())
+    if (!getDependencesFrom(linalgOp, dep).empty())
       return true;
   }
   return false;
+}
+
+bool LinalgDependenceGraph::hasDependentOperationsInto(
+    LinalgOp linalgOp,
+    ArrayRef<LinalgDependenceGraph::DependenceType> depTypes) const {
+  for (auto dep : depTypes) {
+    if (!getDependencesInto(linalgOp, dep).empty())
+      return true;
+  }
+  return false;
+}
+
+bool LinalgDependenceGraph::hasDependentOperations(
+    LinalgOp linalgOp, ArrayRef<DependenceType> depTypes) const {
+  return hasDependentOperationsInto(linalgOp, depTypes) ||
+         hasDependentOperationsFrom(linalgOp, depTypes);
+}
+
+SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 2>
+LinalgDependenceGraph::getDependentOperationsInto(
+    LinalgOp linalgOp, ArrayRef<DependenceType> depTypes) const {
+  SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 2>
+      dependentOperations;
+  for (auto dependenceType : depTypes) {
+    auto dependencies = getDependencesInto(linalgOp, dependenceType);
+    dependentOperations.append(dependencies.begin(), dependencies.end());
+  }
+  return dependentOperations;
+}
+
+SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 2>
+LinalgDependenceGraph::getDependentOperationsFrom(
+    LinalgOp linalgOp, ArrayRef<DependenceType> depTypes) const {
+  SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 2>
+      dependentOperations;
+  for (auto dependenceType : depTypes) {
+    auto dependencies = getDependencesFrom(linalgOp, dependenceType);
+    dependentOperations.append(dependencies.begin(), dependencies.end());
+  }
+  return dependentOperations;
+}
+
+/// Returns all dependent operations (into and from) given `operation`.
+SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 2>
+LinalgDependenceGraph::getDependentOperations(
+    LinalgOp linalgOp, ArrayRef<DependenceType> depTypes) const {
+  SmallVector<LinalgDependenceGraphElem, 2> dependentOperations =
+      getDependentOperationsInto(linalgOp, depTypes);
+  SmallVector<LinalgDependenceGraphElem, 2> t =
+      getDependentOperationsFrom(linalgOp, depTypes);
+  dependentOperations.append(t.begin(), t.end());
+  return dependentOperations;
 }

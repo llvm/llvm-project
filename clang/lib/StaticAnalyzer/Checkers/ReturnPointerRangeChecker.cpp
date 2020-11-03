@@ -58,6 +58,11 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
   DefinedOrUnknownSVal ElementCount = getDynamicElementCount(
       state, ER->getSuperRegion(), C.getSValBuilder(), ER->getValueType());
 
+  // We assume that the location after the last element in the array is used as
+  // end() iterator. Reporting on these would return too many false positives.
+  if (Idx == ElementCount)
+    return;
+
   ProgramStateRef StInBound = state->assumeInBound(Idx, ElementCount, true);
   ProgramStateRef StOutBound = state->assumeInBound(Idx, ElementCount, false);
   if (StOutBound && !StInBound) {
@@ -70,7 +75,7 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
     // types explicitly reference such exploit categories (when applicable).
     if (!BT)
       BT.reset(new BuiltinBug(
-          this, "Return of pointer value outside of expected range",
+          this, "Buffer overflow",
           "Returned pointer value points outside the original object "
           "(potential buffer overflow)"));
 

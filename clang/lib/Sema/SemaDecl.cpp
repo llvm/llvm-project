@@ -2637,8 +2637,11 @@ static const NamedDecl *getDefinition(const Decl *D) {
       return Def;
     return VD->getActingDefinition();
   }
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-    return FD->getDefinition();
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    const FunctionDecl *Def = nullptr;
+    if (FD->isDefined(Def, true))
+      return Def;
+  }
   return nullptr;
 }
 
@@ -13860,68 +13863,22 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
                                    const FunctionDecl *EffectiveDefinition,
                                    SkipBodyInfo *SkipBody) {
   const FunctionDecl *Definition = EffectiveDefinition;
-  if (!Definition && !FD->isDefined(Definition) && !FD->isCXXClassMember()) {
-    // If this is a friend function defined in a class template, it does not
-    // have a body until it is used, nevertheless it is a definition, see
-    // [temp.inst]p2:
-    //
-    // ... for the purpose of determining whether an instantiated redeclaration
-    // is valid according to [basic.def.odr] and [class.mem], a declaration that
-    // corresponds to a definition in the template is considered to be a
-    // definition.
-    //
-    // The following code must produce redefinition error:
-    //
-    //     template<typename T> struct C20 { friend void func_20() {} };
-    //     C20<int> c20i;
-    //     void func_20() {}
-    //
-    for (auto I : FD->redecls()) {
-      if (I != FD && !I->isInvalidDecl() &&
-          I->getFriendObjectKind() != Decl::FOK_None) {
-        if (FunctionDecl *Original = I->getInstantiatedFromMemberFunction()) {
-          if (FunctionDecl *OrigFD = FD->getInstantiatedFromMemberFunction()) {
-            // A merged copy of the same function, instantiated as a member of
-            // the same class, is OK.
-            if (declaresSameEntity(OrigFD, Original) &&
-                declaresSameEntity(cast<Decl>(I->getLexicalDeclContext()),
-                                   cast<Decl>(FD->getLexicalDeclContext())))
-              continue;
-          }
+  if (!Definition &&
+      !FD->isDefined(Definition, /*CheckForPendingFriendDefinition*/ true))
+    return;
 
-          if (Original->isThisDeclarationADefinition()) {
-            Definition = I;
-            break;
-          }
-        }
+  if (Definition->getFriendObjectKind() != Decl::FOK_None) {
+    if (FunctionDecl *OrigDef = Definition->getInstantiatedFromMemberFunction()) {
+      if (FunctionDecl *OrigFD = FD->getInstantiatedFromMemberFunction()) {
+        // A merged copy of the same function, instantiated as a member of
+        // the same class, is OK.
+        if (declaresSameEntity(OrigFD, OrigDef) &&
+            declaresSameEntity(cast<Decl>(Definition->getLexicalDeclContext()),
+                               cast<Decl>(FD->getLexicalDeclContext())))
+          return;
       }
     }
   }
-
-  if (!Definition)
-    // Similar to friend functions a friend function template may be a
-    // definition and do not have a body if it is instantiated in a class
-    // template.
-    if (FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate()) {
-      for (auto I : FTD->redecls()) {
-        auto D = cast<FunctionTemplateDecl>(I);
-        if (D != FTD) {
-          assert(!D->isThisDeclarationADefinition() &&
-                 "More than one definition in redeclaration chain");
-          if (D->getFriendObjectKind() != Decl::FOK_None)
-            if (FunctionTemplateDecl *FT =
-                                       D->getInstantiatedFromMemberTemplate()) {
-              if (FT->isThisDeclarationADefinition()) {
-                Definition = D->getTemplatedDecl();
-                break;
-              }
-            }
-        }
-      }
-    }
-
-  if (!Definition)
-    return;
 
   if (canRedefineFunction(Definition, getLangOpts()))
     return;
@@ -14040,9 +13997,10 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
   }
 
-  // See if this is a redefinition. If 'will have body' is already set, then
-  // these checks were already performed when it was set.
-  if (!FD->willHaveBody() && !FD->isLateTemplateParsed()) {
+  // See if this is a redefinition. If 'will have body' (or similar) is already
+  // set, then these checks were already performed when it was set.
+  if (!FD->willHaveBody() && !FD->isLateTemplateParsed() &&
+      !FD->isThisDeclarationInstantiatedFromAFriendDefinition()) {
     CheckForFunctionRedefinition(FD, nullptr, SkipBody);
 
     // If we're skipping the body, we're done. Don't enter the scope.

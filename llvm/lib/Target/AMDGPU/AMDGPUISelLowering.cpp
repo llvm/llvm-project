@@ -1566,17 +1566,25 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
   return DAG.getMergeValues(Ops, SL);
 }
 
-// Widen a vector load from vec3 to vec4.
-SDValue AMDGPUTargetLowering::WidenVectorLoad(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::WidenOrSplitVectorLoad(SDValue Op,
+                                                     SelectionDAG &DAG) const {
   LoadSDNode *Load = cast<LoadSDNode>(Op);
   EVT VT = Op.getValueType();
-  assert(VT.getVectorNumElements() == 3);
   SDValue BasePtr = Load->getBasePtr();
   EVT MemVT = Load->getMemoryVT();
   SDLoc SL(Op);
   const MachinePointerInfo &SrcValue = Load->getMemOperand()->getPointerInfo();
   unsigned BaseAlign = Load->getAlignment();
+  unsigned NumElements = MemVT.getVectorNumElements();
+
+  // Widen from vec3 to vec4 when the load is at least 8-byte aligned
+  // or 16-byte fully dereferenceable. Otherwise, split the vector load.
+  if (NumElements != 3 ||
+      (BaseAlign < 8 &&
+       !SrcValue.isDereferenceable(16, *DAG.getContext(), DAG.getDataLayout())))
+    return SplitVectorLoad(Op, DAG);
+
+  assert(NumElements == 3);
 
   EVT WideVT =
       EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);

@@ -3,7 +3,6 @@
 set -e
 
 print_usage() {
-  echo "Usage:"
   echo "Usage: $(basename $0) [options]"
   echo -e "Creates a Ubuntu root file system image.\n"
   echo -e "  --help\t\t\tDisplay this information."

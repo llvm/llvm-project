@@ -8,8 +8,8 @@
 ; FUNC-LABEL: {{^}}bfi_def:
 ; R600: BFI_INT
 
-; GCN:   s_andn2_b32
-; GCN:   s_and_b32
+; GCN-DAG:   s_andn2_b32
+; GCN-DAG:   s_and_b32
 ; GCN:   s_or_b32
 define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:

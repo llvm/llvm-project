@@ -1022,6 +1022,11 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
   CurFPFeatures = NewFPFeatures.applyOverrides(LO);
 }
 
+void Sema::ActOnPragmaFPExceptions(SourceLocation Loc,
+                                   LangOptions::FPExceptionModeKind FPE) {
+  setExceptionMode(Loc, FPE);
+}
+
 void Sema::PushNamespaceVisibilityAttr(const VisibilityAttr *Attr,
                                        SourceLocation Loc) {
   // Visibility calculations will consider the namespace's visibility.

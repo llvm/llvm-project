@@ -1,8 +1,8 @@
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t
 # RUN: %lldb %t -o "image lookup -v -s f1" -o exit | FileCheck %s
 
-# CHECK:  Function: id = {0x7fffffff0000003c}, name = "f1", range = [0x0000000000000000-0x0000000000000001)
-# CHECK:    Blocks: id = {0x7fffffff0000003c}, range = [0x00000000-0x00000001)
+# CHECK:  Function: id = {0x0000003c}, name = "f1", range = [0x0000000000000000-0x0000000000000001)
+# CHECK:    Blocks: id = {0x0000003c}, range = [0x00000000-0x00000001)
 
 
         .text

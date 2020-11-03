@@ -2316,9 +2316,9 @@ let Predicates = [IsISA3_1] in {
   def VCMPEQUQ : VCMP <455, "vcmpequq $vD, $vA, $vB" , v1i128>;
   def VCMPGTSQ : VCMP <903, "vcmpgtsq $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ : VCMP <647, "vcmpgtuq $vD, $vA, $vB" , v1i128>;
-  def VCMPEQUQ_rec : VCMPo <455, "vcmpequq. $vD, $vA, $vB" , v1i128>;
-  def VCMPGTSQ_rec : VCMPo <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
-  def VCMPGTUQ_rec : VCMPo <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
+  def VCMPEQUQ_rec : VCMP_rec <455, "vcmpequq. $vD, $vA, $vB" , v1i128>;
+  def VCMPGTSQ_rec : VCMP_rec <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
+  def VCMPGTUQ_rec : VCMP_rec <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
   def VMODSQ : VXForm_1<1803, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                         "vmodsq $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v1i128:$vD, (srem v1i128:$vA, v1i128:$vB))]>;

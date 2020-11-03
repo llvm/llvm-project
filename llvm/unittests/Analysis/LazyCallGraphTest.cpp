@@ -337,22 +337,6 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_FALSE(D.isDescendantOf(D));
   EXPECT_EQ(&D, &*CG.postorder_ref_scc_begin());
 
-  LazyCallGraph::RefSCC &C = *J++;
-  ASSERT_EQ(1, C.size());
-  for (LazyCallGraph::Node &N : *C.begin())
-    Nodes.push_back(std::string(N.getFunction().getName()));
-  llvm::sort(Nodes);
-  EXPECT_EQ(3u, Nodes.size());
-  EXPECT_EQ("c1", Nodes[0]);
-  EXPECT_EQ("c2", Nodes[1]);
-  EXPECT_EQ("c3", Nodes[2]);
-  Nodes.clear();
-  EXPECT_TRUE(C.isParentOf(D));
-  EXPECT_FALSE(C.isChildOf(D));
-  EXPECT_TRUE(C.isAncestorOf(D));
-  EXPECT_FALSE(C.isDescendantOf(D));
-  EXPECT_EQ(&C, &*std::next(CG.postorder_ref_scc_begin()));
-
   LazyCallGraph::RefSCC &B = *J++;
   ASSERT_EQ(1, B.size());
   for (LazyCallGraph::Node &N : *B.begin())
@@ -367,9 +351,25 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_FALSE(B.isChildOf(D));
   EXPECT_TRUE(B.isAncestorOf(D));
   EXPECT_FALSE(B.isDescendantOf(D));
+  EXPECT_EQ(&B, &*std::next(CG.postorder_ref_scc_begin()));
+
+  LazyCallGraph::RefSCC &C = *J++;
+  ASSERT_EQ(1, C.size());
+  for (LazyCallGraph::Node &N : *C.begin())
+    Nodes.push_back(std::string(N.getFunction().getName()));
+  llvm::sort(Nodes);
+  EXPECT_EQ(3u, Nodes.size());
+  EXPECT_EQ("c1", Nodes[0]);
+  EXPECT_EQ("c2", Nodes[1]);
+  EXPECT_EQ("c3", Nodes[2]);
+  Nodes.clear();
   EXPECT_FALSE(B.isAncestorOf(C));
   EXPECT_FALSE(C.isAncestorOf(B));
-  EXPECT_EQ(&B, &*std::next(CG.postorder_ref_scc_begin(), 2));
+  EXPECT_TRUE(C.isParentOf(D));
+  EXPECT_FALSE(C.isChildOf(D));
+  EXPECT_TRUE(C.isAncestorOf(D));
+  EXPECT_FALSE(C.isDescendantOf(D));
+  EXPECT_EQ(&C, &*std::next(CG.postorder_ref_scc_begin(), 2));
 
   LazyCallGraph::RefSCC &A = *J++;
   ASSERT_EQ(1, A.size());
@@ -1206,9 +1206,9 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   ASSERT_NE(I, E);
   EXPECT_EQ(&NewDRC, &*I) << "Actual RefSCC: " << *I;
   ASSERT_NE(++I, E);
-  EXPECT_EQ(&CRC, &*I) << "Actual RefSCC: " << *I;
-  ASSERT_NE(++I, E);
   EXPECT_EQ(&BRC, &*I) << "Actual RefSCC: " << *I;
+  ASSERT_NE(++I, E);
+  EXPECT_EQ(&CRC, &*I) << "Actual RefSCC: " << *I;
   ASSERT_NE(++I, E);
   EXPECT_EQ(&ARC, &*I) << "Actual RefSCC: " << *I;
   EXPECT_EQ(++I, E);
@@ -1997,8 +1997,8 @@ TEST(LazyCallGraphTest, HandleBlockAddress2) {
 
   CG.buildRefSCCs();
   auto I = CG.postorder_ref_scc_begin();
-  LazyCallGraph::RefSCC &GRC = *I++;
   LazyCallGraph::RefSCC &FRC = *I++;
+  LazyCallGraph::RefSCC &GRC = *I++;
   EXPECT_EQ(CG.postorder_ref_scc_end(), I);
 
   LazyCallGraph::Node &F = *CG.lookup(lookupFunction(*M, "f"));

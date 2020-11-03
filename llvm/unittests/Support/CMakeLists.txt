@@ -37,6 +37,7 @@ add_llvm_unittest(SupportTests
   FileOutputBufferTest.cpp
   FileUtilitiesTest.cpp
   FormatVariadicTest.cpp
+  FSUniqueIDTest.cpp
   GlobPatternTest.cpp
   Host.cpp
   IndexedAccessorTest.cpp
@@ -44,6 +45,7 @@ add_llvm_unittest(SupportTests
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
+  LinearPolyBaseTest.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
   MatchersTest.cpp

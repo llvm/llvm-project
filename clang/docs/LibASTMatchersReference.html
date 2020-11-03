@@ -3042,6 +3042,14 @@ passed as a quoted string. e.g., hasAttr("attr::CUDADevice").
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isExpandedFromMacro0')"><a name="isExpandedFromMacro0Anchor">isExpandedFromMacro</a></td><td>std::string MacroName</td></tr>
+<tr><td colspan="4" class="doc" id="isExpandedFromMacro0"><pre>Matches statements that are (transitively) expanded from the named macro.
+Does not match if only part of the statement is expanded from that macro or
+if different parts of the the statement are expanded from different
+appearances of the macro.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isExpansionInFileMatching0')"><a name="isExpansionInFileMatching0Anchor">isExpansionInFileMatching</a></td><td>StringRef RegExp, Regex::RegexFlags Flags = NoFlags</td></tr>
 <tr><td colspan="4" class="doc" id="isExpansionInFileMatching0"><pre>Matches AST nodes that were expanded within files whose name is
 partially matching a given regex.
@@ -4293,14 +4301,11 @@ Stmt has pointer identity in the AST.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isExpandedFromMacro0')"><a name="isExpandedFromMacro0Anchor">isExpandedFromMacro</a></td><td>llvm::StringRef MacroName</td></tr>
-<tr><td colspan="4" class="doc" id="isExpandedFromMacro0"><pre>Matches statements that are (transitively) expanded from the named macro.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isExpandedFromMacro1')"><a name="isExpandedFromMacro1Anchor">isExpandedFromMacro</a></td><td>std::string MacroName</td></tr>
+<tr><td colspan="4" class="doc" id="isExpandedFromMacro1"><pre>Matches statements that are (transitively) expanded from the named macro.
 Does not match if only part of the statement is expanded from that macro or
 if different parts of the the statement are expanded from different
 appearances of the macro.
-
-FIXME: Change to be a polymorphic matcher that works on any syntactic
-node. There's nothing `Stmt`-specific about it.
 </pre></td></tr>
 
 
@@ -4487,6 +4492,14 @@ Given
   C&lt;int&gt; c;
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('isExpandedFromMacro2')"><a name="isExpandedFromMacro2Anchor">isExpandedFromMacro</a></td><td>std::string MacroName</td></tr>
+<tr><td colspan="4" class="doc" id="isExpandedFromMacro2"><pre>Matches statements that are (transitively) expanded from the named macro.
+Does not match if only part of the statement is expanded from that macro or
+if different parts of the the statement are expanded from different
+appearances of the macro.
 </pre></td></tr>
 
 
