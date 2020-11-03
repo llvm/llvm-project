@@ -91,6 +91,9 @@ struct Fragment {
     /// The start of the original source for this fragment.
     /// Only valid if SourceManager is set.
     llvm::SMLoc Location;
+    /// Absolute path to directory the fragment is associated with. Relative
+    /// paths mentioned in the fragment are resolved against this.
+    std::string Directory;
   };
   SourceInfo Source;
 

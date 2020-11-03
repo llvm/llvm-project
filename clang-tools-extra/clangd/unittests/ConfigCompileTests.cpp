@@ -9,8 +9,12 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
+#include "TestFS.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -116,6 +120,62 @@ TEST_F(ConfigCompileTests, Index) {
           "Invalid Background value 'Foo'. Valid values are Build, Skip.")));
 }
 
+TEST_F(ConfigCompileTests, PathSpecMatch) {
+  auto BarPath = llvm::sys::path::convert_to_slash(testPath("foo/bar.h"));
+  Parm.Path = BarPath;
+
+  struct {
+    std::string Directory;
+    std::string PathSpec;
+    bool ShouldMatch;
+  } Cases[] = {
+      {
+          // Absolute path matches.
+          "",
+          llvm::sys::path::convert_to_slash(testPath("foo/bar.h")),
+          true,
+      },
+      {
+          // Absolute path fails.
+          "",
+          llvm::sys::path::convert_to_slash(testPath("bar/bar.h")),
+          false,
+      },
+      {
+          // Relative should fail to match as /foo/bar.h doesn't reside under
+          // /baz/.
+          testPath("baz"),
+          "bar\\.h",
+          false,
+      },
+      {
+          // Relative should pass with /foo as directory.
+          testPath("foo"),
+          "bar\\.h",
+          true,
+      },
+  };
+
+  // PathMatch
+  for (const auto &Case : Cases) {
+    Frag = {};
+    Frag.If.PathMatch.emplace_back(Case.PathSpec);
+    Frag.Source.Directory = Case.Directory;
+    EXPECT_EQ(compileAndApply(), Case.ShouldMatch);
+    ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  }
+
+  // PathEclude
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Directory);
+    SCOPED_TRACE(Case.PathSpec);
+    Frag = {};
+    Frag.If.PathExclude.emplace_back(Case.PathSpec);
+    Frag.Source.Directory = Case.Directory;
+    EXPECT_NE(compileAndApply(), Case.ShouldMatch);
+    ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  }
+}
 } // namespace
 } // namespace config
 } // namespace clangd
