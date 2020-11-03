@@ -22,12 +22,22 @@
 #include <set>
 #include <vector>
 
+#include "rtl.h"
+
 // Forward declarations.
 struct RTLInfoTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 struct __tgt_async_info;
 class MemoryManagerTy;
+
+// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
+enum kmp_target_offload_kind {
+  tgt_disabled = 0,
+  tgt_default = 1,
+  tgt_mandatory = 2
+};
+typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 /// Map between host data and target data.
 struct HostDataToTargetTy {
@@ -221,8 +231,31 @@ private:
 
 /// Map between Device ID (i.e. openmp device id) and its DeviceTy.
 typedef std::vector<DeviceTy> DevicesTy;
-extern DevicesTy Devices;
 
 extern bool device_is_ready(int device_num);
+
+/// Struct for the data required to handle plugins
+struct PluginManager {
+  /// RTLs identified on the host
+  RTLsTy RTLs;
+
+  /// Devices associated with RTLs
+  DevicesTy Devices;
+  std::mutex RTLsMtx; ///< For RTLs and Devices
+
+  /// Translation table retreived from the binary
+  HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
+  std::mutex TrlTblMtx; ///< For Translation Table
+
+  /// Map from ptrs on the host to an entry in the Translation Table
+  HostPtrToTableMapTy HostPtrToTableMap;
+  std::mutex TblMapMtx; ///< For HostPtrToTableMap
+
+  // Store target policy (disabled, mandatory, default)
+  kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
+  std::mutex TargetOffloadMtx; ///< For TargetOffloadPolicy
+};
+
+extern PluginManager *PM;
 
 #endif
