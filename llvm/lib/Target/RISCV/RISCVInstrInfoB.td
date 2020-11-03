@@ -665,9 +665,7 @@ def : Pat<(xor (srl (xor GPR:$rs1, -1), GPR:$rs2), -1),
 
 let Predicates = [HasStdExtZbbOrZbp] in {
 def : Pat<(rotl GPR:$rs1, GPR:$rs2), (ROL GPR:$rs1, GPR:$rs2)>;
-def : Pat<(fshl GPR:$rs1, GPR:$rs1, GPR:$rs2), (ROL GPR:$rs1, GPR:$rs2)>;
 def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(fshr GPR:$rs1, GPR:$rs1, GPR:$rs2), (ROR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbs, IsRV32] in

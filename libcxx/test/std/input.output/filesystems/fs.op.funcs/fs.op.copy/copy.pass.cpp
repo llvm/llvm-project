@@ -286,14 +286,14 @@ TEST_CASE(test_dir_create_symlink)
     {
         std::error_code ec = GetTestEC();
         fs::copy(dir, dest, copy_options::create_symlinks, ec);
-        TEST_CHECK(ec == std::make_error_code(std::errc::is_a_directory));
+        TEST_CHECK(ErrorIs(ec, std::errc::is_a_directory));
         TEST_CHECK(!exists(dest));
         TEST_CHECK(!is_symlink(dest));
     }
     {
         std::error_code ec = GetTestEC();
         fs::copy(dir, dest, copy_options::create_symlinks|copy_options::recursive, ec);
-        TEST_CHECK(ec == std::make_error_code(std::errc::is_a_directory));
+        TEST_CHECK(ErrorIs(ec, std::errc::is_a_directory));
         TEST_CHECK(!exists(dest));
         TEST_CHECK(!is_symlink(dest));
     }

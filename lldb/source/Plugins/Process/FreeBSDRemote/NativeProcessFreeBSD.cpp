@@ -447,6 +447,9 @@ Status NativeProcessFreeBSD::Kill() {
 Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                                  MemoryRegionInfo &range_info) {
 
+  // TODO: figure out why it breaks stuff
+  return Status("currently breaks determining module list");
+
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
     // We're done.
     return Status("unsupported");
@@ -580,11 +583,6 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
   return Status();
 }
 
-lldb::addr_t NativeProcessFreeBSD::GetSharedLibraryInfoAddress() {
-  // punt on this for now
-  return LLDB_INVALID_ADDRESS;
-}
-
 size_t NativeProcessFreeBSD::UpdateThreads() { return m_threads.size(); }
 
 Status NativeProcessFreeBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
@@ -698,8 +696,9 @@ Status NativeProcessFreeBSD::Attach() {
       0)
     return Status(errno, eErrorTypePOSIX);
 
-  /* Initialize threads */
-  status = ReinitializeThreads();
+  // Initialize threads and tracing status
+  // NB: this needs to be called before we set thread state
+  status = SetupTrace();
   if (status.Fail())
     return status;
 
@@ -707,7 +706,8 @@ Status NativeProcessFreeBSD::Attach() {
     static_cast<NativeThreadFreeBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
 
   // Let our process instance know the thread has stopped.
-  SetState(StateType::eStateStopped);
+  SetCurrentThreadID(m_threads.front()->GetID());
+  SetState(StateType::eStateStopped, false);
   return Status();
 }
 

@@ -60,8 +60,6 @@ public:
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                      size_t &bytes_written) override;
 
-  lldb::addr_t GetSharedLibraryInfoAddress() override;
-
   size_t UpdateThreads() override;
 
   const ArchSpec &GetArchitecture() const override { return m_arch; }

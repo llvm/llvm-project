@@ -684,12 +684,14 @@ namespace {
       ec = capture_errno();
       return false;
     }
+    read_fd.fd = -1;
     ofstream out;
     out.__open(write_fd.fd, ios::binary);
     if (!out.is_open()) {
       ec = capture_errno();
       return false;
     }
+    write_fd.fd = -1;
 
     if (in.good() && out.good()) {
       using InIt = istreambuf_iterator<char>;
