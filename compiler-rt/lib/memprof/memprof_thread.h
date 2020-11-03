@@ -51,6 +51,9 @@ struct MemprofThreadContext final : public ThreadContextBase {
     MemprofThread *thread;
     StackTrace *stack;
   };
+
+protected:
+  ~MemprofThreadContext() {}
 };
 
 // MemprofThreadContext objects are never freed, so we need many of them.

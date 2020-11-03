@@ -48,7 +48,7 @@
 
 namespace __sanitizer {
 
-class SuspendedThreadsListNetBSD : public SuspendedThreadsList {
+class SuspendedThreadsListNetBSD final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListNetBSD() { thread_ids_.reserve(1024); }
 
