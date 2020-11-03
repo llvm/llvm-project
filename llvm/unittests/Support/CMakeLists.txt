@@ -45,6 +45,7 @@ add_llvm_unittest(SupportTests
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
+  LinearPolyBaseTest.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
   MatchersTest.cpp
