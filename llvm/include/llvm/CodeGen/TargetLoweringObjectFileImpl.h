@@ -63,6 +63,8 @@ public:
 
   MCSection *getSectionForJumpTable(const Function &F,
                                     const TargetMachine &TM) const override;
+  MCSection *getSectionForLSDA(const Function &F,
+                               const TargetMachine &TM) const override;
 
   MCSection *
   getSectionForMachineBasicBlock(const Function &F,
