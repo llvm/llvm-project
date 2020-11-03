@@ -1029,8 +1029,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
   unsigned NumBits = Ty.getScalarSizeInBits();
   auto ValVRegAndVal = getConstantVRegValWithLookThrough(Val, MRI);
   if (!Ty.isVector() && ValVRegAndVal) {
-    unsigned KnownVal = ValVRegAndVal->Value;
-    APInt Scalar = APInt(8, KnownVal);
+    APInt Scalar = ValVRegAndVal->Value.truncOrSelf(8);
     APInt SplatVal = APInt::getSplat(NumBits, Scalar);
     return MIB.buildConstant(Ty, SplatVal).getReg(0);
   }
@@ -1411,7 +1410,7 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   auto LenVRegAndVal = getConstantVRegValWithLookThrough(Len, MRI);
   if (!LenVRegAndVal)
     return false; // Leave it to the legalizer to lower it to a libcall.
-  unsigned KnownLen = LenVRegAndVal->Value;
+  unsigned KnownLen = LenVRegAndVal->Value.getZExtValue();
 
   if (KnownLen == 0) {
     MI.eraseFromParent();
@@ -1521,7 +1520,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
     return false;
 
   // Pass the combined immediate to the apply function.
-  MatchInfo.Imm = MaybeImmVal->Value + MaybeImm2Val->Value;
+  MatchInfo.Imm = (MaybeImmVal->Value + MaybeImm2Val->Value).getSExtValue();
   MatchInfo.Base = Base;
   return true;
 }
@@ -1571,7 +1570,7 @@ bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
     return false;
 
   // Pass the combined immediate to the apply function.
-  MatchInfo.Imm = MaybeImmVal->Value + MaybeImm2Val->Value;
+  MatchInfo.Imm = (MaybeImmVal->Value + MaybeImm2Val->Value).getSExtValue();
   MatchInfo.Reg = Base;
 
   // There is no simple replacement for a saturating unsigned left shift that
@@ -1654,7 +1653,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
   if (!MaybeImmVal)
     return false;
 
-  const uint64_t C1Val = MaybeImmVal->Value;
+  const uint64_t C1Val = MaybeImmVal->Value.getZExtValue();
 
   auto matchFirstShift = [&](const MachineInstr *MI, uint64_t &ShiftVal) {
     // Shift should match previous one and should be a one-use.
@@ -1668,7 +1667,7 @@ bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
     if (!MaybeImmVal)
       return false;
 
-    ShiftVal = MaybeImmVal->Value;
+    ShiftVal = MaybeImmVal->Value.getSExtValue();
     return true;
   };
 
@@ -1738,10 +1737,11 @@ bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
   auto MaybeImmVal =
       getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (!MaybeImmVal || !isPowerOf2_64(MaybeImmVal->Value))
+  if (!MaybeImmVal)
     return false;
-  ShiftVal = Log2_64(MaybeImmVal->Value);
-  return true;
+
+  ShiftVal = MaybeImmVal->Value.exactLogBase2();
+  return (static_cast<int32_t>(ShiftVal) != -1);
 }
 
 bool CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
@@ -1787,7 +1787,7 @@ bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
       return false;
   }
 
-  int64_t ShiftAmt = MaybeShiftAmtVal->Value;
+  int64_t ShiftAmt = MaybeShiftAmtVal->Value.getSExtValue();
   MatchData.Reg = ExtSrc;
   MatchData.Imm = ShiftAmt;
 
@@ -2026,7 +2026,7 @@ bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
   if (!MaybeImmVal)
     return false;
 
-  ShiftVal = MaybeImmVal->Value;
+  ShiftVal = MaybeImmVal->Value.getSExtValue();
   return ShiftVal >= Size / 2 && ShiftVal < Size;
 }
 
@@ -2200,7 +2200,7 @@ bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
   Register RHS = MI.getOperand(2).getReg();
   MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
 
-  if (auto RHSCst = getConstantVRegVal(RHS, MRI)) {
+  if (auto RHSCst = getConstantVRegSExtVal(RHS, MRI)) {
     int64_t Cst;
     if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
       NewCst = Cst + *RHSCst;
@@ -2441,7 +2441,7 @@ bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) {
   assert(MI.getOpcode() == TargetOpcode::G_SELECT);
   if (auto MaybeCstCmp =
           getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI)) {
-    OpIdx = MaybeCstCmp->Value ? 2 : 3;
+    OpIdx = MaybeCstCmp->Value.isNullValue() ? 3 : 2;
     return true;
   }
   return false;

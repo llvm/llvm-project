@@ -611,8 +611,10 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   if (ConstSrc1) {
     auto ConstSrc0 = getConstantVRegValWithLookThrough(Src0, *MRI, true, true);
     if (ConstSrc0) {
-      uint32_t Lo16 = static_cast<uint32_t>(ConstSrc0->Value) & 0xffff;
-      uint32_t Hi16 = static_cast<uint32_t>(ConstSrc1->Value) & 0xffff;
+      const int64_t K0 = ConstSrc0->Value.getSExtValue();
+      const int64_t K1 = ConstSrc1->Value.getSExtValue();
+      uint32_t Lo16 = static_cast<uint32_t>(K0) & 0xffff;
+      uint32_t Hi16 = static_cast<uint32_t>(K1) & 0xffff;
 
       BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
         .addImm(Lo16 | (Hi16 << 16));
@@ -820,7 +822,7 @@ bool AMDGPUInstructionSelector::selectWritelane(MachineInstr &MI) const {
     // The selector has to be an inline immediate, so we can use whatever for
     // the other operands.
     MIB.addReg(Val);
-    MIB.addImm(ConstSelect->Value &
+    MIB.addImm(ConstSelect->Value.getSExtValue() &
                maskTrailingOnes<uint64_t>(STI.getWavefrontSizeLog2()));
   } else {
     Optional<ValueAndVReg> ConstVal =
@@ -828,9 +830,9 @@ bool AMDGPUInstructionSelector::selectWritelane(MachineInstr &MI) const {
 
     // If the value written is an inline immediate, we can get away without a
     // copy to m0.
-    if (ConstVal && AMDGPU::isInlinableLiteral32(ConstVal->Value,
+    if (ConstVal && AMDGPU::isInlinableLiteral32(ConstVal->Value.getSExtValue(),
                                                  STI.hasInv2PiInlineImm())) {
-      MIB.addImm(ConstVal->Value);
+      MIB.addImm(ConstVal->Value.getSExtValue());
       MIB.addReg(LaneSelect);
     } else {
       MIB.addReg(Val);
@@ -1101,7 +1103,7 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
       getConstantVRegValWithLookThrough(I.getOperand(2).getReg(), *MRI, true);
 
   if (Arg.hasValue()) {
-    const int64_t Value = Arg.getValue().Value;
+    const int64_t Value = Arg.getValue().Value.getSExtValue();
     if (Value == 0) {
       unsigned Opcode = Is64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
       BuildMI(*BB, &I, DL, TII.get(Opcode), DstReg).addImm(0);
@@ -3430,7 +3432,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
     return Default;
 
   Optional<int64_t> Offset =
-    getConstantVRegVal(OpDef->getOperand(2).getReg(), *MRI);
+      getConstantVRegSExtVal(OpDef->getOperand(2).getReg(), *MRI);
   if (!Offset.hasValue())
     return Default;
 
@@ -3919,7 +3921,7 @@ AMDGPUInstructionSelector::getPtrBaseWithConstantOffset(
     = getConstantVRegValWithLookThrough(RHS.getReg(), MRI, true);
   if (!MaybeOffset)
     return {Root, 0};
-  return {RootI->getOperand(1).getReg(), MaybeOffset->Value};
+  return {RootI->getOperand(1).getReg(), MaybeOffset->Value.getSExtValue()};
 }
 
 static void addZeroImm(MachineInstrBuilder &MIB) {
@@ -4247,7 +4249,7 @@ AMDGPUInstructionSelector::selectMUBUFOffsetAtomic(MachineOperand &Root) const {
 static Optional<uint64_t> getConstantZext32Val(Register Reg,
                                                const MachineRegisterInfo &MRI) {
   // getConstantVRegVal sexts any values, so see if that matters.
-  Optional<int64_t> OffsetVal = getConstantVRegVal(Reg, MRI);
+  Optional<int64_t> OffsetVal = getConstantVRegSExtVal(Reg, MRI);
   if (!OffsetVal || !isInt<32>(*OffsetVal))
     return None;
   return Lo_32(*OffsetVal);
