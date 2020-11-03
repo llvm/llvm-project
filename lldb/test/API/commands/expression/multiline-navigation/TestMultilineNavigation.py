@@ -18,6 +18,7 @@ class TestCase(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'])
     def test_nav_arrow_up(self):
         """Tests that we can navigate back to the previous line with the up arrow"""
         self.launch()
@@ -40,6 +41,7 @@ class TestCase(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'])
     def test_nav_arrow_down(self):
         """Tests that we can navigate to the next line with the down arrow"""
         self.launch()
