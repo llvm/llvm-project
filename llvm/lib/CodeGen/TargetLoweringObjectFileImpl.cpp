@@ -837,7 +837,8 @@ MCSection *
 TargetLoweringObjectFileELF::getSectionForLSDA(const Function &F,
                                                const TargetMachine &TM) const {
   // If neither COMDAT nor function sections, use the monolithic LSDA section.
-  if (!F.hasComdat() && !TM.getFunctionSections())
+  // Re-use this path if LSDASection is null as in the Arm EHABI.
+  if (!LSDASection || (!F.hasComdat() && !TM.getFunctionSections()))
     return LSDASection;
 
   const auto *LSDA = cast<MCSectionELF>(LSDASection);
