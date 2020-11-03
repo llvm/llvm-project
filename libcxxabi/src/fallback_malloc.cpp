@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Define _LIBCPP_BUILDING_LIBRARY to ensure _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
-// is only defined when libc aligned allocation is not available.
-#define _LIBCPP_BUILDING_LIBRARY
 #include "fallback_malloc.h"
 
 #include <__threading_support>
