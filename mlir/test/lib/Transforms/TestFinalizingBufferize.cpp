@@ -13,7 +13,7 @@
 
 #include "TestDialect.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -47,9 +47,47 @@ struct TestFinalizingBufferizePass
     : mlir::PassWrapper<TestFinalizingBufferizePass<allowMemrefFunctionResults>,
                         OperationPass<ModuleOp>> {
 
+  /// Converts tensor based test operations to buffer based ones using
+  /// bufferize.
+  class TensorBasedOpConverter
+      : public BufferizeOpConversionPattern<mlir::TensorBasedOp> {
+  public:
+    using BufferizeOpConversionPattern<
+        mlir::TensorBasedOp>::BufferizeOpConversionPattern;
+
+    LogicalResult
+    matchAndRewrite(mlir::TensorBasedOp op, ArrayRef<Value> operands,
+                    ConversionPatternRewriter &rewriter) const final {
+      mlir::TensorBasedOpAdaptor adaptor(
+          operands, op.getOperation()->getAttrDictionary());
+
+      // The input needs to be turned into a buffer first. Until then, bail out.
+      if (!adaptor.input().getType().isa<MemRefType>())
+        return failure();
+
+      Location loc = op.getLoc();
+
+      // Update the result type to a memref type.
+      auto type = op.getResult().getType().cast<ShapedType>();
+      if (!type.hasStaticShape())
+        return rewriter.notifyMatchFailure(
+            op, "dynamic shapes not currently supported");
+      auto memrefType = MemRefType::get(type.getShape(), type.getElementType());
+      Value newOutputBuffer = rewriter.create<AllocOp>(loc, memrefType);
+
+      // Generate a new test operation that works on buffers.
+      rewriter.create<mlir::BufferBasedOp>(loc,
+                                           /*input=*/adaptor.input(),
+                                           /*output=*/newOutputBuffer);
+
+      // Replace the results of the old op with the new output buffers.
+      rewriter.replaceOp(op, newOutputBuffer);
+      return success();
+    }
+  };
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<TestDialect>();
-    registry.insert<linalg::LinalgDialect>();
   }
 
   void runOnOperation() override {
@@ -59,11 +97,16 @@ struct TestFinalizingBufferizePass
 
     // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect>();
-    target.addLegalOp<linalg::CopyOp>();
     target.addLegalOp<MakeTupleOp>();
     target.addLegalOp<GetTupleElementOp>();
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<ModuleTerminatorOp>();
+
+    // Mark all Test operations illegal as long as they work on tensors.
+    auto isLegalOperation = [&](Operation *op) {
+      return converter.isLegal(op);
+    };
+    target.addDynamicallyLegalDialect<TestDialect>(isLegalOperation);
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
@@ -118,8 +161,10 @@ struct TestFinalizingBufferizePass
 
     OwningRewritePatternList patterns;
     populateWithBufferizeOpConversionPatterns<mlir::ReturnOp, mlir::ReturnOp,
-                                              linalg::CopyOp>(
+                                              mlir::CopyOp>(
         &context, converter, patterns);
+    patterns.insert<TensorBasedOpConverter>(&context, converter);
+
     if (failed(applyFullConversion(this->getOperation(), target,
                                    std::move(patterns))))
       this->signalPassFailure();
