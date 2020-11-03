@@ -1522,6 +1522,29 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   if (result.HasSideEffects)
     return ConstantEmission();
 
+  // In CUDA/HIP device compilation, a lambda may capture a reference variable
+  // referencing a global host variable by copy. In this case the lambda should
+  // make a copy of the value of the global host variable. The DRE of the
+  // captured reference variable cannot be emitted as load from the host
+  // global variable as compile time constant, since the host variable is not
+  // accessible on device. The DRE of the captured reference variable has to be
+  // loaded from captures.
+  if (CGM.getLangOpts().CUDAIsDevice &&
+      refExpr->refersToEnclosingVariableOrCapture()) {
+    auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl);
+    if (MD && MD->getParent()->isLambda() &&
+        MD->getOverloadedOperator() == OO_Call) {
+      const APValue::LValueBase &base = result.Val.getLValueBase();
+      if (const ValueDecl *D = base.dyn_cast<const ValueDecl *>()) {
+        if (const VarDecl *VD = dyn_cast<const VarDecl>(D)) {
+          if (!VD->hasAttr<CUDADeviceAttr>()) {
+            return ConstantEmission();
+          }
+        }
+      }
+    }
+  }
+
   // Emit as a constant.
   auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
                                                result.Val, resultType);
