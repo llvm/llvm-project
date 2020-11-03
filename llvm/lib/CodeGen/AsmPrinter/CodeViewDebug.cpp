@@ -137,28 +137,7 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
 }
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
-    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {
-  // If module doesn't have named metadata anchors or COFF debug section
-  // is not available, skip any debug info related stuff.
-  if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
-      !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
-    Asm = nullptr;
-    MMI->setDebugInfoAvailability(false);
-    return;
-  }
-  // Tell MMI that we have debug info.
-  MMI->setDebugInfoAvailability(true);
-
-  TheCPU =
-      mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
-
-  collectGlobalVariableInfo();
-
-  // Check if we should emit type record hashes.
-  ConstantInt *GH = mdconst::extract_or_null<ConstantInt>(
-      MMI->getModule()->getModuleFlag("CodeViewGHash"));
-  EmitDebugGlobalHashes = GH && !GH->isZero();
-}
+    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {}
 
 StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   std::string &Filepath = FileToFilepathMap[File];
@@ -562,11 +541,30 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
+void CodeViewDebug::beginModule(Module *M) {
+  // If module doesn't have named metadata anchors or COFF debug section
+  // is not available, skip any debug info related stuff.
+  if (!M->getNamedMetadata("llvm.dbg.cu") ||
+      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+    Asm = nullptr;
+    return;
+  }
+  // Tell MMI that we have and need debug info.
+  MMI->setDebugInfoAvailability(true);
+
+  TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
+
+  collectGlobalVariableInfo();
+
+  // Check if we should emit type record hashes.
+  ConstantInt *GH =
+      mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("CodeViewGHash"));
+  EmitDebugGlobalHashes = GH && !GH->isZero();
+}
+
 void CodeViewDebug::endModule() {
   if (!Asm || !MMI->hasDebugInfo())
     return;
-
-  assert(Asm != nullptr);
 
   // The COFF .debug$S section consists of several subsections, each starting
   // with a 4-byte control code (e.g. 0xF1, 0xF2, etc) and then a 4-byte length
