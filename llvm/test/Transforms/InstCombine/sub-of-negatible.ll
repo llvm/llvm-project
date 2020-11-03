@@ -183,30 +183,74 @@ define i8 @n10(i8 %x, i8 %y, i8 %z) {
   ret i8 %t1
 }
 
-define i8 @negator_sub_constant_multi_use(i8 %x) {
-; CHECK-LABEL: @negator_sub_constant_multi_use(
-; CHECK-NEXT:    [[S:%.*]] = sub nsw i8 42, [[X:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 0, [[S]]
-; CHECK-NEXT:    ret i8 [[R]]
+define i8 @neg_of_sub_from_constant(i8 %x) {
+; CHECK-LABEL: @neg_of_sub_from_constant(
+; CHECK-NEXT:    [[S_NEG:%.*]] = add i8 [[X:%.*]], -42
+; CHECK-NEXT:    ret i8 [[S_NEG]]
 ;
-  %s = sub nsw i8 42, %x
-  call void @use8(i8 %s)
-  %r = sub nsw i8 0, %s
+  %s = sub i8 42, %x
+  %r = sub i8 0, %s
   ret i8 %r
 }
 
-define <2 x i8> @negator_sub_constant_multi_use_vec(<2 x i8> %x, <2 x i8>* %p) {
-; CHECK-LABEL: @negator_sub_constant_multi_use_vec(
-; CHECK-NEXT:    [[S:%.*]] = sub nsw <2 x i8> <i8 42, i8 -17>, [[X:%.*]]
-; CHECK-NEXT:    store <2 x i8> [[S]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> zeroinitializer, [[S]]
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+define i8 @neg_of_sub_from_constant_multi_use(i8 %x) {
+; CHECK-LABEL: @neg_of_sub_from_constant_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 42, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %s = sub nsw <2 x i8> <i8 42, i8 -17>, %x
-  store <2 x i8> %s, <2 x i8>* %p
-  %r = sub nsw <2 x i8> zeroinitializer, %s
-  ret <2 x i8> %r
+  %s = sub i8 42, %x
+  call void @use8(i8 %s)
+  %r = sub i8 0, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_constant_of_sub_from_constant(i8 %x) {
+; CHECK-LABEL: @sub_from_constant_of_sub_from_constant(
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], -31
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 42, %x
+  %r = sub i8 11, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_constant_of_sub_from_constant_multi_use(i8 %x) {
+; CHECK-LABEL: @sub_from_constant_of_sub_from_constant_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 42, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], -31
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 42, %x
+  call void @use8(i8 %s)
+  %r = sub i8 11, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_variable_of_sub_from_constant(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_from_variable_of_sub_from_constant(
+; CHECK-NEXT:    [[S_NEG:%.*]] = add i8 [[X:%.*]], -42
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[S_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 42, %x
+  %r = sub i8 %y, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_variable_of_sub_from_constant_multi_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_from_variable_of_sub_from_constant_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 42, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 42, %x
+  call void @use8(i8 %s)
+  %r = sub i8 %y, %s
+  ret i8 %r
 }
 
 ; Addition can be negated if both operands can be negated
