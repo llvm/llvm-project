@@ -2418,6 +2418,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   };
 
   bool Changed = false;
+  bool SkipLastIter = false;
   SmallSet<const SCEV*, 8> DominatingExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
@@ -2425,17 +2426,48 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      auto OptimizeCond = [&](bool Inverted) {
-        if (isTrivialCond(L, BI, SE, Inverted, MaxExitCount)) {
+      auto OptimizeCond = [this, L, BI, ExitingBB, MaxExitCount, &FoldExit](
+          bool Inverted, bool SkipLastIter) {
+        const SCEV *MaxIter = MaxExitCount;
+        if (SkipLastIter) {
+          const SCEV *One = SE->getOne(MaxIter->getType());
+          MaxIter = SE->getMinusSCEV(MaxIter, One);
+        }
+        if (isTrivialCond(L, BI, SE, Inverted, MaxIter)) {
           FoldExit(ExitingBB, Inverted);
           return true;
         }
         return false;
       };
-      if (OptimizeCond(false) || OptimizeCond(true))
+
+      // TODO: We might have proved that we can skip the last iteration for
+      // this check. In this case, we only want to check the condition on the
+      // pre-last iteration (MaxExitCount - 1). However, there is a nasty
+      // corner case:
+      //
+      //   for (i = len; i != 0; i--) { ... check (i ult X) ... }
+      //
+      // If we could not prove that len != 0, then we also could not prove that
+      // (len - 1) is not a UINT_MAX. If we simply query (len - 1), then
+      // OptimizeCond will likely not prove anything for it, even if it could
+      // prove the same fact for len.
+      //
+      // As a temporary solution, we query both last and pre-last iterations in
+      // hope that we will be able to prove triviality for at least one of
+      // them. We can stop querying MaxExitCount for this case once SCEV
+      // understands that (MaxExitCount - 1) will not overflow here.
+      if (OptimizeCond(false, false) || OptimizeCond(true, false))
         Changed = true;
+      else if (SkipLastIter)
+        if (OptimizeCond(false, true) || OptimizeCond(true, true))
+          Changed = true;
       continue;
     }
+
+    if (MaxExitCount == ExitCount)
+      // If the loop has more than 1 iteration, all further checks will be
+      // executed 1 iteration less.
+      SkipLastIter = true;
 
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this
