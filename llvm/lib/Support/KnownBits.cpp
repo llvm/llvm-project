@@ -192,6 +192,23 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
+KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().ult(BitWidth)) {
+    unsigned Shift = RHS.getConstant().getZExtValue();
+    Known = LHS;
+    Known.Zero.ashrInPlace(Shift);
+    Known.One.ashrInPlace(Shift);
+    return Known;
+  }
+
+  // TODO: Minimum shift amount high bits are known sign bits.
+  // TODO: No matter the shift amount, the leading sign bits will stay.
+  return Known;
+}
+
 KnownBits KnownBits::abs() const {
   // If the source's MSB is zero then we know the rest of the bits already.
   if (isNonNegative())
