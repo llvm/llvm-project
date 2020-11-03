@@ -85,6 +85,9 @@ struct DDetector {
   virtual void MutexDestroy(DDCallback *cb, DDMutex *m) {}
 
   virtual DDReport *GetReport(DDCallback *cb) { return nullptr; }
+
+ protected:
+  ~DDetector(){};
 };
 
 } // namespace __sanitizer

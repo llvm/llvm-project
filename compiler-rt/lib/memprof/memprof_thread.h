@@ -34,7 +34,7 @@ class MemprofThread;
 
 // These objects are created for every thread and are never deleted,
 // so we can find them by tid even if the thread is long dead.
-struct MemprofThreadContext : public ThreadContextBase {
+struct MemprofThreadContext final : public ThreadContextBase {
   explicit MemprofThreadContext(int tid)
       : ThreadContextBase(tid), announced(false),
         destructor_iterations(GetPthreadDestructorIterations()), stack_id(0),
