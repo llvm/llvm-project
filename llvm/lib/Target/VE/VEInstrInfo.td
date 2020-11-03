@@ -48,7 +48,7 @@ def LO7 : SDNodeXForm<imm, [{
                                    SDLoc(N), MVT::i32);
 }]>;
 def MIMM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(convMImmVal(getImmVal(N)),
+  return CurDAG->getTargetConstant(val2MImm(getImmVal(N)),
                                    SDLoc(N), MVT::i32);
 }]>;
 def LO32 : SDNodeXForm<imm, [{
@@ -66,7 +66,7 @@ def LO7FP : SDNodeXForm<fpimm, [{
   return CurDAG->getTargetConstant(SignExtend32(Val, 7), SDLoc(N), MVT::i32);
 }]>;
 def MIMMFP : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(convMImmVal(getFpImmVal(N)),
+  return CurDAG->getTargetConstant(val2MImm(getFpImmVal(N)),
                                    SDLoc(N), MVT::i32);
 }]>;
 def LOFP32 : SDNodeXForm<fpimm, [{
@@ -515,7 +515,8 @@ multiclass RRbm<string opcStr, bits<8>opc,
                 RegisterClass RCo, ValueType Tyo,
                 RegisterClass RCi, ValueType Tyi,
                 SDPatternOperator OpNode = null_frag,
-                Operand immOp = simm7, Operand mOp = mimm> {
+                Operand immOp = simm7, Operand mOp = mimm,
+                bit MoveImm = 0> {
   def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
               [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>;
@@ -532,7 +533,12 @@ multiclass RRbm<string opcStr, bits<8>opc,
   let cy = 0, cz = 0 in
   def im : RR<opc, (outs RCo:$sx), (ins immOp:$sy, mOp:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), (Tyi mOp:$sz)))]>;
+              [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), (Tyi mOp:$sz)))]> {
+    // VE uses ORim as a move immediate instruction, so declare it here.
+    // An instruction declared as MoveImm will be optimized in FoldImmediate
+    // later.
+    let isMoveImm = MoveImm;
+  }
 }
 
 // Multiclass for non-commutative RR type instructions
@@ -564,8 +570,8 @@ multiclass RRNCbm<string opcStr, bits<8>opc,
 multiclass RRm<string opcStr, bits<8>opc,
                RegisterClass RC, ValueType Ty,
                SDPatternOperator OpNode = null_frag,
-               Operand immOp = simm7, Operand mOp = mimm> :
-  RRbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
+               Operand immOp = simm7, Operand mOp = mimm, bit MoveImm = 0> :
+  RRbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp, MoveImm>;
 
 // Generic RR multiclass for non-commutative instructions with 2 arguments.
 //   e.g. SUBUL, SUBUW, SUBSWSX, and etc.
@@ -923,7 +929,7 @@ multiclass SHMm<string opcStr, bits<8> opc, RegisterClass RC> {
 //-----------------------------------------------------------------------------
 
 // Multiclass for generic RM instructions
-multiclass RMm<string opcStr, bits<8>opc, RegisterClass RC> {
+multiclass RMm<string opcStr, bits<8>opc, RegisterClass RC, bit MoveImm = 0> {
   def rri : RM<opc, (outs RC:$dest), (ins MEMrri:$addr),
                !strconcat(opcStr, " $dest, $addr"), []>;
   let cy = 0 in
@@ -934,14 +940,19 @@ multiclass RMm<string opcStr, bits<8>opc, RegisterClass RC> {
                !strconcat(opcStr, " $dest, $addr"), []>;
   let cy = 0, cz = 0 in
   def zii : RM<opc, (outs RC:$dest), (ins MEMzii:$addr),
-               !strconcat(opcStr, " $dest, $addr"), []>;
+               !strconcat(opcStr, " $dest, $addr"), []> {
+    // VE uses LEAzii and LEASLzii as a move immediate instruction, so declare
+    // it here.  An instruction declared as MoveImm will be optimized in
+    // FoldImmediate later.
+    let isMoveImm = MoveImm;
+  }
 }
 
 // Section 8.2.1 - LEA
 let isReMaterializable = 1, isAsCheapAsAMove = 1,
     DecoderMethod = "DecodeLoadI64" in {
-  let cx = 0 in defm LEA : RMm<"lea", 0x06, I64>;
-  let cx = 1 in defm LEASL : RMm<"lea.sl", 0x06, I64>;
+  let cx = 0 in defm LEA : RMm<"lea", 0x06, I64, /* MoveImm */ 1>;
+  let cx = 1 in defm LEASL : RMm<"lea.sl", 0x06, I64, /* MoveImm */ 1>;
 }
 
 // LEA basic patterns.
@@ -1218,7 +1229,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm AND : RRm<"and", 0x44, I64, i64, and>;
 
 // Section 8.5.2 - OR (OR)
-defm OR : RRm<"or", 0x45, I64, i64, or>;
+defm OR : RRm<"or", 0x45, I64, i64, or, simm7, mimm, /* MoveImm */ 1>;
 
 // Section 8.5.3 - XOR (Exclusive OR)
 defm XOR : RRm<"xor", 0x46, I64, i64, xor>;
