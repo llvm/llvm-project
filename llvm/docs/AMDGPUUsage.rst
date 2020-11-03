@@ -257,6 +257,22 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                                              Add product
                                                                                              names.
 
+     ``gfx90c``                  ``amdgcn``   APU   - xnack                               - Ryzen 7 4700G
+                                                      [on]                                - Ryzen 7 4700GE
+                                                                                          - Ryzen 7 4700G
+                                                                                          - Ryzen 7 4700GE
+                                                                                          - Ryzen 5 4600G
+                                                                                          - Ryzen 5 4600GE
+                                                                                          - Ryzen 3 4300G
+                                                                                          - Ryzen 3 4300GE
+                                                                                          - Ryzen Pro 4000G
+                                                                                          - Ryzen 7 Pro 4700G
+                                                                                          - Ryzen 7 Pro 4750GE
+                                                                                          - Ryzen 5 Pro 4650G
+                                                                                          - Ryzen 5 Pro 4650GE
+                                                                                          - Ryzen 3 Pro 4350G
+                                                                                          - Ryzen 3 Pro 4350GE
+
      **GCN GFX10** [AMD-GCN-GFX10]_
      -----------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - xnack                               - Radeon RX 5700
@@ -848,7 +864,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX906``     0x02f      ``gfx906``
      ``EF_AMDGPU_MACH_AMDGCN_GFX908``     0x030      ``gfx908``
      ``EF_AMDGPU_MACH_AMDGCN_GFX909``     0x031      ``gfx909``
-     *reserved*                           0x032      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX90C``     0x032      ``gfx90c``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1010``    0x033      ``gfx1010``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1011``    0x034      ``gfx1011``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012``    0x035      ``gfx1012``

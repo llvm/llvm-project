@@ -52,6 +52,7 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX906 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx908 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX908 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx909 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX909 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx90c < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX90C %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1010 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1010 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1011 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1011 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1012 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1012 %s
@@ -108,6 +109,7 @@
 ; GFX908:        EF_AMDGPU_MACH_AMDGCN_GFX908 (0x30)
 ; GFX908-NEXT:   EF_AMDGPU_SRAM_ECC           (0x200)
 ; GFX909:        EF_AMDGPU_MACH_AMDGCN_GFX909 (0x31)
+; GFX90C:        EF_AMDGPU_MACH_AMDGCN_GFX90C (0x32)
 ; GFX1010:       EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
 ; GFX1011:       EF_AMDGPU_MACH_AMDGCN_GFX1011 (0x34)
 ; GFX1012:       EF_AMDGPU_MACH_AMDGCN_GFX1012 (0x35)
