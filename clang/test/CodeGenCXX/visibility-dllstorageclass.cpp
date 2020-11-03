@@ -19,11 +19,17 @@
 // RUN:     -x c++  %s -S -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=EXPLICIT
 
+// Local
+static void l() {}
+void use_locals(){l();}
+// DEFAULT-DAG: define internal void @_ZL1lv()
+// EXPLICIT-DAG: define internal void @_ZL1lv()
+
 // Function
 void f() {}
 void __declspec(dllexport) exported_f() {}
 // DEFAULT-DAG: define hidden void @_Z1fv()
-// DEFAULT-DAG: define dso_local  void @_Z10exported_fv()
+// DEFAULT-DAG: define dso_local void @_Z10exported_fv()
 // EXPLICIT-DAG: define protected void @_Z1fv()
 // EXPLICIT-DAG: define hidden void @_Z10exported_fv()
 
