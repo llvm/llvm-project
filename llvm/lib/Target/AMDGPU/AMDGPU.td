@@ -753,14 +753,14 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
 def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   "gfx11",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
-   FeatureFlatAddressSpace,
-   FeatureCIInsts, Feature16BitInsts,
-   FeatureSMemRealTime, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts, FeatureGFX11Insts, FeatureVOP3P,
+   FeatureFlatAddressSpace, Feature16BitInsts,
+   FeatureSMemRealTime, FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
+   FeatureGFX11Insts, FeatureVOP3P,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
-   FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC,
@@ -1165,9 +1165,17 @@ def isGFX8GFX9 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding)>;
 
+def isGFX10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of FeatureGFX10Insts, (not FeatureGFX11Insts))>;
+
 def isGFX10Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX10Insts)>;
+
+def isGFX11 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
