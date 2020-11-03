@@ -4874,6 +4874,6 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
   return status;
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #undef APFLOAT_DISPATCH_ON_SEMANTICS
