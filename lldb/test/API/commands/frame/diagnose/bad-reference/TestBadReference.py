@@ -22,5 +22,4 @@ class TestBadReference(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("thread list", "Thread should be stopped",
                     substrs=['stopped'])
-        self.expect("frame diagnose", "Crash diagnosis was accurate",
-                    substrs=["f->b"])
+        self.expect("frame diagnose", "Crash diagnosis was accurate", "f->b")
