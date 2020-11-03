@@ -2188,6 +2188,59 @@ void varDeclCtors() {
       Code,
       traverse(TK_IgnoreUnlessSpelledInSource,
                varDecl(hasName("var8"), hasInitializer(cxxConstructExpr())))));
+
+  Code = R"cpp(
+
+template<typename T>
+struct TemplStruct {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+private:
+  T m_t;
+};
+
+template<typename T>
+T timesTwo(T input)
+{
+  return input * 2;
+}
+
+void instantiate()
+{
+  TemplStruct<int> ti;
+  TemplStruct<double> td;
+  (void)timesTwo<int>(2);
+  (void)timesTwo<double>(2);
+}
+
+)cpp";
+  {
+    auto M = cxxRecordDecl(hasName("TemplStruct"),
+                           has(fieldDecl(hasType(asString("int")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = cxxRecordDecl(hasName("TemplStruct"),
+                           has(fieldDecl(hasType(asString("double")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M =
+        functionDecl(hasName("timesTwo"),
+                     hasParameter(0, parmVarDecl(hasType(asString("int")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M =
+        functionDecl(hasName("timesTwo"),
+                     hasParameter(0, parmVarDecl(hasType(asString("double")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
 }
 
 template <typename MatcherT>
