@@ -150,8 +150,17 @@ private:
 /// This function should be called by all bufferization passes using
 /// BufferizeTypeConverter so that materializations work proprely. One exception
 /// is bufferization passes doing "full" conversions, where it can be desirable
-/// for even the materializations to remain illegal so that they are eliminated.
+/// for even the materializations to remain illegal so that they are eliminated,
+/// such as via the patterns in
+/// populateEliminateBufferizeMaterializationsPatterns.
 void populateBufferizeMaterializationLegality(ConversionTarget &target);
+
+/// Populate patterns to eliminate bufferize materializations.
+///
+/// In particular, these are the tensor_load/tensor_to_memref ops.
+void populateEliminateBufferizeMaterializationsPatterns(
+    MLIRContext *context, BufferizeTypeConverter &typeConverter,
+    OwningRewritePatternList &patterns);
 
 /// Helper conversion pattern that encapsulates a BufferizeTypeConverter
 /// instance.

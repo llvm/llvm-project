@@ -98,7 +98,8 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
 class ArgumentAnalyzer {
 public:
   explicit ArgumentAnalyzer(ExpressionAnalyzer &context)
-      : context_{context}, isProcedureCall_{false} {}
+      : context_{context}, source_{context.GetContextualMessages().at()},
+        isProcedureCall_{false} {}
   ArgumentAnalyzer(ExpressionAnalyzer &context, parser::CharBlock source,
       bool isProcedureCall = false)
       : context_{context}, source_{source}, isProcedureCall_{isProcedureCall} {}
@@ -656,6 +657,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::BOZLiteralConstant &x) {
 
 // Names and named constants
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
+  auto restorer{GetContextualMessages().SetLocation(n.source)};
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
     return AsMaybeExpr(ConvertToKind<TypeCategory::Integer>(
         *kind, AsExpr(ImpliedDoIndex{n.source})));
@@ -696,6 +698,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::NamedConstant &n) {
+  auto restorer{GetContextualMessages().SetLocation(n.v.source)};
   if (MaybeExpr value{Analyze(n.v)}) {
     Expr<SomeType> folded{Fold(std::move(*value))};
     if (IsConstantExpr(folded)) {
@@ -967,11 +970,8 @@ static std::optional<Component> CreateComponent(
 // Derived type component references and type parameter inquiries
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
   MaybeExpr base{Analyze(sc.base)};
-  if (!base) {
-    return std::nullopt;
-  }
   Symbol *sym{sc.component.symbol};
-  if (context_.HasError(sym)) {
+  if (!base || !sym || context_.HasError(sym)) {
     return std::nullopt;
   }
   const auto &name{sc.component.source};
@@ -981,6 +981,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
       if (auto *designator{UnwrapExpr<Designator<SomeDerived>>(*dtExpr)}) {
         if (std::optional<DynamicType> dyType{DynamicType::From(*sym)}) {
           if (dyType->category() == TypeCategory::Integer) {
+            auto restorer{GetContextualMessages().SetLocation(name)};
             return Fold(ConvertToType(*dyType,
                 AsGenericExpr(TypeParamInquiry{
                     IgnoreAnySubscripts(std::move(*designator)), *sym})));
@@ -2155,8 +2156,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
           new GenericAssignmentWrapper{}, GenericAssignmentWrapper::Deleter);
     } else {
       std::optional<ProcedureRef> procRef{analyzer.TryDefinedAssignment()};
-      Assignment assignment{
-          Fold(analyzer.MoveExpr(0)), Fold(analyzer.MoveExpr(1))};
+      Assignment assignment{analyzer.MoveExpr(0), analyzer.MoveExpr(1)};
       if (procRef) {
         assignment.u = std::move(*procRef);
       }
@@ -2601,18 +2601,20 @@ static void FixMisparsedFunctionReference(
 // Common handling of parse tree node types that retain the
 // representation of the analyzed expression.
 template <typename PARSED>
-MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
+MaybeExpr ExpressionAnalyzer::ExprOrVariable(
+    const PARSED &x, parser::CharBlock source) {
   if (useSavedTypedExprs_ && x.typedExpr) {
     return x.typedExpr->v;
   }
+  auto restorer{GetContextualMessages().SetLocation(source)};
   if constexpr (std::is_same_v<PARSED, parser::Expr> ||
       std::is_same_v<PARSED, parser::Variable>) {
     FixMisparsedFunctionReference(context_, x.u);
   }
   if (AssumedTypeDummy(x)) { // C710
     Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
-  } else if (MaybeExpr result{evaluate::Fold(foldingContext_, Analyze(x.u))}) {
-    SetExpr(x, std::move(*result));
+  } else if (MaybeExpr result{Analyze(x.u)}) {
+    SetExpr(x, Fold(std::move(*result)));
     return x.typedExpr->v;
   }
   ResetExpr(x);
@@ -2628,17 +2630,17 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
   auto restorer{GetContextualMessages().SetLocation(expr.source)};
-  return ExprOrVariable(expr);
+  return ExprOrVariable(expr, expr.source);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Variable &variable) {
   auto restorer{GetContextualMessages().SetLocation(variable.GetSource())};
-  return ExprOrVariable(variable);
+  return ExprOrVariable(variable, variable.GetSource());
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
   auto restorer{GetContextualMessages().SetLocation(x.source)};
-  return ExprOrVariable(x);
+  return ExprOrVariable(x, x.source);
 }
 
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
@@ -2652,12 +2654,11 @@ Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
       common::visitors{
           [&](const parser::ScalarIntConstantExpr &x) {
             if (MaybeExpr kind{Analyze(x)}) {
-              Expr<SomeType> folded{Fold(std::move(*kind))};
-              if (std::optional<std::int64_t> code{ToInt64(folded)}) {
+              if (std::optional<std::int64_t> code{ToInt64(*kind)}) {
                 if (CheckIntrinsicKind(category, *code)) {
                   return Expr<SubscriptInteger>{*code};
                 }
-              } else if (auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(folded)}) {
+              } else if (auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(*kind)}) {
                 return ConvertToType<SubscriptInteger>(std::move(*intExpr));
               }
             }
@@ -3110,7 +3111,7 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
     if (isProcedureCall_ || !IsProcedure(*argExpr)) {
-      return ActualArgument{context_.Fold(std::move(*argExpr))};
+      return ActualArgument{std::move(*argExpr)};
     }
     context_.SayAt(expr.source,
         IsFunction(*argExpr) ? "Function call must have argument list"_err_en_US

@@ -24,16 +24,19 @@ class Logger {
 public:
   virtual ~Logger() = default;
 
-  enum Level { Debug, Verbose, Info, Error };
+  /// The significance or severity of this message.
+  /// Typically used to filter the output to an interesting level.
+  enum Level : unsigned char { Debug, Verbose, Info, Error };
   static char indicator(Level L) { return "DVIE"[L]; }
 
   /// Implementations of this method must be thread-safe.
-  virtual void log(Level, const llvm::formatv_object_base &Message) = 0;
+  virtual void log(Level, const char *Fmt,
+                   const llvm::formatv_object_base &Message) = 0;
 };
 
 namespace detail {
 const char *debugType(const char *Filename);
-void log(Logger::Level, const llvm::formatv_object_base &);
+void logImpl(Logger::Level, const char *Fmt, const llvm::formatv_object_base &);
 
 // We often want to consume llvm::Errors by value when passing them to log().
 // We automatically wrap them in llvm::fmt_consume() as formatv requires.
@@ -43,7 +46,8 @@ inline decltype(fmt_consume(llvm::Error::success())) wrap(llvm::Error &&V) {
 }
 template <typename... Ts>
 void log(Logger::Level L, const char *Fmt, Ts &&... Vals) {
-  detail::log(L, llvm::formatv(Fmt, detail::wrap(std::forward<Ts>(Vals))...));
+  detail::logImpl(L, Fmt,
+                  llvm::formatv(Fmt, detail::wrap(std::forward<Ts>(Vals))...));
 }
 
 llvm::Error error(std::error_code, std::string &&);
@@ -119,7 +123,8 @@ public:
       : MinLevel(MinLevel), Logs(Logs) {}
 
   /// Write a line to the logging stream.
-  void log(Level, const llvm::formatv_object_base &Message) override;
+  void log(Level, const char *Fmt,
+           const llvm::formatv_object_base &Message) override;
 
 private:
   Logger::Level MinLevel;

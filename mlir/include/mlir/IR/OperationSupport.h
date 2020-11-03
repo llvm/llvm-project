@@ -80,6 +80,15 @@ class AbstractOperation {
 public:
   using OperationProperties = uint32_t;
 
+  using GetCanonicalizationPatternsFn = void (*)(OwningRewritePatternList &,
+                                                 MLIRContext *);
+  using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
+                                       SmallVectorImpl<OpFoldResult> &);
+  using HasTraitFn = bool (*)(TypeID);
+  using ParseAssemblyFn = ParseResult (*)(OpAsmParser &, OperationState &);
+  using PrintAssemblyFn = void (*)(Operation *, OpAsmPrinter &);
+  using VerifyInvariantsFn = LogicalResult (*)(Operation *);
+
   /// This is the name of the operation.
   const Identifier name;
 
@@ -90,15 +99,19 @@ public:
   TypeID typeID;
 
   /// Use the specified object to parse this ops custom assembly format.
-  ParseResult (&parseAssembly)(OpAsmParser &parser, OperationState &result);
+  ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
 
   /// This hook implements the AsmPrinter for this operation.
-  void (&printAssembly)(Operation *op, OpAsmPrinter &p);
+  void printAssembly(Operation *op, OpAsmPrinter &p) const {
+    return printAssemblyFn(op, p);
+  }
 
   /// This hook implements the verifier for this operation.  It should emits an
   /// error message and returns failure if a problem is detected, or returns
   /// success if everything is ok.
-  LogicalResult (&verifyInvariants)(Operation *op);
+  LogicalResult verifyInvariants(Operation *op) const {
+    return verifyInvariantsFn(op);
+  }
 
   /// This hook implements a generalized folder for this operation.  Operations
   /// can implement this to provide simplifications rules that are applied by
@@ -119,13 +132,17 @@ public:
   /// This allows expression of some simple in-place canonicalizations (e.g.
   /// "x+0 -> x", "min(x,y,x,z) -> min(x,y,z)", "x+y-x -> y", etc), as well as
   /// generalized constant folding.
-  LogicalResult (&foldHook)(Operation *op, ArrayRef<Attribute> operands,
-                            SmallVectorImpl<OpFoldResult> &results);
+  LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
+                         SmallVectorImpl<OpFoldResult> &results) const {
+    return foldHookFn(op, operands, results);
+  }
 
   /// This hook returns any canonicalization pattern rewrites that the operation
   /// supports, for use by the canonicalization pass.
-  void (&getCanonicalizationPatterns)(OwningRewritePatternList &results,
-                                      MLIRContext *context);
+  void getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                   MLIRContext *context) const {
+    return getCanonicalizationPatternsFn(results, context);
+  }
 
   /// Returns whether the operation has a particular property.
   bool hasProperty(OperationProperty property) const {
@@ -141,7 +158,7 @@ public:
 
   /// Returns true if the operation has a particular trait.
   template <template <typename T> class Trait> bool hasTrait() const {
-    return hasRawTrait(TypeID::get<Trait>());
+    return hasTraitFn(TypeID::get<Trait>());
   }
 
   /// Look up the specified operation in the specified MLIRContext and return a
@@ -151,26 +168,30 @@ public:
 
   /// This constructor is used by Dialect objects when they register the list of
   /// operations they contain.
-  template <typename T> static AbstractOperation get(Dialect &dialect) {
-    return AbstractOperation(
-        T::getOperationName(), dialect, T::getOperationProperties(),
-        TypeID::get<T>(), T::parseAssembly, T::printAssembly,
-        T::verifyInvariants, T::foldHook, T::getCanonicalizationPatterns,
-        T::getInterfaceMap(), T::hasTrait);
+  template <typename T> static void insert(Dialect &dialect) {
+    insert(T::getOperationName(), dialect, T::getOperationProperties(),
+           TypeID::get<T>(), T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
+           T::getVerifyInvariantsFn(), T::getFoldHookFn(),
+           T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
+           T::getHasTraitFn());
   }
 
 private:
-  AbstractOperation(
-      StringRef name, Dialect &dialect, OperationProperties opProperties,
-      TypeID typeID,
-      ParseResult (&parseAssembly)(OpAsmParser &parser, OperationState &result),
-      void (&printAssembly)(Operation *op, OpAsmPrinter &p),
-      LogicalResult (&verifyInvariants)(Operation *op),
-      LogicalResult (&foldHook)(Operation *op, ArrayRef<Attribute> operands,
-                                SmallVectorImpl<OpFoldResult> &results),
-      void (&getCanonicalizationPatterns)(OwningRewritePatternList &results,
-                                          MLIRContext *context),
-      detail::InterfaceMap &&interfaceMap, bool (&hasTrait)(TypeID traitID));
+  static void insert(StringRef name, Dialect &dialect,
+                     OperationProperties opProperties, TypeID typeID,
+                     ParseAssemblyFn parseAssembly,
+                     PrintAssemblyFn printAssembly,
+                     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
+                     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
+                     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
+
+  AbstractOperation(StringRef name, Dialect &dialect,
+                    OperationProperties opProperties, TypeID typeID,
+                    ParseAssemblyFn parseAssembly,
+                    PrintAssemblyFn printAssembly,
+                    VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
+                    GetCanonicalizationPatternsFn getCanonicalizationPatterns,
+                    detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
 
   /// The properties of the operation.
   const OperationProperties opProperties;
@@ -178,9 +199,13 @@ private:
   /// A map of interfaces that were registered to this operation.
   detail::InterfaceMap interfaceMap;
 
-  /// This hook returns if the operation contains the trait corresponding
-  /// to the given TypeID.
-  bool (&hasRawTrait)(TypeID traitID);
+  /// Internal callback hooks provided by the op implementation.
+  FoldHookFn foldHookFn;
+  GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+  HasTraitFn hasTraitFn;
+  ParseAssemblyFn parseAssemblyFn;
+  PrintAssemblyFn printAssemblyFn;
+  VerifyInvariantsFn verifyInvariantsFn;
 };
 
 //===----------------------------------------------------------------------===//

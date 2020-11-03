@@ -28,9 +28,7 @@ inline constexpr uptr archMemoryTagGranuleSize() { return 16; }
 
 inline uptr untagPointer(uptr Ptr) { return Ptr & ((1ULL << 56) - 1); }
 
-inline uint8_t extractTag(uptr Ptr) {
-  return (Ptr >> 56) & 0xf;
-}
+inline uint8_t extractTag(uptr Ptr) { return (Ptr >> 56) & 0xf; }
 
 #else
 
@@ -82,7 +80,7 @@ inline void enableMemoryTagChecksTestOnly() {
 class ScopedDisableMemoryTagChecks {
   size_t PrevTCO;
 
- public:
+public:
   ScopedDisableMemoryTagChecks() {
     __asm__ __volatile__(".arch_extension mte; mrs %0, tco; msr tco, #1"
                          : "=r"(PrevTCO));
@@ -190,8 +188,8 @@ inline void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr BlockEnd) {
 
   2:
   )"
-                       : [ Cur ] "+&r"(RoundOldPtr), [ End ] "+&r"(NewPtr)
-                       : [ BlockEnd ] "r"(BlockEnd)
+                       : [Cur] "+&r"(RoundOldPtr), [End] "+&r"(NewPtr)
+                       : [BlockEnd] "r"(BlockEnd)
                        : "memory");
 }
 
