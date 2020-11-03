@@ -543,6 +543,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::tcele:
     return std::make_unique<TCELETargetInfo>(Triple, Opts);
 
+  case llvm::Triple::tcele64:
+    return std::make_unique<TCELE64TargetInfo>(Triple, Opts);
+
   case llvm::Triple::x86:
     if (Triple.isOSDarwin())
       return std::make_unique<DarwinI386TargetInfo>(Triple, Opts);
