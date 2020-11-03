@@ -487,6 +487,7 @@ public:
         LLVM_DEBUG(
             dbgs() << "    forwarded known load with preexisting MemoryAccess"
                    << Access << "\n");
+        (void)Access;
 
         NumKnownLoadsForwarded++;
         TotalKnownLoadsForwarded++;
@@ -574,6 +575,7 @@ public:
       MemoryAccess *Access = makeReadArrayAccess(TargetStmt, LI, SameVal);
       LLVM_DEBUG(dbgs() << "    forwarded known load with new MemoryAccess"
                         << Access << "\n");
+      (void)Access;
 
       if (LocalTranslator)
         Translator = Translator.add_map(LocalTranslator);
