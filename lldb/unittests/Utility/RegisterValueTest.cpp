@@ -41,18 +41,16 @@ TEST(RegisterValueTest, GetScalarValue) {
   EXPECT_EQ(Get(RV(47.5L)), Scalar(47.5L));
   EXPECT_EQ(Get(RV({0xff, 0xee, 0xdd, 0xcc}, lldb::eByteOrderLittle)),
             Scalar(0xccddeeff));
-  //  EXPECT_EQ(Get(RV({0xff, 0xee, 0xdd, 0xcc}, lldb::eByteOrderBig)),
-  //            Scalar(0xffeeddcc));
+  EXPECT_EQ(Get(RV({0xff, 0xee, 0xdd, 0xcc}, lldb::eByteOrderBig)),
+            Scalar(0xffeeddcc));
   EXPECT_EQ(Get(RV({0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66,
                     0x55, 0x44, 0x33, 0x22, 0x11, 0x00},
                    lldb::eByteOrderLittle)),
             Scalar((APInt(128, 0x0011223344556677ull) << 64) |
                    APInt(128, 0x8899aabbccddeeff)));
-#if 0
   EXPECT_EQ(Get(RV({0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66,
                     0x55, 0x44, 0x33, 0x22, 0x11, 0x00},
                    lldb::eByteOrderBig)),
             Scalar((APInt(128, 0xffeeddccbbaa9988ull) << 64) |
                    APInt(128, 0x7766554433221100)));
-#endif
 }
