@@ -23,3 +23,15 @@ def : Pat<(select (i32 (setne I32:$cond, 0)), EXNREF:$lhs, EXNREF:$rhs),
           (SELECT_EXNREF EXNREF:$lhs, EXNREF:$rhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), EXNREF:$lhs, EXNREF:$rhs),
           (SELECT_EXNREF EXNREF:$rhs, EXNREF:$lhs, I32:$cond)>;
+
+multiclass REF<WebAssemblyRegClass rt> {
+  defm REF_NULL_#rt : I<(outs rt:$res), (ins HeapType:$heaptype),
+                        (outs), (ins HeapType:$heaptype),
+                        [],
+                        "ref.null\t$res, $heaptype",
+                        "ref.null\t$heaptype",
+                        0xd0>;
+}
+
+defm "" : REF<FUNCREF>, Requires<[HasReferenceTypes]>;
+defm "" : REF<EXTERNREF>, Requires<[HasReferenceTypes]>;
