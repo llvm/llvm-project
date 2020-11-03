@@ -39,7 +39,7 @@ def main():
     env = {k : v  for (k, v) in map(lambda s: s.split('=', 1), args.env)}
 
     # Run the command line with the given environment in the execution directory.
-    return subprocess.call(subprocess.list2cmdline(commandLine), cwd=args.execdir, env=env, shell=True)
+    return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
 
 
 if __name__ == '__main__':
