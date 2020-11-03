@@ -129,11 +129,9 @@ void ASTDumper::dumpTemplateDecl(const TemplateDecl *D, bool DumpExplicitInst) {
 
   Visit(D->getTemplatedDecl());
 
-  if (GetTraversalKind() == TK_AsIs) {
-    for (const auto *Child : D->specializations())
-      dumpTemplateDeclSpecialization(Child, DumpExplicitInst,
-                                     !D->isCanonicalDecl());
-  }
+  for (const auto *Child : D->specializations())
+    dumpTemplateDeclSpecialization(Child, DumpExplicitInst,
+                                   !D->isCanonicalDecl());
 }
 
 void ASTDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
