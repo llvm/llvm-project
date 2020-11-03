@@ -784,47 +784,47 @@ class VCMP<bits<10> xo, string asmstr, ValueType Ty>
   : VXRForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB), asmstr,
               IIC_VecFPCompare,
               [(set Ty:$vD, (Ty (PPCvcmp Ty:$vA, Ty:$vB, xo)))]>;
-class VCMPo<bits<10> xo, string asmstr, ValueType Ty>
+class VCMP_rec<bits<10> xo, string asmstr, ValueType Ty>
   : VXRForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB), asmstr,
               IIC_VecFPCompare,
-              [(set Ty:$vD, (Ty (PPCvcmp_o Ty:$vA, Ty:$vB, xo)))]> {
+              [(set Ty:$vD, (Ty (PPCvcmp_rec Ty:$vA, Ty:$vB, xo)))]> {
   let Defs = [CR6];
   let RC = 1;
 }
 
 // f32 element comparisons.0
 def VCMPBFP   : VCMP <966, "vcmpbfp $vD, $vA, $vB"  , v4f32>;
-def VCMPBFP_rec  : VCMPo<966, "vcmpbfp. $vD, $vA, $vB" , v4f32>;
+def VCMPBFP_rec  : VCMP_rec<966, "vcmpbfp. $vD, $vA, $vB" , v4f32>;
 def VCMPEQFP  : VCMP <198, "vcmpeqfp $vD, $vA, $vB" , v4f32>;
-def VCMPEQFP_rec : VCMPo<198, "vcmpeqfp. $vD, $vA, $vB", v4f32>;
+def VCMPEQFP_rec : VCMP_rec<198, "vcmpeqfp. $vD, $vA, $vB", v4f32>;
 def VCMPGEFP  : VCMP <454, "vcmpgefp $vD, $vA, $vB" , v4f32>;
-def VCMPGEFP_rec : VCMPo<454, "vcmpgefp. $vD, $vA, $vB", v4f32>;
+def VCMPGEFP_rec : VCMP_rec<454, "vcmpgefp. $vD, $vA, $vB", v4f32>;
 def VCMPGTFP  : VCMP <710, "vcmpgtfp $vD, $vA, $vB" , v4f32>;
-def VCMPGTFP_rec : VCMPo<710, "vcmpgtfp. $vD, $vA, $vB", v4f32>;
+def VCMPGTFP_rec : VCMP_rec<710, "vcmpgtfp. $vD, $vA, $vB", v4f32>;
 
 // i8 element comparisons.
 def VCMPEQUB  : VCMP <  6, "vcmpequb $vD, $vA, $vB" , v16i8>;
-def VCMPEQUB_rec : VCMPo<  6, "vcmpequb. $vD, $vA, $vB", v16i8>;
+def VCMPEQUB_rec : VCMP_rec<  6, "vcmpequb. $vD, $vA, $vB", v16i8>;
 def VCMPGTSB  : VCMP <774, "vcmpgtsb $vD, $vA, $vB" , v16i8>;
-def VCMPGTSB_rec : VCMPo<774, "vcmpgtsb. $vD, $vA, $vB", v16i8>;
+def VCMPGTSB_rec : VCMP_rec<774, "vcmpgtsb. $vD, $vA, $vB", v16i8>;
 def VCMPGTUB  : VCMP <518, "vcmpgtub $vD, $vA, $vB" , v16i8>;
-def VCMPGTUB_rec : VCMPo<518, "vcmpgtub. $vD, $vA, $vB", v16i8>;
+def VCMPGTUB_rec : VCMP_rec<518, "vcmpgtub. $vD, $vA, $vB", v16i8>;
 
 // i16 element comparisons.
 def VCMPEQUH  : VCMP < 70, "vcmpequh $vD, $vA, $vB" , v8i16>;
-def VCMPEQUH_rec : VCMPo< 70, "vcmpequh. $vD, $vA, $vB", v8i16>;
+def VCMPEQUH_rec : VCMP_rec< 70, "vcmpequh. $vD, $vA, $vB", v8i16>;
 def VCMPGTSH  : VCMP <838, "vcmpgtsh $vD, $vA, $vB" , v8i16>;
-def VCMPGTSH_rec : VCMPo<838, "vcmpgtsh. $vD, $vA, $vB", v8i16>;
+def VCMPGTSH_rec : VCMP_rec<838, "vcmpgtsh. $vD, $vA, $vB", v8i16>;
 def VCMPGTUH  : VCMP <582, "vcmpgtuh $vD, $vA, $vB" , v8i16>;
-def VCMPGTUH_rec : VCMPo<582, "vcmpgtuh. $vD, $vA, $vB", v8i16>;
+def VCMPGTUH_rec : VCMP_rec<582, "vcmpgtuh. $vD, $vA, $vB", v8i16>;
 
 // i32 element comparisons.
 def VCMPEQUW  : VCMP <134, "vcmpequw $vD, $vA, $vB" , v4i32>;
-def VCMPEQUW_rec : VCMPo<134, "vcmpequw. $vD, $vA, $vB", v4i32>;
+def VCMPEQUW_rec : VCMP_rec<134, "vcmpequw. $vD, $vA, $vB", v4i32>;
 def VCMPGTSW  : VCMP <902, "vcmpgtsw $vD, $vA, $vB" , v4i32>;
-def VCMPGTSW_rec : VCMPo<902, "vcmpgtsw. $vD, $vA, $vB", v4i32>;
+def VCMPGTSW_rec : VCMP_rec<902, "vcmpgtsw. $vD, $vA, $vB", v4i32>;
 def VCMPGTUW  : VCMP <646, "vcmpgtuw $vD, $vA, $vB" , v4i32>;
-def VCMPGTUW_rec : VCMPo<646, "vcmpgtuw. $vD, $vA, $vB", v4i32>;
+def VCMPGTUW_rec : VCMP_rec<646, "vcmpgtuw. $vD, $vA, $vB", v4i32>;
 
 let isCodeGenOnly = 1, isMoveImm = 1, isAsCheapAsAMove = 1,
     isReMaterializable = 1 in {
@@ -1291,11 +1291,11 @@ def VORC : VXForm_1<1348, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
 
 // i64 element comparisons.
 def VCMPEQUD  : VCMP <199, "vcmpequd $vD, $vA, $vB" , v2i64>;
-def VCMPEQUD_rec : VCMPo<199, "vcmpequd. $vD, $vA, $vB", v2i64>;
+def VCMPEQUD_rec : VCMP_rec<199, "vcmpequd. $vD, $vA, $vB", v2i64>;
 def VCMPGTSD  : VCMP <967, "vcmpgtsd $vD, $vA, $vB" , v2i64>;
-def VCMPGTSD_rec : VCMPo<967, "vcmpgtsd. $vD, $vA, $vB", v2i64>;
+def VCMPGTSD_rec : VCMP_rec<967, "vcmpgtsd. $vD, $vA, $vB", v2i64>;
 def VCMPGTUD  : VCMP <711, "vcmpgtud $vD, $vA, $vB" , v2i64>;
-def VCMPGTUD_rec : VCMPo<711, "vcmpgtud. $vD, $vA, $vB", v2i64>;
+def VCMPGTUD_rec : VCMP_rec<711, "vcmpgtud. $vD, $vA, $vB", v2i64>;
 
 // The cryptography instructions that do not require Category:Vector.Crypto
 def VPMSUMB : VX1_Int_Ty<1032, "vpmsumb",
@@ -1363,21 +1363,21 @@ def VMSUMUDM : VA1a_Int_Ty3<35, "vmsumudm", int_ppc_altivec_vmsumudm,
 
 // i8 element comparisons.
 def VCMPNEB   : VCMP   <  7, "vcmpneb $vD, $vA, $vB"  , v16i8>;
-def VCMPNEB_rec  : VCMPo  <  7, "vcmpneb. $vD, $vA, $vB" , v16i8>;
+def VCMPNEB_rec  : VCMP_rec  <  7, "vcmpneb. $vD, $vA, $vB" , v16i8>;
 def VCMPNEZB  : VCMP <263, "vcmpnezb $vD, $vA, $vB" , v16i8>;
-def VCMPNEZB_rec : VCMPo<263, "vcmpnezb. $vD, $vA, $vB", v16i8>;
+def VCMPNEZB_rec : VCMP_rec<263, "vcmpnezb. $vD, $vA, $vB", v16i8>;
 
 // i16 element comparisons.
 def VCMPNEH   : VCMP < 71, "vcmpneh $vD, $vA, $vB"  , v8i16>;
-def VCMPNEH_rec  : VCMPo< 71, "vcmpneh. $vD, $vA, $vB" , v8i16>;
+def VCMPNEH_rec  : VCMP_rec< 71, "vcmpneh. $vD, $vA, $vB" , v8i16>;
 def VCMPNEZH  : VCMP <327, "vcmpnezh $vD, $vA, $vB" , v8i16>;
-def VCMPNEZH_rec : VCMPo<327, "vcmpnezh. $vD, $vA, $vB", v8i16>;
+def VCMPNEZH_rec : VCMP_rec<327, "vcmpnezh. $vD, $vA, $vB", v8i16>;
 
 // i32 element comparisons.
 def VCMPNEW   : VCMP <135, "vcmpnew $vD, $vA, $vB"  , v4i32>;
-def VCMPNEW_rec  : VCMPo<135, "vcmpnew. $vD, $vA, $vB" , v4i32>;
+def VCMPNEW_rec  : VCMP_rec<135, "vcmpnew. $vD, $vA, $vB" , v4i32>;
 def VCMPNEZW  : VCMP <391, "vcmpnezw $vD, $vA, $vB" , v4i32>;
-def VCMPNEZW_rec : VCMPo<391, "vcmpnezw. $vD, $vA, $vB", v4i32>;
+def VCMPNEZW_rec : VCMP_rec<391, "vcmpnezw. $vD, $vA, $vB", v4i32>;
 
 // VX-Form: [PO VRT / UIM VRB XO].
 // We use VXForm_1 to implement it, that is, we use "VRA" (5 bit) to represent

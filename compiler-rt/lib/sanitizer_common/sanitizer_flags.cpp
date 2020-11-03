@@ -72,7 +72,7 @@ void SubstituteForFlagValue(const char *s, char *out, uptr out_size) {
   *out = '\0';
 }
 
-class FlagHandlerInclude : public FlagHandlerBase {
+class FlagHandlerInclude final : public FlagHandlerBase {
   FlagParser *parser_;
   bool ignore_missing_;
   const char *original_path_;

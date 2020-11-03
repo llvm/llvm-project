@@ -66,6 +66,9 @@ struct DDCallback {
 
   virtual u32 Unwind() { return 0; }
   virtual int UniqueTid() { return 0; }
+
+ protected:
+  ~DDCallback() {}
 };
 
 struct DDetector {
