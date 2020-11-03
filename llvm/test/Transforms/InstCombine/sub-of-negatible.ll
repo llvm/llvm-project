@@ -309,6 +309,76 @@ define i8 @n14(i8 %x, i8 %y, i8 %z) {
   ret i8 %t3
 }
 
+define i8 @neg_of_add_with_constant(i8 %x) {
+; CHECK-LABEL: @neg_of_add_with_constant(
+; CHECK-NEXT:    [[S_NEG:%.*]] = sub i8 -42, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[S_NEG]]
+;
+  %s = add i8 %x, 42
+  %r = sub i8 0, %s
+  ret i8 %r
+}
+
+define i8 @neg_of_add_with_constant_multi_use(i8 %x) {
+; CHECK-LABEL: @neg_of_add_with_constant_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = add i8 %x, 42
+  call void @use8(i8 %s)
+  %r = sub i8 0, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_constant_of_add_with_constant(i8 %x) {
+; CHECK-LABEL: @sub_from_constant_of_add_with_constant(
+; CHECK-NEXT:    [[R:%.*]] = sub i8 -31, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = add i8 %x, 42
+  %r = sub i8 11, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_constant_of_add_with_constant_multi_use(i8 %x) {
+; CHECK-LABEL: @sub_from_constant_of_add_with_constant_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 -31, [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = add i8 %x, 42
+  call void @use8(i8 %s)
+  %r = sub i8 11, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_variable_of_add_with_constant(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_from_variable_of_add_with_constant(
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = add i8 %x, 42
+  %r = sub i8 %y, %s
+  ret i8 %r
+}
+
+define i8 @sub_from_variable_of_add_with_constant_multi_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_from_variable_of_add_with_constant_multi_use(
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[Y:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = add i8 %x, 42
+  call void @use8(i8 %s)
+  %r = sub i8 %y, %s
+  ret i8 %r
+}
+
 ; Multiplication can be negated if either one of operands can be negated
 ; x - (y * z) -> x + ((-y) * z) or  x + ((-z) * y)
 define i8 @t15(i8 %x, i8 %y, i8 %z) {
