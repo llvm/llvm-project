@@ -274,12 +274,12 @@ public:
                                                       foldingContext, &expr);
   }
   mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
-    return Fortran::lower::translateVariableToFIRType(
-        &getMLIRContext(), bridge.getDefaultKinds(), var);
+    return Fortran::lower::translateVariableToFIRType(&getMLIRContext(),
+                                                      foldingContext, var);
   }
   mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
-    return Fortran::lower::translateSymbolToFIRType(
-        &getMLIRContext(), bridge.getDefaultKinds(), sym);
+    return Fortran::lower::translateSymbolToFIRType(&getMLIRContext(),
+                                                    foldingContext, sym);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc,
                      int kind) override final {

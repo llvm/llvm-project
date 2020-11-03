@@ -490,7 +490,7 @@ private:
 /// current one (The old one is still used for DataRef and Designator).
 struct NewTypeBuilder {
 
-  mlir::Type gen(const Fortran::lower::SomeExpr &expr) {
+  mlir::Type genExprType(const Fortran::lower::SomeExpr &expr) {
     auto dynamicType = expr.GetType();
     if (!dynamicType)
       llvm::report_fatal_error("lowering typeless expression type");
@@ -499,7 +499,7 @@ struct NewTypeBuilder {
       TODO("derived types lowering");
     auto shapeExpr = Fortran::evaluate::GetShape(foldingContext, expr);
     if (!shapeExpr)
-      TODO("implied shape expression type lowering");
+      TODO("Assumed rank expression type lowering");
 
     auto baseType = TypeBuilder{context, foldingContext.defaults()}.genFIRTy(
         category, dynamicType->kind());
@@ -535,6 +535,100 @@ struct NewTypeBuilder {
         Fortran::evaluate::Fold(foldingContext, std::move(expr)));
   }
 
+  mlir::Type genSymbolType(const Fortran::semantics::Symbol &symbol,
+                           bool isAlloc = false, bool isPtr = false) {
+    // TODO: translate symbol location to mlir loc. Need converter
+    auto loc = mlir::UnknownLoc::get(context);
+    mlir::Type ty;
+    if (auto *type{symbol.GetType()}) {
+      if (auto *tySpec{type->AsIntrinsic()}) {
+        int kind = toInt64(Fortran::common::Clone(tySpec->kind())).value();
+        ty = TypeBuilder{context, foldingContext.defaults()}.genFIRTy(
+            tySpec->category(), kind);
+      } else if (auto *tySpec = type->AsDerived()) {
+        std::vector<std::pair<std::string, mlir::Type>> ps;
+        std::vector<std::pair<std::string, mlir::Type>> cs;
+        auto &symbol = tySpec->typeSymbol();
+        auto rec = fir::RecordType::get(context, toStringRef(symbol.name()));
+        // TODO: use Fortran::semantics::ComponentIterator to go through
+        // components. or use similar mechanism. We probably want to go through
+        // the Ordered components.
+        TODO("lower derived type to fir types");
+        rec.finalize(ps, cs);
+        ty = rec;
+      } else {
+        mlir::emitError(loc, "symbol's type must have a type spec");
+        return {};
+      }
+    } else {
+      mlir::emitError(loc, "symbol must have a type");
+      return {};
+    }
+    if (symbol.IsObjectArray()) {
+      auto shapeExpr =
+          Fortran::evaluate::GetShapeHelper{foldingContext}(symbol);
+      if (!shapeExpr)
+        TODO("assumed rank symbol type lowering");
+      fir::SequenceType::Shape shape;
+      if (symbol.GetType()->category() ==
+          Fortran::semantics::DeclTypeSpec::Character)
+        shape.push_back(getCharacterLength(symbol));
+      translateShape(shape, std::move(*shapeExpr));
+      ty = fir::SequenceType::get(shape, ty);
+    }
+
+    if (ty.isa<fir::CharacterType>()) {
+      auto charLen = getCharacterLength(symbol);
+      fir::SequenceType::Shape shape = {charLen};
+      ty = fir::SequenceType::get(shape, ty);
+    }
+
+    if (isPtr || Fortran::semantics::IsPointer(symbol))
+      ty = fir::PointerType::get(ty);
+    else if (isAlloc || Fortran::semantics::IsAllocatable(symbol))
+      ty = fir::HeapType::get(ty);
+    return ty;
+  }
+
+  // To get the character length from a symbol, make an fold a designator for
+  // the symbol to cover the case where the symbol is an assumed length named
+  // constant and its length comes from its init expression length.
+  template <int Kind>
+  fir::SequenceType::Extent
+  getCharacterLengthHelper(const Fortran::semantics::Symbol &symbol) {
+    using TC =
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, Kind>;
+    auto designator = Fortran::evaluate::Fold(
+        foldingContext,
+        Fortran::evaluate::Expr<TC>{Fortran::evaluate::Designator<TC>{symbol}});
+    if (auto len = toInt64(std::move(designator.LEN())))
+      return *len;
+    return fir::SequenceType::getUnknownExtent();
+  }
+  fir::SequenceType::Extent
+  getCharacterLength(const Fortran::semantics::Symbol &symbol) {
+    auto *type = symbol.GetType();
+    if (!type ||
+        type->category() != Fortran::semantics::DeclTypeSpec::Character ||
+        !type->AsIntrinsic())
+      llvm::report_fatal_error("not a character symbol");
+    int kind =
+        toInt64(Fortran::common::Clone(type->AsIntrinsic()->kind())).value();
+    switch (kind) {
+    case 1:
+      return getCharacterLengthHelper<1>(symbol);
+    case 2:
+      return getCharacterLengthHelper<2>(symbol);
+    case 4:
+      return getCharacterLengthHelper<4>(symbol);
+    }
+    llvm::report_fatal_error("unknown character kind");
+  }
+
+  mlir::Type genVariableType(const Fortran::lower::pft::Variable &var) {
+    return genSymbolType(var.getSymbol(), var.isHeapAlloc(), var.isPointer());
+  }
+
   mlir::MLIRContext *context;
   Fortran::evaluate::FoldingContext &foldingContext;
 };
@@ -565,21 +659,19 @@ mlir::Type Fortran::lower::translateDataRefToFIRType(
 mlir::Type Fortran::lower::translateSomeExprToFIRType(
     mlir::MLIRContext *context, Fortran::evaluate::FoldingContext &foldingCtx,
     const SomeExpr *expr) {
-  return NewTypeBuilder{context, foldingCtx}.gen(*expr);
+  return NewTypeBuilder{context, foldingCtx}.genExprType(*expr);
 }
 
 mlir::Type Fortran::lower::translateSymbolToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
+    mlir::MLIRContext *context, Fortran::evaluate::FoldingContext &foldingCtx,
     const SymbolRef symbol) {
-  return TypeBuilder{context, defaults}.gen(symbol);
+  return NewTypeBuilder{context, foldingCtx}.genSymbolType(symbol);
 }
 
 mlir::Type Fortran::lower::translateVariableToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
+    mlir::MLIRContext *context, Fortran::evaluate::FoldingContext &foldingCtx,
     const Fortran::lower::pft::Variable &var) {
-  return TypeBuilder{context, defaults}.gen(var);
+  return NewTypeBuilder{context, foldingCtx}.genVariableType(var);
 }
 
 mlir::Type Fortran::lower::convertReal(mlir::MLIRContext *context, int kind) {
