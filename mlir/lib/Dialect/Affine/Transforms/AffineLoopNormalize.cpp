@@ -1,4 +1,4 @@
-//===- AffineParallelNormalize.cpp - AffineParallelNormalize Pass ---------===//
+//===- AffineLoopNormalize.cpp - AffineLoopNormalize Pass -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a normalizer for affine parallel loops.
+// This file implements a normalizer for affine loop-like ops.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,11 +14,13 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/LoopUtils.h"
 
 using namespace mlir;
 
-void normalizeAffineParallel(AffineParallelOp op) {
+void mlir::normalizeAffineParallel(AffineParallelOp op) {
   AffineMap lbMap = op.lowerBoundsMap();
   SmallVector<int64_t, 8> steps = op.getSteps();
   // No need to do any work if the parallel op is already normalized.
@@ -77,20 +79,36 @@ void normalizeAffineParallel(AffineParallelOp op) {
   op.setUpperBounds(ranges.getOperands(), newUpperMap);
 }
 
+/// Normalization transformations for affine.for ops. For now, it only removes
+/// single iteration loops. We may want to consider separating redundant loop
+/// elimitation from loop bound normalization, if needed in the future.
+static void normalizeAffineFor(AffineForOp op) {
+  if (succeeded(promoteIfSingleIteration(op)))
+    return;
+
+  // TODO: Normalize loop bounds.
+}
+
 namespace {
 
 /// Normalize affine.parallel ops so that lower bounds are 0 and steps are 1.
 /// As currently implemented, this pass cannot fail, but it might skip over ops
 /// that are already in a normalized form.
-struct AffineParallelNormalizePass
-    : public AffineParallelNormalizeBase<AffineParallelNormalizePass> {
+struct AffineLoopNormalizePass
+    : public AffineLoopNormalizeBase<AffineLoopNormalizePass> {
 
-  void runOnFunction() override { getFunction().walk(normalizeAffineParallel); }
+  void runOnFunction() override {
+    getFunction().walk([](Operation *op) {
+      if (auto affineParallel = dyn_cast<AffineParallelOp>(op))
+        normalizeAffineParallel(affineParallel);
+      else if (auto affineFor = dyn_cast<AffineForOp>(op))
+        normalizeAffineFor(affineFor);
+    });
+  }
 };
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createAffineParallelNormalizePass() {
-  return std::make_unique<AffineParallelNormalizePass>();
+std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineLoopNormalizePass() {
+  return std::make_unique<AffineLoopNormalizePass>();
 }

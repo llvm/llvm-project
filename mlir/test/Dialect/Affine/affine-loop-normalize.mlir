@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -affine-parallel-normalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -affine-loop-normalize -split-input-file | FileCheck %s
 
 // Normalize steps to 1 and lower bounds to 0.
 
@@ -23,3 +23,22 @@ func @normalize_parallel() {
   }
   return
 }
+
+// -----
+
+// Check that single iteration loop is removed and its body is promoted to the
+// parent block.
+
+// CHECK-LABEL: func @single_iteration_loop
+func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
+  affine.for %i = 0 to 1 {
+    %1 = affine.load %in[%i] : memref<1xf32>
+    affine.store %1, %out[%i] : memref<1xf32>
+  }
+  return
+}
+
+// CHECK-NOT:  affine.for
+// CHECK:      affine.load
+// CHECK-NEXT: affine.store
+// CHECK-NEXT: return
