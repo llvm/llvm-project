@@ -219,19 +219,22 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     break; // Other instructions require recursive reasoning.
   }
 
+  if (I->getOpcode() == Instruction::Sub &&
+      (I->hasOneUse() || (isa<Constant>(I->getOperand(0)) &&
+                          !isa<ConstantExpr>(I->getOperand(0))))) {
+    // `sub` is always negatible.
+    // However, only do this either if the old `sub` doesn't stick around, or
+    // it was subtracting from a constant. Otherwise, this isn't profitable.
+    return Builder.CreateSub(I->getOperand(1), I->getOperand(0),
+                             I->getName() + ".neg");
+  }
+
   // Some other cases, while still don't require recursion,
   // are restricted to the one-use case.
   if (!V->hasOneUse())
     return nullptr;
 
   switch (I->getOpcode()) {
-  case Instruction::Sub:
-    // `sub` is always negatible.
-    // But if the old `sub` sticks around, even thought we don't increase
-    // instruction count, this is a likely regression since we increased
-    // live-range of *both* of the operands, which might lead to more spilling.
-    return Builder.CreateSub(I->getOperand(1), I->getOperand(0),
-                             I->getName() + ".neg");
   case Instruction::SDiv:
     // `sdiv` is negatible if divisor is not undef/INT_MIN/1.
     // While this is normally not behind a use-check,
