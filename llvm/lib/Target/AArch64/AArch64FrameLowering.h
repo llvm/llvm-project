@@ -13,7 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64FRAMELOWERING_H
 
-#include "AArch64StackOffset.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
