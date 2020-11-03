@@ -188,6 +188,11 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
     they are broadcastable. This broadcastable follows the same logic as what
     shape.broadcast documents.
 
+    Concretely, shape.is_broadcastable returning true implies that
+    shape.broadcast will not give an error, and shape.cstr_broadcastable will
+    not result in an assertion failure. Similarly, false implies an error or
+    assertion failure.
+
     Example:
     ```mlir
     %true = shape.is_broadcastable [2,2], [3,1,2]
@@ -199,7 +204,7 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
                        Shape_ShapeOrExtentTensorType:$rhs);
   let results = (outs I1:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict";
+  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs) `,` type($rhs)";
 }
 
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
