@@ -1535,10 +1535,6 @@ earlier passes.
 
 Areas Requiring Attention
 =========================
-#. A coroutine frame is bigger than it could be. Adding stack packing and stack 
-   coloring like optimization on the coroutine frame will result in tighter
-   coroutine frames.
-
 #. Take advantage of the lifetime intrinsics for the data that goes into the
    coroutine frame. Leave lifetime intrinsics as is for the data that stays in
    allocas.
