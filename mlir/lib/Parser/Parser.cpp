@@ -1480,10 +1480,13 @@ public:
   }
 
   /// Parse a list of assignments of the form
-  /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
-  /// The list must contain at least one entry
-  ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
-                                  SmallVectorImpl<OperandType> &rhs) override {
+  ///   (%x1 = %y1, %x2 = %y2, ...).
+  OptionalParseResult
+  parseOptionalAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                              SmallVectorImpl<OperandType> &rhs) override {
+    if (failed(parseOptionalLParen()))
+      return llvm::None;
+
     auto parseElt = [&]() -> ParseResult {
       OperandType regionArg, operand;
       if (parseRegionArgument(regionArg) || parseEqual() ||
@@ -1493,8 +1496,6 @@ public:
       rhs.push_back(operand);
       return success();
     };
-    if (parseLParen())
-      return failure();
     return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 
