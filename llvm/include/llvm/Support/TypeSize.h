@@ -117,16 +117,11 @@ public:
 // StackOffset - Represent an offset with named fixed and scalable components.
 //===----------------------------------------------------------------------===//
 
-namespace NewStackOffset {
 class StackOffset;
-} // end namespace NewStackOffset
-
-template <> struct LinearPolyBaseTypeTraits<NewStackOffset::StackOffset> {
+template <> struct LinearPolyBaseTypeTraits<StackOffset> {
   using ScalarTy = int64_t;
   static constexpr unsigned Dimensions = 2;
 };
-
-namespace NewStackOffset {
 
 /// StackOffset is a class to represent an offset with 2 dimensions,
 /// named fixed and scalable, respectively. This class allows a value for both
@@ -150,9 +145,6 @@ public:
   ScalarTy getFixed() const { return this->getValue(0); }
   ScalarTy getScalable() const { return this->getValue(1); }
 };
-
-} // end namespace NewStackOffset
-
 
 //===----------------------------------------------------------------------===//
 // UnivariateLinearPolyBase - a base class for linear polynomials with multiple
