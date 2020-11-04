@@ -370,7 +370,7 @@ end:
   ret i32 %cond
 }
 
-; Negative test - wrong shift for rotate (but can be folded to a generic funnel shift).
+; Negative test - wrong shift.
 
 define i32 @not_rotr_5(i32 %a, i32 %b) {
 ; CHECK-LABEL: @not_rotr_5(
@@ -378,10 +378,14 @@ define i32 @not_rotr_5(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[ROTBB:%.*]]
 ; CHECK:       rotbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[B]], [[SUB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[B]], i32 [[A:%.*]], i32 [[B]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[A]], [[ENTRY:%.*]] ], [ [[OR]], [[ROTBB]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %b, 0
