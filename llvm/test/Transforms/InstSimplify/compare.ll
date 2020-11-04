@@ -1466,7 +1466,6 @@ define i1 @icmp_shl_nuw_1(i64 %a) {
   %shl = shl nuw i64 1, %a
   %cmp = icmp ne i64 %shl, 0
   ret i1 %cmp
-
 }
 
 define i1 @icmp_shl_1_V_ugt_2147483648(i32 %V) {
@@ -1476,7 +1475,39 @@ define i1 @icmp_shl_1_V_ugt_2147483648(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp ugt i32 %shl, 2147483648
   ret i1 %cmp
+}
 
+define <2 x i1> @icmp_shl_1_ugt_signmask(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ugt_signmask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[SHL]], <i8 -128, i8 -128>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 1>, %V
+  %cmp = icmp ugt <2 x i8> %shl, <i8 128, i8 128>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_shl_1_ugt_signmask_undef(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ugt_signmask_undef(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[SHL]], <i8 -128, i8 undef>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 1>, %V
+  %cmp = icmp ugt <2 x i8> %shl, <i8 128, i8 undef>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_shl_1_ugt_signmask_undef2(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ugt_signmask_undef2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 undef>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[SHL]], <i8 undef, i8 -128>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 undef>, %V
+  %cmp = icmp ugt <2 x i8> %shl, <i8 undef, i8 128>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_1_V_ule_2147483648(i32 %V) {
@@ -1486,7 +1517,39 @@ define i1 @icmp_shl_1_V_ule_2147483648(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp ule i32 %shl, 2147483648
   ret i1 %cmp
+}
 
+define <2 x i1> @icmp_shl_1_ule_signmask(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ule_signmask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i8> [[SHL]], <i8 -128, i8 -128>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 1>, %V
+  %cmp = icmp ule <2 x i8> %shl, <i8 128, i8 128>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_shl_1_ule_signmask_undef(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ule_signmask_undef(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i8> [[SHL]], <i8 -128, i8 undef>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 1>, %V
+  %cmp = icmp ule <2 x i8> %shl, <i8 128, i8 undef>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_shl_1_ule_signmask_undef2(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ule_signmask_undef2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 undef>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i8> [[SHL]], <i8 undef, i8 -128>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 undef>, %V
+  %cmp = icmp ule <2 x i8> %shl, <i8 undef, i8 128>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_1_V_eq_31(i32 %V) {
@@ -1496,7 +1559,6 @@ define i1 @icmp_shl_1_V_eq_31(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp eq i32 %shl, 31
   ret i1 %cmp
-
 }
 
 define i1 @icmp_shl_1_V_ne_31(i32 %V) {
@@ -1506,7 +1568,6 @@ define i1 @icmp_shl_1_V_ne_31(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp ne i32 %shl, 31
   ret i1 %cmp
-
 }
 
 define i1 @tautological1(i32 %A, i32 %B) {
