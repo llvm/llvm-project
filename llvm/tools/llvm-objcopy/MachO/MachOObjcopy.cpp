@@ -305,7 +305,7 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
 // isValidMachOCannonicalName returns success if Name is a MachO cannonical name
 // ("<segment>,<section>") and lengths of both segment and section names are
 // valid.
-Error isValidMachOCannonicalName(StringRef Name) {
+static Error isValidMachOCannonicalName(StringRef Name) {
   if (Name.count(',') != 1)
     return createStringError(errc::invalid_argument,
                              "invalid section name '%s' (should be formatted "
