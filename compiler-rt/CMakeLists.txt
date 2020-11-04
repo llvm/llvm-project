@@ -119,22 +119,10 @@ if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
     CHECK_SYMBOL_EXISTS (__thumb__ "" COMPILER_RT_ARM_THUMB)
   endif()
 endif()
-
-set(ANDROID_HAS_ELF_TLS 0)
 if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*android.*")
   set(ANDROID 1)
-  CHECK_CXX_SOURCE_COMPILES("
-int main() {
-#if __ANDROID_API__ >= 28
-    return 0;
-#else
-  #error NO_ELF_TLS
-  return 1;
-#endif
-}
-  " ANDROID_HAS_ELF_TLS)
   string(REGEX MATCH "-target(=| +)[^ ]+android([0-9]+)" ANDROID_API_LEVEL "${CMAKE_C_FLAGS}")
-  set(ANDROID_API_LEVEL ${CMAKE_MATCH_2}) 
+  set(ANDROID_API_LEVEL ${CMAKE_MATCH_2})
 endif()
 pythonize_bool(ANDROID)
 
@@ -289,7 +277,7 @@ if(NOT COMPILER_RT_HAS_FUNC_SYMBOL)
 endif()
 
 # Provide some common commmandline flags for Sanitizer runtimes.
-if(ANDROID_HAS_ELF_TLS)
+if("${ANDROID_API_LEVEL}" GREATER_EQUAL 28)
   list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
   list(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS -fno-emulated-tls)
 endif()
