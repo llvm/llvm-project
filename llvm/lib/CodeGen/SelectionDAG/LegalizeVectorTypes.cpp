@@ -624,6 +624,7 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
       Res = ScalarizeVecOp_VECREDUCE(N);
       break;
     case ISD::VECREDUCE_SEQ_FADD:
+    case ISD::VECREDUCE_SEQ_FMUL:
       Res = ScalarizeVecOp_VECREDUCE_SEQ(N);
       break;
     }
@@ -2090,6 +2091,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
       Res = SplitVecOp_VECREDUCE(N, OpNo);
       break;
     case ISD::VECREDUCE_SEQ_FADD:
+    case ISD::VECREDUCE_SEQ_FMUL:
       Res = SplitVecOp_VECREDUCE_SEQ(N);
       break;
     }
@@ -4358,6 +4360,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_VECREDUCE(N);
     break;
   case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
     Res = WidenVecOp_VECREDUCE_SEQ(N);
     break;
   }

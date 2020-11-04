@@ -734,6 +734,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::VECREDUCE_FMAX, VT, Expand);
     setOperationAction(ISD::VECREDUCE_FMIN, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Expand);
+    setOperationAction(ISD::VECREDUCE_SEQ_FMUL, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

@@ -37,8 +37,8 @@ private:
   unsigned Andn2Opc;
   unsigned OrSaveExecOpc;
   unsigned XorTermrOpc;
-  Register CondReg;
-  Register ExecReg;
+  MCRegister CondReg;
+  MCRegister ExecReg;
 
   Register optimizeVcndVcmpPair(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
@@ -97,7 +97,7 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   if (Reg.isVirtual())
     return isDefBetween(LIS->getInterval(Reg), AndIdx, SelIdx);
 
-  for (MCRegUnitIterator UI(Reg, &TRI); UI.isValid(); ++UI) {
+  for (MCRegUnitIterator UI(Reg.asMCReg(), &TRI); UI.isValid(); ++UI) {
     if (isDefBetween(LIS->getRegUnit(*UI), AndIdx, SelIdx))
       return true;
   }
@@ -139,11 +139,11 @@ SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   MachineOperand *AndCC = &And->getOperand(1);
   Register CmpReg = AndCC->getReg();
   unsigned CmpSubReg = AndCC->getSubReg();
-  if (CmpReg == ExecReg) {
+  if (CmpReg == Register(ExecReg)) {
     AndCC = &And->getOperand(2);
     CmpReg = AndCC->getReg();
     CmpSubReg = AndCC->getSubReg();
-  } else if (And->getOperand(2).getReg() != ExecReg) {
+  } else if (And->getOperand(2).getReg() != Register(ExecReg)) {
     return Register();
   }
 
@@ -205,7 +205,7 @@ SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
   if ((CmpReg.isVirtual() && MRI->use_nodbg_empty(CmpReg)) ||
-      (CmpReg == CondReg &&
+      (CmpReg == Register(CondReg) &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
                     [&](const MachineInstr &MI) {
                       return MI.readsRegister(CondReg, TRI);
@@ -258,7 +258,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
     return false;
 
   MachineInstr &XorTermMI = *I;
-  if (XorTermMI.getOperand(1).getReg() != ExecReg)
+  if (XorTermMI.getOperand(1).getReg() != Register(ExecReg))
     return false;
 
   Register SavedExecReg = SaveExecMI.getOperand(0).getReg();
@@ -269,7 +269,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   I--;
   while (I != First && !AndExecMI) {
     if (I->getOpcode() == AndOpc && I->getOperand(0).getReg() == DstReg &&
-        I->getOperand(1).getReg() == ExecReg)
+        I->getOperand(1).getReg() == Register(ExecReg))
       AndExecMI = &*I;
     I--;
   }
@@ -318,8 +318,8 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   OrSaveExecOpc =
       Wave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
   XorTermrOpc = Wave32 ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
-  CondReg = Wave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
-  ExecReg = Wave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  CondReg = MCRegister::from(Wave32 ? AMDGPU::VCC_LO : AMDGPU::VCC);
+  ExecReg = MCRegister::from(Wave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
 
   DenseSet<Register> RecalcRegs({AMDGPU::EXEC_LO, AMDGPU::EXEC_HI});
   bool Changed = false;
@@ -413,7 +413,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     for (auto I = MBB.rbegin(), E = MBB.rend(); I != E
          && ScanThreshold--; ++I) {
       // Continue scanning if this is not a full exec copy
-      if (!(I->isFullCopy() && I->getOperand(1).getReg() == ExecReg))
+      if (!(I->isFullCopy() && I->getOperand(1).getReg() == Register(ExecReg)))
         continue;
 
       Register SavedExec = I->getOperand(0).getReg();
