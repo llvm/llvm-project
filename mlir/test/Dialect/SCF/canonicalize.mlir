@@ -137,3 +137,38 @@ func @all_unused() {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:           }
 // CHECK:           return
+
+// -----
+
+func @make_i32() -> i32
+
+func @for_yields_2(%lb : index, %ub : index, %step : index) -> i32 {
+  %a = call @make_i32() : () -> (i32)
+  %b = scf.for %i = %lb to %ub step %step iter_args(%0 = %a) -> i32 {
+    scf.yield %0 : i32
+  }
+  return %b : i32
+}
+
+// CHECK-LABEL:   func @for_yields_2
+//  CHECK-NEXT:     %[[R:.*]] = call @make_i32() : () -> i32
+//  CHECK-NEXT:     return %[[R]] : i32
+
+func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i32) {
+  %a = call @make_i32() : () -> (i32)
+  %b = call @make_i32() : () -> (i32)
+  %r:3 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %a, %2 = %b) -> (i32, i32, i32) {
+    %c = call @make_i32() : () -> (i32)
+    scf.yield %0, %c, %2 : i32, i32, i32
+  }
+  return %r#0, %r#1, %r#2 : i32, i32, i32
+}
+
+// CHECK-LABEL:   func @for_yields_3
+//  CHECK-NEXT:     %[[a:.*]] = call @make_i32() : () -> i32
+//  CHECK-NEXT:     %[[b:.*]] = call @make_i32() : () -> i32
+//  CHECK-NEXT:     %[[r1:.*]] = scf.for {{.*}} iter_args(%arg4 = %[[a]]) -> (i32) {
+//  CHECK-NEXT:       %[[c:.*]] = call @make_i32() : () -> i32
+//  CHECK-NEXT:       scf.yield %[[c]] : i32
+//  CHECK-NEXT:     }
+//  CHECK-NEXT:     return %[[a]], %[[r1]], %[[b]] : i32, i32, i32
