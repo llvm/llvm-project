@@ -51,8 +51,8 @@ template <typename T> struct Located {
       : Range(Range), Value(std::move(Value)) {}
 
   llvm::SMRange Range;
-  T &operator->() { return Value; }
-  const T &operator->() const { return Value; }
+  T *operator->() { return &Value; }
+  const T *operator->() const { return &Value; }
   T &operator*() { return Value; }
   const T &operator*() const { return Value; }
 

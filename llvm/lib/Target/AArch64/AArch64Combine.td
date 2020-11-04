@@ -94,6 +94,14 @@ def adjust_icmp_imm : GICombineRule <
 
 def icmp_lowering : GICombineGroup<[adjust_icmp_imm]>;
 
+def extractvecelt_pairwise_add_matchdata : GIDefMatchData<"std::tuple<unsigned, LLT, Register>">;
+def extractvecelt_pairwise_add : GICombineRule<
+  (defs root:$root, extractvecelt_pairwise_add_matchdata:$matchinfo),
+  (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
+          [{ return matchExtractVecEltPairwiseAdd(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyExtractVecEltPairwiseAdd(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -110,6 +118,7 @@ def AArch64PostLegalizerCombinerHelper
                        [copy_prop, erase_undef_store, combines_for_extload,
                         sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
-                        and_trivial_mask, xor_of_and_with_same_reg]> {
+                        and_trivial_mask, xor_of_and_with_same_reg,
+                        extractvecelt_pairwise_add]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

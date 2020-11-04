@@ -1276,81 +1276,96 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
   if (TII->areMemAccessesTriviallyDisjoint(*this, Other))
     return false;
 
-  // FIXME: Need to handle multiple memory operands to support all targets.
-  if (!hasOneMemOperand() || !Other.hasOneMemOperand())
+  // Memory operations without memory operands may access anything. Be
+  // conservative and assume `MayAlias`.
+  if (memoperands_empty() || Other.memoperands_empty())
     return true;
 
-  MachineMemOperand *MMOa = *memoperands_begin();
-  MachineMemOperand *MMOb = *Other.memoperands_begin();
+  // Skip if there are too many memory operands.
+  auto NumChecks = getNumMemOperands() * Other.getNumMemOperands();
+  if (NumChecks > TII->getMemOperandAACheckLimit())
+    return true;
 
-  // The following interface to AA is fashioned after DAGCombiner::isAlias
-  // and operates with MachineMemOperand offset with some important
-  // assumptions:
-  //   - LLVM fundamentally assumes flat address spaces.
-  //   - MachineOperand offset can *only* result from legalization and
-  //     cannot affect queries other than the trivial case of overlap
-  //     checking.
-  //   - These offsets never wrap and never step outside
-  //     of allocated objects.
-  //   - There should never be any negative offsets here.
-  //
-  // FIXME: Modify API to hide this math from "user"
-  // Even before we go to AA we can reason locally about some
-  // memory objects. It can save compile time, and possibly catch some
-  // corner cases not currently covered.
+  auto HasAlias = [MFI, AA, UseTBAA](const MachineMemOperand *MMOa,
+                                     const MachineMemOperand *MMOb) {
+    // The following interface to AA is fashioned after DAGCombiner::isAlias
+    // and operates with MachineMemOperand offset with some important
+    // assumptions:
+    //   - LLVM fundamentally assumes flat address spaces.
+    //   - MachineOperand offset can *only* result from legalization and
+    //     cannot affect queries other than the trivial case of overlap
+    //     checking.
+    //   - These offsets never wrap and never step outside
+    //     of allocated objects.
+    //   - There should never be any negative offsets here.
+    //
+    // FIXME: Modify API to hide this math from "user"
+    // Even before we go to AA we can reason locally about some
+    // memory objects. It can save compile time, and possibly catch some
+    // corner cases not currently covered.
 
-  int64_t OffsetA = MMOa->getOffset();
-  int64_t OffsetB = MMOb->getOffset();
-  int64_t MinOffset = std::min(OffsetA, OffsetB);
+    int64_t OffsetA = MMOa->getOffset();
+    int64_t OffsetB = MMOb->getOffset();
+    int64_t MinOffset = std::min(OffsetA, OffsetB);
 
-  uint64_t WidthA = MMOa->getSize();
-  uint64_t WidthB = MMOb->getSize();
-  bool KnownWidthA = WidthA != MemoryLocation::UnknownSize;
-  bool KnownWidthB = WidthB != MemoryLocation::UnknownSize;
+    uint64_t WidthA = MMOa->getSize();
+    uint64_t WidthB = MMOb->getSize();
+    bool KnownWidthA = WidthA != MemoryLocation::UnknownSize;
+    bool KnownWidthB = WidthB != MemoryLocation::UnknownSize;
 
-  const Value *ValA = MMOa->getValue();
-  const Value *ValB = MMOb->getValue();
-  bool SameVal = (ValA && ValB && (ValA == ValB));
-  if (!SameVal) {
-    const PseudoSourceValue *PSVa = MMOa->getPseudoValue();
-    const PseudoSourceValue *PSVb = MMOb->getPseudoValue();
-    if (PSVa && ValB && !PSVa->mayAlias(&MFI))
-      return false;
-    if (PSVb && ValA && !PSVb->mayAlias(&MFI))
-      return false;
-    if (PSVa && PSVb && (PSVa == PSVb))
-      SameVal = true;
-  }
+    const Value *ValA = MMOa->getValue();
+    const Value *ValB = MMOb->getValue();
+    bool SameVal = (ValA && ValB && (ValA == ValB));
+    if (!SameVal) {
+      const PseudoSourceValue *PSVa = MMOa->getPseudoValue();
+      const PseudoSourceValue *PSVb = MMOb->getPseudoValue();
+      if (PSVa && ValB && !PSVa->mayAlias(&MFI))
+        return false;
+      if (PSVb && ValA && !PSVb->mayAlias(&MFI))
+        return false;
+      if (PSVa && PSVb && (PSVa == PSVb))
+        SameVal = true;
+    }
 
-  if (SameVal) {
-    if (!KnownWidthA || !KnownWidthB)
+    if (SameVal) {
+      if (!KnownWidthA || !KnownWidthB)
+        return true;
+      int64_t MaxOffset = std::max(OffsetA, OffsetB);
+      int64_t LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
+      return (MinOffset + LowWidth > MaxOffset);
+    }
+
+    if (!AA)
       return true;
-    int64_t MaxOffset = std::max(OffsetA, OffsetB);
-    int64_t LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
-    return (MinOffset + LowWidth > MaxOffset);
-  }
 
-  if (!AA)
-    return true;
+    if (!ValA || !ValB)
+      return true;
 
-  if (!ValA || !ValB)
-    return true;
+    assert((OffsetA >= 0) && "Negative MachineMemOperand offset");
+    assert((OffsetB >= 0) && "Negative MachineMemOperand offset");
 
-  assert((OffsetA >= 0) && "Negative MachineMemOperand offset");
-  assert((OffsetB >= 0) && "Negative MachineMemOperand offset");
+    int64_t OverlapA = KnownWidthA ? WidthA + OffsetA - MinOffset
+                                   : MemoryLocation::UnknownSize;
+    int64_t OverlapB = KnownWidthB ? WidthB + OffsetB - MinOffset
+                                   : MemoryLocation::UnknownSize;
 
-  int64_t OverlapA = KnownWidthA ? WidthA + OffsetA - MinOffset
-                                 : MemoryLocation::UnknownSize;
-  int64_t OverlapB = KnownWidthB ? WidthB + OffsetB - MinOffset
-                                 : MemoryLocation::UnknownSize;
+    AliasResult AAResult =
+        AA->alias(MemoryLocation(ValA, OverlapA,
+                                 UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
+                  MemoryLocation(ValB, OverlapB,
+                                 UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 
-  AliasResult AAResult = AA->alias(
-      MemoryLocation(ValA, OverlapA,
-                     UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
-      MemoryLocation(ValB, OverlapB,
-                     UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
+    return (AAResult != NoAlias);
+  };
 
-  return (AAResult != NoAlias);
+  // Check each pair of memory operands from both instructions, which can't
+  // alias only if all pairs won't alias.
+  for (auto *MMOa : memoperands())
+    for (auto *MMOb : Other.memoperands())
+      if (HasAlias(MMOa, MMOb))
+        return true;
+
+  return false;
 }
 
 /// hasOrderedMemoryRef - Return true if this instruction may have an ordered
