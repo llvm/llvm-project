@@ -7,6 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import *
+import re
 import sys
 
 _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_build_version__' not in compilerMacros(cfg)
@@ -127,4 +128,28 @@ DEFAULT_FEATURES += [
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
   Feature(name='linux', when=lambda cfg: '__linux__' in compilerMacros(cfg)),
   Feature(name='netbsd', when=lambda cfg: '__NetBSD__' in compilerMacros(cfg))
+]
+
+
+# When vendor-specific availability annotations are enabled, add Lit features
+# with various forms of the target triple to make it easier to write XFAIL or
+# UNSUPPORTED markup for tests that are known to fail on a particular triple.
+#
+# TODO: This is very unclean -- we assume that the 'use_system_cxx_lib' parameter
+#       is set before this feature gets detected, and we also set a dummy name
+#       for the main feature. We also take for granted that `target_triple`
+#       exists in the config object. This should be refactored so that the
+#       'use_system_cxx_lib' Parameter can set these features itself.
+def _addSystemCxxLibDeclinations(cfg):
+  (arch, vendor, platform) = cfg.target_triple.split('-', 2)
+  (sysname, version) = re.match(r'([^0-9]+)([0-9\.]*)', platform).groups()
+  return [
+    AddFeature('with_system_cxx_lib={}-{}-{}{}'.format(arch, vendor, sysname, version)),
+    AddFeature('with_system_cxx_lib={}{}'.format(sysname, version)),
+    AddFeature('with_system_cxx_lib={}'.format(sysname)),
+  ]
+DEFAULT_FEATURES += [
+  Feature(name='__dummy_use_system_cxx_lib',
+          when=lambda cfg: 'use_system_cxx_lib' in cfg.available_features,
+          actions=_addSystemCxxLibDeclinations)
 ]
