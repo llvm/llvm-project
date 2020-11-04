@@ -12,8 +12,6 @@ TableGen Programmer's Reference
 
    BackEnds
    BackGuide
-   Index
-   ../CommandGuide/tblgen
 
 Introduction
 ============
