@@ -1301,8 +1301,8 @@ void __resize_file(const path& p, uintmax_t size, error_code* ec) {
 space_info __space(const path& p, error_code* ec) {
   ErrorHandler<void> err("space", ec, &p);
   space_info si;
-  struct statvfs m_svfs = {};
-  if (::statvfs(p.c_str(), &m_svfs) == -1) {
+  detail::StatVFS m_svfs = {};
+  if (detail::statvfs(p.c_str(), &m_svfs) == -1) {
     err.report(capture_errno());
     si.capacity = si.free = si.available = static_cast<uintmax_t>(-1);
     return si;
