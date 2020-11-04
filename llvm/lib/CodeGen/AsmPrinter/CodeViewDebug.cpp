@@ -3155,7 +3155,7 @@ void CodeViewDebug::emitStaticConstMemberList() {
 }
 
 static bool isFloatDIType(const DIType *Ty) {
-  if (auto *CTy = dyn_cast<DICompositeType>(Ty))
+  if (isa<DICompositeType>(Ty))
     return false;
 
   if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
