@@ -1319,7 +1319,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Apply module pipeline start EP callback.
   for (auto &C : PipelineStartEPCallbacks)
-    C(MPM, Level);
+    C(MPM);
 
   if (PGOOpt && PGOOpt->SamplePGOSupport)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
@@ -1348,7 +1348,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   // Apply module pipeline start EP callback.
   for (auto &C : PipelineStartEPCallbacks)
-    C(MPM, Level);
+    C(MPM);
 
   // If we are planning to perform ThinLTO later, we don't bloat the code with
   // unrolling/vectorization/... now. Just simplify the module as much as we
