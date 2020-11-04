@@ -200,6 +200,72 @@ struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
   LogicalResult matchAndRewrite(mlir::scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+/// Create a CFG subgraph for this loop construct. The regions of the loop need
+/// not be a single block anymore (for example, if other SCF constructs that
+/// they contain have been already converted to CFG), but need to be single-exit
+/// from the last block of each region. The operations following the original
+/// WhileOp are split into a new continuation block. Both regions of the WhileOp
+/// are inlined, and their terminators are rewritten to organize the control
+/// flow implementing the loop as follows.
+///
+///      +---------------------------------+
+///      |   <code before the WhileOp>     |
+///      |   br ^before(%operands...)      |
+///      +---------------------------------+
+///             |
+///  -------|   |
+///  |      v   v
+///  |   +--------------------------------+
+///  |   | ^before(%bargs...):            |
+///  |   |   %vals... = <some payload>    |
+///  |   +--------------------------------+
+///  |                   |
+///  |                  ...
+///  |                   |
+///  |   +--------------------------------+
+///  |   | ^before-last:
+///  |   |   %cond = <compute condition>  |
+///  |   |   cond_br %cond,               |
+///  |   |        ^after(%vals...), ^cont |
+///  |   +--------------------------------+
+///  |          |               |
+///  |          |               -------------|
+///  |          v                            |
+///  |   +--------------------------------+  |
+///  |   | ^after(%aargs...):             |  |
+///  |   |   <body contents>              |  |
+///  |   +--------------------------------+  |
+///  |                   |                   |
+///  |                  ...                  |
+///  |                   |                   |
+///  |   +--------------------------------+  |
+///  |   | ^after-last:                   |  |
+///  |   |   %yields... = <some payload>  |  |
+///  |   |   br ^before(%yields...)       |  |
+///  |   +--------------------------------+  |
+///  |          |                            |
+///  |-----------        |--------------------
+///                      v
+///      +--------------------------------+
+///      | ^cont:                         |
+///      |   <code after the WhileOp>     |
+///      |   <%vals from 'before' region  |
+///      |          visible by dominance> |
+///      +--------------------------------+
+///
+/// Values are communicated between ex-regions (the groups of blocks that used
+/// to form a region before inlining) through block arguments of their
+/// entry blocks, which are visible in all other dominated blocks. Similarly,
+/// the results of the WhileOp are defined in the 'before' region, which is
+/// required to have a single existing block, and are therefore accessible in
+/// the continuation block due to dominance.
+struct WhileLowering : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp whileOp,
+                                PatternRewriter &rewriter) const override;
+};
 } // namespace
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -399,18 +465,61 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   return success();
 }
 
+LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
+                                             PatternRewriter &rewriter) const {
+  OpBuilder::InsertionGuard guard(rewriter);
+  Location loc = whileOp.getLoc();
+
+  // Split the current block before the WhileOp to create the inlining point.
+  Block *currentBlock = rewriter.getInsertionBlock();
+  Block *continuation =
+      rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+
+  // Inline both regions.
+  Block *after = &whileOp.after().front();
+  Block *afterLast = &whileOp.after().back();
+  Block *before = &whileOp.before().front();
+  Block *beforeLast = &whileOp.before().back();
+  rewriter.inlineRegionBefore(whileOp.after(), continuation);
+  rewriter.inlineRegionBefore(whileOp.before(), after);
+
+  // Branch to the "before" region.
+  rewriter.setInsertionPointToEnd(currentBlock);
+  rewriter.create<BranchOp>(loc, before, whileOp.inits());
+
+  // Replace terminators with branches. Assuming bodies are SESE, which holds
+  // given only the patterns from this file, we only need to look at the last
+  // block. This should be reconsidered if we allow break/continue in SCF.
+  rewriter.setInsertionPointToEnd(beforeLast);
+  auto condOp = cast<ConditionOp>(beforeLast->getTerminator());
+  rewriter.replaceOpWithNewOp<CondBranchOp>(condOp, condOp.condition(), after,
+                                            condOp.args(), continuation,
+                                            ValueRange());
+
+  rewriter.setInsertionPointToEnd(afterLast);
+  auto yieldOp = cast<scf::YieldOp>(afterLast->getTerminator());
+  rewriter.replaceOpWithNewOp<BranchOp>(yieldOp, before, yieldOp.results());
+
+  // Replace the op with values "yielded" from the "before" region, which are
+  // visible by dominance.
+  rewriter.replaceOp(whileOp, condOp.args());
+
+  return success();
+}
+
 void mlir::populateLoopToStdConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<ForLowering, IfLowering, ParallelLowering>(ctx);
+  patterns.insert<ForLowering, IfLowering, ParallelLowering, WhileLowering>(
+      ctx);
 }
 
 void SCFToStandardPass::runOnOperation() {
   OwningRewritePatternList patterns;
   populateLoopToStdConversionPatterns(patterns, &getContext());
-  // Configure conversion to lower out scf.for, scf.if and scf.parallel.
-  // Anything else is fine.
+  // Configure conversion to lower out scf.for, scf.if, scf.parallel and
+  // scf.while. Anything else is fine.
   ConversionTarget target(getContext());
-  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp>();
+  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp, scf::WhileOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
