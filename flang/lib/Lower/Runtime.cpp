@@ -20,36 +20,6 @@
 #define DEBUG_TYPE "flang-lower-runtime"
 
 using namespace Fortran::runtime;
-#define mkRTKey(X) mkKey(RTNAME(X))
-
-static constexpr std::tuple<mkRTKey(DateAndTime), mkRTKey(FailImageStatement),
-                            mkRTKey(PauseStatement),
-                            mkRTKey(ProgramEndStatement),
-                            mkRTKey(StopStatement), mkRTKey(StopStatementText)>
-    newRTTable;
-
-template <typename A>
-static constexpr const char *getName() {
-  return std::get<A>(newRTTable).name;
-}
-
-template <typename A>
-static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
-  return std::get<A>(newRTTable).getTypeModel();
-}
-
-template <typename RuntimeEntry>
-static mlir::FuncOp genRuntimeFunction(mlir::Location loc,
-                                       Fortran::lower::FirOpBuilder &builder) {
-  auto name = getName<RuntimeEntry>();
-  auto func = builder.getNamedFunction(name);
-  if (func)
-    return func;
-  auto funTy = getTypeModel<RuntimeEntry>()(builder.getContext());
-  func = builder.createFunction(loc, name, funTy);
-  func.setAttr("fir.runtime", builder.getUnitAttr());
-  return func;
-}
 
 // TODO: We don't have runtime library support for various features. When they
 // are encountered, we emit an error message and exit immediately.
@@ -243,7 +213,7 @@ void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value, 8> args{dateBuffer, timeBuffer, zoneBuffer,
                                          dateLen,    timeLen,    zoneLen};
   llvm::SmallVector<mlir::Value, 8> operands;
-  for (auto [fst,snd] : llvm::zip(args, callee.getType().getInputs()))
-    operands.emplace_back(builder.convertWithSemantics(loc, snd, fst));
+  for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
+    operands.emplace_back(builder.createConvert(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);
 }

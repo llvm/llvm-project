@@ -120,6 +120,11 @@ public:
   /// Generate the location as converted from a CharBlock
   virtual mlir::Location genLocation(const Fortran::parser::CharBlock &) = 0;
 
+  /// Generate a string literal containing the file name and return its address
+  virtual mlir::Value locationToFilename(mlir::Location) = 0;
+  /// Generate a constant of the given type with the location line number
+  virtual mlir::Value locationToLineNo(mlir::Location, mlir::Type) = 0;
+
   //===--------------------------------------------------------------------===//
   // FIR/MLIR
   //===--------------------------------------------------------------------===//

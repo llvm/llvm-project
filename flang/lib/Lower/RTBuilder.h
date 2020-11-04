@@ -18,6 +18,7 @@
 #define FORTRAN_LOWER_RTBUILDER_H
 
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -42,6 +43,9 @@ using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *);
 //===----------------------------------------------------------------------===//
 // Type builder models
 //===----------------------------------------------------------------------===//
+
+// TODO: all usages of sizeof in this file assume build ==  host == target.
+// This will need to be re-visited for cross compilation.
 
 /// Return a function that returns the type signature model for the type `T`
 /// when provided an MLIRContext*. This allows one to translate C(++) function
@@ -210,6 +214,24 @@ constexpr TypeBuilderFunc getModel<const Fortran::runtime::Descriptor &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(
+        fir::BoxType::get(mlir::NoneType::get(context)));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor *>() {
+  return getModel<Fortran::runtime::Descriptor &>();
+}
+template <>
+constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(sizeof(Fortran::common::TypeCategory) * 8,
+                                  context);
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<const Fortran::runtime::NamelistGroup &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     // FIXME: a namelist group must be some well-defined data structure, use a
@@ -308,7 +330,24 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 #define mkKey(X)                                                               \
   Fortran::lower::RuntimeTableEntry<                                           \
       Fortran::lower::RuntimeTableKey<decltype(X)>, AsSequence(X)>
+#define mkRTKey(X) mkKey(RTNAME(X))
 
+/// Get (or generate) the MLIR FuncOp for a given runtime function. Its template
+/// argument is intended to be of the form: <mkRTKey(runtime function name)>
+/// Clients should add "using namespace Fortran::runtime"
+/// in order to use this function.
+template <typename RuntimeEntry>
+static mlir::FuncOp genRuntimeFunction(mlir::Location loc,
+                                       Fortran::lower::FirOpBuilder &builder) {
+  auto name = RuntimeEntry::name;
+  auto func = builder.getNamedFunction(name);
+  if (func)
+    return func;
+  auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
+  func = builder.createFunction(loc, name, funTy);
+  func.setAttr("fir.runtime", builder.getUnitAttr());
+  return func;
+}
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_RTBUILDER_H

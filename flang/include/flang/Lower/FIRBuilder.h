@@ -217,6 +217,11 @@ public:
   /// Array entities are boxed with a shape and character with their length.
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv);
 
+  /// Create constant i1 with value 1. if \p b is true or 0. otherwise
+  mlir::Value createBool(mlir::Location loc, bool b) {
+    return createIntegerConstant(loc, getIntegerType(1), b ? 1 : 0);
+  }
+
 private:
   const fir::KindMapping &kindMap;
 };
