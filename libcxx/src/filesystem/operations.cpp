@@ -42,7 +42,7 @@
 # define _LIBCPP_FILESYSTEM_USE_FSTREAM
 #endif
 
-#if !defined(CLOCK_REALTIME)
+#if !defined(CLOCK_REALTIME) && !defined(_LIBCPP_WIN32API)
 # include <sys/time.h> // for gettimeofday and timeval
 #endif
 
@@ -567,7 +567,14 @@ const bool _FilesystemClock::is_steady;
 
 _FilesystemClock::time_point _FilesystemClock::now() noexcept {
   typedef chrono::duration<rep> __secs;
-#if defined(CLOCK_REALTIME)
+#if defined(_LIBCPP_WIN32API)
+  typedef chrono::duration<rep, nano> __nsecs;
+  FILETIME time;
+  GetSystemTimeAsFileTime(&time);
+  TimeSpec tp = detail::filetime_to_timespec(time);
+  return time_point(__secs(tp.tv_sec) +
+                    chrono::duration_cast<duration>(__nsecs(tp.tv_nsec)));
+#elif defined(CLOCK_REALTIME)
   typedef chrono::duration<rep, nano> __nsecs;
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_REALTIME, &tp))
@@ -1121,6 +1128,17 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
   using detail::fs_time;
   ErrorHandler<void> err("last_write_time", ec, &p);
 
+#if defined(_LIBCPP_WIN32API)
+  TimeSpec ts;
+  if (!fs_time::convert_to_timespec(ts, new_time))
+    return err.report(errc::value_too_large);
+  detail::WinHandle h(p.c_str(), FILE_WRITE_ATTRIBUTES, 0);
+  if (!h)
+    return err.report(detail::make_windows_error(GetLastError()));
+  FILETIME last_write = timespec_to_filetime(ts);
+  if (!SetFileTime(h, nullptr, nullptr, &last_write))
+    return err.report(detail::make_windows_error(GetLastError()));
+#else
   error_code m_ec;
   array<TimeSpec, 2> tbuf;
 #if !defined(_LIBCPP_USE_UTIMENSAT)
@@ -1142,6 +1160,7 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
   detail::set_file_times(p, tbuf, m_ec);
   if (m_ec)
     return err.report(m_ec);
+#endif
 }
 
 void __permissions(const path& p, perms prms, perm_options opts,
