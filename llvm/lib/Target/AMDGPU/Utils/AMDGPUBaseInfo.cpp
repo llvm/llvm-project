@@ -315,6 +315,7 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
   return 0;
 }
 
+// TODO-GFX11
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". For gfx10 in CU mode this is the CU, which contains
@@ -344,6 +345,7 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
+  // TODO-GFX11
   if (!isGFX10(*STI))
     return 10;
   return hasGFX10_3Insts(*STI) ? 16 : 20;
@@ -1119,6 +1121,10 @@ bool isGFX10Plus(const MCSubtargetInfo &STI) {
 
 bool isGFX11(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+}
+
+bool isGFX11Plus(const MCSubtargetInfo &STI) {
+  return isGFX11(STI);
 }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
