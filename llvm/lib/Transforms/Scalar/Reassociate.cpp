@@ -920,6 +920,28 @@ static Value *NegateValue(Value *V, Instruction *BI,
   return NewNeg;
 }
 
+/// Return true if it may be profitable to convert this (X|Y) into (X+Y).
+static bool ShouldConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
+  // Don't bother to convert this up unless either the LHS is an associable add
+  // or subtract or mul or if this is only used by one of the above.
+  // This is only a compile-time improvement, it is not needed for correctness!
+  auto isInteresting = [](Value *V) {
+    for (auto Op : {Instruction::Add, Instruction::Sub, Instruction::Mul})
+      if (isReassociableOp(V, Op))
+        return true;
+    return false;
+  };
+
+  if (any_of(Or->operands(), isInteresting))
+    return true;
+
+  Value *VB = Or->user_back();
+  if (Or->hasOneUse() && isInteresting(VB))
+    return true;
+
+  return false;
+}
+
 /// If we have (X|Y), and iff X and Y have no common bits set,
 /// transform this into (X+Y) to allow arithmetics reassociation.
 static BinaryOperator *ConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
@@ -2137,6 +2159,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // If this is a bitwise or instruction of operands
   // with no common bits set, convert it to X+Y.
   if (I->getOpcode() == Instruction::Or &&
+      ShouldConvertOrWithNoCommonBitsToAdd(I) &&
       haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
                           I->getModule()->getDataLayout(), /*AC=*/nullptr, I,
                           /*DT=*/nullptr)) {
