@@ -586,10 +586,6 @@ public:
       return this->InnerMatcher.matches(DynTypedNode::create(*Node), Finder,
                                         Builder);
     }
-
-    llvm::Optional<clang::TraversalKind> TraversalKind() const override {
-      return this->InnerMatcher.getTraversalKind();
-    }
   };
 
 private:
@@ -1059,8 +1055,6 @@ public:
   }
 
   virtual ASTContext &getASTContext() const = 0;
-
-  virtual bool isMatchingInImplicitTemplateInstantiation() const = 0;
 
 protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,

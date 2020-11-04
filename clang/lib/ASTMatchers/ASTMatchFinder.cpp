@@ -584,45 +584,7 @@ public:
   bool shouldVisitTemplateInstantiations() const { return true; }
   bool shouldVisitImplicitCode() const { return true; }
 
-  bool isMatchingInImplicitTemplateInstantiation() const override {
-    return TraversingImplicitTemplateInstantiation;
-  }
-
-  bool TraverseTemplateInstantiations(ClassTemplateDecl *D) {
-    ImplicitTemplateInstantiationScope RAII(this, true);
-    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
-        D);
-  }
-
-  bool TraverseTemplateInstantiations(VarTemplateDecl *D) {
-    ImplicitTemplateInstantiationScope RAII(this, true);
-    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
-        D);
-  }
-
-  bool TraverseTemplateInstantiations(FunctionTemplateDecl *D) {
-    ImplicitTemplateInstantiationScope RAII(this, true);
-    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
-        D);
-  }
-
 private:
-  bool TraversingImplicitTemplateInstantiation = false;
-
-  struct ImplicitTemplateInstantiationScope {
-    ImplicitTemplateInstantiationScope(MatchASTVisitor *V, bool B)
-        : MV(V), MB(V->TraversingImplicitTemplateInstantiation) {
-      V->TraversingImplicitTemplateInstantiation = B;
-    }
-    ~ImplicitTemplateInstantiationScope() {
-      MV->TraversingImplicitTemplateInstantiation = MB;
-    }
-
-  private:
-    MatchASTVisitor *MV;
-    bool MB;
-  };
-
   class TimeBucketRegion {
   public:
     TimeBucketRegion() : Bucket(nullptr) {}

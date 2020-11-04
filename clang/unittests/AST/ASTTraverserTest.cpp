@@ -68,14 +68,6 @@ public:
   void Visit(const TemplateArgument &A, SourceRange R = {},
              const Decl *From = nullptr, const char *Label = nullptr) {
     OS << "TemplateArgument";
-    switch (A.getKind()) {
-    case TemplateArgument::Type: {
-      OS << " type " << A.getAsType().getAsString();
-      break;
-    }
-    default:
-      break;
-    }
   }
 
   template <typename... T> void Visit(T...) {}
@@ -251,7 +243,7 @@ FullComment
 
   verifyWithDynNode(TA,
                     R"cpp(
-TemplateArgument type int
+TemplateArgument
 `-BuiltinType
 )cpp");
 
@@ -1047,147 +1039,6 @@ LambdaExpr
 `-CompoundStmt
 )cpp";
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, L), Expected);
-  }
-}
-
-TEST(Traverse, IgnoreUnlessSpelledInSourceTemplateInstantiations) {
-
-  auto AST = buildASTFromCode(R"cpp(
-template<typename T>
-struct TemplStruct {
-  TemplStruct() {}
-  ~TemplStruct() {}
-
-private:
-  T m_t;
-};
-
-template<typename T>
-T timesTwo(T input)
-{
-  return input * 2;
-}
-
-void instantiate()
-{
-  TemplStruct<int> ti;
-  TemplStruct<double> td;
-  (void)timesTwo<int>(2);
-  (void)timesTwo<double>(2);
-}
-)cpp");
-  {
-    auto BN = ast_matchers::match(
-        classTemplateDecl(hasName("TemplStruct")).bind("rec"),
-        AST->getASTContext());
-    EXPECT_EQ(BN.size(), 1u);
-
-    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
-                            BN[0].getNodeAs<Decl>("rec")),
-              R"cpp(
-ClassTemplateDecl 'TemplStruct'
-|-TemplateTypeParmDecl 'T'
-`-CXXRecordDecl 'TemplStruct'
-  |-CXXRecordDecl 'TemplStruct'
-  |-CXXConstructorDecl 'TemplStruct<T>'
-  | `-CompoundStmt
-  |-CXXDestructorDecl '~TemplStruct<T>'
-  | `-CompoundStmt
-  |-AccessSpecDecl
-  `-FieldDecl 'm_t'
-)cpp");
-
-    EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("rec")),
-              R"cpp(
-ClassTemplateDecl 'TemplStruct'
-|-TemplateTypeParmDecl 'T'
-|-CXXRecordDecl 'TemplStruct'
-| |-CXXRecordDecl 'TemplStruct'
-| |-CXXConstructorDecl 'TemplStruct<T>'
-| | `-CompoundStmt
-| |-CXXDestructorDecl '~TemplStruct<T>'
-| | `-CompoundStmt
-| |-AccessSpecDecl
-| `-FieldDecl 'm_t'
-|-ClassTemplateSpecializationDecl 'TemplStruct'
-| |-TemplateArgument type int
-| | `-BuiltinType
-| |-CXXRecordDecl 'TemplStruct'
-| |-CXXConstructorDecl 'TemplStruct'
-| | `-CompoundStmt
-| |-CXXDestructorDecl '~TemplStruct'
-| | `-CompoundStmt
-| |-AccessSpecDecl
-| |-FieldDecl 'm_t'
-| `-CXXConstructorDecl 'TemplStruct'
-|   `-ParmVarDecl ''
-`-ClassTemplateSpecializationDecl 'TemplStruct'
-  |-TemplateArgument type double
-  | `-BuiltinType
-  |-CXXRecordDecl 'TemplStruct'
-  |-CXXConstructorDecl 'TemplStruct'
-  | `-CompoundStmt
-  |-CXXDestructorDecl '~TemplStruct'
-  | `-CompoundStmt
-  |-AccessSpecDecl
-  |-FieldDecl 'm_t'
-  `-CXXConstructorDecl 'TemplStruct'
-    `-ParmVarDecl ''
-)cpp");
-  }
-  {
-    auto BN = ast_matchers::match(
-        functionTemplateDecl(hasName("timesTwo")).bind("fn"),
-        AST->getASTContext());
-    EXPECT_EQ(BN.size(), 1u);
-
-    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
-                            BN[0].getNodeAs<Decl>("fn")),
-              R"cpp(
-FunctionTemplateDecl 'timesTwo'
-|-TemplateTypeParmDecl 'T'
-`-FunctionDecl 'timesTwo'
-  |-ParmVarDecl 'input'
-  `-CompoundStmt
-    `-ReturnStmt
-      `-BinaryOperator
-        |-DeclRefExpr 'input'
-        `-IntegerLiteral
-)cpp");
-
-    EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("fn")),
-              R"cpp(
-FunctionTemplateDecl 'timesTwo'
-|-TemplateTypeParmDecl 'T'
-|-FunctionDecl 'timesTwo'
-| |-ParmVarDecl 'input'
-| `-CompoundStmt
-|   `-ReturnStmt
-|     `-BinaryOperator
-|       |-DeclRefExpr 'input'
-|       `-IntegerLiteral
-|-FunctionDecl 'timesTwo'
-| |-TemplateArgument type int
-| | `-BuiltinType
-| |-ParmVarDecl 'input'
-| `-CompoundStmt
-|   `-ReturnStmt
-|     `-BinaryOperator
-|       |-ImplicitCastExpr
-|       | `-DeclRefExpr 'input'
-|       `-IntegerLiteral
-`-FunctionDecl 'timesTwo'
-  |-TemplateArgument type double
-  | `-BuiltinType
-  |-ParmVarDecl 'input'
-  `-CompoundStmt
-    `-ReturnStmt
-      `-BinaryOperator
-        |-ImplicitCastExpr
-        | `-DeclRefExpr 'input'
-        `-ImplicitCastExpr
-          `-IntegerLiteral
-)cpp");
   }
 }
 
