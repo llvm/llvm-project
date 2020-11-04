@@ -312,6 +312,43 @@ int statvfs(const wchar_t *p, StatVFS *buf) {
 }
 
 wchar_t *getcwd(wchar_t *buff, size_t size) { return _wgetcwd(buff, size); }
+
+wchar_t *realpath(const wchar_t *path, wchar_t *resolved_name) {
+  // Only expected to be used with us allocating the buffer.
+  _LIBCPP_ASSERT(resolved_name == nullptr,
+                 "Windows realpath() assumes a null resolved_name");
+
+  WinHandle h(path, FILE_READ_ATTRIBUTES, 0);
+  if (!h) {
+    set_errno();
+    return nullptr;
+  }
+  size_t buff_size = MAX_PATH + 10;
+  std::unique_ptr<wchar_t, decltype(&::free)> buff(
+      static_cast<wchar_t *>(malloc(buff_size * sizeof(wchar_t))), &::free);
+  DWORD retval = GetFinalPathNameByHandleW(
+      h, buff.get(), buff_size, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+  if (retval > buff_size) {
+    buff_size = retval;
+    buff.reset(static_cast<wchar_t *>(malloc(buff_size * sizeof(wchar_t))));
+    retval = GetFinalPathNameByHandleW(h, buff.get(), buff_size,
+                                       FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+  }
+  if (!retval) {
+    set_errno();
+    return nullptr;
+  }
+  wchar_t *ptr = buff.get();
+  if (!wcsncmp(ptr, L"\\\\?\\", 4)) {
+    if (ptr[5] == ':') { // \\?\X: -> X:
+      memmove(&ptr[0], &ptr[4], (wcslen(&ptr[4]) + 1) * sizeof(wchar_t));
+    } else if (!wcsncmp(&ptr[4], L"UNC\\", 4)) { // \\?\UNC\server -> \\server
+      wcscpy(&ptr[0], L"\\\\");
+      memmove(&ptr[2], &ptr[8], (wcslen(&ptr[8]) + 1) * sizeof(wchar_t));
+    }
+  }
+  return buff.release();
+}
 #else
 int symlink_file(const char *oldname, const char *newname) {
   return ::symlink(oldname, newname);
@@ -328,6 +365,7 @@ using ::link;
 using ::lstat;
 using ::mkdir;
 using ::open;
+using ::realpath;
 using ::remove;
 using ::rename;
 using ::stat;
