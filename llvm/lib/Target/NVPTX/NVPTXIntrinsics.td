@@ -7367,10 +7367,7 @@ class WMMA_REGINFO<WMMA_REGS r>
   list<string> reg_names = RegSeq<!size(ptx_regs), "r"#frag>.ret;
 
   // Generates "{{$r0, $r1,.... $rN-1}}" for use in asm string construction.
-  string regstring = "{{$" # !head(reg_names)
-                           # !foldl("", !tail(reg_names), a, b,
-                                    !strconcat(a, ", $", b))
-                     # "}}";
+  string regstring = "{{$" # !interleave(reg_names, ", $") # "}}";
 
   // Predicates for particular fragment variant. Technically those are
   // per-instruction predicates, but currently all fragments that can be used in
