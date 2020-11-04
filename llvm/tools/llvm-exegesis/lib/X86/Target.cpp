@@ -28,6 +28,7 @@
 #include <vector>
 #if defined(_MSC_VER)
 #include <immintrin.h>
+#include <intrin.h>
 #endif
 
 namespace llvm {
