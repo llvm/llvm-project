@@ -2169,7 +2169,7 @@ static void printGlobalMemrefOpTypeAndInitialValue(OpAsmPrinter &p,
   p << type;
   if (!op.isExternal()) {
     p << " = ";
-    if (op.isUnitialized())
+    if (op.isUninitialized())
       p << "uninitialized";
     else
       p.printAttributeWithoutType(initialValue);
