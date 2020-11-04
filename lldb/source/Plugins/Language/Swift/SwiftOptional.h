@@ -33,10 +33,23 @@ class PointerOrSP {
 public:
   PointerOrSP(std::nullptr_t) : m_raw_ptr(nullptr), m_shared_ptr(nullptr) {}
 
-  PointerOrSP(ValueObject *valobj) : m_raw_ptr(valobj), m_shared_ptr(nullptr) {}
+  PointerOrSP(ValueObject *valobj) : m_raw_ptr(valobj), m_shared_ptr(nullptr) {
+      m_error = valobj->GetError();
+  }
 
   PointerOrSP(lldb::ValueObjectSP valobj_sp)
-      : m_raw_ptr(nullptr), m_shared_ptr(valobj_sp) {}
+      : m_raw_ptr(nullptr), m_shared_ptr(valobj_sp) {
+      m_error = valobj_sp->GetError();
+  }
+  
+  PointerOrSP(Status &error) : m_raw_ptr(nullptr), m_shared_ptr(nullptr),
+                               m_error(error) {}
+                               
+  PointerOrSP(llvm::StringRef error_msg) : m_raw_ptr(nullptr), 
+          m_shared_ptr(nullptr)
+  {
+    m_error.SetErrorString(error_msg);
+  }
 
   ValueObject *operator->() {
     if (m_shared_ptr)
@@ -51,12 +64,15 @@ public:
   explicit operator bool() const {
     return (m_shared_ptr.get() != nullptr) || (m_raw_ptr != nullptr);
   }
+  
+  Status GetError() { return m_error; }
 
   bool operator==(std::nullptr_t) const { return !(this->operator bool()); }
 
 protected:
   ValueObject *m_raw_ptr;
   lldb::ValueObjectSP m_shared_ptr;
+  Status m_error;
 };
 
 namespace swift {
