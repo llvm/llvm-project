@@ -1067,6 +1067,70 @@ TEST_F(TransformerTest, ErrorOccurredMatchSkipped) {
   EXPECT_EQ(ErrorCount, 0);
 }
 
+TEST_F(TransformerTest, TemplateInstantiation) {
+
+  std::string NonTemplatesInput = R"cpp(
+struct S {
+  int m_i;
+};
+)cpp";
+  std::string NonTemplatesExpected = R"cpp(
+struct S {
+  safe_int m_i;
+};
+)cpp";
+
+  std::string TemplatesInput = R"cpp(
+template<typename T>
+struct TemplStruct {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+private:
+  T m_t;
+};
+
+void instantiate()
+{
+  TemplStruct<int> ti;
+}
+)cpp";
+
+  auto MatchedField = fieldDecl(hasType(asString("int"))).bind("theField");
+
+  // Changes the 'int' in 'S', but not the 'T' in 'TemplStruct':
+  testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedField),
+                    changeTo(cat("safe_int ", name("theField")))),
+           NonTemplatesInput + TemplatesInput,
+           NonTemplatesExpected + TemplatesInput);
+
+  // In AsIs mode, template instantiations are modified, which is
+  // often not desired:
+
+  std::string IncorrectTemplatesExpected = R"cpp(
+template<typename T>
+struct TemplStruct {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+private:
+  safe_int m_t;
+};
+
+void instantiate()
+{
+  TemplStruct<int> ti;
+}
+)cpp";
+
+  // Changes the 'int' in 'S', and (incorrectly) the 'T' in 'TemplStruct':
+  testRule(makeRule(traverse(TK_AsIs, MatchedField),
+                    changeTo(cat("safe_int ", name("theField")))),
+
+           NonTemplatesInput + TemplatesInput,
+           NonTemplatesExpected + IncorrectTemplatesExpected);
+}
+
 // Transformation of macro source text when the change encompasses the entirety
 // of the expanded text.
 TEST_F(TransformerTest, SimpleMacro) {
