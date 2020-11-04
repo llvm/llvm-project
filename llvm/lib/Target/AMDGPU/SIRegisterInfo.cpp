@@ -61,7 +61,8 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
          "getNumCoveredRegs() will not work with generated subreg masks!");
 
   RegPressureIgnoredUnits.resize(getNumRegUnits());
-  RegPressureIgnoredUnits.set(*MCRegUnitIterator(AMDGPU::M0, this));
+  RegPressureIgnoredUnits.set(
+      *MCRegUnitIterator(MCRegister::from(AMDGPU::M0), this));
   for (auto Reg : AMDGPU::VGPR_HI16RegClass)
     RegPressureIgnoredUnits.set(*MCRegUnitIterator(Reg, this));
 
@@ -2093,7 +2094,8 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
     DefIdx = V->def;
   } else {
     // Find last def.
-    for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units) {
+    for (MCRegUnitIterator Units(Reg.asMCReg(), this); Units.isValid();
+         ++Units) {
       LiveRange &LR = LIS->getRegUnit(*Units);
       if (VNInfo *V = LR.getVNInfoAt(UseIdx)) {
         if (!DefIdx.isValid() ||
