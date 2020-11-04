@@ -347,10 +347,8 @@ void IRChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (!PrintChanged)
     return;
 
-  PIC.registerBeforePassCallback([this](StringRef P, Any IR) {
-    saveIRBeforePass(IR, P);
-    return true;
-  });
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any IR) { saveIRBeforePass(IR, P); });
 
   PIC.registerAfterPassCallback(
       [this](StringRef P, Any IR, const PreservedAnalyses &) {
@@ -521,11 +519,11 @@ void PrintIRInstrumentation::registerCallbacks(
 
 void OptNoneInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  PIC.registerBeforePassCallback(
-      [this](StringRef P, Any IR) { return this->skip(P, IR); });
+  PIC.registerShouldRunOptionalPassCallback(
+      [this](StringRef P, Any IR) { return this->shouldRun(P, IR); });
 }
 
-bool OptNoneInstrumentation::skip(StringRef PassID, Any IR) {
+bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
   if (!EnableOptnone)
     return true;
   const Function *F = nullptr;
@@ -534,7 +532,12 @@ bool OptNoneInstrumentation::skip(StringRef PassID, Any IR) {
   } else if (any_isa<const Loop *>(IR)) {
     F = any_cast<const Loop *>(IR)->getHeader()->getParent();
   }
-  return !(F && F->hasOptNone());
+  bool ShouldRun = !(F && F->hasOptNone());
+  if (!ShouldRun && DebugLogging) {
+    errs() << "Skipping pass " << PassID << " on " << F->getName()
+           << " due to optnone attribute\n";
+  }
+  return ShouldRun;
 }
 
 void PrintPassInstrumentation::registerCallbacks(
