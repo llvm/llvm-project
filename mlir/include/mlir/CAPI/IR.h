@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INCLUDE_MLIR_CAPI_IR_H
-#define MLIR_INCLUDE_MLIR_CAPI_IR_H
+#ifndef MLIR_CAPI_IR_H
+#define MLIR_CAPI_IR_H
 
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/Identifier.h"
@@ -35,4 +35,4 @@ DEFINE_C_API_METHODS(MlirModule, mlir::ModuleOp)
 DEFINE_C_API_METHODS(MlirType, mlir::Type)
 DEFINE_C_API_METHODS(MlirValue, mlir::Value)
 
-#endif // MLIR_INCLUDE_MLIR_CAPI_IR_H
+#endif // MLIR_CAPI_IR_H
