@@ -49,12 +49,14 @@ public:
     });
   }
 };
-} // end namespace
+} // namespace
 
 namespace mlir {
+namespace test {
 void registerTestLoopMappingPass() {
   PassRegistration<TestLoopMappingPass>(
       "test-mapping-to-processing-elements",
       "test mapping a single loop on a virtual processor grid");
 }
+} // namespace test
 } // namespace mlir

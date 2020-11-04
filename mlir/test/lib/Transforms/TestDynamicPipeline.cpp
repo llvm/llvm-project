@@ -103,12 +103,14 @@ public:
       *this, "op-name", llvm::cl::MiscFlags::CommaSeparated,
       llvm::cl::desc("List of function name to apply the pipeline to")};
 };
-} // end namespace
+} // namespace
 
 namespace mlir {
+namespace test {
 void registerTestDynamicPipelinePass() {
   PassRegistration<TestDynamicPipelinePass>(
       "test-dynamic-pipeline", "Tests the dynamic pipeline feature by applying "
                                "a pipeline on a selected set of functions");
 }
+} // namespace test
 } // namespace mlir

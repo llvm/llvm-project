@@ -38,7 +38,9 @@
 #include "TestOps.h.inc"
 
 namespace mlir {
+namespace test {
 void registerTestDialect(DialectRegistry &registry);
-} // end namespace mlir
+} // namespace test
+} // namespace mlir
 
 #endif // MLIR_TESTDIALECT_H

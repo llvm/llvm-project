@@ -50,8 +50,10 @@ void TestMemRefStrideCalculation::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestMemRefStrideCalculation() {
   PassRegistration<TestMemRefStrideCalculation> pass(
       "test-memref-stride-calculation", "Test operation constant folding");
 }
+} // namespace test
 } // namespace mlir

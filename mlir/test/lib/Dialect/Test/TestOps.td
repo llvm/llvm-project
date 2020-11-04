@@ -21,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let cppNamespace = "::mlir";
+  let cppNamespace = "::mlir::test";
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
@@ -89,8 +89,8 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
 }
 
 def TEST_TestType : DialectType<Test_Dialect,
-    CPred<"$_self.isa<::mlir::TestType>()">, "test">,
-    BuildableType<"$_builder.getType<::mlir::TestType>()">;
+    CPred<"$_self.isa<::mlir::test::TestType>()">, "test">,
+    BuildableType<"$_builder.getType<::mlir::test::TestType>()">;
 
 //===----------------------------------------------------------------------===//
 // Test Symbols
