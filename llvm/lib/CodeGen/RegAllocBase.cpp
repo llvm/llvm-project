@@ -73,7 +73,7 @@ void RegAllocBase::seedLiveRegs() {
   NamedRegionTimer T("seed", "Seed Live Regs", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
+    Register Reg = Register::index2VirtReg(i);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     enqueue(&LIS->getInterval(Reg));
@@ -143,7 +143,7 @@ void RegAllocBase::allocatePhysRegs() {
     if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
-    for (unsigned Reg : SplitVRegs) {
+    for (Register Reg : SplitVRegs) {
       assert(LIS->hasInterval(Reg));
 
       LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
