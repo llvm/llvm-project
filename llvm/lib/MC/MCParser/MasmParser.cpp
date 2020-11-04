@@ -3086,70 +3086,19 @@ bool MasmParser::parseEscapedString(std::string &Data) {
     return true;
 
   Data = "";
+  char Quote = getTok().getString().front();
   StringRef Str = getTok().getStringContents();
-  for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-    if (Str[i] != '\\') {
-      Data += Str[i];
-      continue;
-    }
-
-    // Recognize escaped characters. Note that this escape semantics currently
-    // loosely follows Darwin 'as'.
-    ++i;
-    if (i == e)
-      return TokError("unexpected backslash at end of string");
-
-    // Recognize hex sequences similarly to GNU 'as'.
-    if (Str[i] == 'x' || Str[i] == 'X') {
-      size_t length = Str.size();
-      if (i + 1 >= length || !isHexDigit(Str[i + 1]))
-        return TokError("invalid hexadecimal escape sequence");
-
-      // Consume hex characters. GNU 'as' reads all hexadecimal characters and
-      // then truncates to the lower 16 bits. Seems reasonable.
-      unsigned Value = 0;
-      while (i + 1 < length && isHexDigit(Str[i + 1]))
-        Value = Value * 16 + hexDigitValue(Str[++i]);
-
-      Data += (unsigned char)(Value & 0xFF);
-      continue;
-    }
-
-    // Recognize octal sequences.
-    if ((unsigned)(Str[i] - '0') <= 7) {
-      // Consume up to three octal characters.
-      unsigned Value = Str[i] - '0';
-
-      if (i + 1 != e && ((unsigned)(Str[i + 1] - '0')) <= 7) {
+  Data.reserve(Str.size());
+  for (int i = 0, e = Str.size(); i != e; ++i) {
+    Data.push_back(Str[i]);
+    if (Str[i] == Quote) {
+      // MASM treats doubled delimiting quotes as an escaped delimiting quote.
+      // If we're escaping the string's trailing delimiter, we're definitely
+      // missing a quotation mark.
+      if (i + 1 == Str.size())
+        return Error(getTok().getLoc(), "missing quotation mark in string");
+      if (Str[i + 1] == Quote)
         ++i;
-        Value = Value * 8 + (Str[i] - '0');
-
-        if (i + 1 != e && ((unsigned)(Str[i + 1] - '0')) <= 7) {
-          ++i;
-          Value = Value * 8 + (Str[i] - '0');
-        }
-      }
-
-      if (Value > 255)
-        return TokError("invalid octal escape sequence (out of range)");
-
-      Data += (unsigned char)Value;
-      continue;
-    }
-
-    // Otherwise recognize individual escapes.
-    switch (Str[i]) {
-    default:
-      // Just reject invalid escape sequences for now.
-      return TokError("invalid escape sequence (unrecognized character)");
-
-    case 'b': Data += '\b'; break;
-    case 'f': Data += '\f'; break;
-    case 'n': Data += '\n'; break;
-    case 'r': Data += '\r'; break;
-    case 't': Data += '\t'; break;
-    case '"': Data += '"'; break;
-    case '\\': Data += '\\'; break;
     }
   }
 
@@ -3220,7 +3169,9 @@ bool MasmParser::parseScalarInitializer(unsigned Size,
                                         SmallVectorImpl<const MCExpr *> &Values,
                                         unsigned StringPadLength) {
   if (getTok().is(AsmToken::String)) {
-    StringRef Value = getTok().getStringContents();
+    std::string Value;
+    if (parseEscapedString(Value))
+      return true;
     if (Size == 1) {
       // Treat each character as an initializer.
       for (const char CharVal : Value)
@@ -3235,11 +3186,10 @@ bool MasmParser::parseScalarInitializer(unsigned Size,
         return Error(getTok().getLoc(), "out of range literal value");
 
       uint64_t IntValue = 0;
-      for (const unsigned char CharVal : Value.bytes())
+      for (const unsigned char CharVal : Value)
         IntValue = (IntValue << 8) | CharVal;
       Values.push_back(MCConstantExpr::create(IntValue, getContext()));
     }
-    Lex();
   } else {
     const MCExpr *Value;
     if (parseExpression(Value))

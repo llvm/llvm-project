@@ -1696,6 +1696,17 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
     case AsmToken::At:
     case AsmToken::String:
     case AsmToken::Identifier: {
+      if (Parser.isParsingMasm() && Tok.is(AsmToken::String)) {
+        // Single-character strings should be treated as integer constants. This
+        // includes MASM escapes for quotes.
+        char Quote = Tok.getString().front();
+        StringRef Contents = Tok.getStringContents();
+        if (Contents.size() == 1 || Contents == std::string(2, Quote)) {
+          if (SM.onInteger(Contents.front(), ErrMsg))
+            return Error(Tok.getLoc(), ErrMsg);
+          break;
+        }
+      }
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
