@@ -272,8 +272,8 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
             break;
           }
         } else if (Info.OperandType == WebAssembly::OPERAND_HEAPTYPE) {
-          auto HT = static_cast<WebAssembly::HeapType>(MO.getImm());
-          assert(HT != WebAssembly::HeapType::Invalid);
+          assert(static_cast<WebAssembly::HeapType>(MO.getImm()) !=
+                 WebAssembly::HeapType::Invalid);
           // With typed function references, this will need a case for type
           // index operands.  Otherwise, fall through.
         }
