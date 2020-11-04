@@ -74,17 +74,6 @@ struct MlirNamedAttribute {
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
-/** A callback for returning string references.
- *
- * This function is called back by the functions that need to return a reference
- * to the portion of the string with the following arguments:
- *   - a pointer to the beginning of a string;
- *   - the length of the string (the pointer may point to a larger buffer, not
- *     necessarily null-terminated);
- *   - a pointer to user data forwarded from the printing call.
- */
-typedef void (*MlirStringCallback)(const char *, intptr_t, void *);
-
 //===----------------------------------------------------------------------===//
 // Context API.
 //===----------------------------------------------------------------------===//
