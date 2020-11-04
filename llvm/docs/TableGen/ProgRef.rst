@@ -7,12 +7,6 @@ TableGen Programmer's Reference
 .. contents::
    :local:
 
-.. toctree::
-   :hidden:
-
-   BackEnds
-   BackGuide
-
 Introduction
 ============
 
