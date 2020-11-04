@@ -10,6 +10,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 include(AddMLIR)
 
+# Forbid implicit function declaration: this may lead to subtle bugs and we
+# don't have a reason to support this.
+add_flag_if_supported("-Werror-implicit-function-declaration" WERROR_IMPLICIT_FUNCTION_DECLARATION)
+
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
 # mlir-generic-headers are dialect-independent.
