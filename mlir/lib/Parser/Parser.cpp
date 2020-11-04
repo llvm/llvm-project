@@ -35,8 +35,8 @@ using llvm::SourceMgr;
 
 /// Parse a comma separated list of elements that must have at least one entry
 /// in it.
-ParseResult Parser::parseCommaSeparatedList(
-    const std::function<ParseResult()> &parseElement) {
+ParseResult
+Parser::parseCommaSeparatedList(function_ref<ParseResult()> parseElement) {
   // Non-empty case starts with an element.
   if (parseElement())
     return failure();
@@ -55,9 +55,10 @@ ParseResult Parser::parseCommaSeparatedList(
 ///   abstract-list ::= rightToken                  // if allowEmptyList == true
 ///   abstract-list ::= element (',' element)* rightToken
 ///
-ParseResult Parser::parseCommaSeparatedListUntil(
-    Token::Kind rightToken, const std::function<ParseResult()> &parseElement,
-    bool allowEmptyList) {
+ParseResult
+Parser::parseCommaSeparatedListUntil(Token::Kind rightToken,
+                                     function_ref<ParseResult()> parseElement,
+                                     bool allowEmptyList) {
   // Handle the empty case.
   if (getToken().is(rightToken)) {
     if (!allowEmptyList)
@@ -145,8 +146,8 @@ public:
   /// returns null on failure.
   Value resolveSSAUse(SSAUseInfo useInfo, Type type);
 
-  ParseResult parseSSADefOrUseAndType(
-      const std::function<ParseResult(SSAUseInfo, Type)> &action);
+  ParseResult
+  parseSSADefOrUseAndType(function_ref<ParseResult(SSAUseInfo, Type)> action);
 
   ParseResult parseOptionalSSAUseAndTypeList(SmallVectorImpl<Value> &results);
 
@@ -506,7 +507,7 @@ Value OperationParser::resolveSSAUse(SSAUseInfo useInfo, Type type) {
 ///
 ///   ssa-use-and-type ::= ssa-use `:` type
 ParseResult OperationParser::parseSSADefOrUseAndType(
-    const std::function<ParseResult(SSAUseInfo, Type)> &action) {
+    function_ref<ParseResult(SSAUseInfo, Type)> action) {
   SSAUseInfo useInfo;
   if (parseSSAUse(useInfo) ||
       parseToken(Token::colon, "expected ':' and type for SSA operand"))
