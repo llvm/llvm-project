@@ -4,6 +4,7 @@ add_mlir_library(MLIRCAPIIR
   AffineMap.cpp
   Diagnostics.cpp
   IR.cpp
+  Pass.cpp
   StandardAttributes.cpp
   StandardTypes.cpp
   Support.cpp

@@ -28,7 +28,8 @@ class CallbackOstream : public llvm::raw_ostream {
 public:
   CallbackOstream(std::function<void(const char *, intptr_t, void *)> callback,
                   void *opaqueData)
-      : callback(callback), opaqueData(opaqueData), pos(0u) {}
+      : raw_ostream(/*unbuffered=*/true), callback(callback),
+        opaqueData(opaqueData), pos(0u) {}
 
   void write_impl(const char *ptr, size_t size) override {
     callback(ptr, size, opaqueData);
