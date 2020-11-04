@@ -125,31 +125,17 @@ struct BlockInfoBuilder {
 };
 } // namespace
 
-/// Walks all regions (including nested regions recursively) and invokes the
-/// given function for every block.
-template <typename FuncT>
-static void walkRegions(MutableArrayRef<Region> regions, const FuncT &func) {
-  for (Region &region : regions)
-    for (Block &block : region) {
-      func(block);
-
-      // Traverse all nested regions.
-      for (Operation &operation : block)
-        walkRegions(operation.getRegions(), func);
-    }
-}
-
 /// Builds the internal liveness block mapping.
-static void buildBlockMapping(MutableArrayRef<Region> regions,
+static void buildBlockMapping(Operation *operation,
                               DenseMap<Block *, BlockInfoBuilder> &builders) {
   llvm::SetVector<Block *> toProcess;
 
-  walkRegions(regions, [&](Block &block) {
+  operation->walk([&](Block *block) {
     BlockInfoBuilder &builder =
-        builders.try_emplace(&block, &block).first->second;
+        builders.try_emplace(block, block).first->second;
 
     if (builder.updateLiveIn())
-      toProcess.insert(block.pred_begin(), block.pred_end());
+      toProcess.insert(block->pred_begin(), block->pred_end());
   });
 
   // Propagate the in and out-value sets (fixpoint iteration)
@@ -172,14 +158,14 @@ static void buildBlockMapping(MutableArrayRef<Region> regions,
 
 /// Creates a new Liveness analysis that computes liveness information for all
 /// associated regions.
-Liveness::Liveness(Operation *op) : operation(op) { build(op->getRegions()); }
+Liveness::Liveness(Operation *op) : operation(op) { build(); }
 
 /// Initializes the internal mappings.
-void Liveness::build(MutableArrayRef<Region> regions) {
+void Liveness::build() {
 
   // Build internal block mapping.
   DenseMap<Block *, BlockInfoBuilder> builders;
-  buildBlockMapping(regions, builders);
+  buildBlockMapping(operation, builders);
 
   // Store internal block data.
   for (auto &entry : builders) {
@@ -284,11 +270,11 @@ void Liveness::print(raw_ostream &os) const {
   DenseMap<Block *, size_t> blockIds;
   DenseMap<Operation *, size_t> operationIds;
   DenseMap<Value, size_t> valueIds;
-  walkRegions(operation->getRegions(), [&](Block &block) {
-    blockIds.insert({&block, blockIds.size()});
-    for (BlockArgument argument : block.getArguments())
+  operation->walk([&](Block *block) {
+    blockIds.insert({block, blockIds.size()});
+    for (BlockArgument argument : block->getArguments())
       valueIds.insert({argument, valueIds.size()});
-    for (Operation &operation : block) {
+    for (Operation &operation : *block) {
       operationIds.insert({&operation, operationIds.size()});
       for (Value result : operation.getResults())
         valueIds.insert({result, valueIds.size()});
@@ -318,9 +304,9 @@ void Liveness::print(raw_ostream &os) const {
   };
 
   // Dump information about in and out values.
-  walkRegions(operation->getRegions(), [&](Block &block) {
-    os << "// - Block: " << blockIds[&block] << "\n";
-    auto liveness = getLiveness(&block);
+  operation->walk([&](Block *block) {
+    os << "// - Block: " << blockIds[block] << "\n";
+    const auto *liveness = getLiveness(block);
     os << "// --- LiveIn: ";
     printValueRefs(liveness->inValues);
     os << "\n// --- LiveOut: ";
@@ -329,7 +315,7 @@ void Liveness::print(raw_ostream &os) const {
 
     // Print liveness intervals.
     os << "// --- BeginLiveness";
-    for (Operation &op : block) {
+    for (Operation &op : *block) {
       if (op.getNumResults() < 1)
         continue;
       os << "\n";
