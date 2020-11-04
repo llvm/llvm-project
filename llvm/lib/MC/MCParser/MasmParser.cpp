@@ -3089,7 +3089,7 @@ bool MasmParser::parseEscapedString(std::string &Data) {
   char Quote = getTok().getString().front();
   StringRef Str = getTok().getStringContents();
   Data.reserve(Str.size());
-  for (int i = 0, e = Str.size(); i != e; ++i) {
+  for (size_t i = 0, e = Str.size(); i != e; ++i) {
     Data.push_back(Str[i]);
     if (Str[i] == Quote) {
       // MASM treats doubled delimiting quotes as an escaped delimiting quote.
