@@ -350,11 +350,13 @@ class MUBUF_Real <MUBUF_Pseudo ps> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
-  let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
-  let TSFlags            = ps.TSFlags;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let OtherPredicates      = ps.OtherPredicates;
+  let Constraints          = ps.Constraints;
+  let DisableEncoding      = ps.DisableEncoding;
+  let TSFlags              = ps.TSFlags;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
 
   bits<12> offset;
   bits<1>  glc;
@@ -627,9 +629,9 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in,
   dag ret = !if(vdata_in,
     !if(!empty(vaddrList),
       (ins vdataClass:$vdata_in,
-           SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, SLC:$slc),
+           SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, GLC_1:$glc1, SLC:$slc),
       (ins vdataClass:$vdata_in, vaddrClass:$vaddr,
-           SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, SLC:$slc)
+           SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, GLC_1:$glc1, SLC:$slc)
     ),
     !if(!empty(vaddrList),
       (ins vdataClass:$vdata,
@@ -706,7 +708,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
   : MUBUF_Atomic_Pseudo<opName, addrKindCopy,
                         (outs vdataClassCopy:$vdata),
                         getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 1>.ret,
-                        " $vdata, " # getMUBUFAsmOps<addrKindCopy>.ret # " glc$slc",
+                        " $vdata, " # getMUBUFAsmOps<addrKindCopy>.ret # "$glc1$slc",
                         pattern>,
     AtomicNoRet<opName # "_" # getAddrName<addrKindCopy>.ret, 1> {
   let PseudoInstr = opName # "_rtn_" # getAddrName<addrKindCopy>.ret;

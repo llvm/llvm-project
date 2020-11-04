@@ -2393,6 +2393,7 @@ bool AMDGPUInstructionSelector::selectG_AMDGPU_ATOMIC_CMPXCHG(
     MIB.addImm(0);
 
   MIB.addImm(Offset);
+  MIB.addImm(1); // glc
   MIB.addImm(0); // slc
   MIB.cloneMemRefs(MI);
 
