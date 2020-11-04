@@ -6943,6 +6943,7 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
 
 
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+// and the columns of the getMCOpcodeGen table.
 enum SIEncodingFamily {
   SI = 0,
   VI = 1,
@@ -6952,7 +6953,7 @@ enum SIEncodingFamily {
   GFX9 = 5,
   GFX10 = 6,
   SDWA10 = 7,
-  GFX11 = 11,
+  GFX11 = 8,
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {

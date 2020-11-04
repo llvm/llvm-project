@@ -17,7 +17,8 @@ class GCNPredicateControl : PredicateControl {
 }
 
 // Execpt for the NONE field, this must be kept in sync with the
-// SIEncodingFamily enum in SIInstrInfo.cpp
+// SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the
+// getMCOpcodeGen table.
 def SIEncodingFamily {
   int NONE = -1;
   int SI = 0;
@@ -28,7 +29,7 @@ def SIEncodingFamily {
   int GFX9 = 5;
   int GFX10 = 6;
   int SDWA10 = 7;
-  int GFX11 = 11;
+  int GFX11 = 8;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2474,6 +2475,7 @@ def getMCOpcodeGen : InstrMapping {
   let RowFields = ["PseudoInstr"];
   let ColFields = ["Subtarget"];
   let KeyCol = [!cast<string>(SIEncodingFamily.NONE)];
+  // These columns must be kept in sync with the SIEncodingFamily enumeration.
   let ValueCols = [[!cast<string>(SIEncodingFamily.SI)],
                    [!cast<string>(SIEncodingFamily.VI)],
                    [!cast<string>(SIEncodingFamily.SDWA)],

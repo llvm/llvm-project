@@ -59,7 +59,7 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1031 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1031 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1032 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1032 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1033 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1033 %s
-; TODO: llc -filetype=obj -march=amdgcn -mcpu=gfx1100 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1100 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1100 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1100 %s
 
 ; ARCH-R600: Format: elf32-amdgpu
 ; ARCH-R600: Arch: r600
