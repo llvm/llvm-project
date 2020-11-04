@@ -131,7 +131,7 @@ class CrashLog(symbolication.Symbolicator):
                             if line_entry.IsValid():
                                 strm = lldb.SBStream()
                                 if line_entry:
-                                    lldb.debugger.GetSourceManager().DisplaySourceLinesWithLineNumbers(
+                                    crash_log.debugger.GetSourceManager().DisplaySourceLinesWithLineNumbers(
                                         line_entry.file, line_entry.line, source_context, source_context, "->", strm)
                                 source_text = strm.GetData()
                                 if source_text:
@@ -310,9 +310,9 @@ class CrashLog(symbolication.Symbolicator):
                 self.unavailable = True
             return False
 
-    def __init__(self, path, verbose):
+    def __init__(self, debugger, path, verbose):
         """CrashLog constructor that take a path to a darwin crash log file"""
-        symbolication.Symbolicator.__init__(self)
+        symbolication.Symbolicator.__init__(self, debugger)
         self.path = os.path.expanduser(path)
         self.info_lines = list()
         self.system_profile = list()
@@ -360,12 +360,12 @@ class CrashLog(symbolication.Symbolicator):
                 for ident in self.idents:
                     image = self.find_image_with_identifier(ident)
                     if image:
-                        self.target = image.create_target()
+                        self.target = image.create_target(self.debugger)
                         if self.target:
                             return self.target  # success
             print('crashlog.create_target()...3')
             for image in self.images:
-                self.target = image.create_target()
+                self.target = image.create_target(self.debugger)
                 if self.target:
                     return self.target  # success
             print('crashlog.create_target()...4')
@@ -411,12 +411,12 @@ class CrashLogParser:
                                  )
 
 
-    def __init__(self, path, verbose):
+    def __init__(self, debugger, path, verbose):
         self.path = os.path.expanduser(path)
         self.verbose = verbose
         self.thread = None
         self.app_specific_backtrace = False
-        self.crashlog = CrashLog(self.path, self.verbose)
+        self.crashlog = CrashLog(debugger, self.path, self.verbose)
         self.parse_mode = CrashLogParseMode.NORMAL
         self.parsers = {
             CrashLogParseMode.NORMAL : self.parse_normal,
@@ -711,7 +711,7 @@ class Interactive(cmd.Cmd):
         return False
 
 
-def interactive_crashlogs(options, args):
+def interactive_crashlogs(debugger, options, args):
     crash_log_files = list()
     for arg in args:
         for resolved_path in glob.glob(arg):
@@ -720,7 +720,7 @@ def interactive_crashlogs(options, args):
     crash_logs = list()
     for crash_log_file in crash_log_files:
         try:
-            crash_log = CrashLogParser(crash_log_file, options.verbose).parse()
+            crash_log = CrashLogParser(debugger, crash_log_file, options.verbose).parse()
         except Exception as e:
             print(e)
             continue
@@ -848,7 +848,7 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
 
 def Symbolicate(debugger, command, result, dict):
     try:
-        SymbolicateCrashLogs(shlex.split(command))
+        SymbolicateCrashLogs(debugger, shlex.split(command))
     except Exception as e:
         result.PutCString("error: python exception: %s" % e)
 
@@ -1024,7 +1024,7 @@ def CreateSymbolicateCrashLogOptions(
     return option_parser
 
 
-def SymbolicateCrashLogs(command_args):
+def SymbolicateCrashLogs(debugger, command_args):
     description = '''Symbolicate one or more darwin crash log files to provide source file and line information,
 inlined stack frames back to the concrete functions, and disassemble the location of the crash
 for the first frame of the crashed thread.
@@ -1052,17 +1052,17 @@ be disassembled and lookups can be performed using the addresses found in the cr
 
     if args:
         if options.interactive:
-            interactive_crashlogs(options, args)
+            interactive_crashlogs(debugger, options, args)
         else:
             for crash_log_file in args:
-                crash_log_parser = CrashLogParser(crash_log_file, options.verbose)
+                crash_log_parser = CrashLogParser(debugger, crash_log_file, options.verbose)
                 crash_log = crash_log_parser.parse()
                 SymbolicateCrashLog(crash_log, options)
 if __name__ == '__main__':
     # Create a new debugger instance
-    lldb.debugger = lldb.SBDebugger.Create()
-    SymbolicateCrashLogs(sys.argv[1:])
-    lldb.SBDebugger.Destroy(lldb.debugger)
+    debugger = lldb.SBDebugger.Create()
+    SymbolicateCrashLogs(debugger, sys.argv[1:])
+    lldb.SBDebugger.Destroy(debugger)
 elif getattr(lldb, 'debugger', None):
     lldb.debugger.HandleCommand(
         'command script add -f lldb.macosx.crashlog.Symbolicate crashlog')
