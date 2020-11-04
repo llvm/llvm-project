@@ -1013,6 +1013,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SHL, VT, Custom);
       setOperationAction(ISD::SRL, VT, Custom);
       setOperationAction(ISD::SRA, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
     }
 
     // Illegal unpacked integer vector types.
@@ -1027,6 +1035,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
       setOperationAction(ISD::TRUNCATE, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
 
       // There are no legal MVT::nxv16f## based types.
       if (VT != MVT::nxv16i1) {
@@ -9815,30 +9826,35 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                       Op.getOpcode() == ISD::VECREDUCE_FADD ||
                       (Op.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
-  if (useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON)) {
+  if (SrcVT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON)) {
+
+    if (SrcVT.getVectorElementType() == MVT::i1)
+      return LowerPredReductionToSVE(Op, DAG);
+
     switch (Op.getOpcode()) {
     case ISD::VECREDUCE_ADD:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::UADDV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::UADDV_PRED, Op, DAG);
     case ISD::VECREDUCE_AND:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::ANDV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::ANDV_PRED, Op, DAG);
     case ISD::VECREDUCE_OR:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::ORV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::ORV_PRED, Op, DAG);
     case ISD::VECREDUCE_SMAX:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::SMAXV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::SMAXV_PRED, Op, DAG);
     case ISD::VECREDUCE_SMIN:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::SMINV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::SMINV_PRED, Op, DAG);
     case ISD::VECREDUCE_UMAX:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::UMAXV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::UMAXV_PRED, Op, DAG);
     case ISD::VECREDUCE_UMIN:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::UMINV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::UMINV_PRED, Op, DAG);
     case ISD::VECREDUCE_XOR:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::EORV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::EORV_PRED, Op, DAG);
     case ISD::VECREDUCE_FADD:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::FADDV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::FADDV_PRED, Op, DAG);
     case ISD::VECREDUCE_FMAX:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::FMAXNMV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::FMAXNMV_PRED, Op, DAG);
     case ISD::VECREDUCE_FMIN:
-      return LowerFixedLengthReductionToSVE(AArch64ISD::FMINNMV_PRED, Op, DAG);
+      return LowerReductionToSVE(AArch64ISD::FMINNMV_PRED, Op, DAG);
     default:
       llvm_unreachable("Unhandled fixed length reduction");
     }
@@ -16333,20 +16349,56 @@ SDValue AArch64TargetLowering::LowerVECREDUCE_SEQ_FADD(SDValue ScalarOp,
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Rdx, Zero);
 }
 
-SDValue AArch64TargetLowering::LowerFixedLengthReductionToSVE(unsigned Opcode,
-    SDValue ScalarOp, SelectionDAG &DAG) const {
+SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
+                                                       SelectionDAG &DAG) const {
+  SDLoc DL(ReduceOp);
+  SDValue Op = ReduceOp.getOperand(0);
+  EVT OpVT = Op.getValueType();
+  EVT VT = ReduceOp.getValueType();
+
+  if (!OpVT.isScalableVector() || OpVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  SDValue Pg = getPredicateForVector(DAG, DL, OpVT);
+
+  switch (ReduceOp.getOpcode()) {
+  default:
+    return SDValue();
+  case ISD::VECREDUCE_OR:
+    return getPTest(DAG, VT, Pg, Op, AArch64CC::ANY_ACTIVE);
+  case ISD::VECREDUCE_AND: {
+    Op = DAG.getNode(ISD::XOR, DL, OpVT, Op, Pg);
+    return getPTest(DAG, VT, Pg, Op, AArch64CC::NONE_ACTIVE);
+  }
+  case ISD::VECREDUCE_XOR: {
+    SDValue ID =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64);
+    SDValue Cntp =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64, ID, Pg, Op);
+    return DAG.getAnyExtOrTrunc(Cntp, DL, VT);
+  }
+  }
+
+  return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
+                                                   SDValue ScalarOp,
+                                                   SelectionDAG &DAG) const {
   SDLoc DL(ScalarOp);
   SDValue VecOp = ScalarOp.getOperand(0);
   EVT SrcVT = VecOp.getValueType();
 
-  SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
-  EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
-  VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  if (useSVEForFixedLengthVectorVT(SrcVT, true)) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
+    VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  }
 
   // UADDV always returns an i64 result.
   EVT ResVT = (Opcode == AArch64ISD::UADDV_PRED) ? MVT::i64 :
                                                    SrcVT.getVectorElementType();
 
+  SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
   SDValue Rdx = DAG.getNode(Opcode, DL, getPackedSVEVectorVT(ResVT), Pg, VecOp);
   SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT,
                             Rdx, DAG.getConstant(0, DL, MVT::i64));
