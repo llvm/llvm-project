@@ -370,6 +370,12 @@ def SameOperandAndResultTypeOp : TEST_Op<"same_operand_and_result_type",
   let results = (outs Variadic<AnyType>);
 }
 
+def ElementwiseMappableOp : TEST_Op<"elementwise_mappable",
+    [ElementwiseMappable]> {
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>);
+}
+
 def ArgAndResHaveFixedElementTypesOp :
     TEST_Op<"arg_and_res_have_fixed_element_types",
       [PredOpTrait<"fixed type combination",
