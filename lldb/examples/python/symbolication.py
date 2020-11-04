@@ -410,7 +410,7 @@ class Image:
             return str(self.uuid).upper()
         return None
 
-    def create_target(self):
+    def create_target(self, debugger):
         '''Create a target using the information in this Image object.'''
         if self.unavailable:
             return None
@@ -419,7 +419,7 @@ class Image:
             resolved_path = self.get_resolved_path()
             path_spec = lldb.SBFileSpec(resolved_path)
             error = lldb.SBError()
-            target = lldb.debugger.CreateTarget(
+            target = debugger.CreateTarget(
                 resolved_path, self.arch, None, False, error)
             if target:
                 self.module = target.FindModule(path_spec)
@@ -437,8 +437,9 @@ class Image:
 
 class Symbolicator:
 
-    def __init__(self):
+    def __init__(self, debugger):
         """A class the represents the information needed to symbolicate addresses in a program"""
+        self.debugger = debugger
         self.target = None
         self.images = list()  # a list of images to be used when symbolicating
         self.addr_mask = 0xffffffffffffffff
@@ -496,7 +497,7 @@ class Symbolicator:
 
         if self.images:
             for image in self.images:
-                self.target = image.create_target()
+                self.target = image.create_target(self.debugger)
                 if self.target:
                     if self.target.GetAddressByteSize() == 4:
                         triple = self.target.triple
@@ -632,7 +633,7 @@ def print_module_symbols(module):
         print(sym)
 
 
-def Symbolicate(command_args):
+def Symbolicate(debugger, command_args):
 
     usage = "usage: %prog [options] <addr1> [addr2 ...]"
     description = '''Symbolicate one or more addresses using LLDB's python scripting API..'''
@@ -686,7 +687,7 @@ def Symbolicate(command_args):
         (options, args) = parser.parse_args(command_args)
     except:
         return
-    symbolicator = Symbolicator()
+    symbolicator = Symbolicator(debugger)
     images = list()
     if options.file:
         image = Image(options.file)
@@ -720,5 +721,6 @@ def Symbolicate(command_args):
 
 if __name__ == '__main__':
     # Create a new debugger instance
-    lldb.debugger = lldb.SBDebugger.Create()
-    Symbolicate(sys.argv[1:])
+    debugger = lldb.SBDebugger.Create()
+    Symbolicate(debugger, sys.argv[1:])
+    SBDebugger.Destroy(debugger)
