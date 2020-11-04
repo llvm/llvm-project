@@ -628,7 +628,9 @@ public:
   }
 
 private:
+#ifdef __x86_64__
   alignas(16) char FPState[512];
+#endif
 };
 
 class ExegesisX86Target : public ExegesisTarget {
