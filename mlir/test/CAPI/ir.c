@@ -65,7 +65,7 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   mlirBlockAppendOwnedOperation(loopBody, yield);
 }
 
-MlirModule makeAdd(MlirContext ctx, MlirLocation location) {
+MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirModule moduleOp = mlirModuleCreateEmpty(location);
   MlirBlock moduleBody = mlirModuleGetBody(moduleOp);
 
@@ -136,6 +136,25 @@ MlirModule makeAdd(MlirContext ctx, MlirLocation location) {
   MlirOperationState retState = mlirOperationStateGet("std.return", location);
   MlirOperation ret = mlirOperationCreate(&retState);
   mlirBlockAppendOwnedOperation(funcBody, ret);
+
+  MlirOperation module = mlirModuleGetOperation(moduleOp);
+  mlirOperationDump(module);
+  // clang-format off
+  // CHECK: module {
+  // CHECK:   func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>) {
+  // CHECK:     %[[C0:.*]] = constant 0 : index
+  // CHECK:     %[[DIM:.*]] = dim %[[ARG0]], %[[C0]] : memref<?xf32>
+  // CHECK:     %[[C1:.*]] = constant 1 : index
+  // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
+  // CHECK:       %[[LHS:.*]] = load %[[ARG0]][%[[I]]] : memref<?xf32>
+  // CHECK:       %[[RHS:.*]] = load %[[ARG1]][%[[I]]] : memref<?xf32>
+  // CHECK:       %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
+  // CHECK:       store %[[SUM]], %[[ARG0]][%[[I]]] : memref<?xf32>
+  // CHECK:     }
+  // CHECK:     return
+  // CHECK:   }
+  // CHECK: }
+  // clang-format on
 
   return moduleOp;
 }
@@ -237,6 +256,10 @@ int collectStats(MlirOperation operation) {
     head = next;
   } while (head);
 
+  if (stats.numValues != stats.numBlockArguments + stats.numOpResults)
+    return 100;
+
+  fprintf(stderr, "@stats\n");
   fprintf(stderr, "Number of operations: %u\n", stats.numOperations);
   fprintf(stderr, "Number of attributes: %u\n", stats.numAttributes);
   fprintf(stderr, "Number of blocks: %u\n", stats.numBlocks);
@@ -244,8 +267,16 @@ int collectStats(MlirOperation operation) {
   fprintf(stderr, "Number of values: %u\n", stats.numValues);
   fprintf(stderr, "Number of block arguments: %u\n", stats.numBlockArguments);
   fprintf(stderr, "Number of op results: %u\n", stats.numOpResults);
-  if (stats.numValues != stats.numBlockArguments + stats.numOpResults)
-    return 100;
+  // clang-format off
+  // CHECK-LABEL: @stats
+  // CHECK: Number of operations: 13
+  // CHECK: Number of attributes: 4
+  // CHECK: Number of blocks: 3
+  // CHECK: Number of regions: 3
+  // CHECK: Number of values: 9
+  // CHECK: Number of block arguments: 3
+  // CHECK: Number of op results: 6
+  // clang-format on
   return 0;
 }
 
@@ -271,6 +302,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
                              parentOperation));
   fprintf(stderr, "Block eq: %d\n",
           mlirBlockEqual(mlirOperationGetBlock(operation), block));
+  // CHECK: Parent operation eq: 1
+  // CHECK: Block eq: 1
 
   // In the module we created, the first operation of the first function is
   // an "std.dim", which has an attribute and a single result that we can
@@ -280,6 +313,19 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "First operation: ");
   mlirOperationPrint(operation, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // clang-format off
+  // CHECK:   %[[C0:.*]] = constant 0 : index
+  // CHECK:   %[[DIM:.*]] = dim %{{.*}}, %[[C0]] : memref<?xf32>
+  // CHECK:   %[[C1:.*]] = constant 1 : index
+  // CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
+  // CHECK:     %[[LHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     %[[RHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
+  // CHECK:     store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:   }
+  // CHECK: return
+  // CHECK: First operation: {{.*}} = constant 0 : index
+  // clang-format on
 
   // Get the operation name and print it.
   MlirIdentifier ident = mlirOperationGetName(operation);
@@ -288,23 +334,27 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   for (size_t i = 0; i < identStr.length; ++i)
     fputc(identStr.data[i], stderr);
   fprintf(stderr, "'\n");
+  // CHECK: Operation name: 'std.constant'
 
   // Get the identifier again and verify equal.
   MlirIdentifier identAgain = mlirIdentifierGet(ctx, identStr);
   fprintf(stderr, "Identifier equal: %d\n",
           mlirIdentifierEqual(ident, identAgain));
+  // CHECK: Identifier equal: 1
 
   // Get the block terminator and print it.
   MlirOperation terminator = mlirBlockGetTerminator(block);
   fprintf(stderr, "Terminator: ");
   mlirOperationPrint(terminator, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // CHECK: Terminator: return
 
   // Get the attribute by index.
   MlirNamedAttribute namedAttr0 = mlirOperationGetAttribute(operation, 0);
   fprintf(stderr, "Get attr 0: ");
   mlirAttributePrint(namedAttr0.attribute, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // CHECK: Get attr 0: 0 : index
 
   // Now re-get the attribute by name.
   MlirAttribute attr0ByName =
@@ -312,11 +362,13 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Get attr 0 by name: ");
   mlirAttributePrint(attr0ByName, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // CHECK: Get attr 0 by name: 0 : index
 
   // Get a non-existing attribute and assert that it is null (sanity).
   fprintf(stderr, "does_not_exist is null: %d\n",
           mlirAttributeIsNull(
               mlirOperationGetAttributeByName(operation, "does_not_exist")));
+  // CHECK: does_not_exist is null: 1
 
   // Get result 0 and its type.
   MlirValue value = mlirOperationGetResult(operation, 0);
@@ -324,11 +376,14 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirValuePrint(value, printToStderr, NULL);
   fprintf(stderr, "\n");
   fprintf(stderr, "Value is null: %d\n", mlirValueIsNull(value));
+  // CHECK: Result 0: {{.*}} = constant 0 : index
+  // CHECK: Value is null: 0
 
   MlirType type = mlirValueGetType(value);
   fprintf(stderr, "Result 0 type: ");
   mlirTypePrint(type, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // CHECK: Result 0 type: index
 
   // Set a custom attribute.
   mlirOperationSetAttributeByName(operation, "custom_attr",
@@ -336,6 +391,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Op with set attr: ");
   mlirOperationPrint(operation, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // CHECK: Op with set attr: {{.*}} {custom_attr = true}
 
   // Remove the attribute.
   fprintf(stderr, "Remove attr: %d\n",
@@ -345,6 +401,9 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Removed attr is null: %d\n",
           mlirAttributeIsNull(
               mlirOperationGetAttributeByName(operation, "custom_attr")));
+  // CHECK: Remove attr: 1
+  // CHECK: Remove attr again: 0
+  // CHECK: Removed attr is null: 1
 
   // Add a large attribute to verify printing flags.
   int64_t eltsShape[] = {4};
@@ -362,8 +421,25 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Op print with all flags: ");
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
+  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
 
   mlirOpPrintingFlagsDestroy(flags);
+}
+
+static int constructAndTraverseIr(MlirContext ctx) {
+  MlirLocation location = mlirLocationUnknownGet(ctx);
+
+  MlirModule moduleOp = makeAndDumpAdd(ctx, location);
+  MlirOperation module = mlirModuleGetOperation(moduleOp);
+
+  int errcode = collectStats(module);
+  if (errcode)
+    return errcode;
+
+  printFirstOfEach(ctx, module);
+
+  mlirModuleDestroy(moduleOp);
+  return 0;
 }
 
 /// Creates an operation with a region containing multiple blocks with
@@ -426,6 +502,20 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
 
   mlirOperationDump(op);
   mlirOperationDestroy(op);
+  // clang-format off
+  // CHECK-LABEL:  "insertion.order.test"
+  // CHECK:      ^{{.*}}(%{{.*}}: i1
+  // CHECK:        "dummy.op1"
+  // CHECK-NEXT:   "dummy.op2"
+  // CHECK-NEXT:   "dummy.op3"
+  // CHECK-NEXT:   "dummy.op4"
+  // CHECK:      ^{{.*}}(%{{.*}}: i2
+  // CHECK:        "dummy.op5"
+  // CHECK:      ^{{.*}}(%{{.*}}: i3
+  // CHECK:        "dummy.op6"
+  // CHECK:      ^{{.*}}(%{{.*}}: i4
+  // CHECK:        "dummy.op7"
+  // clang-format on
 }
 
 /// Dumps instances of all standard types to check that C API works correctly.
@@ -448,12 +538,17 @@ static int printStandardTypes(MlirContext ctx) {
     return 4;
   if (mlirIntegerTypeGetWidth(i32) != mlirIntegerTypeGetWidth(si32))
     return 5;
+  fprintf(stderr, "@types\n");
   mlirTypeDump(i32);
   fprintf(stderr, "\n");
   mlirTypeDump(si32);
   fprintf(stderr, "\n");
   mlirTypeDump(ui32);
   fprintf(stderr, "\n");
+  // CHECK-LABEL: @types
+  // CHECK: i32
+  // CHECK: si32
+  // CHECK: ui32
 
   // Index type.
   MlirType index = mlirIndexTypeGet(ctx);
@@ -461,6 +556,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 6;
   mlirTypeDump(index);
   fprintf(stderr, "\n");
+  // CHECK: index
 
   // Floating-point types.
   MlirType bf16 = mlirBF16TypeGet(ctx);
@@ -483,6 +579,10 @@ static int printStandardTypes(MlirContext ctx) {
   fprintf(stderr, "\n");
   mlirTypeDump(f64);
   fprintf(stderr, "\n");
+  // CHECK: bf16
+  // CHECK: f16
+  // CHECK: f32
+  // CHECK: f64
 
   // None type.
   MlirType none = mlirNoneTypeGet(ctx);
@@ -490,6 +590,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 12;
   mlirTypeDump(none);
   fprintf(stderr, "\n");
+  // CHECK: none
 
   // Complex type.
   MlirType cplx = mlirComplexTypeGet(f32);
@@ -498,6 +599,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 13;
   mlirTypeDump(cplx);
   fprintf(stderr, "\n");
+  // CHECK: complex<f32>
 
   // Vector (and Shaped) type. ShapedType is a common base class for vectors,
   // memrefs and tensors, one cannot create instances of this class so it is
@@ -516,6 +618,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 15;
   mlirTypeDump(vector);
   fprintf(stderr, "\n");
+  // CHECK: vector<2x3xf32>
 
   // Ranked tensor type.
   MlirType rankedTensor =
@@ -525,6 +628,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 16;
   mlirTypeDump(rankedTensor);
   fprintf(stderr, "\n");
+  // CHECK: tensor<2x3xf32>
 
   // Unranked tensor type.
   MlirType unrankedTensor = mlirUnrankedTensorTypeGet(f32);
@@ -534,6 +638,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 17;
   mlirTypeDump(unrankedTensor);
   fprintf(stderr, "\n");
+  // CHECK: tensor<*xf32>
 
   // MemRef type.
   MlirType memRef = mlirMemRefTypeContiguousGet(
@@ -544,6 +649,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 18;
   mlirTypeDump(memRef);
   fprintf(stderr, "\n");
+  // CHECK: memref<2x3xf32, 2>
 
   // Unranked MemRef type.
   MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, 4);
@@ -553,6 +659,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 19;
   mlirTypeDump(unrankedMemRef);
   fprintf(stderr, "\n");
+  // CHECK: memref<*xf32, 4>
 
   // Tuple type.
   MlirType types[] = {unrankedMemRef, f32};
@@ -563,6 +670,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 20;
   mlirTypeDump(tuple);
   fprintf(stderr, "\n");
+  // CHECK: tuple<memref<*xf32, 4>, f32>
 
   // Function type.
   MlirType funcInputs[2] = {mlirIndexTypeGet(ctx), mlirIntegerTypeGet(ctx, 1)};
@@ -583,6 +691,7 @@ static int printStandardTypes(MlirContext ctx) {
     return 24;
   mlirTypeDump(funcType);
   fprintf(stderr, "\n");
+  // CHECK: (index, i1) -> (i16, i32, i64)
 
   return 0;
 }
@@ -598,22 +707,28 @@ int printStandardAttributes(MlirContext ctx) {
   if (!mlirAttributeIsAFloat(floating) ||
       fabs(mlirFloatAttrGetValueDouble(floating) - 2.0) > 1E-6)
     return 1;
+  fprintf(stderr, "@attrs\n");
   mlirAttributeDump(floating);
+  // CHECK-LABEL: @attrs
+  // CHECK: 2.000000e+00 : f64
 
   // Exercise mlirAttributeGetType() just for the first one.
   MlirType floatingType = mlirAttributeGetType(floating);
   mlirTypeDump(floatingType);
+  // CHECK: f64
 
   MlirAttribute integer = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 42);
   if (!mlirAttributeIsAInteger(integer) ||
       mlirIntegerAttrGetValueInt(integer) != 42)
     return 2;
   mlirAttributeDump(integer);
+  // CHECK: 42 : i32
 
   MlirAttribute boolean = mlirBoolAttrGet(ctx, 1);
   if (!mlirAttributeIsABool(boolean) || !mlirBoolAttrGetValue(boolean))
     return 3;
   mlirAttributeDump(boolean);
+  // CHECK: true
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
   MlirAttribute opaque =
@@ -627,6 +742,7 @@ int printStandardAttributes(MlirContext ctx) {
       strncmp(data, opaqueData.data, opaqueData.length))
     return 5;
   mlirAttributeDump(opaque);
+  // CHECK: #std.abc
 
   MlirAttribute string = mlirStringAttrGet(ctx, 2, data + 3);
   if (!mlirAttributeIsAString(string))
@@ -637,6 +753,7 @@ int printStandardAttributes(MlirContext ctx) {
       strncmp(data + 3, stringValue.data, stringValue.length))
     return 7;
   mlirAttributeDump(string);
+  // CHECK: "de"
 
   MlirAttribute flatSymbolRef = mlirFlatSymbolRefAttrGet(ctx, 3, data + 5);
   if (!mlirAttributeIsAFlatSymbolRef(flatSymbolRef))
@@ -648,6 +765,7 @@ int printStandardAttributes(MlirContext ctx) {
       strncmp(data + 5, flatSymbolRefValue.data, flatSymbolRefValue.length))
     return 9;
   mlirAttributeDump(flatSymbolRef);
+  // CHECK: @fgh
 
   MlirAttribute symbols[] = {flatSymbolRef, flatSymbolRef};
   MlirAttribute symbolRef = mlirSymbolRefAttrGet(ctx, 2, data + 8, 2, symbols);
@@ -667,17 +785,20 @@ int printStandardAttributes(MlirContext ctx) {
       strncmp(data + 8, symbolRefRoot.data, symbolRefRoot.length))
     return 11;
   mlirAttributeDump(symbolRef);
+  // CHECK: @ij::@fgh::@fgh
 
   MlirAttribute type = mlirTypeAttrGet(mlirF32TypeGet(ctx));
   if (!mlirAttributeIsAType(type) ||
       !mlirTypeEqual(mlirF32TypeGet(ctx), mlirTypeAttrGetValue(type)))
     return 12;
   mlirAttributeDump(type);
+  // CHECK: f32
 
   MlirAttribute unit = mlirUnitAttrGet(ctx);
   if (!mlirAttributeIsAUnit(unit))
     return 13;
   mlirAttributeDump(unit);
+  // CHECK: unit
 
   int64_t shape[] = {1, 2};
 
@@ -733,6 +854,13 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(int64Elements);
   mlirAttributeDump(floatElements);
   mlirAttributeDump(doubleElements);
+  // CHECK: dense<{{\[}}[false, true]]> : tensor<1x2xi1>
+  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xui32>
+  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xi32>
+  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xui64>
+  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xi64>
+  // CHECK: dense<{{\[}}[0.000000e+00, 1.000000e+00]]> : tensor<1x2xf32>
+  // CHECK: dense<{{\[}}[0.000000e+00, 1.000000e+00]]> : tensor<1x2xf64>
 
   MlirAttribute splatBool = mlirDenseElementsAttrBoolSplatGet(
       mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1)), 1);
@@ -782,9 +910,18 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(splatInt64);
   mlirAttributeDump(splatFloat);
   mlirAttributeDump(splatDouble);
+  // CHECK: dense<true> : tensor<1x2xi1>
+  // CHECK: dense<1> : tensor<1x2xi32>
+  // CHECK: dense<1> : tensor<1x2xi32>
+  // CHECK: dense<1> : tensor<1x2xi64>
+  // CHECK: dense<1> : tensor<1x2xi64>
+  // CHECK: dense<1.000000e+00> : tensor<1x2xf32>
+  // CHECK: dense<1.000000e+00> : tensor<1x2xf64>
 
   mlirAttributeDump(mlirElementsAttrGetValue(floatElements, 2, uints64));
   mlirAttributeDump(mlirElementsAttrGetValue(doubleElements, 2, uints64));
+  // CHECK: 1.000000e+00 : f32
+  // CHECK: 1.000000e+00 : f64
 
   int64_t indices[] = {4, 7};
   int64_t two = 2;
@@ -797,6 +934,7 @@ int printStandardAttributes(MlirContext ctx) {
       mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), indicesAttr,
       valuesAttr);
   mlirAttributeDump(sparseAttr);
+  // CHECK: sparse<[4, 7], [0.000000e+00, 1.000000e+00]> : tensor<1x2xf32>
 
   return 0;
 }
@@ -813,12 +951,20 @@ int printAffineMap(MlirContext ctx) {
   MlirAffineMap permutationAffineMap = mlirAffineMapPermutationGet(
       ctx, sizeof(permutation) / sizeof(unsigned), permutation);
 
+  fprintf(stderr, "@affineMap\n");
   mlirAffineMapDump(emptyAffineMap);
   mlirAffineMapDump(affineMap);
   mlirAffineMapDump(constAffineMap);
   mlirAffineMapDump(multiDimIdentityAffineMap);
   mlirAffineMapDump(minorIdentityAffineMap);
   mlirAffineMapDump(permutationAffineMap);
+  // CHECK-LABEL: @affineMap
+  // CHECK: () -> ()
+  // CHECK: (d0, d1, d2)[s0, s1] -> ()
+  // CHECK: () -> (2)
+  // CHECK: (d0, d1, d2) -> (d0, d1, d2)
+  // CHECK: (d0, d1, d2) -> (d1, d2)
+  // CHECK: (d0, d1, d2) -> (d1, d2, d0)
 
   if (!mlirAffineMapIsIdentity(emptyAffineMap) ||
       mlirAffineMapIsIdentity(affineMap) ||
@@ -911,6 +1057,9 @@ int printAffineMap(MlirContext ctx) {
   mlirAffineMapDump(subMap);
   mlirAffineMapDump(majorSubMap);
   mlirAffineMapDump(minorSubMap);
+  // CHECK: (d0, d1, d2) -> (d1)
+  // CHECK: (d0, d1, d2) -> (d0)
+  // CHECK: (d0, d1, d2) -> (d2)
 
   return 0;
 }
@@ -931,6 +1080,7 @@ int printAffineExpr(MlirContext ctx) {
       mlirAffineCeilDivExprGet(affineDimExpr, affineSymbolExpr);
 
   // Tests mlirAffineExprDump.
+  fprintf(stderr, "@affineExpr\n");
   mlirAffineExprDump(affineDimExpr);
   mlirAffineExprDump(affineSymbolExpr);
   mlirAffineExprDump(affineConstantExpr);
@@ -939,11 +1089,22 @@ int printAffineExpr(MlirContext ctx) {
   mlirAffineExprDump(affineModExpr);
   mlirAffineExprDump(affineFloorDivExpr);
   mlirAffineExprDump(affineCeilDivExpr);
+  // CHECK-LABEL: @affineExpr
+  // CHECK: d5
+  // CHECK: s5
+  // CHECK: 5
+  // CHECK: d5 + s5
+  // CHECK: d5 * s5
+  // CHECK: d5 mod s5
+  // CHECK: d5 floordiv s5
+  // CHECK: d5 ceildiv s5
 
   // Tests methods of affine binary operation expression, takes add expression
   // as an example.
   mlirAffineExprDump(mlirAffineBinaryOpExprGetLHS(affineAddExpr));
   mlirAffineExprDump(mlirAffineBinaryOpExprGetRHS(affineAddExpr));
+  // CHECK: d5
+  // CHECK: s5
 
   // Tests methods of affine dimension expression.
   if (mlirAffineDimExprGetPosition(affineDimExpr) != 5)
@@ -1060,6 +1221,9 @@ int registerOnlyStd() {
       strncmp(stdNs.data, alsoStdNs.data, stdNs.length))
     return 8;
 
+  fprintf(stderr, "@registration\n");
+  // CHECK-LABEL: @registration
+
   return 0;
 }
 
@@ -1080,206 +1244,10 @@ void testDiagnostics() {
   MlirDiagnosticHandlerID id =
       mlirContextAttachDiagnosticHandler(ctx, errorHandler);
   MlirLocation loc = mlirLocationUnknownGet(ctx);
+  fprintf(stderr, "@test_diagnostics\n");
   mlirEmitError(loc, "test diagnostics");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(loc, "more test diagnostics");
-}
-
-int main() {
-  MlirContext ctx = mlirContextCreate();
-  mlirRegisterAllDialects(ctx);
-  MlirLocation location = mlirLocationUnknownGet(ctx);
-
-  MlirModule moduleOp = makeAdd(ctx, location);
-  MlirOperation module = mlirModuleGetOperation(moduleOp);
-  mlirOperationDump(module);
-  // clang-format off
-  // CHECK: module {
-  // CHECK:   func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>) {
-  // CHECK:     %[[C0:.*]] = constant 0 : index
-  // CHECK:     %[[DIM:.*]] = dim %[[ARG0]], %[[C0]] : memref<?xf32>
-  // CHECK:     %[[C1:.*]] = constant 1 : index
-  // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
-  // CHECK:       %[[LHS:.*]] = load %[[ARG0]][%[[I]]] : memref<?xf32>
-  // CHECK:       %[[RHS:.*]] = load %[[ARG1]][%[[I]]] : memref<?xf32>
-  // CHECK:       %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
-  // CHECK:       store %[[SUM]], %[[ARG0]][%[[I]]] : memref<?xf32>
-  // CHECK:     }
-  // CHECK:     return
-  // CHECK:   }
-  // CHECK: }
-  // clang-format on
-
-  fprintf(stderr, "@stats\n");
-  int errcode = collectStats(module);
-  fprintf(stderr, "%d\n", errcode);
-  // clang-format off
-  // CHECK-LABEL: @stats
-  // CHECK: Number of operations: 13
-  // CHECK: Number of attributes: 4
-  // CHECK: Number of blocks: 3
-  // CHECK: Number of regions: 3
-  // CHECK: Number of values: 9
-  // CHECK: Number of block arguments: 3
-  // CHECK: Number of op results: 6
-  // CHECK: 0
-  // clang-format on
-
-  printFirstOfEach(ctx, module);
-  // clang-format off
-  // CHECK: Parent operation eq: 1
-  // CHECK: Block eq: 1
-  // CHECK:   %[[C0:.*]] = constant 0 : index
-  // CHECK:   %[[DIM:.*]] = dim %{{.*}}, %[[C0]] : memref<?xf32>
-  // CHECK:   %[[C1:.*]] = constant 1 : index
-  // CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
-  // CHECK:     %[[LHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
-  // CHECK:     %[[RHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
-  // CHECK:     %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
-  // CHECK:     store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
-  // CHECK:   }
-  // CHECK: return
-  // CHECK: First operation: {{.*}} = constant 0 : index
-  // CHECK: Operation name: 'std.constant'
-  // CHECK: Identifier equal: 1
-  // CHECK: Terminator: return
-  // CHECK: Get attr 0: 0 : index
-  // CHECK: Get attr 0 by name: 0 : index
-  // CHECK: does_not_exist is null: 1
-  // CHECK: Result 0: {{.*}} = constant 0 : index
-  // CHECK: Value is null: 0
-  // CHECK: Result 0 type: index
-  // CHECK: Op with set attr: {{.*}} {custom_attr = true}
-  // CHECK: Remove attr: 1
-  // CHECK: Remove attr again: 0
-  // CHECK: Removed attr is null: 1
-  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
-  // clang-format on
-
-  mlirModuleDestroy(moduleOp);
-
-  buildWithInsertionsAndPrint(ctx);
-  // clang-format off
-  // CHECK-LABEL:  "insertion.order.test"
-  // CHECK:      ^{{.*}}(%{{.*}}: i1
-  // CHECK:        "dummy.op1"
-  // CHECK-NEXT:   "dummy.op2"
-  // CHECK-NEXT:   "dummy.op3"
-  // CHECK-NEXT:   "dummy.op4"
-  // CHECK:      ^{{.*}}(%{{.*}}: i2
-  // CHECK:        "dummy.op5"
-  // CHECK:      ^{{.*}}(%{{.*}}: i3
-  // CHECK:        "dummy.op6"
-  // CHECK:      ^{{.*}}(%{{.*}}: i4
-  // CHECK:        "dummy.op7"
-  // clang-format on
-
-  // clang-format off
-  // CHECK-LABEL: @types
-  // CHECK: i32
-  // CHECK: si32
-  // CHECK: ui32
-  // CHECK: index
-  // CHECK: bf16
-  // CHECK: f16
-  // CHECK: f32
-  // CHECK: f64
-  // CHECK: none
-  // CHECK: complex<f32>
-  // CHECK: vector<2x3xf32>
-  // CHECK: tensor<2x3xf32>
-  // CHECK: tensor<*xf32>
-  // CHECK: memref<2x3xf32, 2>
-  // CHECK: memref<*xf32, 4>
-  // CHECK: tuple<memref<*xf32, 4>, f32>
-  // CHECK: (index, i1) -> (i16, i32, i64)
-  // CHECK: 0
-  // clang-format on
-  fprintf(stderr, "@types\n");
-  errcode = printStandardTypes(ctx);
-  fprintf(stderr, "%d\n", errcode);
-
-  // clang-format off
-  // CHECK-LABEL: @attrs
-  // CHECK: 2.000000e+00 : f64
-  // CHECK: f64
-  // CHECK: 42 : i32
-  // CHECK: true
-  // CHECK: #std.abc
-  // CHECK: "de"
-  // CHECK: @fgh
-  // CHECK: @ij::@fgh::@fgh
-  // CHECK: f32
-  // CHECK: unit
-  // CHECK: dense<{{\[}}[false, true]]> : tensor<1x2xi1>
-  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xui32>
-  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xi32>
-  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xui64>
-  // CHECK: dense<{{\[}}[0, 1]]> : tensor<1x2xi64>
-  // CHECK: dense<{{\[}}[0.000000e+00, 1.000000e+00]]> : tensor<1x2xf32>
-  // CHECK: dense<{{\[}}[0.000000e+00, 1.000000e+00]]> : tensor<1x2xf64>
-  // CHECK: dense<true> : tensor<1x2xi1>
-  // CHECK: dense<1> : tensor<1x2xi32>
-  // CHECK: dense<1> : tensor<1x2xi32>
-  // CHECK: dense<1> : tensor<1x2xi64>
-  // CHECK: dense<1> : tensor<1x2xi64>
-  // CHECK: dense<1.000000e+00> : tensor<1x2xf32>
-  // CHECK: dense<1.000000e+00> : tensor<1x2xf64>
-  // CHECK: 1.000000e+00 : f32
-  // CHECK: 1.000000e+00 : f64
-  // CHECK: sparse<[4, 7], [0.000000e+00, 1.000000e+00]> : tensor<1x2xf32>
-  // clang-format on
-  fprintf(stderr, "@attrs\n");
-  errcode = printStandardAttributes(ctx);
-  fprintf(stderr, "%d\n", errcode);
-
-  // clang-format off
-  // CHECK-LABEL: @affineMap
-  // CHECK: () -> ()
-  // CHECK: (d0, d1, d2)[s0, s1] -> ()
-  // CHECK: () -> (2)
-  // CHECK: (d0, d1, d2) -> (d0, d1, d2)
-  // CHECK: (d0, d1, d2) -> (d1, d2)
-  // CHECK: (d0, d1, d2) -> (d1, d2, d0)
-  // CHECK: (d0, d1, d2) -> (d1)
-  // CHECK: (d0, d1, d2) -> (d0)
-  // CHECK: (d0, d1, d2) -> (d2)
-  // CHECK: 0
-  // clang-format on
-  fprintf(stderr, "@affineMap\n");
-  errcode = printAffineMap(ctx);
-  fprintf(stderr, "%d\n", errcode);
-
-  // clang-format off
-  // CHECK: d5
-  // CHECK: s5
-  // CHECK: 5
-  // CHECK: d5 + s5
-  // CHECK: d5 * s5
-  // CHECK: d5 mod s5
-  // CHECK: d5 floordiv s5
-  // CHECK: d5 ceildiv s5
-  // CHECK: d5
-  // CHECK: s5
-  // CHECK: 0
-  // clang-format on
-  fprintf(stderr, "@affineExpr\n");
-  errcode = printAffineExpr(ctx);
-  fprintf(stderr, "%d\n", errcode);
-
-  fprintf(stderr, "@registration\n");
-  errcode = registerOnlyStd();
-  fprintf(stderr, "%d\n", errcode);
-  // clang-format off
-  // CHECK-LABEL: @registration
-  // CHECK: 0
-  // clang-format on
-
-  mlirContextDestroy(ctx);
-
-  fprintf(stderr, "@test_diagnostics\n");
-  testDiagnostics();
-  // clang-format off
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic <<
   // CHECK:   test diagnostics
@@ -1287,6 +1255,28 @@ int main() {
   // CHECK: >> end of diagnostic
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
+}
 
+int main() {
+  MlirContext ctx = mlirContextCreate();
+  mlirRegisterAllDialects(ctx);
+  if (constructAndTraverseIr(ctx))
+    return 1;
+  buildWithInsertionsAndPrint(ctx);
+
+  if (printStandardTypes(ctx))
+    return 2;
+  if (printStandardAttributes(ctx))
+    return 3;
+  if (printAffineMap(ctx))
+    return 4;
+  if (printAffineExpr(ctx))
+    return 5;
+  if (registerOnlyStd())
+    return 6;
+
+  mlirContextDestroy(ctx);
+
+  testDiagnostics();
   return 0;
 }
