@@ -28,6 +28,11 @@ void mlirPassManagerDestroy(MlirPassManager passManager) {
   delete unwrap(passManager);
 }
 
+MlirOpPassManager
+mlirPassManagerGetAsOpPassManager(MlirPassManager passManager) {
+  return wrap(static_cast<OpPassManager *>(unwrap(passManager)));
+}
+
 MlirLogicalResult mlirPassManagerRun(MlirPassManager passManager,
                                      MlirModule module) {
   return wrap(unwrap(passManager)->run(unwrap(module)));
@@ -50,4 +55,17 @@ void mlirPassManagerAddOwnedPass(MlirPassManager passManager, MlirPass pass) {
 void mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager,
                                    MlirPass pass) {
   unwrap(passManager)->addPass(std::unique_ptr<Pass>(unwrap(pass)));
+}
+
+void mlirPrintPassPipeline(MlirOpPassManager passManager,
+                           MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  unwrap(passManager)->printAsTextualPipeline(stream);
+}
+
+MlirLogicalResult mlirParsePassPipeline(MlirOpPassManager passManager,
+                                        MlirStringRef pipeline) {
+  // TODO: errors are sent to std::errs() at the moment, we should pass in a
+  // stream and redirect to a diagnostic.
+  return wrap(mlir::parsePassPipeline(unwrap(pipeline), *unwrap(passManager)));
 }
