@@ -688,7 +688,6 @@ let SubtargetPredicate = isGFX9Plus in {
 } // End SubtargetPredicate = isGFX9Plus
 
 let SubtargetPredicate = isGFX11Plus in {
-  // TODO-GFX11 check isel
   def S_PACK_HL_B32_B16 : SOP2_32<"s_pack_hl_b32_b16">;
   // TODO-GFX11 ASIC_SCALAR_FLOAT
   /*def S_SUB_F32         : SOP2_32<"s_sub_f32">;*/
