@@ -12,6 +12,7 @@
 
 #include "mlir/Target/LLVMIR.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 
