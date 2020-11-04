@@ -280,8 +280,8 @@ KnownBits KnownBits::computeForMul(const KnownBits &LHS, const KnownBits &RHS) {
   // Where C5, C6 describe the known bits of %a, %b
   // C1, C2 describe the known bottom bits of %a, %b.
   // C7 describes the mask of the known bits of the result.
-  APInt Bottom0 = LHS.One;
-  APInt Bottom1 = RHS.One;
+  const APInt &Bottom0 = LHS.One;
+  const APInt &Bottom1 = RHS.One;
 
   // How many times we'd be able to divide each argument by 2 (shr by 1).
   // This gives us the number of trailing zeros on the multiplication result.
