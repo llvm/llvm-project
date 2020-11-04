@@ -50,7 +50,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       // conflicts.
       IsSwiftInferImportAsMember(false),
 
-      HasUmbrellaDir(false), NameVisibility(Hidden) {
+      NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
@@ -254,7 +254,7 @@ Module::DirectoryName Module::getUmbrellaDir() const {
     return {"", "", U.Entry->getDir()};
 
   return {UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-          static_cast<const DirectoryEntry *>(Umbrella)};
+          Umbrella.dyn_cast<const DirectoryEntry *>()};
 }
 
 void Module::addTopHeader(const FileEntry *File) {
