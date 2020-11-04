@@ -884,7 +884,7 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps> :
   let Inst{25-18} = op;
   let Inst{31-26} = 0x3d;
   let Inst{52-32} = !if(ps.offset_is_imm, !if(ps.has_offset, offset{20-0}, ?), ?);
-  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL.HWEncoding),
+  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL_gfxpre11.HWEncoding),
                                           !if(ps.has_offset, offset{6-0}, ?));
 }
 

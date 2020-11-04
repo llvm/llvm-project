@@ -1192,6 +1192,8 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
   CASE_VI_GFX9_GFX10(TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11) \
   CASE_VI_GFX9_GFX10(TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
   CASE_VI_GFX9_GFX10(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
+  CASE_GFXPRE11_GFX11PLUS(M0) \
+  CASE_GFXPRE11_GFX11PLUS(SGPR_NULL) \
   }
 
 #define CASE_CI_VI(node) \
@@ -1201,6 +1203,9 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
 #define CASE_VI_GFX9_GFX10(node) \
   case node: return (isGFX9(STI) || isGFX10(STI)) ? node##_gfx9_gfx10 : node##_vi;
 
+#define CASE_GFXPRE11_GFX11PLUS(node) \
+  case node: return isGFX11Plus(STI) ? node##_gfx11plus : node##_gfxpre11;
+
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
     return Reg;
@@ -1209,9 +1214,11 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9_GFX10
+#undef CASE_GFXPRE11_GFX11PLUS
 
 #define CASE_CI_VI(node)   case node##_ci: case node##_vi:   return node;
 #define CASE_VI_GFX9_GFX10(node) case node##_vi: case node##_gfx9_gfx10: return node;
+#define CASE_GFXPRE11_GFX11PLUS(node) case node##_gfx11plus: case node##_gfxpre11: return node;
 
 unsigned mc2PseudoReg(unsigned Reg) {
   MAP_REG2REG
@@ -1219,6 +1226,7 @@ unsigned mc2PseudoReg(unsigned Reg) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9_GFX10
+#undef CASE_GFXPRE11_GFX11PLUS
 #undef MAP_REG2REG
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
