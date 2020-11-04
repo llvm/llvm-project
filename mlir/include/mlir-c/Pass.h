@@ -1,15 +1,15 @@
-/*===-- mlir-c/Pass.h - C API to Pass Management ------------------*- C -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-|*===----------------------------------------------------------------------===*|
-|*                                                                            *|
-|* This header declares the C interface to MLIR pass manager.                 *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===-- mlir-c/Pass.h - C API to Pass Management ------------------*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This header declares the C interface to MLIR pass manager.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_C_PASS_H
 #define MLIR_C_PASS_H
@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
 /** Opaque type declarations.
  *
  * Types are exposed to C bindings as structs containing opaque pointers. They
@@ -33,7 +33,7 @@ extern "C" {
  * Instances of these types may or may not own the underlying object. The
  * ownership semantics is defined by how an instance of the type was obtained.
  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
 
 #define DEFINE_C_API_STRUCT(name, storage)                                     \
   struct name {                                                                \
@@ -47,17 +47,17 @@ DEFINE_C_API_STRUCT(MlirOpPassManager, void);
 
 #undef DEFINE_C_API_STRUCT
 
-/** Create a new top-level PassManager. */
+/// Create a new top-level PassManager.
 MlirPassManager mlirPassManagerCreate(MlirContext ctx);
 
-/** Destroy the provided PassManager. */
+/// Destroy the provided PassManager.
 void mlirPassManagerDestroy(MlirPassManager passManager);
 
-/** Cast a top-level PassManager to a generic OpPassManager. */
+/// Cast a top-level PassManager to a generic OpPassManager.
 MlirOpPassManager
 mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 
-/** Run the provided `passManager` on the given `module`. */
+/// Run the provided `passManager` on the given `module`.
 MlirLogicalResult mlirPassManagerRun(MlirPassManager passManager,
                                      MlirModule module);
 

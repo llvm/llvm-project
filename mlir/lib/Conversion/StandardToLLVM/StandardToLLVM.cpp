@@ -450,9 +450,9 @@ ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
     : ConversionPattern(rootOpName, benefit, typeConverter, context),
       typeConverter(typeConverter) {}
 
-/*============================================================================*/
-/* StructBuilder implementation                                               */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// StructBuilder implementation
+//===----------------------------------------------------------------------===//
 
 StructBuilder::StructBuilder(Value v) : value(v) {
   assert(value != nullptr && "value cannot be null");
@@ -473,9 +473,9 @@ void StructBuilder::setPtr(OpBuilder &builder, Location loc, unsigned pos,
                                               builder.getI64ArrayAttr(pos));
 }
 
-/*============================================================================*/
-/* ComplexStructBuilder implementation                                        */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// ComplexStructBuilder implementation
+//===----------------------------------------------------------------------===//
 
 ComplexStructBuilder ComplexStructBuilder::undef(OpBuilder &builder,
                                                  Location loc, Type type) {
@@ -501,9 +501,9 @@ Value ComplexStructBuilder::imaginary(OpBuilder &builder, Location loc) {
   return extractPtr(builder, loc, kImaginaryPosInComplexNumberStruct);
 }
 
-/*============================================================================*/
-/* MemRefDescriptor implementation                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// MemRefDescriptor implementation
+//===----------------------------------------------------------------------===//
 
 /// Construct a helper for the given descriptor value.
 MemRefDescriptor::MemRefDescriptor(Value descriptor)
@@ -734,9 +734,9 @@ unsigned MemRefDescriptor::getNumUnpackedValues(MemRefType type) {
   return 3 + 2 * type.getRank();
 }
 
-/*============================================================================*/
-/* MemRefDescriptorView implementation.                                       */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// MemRefDescriptorView implementation.
+//===----------------------------------------------------------------------===//
 
 MemRefDescriptorView::MemRefDescriptorView(ValueRange range)
     : rank((range.size() - kSizePosInMemRefDescriptor) / 2), elements(range) {}
@@ -761,9 +761,9 @@ Value MemRefDescriptorView::stride(unsigned pos) {
   return elements[kSizePosInMemRefDescriptor + rank + pos];
 }
 
-/*============================================================================*/
-/* UnrankedMemRefDescriptor implementation                                    */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// UnrankedMemRefDescriptor implementation
+//===----------------------------------------------------------------------===//
 
 /// Construct a helper for the given descriptor value.
 UnrankedMemRefDescriptor::UnrankedMemRefDescriptor(Value descriptor)
