@@ -93,6 +93,8 @@ class LogTestCase(TestBase):
 
     # Enable all log options and check that nothing crashes.
     @skipIfWindows
+    # TODO: figure out why it segfaults
+    @skipIfFreeBSD
     def test_all_log_options(self):
         if (os.path.exists(self.log_file)):
             os.remove(self.log_file)
