@@ -544,3 +544,57 @@ define i64 @fshri_i64(i64 %a, i64 %b) nounwind {
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 5)
   ret i64 %1
 }
+
+define i32 @fshli_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: fshli_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a1, 27
+; RV32I-NEXT:    slli a0, a0, 5
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: fshli_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 5
+; RV32IB-NEXT:    fsl a0, a0, a2, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBT-LABEL: fshli_i32:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    addi a2, zero, 5
+; RV32IBT-NEXT:    fsl a0, a0, a2, a1
+; RV32IBT-NEXT:    ret
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 5)
+  ret i32 %1
+}
+
+define i64 @fshli_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: fshli_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a2, a3, 27
+; RV32I-NEXT:    slli a3, a0, 5
+; RV32I-NEXT:    or a2, a3, a2
+; RV32I-NEXT:    srli a0, a0, 27
+; RV32I-NEXT:    slli a1, a1, 5
+; RV32I-NEXT:    or a1, a1, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: fshli_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a4, zero, 5
+; RV32IB-NEXT:    fsl a2, a0, a4, a3
+; RV32IB-NEXT:    fsl a1, a1, a4, a0
+; RV32IB-NEXT:    mv a0, a2
+; RV32IB-NEXT:    ret
+;
+; RV32IBT-LABEL: fshli_i64:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    addi a4, zero, 5
+; RV32IBT-NEXT:    fsl a2, a0, a4, a3
+; RV32IBT-NEXT:    fsl a1, a1, a4, a0
+; RV32IBT-NEXT:    mv a0, a2
+; RV32IBT-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 5)
+  ret i64 %1
+}
