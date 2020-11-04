@@ -434,28 +434,6 @@ void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   addSourceLine(Die, Ty->getLine(), Ty->getFile());
 }
 
-void DwarfUnit::addConstantFPValue(DIE &Die, const MachineOperand &MO) {
-  assert(MO.isFPImm() && "Invalid machine operand!");
-  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
-  APFloat FPImm = MO.getFPImm()->getValueAPF();
-
-  // Get the raw data form of the floating point.
-  const APInt FltVal = FPImm.bitcastToAPInt();
-  const char *FltPtr = (const char *)FltVal.getRawData();
-
-  int NumBytes = FltVal.getBitWidth() / 8; // 8 bits per byte.
-  bool LittleEndian = Asm->getDataLayout().isLittleEndian();
-  int Incr = (LittleEndian ? 1 : -1);
-  int Start = (LittleEndian ? 0 : NumBytes - 1);
-  int Stop = (LittleEndian ? NumBytes : -1);
-
-  // Output the constant to DWARF one byte at a time.
-  for (; Start != Stop; Start += Incr)
-    addUInt(*Block, dwarf::DW_FORM_data1, (unsigned char)0xFF & FltPtr[Start]);
-
-  addBlock(Die, dwarf::DW_AT_const_value, Block);
-}
-
 void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {
   // Pass this down to addConstantValue as an unsigned bag of bits.
   addConstantValue(Die, CFP->getValueAPF().bitcastToAPInt(), true);
@@ -464,13 +442,6 @@ void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {
 void DwarfUnit::addConstantValue(DIE &Die, const ConstantInt *CI,
                                  const DIType *Ty) {
   addConstantValue(Die, CI->getValue(), Ty);
-}
-
-void DwarfUnit::addConstantValue(DIE &Die, const MachineOperand &MO,
-                                 const DIType *Ty) {
-  assert(MO.isImm() && "Invalid machine operand!");
-
-  addConstantValue(Die, DD->isUnsignedDIType(Ty), MO.getImm());
 }
 
 void DwarfUnit::addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty) {
