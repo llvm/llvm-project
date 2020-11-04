@@ -18,11 +18,7 @@ using UIntType = FPBits::UIntType;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-static const float zero = FPBits::zero();
-static const float negZero = FPBits::negZero();
-static const float nan = FPBits::buildNaN(1);
-static const float inf = FPBits::inf();
-static const float negInf = FPBits::negInf();
+DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(HypotfTest, SpecialNumbers) {
   EXPECT_FP_EQ(__llvm_libc::hypotf(inf, nan), inf);
