@@ -14,6 +14,7 @@
 #include "../../runtime/iostat.h"
 #include "BoxAnalyzer.h"
 #include "SymbolMap.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/Coarray.h"
@@ -304,6 +305,21 @@ public:
       }
     }
     return genLocation();
+  }
+
+  virtual mlir::Value locationToFilename(mlir::Location loc) override final {
+    if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>()) {
+      // must be encoded as asciiz, C string
+      auto fn = flc.getFilename().str() + '\0';
+      return fir::getBase(createStringLiteral(loc, *this, fn, fn.size()));
+    }
+    return builder->createNullConstant(loc);
+  }
+  virtual mlir::Value locationToLineNo(mlir::Location loc,
+                                       mlir::Type type) override final {
+    if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>())
+      return builder->createIntegerConstant(loc, type, flc.getLine());
+    return builder->createIntegerConstant(loc, type, 0);
   }
 
   Fortran::lower::FirOpBuilder &getFirOpBuilder() override final {
@@ -1340,9 +1356,13 @@ private:
   // Memory allocation and deallocation
   //===--------------------------------------------------------------------===//
 
-  void genFIR(const Fortran::parser::AllocateStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::AllocateStmt &stmt) {
+    Fortran::lower::genAllocateStmt(*this, stmt, toLocation());
+  }
 
-  void genFIR(const Fortran::parser::DeallocateStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::DeallocateStmt &stmt) {
+    Fortran::lower::genDeallocateStmt(*this, stmt, toLocation());
+  }
 
   /// Nullify pointer object list
   ///
@@ -1948,6 +1968,18 @@ private:
     mapSymbolAttributes(var, storeMap, preAlloc);
   }
 
+  void createLocalAllocatable(mlir::Location loc,
+                              const Fortran::lower::pft::Variable &var,
+                              mlir::Type varType) {
+    auto boxTy = fir::BoxType::get(varType);
+    auto boxAlloc = builder->allocateLocal(
+        loc, boxTy, mangleName(var.getSymbol()), llvm::None, var.isTarget());
+    localSymbols.addSymbol(var.getSymbol(), boxAlloc);
+    // TODO Note: for globals, we want to init desc only once, so ideally we
+    // probably want to avoid a runtime call to do this.
+    Fortran::lower::genAllocatableInit(*this, var, boxAlloc);
+  }
+
   void mapSymbolAttributes(const Fortran::lower::pft::Variable &var,
                            llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
                            mlir::Value preAlloc = {}) {
@@ -2052,6 +2084,14 @@ private:
         // Trivial case.
         //===--------------------------------------------------------------===//
         [&](const Fortran::lower::details::ScalarSym &) {
+          if (Fortran::semantics::IsAllocatable(sym)) {
+            if (lookupSymbol(sym))
+              TODO("allocatable dummy or result");
+            if (var.isGlobal())
+              TODO("global allocatable");
+            createLocalAllocatable(loc, var, genType(var));
+            return;
+          }
           if (isDummy) {
             // This is an argument.
             if (!lookupSymbol(sym))
@@ -2179,9 +2219,18 @@ private:
 
         [&](const Fortran::lower::details::DynamicArray &x) {
           // cast to the known constant parts from the declaration
-          auto castTy = builder->getRefType(genType(var));
+          auto varType = genType(var);
           mlir::Value addr = lookupSymbol(sym).getAddr();
           mlir::Value argBox;
+          if (Fortran::semantics::IsAllocatable(sym)) {
+            if (addr)
+              TODO("allocatable dummy or result");
+            if (var.isGlobal())
+              TODO("global allocatable");
+            createLocalAllocatable(loc, var, varType);
+            return;
+          }
+          auto castTy = builder->getRefType(varType);
           if (addr) {
             if (auto boxTy = addr.getType().dyn_cast<fir::BoxType>()) {
               argBox = addr;

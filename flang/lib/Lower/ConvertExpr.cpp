@@ -270,9 +270,46 @@ private:
     return createCharCompare(pred, genval(ex.left()), genval(ex.right()));
   }
 
+  fir::ExtendedValue
+  genAllocatableOrPointerUnbox(Fortran::semantics::SymbolRef sym) {
+    auto boxAddr = symMap.lookupSymbol(sym).getAddr();
+    if (Fortran::semantics::IsAssumedRankArray(sym))
+      TODO("Assumed rank allocatables or pointers");
+    if (Fortran::semantics::IsPointer(sym))
+      TODO("pointer"); // deal with non contiguity;
+    auto rank = sym->Rank();
+    // TODO: only intrinsic types other than CHARACTER
+    if (!boxAddr)
+      TODO("Allocatable type not lowered yet");
+    auto boxType = fir::dyn_cast_ptrEleTy(boxAddr.getType());
+    if (!boxType || !boxType.isa<fir::BoxType>())
+      llvm_unreachable("bad allocatable or pointer type in symbol map");
+
+    auto varAddrType = boxType.cast<fir::BoxType>().getEleTy();
+    auto loc = getLoc();
+
+    auto box = builder.create<fir::LoadOp>(loc, boxAddr);
+    auto addr = builder.create<fir::BoxAddrOp>(loc, varAddrType, box);
+    if (rank == 0)
+      return addr;
+    auto idxTy = builder.getIndexType();
+    llvm::SmallVector<mlir::Value, 4> lbounds;
+    llvm::SmallVector<mlir::Value, 4> extents;
+    for (decltype(rank) dim = 0; dim < rank; ++dim) {
+      auto dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+      auto dimInfo =
+          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dimVal);
+      lbounds.push_back(dimInfo.getResult(0));
+      extents.push_back(dimInfo.getResult(1));
+    }
+    return fir::ArrayBoxValue{addr, extents, lbounds};
+  }
+
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   fir::ExtendedValue gen(Fortran::semantics::SymbolRef sym) {
+    if (Fortran::semantics::IsAllocatableOrPointer(sym))
+      return genAllocatableOrPointerUnbox(sym);
     if (auto val = symMap.lookupSymbol(sym))
       return val.toExtendedValue();
     llvm_unreachable("all symbols should be in the map");
@@ -1188,10 +1225,10 @@ private:
         });
   }
 
-  fir::ExtendedValue genArrayCoorOp(const Fortran::lower::SymbolBox &si,
+  fir::ExtendedValue genArrayCoorOp(const fir::ExtendedValue &exv,
                                     const Fortran::evaluate::ArrayRef &aref) {
     auto loc = getLoc();
-    auto addr = si.getAddr();
+    auto addr = fir::getBase(exv);
     auto arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     auto refTy = builder.getRefType(eleTy);
@@ -1216,19 +1253,19 @@ private:
       return builder.create<fir::ArrayCoorOp>(
           loc, refTy, addr, shape, mlir::Value{}, arrayCoorArgs, ValueRange());
     };
-    return si.match(
-        [&](const Fortran::lower::SymbolBox::FullDim &arr) {
+    return exv.match(
+        [&](const fir::ArrayBoxValue &arr) {
           if (!inArrayContext() && isSlice(aref)) {
             TODO("");
             return mlir::Value{};
           }
           return genWithShape(arr);
         },
-        [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
+        [&](const fir::CharArrayBoxValue &arr) {
           TODO("");
           return mlir::Value{};
         },
-        [&](const Fortran::lower::SymbolBox::Derived &arr) {
+        [&](const fir::BoxValue &arr) {
           TODO("");
           return mlir::Value{};
         },
@@ -1242,9 +1279,18 @@ private:
   fir::ExtendedValue gen(const Fortran::evaluate::ArrayRef &aref) {
     if (aref.base().IsSymbol()) {
       auto &symbol = aref.base().GetFirstSymbol();
-      auto si = symMap.lookupSymbol(symbol);
       if (generateArrayCoordinate)
-        return genArrayCoorOp(si, aref);
+        return genArrayCoorOp(gen(symbol), aref);
+      auto si = symMap.lookupSymbol(symbol);
+      if (Fortran::semantics::IsAllocatableOrPointer(symbol))
+        si = gen(symbol).match(
+            [&](const fir::ArrayBoxValue &x) -> Fortran::lower::SymbolBox {
+              return x;
+            },
+            [&](const auto &) -> Fortran::lower::SymbolBox {
+              TODO("character and derived intrinsic allocatables");
+              return {};
+            });
       if (!si.hasConstantShape())
         return gen(si, aref);
       auto box = gen(symbol);

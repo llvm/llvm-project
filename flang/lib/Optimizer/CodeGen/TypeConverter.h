@@ -132,6 +132,9 @@ public:
     // (buffer*, ele-size, rank, type-descriptor, attribute, [dims])
     SmallVector<mlir::LLVM::LLVMType, 6> parts;
     mlir::Type ele = box.getEleTy();
+    // remove fir.heap/fir.ref/fir.ptr
+    if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
+      ele = removeIndirection;
     auto eleTy = unwrap(convertType(ele));
     // buffer*
     if (ele.isa<SequenceType>() && eleTy.isPointerTy())
