@@ -587,7 +587,7 @@ public:
   /// pipeline. This does not apply to 'backend' compiles (LTO and ThinLTO
   /// link-time pipelines).
   void registerPipelineStartEPCallback(
-      const std::function<void(ModulePassManager &)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
     PipelineStartEPCallbacks.push_back(C);
   }
 
@@ -722,7 +722,7 @@ private:
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       OptimizerLastEPCallbacks;
   // Module callbacks
-  SmallVector<std::function<void(ModulePassManager &)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>
       ModuleAnalysisRegistrationCallbacks;
