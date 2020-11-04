@@ -6,23 +6,27 @@
 define i32 @test1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[C:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[C_PLUS_ONE:%.*]] = add i32 [[C]], 1
+; CHECK-NEXT:    ret i32 [[C_PLUS_ONE]]
 ;
   %c = or i32 %a, %b
-  ret i32 %c
+  %c.plus.one = add i32 %c, 1
+  ret i32 %c.plus.one
 }
 
 ; But if we *do* know  that operands have no common bits set,
 ; we *can* convert the `or` into an `add`.
-define i32 @test2(i32 %x) {
+define i32 @test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[X_NUMLZ]], -32
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[RES_PLUS_ONE:%.*]] = add i32 [[RES]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[RES_PLUS_ONE]]
 ;
   %x.numlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true), !range !0
   %res = or i32 %x.numlz, -32
-  ret i32 %res
+  %res.plus.one = add i32 %res, %y
+  ret i32 %res.plus.one
 }
 
 ; And that allows reassociation in general.
