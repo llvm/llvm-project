@@ -884,7 +884,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
 
   // The second operand is only an offset if it's an immediate.
   bool MemLoc = MI->isIndirectDebugValue();
-  int64_t Offset = MemLoc ? MI->getOperand(1).getImm() : 0;
+  auto Offset = StackOffset::getFixed(MemLoc ? MI->getOperand(1).getImm() : 0);
   const DIExpression *Expr = MI->getDebugExpression();
   if (Expr->getNumElements()) {
     OS << '[';
@@ -948,7 +948,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   if (MemLoc)
-    OS << '+' << Offset << ']';
+    OS << '+' << Offset.getFixed() << ']';
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
   AP.OutStreamer->emitRawComment(OS.str());
