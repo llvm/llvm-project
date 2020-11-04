@@ -26,6 +26,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#if defined(_MSC_VER)
+#include <immintrin.h>
+#endif
 
 namespace llvm {
 namespace exegesis {
@@ -594,6 +597,40 @@ void ConstantInliner::initStack(unsigned Bytes) {
 
 namespace {
 
+class X86SavedState : public ExegesisTarget::SavedState {
+public:
+  X86SavedState() {
+#ifdef __x86_64__
+# if defined(_MSC_VER)
+    _fxsave64(FPState);
+# elif defined(__GNUC__)
+    __builtin_ia32_fxsave64(FPState);
+# endif
+#else
+    llvm_unreachable("X86 exegesis running on non-X86 target");
+#endif
+  }
+
+  ~X86SavedState() {
+    // Restoring the X87 state does not flush pending exceptions, make sure
+    // these exceptions are flushed now.
+#ifdef __x86_64__
+# if defined(_MSC_VER)
+    _clearfp();
+    _fxrstor64(FPState);
+# elif defined(__GNUC__)
+    asm volatile("fwait");
+    __builtin_ia32_fxrstor64(FPState);
+# endif
+#else
+    llvm_unreachable("X86 exegesis running on non-X86 target");
+#endif
+  }
+
+private:
+  alignas(16) char FPState[512];
+};
+
 class ExegesisX86Target : public ExegesisTarget {
 public:
   ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
@@ -689,6 +726,10 @@ private:
         "LBR not supported on this kernel and/or platform",
         llvm::errc::not_supported);
 #endif
+  }
+
+  std::unique_ptr<SavedState> withSavedState() const override {
+    return std::make_unique<X86SavedState>();
   }
 
   static const unsigned kUnavailableRegisters[4];

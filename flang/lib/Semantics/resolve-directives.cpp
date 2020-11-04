@@ -223,7 +223,7 @@ public:
 
   bool Pre(const parser::SpecificationPart &x) {
     Walk(std::get<std::list<parser::OpenMPDeclarativeConstruct>>(x.t));
-    return false;
+    return true;
   }
 
   bool Pre(const parser::OpenMPBlockConstruct &);
@@ -269,6 +269,10 @@ public:
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpLastPrivate);
     return false;
   }
+  bool Pre(const parser::OmpClause::Copyin &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyIn);
+    return false;
+  }
 
   void Post(const parser::Name &);
 
@@ -291,6 +295,9 @@ private:
 
   static constexpr Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate};
+
+  static constexpr Symbol::Flags dataCopyingAttributeFlags{
+      Symbol::Flag::OmpCopyIn};
 
   std::vector<const parser::Name *> allocateNames_; // on one directive
   SymbolSet privateDataSharingAttributeObjects_; // on one directive
@@ -319,6 +326,9 @@ private:
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(
+      const parser::Name &, const Symbol &, Symbol::Flag);
+
+  void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
 };
 
@@ -869,7 +879,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
   ResolveOmpObjectList(list, Symbol::Flag::OmpThreadprivate);
-  return false;
+  return true;
 }
 
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
@@ -922,9 +932,14 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
               : nullptr}) {
     name->symbol = prev;
     return prev;
-  } else {
-    return nullptr;
   }
+  // Check if the Common Block is declared in the current scope
+  if (auto *commonBlockSymbol{
+          name ? GetContext().scope.FindCommonBlock(name->source) : nullptr}) {
+    name->symbol = commonBlockSymbol;
+    return commonBlockSymbol;
+  }
+  return nullptr;
 }
 
 void OmpAttributeVisitor::ResolveOmpObjectList(
@@ -941,12 +956,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
           [&](const parser::Designator &designator) {
             if (const auto *name{GetDesignatorNameIfDataRef(designator)}) {
               if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
-                AddToContextObjectWithDSA(*symbol, ompFlag);
-                if (dataSharingAttributeFlags.test(ompFlag)) {
-                  CheckMultipleAppearances(*name, *symbol, ompFlag);
-                }
-                if (ompFlag == Symbol::Flag::OmpAllocate) {
-                  AddAllocateName(name);
+                if (dataCopyingAttributeFlags.test(ompFlag)) {
+                  CheckDataCopyingClause(*name, *symbol, ompFlag);
+                } else {
+                  AddToContextObjectWithDSA(*symbol, ompFlag);
+                  if (dataSharingAttributeFlags.test(ompFlag)) {
+                    CheckMultipleAppearances(*name, *symbol, ompFlag);
+                  }
+                  if (ompFlag == Symbol::Flag::OmpAllocate) {
+                    AddAllocateName(name);
+                  }
                 }
               }
             } else {
@@ -963,15 +982,21 @@ void OmpAttributeVisitor::ResolveOmpObject(
           },
           [&](const parser::Name &name) { // common block
             if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
-              CheckMultipleAppearances(
-                  name, *symbol, Symbol::Flag::OmpCommonBlock);
+              if (!dataCopyingAttributeFlags.test(ompFlag)) {
+                CheckMultipleAppearances(
+                    name, *symbol, Symbol::Flag::OmpCommonBlock);
+              }
               // 2.15.3 When a named common block appears in a list, it has the
               // same meaning as if every explicit member of the common block
               // appeared in the list
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         ResolveOmp(*object, ompFlag, currScope())}) {
-                  AddToContextObjectWithDSA(*resolvedObject, ompFlag);
+                  if (dataCopyingAttributeFlags.test(ompFlag)) {
+                    CheckDataCopyingClause(name, *resolvedObject, ompFlag);
+                  } else {
+                    AddToContextObjectWithDSA(*resolvedObject, ompFlag);
+                  }
                 }
               }
             } else {
@@ -1070,6 +1095,22 @@ void ResolveOmpParts(
       // prior to the DoConstruct.
       OmpAttributeVisitor{context}.Walk(node);
     }
+  }
+}
+
+void OmpAttributeVisitor::CheckDataCopyingClause(
+    const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
+  const auto *checkSymbol{&symbol};
+  if (ompFlag == Symbol::Flag::OmpCopyIn) {
+    if (const auto *details{symbol.detailsIf<HostAssocDetails>()})
+      checkSymbol = &details->symbol();
+
+    // List of items/objects that can appear in a 'copyin' clause must be
+    // 'threadprivate'
+    if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate))
+      context_.Say(name.source,
+          "Non-THREADPRIVATE object '%s' in COPYIN clause"_err_en_US,
+          checkSymbol->name());
   }
 }
 

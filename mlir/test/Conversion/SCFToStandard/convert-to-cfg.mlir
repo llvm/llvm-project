@@ -412,3 +412,137 @@ func @unknown_op_inside_loop(%arg0: index, %arg1: index, %arg2: index) {
   }
   return
 }
+
+// CHECK-LABEL: @minimal_while
+func @minimal_while() {
+  // CHECK:   %[[COND:.*]] = "test.make_condition"() : () -> i1
+  // CHECK:   br ^[[BEFORE:.*]]
+  %0 = "test.make_condition"() : () -> i1
+  scf.while : () -> () {
+  // CHECK: ^[[BEFORE]]:
+  // CHECK:   cond_br %[[COND]], ^[[AFTER:.*]], ^[[CONT:.*]]
+    scf.condition(%0)
+  } do {
+  // CHECK: ^[[AFTER]]:
+  // CHECK:   "test.some_payload"() : () -> ()
+    "test.some_payload"() : () -> ()
+  // CHECK:   br ^[[BEFORE]]
+    scf.yield
+  }
+  // CHECK: ^[[CONT]]:
+  // CHECK:   return
+  return
+}
+
+// CHECK-LABEL: @do_while
+func @do_while(%arg0: f32) {
+  // CHECK:   br ^[[BEFORE:.*]]({{.*}}: f32)
+  scf.while (%arg1 = %arg0) : (f32) -> (f32) {
+  // CHECK: ^[[BEFORE]](%[[VAL:.*]]: f32):
+    // CHECK:   %[[COND:.*]] = "test.make_condition"() : () -> i1
+    %0 = "test.make_condition"() : () -> i1
+    // CHECK:   cond_br %[[COND]], ^[[BEFORE]](%[[VAL]] : f32), ^[[CONT:.*]]
+    scf.condition(%0) %arg1 : f32
+  } do {
+  ^bb0(%arg2: f32):
+    // CHECK-NOT: br ^[[BEFORE]]
+    scf.yield %arg2 : f32
+  }
+  // CHECK: ^[[CONT]]:
+  // CHECK:   return
+  return
+}
+
+// CHECK-LABEL: @while_values
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: f32)
+func @while_values(%arg0: i32, %arg1: f32) {
+  // CHECK:     %[[COND:.*]] = "test.make_condition"() : () -> i1
+  %0 = "test.make_condition"() : () -> i1
+  %c0_i32 = constant 0 : i32
+  %cst = constant 0.000000e+00 : f32
+  // CHECK:     br ^[[BEFORE:.*]](%[[ARG0]], %[[ARG1]] : i32, f32)
+  %1:2 = scf.while (%arg2 = %arg0, %arg3 = %arg1) : (i32, f32) -> (i64, f64) {
+  // CHECK:   ^bb1(%[[ARG2:.*]]: i32, %[[ARG3:.]]: f32):
+    // CHECK:   %[[VAL1:.*]] = zexti %[[ARG0]] : i32 to i64
+    %2 = zexti %arg0 : i32 to i64
+    // CHECK:   %[[VAL2:.*]] = fpext %[[ARG3]] : f32 to f64
+    %3 = fpext %arg3 : f32 to f64
+    // CHECK:   cond_br %[[COND]],
+    // CHECK:           ^[[AFTER:.*]](%[[VAL1]], %[[VAL2]] : i64, f64),
+    // CHECK:           ^[[CONT:.*]]
+    scf.condition(%0) %2, %3 : i64, f64
+  } do {
+  // CHECK:   ^[[AFTER]](%[[ARG4:.*]]: i64, %[[ARG5:.*]]: f64):
+  ^bb0(%arg2: i64, %arg3: f64):  // no predecessors
+    // CHECK:   br ^[[BEFORE]](%{{.*}}, %{{.*}} : i32, f32)
+    scf.yield %c0_i32, %cst : i32, f32
+  }
+  // CHECK:   ^bb3:
+  // CHECK:     return
+  return
+}
+
+// CHECK-LABEL: @nested_while_ops
+func @nested_while_ops(%arg0: f32) -> i64 {
+  // CHECK:       br ^[[OUTER_BEFORE:.*]](%{{.*}} : f32)
+  %0 = scf.while(%outer = %arg0) : (f32) -> i64 {
+    // CHECK:   ^[[OUTER_BEFORE]](%{{.*}}: f32):
+    // CHECK:     %[[OUTER_COND:.*]] = "test.outer_before_pre"() : () -> i1
+    %cond = "test.outer_before_pre"() : () -> i1
+    // CHECK:     br ^[[INNER_BEFORE_BEFORE:.*]](%{{.*}} : f32)
+    %1 = scf.while(%inner = %outer) : (f32) -> i64 {
+      // CHECK: ^[[INNER_BEFORE_BEFORE]](%{{.*}}: f32):
+      // CHECK:   %[[INNER1:.*]]:2 = "test.inner_before"(%{{.*}}) : (f32) -> (i1, i64)
+      %2:2 = "test.inner_before"(%inner) : (f32) -> (i1, i64)
+      // CHECK:   cond_br %[[INNER1]]#0,
+      // CHECK:           ^[[INNER_BEFORE_AFTER:.*]](%[[INNER1]]#1 : i64),
+      // CHECK:           ^[[OUTER_BEFORE_LAST:.*]]
+      scf.condition(%2#0) %2#1 : i64
+    } do {
+      // CHECK: ^[[INNER_BEFORE_AFTER]](%{{.*}}: i64):
+    ^bb0(%arg1: i64):
+      // CHECK:   %[[INNER2:.*]] = "test.inner_after"(%{{.*}}) : (i64) -> f32
+      %3 = "test.inner_after"(%arg1) : (i64) -> f32
+      // CHECK:   br ^[[INNER_BEFORE_BEFORE]](%[[INNER2]] : f32)
+      scf.yield %3 : f32
+    }
+    // CHECK:   ^[[OUTER_BEFORE_LAST]]:
+    // CHECK:     "test.outer_before_post"() : () -> ()
+    "test.outer_before_post"() : () -> ()
+    // CHECK:     cond_br %[[OUTER_COND]],
+    // CHECK:             ^[[OUTER_AFTER:.*]](%[[INNER1]]#1 : i64),
+    // CHECK:             ^[[CONTINUATION:.*]]
+    scf.condition(%cond) %1 : i64
+  } do {
+    // CHECK:   ^[[OUTER_AFTER]](%{{.*}}: i64):
+  ^bb2(%arg2: i64):
+    // CHECK:     "test.outer_after_pre"(%{{.*}}) : (i64) -> ()
+    "test.outer_after_pre"(%arg2) : (i64) -> ()
+    // CHECK:     br ^[[INNER_AFTER_BEFORE:.*]](%{{.*}} : i64)
+    %4 = scf.while(%inner = %arg2) : (i64) -> f32 {
+      // CHECK: ^[[INNER_AFTER_BEFORE]](%{{.*}}: i64):
+      // CHECK:   %[[INNER3:.*]]:2 = "test.inner2_before"(%{{.*}}) : (i64) -> (i1, f32)
+      %5:2 = "test.inner2_before"(%inner) : (i64) -> (i1, f32)
+      // CHECK:   cond_br %[[INNER3]]#0,
+      // CHECK:           ^[[INNER_AFTER_AFTER:.*]](%[[INNER3]]#1 : f32),
+      // CHECK:           ^[[OUTER_AFTER_LAST:.*]]
+      scf.condition(%5#0) %5#1 : f32
+    } do {
+      // CHECK: ^[[INNER_AFTER_AFTER]](%{{.*}}: f32):
+    ^bb3(%arg3: f32):
+      // CHECK:   %{{.*}} = "test.inner2_after"(%{{.*}}) : (f32) -> i64
+      %6 = "test.inner2_after"(%arg3) : (f32) -> i64
+      // CHECK:   br ^[[INNER_AFTER_BEFORE]](%{{.*}} : i64)
+      scf.yield %6 : i64
+    }
+    // CHECK:   ^[[OUTER_AFTER_LAST]]:
+    // CHECK:     "test.outer_after_post"() : () -> ()
+    "test.outer_after_post"() : () -> ()
+    // CHECK:     br ^[[OUTER_BEFORE]](%[[INNER3]]#1 : f32)
+    scf.yield %4 : f32
+  }
+  // CHECK:     ^[[CONTINUATION]]:
+  // CHECK:       return %{{.*}} : i64
+  return %0 : i64
+}
+

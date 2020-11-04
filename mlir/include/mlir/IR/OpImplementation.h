@@ -755,11 +755,18 @@ public:
   parseOptionalColonTypeList(SmallVectorImpl<Type> &result) = 0;
 
   /// Parse a list of assignments of the form
-  /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
-  /// The list must contain at least one entry
-  virtual ParseResult
-  parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
-                      SmallVectorImpl<OperandType> &rhs) = 0;
+  ///   (%x1 = %y1, %x2 = %y2, ...)
+  ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                                  SmallVectorImpl<OperandType> &rhs) {
+    OptionalParseResult result = parseOptionalAssignmentList(lhs, rhs);
+    if (!result.hasValue())
+      return emitError(getCurrentLocation(), "expected '('");
+    return result.getValue();
+  }
+
+  virtual OptionalParseResult
+  parseOptionalAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                              SmallVectorImpl<OperandType> &rhs) = 0;
 
   /// Parse a keyword followed by a type.
   ParseResult parseKeywordType(const char *keyword, Type &result) {

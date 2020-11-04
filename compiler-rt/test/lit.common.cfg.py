@@ -60,18 +60,6 @@ if config.asan_shadow_scale != '':
 if config.memprof_shadow_scale != '':
   config.target_cflags += " -mllvm -memprof-mapping-scale=" + config.memprof_shadow_scale
 
-# BFD linker in 64-bit android toolchains fails to find libc++_shared.so, which
-# is a transitive shared library dependency (via asan runtime).
-if config.android:
-  # Prepend the flag so that it can be overridden.
-  config.target_cflags = "-pie -fuse-ld=gold " + config.target_cflags
-  if config.android_ndk_version < 19:
-    # With a new compiler and NDK < r19 this flag ends up meaning "link against
-    # libc++", but NDK r19 makes this mean "link against the stub libstdc++ that
-    # just contains a handful of ABI functions", which makes most C++ code fail
-    # to link. In r19 and later we just use the default which is libc++.
-    config.cxx_mode_flags.append('-stdlib=libstdc++')
-
 config.environment = dict(os.environ)
 
 # Clear some environment variables that might affect Clang.

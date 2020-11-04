@@ -140,26 +140,37 @@ static LogicalResult verify(ForOp op) {
   return RegionBranchOpInterface::verifyTypes(op);
 }
 
+/// Prints the initialization list in the form of
+///   <prefix>(%inner = %outer, %inner2 = %outer2, <...>)
+/// where 'inner' values are assumed to be region arguments and 'outer' values
+/// are regular SSA values.
+static void printInitializationList(OpAsmPrinter &p,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  p << prefix << '(';
+  llvm::interleaveComma(llvm::zip(blocksArgs, initializers), p, [&](auto it) {
+    p << std::get<0>(it) << " = " << std::get<1>(it);
+  });
+  p << ")";
+}
+
 static void print(OpAsmPrinter &p, ForOp op) {
-  bool printBlockTerminators = false;
   p << op.getOperationName() << " " << op.getInductionVar() << " = "
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
 
-  if (op.hasIterOperands()) {
-    p << " iter_args(";
-    auto regionArgs = op.getRegionIterArgs();
-    auto operands = op.getIterOperands();
-
-    llvm::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
-      p << std::get<0>(it) << " = " << std::get<1>(it);
-    });
-    p << ")";
-    p << " -> (" << op.getResultTypes() << ")";
-    printBlockTerminators = true;
-  }
+  printInitializationList(p, op.getRegionIterArgs(), op.getIterOperands(),
+                          " iter_args");
+  if (!op.getIterOperands().empty())
+    p << " -> (" << op.getIterOperands().getTypes() << ')';
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+                /*printBlockTerminators=*/op.hasIterOperands());
   p.printOptionalAttrDict(op.getAttrs());
 }
 
@@ -931,6 +942,158 @@ static LogicalResult verify(ReduceReturnOp op) {
     return op.emitOpError() << "needs to have type " << reduceType
                             << " (the type of the enclosing ReduceOp)";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WhileOp
+//===----------------------------------------------------------------------===//
+
+OperandRange WhileOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index == 0 &&
+         "WhileOp is expected to branch only to the first region");
+
+  return inits();
+}
+
+void WhileOp::getSuccessorRegions(Optional<unsigned> index,
+                                  ArrayRef<Attribute> operands,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  (void)operands;
+
+  if (!index.hasValue()) {
+    regions.emplace_back(&before(), before().getArguments());
+    return;
+  }
+
+  assert(*index < 2 && "there are only two regions in a WhileOp");
+  if (*index == 0) {
+    regions.emplace_back(&after(), after().getArguments());
+    regions.emplace_back(getResults());
+    return;
+  }
+
+  regions.emplace_back(&before(), before().getArguments());
+}
+
+/// Parses a `while` op.
+///
+/// op ::= `scf.while` assignments `:` function-type region `do` region
+///         `attributes` attribute-dict
+/// initializer ::= /* empty */ | `(` assignment-list `)`
+/// assignment-list ::= assignment | assignment `,` assignment-list
+/// assignment ::= ssa-value `=` ssa-value
+static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
+  Region *before = result.addRegion();
+  Region *after = result.addRegion();
+
+  OptionalParseResult listResult =
+      parser.parseOptionalAssignmentList(regionArgs, operands);
+  if (listResult.hasValue() && failed(listResult.getValue()))
+    return failure();
+
+  FunctionType functionType;
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  if (failed(parser.parseColonType(functionType)))
+    return failure();
+
+  result.addTypes(functionType.getResults());
+
+  if (functionType.getNumInputs() != operands.size()) {
+    return parser.emitError(typeLoc)
+           << "expected as many input types as operands "
+           << "(expected " << operands.size() << " got "
+           << functionType.getNumInputs() << ")";
+  }
+
+  // Resolve input operands.
+  if (failed(parser.resolveOperands(operands, functionType.getInputs(),
+                                    parser.getCurrentLocation(),
+                                    result.operands)))
+    return failure();
+
+  return failure(
+      parser.parseRegion(*before, regionArgs, functionType.getInputs()) ||
+      parser.parseKeyword("do") || parser.parseRegion(*after) ||
+      parser.parseOptionalAttrDictWithKeyword(result.attributes));
+}
+
+/// Prints a `while` op.
+static void print(OpAsmPrinter &p, scf::WhileOp op) {
+  p << op.getOperationName();
+  printInitializationList(p, op.before().front().getArguments(), op.inits(),
+                          " ");
+  p << " : ";
+  p.printFunctionalType(op.inits().getTypes(), op.results().getTypes());
+  p.printRegion(op.before(), /*printEntryBlockArgs=*/false);
+  p << " do";
+  p.printRegion(op.after());
+  p.printOptionalAttrDictWithKeyword(op.getAttrs());
+}
+
+/// Verifies that two ranges of types match, i.e. have the same number of
+/// entries and that types are pairwise equals. Reports errors on the given
+/// operation in case of mismatch.
+template <typename OpTy>
+static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
+                                           TypeRange right, StringRef message) {
+  if (left.size() != right.size())
+    return op.emitOpError("expects the same number of ") << message;
+
+  for (unsigned i = 0, e = left.size(); i < e; ++i) {
+    if (left[i] != right[i]) {
+      InFlightDiagnostic diag = op.emitOpError("expects the same types for ")
+                                << message;
+      diag.attachNote() << "for argument " << i << ", found " << left[i]
+                        << " and " << right[i];
+      return diag;
+    }
+  }
+
+  return success();
+}
+
+/// Verifies that the first block of the given `region` is terminated by a
+/// YieldOp. Reports errors on the given operation if it is not the case.
+template <typename TerminatorTy>
+static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
+                                           StringRef errorMessage) {
+  Operation *terminatorOperation = region.front().getTerminator();
+  if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
+    return yield;
+
+  auto diag = op.emitOpError(errorMessage);
+  if (terminatorOperation)
+    diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
+  return nullptr;
+}
+
+static LogicalResult verify(scf::WhileOp op) {
+  if (failed(RegionBranchOpInterface::verifyTypes(op)))
+    return failure();
+
+  auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
+      op, op.before(),
+      "expects the 'before' region to terminate with 'scf.condition'");
+  if (!beforeTerminator)
+    return failure();
+
+  TypeRange trailingTerminatorOperands = beforeTerminator.args().getTypes();
+  if (failed(verifyTypeRangesMatch(op, trailingTerminatorOperands,
+                                   op.after().getArgumentTypes(),
+                                   "trailing operands of the 'before' block "
+                                   "terminator and 'after' region arguments")))
+    return failure();
+
+  if (failed(verifyTypeRangesMatch(
+          op, trailingTerminatorOperands, op.getResultTypes(),
+          "trailing operands of the 'before' block terminator and op results")))
+    return failure();
+
+  auto afterTerminator = verifyAndGetTerminator<scf::YieldOp>(
+      op, op.after(),
+      "expects the 'after' region to terminate with 'scf.yield'");
+  return success(afterTerminator != nullptr);
 }
 
 //===----------------------------------------------------------------------===//
