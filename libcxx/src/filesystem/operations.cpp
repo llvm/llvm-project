@@ -17,6 +17,8 @@
 
 #include "filesystem_common.h"
 
+#include "posix_compat.h"
+
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
 # define NOMINMAX
@@ -495,7 +497,7 @@ file_status create_file_status(error_code& m_ec, path const& p,
 
 file_status posix_stat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
-  if (::stat(p.c_str(), &path_stat) == -1)
+  if (detail::stat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
@@ -507,7 +509,7 @@ file_status posix_stat(path const& p, error_code* ec) {
 
 file_status posix_lstat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
-  if (::lstat(p.c_str(), &path_stat) == -1)
+  if (detail::lstat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
@@ -545,7 +547,7 @@ file_status FileDescriptor::refresh_status(error_code& ec) {
   m_status = file_status{};
   m_stat = {};
   error_code m_ec;
-  if (::fstat(fd, &m_stat) == -1)
+  if (detail::fstat(fd, &m_stat) == -1)
     m_ec = capture_errno();
   m_status = create_file_status(m_ec, name, m_stat, &ec);
   return m_status;
@@ -1197,7 +1199,7 @@ path __read_symlink(const path& p, error_code* ec) {
   auto buff = std::unique_ptr<char[], NullDeleter>(stack_buff);
 #else
   StatT sb;
-  if (::lstat(p.c_str(), &sb) == -1) {
+  if (detail::lstat(p.c_str(), &sb) == -1) {
     return err.report(capture_errno());
   }
   const size_t size = sb.st_size + 1;
