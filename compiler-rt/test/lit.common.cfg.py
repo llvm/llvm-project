@@ -355,6 +355,7 @@ if config.android:
 
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
+    android_api_codename = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.codename"], env=env).rstrip().decode("utf-8")
   except (subprocess.CalledProcessError, OSError):
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb)" % adb)
   try:
@@ -365,6 +366,8 @@ if config.android:
     config.available_features.add('android-26')
   if android_api_level >= 28:
     config.available_features.add('android-28')
+  if android_api_level >= 31 or android_api_codename == 'S':
+    config.available_features.add('android-thread-properties-api')
 
   # Prepare the device.
   android_tmpdir = '/data/local/tmp/Output'
@@ -385,7 +388,7 @@ if config.host_os == 'Linux':
                                  env={'LANG': 'C'})
   sout, _ = ldd_ver_cmd.communicate()
   ver_line = sout.splitlines()[0]
-  if ver_line.startswith(b"ldd "):
+  if not config.android and ver_line.startswith(b"ldd "):
     from distutils.version import LooseVersion
     ver = LooseVersion(ver_line.split()[-1].decode())
     # 2.27 introduced some incompatibilities

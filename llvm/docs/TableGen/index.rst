@@ -25,7 +25,7 @@ it easier to structure domain specific information.
 The TableGen front end parses a file, instantiates the declarations, and
 hands the result off to a domain-specific `backend`_ for processing.  See
 the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
-description of TableGen. See :doc:`xxx-tblgen: Target Description to C++
+description of TableGen. See :doc:`xxx-tblgen - Target Description to C++
 Code <../CommandGuide/tblgen>` for details on the various
 ``xxx-tblgen`` commands that invoke TableGen.
 

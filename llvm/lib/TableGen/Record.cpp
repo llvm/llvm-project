@@ -878,6 +878,34 @@ static StringInit *ConcatStringInits(const StringInit *I0,
   return StringInit::get(Concat);
 }
 
+static StringInit *interleaveStringList(const ListInit *List,
+                                        const StringInit *Delim) {
+  if (List->size() == 0)
+    return StringInit::get("");
+  SmallString<80> Result(dyn_cast<StringInit>(List->getElement(0))->getValue());
+  
+  for (unsigned I = 1, E = List->size(); I < E; ++I) {
+    Result.append(Delim->getValue());
+    Result.append(dyn_cast<StringInit>(List->getElement(I))->getValue());
+  }
+  return StringInit::get(Result);
+}
+
+static StringInit *interleaveIntList(const ListInit *List,
+                                     const StringInit *Delim) {
+  if (List->size() == 0)
+    return StringInit::get("");
+  SmallString<80> Result(dyn_cast<IntInit>(List->getElement(0)->
+                             getCastTo(IntRecTy::get()))->getAsString());
+  
+  for (unsigned I = 1, E = List->size(); I < E; ++I) {
+    Result.append(Delim->getValue());
+    Result.append(dyn_cast<IntInit>(List->getElement(I)->
+                      getCastTo(IntRecTy::get()))->getAsString());
+  }
+  return StringInit::get(Result);
+}
+
 Init *BinOpInit::getStrConcat(Init *I0, Init *I1) {
   // Shortcut for the common case of concatenating two strings.
   if (const StringInit *I0s = dyn_cast<StringInit>(I0))
@@ -902,10 +930,6 @@ Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
      if (const ListInit *RHSList = dyn_cast<ListInit>(RHS))
        return ConcatListInits(LHSList, RHSList);
    return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
-}
-
-Init *BinOpInit::getListSplat(TypedInit *LHS, Init *RHS) {
-  return BinOpInit::get(BinOpInit::LISTSPLAT, LHS, RHS, LHS->getType());
 }
 
 Init *BinOpInit::Fold(Record *CurRec) const {
@@ -967,6 +991,17 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     StringInit *RHSs = dyn_cast<StringInit>(RHS);
     if (LHSs && RHSs)
       return ConcatStringInits(LHSs, RHSs);
+    break;
+  }
+  case INTERLEAVE: {
+    ListInit *List = dyn_cast<ListInit>(LHS);
+    StringInit *Delim = dyn_cast<StringInit>(RHS);
+    if (List && Delim) {
+      if (isa<StringRecTy>(List->getElementType()))
+        return interleaveStringList(List, Delim);
+      else
+        return interleaveIntList(List, Delim);
+    }
     break;
   }
   case EQ:
@@ -1091,6 +1126,7 @@ std::string BinOpInit::getAsString() const {
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
   case STRCONCAT: Result = "!strconcat"; break;
+  case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
   }
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
