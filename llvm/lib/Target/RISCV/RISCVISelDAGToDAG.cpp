@@ -141,20 +141,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
     }
-    // Match (srl (shl val, 32), imm).
-    if (Op0->getOpcode() == ISD::SHL &&
-        isa<ConstantSDNode>(Op0->getOperand(1)) &&
-        isa<ConstantSDNode>(Node->getOperand(1))) {
-      uint64_t ShlAmt = Op0->getConstantOperandVal(1);
-      uint64_t SrlAmt = Node->getConstantOperandVal(1);
-      if (ShlAmt == 32 && SrlAmt > 32) {
-        SDValue SrlAmtSub32Val =
-            CurDAG->getTargetConstant(SrlAmt - 32, SDLoc(Node), XLenVT);
-        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0->getOperand(0),
-                             SrlAmtSub32Val);
-        return;
-      }
-    }
     break;
   }
   case RISCVISD::READ_CYCLE_WIDE:

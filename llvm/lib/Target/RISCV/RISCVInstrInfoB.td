@@ -40,12 +40,6 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   }];
 }
 
-// Return an immediate value minus 32.
-def ImmSub32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() - 32, SDLoc(N),
-                                   N->getValueType(0));
-}]>;
-
 
 // Convert rotl immediate to a rotr immediate.
 def ImmROTL2R : SDNodeXForm<imm, [{
@@ -1043,9 +1037,9 @@ def : Pat<(sext_inreg (fshr (assertsexti32 GPR:$rs1),
           (FSRW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 def : Pat<(sext_inreg (fshr (assertsexti32 GPR:$rs1),
                             (shl (assertsexti32 GPR:$rs2), (i64 32)),
-                            uimmlog2xlen:$shamt),
+                            uimm6gt32:$shamt),
                       i32),
-          (FSRIW GPR:$rs1, GPR:$rs2, (ImmSub32 uimm5:$shamt))>;
+          (FSRIW GPR:$rs1, GPR:$rs2, (ImmSub32 uimm6gt32:$shamt))>;
 } // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
