@@ -3323,6 +3323,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     SDValue InVec = Op.getOperand(0);
     SDValue EltNo = Op.getOperand(1);
     EVT VecVT = InVec.getValueType();
+    // computeKnownBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
     const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
 
@@ -4809,6 +4812,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VSCALE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");
     break;
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+    if (Operand.getValueType().getScalarType() == MVT::i1)
+      return getNode(ISD::VECREDUCE_OR, DL, VT, Operand);
+    break;
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_UMIN:
+    if (Operand.getValueType().getScalarType() == MVT::i1)
+      return getNode(ISD::VECREDUCE_AND, DL, VT, Operand);
+    break;
   }
 
   SDNode *N;
@@ -5318,10 +5331,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::MULHS:
   case ISD::SDIV:
   case ISD::SREM:
-  case ISD::SMIN:
-  case ISD::SMAX:
-  case ISD::UMIN:
-  case ISD::UMAX:
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
   case ISD::UADDSAT:
@@ -5329,6 +5338,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    break;
+  case ISD::SMIN:
+  case ISD::UMAX:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           N1.getValueType() == VT && "Binary operator types must match!");
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      return getNode(ISD::OR, DL, VT, N1, N2);
+    break;
+  case ISD::SMAX:
+  case ISD::UMIN:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           N1.getValueType() == VT && "Binary operator types must match!");
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      return getNode(ISD::AND, DL, VT, N1, N2);
     break;
   case ISD::FADD:
   case ISD::FSUB:
