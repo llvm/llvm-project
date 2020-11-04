@@ -125,7 +125,6 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
       // we don't do anything with these for now
       break;
     case Value::eValueTypeScalar:
-    case Value::eValueTypeVector:
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVIsFreezeDried;
       expr_variable_sp->m_flags |=

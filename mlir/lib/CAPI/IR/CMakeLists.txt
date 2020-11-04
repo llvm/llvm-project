@@ -16,4 +16,5 @@ add_mlir_library(MLIRCAPIIR
   MLIRIR
   MLIRParser
   MLIRSupport
+  MLIRPass
   )
