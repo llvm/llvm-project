@@ -81,7 +81,7 @@ DEFAULT_PARAMETERS = [
               AddFeature('use_system_cxx_lib')
             ] if useSystem else [
               # If we're testing upstream libc++, disable availability markup,
-              # which is not relevant for non-shipped flabors of libc++.
+              # which is not relevant for non-shipped flavors of libc++.
               AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
             ]),
 

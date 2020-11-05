@@ -505,6 +505,8 @@ u32 GetNumberOfCPUs() {
 
 uptr GetRSS() { UNIMPLEMENTED(); }
 
+void InitializePlatformCommonFlags(CommonFlags *cf) {}
+
 }  // namespace __sanitizer
 
 using namespace __sanitizer;
