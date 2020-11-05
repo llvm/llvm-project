@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONBLOCKRANGES_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/Register.h"
 #include <cassert>
 #include <map>
 #include <set>
@@ -30,8 +31,10 @@ class TargetRegisterInfo;
 struct HexagonBlockRanges {
   HexagonBlockRanges(MachineFunction &MF);
 
+  // FIXME: Consolidate duplicate definitions of RegisterRef
   struct RegisterRef {
-    unsigned Reg, Sub;
+    llvm::Register Reg;
+    unsigned Sub;
 
     bool operator<(RegisterRef R) const {
       return Reg < R.Reg || (Reg == R.Reg && Sub < R.Sub);
