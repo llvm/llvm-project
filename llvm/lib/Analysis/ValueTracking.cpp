@@ -1127,19 +1127,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::UDiv: {
-    // For the purposes of computing leading zeros we can conservatively
-    // treat a udiv as a logical right shift by the power of 2 known to
-    // be less than the denominator.
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-    unsigned LeadZ = Known2.countMinLeadingZeros();
-
-    Known2.resetAll();
+    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
-    unsigned RHSMaxLeadingZeros = Known2.countMaxLeadingZeros();
-    if (RHSMaxLeadingZeros != BitWidth)
-      LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
-
-    Known.Zero.setHighBits(LeadZ);
+    Known = KnownBits::udiv(Known, Known2);
     break;
   }
   case Instruction::Select: {
