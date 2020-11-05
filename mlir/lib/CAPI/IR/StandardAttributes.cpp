@@ -15,9 +15,9 @@
 
 using namespace mlir;
 
-/*============================================================================*/
-/* Affine map attribute.                                                      */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Affine map attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAAffineMap(MlirAttribute attr) {
   return unwrap(attr).isa<AffineMapAttr>();
@@ -31,9 +31,9 @@ MlirAffineMap mlirAffineMapAttrGetValue(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<AffineMapAttr>().getValue());
 }
 
-/*============================================================================*/
-/* Array attribute.                                                           */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Array attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAArray(MlirAttribute attr) {
   return unwrap(attr).isa<ArrayAttr>();
@@ -55,9 +55,9 @@ MlirAttribute mlirArrayAttrGetElement(MlirAttribute attr, intptr_t pos) {
   return wrap(unwrap(attr).cast<ArrayAttr>().getValue()[pos]);
 }
 
-/*============================================================================*/
-/* Dictionary attribute.                                                      */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Dictionary attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsADictionary(MlirAttribute attr) {
   return unwrap(attr).isa<DictionaryAttr>();
@@ -89,9 +89,9 @@ MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,
   return wrap(unwrap(attr).cast<DictionaryAttr>().get(name));
 }
 
-/*============================================================================*/
-/* Floating point attribute.                                                  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Floating point attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAFloat(MlirAttribute attr) {
   return unwrap(attr).isa<FloatAttr>();
@@ -111,9 +111,9 @@ double mlirFloatAttrGetValueDouble(MlirAttribute attr) {
   return unwrap(attr).cast<FloatAttr>().getValueAsDouble();
 }
 
-/*============================================================================*/
-/* Integer attribute.                                                         */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Integer attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAInteger(MlirAttribute attr) {
   return unwrap(attr).isa<IntegerAttr>();
@@ -127,9 +127,9 @@ int64_t mlirIntegerAttrGetValueInt(MlirAttribute attr) {
   return unwrap(attr).cast<IntegerAttr>().getInt();
 }
 
-/*============================================================================*/
-/* Bool attribute.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Bool attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsABool(MlirAttribute attr) {
   return unwrap(attr).isa<BoolAttr>();
@@ -143,17 +143,17 @@ int mlirBoolAttrGetValue(MlirAttribute attr) {
   return unwrap(attr).cast<BoolAttr>().getValue();
 }
 
-/*============================================================================*/
-/* Integer set attribute.                                                     */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Integer set attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAIntegerSet(MlirAttribute attr) {
   return unwrap(attr).isa<IntegerSetAttr>();
 }
 
-/*============================================================================*/
-/* Opaque attribute.                                                          */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Opaque attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAOpaque(MlirAttribute attr) {
   return unwrap(attr).isa<OpaqueAttr>();
@@ -175,9 +175,9 @@ MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<OpaqueAttr>().getAttrData());
 }
 
-/*============================================================================*/
-/* String attribute.                                                          */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// String attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAString(MlirAttribute attr) {
   return unwrap(attr).isa<StringAttr>();
@@ -197,9 +197,9 @@ MlirStringRef mlirStringAttrGetValue(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<StringAttr>().getValue());
 }
 
-/*============================================================================*/
-/* SymbolRef attribute.                                                       */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// SymbolRef attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsASymbolRef(MlirAttribute attr) {
   return unwrap(attr).isa<SymbolRefAttr>();
@@ -233,9 +233,9 @@ MlirAttribute mlirSymbolRefAttrGetNestedReference(MlirAttribute attr,
   return wrap(unwrap(attr).cast<SymbolRefAttr>().getNestedReferences()[pos]);
 }
 
-/*============================================================================*/
-/* Flat SymbolRef attribute.                                                  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Flat SymbolRef attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAFlatSymbolRef(MlirAttribute attr) {
   return unwrap(attr).isa<FlatSymbolRefAttr>();
@@ -250,9 +250,9 @@ MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<FlatSymbolRefAttr>().getValue());
 }
 
-/*============================================================================*/
-/* Type attribute.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Type attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAType(MlirAttribute attr) {
   return unwrap(attr).isa<TypeAttr>();
@@ -266,9 +266,9 @@ MlirType mlirTypeAttrGetValue(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<TypeAttr>().getValue());
 }
 
-/*============================================================================*/
-/* Unit attribute.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Unit attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAUnit(MlirAttribute attr) {
   return unwrap(attr).isa<UnitAttr>();
@@ -278,9 +278,9 @@ MlirAttribute mlirUnitAttrGet(MlirContext ctx) {
   return wrap(UnitAttr::get(unwrap(ctx)));
 }
 
-/*============================================================================*/
-/* Elements attributes.                                                       */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Elements attributes.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAElements(MlirAttribute attr) {
   return unwrap(attr).isa<ElementsAttr>();
@@ -302,9 +302,9 @@ int64_t mlirElementsAttrGetNumElements(MlirAttribute attr) {
   return unwrap(attr).cast<ElementsAttr>().getNumElements();
 }
 
-/*============================================================================*/
-/* Dense elements attribute.                                                  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Dense elements attribute.
+//===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // IsA support.
@@ -516,17 +516,17 @@ MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
         pos));
 }
 
-/*============================================================================*/
-/* Opaque elements attribute.                                                 */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Opaque elements attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsAOpaqueElements(MlirAttribute attr) {
   return unwrap(attr).isa<OpaqueElementsAttr>();
 }
 
-/*============================================================================*/
-/* Sparse elements attribute.                                                 */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Sparse elements attribute.
+//===----------------------------------------------------------------------===//
 
 int mlirAttributeIsASparseElements(MlirAttribute attr) {
   return unwrap(attr).isa<SparseElementsAttr>();

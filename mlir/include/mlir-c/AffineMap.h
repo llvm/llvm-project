@@ -1,11 +1,11 @@
-/*===-- mlir-c/AffineMap.h - C API for MLIR Affine maps -----------*- C -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===-- mlir-c/AffineMap.h - C API for MLIR Affine maps -----------*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_C_AFFINEMAP_H
 #define MLIR_C_AFFINEMAP_H
@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
 /** Opaque type declarations.
  *
  * Types are exposed to C bindings as structs containing opaque pointers. They
@@ -28,7 +28,7 @@ extern "C" {
  * Instances of these types may or may not own the underlying object. The
  * ownership semantics is defined by how an instance of the type was obtained.
  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
 
 #define DEFINE_C_API_STRUCT(name, storage)                                     \
   struct name {                                                                \
@@ -40,15 +40,15 @@ DEFINE_C_API_STRUCT(MlirAffineMap, const void);
 
 #undef DEFINE_C_API_STRUCT
 
-/** Gets the context that the given affine map was created with*/
+/// Gets the context that the given affine map was created with
 MlirContext mlirAffineMapGetContext(MlirAffineMap affineMap);
 
-/** Checks whether an affine map is null. */
+/// Checks whether an affine map is null.
 inline int mlirAffineMapIsNull(MlirAffineMap affineMap) {
   return !affineMap.ptr;
 }
 
-/** Checks if two affine maps are equal. */
+/// Checks if two affine maps are equal.
 int mlirAffineMapEqual(MlirAffineMap a1, MlirAffineMap a2);
 
 /** Prints an affine map by sending chunks of the string representation and
@@ -57,7 +57,7 @@ int mlirAffineMapEqual(MlirAffineMap a1, MlirAffineMap a2);
 void mlirAffineMapPrint(MlirAffineMap affineMap, MlirStringCallback callback,
                         void *userData);
 
-/** Prints the affine map to the standard error stream. */
+/// Prints the affine map to the standard error stream.
 void mlirAffineMapDump(MlirAffineMap affineMap);
 
 /** Creates a zero result affine map with no dimensions or symbols in the
@@ -97,10 +97,10 @@ MlirAffineMap mlirAffineMapPermutationGet(MlirContext ctx, intptr_t size,
  * results. */
 int mlirAffineMapIsIdentity(MlirAffineMap affineMap);
 
-/** Checks whether the given affine map is a minor identity affine map. */
+/// Checks whether the given affine map is a minor identity affine map.
 int mlirAffineMapIsMinorIdentity(MlirAffineMap affineMap);
 
-/** Checks whether the given affine map is an empty affine map. */
+/// Checks whether the given affine map is an empty affine map.
 int mlirAffineMapIsEmpty(MlirAffineMap affineMap);
 
 /** Checks whether the given affine map is a single result constant affine
@@ -111,13 +111,13 @@ int mlirAffineMapIsSingleConstant(MlirAffineMap affineMap);
  * that the map has a single constant result. */
 int64_t mlirAffineMapGetSingleConstantResult(MlirAffineMap affineMap);
 
-/** Returns the number of dimensions of the given affine map. */
+/// Returns the number of dimensions of the given affine map.
 intptr_t mlirAffineMapGetNumDims(MlirAffineMap affineMap);
 
-/** Returns the number of symbols of the given affine map. */
+/// Returns the number of symbols of the given affine map.
 intptr_t mlirAffineMapGetNumSymbols(MlirAffineMap affineMap);
 
-/** Returns the number of results of the given affine map. */
+/// Returns the number of results of the given affine map.
 intptr_t mlirAffineMapGetNumResults(MlirAffineMap affineMap);
 
 /** Returns the number of inputs (dimensions + symbols) of the given affine
@@ -132,7 +132,7 @@ int mlirAffineMapIsProjectedPermutation(MlirAffineMap affineMap);
  * map. */
 int mlirAffineMapIsPermutation(MlirAffineMap affineMap);
 
-/** Returns the affine map consisting of the `resultPos` subset. */
+/// Returns the affine map consisting of the `resultPos` subset.
 MlirAffineMap mlirAffineMapGetSubMap(MlirAffineMap affineMap, intptr_t size,
                                      intptr_t *resultPos);
 

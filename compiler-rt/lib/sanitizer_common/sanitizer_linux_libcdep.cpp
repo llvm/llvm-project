@@ -445,9 +445,27 @@ int GetSizeFromHdr(struct dl_phdr_info *info, size_t size, void *data) {
 }
 #endif  // SANITIZER_NETBSD
 
+#if SANITIZER_ANDROID
+// Bionic provides this API since S.
+extern "C" SANITIZER_WEAK_ATTRIBUTE void __libc_get_static_tls_bounds(void **,
+                                                                      void **);
+#endif
+
 #if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_ANDROID
+  if (&__libc_get_static_tls_bounds) {
+    void *start_addr;
+    void *end_addr;
+    __libc_get_static_tls_bounds(&start_addr, &end_addr);
+    *addr = reinterpret_cast<uptr>(start_addr);
+    *size =
+        reinterpret_cast<uptr>(end_addr) - reinterpret_cast<uptr>(start_addr);
+  } else {
+    *addr = 0;
+    *size = 0;
+  }
+#elif SANITIZER_LINUX
 #if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
   *addr = ThreadSelf();
   *size = GetTlsSize();
@@ -488,9 +506,6 @@ static void GetTls(uptr *addr, uptr *size) {
       *addr = (uptr)tcb->tcb_dtv[1];
     }
   }
-#elif SANITIZER_ANDROID
-  *addr = 0;
-  *size = 0;
 #elif SANITIZER_SOLARIS
   // FIXME
   *addr = 0;
@@ -889,6 +904,13 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
 
   return shadow_start;
+}
+
+void InitializePlatformCommonFlags(CommonFlags *cf) {
+#if SANITIZER_ANDROID
+  if (&__libc_get_static_tls_bounds == nullptr)
+    cf->detect_leaks = false;
+#endif
 }
 
 } // namespace __sanitizer

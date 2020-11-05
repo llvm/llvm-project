@@ -330,9 +330,10 @@ struct MockPassInstrumentationCallbacks {
   MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
 
   void registerPassInstrumentation() {
-    Callbacks.registerBeforePassCallback([this](StringRef P, llvm::Any IR) {
-      return this->runBeforePass(P, IR);
-    });
+    Callbacks.registerShouldRunOptionalPassCallback(
+        [this](StringRef P, llvm::Any IR) {
+          return this->runBeforePass(P, IR);
+        });
     Callbacks.registerBeforeSkippedPassCallback(
         [this](StringRef P, llvm::Any IR) {
           this->runBeforeSkippedPass(P, IR);

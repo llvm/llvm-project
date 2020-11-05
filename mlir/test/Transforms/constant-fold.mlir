@@ -402,6 +402,82 @@ func @divi_unsigned_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi3
 
 // -----
 
+// CHECK-LABEL: func @simple_floordivi_signed
+func @simple_floordivi_signed() -> (i32, i32, i32, i32, i32) {
+  // CHECK-DAG: [[C0:%.+]] = constant 0
+  %z = constant 0 : i32
+  // CHECK-DAG: [[C6:%.+]] = constant 7
+  %0 = constant 7 : i32
+  %1 = constant 2 : i32
+
+  // floor(7, 2) = 3
+  // CHECK-NEXT: [[C3:%.+]] = constant 3 : i32
+  %2 = floordivi_signed %0, %1 : i32
+
+  %3 = constant -2 : i32
+
+  // floor(7, -2) = -4
+  // CHECK-NEXT: [[CM3:%.+]] = constant -4 : i32
+  %4 = floordivi_signed %0, %3 : i32
+
+  %5 = constant -9 : i32
+
+  // floor(-9, 2) = -5
+  // CHECK-NEXT: [[CM4:%.+]] = constant -5 : i32
+  %6 = floordivi_signed %5, %1 : i32
+
+  %7 = constant -13 : i32
+
+  // floor(-13, -2) = 6
+  // CHECK-NEXT: [[CM5:%.+]] = constant 6 : i32
+  %8 = floordivi_signed %7, %3 : i32
+
+  // CHECK-NEXT: [[XZ:%.+]] = floordivi_signed [[C6]], [[C0]]
+  %9 = floordivi_signed %0, %z : i32
+
+  return %2, %4, %6, %8, %9 : i32, i32, i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func @simple_ceildivi_signed
+func @simple_ceildivi_signed() -> (i32, i32, i32, i32, i32) {
+  // CHECK-DAG: [[C0:%.+]] = constant 0
+  %z = constant 0 : i32
+  // CHECK-DAG: [[C6:%.+]] = constant 7
+  %0 = constant 7 : i32
+  %1 = constant 2 : i32
+
+  // ceil(7, 2) = 4
+  // CHECK-NEXT: [[C3:%.+]] = constant 4 : i32
+  %2 = ceildivi_signed %0, %1 : i32
+
+  %3 = constant -2 : i32
+
+  // ceil(7, -2) = -3
+  // CHECK-NEXT: [[CM3:%.+]] = constant -3 : i32
+  %4 = ceildivi_signed %0, %3 : i32
+
+  %5 = constant -9 : i32
+
+  // ceil(-9, 2) = -4
+  // CHECK-NEXT: [[CM4:%.+]] = constant -4 : i32
+  %6 = ceildivi_signed %5, %1 : i32
+
+  %7 = constant -15 : i32
+
+  // ceil(-15, -2) = 8
+  // CHECK-NEXT: [[CM5:%.+]] = constant 8 : i32
+  %8 = ceildivi_signed %7, %3 : i32
+
+  // CHECK-NEXT: [[XZ:%.+]] = ceildivi_signed [[C6]], [[C0]]
+  %9 = ceildivi_signed %0, %z : i32
+
+  return %2, %4, %6, %8, %9 : i32, i32, i32, i32, i32
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_remi_signed
 func @simple_remi_signed(%a : i32) -> (i32, i32, i32) {
   %0 = constant 5 : i32

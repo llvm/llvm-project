@@ -378,7 +378,6 @@ define signext i32 @not_rori_i32(i32 signext %x, i32 signext %y) nounwind {
 ; This is similar to the type legalized roriw pattern, but the and mask is more
 ; than 32 bits so the lshr doesn't shift zeroes into the lower 32 bits. Make
 ; sure we don't match it to roriw.
-; FIXME: We are currently truncating the mask to 32-bits before checking.
 define i64 @roriw_bug(i64 %x) nounwind {
 ; RV64I-LABEL: roriw_bug:
 ; RV64I:       # %bb.0:
@@ -392,23 +391,32 @@ define i64 @roriw_bug(i64 %x) nounwind {
 ;
 ; RV64IB-LABEL: roriw_bug:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    andi a1, a0, -2
-; RV64IB-NEXT:    roriw a0, a0, 1
-; RV64IB-NEXT:    xor a0, a1, a0
+; RV64IB-NEXT:    slli a1, a0, 31
+; RV64IB-NEXT:    andi a0, a0, -2
+; RV64IB-NEXT:    srli a2, a0, 1
+; RV64IB-NEXT:    or a1, a1, a2
+; RV64IB-NEXT:    sext.w a1, a1
+; RV64IB-NEXT:    xor a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: roriw_bug:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    andi a1, a0, -2
-; RV64IBB-NEXT:    roriw a0, a0, 1
-; RV64IBB-NEXT:    xor a0, a1, a0
+; RV64IBB-NEXT:    slli a1, a0, 31
+; RV64IBB-NEXT:    andi a0, a0, -2
+; RV64IBB-NEXT:    srli a2, a0, 1
+; RV64IBB-NEXT:    or a1, a1, a2
+; RV64IBB-NEXT:    sext.w a1, a1
+; RV64IBB-NEXT:    xor a0, a0, a1
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: roriw_bug:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    andi a1, a0, -2
-; RV64IBP-NEXT:    roriw a0, a0, 1
-; RV64IBP-NEXT:    xor a0, a1, a0
+; RV64IBP-NEXT:    slli a1, a0, 31
+; RV64IBP-NEXT:    andi a0, a0, -2
+; RV64IBP-NEXT:    srli a2, a0, 1
+; RV64IBP-NEXT:    or a1, a1, a2
+; RV64IBP-NEXT:    sext.w a1, a1
+; RV64IBP-NEXT:    xor a0, a0, a1
 ; RV64IBP-NEXT:    ret
   %a = shl i64 %x, 31
   %b = and i64 %x, 18446744073709551614

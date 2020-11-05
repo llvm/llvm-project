@@ -36,12 +36,12 @@ void pipeline_disabled_on_nested_loop(int *List, int Length, int Value) {
   }
 }
 
-// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[PIPELINE_DISABLE:.*]]}
+// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[PIPELINE_DISABLE:.*]]}
 // CHECK: ![[PIPELINE_DISABLE]] = !{!"llvm.loop.pipeline.disable", i1 true}
 
 // CHECK-NOT:llvm.loop.pipeline
 
-// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[PIPELINE_II_10:.*]]}
+// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], [[MP]], ![[PIPELINE_II_10:.*]]}
 // CHECK: ![[PIPELINE_II_10]] = !{!"llvm.loop.pipeline.initiationinterval", i32 10}
 
-// CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[PIPELINE_DISABLE]]}
+// CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], [[MP]], ![[PIPELINE_DISABLE]]}

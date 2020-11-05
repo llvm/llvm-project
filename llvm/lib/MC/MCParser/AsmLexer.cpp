@@ -64,6 +64,12 @@ int AsmLexer::getNextChar() {
   return (unsigned char)*CurPtr++;
 }
 
+int AsmLexer::peekNextChar() {
+  if (CurPtr == CurBuf.end())
+    return EOF;
+  return (unsigned char)*CurPtr;
+}
+
 /// The leading integral digit sequence and dot should have already been
 /// consumed, some or all of the fractional digit sequence *can* have been
 /// consumed.
@@ -521,6 +527,24 @@ AsmToken AsmLexer::LexDigit() {
 AsmToken AsmLexer::LexSingleQuote() {
   int CurChar = getNextChar();
 
+  if (LexMasmStrings) {
+    while (CurChar != EOF) {
+      if (CurChar != '\'') {
+        CurChar = getNextChar();
+      } else if (peekNextChar() == '\'') {
+        // In MASM single-quote strings, doubled single-quotes mean an escaped
+        // single quote, so should be lexed in.
+        getNextChar();
+        CurChar = getNextChar();
+      } else {
+        break;
+      }
+    }
+    if (CurChar == EOF)
+      return ReturnError(TokStart, "unterminated string constant");
+    return AsmToken(AsmToken::String, StringRef(TokStart, CurPtr - TokStart));
+  }
+
   if (CurChar == '\\')
     CurChar = getNextChar();
 
@@ -555,6 +579,24 @@ AsmToken AsmLexer::LexSingleQuote() {
 /// LexQuote: String: "..."
 AsmToken AsmLexer::LexQuote() {
   int CurChar = getNextChar();
+  if (LexMasmStrings) {
+    while (CurChar != EOF) {
+      if (CurChar != '"') {
+        CurChar = getNextChar();
+      } else if (peekNextChar() == '"') {
+        // In MASM double-quoted strings, doubled double-quotes mean an escaped
+        // double quote, so should be lexed in.
+        getNextChar();
+        CurChar = getNextChar();
+      } else {
+        break;
+      }
+    }
+    if (CurChar == EOF)
+      return ReturnError(TokStart, "unterminated string constant");
+    return AsmToken(AsmToken::String, StringRef(TokStart, CurPtr - TokStart));
+  }
+
   // TODO: does gas allow multiline string constants?
   while (CurChar != '"') {
     if (CurChar == '\\') {

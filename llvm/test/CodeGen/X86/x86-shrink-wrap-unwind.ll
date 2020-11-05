@@ -1,17 +1,14 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-darwin10.6 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s --check-prefix=NOCOMPACTUNWIND
 ;
 ; Note: This test cannot be merged with the shrink-wrapping tests
 ; because the booleans set on the command line take precedence on
 ; the target logic that disable shrink-wrapping.
-target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "x86_64-apple-macosx"
 
-
-; This test checks that we do not use shrink-wrapping when
-; the function does not have any frame pointer and may unwind.
-; This is a workaround for a limitation in the emission of
-; the CFI directives, that are not correct in such case.
-; PR25614
+; The current compact unwind scheme does not work when the prologue is not at
+; the start (the instructions before the prologue cannot be described).
+; Currently we choose to not perform shrink-wrapping for functions without FP
+; not marked as nounwind. PR25614
 ;
 ; No shrink-wrapping should occur here, until the CFI information are fixed.
 ; CHECK-LABEL: framelessUnwind:
@@ -41,6 +38,12 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NEXT: popq
 ;
 ; CHECK-NEXT: retq
+
+; On a platform which does not support compact unwind, shrink wrapping is enabled.
+; NOCOMPACTUNWIND-LABEL: framelessUnwind:
+; NOCOMPACTUNWIND-NOT:     pushq
+; NOCOMPACTUNWIND:       # %bb.1:
+; NOCOMPACTUNWIND-NEXT:    pushq %rax
 define i32 @framelessUnwind(i32 %a, i32 %b) #0 {
   %tmp = alloca i32, align 4
   %tmp2 = icmp slt i32 %a, %b

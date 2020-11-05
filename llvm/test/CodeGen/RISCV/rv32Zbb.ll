@@ -246,7 +246,7 @@ define i64 @sloi_i64(i64 %a) nounwind {
 ; RV32IB-LABEL: sloi_i64:
 ; RV32IB:       # %bb.0:
 ; RV32IB-NEXT:    addi a2, zero, 1
-; RV32IB-NEXT:    fsl a1, a1, a2, a0
+; RV32IB-NEXT:    fsl a1, a1, a0, a2
 ; RV32IB-NEXT:    sloi a0, a0, 1
 ; RV32IB-NEXT:    ret
 ;
@@ -298,7 +298,7 @@ define i64 @sroi_i64(i64 %a) nounwind {
 ; RV32IB-LABEL: sroi_i64:
 ; RV32IB:       # %bb.0:
 ; RV32IB-NEXT:    addi a2, zero, 31
-; RV32IB-NEXT:    fsl a0, a1, a2, a0
+; RV32IB-NEXT:    fsl a0, a1, a0, a2
 ; RV32IB-NEXT:    sroi a1, a1, 1
 ; RV32IB-NEXT:    ret
 ;

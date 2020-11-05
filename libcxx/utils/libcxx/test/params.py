@@ -73,6 +73,18 @@ DEFAULT_PARAMETERS = [
               AddOptionalWarningFlag(w) for w in _warningFlags
             ]),
 
+  Parameter(name='use_system_cxx_lib', choices=[True, False], type=bool, default=False,
+            help="Whether the test suite is being *run* against the library shipped on "
+                 "the target triple in use, as opposed to the trunk library.",
+            actions=lambda useSystem: [
+              # TODO: Remove this, see comment in features.py
+              AddFeature('use_system_cxx_lib')
+            ] if useSystem else [
+              # If we're testing upstream libc++, disable availability markup,
+              # which is not relevant for non-shipped flabors of libc++.
+              AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
+            ]),
+
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_filesystem', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for the C++ <filesystem> library.",

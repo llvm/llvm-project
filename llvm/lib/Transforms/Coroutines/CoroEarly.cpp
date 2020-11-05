@@ -187,6 +187,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         break;
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
+      case Intrinsic::coro_id_async:
         F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
         break;
       case Intrinsic::coro_resume:

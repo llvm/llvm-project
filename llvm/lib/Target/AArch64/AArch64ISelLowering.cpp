@@ -6239,7 +6239,8 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
       // instead of a CSEL in that case.
       if (TrueVal == ~FalseVal) {
         Opcode = AArch64ISD::CSINV;
-      } else if (TrueVal == -FalseVal) {
+      } else if (FalseVal > std::numeric_limits<int64_t>::min() &&
+                 TrueVal == -FalseVal) {
         Opcode = AArch64ISD::CSNEG;
       } else if (TVal.getValueType() == MVT::i32) {
         // If our operands are only 32-bit wide, make sure we use 32-bit

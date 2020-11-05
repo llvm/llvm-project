@@ -539,6 +539,22 @@ void Loop::setLoopAlreadyUnrolled() {
   setLoopID(NewLoopID);
 }
 
+void Loop::setLoopMustProgress() {
+  LLVMContext &Context = getHeader()->getContext();
+
+  MDNode *MustProgress = findOptionMDForLoop(this, "llvm.loop.mustprogress");
+
+  if (MustProgress)
+    return;
+
+  MDNode *MustProgressMD =
+      MDNode::get(Context, MDString::get(Context, "llvm.loop.mustprogress"));
+  MDNode *LoopID = getLoopID();
+  MDNode *NewLoopID =
+      makePostTransformationMetadata(Context, LoopID, {}, {MustProgressMD});
+  setLoopID(NewLoopID);
+}
+
 bool Loop::isAnnotatedParallel() const {
   MDNode *DesiredLoopIdMetadata = getLoopID();
 

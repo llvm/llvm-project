@@ -3307,6 +3307,23 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }
 
+// Check if the given type is a non-pointer PPC MMA type. This function is used
+// in Sema to prevent invalid uses of restricted PPC MMA types.
+bool Sema::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
+  if (Type->isPointerType() || Type->isArrayType())
+    return false;
+
+  QualType CoreType = Type.getCanonicalType().getUnqualifiedType();
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) || CoreType == Context.Id##Ty
+  if (false
+#include "clang/Basic/PPCTypes.def"
+     ) {
+    Diag(TypeLoc, diag::err_ppc_invalid_use_mma_type);
+    return true;
+  }
+  return false;
+}
+
 bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
   // position of memory order and scope arguments in the builtin
@@ -10315,6 +10332,11 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
           << FD << getLangOpts().CPlusPlus11;
     }
   }
+
+  // PPC MMA non-pointer types are not allowed as return type. Checking the type
+  // here prevent the user from using a PPC MMA type as trailing return type.
+  if (Context.getTargetInfo().getTriple().isPPC64())
+    CheckPPCMMAType(RetValExp->getType(), ReturnLoc);
 }
 
 //===--- CHECK: Floating-Point comparisons (-Wfloat-equal) ---------------===//

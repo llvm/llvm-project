@@ -59,6 +59,24 @@ define float @test_v4f32(<4 x float> %a) nounwind {
   ret float %b
 }
 
+define float @test_v4f32_strict(<4 x float> %a) nounwind {
+; CHECK-LABEL: test_v4f32_strict:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r11, lr}
+; CHECK-NEXT:    push {r4, r5, r11, lr}
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    bl __aeabi_fmul
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    bl __aeabi_fmul
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    bl __aeabi_fmul
+; CHECK-NEXT:    pop {r4, r5, r11, lr}
+; CHECK-NEXT:    mov pc, lr
+  %b = call float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
+  ret float %b
+}
+
 define double @test_v2f64(<2 x double> %a) nounwind {
 ; CHECK-LABEL: test_v2f64:
 ; CHECK:       @ %bb.0:
@@ -68,6 +86,18 @@ define double @test_v2f64(<2 x double> %a) nounwind {
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast double @llvm.vector.reduce.fmul.f64.v2f64(double 1.0, <2 x double> %a)
+  ret double %b
+}
+
+define double @test_v2f64_strict(<2 x double> %a) nounwind {
+; CHECK-LABEL: test_v2f64_strict:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __aeabi_dmul
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+  %b = call double @llvm.vector.reduce.fmul.f64.v2f64(double 1.0, <2 x double> %a)
   ret double %b
 }
 
@@ -91,5 +121,28 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast fp128 @llvm.vector.reduce.fmul.f128.v2f128(fp128 0xL00000000000000003fff00000000000000, <2 x fp128> %a)
+  ret fp128 %b
+}
+
+define fp128 @test_v2f128_strict(<2 x fp128> %a) nounwind {
+; CHECK-LABEL: test_v2f128_strict:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    ldr r12, [sp, #36]
+; CHECK-NEXT:    str r12, [sp, #12]
+; CHECK-NEXT:    ldr r12, [sp, #32]
+; CHECK-NEXT:    str r12, [sp, #8]
+; CHECK-NEXT:    ldr r12, [sp, #28]
+; CHECK-NEXT:    str r12, [sp, #4]
+; CHECK-NEXT:    ldr r12, [sp, #24]
+; CHECK-NEXT:    str r12, [sp]
+; CHECK-NEXT:    bl __multf3
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+  %b = call fp128 @llvm.vector.reduce.fmul.f128.v2f128(fp128 0xL00000000000000003fff00000000000000, <2 x fp128> %a)
   ret fp128 %b
 }

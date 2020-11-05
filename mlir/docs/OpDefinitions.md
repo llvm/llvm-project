@@ -645,14 +645,14 @@ The generated code will use default value in the declaration, but not in the
 definition, as required by C++.
 
 ```c++
-/* Header file. */
+/// Header file.
 class MyOp : /*...*/ {
   /*...*/
   static void build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
                     float val = 0.5f);
 };
 
-/* Source file. */
+/// Source file.
 MyOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
             float val) {
   state.addAttribute("attr", builder.getF32FloatAttr(val));

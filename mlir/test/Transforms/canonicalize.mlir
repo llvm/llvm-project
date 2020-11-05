@@ -949,6 +949,46 @@ func @tensor_divi_unsigned_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 
 // -----
 
+// CHECK-LABEL: func @floordivi_signed_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @floordivi_signed_by_one(%arg0: i32) -> (i32) {
+  %c1 = constant 1 : i32
+  %res = floordivi_signed %arg0, %c1 : i32
+  // CHECK: return %[[ARG]]
+  return %res : i32
+}
+
+// CHECK-LABEL: func @tensor_floordivi_signed_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @tensor_floordivi_signed_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
+  %c1 = constant dense<1> : tensor<4x5xi32>
+  %res = floordivi_signed %arg0, %c1 : tensor<4x5xi32>
+  // CHECK: return %[[ARG]]
+  return %res : tensor<4x5xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @ceildivi_signed_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @ceildivi_signed_by_one(%arg0: i32) -> (i32) {
+  %c1 = constant 1 : i32
+  %res = ceildivi_signed %arg0, %c1 : i32
+  // CHECK: return %[[ARG]]
+  return %res : i32
+}
+
+// CHECK-LABEL: func @tensor_ceildivi_signed_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @tensor_ceildivi_signed_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
+  %c1 = constant dense<1> : tensor<4x5xi32>
+  %res = ceildivi_signed %arg0, %c1 : tensor<4x5xi32>
+  // CHECK: return %[[ARG]]
+  return %res : tensor<4x5xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast_folding_subview
 func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<?x?xf32, offset:? , strides: [?, ?]>) {
   %0 = memref_cast %arg0 : memref<4x5xf32> to memref<?x?xf32>

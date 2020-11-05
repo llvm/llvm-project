@@ -59,10 +59,12 @@ private:
 
 class OptNoneInstrumentation {
 public:
+  OptNoneInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
-  bool skip(StringRef PassID, Any IR);
+  bool DebugLogging;
+  bool shouldRun(StringRef PassID, Any IR);
 };
 
 // Debug logging for transformation and analysis passes.
@@ -236,7 +238,8 @@ class StandardInstrumentations {
 
 public:
   StandardInstrumentations(bool DebugLogging, bool VerifyEach = false)
-      : PrintPass(DebugLogging), Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      : PrintPass(DebugLogging), OptNone(DebugLogging), Verify(DebugLogging),
+        VerifyEach(VerifyEach) {}
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 

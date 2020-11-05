@@ -141,20 +141,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
     }
-    // Match (srl (shl val, 32), imm).
-    if (Op0->getOpcode() == ISD::SHL &&
-        isa<ConstantSDNode>(Op0->getOperand(1)) &&
-        isa<ConstantSDNode>(Node->getOperand(1))) {
-      uint64_t ShlAmt = Op0->getConstantOperandVal(1);
-      uint64_t SrlAmt = Node->getConstantOperandVal(1);
-      if (ShlAmt == 32 && SrlAmt > 32) {
-        SDValue SrlAmtSub32Val =
-            CurDAG->getTargetConstant(SrlAmt - 32, SDLoc(Node), XLenVT);
-        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0->getOperand(0),
-                             SrlAmtSub32Val);
-        return;
-      }
-    }
     break;
   }
   case RISCVISD::READ_CYCLE_WIDE:
@@ -395,10 +381,11 @@ bool RISCVDAGToDAGISel::SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
 // Then we check that the constant operands respect these constraints:
 //
 // VC2 == 32 - VC1
-// VC3 == maskLeadingOnes<uint32_t>(VC2)
+// VC3 | maskTrailingOnes<uint64_t>(VC1) == 0xffffffff
 //
 // being VC1 the Shamt we need, VC2 the complementary of Shamt over 32
-// and VC3 a 32 bit mask of (32 - VC1) leading ones.
+// and VC3 being 0xffffffff after accounting for SimplifyDemandedBits removing
+// some bits due to the right shift.
 
 bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
   if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
@@ -420,11 +407,14 @@ bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
               isa<ConstantSDNode>(Srl.getOperand(1)) &&
               isa<ConstantSDNode>(Shl.getOperand(1)) &&
               isa<ConstantSDNode>(And.getOperand(1))) {
-            uint32_t VC1 = Srl.getConstantOperandVal(1);
-            uint32_t VC2 = Shl.getConstantOperandVal(1);
-            uint32_t VC3 = And.getConstantOperandVal(1);
+            uint64_t VC1 = Srl.getConstantOperandVal(1);
+            uint64_t VC2 = Shl.getConstantOperandVal(1);
+            uint64_t VC3 = And.getConstantOperandVal(1);
+            // The mask needs to be 0xffffffff, but SimplifyDemandedBits may
+            // have removed lower bits that aren't necessary due to the right
+            // shift.
             if (VC2 == (32 - VC1) &&
-                VC3 == maskLeadingOnes<uint32_t>(VC2)) {
+                (VC3 | maskTrailingOnes<uint64_t>(VC1)) == 0xffffffff) {
               RS1 = Shl.getOperand(0);
               Shamt = CurDAG->getTargetConstant(VC1, SDLoc(N),
                                               Srl.getOperand(1).getValueType());

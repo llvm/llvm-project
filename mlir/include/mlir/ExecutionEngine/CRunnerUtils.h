@@ -18,11 +18,11 @@
 #ifdef _WIN32
 #ifndef MLIR_CRUNNERUTILS_EXPORT
 #ifdef mlir_c_runner_utils_EXPORTS
-/* We are building this library */
+// We are building this library
 #define MLIR_CRUNNERUTILS_EXPORT __declspec(dllexport)
 #define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #else
-/* We are using this library */
+// We are using this library
 #define MLIR_CRUNNERUTILS_EXPORT __declspec(dllimport)
 #endif // mlir_c_runner_utils_EXPORTS
 #endif // MLIR_CRUNNERUTILS_EXPORT
