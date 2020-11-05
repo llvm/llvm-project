@@ -404,12 +404,14 @@ let isCodeGenOnly = 1 in {
                           Deprecated<DeprecatedDST>;
 }
 
-def MFVSCR : VXForm_4<1540, (outs vrrc:$vD), (ins),
-                      "mfvscr $vD", IIC_LdStStore,
-                      [(set v8i16:$vD, (int_ppc_altivec_mfvscr))]>;
-def MTVSCR : VXForm_5<1604, (outs), (ins vrrc:$vB),
-                      "mtvscr $vB", IIC_LdStLoad,
-                      [(int_ppc_altivec_mtvscr v4i32:$vB)]>;
+let hasSideEffects = 1 in {
+  def MFVSCR : VXForm_4<1540, (outs vrrc:$vD), (ins),
+                        "mfvscr $vD", IIC_LdStStore,
+                        [(set v8i16:$vD, (int_ppc_altivec_mfvscr))]>;
+  def MTVSCR : VXForm_5<1604, (outs), (ins vrrc:$vB),
+                        "mtvscr $vB", IIC_LdStLoad,
+                        [(int_ppc_altivec_mtvscr v4i32:$vB)]>;
+}
 
 let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {  // Loads.
 def LVEBX: XForm_1_memOp<31,   7, (outs vrrc:$vD), (ins memrr:$src),
@@ -469,10 +471,11 @@ def VNMSUBFP: VAForm_1<47, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vC, vrrc:$vB),
                        "vnmsubfp $vD, $vA, $vC, $vB", IIC_VecFP,
                        [(set v4f32:$vD, (fneg (fma v4f32:$vA, v4f32:$vC,
                                                   (fneg v4f32:$vB))))]>;
-
-def VMHADDSHS  : VA1a_Int_Ty<32, "vmhaddshs", int_ppc_altivec_vmhaddshs, v8i16>;
-def VMHRADDSHS : VA1a_Int_Ty<33, "vmhraddshs", int_ppc_altivec_vmhraddshs,
-                             v8i16>;
+let hasSideEffects = 1 in {
+  def VMHADDSHS  : VA1a_Int_Ty<32, "vmhaddshs", int_ppc_altivec_vmhaddshs, v8i16>;
+  def VMHRADDSHS : VA1a_Int_Ty<33, "vmhraddshs", int_ppc_altivec_vmhraddshs,
+                               v8i16>;
+}
 def VMLADDUHM  : VA1a_Int_Ty<34, "vmladduhm", int_ppc_altivec_vmladduhm, v8i16>;
 } // isCommutable
 
@@ -608,14 +611,16 @@ def VMSUMMBM : VA1a_Int_Ty3<37, "vmsummbm", int_ppc_altivec_vmsummbm,
                             v4i32, v16i8, v4i32>;
 def VMSUMSHM : VA1a_Int_Ty3<40, "vmsumshm", int_ppc_altivec_vmsumshm,
                             v4i32, v8i16, v4i32>;
-def VMSUMSHS : VA1a_Int_Ty3<41, "vmsumshs", int_ppc_altivec_vmsumshs,
-                            v4i32, v8i16, v4i32>;
 def VMSUMUBM : VA1a_Int_Ty3<36, "vmsumubm", int_ppc_altivec_vmsumubm,
                             v4i32, v16i8, v4i32>;
 def VMSUMUHM : VA1a_Int_Ty3<38, "vmsumuhm", int_ppc_altivec_vmsumuhm,
                             v4i32, v8i16, v4i32>;
-def VMSUMUHS : VA1a_Int_Ty3<39, "vmsumuhs", int_ppc_altivec_vmsumuhs,
-                            v4i32, v8i16, v4i32>;
+let hasSideEffects = 1 in {
+  def VMSUMSHS : VA1a_Int_Ty3<41, "vmsumshs", int_ppc_altivec_vmsumshs,
+                              v4i32, v8i16, v4i32>;
+  def VMSUMUHS : VA1a_Int_Ty3<39, "vmsumuhs", int_ppc_altivec_vmsumuhs,
+                              v4i32, v8i16, v4i32>;
+}
 
 let isCommutable = 1 in {
 def VMULESB : VX1_Int_Ty2<776, "vmulesb", int_ppc_altivec_vmulesb,
@@ -665,15 +670,17 @@ def VSUBUBS : VX1_Int_Ty<1536, "vsububs" , int_ppc_altivec_vsububs, v16i8>;
 def VSUBUHS : VX1_Int_Ty<1600, "vsubuhs" , int_ppc_altivec_vsubuhs, v8i16>;
 def VSUBUWS : VX1_Int_Ty<1664, "vsubuws" , int_ppc_altivec_vsubuws, v4i32>;
 
-def VSUMSWS : VX1_Int_Ty<1928, "vsumsws" , int_ppc_altivec_vsumsws, v4i32>;
-def VSUM2SWS: VX1_Int_Ty<1672, "vsum2sws", int_ppc_altivec_vsum2sws, v4i32>;
+let hasSideEffects = 1 in {
+  def VSUMSWS : VX1_Int_Ty<1928, "vsumsws" , int_ppc_altivec_vsumsws, v4i32>;
+  def VSUM2SWS: VX1_Int_Ty<1672, "vsum2sws", int_ppc_altivec_vsum2sws, v4i32>;
 
-def VSUM4SBS: VX1_Int_Ty3<1800, "vsum4sbs", int_ppc_altivec_vsum4sbs,
-                          v4i32, v16i8, v4i32>;
-def VSUM4SHS: VX1_Int_Ty3<1608, "vsum4shs", int_ppc_altivec_vsum4shs,
-                          v4i32, v8i16, v4i32>;
-def VSUM4UBS: VX1_Int_Ty3<1544, "vsum4ubs", int_ppc_altivec_vsum4ubs,
-                          v4i32, v16i8, v4i32>;
+  def VSUM4SBS: VX1_Int_Ty3<1800, "vsum4sbs", int_ppc_altivec_vsum4sbs,
+                            v4i32, v16i8, v4i32>;
+  def VSUM4SHS: VX1_Int_Ty3<1608, "vsum4shs", int_ppc_altivec_vsum4shs,
+                            v4i32, v8i16, v4i32>;
+  def VSUM4UBS: VX1_Int_Ty3<1544, "vsum4ubs", int_ppc_altivec_vsum4ubs,
+                            v4i32, v16i8, v4i32>;
+}
 
 def VNOR : VXForm_1<1284, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                     "vnor $vD, $vA, $vB", IIC_VecFP,
@@ -742,26 +749,28 @@ def VSPLTISW : VXForm_3<908, (outs vrrc:$vD), (ins s5imm:$SIMM),
 // Vector Pack.
 def VPKPX   : VX1_Int_Ty2<782, "vpkpx", int_ppc_altivec_vpkpx,
                           v8i16, v4i32>;
-def VPKSHSS : VX1_Int_Ty2<398, "vpkshss", int_ppc_altivec_vpkshss,
-                          v16i8, v8i16>;
-def VPKSHUS : VX1_Int_Ty2<270, "vpkshus", int_ppc_altivec_vpkshus,
-                          v16i8, v8i16>;
-def VPKSWSS : VX1_Int_Ty2<462, "vpkswss", int_ppc_altivec_vpkswss,
-                          v8i16, v4i32>;
-def VPKSWUS : VX1_Int_Ty2<334, "vpkswus", int_ppc_altivec_vpkswus,
-                          v8i16, v4i32>;
+let hasSideEffects = 1 in {
+  def VPKSHSS : VX1_Int_Ty2<398, "vpkshss", int_ppc_altivec_vpkshss,
+                            v16i8, v8i16>;
+  def VPKSHUS : VX1_Int_Ty2<270, "vpkshus", int_ppc_altivec_vpkshus,
+                            v16i8, v8i16>;
+  def VPKSWSS : VX1_Int_Ty2<462, "vpkswss", int_ppc_altivec_vpkswss,
+                            v8i16, v4i32>;
+  def VPKSWUS : VX1_Int_Ty2<334, "vpkswus", int_ppc_altivec_vpkswus,
+                            v8i16, v4i32>;
+  def VPKUHUS : VX1_Int_Ty2<142, "vpkuhus", int_ppc_altivec_vpkuhus,
+                            v16i8, v8i16>;
+  def VPKUWUS : VX1_Int_Ty2<206, "vpkuwus", int_ppc_altivec_vpkuwus,
+                            v8i16, v4i32>;
+}
 def VPKUHUM : VXForm_1<14, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                        "vpkuhum $vD, $vA, $vB", IIC_VecFP,
                        [(set v16i8:$vD,
                          (vpkuhum_shuffle v16i8:$vA, v16i8:$vB))]>;
-def VPKUHUS : VX1_Int_Ty2<142, "vpkuhus", int_ppc_altivec_vpkuhus,
-                          v16i8, v8i16>;
 def VPKUWUM : VXForm_1<78, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                        "vpkuwum $vD, $vA, $vB", IIC_VecFP,
                        [(set v16i8:$vD,
                          (vpkuwum_shuffle v16i8:$vA, v16i8:$vB))]>;
-def VPKUWUS : VX1_Int_Ty2<206, "vpkuwus", int_ppc_altivec_vpkuwus,
-                          v8i16, v4i32>;
 
 // Vector Unpack.
 def VUPKHPX : VX2_Int_Ty2<846, "vupkhpx", int_ppc_altivec_vupkhpx,
@@ -1322,16 +1331,18 @@ def VPERMXOR : VA1a_Int_Ty<45, "vpermxor",
                          int_ppc_altivec_crypto_vpermxor, v16i8>;
 
 // Vector doubleword integer pack and unpack.
-def VPKSDSS : VX1_Int_Ty2<1486, "vpksdss", int_ppc_altivec_vpksdss,
-                          v4i32, v2i64>;
-def VPKSDUS : VX1_Int_Ty2<1358, "vpksdus", int_ppc_altivec_vpksdus,
-                          v4i32, v2i64>;
+let hasSideEffects = 1 in {
+  def VPKSDSS : VX1_Int_Ty2<1486, "vpksdss", int_ppc_altivec_vpksdss,
+                            v4i32, v2i64>;
+  def VPKSDUS : VX1_Int_Ty2<1358, "vpksdus", int_ppc_altivec_vpksdus,
+                            v4i32, v2i64>;
+  def VPKUDUS : VX1_Int_Ty2<1230, "vpkudus", int_ppc_altivec_vpkudus,
+                            v4i32, v2i64>;
+}
 def VPKUDUM : VXForm_1<1102, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                        "vpkudum $vD, $vA, $vB", IIC_VecFP,
                        [(set v16i8:$vD,
                          (vpkudum_shuffle v16i8:$vA, v16i8:$vB))]>;
-def VPKUDUS : VX1_Int_Ty2<1230, "vpkudus", int_ppc_altivec_vpkudus,
-                          v4i32, v2i64>;
 def VUPKHSW : VX2_Int_Ty2<1614, "vupkhsw", int_ppc_altivec_vupkhsw,
                           v2i64, v4i32>;
 def VUPKLSW : VX2_Int_Ty2<1742, "vupklsw", int_ppc_altivec_vupklsw,
