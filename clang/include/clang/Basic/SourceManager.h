@@ -297,7 +297,7 @@ namespace SrcMgr {
 
   public:
     /// Return a FileInfo object.
-    static FileInfo get(SourceLocation IL, const ContentCache &Con,
+    static FileInfo get(SourceLocation IL, ContentCache &Con,
                         CharacteristicKind FileCharacter, StringRef Filename) {
       FileInfo X;
       X.IncludeLoc = IL.getRawEncoding();
@@ -923,7 +923,7 @@ public:
   llvm::MemoryBufferRef getMemoryBufferForFileOrFake(const FileEntry *File) {
     if (auto B = getMemoryBufferForFileOrNone(File))
       return *B;
-    return getFakeBufferForRecovery()->getMemBufferRef();
+    return getFakeBufferForRecovery();
   }
 
   /// Override the contents of the given source file by providing an
@@ -1008,7 +1008,7 @@ public:
   getBufferOrFake(FileID FID, SourceLocation Loc = SourceLocation()) const {
     if (auto B = getBufferOrNone(FID, Loc))
       return *B;
-    return getFakeBufferForRecovery()->getMemBufferRef();
+    return getFakeBufferForRecovery();
   }
 
   /// Returns the FileEntry record for the provided FileID.
@@ -1738,8 +1738,8 @@ private:
   friend class ASTReader;
   friend class ASTWriter;
 
-  llvm::MemoryBuffer *getFakeBufferForRecovery() const;
-  const SrcMgr::ContentCache *getFakeContentCacheForRecovery() const;
+  llvm::MemoryBufferRef getFakeBufferForRecovery() const;
+  SrcMgr::ContentCache &getFakeContentCacheForRecovery() const;
 
   const SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid) const;
 
@@ -1811,17 +1811,16 @@ private:
   ///
   /// This works regardless of whether the ContentCache corresponds to a
   /// file or some other input source.
-  FileID createFileIDImpl(const SrcMgr::ContentCache &File, StringRef Filename,
+  FileID createFileIDImpl(SrcMgr::ContentCache &File, StringRef Filename,
                           SourceLocation IncludePos,
                           SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
                           unsigned LoadedOffset);
 
-  const SrcMgr::ContentCache *
-    getOrCreateContentCache(const FileEntry *SourceFile,
-                            bool isSystemFile = false);
+  SrcMgr::ContentCache &getOrCreateContentCache(const FileEntry *SourceFile,
+                                                bool isSystemFile = false);
 
   /// Create a new ContentCache for the specified  memory buffer.
-  const SrcMgr::ContentCache *
+  SrcMgr::ContentCache &
   createMemBufferContentCache(std::unique_ptr<llvm::MemoryBuffer> Buf);
 
   FileID getFileIDSlow(unsigned SLocOffset) const;

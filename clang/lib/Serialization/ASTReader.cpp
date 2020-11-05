@@ -1538,11 +1538,11 @@ bool ASTReader::ReadSLocEntry(int ID) {
                                                              NumFileDecls));
     }
 
-    const SrcMgr::ContentCache *ContentCache
-      = SourceMgr.getOrCreateContentCache(File, isSystem(FileCharacter));
-    if (OverriddenBuffer && !ContentCache->BufferOverridden &&
-        ContentCache->ContentsEntry == ContentCache->OrigEntry &&
-        !ContentCache->getBufferIfLoaded()) {
+    const SrcMgr::ContentCache &ContentCache =
+        SourceMgr.getOrCreateContentCache(File, isSystem(FileCharacter));
+    if (OverriddenBuffer && !ContentCache.BufferOverridden &&
+        ContentCache.ContentsEntry == ContentCache.OrigEntry &&
+        !ContentCache.getBufferIfLoaded()) {
       auto Buffer = ReadBuffer(SLocEntryCursor, File->getName());
       if (!Buffer)
         return true;
