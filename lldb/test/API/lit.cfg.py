@@ -258,7 +258,7 @@ import lldbtest
 # testFormat: The test format to use to interpret tests.
 config.test_format = lldbtest.LLDBTest(dotest_cmd)
 
-# Propagate FREEBSD_REMOTE_PLUGIN
-if 'FREEBSD_REMOTE_PLUGIN' in os.environ:
-  config.environment['FREEBSD_REMOTE_PLUGIN'] = os.environ[
-      'FREEBSD_REMOTE_PLUGIN']
+# Propagate FREEBSD_LEGACY_PLUGIN
+if 'FREEBSD_LEGACY_PLUGIN' in os.environ:
+  config.environment['FREEBSD_LEGACY_PLUGIN'] = os.environ[
+      'FREEBSD_LEGACY_PLUGIN']

@@ -3,6 +3,7 @@
 # RUN:     | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NO-FILTER %s
 # RUN: %lldb -b -s %p/Inputs/stop-hook-threads-2.lldbinit -s %s -f %t \
 # RUN:     | FileCheck --check-prefix=CHECK --check-prefix=CHECK-FILTER %s
+# XFAIL: system-freebsd
 # XFAIL: system-netbsd
 # UNSUPPORTED: system-windows
 # This test is flakey and hangs on windows periodically: llvm.org/pr38373
