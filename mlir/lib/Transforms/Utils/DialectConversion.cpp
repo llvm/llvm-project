@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -74,8 +75,7 @@ computeConversionSet(iterator_range<Region::iterator> region,
 
 /// A utility function to log a successful result for the given reason.
 template <typename... Args>
-static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
-                       Args &&... args) {
+static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> SUCCESS";
@@ -88,8 +88,7 @@ static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
 
 /// A utility function to log a failure result for the given reason.
 template <typename... Args>
-static void logFailure(llvm::ScopedPrinter &os, StringRef fmt,
-                       Args &&... args) {
+static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> FAILURE : "
@@ -2033,21 +2032,21 @@ unsigned OperationLegalizer::applyCostModelToPatterns(
     return minDepth;
 
   // Sort the patterns by those likely to be the most beneficial.
-  llvm::array_pod_sort(
-      patternsByDepth.begin(), patternsByDepth.end(),
-      [](const std::pair<const Pattern *, unsigned> *lhs,
-         const std::pair<const Pattern *, unsigned> *rhs) {
-        // First sort by the smaller pattern legalization depth.
-        if (lhs->second != rhs->second)
-          return llvm::array_pod_sort_comparator<unsigned>(&lhs->second,
-                                                           &rhs->second);
+  llvm::array_pod_sort(patternsByDepth.begin(), patternsByDepth.end(),
+                       [](const std::pair<const Pattern *, unsigned> *lhs,
+                          const std::pair<const Pattern *, unsigned> *rhs) {
+                         // First sort by the smaller pattern legalization
+                         // depth.
+                         if (lhs->second != rhs->second)
+                           return llvm::array_pod_sort_comparator<unsigned>(
+                               &lhs->second, &rhs->second);
 
-        // Then sort by the larger pattern benefit.
-        auto lhsBenefit = lhs->first->getBenefit();
-        auto rhsBenefit = rhs->first->getBenefit();
-        return llvm::array_pod_sort_comparator<PatternBenefit>(&rhsBenefit,
-                                                               &lhsBenefit);
-      });
+                         // Then sort by the larger pattern benefit.
+                         auto lhsBenefit = lhs->first->getBenefit();
+                         auto rhsBenefit = rhs->first->getBenefit();
+                         return llvm::array_pod_sort_comparator<PatternBenefit>(
+                             &rhsBenefit, &lhsBenefit);
+                       });
 
   // Update the legalization pattern to use the new sorted list.
   patterns.clear();

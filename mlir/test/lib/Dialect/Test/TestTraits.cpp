@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/FoldUtils.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -25,9 +24,9 @@ OpFoldResult TestInvolutionTraitFailingOperationFolderOp::fold(
 
 OpFoldResult TestInvolutionTraitSuccesfulOperationFolderOp::fold(
     ArrayRef<Attribute> operands) {
-  auto argument_op = getOperand();
+  auto argumentOp = getOperand();
   // The success case should cause the trait fold to be supressed.
-  return argument_op.getDefiningOp() ? argument_op : OpFoldResult{};
+  return argumentOp.getDefiningOp() ? argumentOp : OpFoldResult{};
 }
 
 namespace {

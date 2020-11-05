@@ -11,9 +11,8 @@
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::quant;
