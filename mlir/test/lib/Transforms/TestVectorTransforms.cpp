@@ -294,6 +294,7 @@ struct TestVectorTransferFullPartialSplitPatterns
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestVectorConversions() {
   PassRegistration<TestVectorToVectorConversion> vectorToVectorPass(
       "test-vector-to-vector-conversion",
@@ -327,4 +328,5 @@ void registerTestVectorConversions() {
       "test-vector-to-forloop",
       "Test conversion patterns to break up a vector op into a for loop");
 }
+} // namespace test
 } // namespace mlir

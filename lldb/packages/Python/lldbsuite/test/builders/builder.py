@@ -93,11 +93,7 @@ class Builder:
         Helper function to return the key-value string to specify the architecture
         used for the make system.
         """
-        arch = architecture if architecture else None
-        if not arch and configuration.arch:
-            arch = configuration.arch
-
-        return ("ARCH=" + arch) if arch else ""
+        return ("ARCH=" + architecture) if architecture else ""
 
     def getCCSpec(self, compiler):
         """

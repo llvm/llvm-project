@@ -41,10 +41,16 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }
 
 
-// Convert rotl immediate to a rotr immediate.
+// Convert rotl immediate to a rotr immediate for XLen instructions.
 def ImmROTL2R : SDNodeXForm<imm, [{
   uint64_t XLen = Subtarget->getXLen();
   return CurDAG->getTargetConstant(XLen - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Convert rotl immediate to a rotr immediate for W instructions.
+def ImmROTL2RW : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -827,6 +833,10 @@ def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
           (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
+// We can use FSRI for fshl by immediate if we subtract the immediate from
+// XLen and swap the operands.
+def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+          (FSRI GPR:$rs1, GPR:$rs3, (ImmROTL2R uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 
 let Predicates = [HasStdExtZbb] in {
@@ -1036,6 +1046,10 @@ def : Pat<(sext_inreg (fshr GPR:$rs3, (shl GPR:$rs1, (i64 32)),
                             uimm6gt32:$shamt),
                       i32),
           (FSRIW GPR:$rs1, GPR:$rs3, (ImmSub32 uimm6gt32:$shamt))>;
+def : Pat<(sext_inreg (fshl GPR:$rs3, (shl GPR:$rs1, (i64 32)),
+                            uimm5:$shamt),
+                      i32),
+          (FSRIW GPR:$rs1, GPR:$rs3, (ImmROTL2RW uimm5:$shamt))>;
 } // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {

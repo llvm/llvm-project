@@ -106,27 +106,27 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
             self.assertIn(os.path.realpath(self.getBuildDir() + "/" + lib), libraries_svr4_names)
 
     @llgs_test
-    @skipUnlessPlatform(["linux", "android", "netbsd"])
+    @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
     def test_supports_libraries_svr4(self):
         self.setup_test()
         self.assertTrue(self.has_libraries_svr4_support())
 
     @llgs_test
-    @skipUnlessPlatform(["linux", "android", "netbsd"])
+    @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
     @expectedFailureNetBSD
     def test_libraries_svr4_well_formed(self):
         self.setup_test()
         self.libraries_svr4_well_formed()
 
     @llgs_test
-    @skipUnlessPlatform(["linux", "android", "netbsd"])
-    @expectedFailureNetBSD
+    @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     def test_libraries_svr4_load_addr(self):
         self.setup_test()
         self.libraries_svr4_has_correct_load_addr()
 
     @llgs_test
-    @skipUnlessPlatform(["linux", "android", "netbsd"])
+    @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
     @expectedFailureNetBSD
     def test_libraries_svr4_libs_present(self):
         self.setup_test()

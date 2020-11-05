@@ -262,18 +262,12 @@ define signext i32 @fshli_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64IB-LABEL: fshli_i32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    slli a1, a1, 32
-; RV64IB-NEXT:    addi a2, zero, 5
-; RV64IB-NEXT:    fsl a0, a0, a1, a2
-; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    fsriw a0, a1, a0, 27
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBT-LABEL: fshli_i32:
 ; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    slli a1, a1, 32
-; RV64IBT-NEXT:    addi a2, zero, 5
-; RV64IBT-NEXT:    fsl a0, a0, a1, a2
-; RV64IBT-NEXT:    sext.w a0, a0
+; RV64IBT-NEXT:    fsriw a0, a1, a0, 27
 ; RV64IBT-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 5)
   ret i32 %1
@@ -289,14 +283,12 @@ define i64 @fshli_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: fshli_i64:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a2, zero, 5
-; RV64IB-NEXT:    fsl a0, a0, a1, a2
+; RV64IB-NEXT:    fsri a0, a1, a0, 59
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBT-LABEL: fshli_i64:
 ; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    addi a2, zero, 5
-; RV64IBT-NEXT:    fsl a0, a0, a1, a2
+; RV64IBT-NEXT:    fsri a0, a1, a0, 59
 ; RV64IBT-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 5)
   ret i64 %1

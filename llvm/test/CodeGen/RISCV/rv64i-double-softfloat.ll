@@ -21,7 +21,7 @@ define i32 @fp64_to_ui32(double %a) nounwind {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
-; RV64IF-NEXT:    call __fixunsdfdi
+; RV64IF-NEXT:    call __fixunsdfsi
 ; RV64IF-NEXT:    ld ra, 8(sp)
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -44,7 +44,7 @@ define i32 @fp64_to_si32(double %a) nounwind {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
-; RV64IF-NEXT:    call __fixdfdi
+; RV64IF-NEXT:    call __fixdfsi
 ; RV64IF-NEXT:    ld ra, 8(sp)
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -72,7 +72,7 @@ define i32 @strict_fp64_to_ui32(double %a) nounwind strictfp {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
-; RV64IF-NEXT:    call __fixunsdfdi
+; RV64IF-NEXT:    call __fixunsdfsi
 ; RV64IF-NEXT:    ld ra, 8(sp)
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -95,7 +95,7 @@ define i32 @struct_fp64_to_si32(double %a) nounwind strictfp {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp)
-; RV64IF-NEXT:    call __fixdfdi
+; RV64IF-NEXT:    call __fixdfsi
 ; RV64IF-NEXT:    ld ra, 8(sp)
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret

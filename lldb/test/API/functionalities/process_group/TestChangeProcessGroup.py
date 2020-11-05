@@ -25,6 +25,8 @@ class ChangeProcessGroupTestCase(TestBase):
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     @expectedFailureNetBSD
     @skipIfReproducer # File synchronization is not supported during replay.
+    @skipIftvOS # fork not available on tvOS.
+    @skipIfwatchOS # fork not available on watchOS.
     def test_setpgid(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

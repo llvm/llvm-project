@@ -551,22 +551,28 @@ def skipIfiOSSimulator(func):
     return skipTestIfFn(is_ios_simulator)(func)
 
 def skipIfiOS(func):
-    return skipIfPlatform(["ios"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.ios))(func)
 
 def skipIftvOS(func):
-    return skipIfPlatform(["tvos"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.tvos))(func)
 
 def skipIfwatchOS(func):
-    return skipIfPlatform(["watchos"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.watchos))(func)
 
 def skipIfbridgeOS(func):
-    return skipIfPlatform(["bridgeos"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.bridgeos))(func)
 
 def skipIfDarwinEmbedded(func):
     """Decorate the item to skip tests that should be skipped on Darwin armv7/arm64 targets."""
     return skipIfPlatform(
         lldbplatform.translate(
             lldbplatform.darwin_embedded))(func)
+
+def skipIfDarwinSimulator(func):
+    """Decorate the item to skip tests that should be skipped on Darwin simulator targets."""
+    return skipIfPlatform(
+        lldbplatform.translate(
+            lldbplatform.darwin_simulator))(func)
 
 def skipIfFreeBSD(func):
     """Decorate the item to skip tests that should be skipped on FreeBSD."""

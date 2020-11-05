@@ -49,7 +49,6 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfWindows
     @llgs_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
-    @expectedFailureAll(oslist=['freebsd'])
     def test_sid_is_same_without_setsid_llgs(self):
         self.init_llgs_test()
         self.set_inferior_startup_launch()

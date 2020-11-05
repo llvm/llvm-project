@@ -111,9 +111,11 @@ void TestMemRefDependenceCheck::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestMemRefDependenceCheck() {
   PassRegistration<TestMemRefDependenceCheck> pass(
       "test-memref-dependence-check",
       "Checks dependences between all pairs of memref accesses.");
 }
+} // namespace test
 } // namespace mlir

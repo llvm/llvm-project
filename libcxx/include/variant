@@ -197,6 +197,7 @@ namespace std {
 */
 
 #include <__config>
+#include <__availability>
 #include <__tuple>
 #include <array>
 #include <exception>
