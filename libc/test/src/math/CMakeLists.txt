@@ -485,6 +485,48 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fdimf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdimf_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdimf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdim_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdim_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdim
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdiml_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdiml_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdiml
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   fminf_test
   SUITE
     libc_math_unittests
