@@ -121,6 +121,18 @@ spv.module Logical GLSL450 attributes {
   }
 }
 
+// Using 16-element vectors requires Vector16.
+// CHECK: requires #spv.vce<v1.0, [Vector16, Shader], []>
+spv.module Logical GLSL450 attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.3, [Shader, Vector16], []>, {}>
+} {
+  spv.func @iadd_v16_function(%val : vector<16xi32>) -> vector<16xi32> "None" {
+    %0 = spv.IAdd %val, %val : vector<16xi32>
+    spv.ReturnValue %0: vector<16xi32>
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Extension
 //===----------------------------------------------------------------------===//
