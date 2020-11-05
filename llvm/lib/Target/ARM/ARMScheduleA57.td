@@ -42,12 +42,20 @@ def IsLdrAm3NegRegOffPredX2 : Am3NegativeRegOffset<3>;
 def IsLdrAm3NegRegOffPredX3 : Am3NegativeRegOffset<4>;
 
 // Load, scaled register offset, not plus LSL2
-def IsLdstsoScaledNotOptimalPredX0 :
-  SchedPredicate<[{TII->isLdstScaledRegNotPlusLsl2(*MI, 0)}]>;
-def IsLdstsoScaledNotOptimalPred :
-  SchedPredicate<[{TII->isLdstScaledRegNotPlusLsl2(*MI, 1)}]>;
-def IsLdstsoScaledNotOptimalPredX2 :
-  SchedPredicate<[{TII->isLdstScaledRegNotPlusLsl2(*MI, 2)}]>;
+class ScaledRegNotPlusLsl2<int n> : CheckNot<
+                                      CheckAny<[
+                                        CheckAM2NoShift<n>,
+                                        CheckAll<[
+                                          CheckAM2OpAdd<n>,
+                                          CheckAM2ShiftLSL<n>,
+                                          CheckAM2Offset<n, 2>
+                                        ]>
+                                      ]>
+                                    >;
+
+def IsLdstsoScaledNotOptimalPredX0 : MCSchedPredicate<ScaledRegNotPlusLsl2<2>>;
+def IsLdstsoScaledNotOptimalPred : MCSchedPredicate<ScaledRegNotPlusLsl2<3>>;
+def IsLdstsoScaledNotOptimalPredX2 : MCSchedPredicate<ScaledRegNotPlusLsl2<4>>;
 
 def IsLdstsoScaledPredX2 : MCSchedPredicate<CheckNot<CheckAM2NoShift<4>>>;
 
