@@ -2784,10 +2784,9 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
   // of i8, or a 1-element array of i32.  They'll both end up in the same
   /// StringMap bucket, linked up by their Next pointers.  Walk the list.
   std::unique_ptr<ConstantDataSequential> *Entry = &Slot.second;
-  for (ConstantDataSequential *Node = Entry->get(); Node;
-       Entry = &Node->Next, Node = Entry->get())
-    if (Node->getType() == Ty)
-      return Node;
+  for (; *Entry; Entry = &(*Entry)->Next)
+    if ((*Entry)->getType() == Ty)
+      return Entry->get();
 
   // Okay, we didn't get a hit.  Create a node of the right class, link it in,
   // and return it.
@@ -2825,14 +2824,16 @@ void ConstantDataSequential::destroyConstantImpl() {
 
   // Otherwise, there are multiple entries linked off the bucket, unlink the
   // node we care about but keep the bucket around.
-  for (ConstantDataSequential *Node = Entry->get();;
-       Entry = &Node->Next, Node = Entry->get()) {
+  while (true) {
+    std::unique_ptr<ConstantDataSequential> &Node = *Entry;
     assert(Node && "Didn't find entry in its uniquing hash table!");
     // If we found our entry, unlink it from the list and we're done.
-    if (Node == this) {
-      *Entry = std::move(Node->Next);
+    if (Node.get() == this) {
+      Node = std::move(Node->Next);
       return;
     }
+
+    Entry = &Node->Next;
   }
 }
 
