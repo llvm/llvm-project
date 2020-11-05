@@ -16,6 +16,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
+#include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -42,9 +43,11 @@
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
+#include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Demangle/MicrosoftDemangle.h"
 #include "llvm/Object/COFF.h"
@@ -79,32 +82,6 @@ static lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   default:
     return lldb::LanguageType::eLanguageTypeUnknown;
   }
-}
-
-static std::unique_ptr<PDBFile> loadPDBFile(std::string PdbPath,
-                                            llvm::BumpPtrAllocator &Allocator) {
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ErrorOrBuffer =
-      llvm::MemoryBuffer::getFile(PdbPath, /*FileSize=*/-1,
-                                  /*RequiresNullTerminator=*/false);
-  if (!ErrorOrBuffer)
-    return nullptr;
-  std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
-
-  llvm::StringRef Path = Buffer->getBufferIdentifier();
-  auto Stream = std::make_unique<llvm::MemoryBufferByteStream>(
-      std::move(Buffer), llvm::support::little);
-
-  auto File = std::make_unique<PDBFile>(Path, std::move(Stream), Allocator);
-  if (auto EC = File->parseFileHeaders()) {
-    llvm::consumeError(std::move(EC));
-    return nullptr;
-  }
-  if (auto EC = File->parseStreamData()) {
-    llvm::consumeError(std::move(EC));
-    return nullptr;
-  }
-
-  return File;
 }
 
 static std::unique_ptr<PDBFile>
@@ -144,11 +121,7 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   }
 
   // If the file is not a PDB or if it doesn't have a matching GUID, fail.
-  llvm::file_magic magic;
-  auto ec = llvm::identify_magic(pdb_file, magic);
-  if (ec || magic != llvm::file_magic::pdb)
-    return nullptr;
-  std::unique_ptr<PDBFile> pdb = loadPDBFile(std::string(pdb_file), allocator);
+  auto pdb = ObjectFilePDB::loadPDBFile(std::string(pdb_file), allocator);
   if (!pdb)
     return nullptr;
 
@@ -292,24 +265,19 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
 
   if (!m_index) {
     // Lazily load and match the PDB file, but only do this once.
-    std::unique_ptr<PDBFile> file_up =
-        loadMatchingPDBFile(m_objfile_sp->GetFileSpec().GetPath(), m_allocator);
-
-    if (!file_up) {
-      auto module_sp = m_objfile_sp->GetModule();
-      if (!module_sp)
-        return 0;
-      // See if any symbol file is specified through `--symfile` option.
-      FileSpec symfile = module_sp->GetSymbolFileFileSpec();
-      if (!symfile)
-        return 0;
-      file_up = loadPDBFile(symfile.GetPath(), m_allocator);
+    PDBFile *pdb_file;
+    if (auto *pdb = llvm::dyn_cast<ObjectFilePDB>(m_objfile_sp.get())) {
+      pdb_file = &pdb->GetPDBFile();
+    } else {
+      m_file_up = loadMatchingPDBFile(m_objfile_sp->GetFileSpec().GetPath(),
+                                      m_allocator);
+      pdb_file = m_file_up.get();
     }
 
-    if (!file_up)
+    if (!pdb_file)
       return 0;
 
-    auto expected_index = PdbIndex::create(std::move(file_up));
+    auto expected_index = PdbIndex::create(pdb_file);
     if (!expected_index) {
       llvm::consumeError(expected_index.takeError());
       return 0;
@@ -329,7 +297,10 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
 }
 
 void SymbolFileNativePDB::InitializeObject() {
-  m_obj_load_address = m_objfile_sp->GetBaseAddress().GetFileAddress();
+  m_obj_load_address = m_objfile_sp->GetModule()
+                           ->GetObjectFile()
+                           ->GetBaseAddress()
+                           .GetFileAddress();
   m_index->SetLoadAddress(m_obj_load_address);
   m_index->ParseSectionContribs();
 
