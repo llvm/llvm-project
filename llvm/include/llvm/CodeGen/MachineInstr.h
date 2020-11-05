@@ -1333,7 +1333,8 @@ public:
   /// Return true if the MachineInstr modifies (fully define or partially
   /// define) the specified register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
-  bool modifiesRegister(Register Reg, const TargetRegisterInfo *TRI) const {
+  bool modifiesRegister(Register Reg,
+                        const TargetRegisterInfo *TRI = nullptr) const {
     return findRegisterDefOperandIdx(Reg, false, true, TRI) != -1;
   }
 
