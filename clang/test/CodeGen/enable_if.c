@@ -65,19 +65,19 @@ void test3() {
 }
 
 
-enum { TRUEFACTS = 1 };
+const int TRUEFACTS = 1;
 void qux(int m) __attribute__((overloadable, enable_if(1, ""),
                                enable_if(TRUEFACTS, "")));
 void qux(int m) __attribute__((overloadable, enable_if(1, "")));
 // CHECK-LABEL: define void @test4
 void test4() {
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXL_Z9TRUEFACTSEEEi
   void (*p)(int) = qux;
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXL_Z9TRUEFACTSEEEi
   void (*p2)(int) = &qux;
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXL_Z9TRUEFACTSEEEi
   p = qux;
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXL_Z9TRUEFACTSEEEi
   p = &qux;
 }
 

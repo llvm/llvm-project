@@ -266,9 +266,6 @@ public:
 
   void AddCXXDefinitionData(const CXXRecordDecl *D);
 
-  /// Emit information about the initializer of a VarDecl.
-  void AddVarDeclInit(const VarDecl *VD);
-
   /// Write an OMPTraitInfo object.
   void writeOMPTraitInfo(const OMPTraitInfo *TI);
 
