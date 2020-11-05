@@ -25,96 +25,98 @@ steps:
   - label: "C++11"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx11"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++14"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx14"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++17"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx17"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot.sh generic-noexceptions"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "GCC/C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-gcc"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "ASAN"
     command: "libcxx/utils/ci/run-buildbot.sh generic-asan"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "TSAN"
     command: "libcxx/utils/ci/run-buildbot.sh generic-tsan"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "UBSAN"
     command: "libcxx/utils/ci/run-buildbot.sh generic-ubsan"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "With LLVM's libunwind"
     command: "libcxx/utils/ci/run-buildbot.sh generic-with_llvm_unwinder"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "Single-threaded"
     command: "libcxx/utils/ci/run-buildbot.sh generic-singlethreaded"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "No debug mode"
     command: "libcxx/utils/ci/run-buildbot.sh generic-nodebug"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "No random device"
     command: "libcxx/utils/ci/run-buildbot.sh generic-no-random_device"
+    artifact_paths:
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
 
   - label: "MacOS C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-macos-builders"
 
@@ -143,13 +145,13 @@ steps:
   - label: "Apple system"
     command: "libcxx/utils/ci/run-buildbot.sh x86_64-apple-system"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-macos-builders"
 
   - label: "Apple system -fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot.sh x86_64-apple-system-noexceptions"
     artifact_paths:
-    - "**/test-results.xml"
+      - "**/test-results.xml"
     agents:
       queue: "libcxx-macos-builders"
