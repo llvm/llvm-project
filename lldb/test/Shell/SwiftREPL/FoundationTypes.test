@@ -43,5 +43,5 @@ n
 // CHECK-NEXT:   name = "abc"
 // CHECK-NEXT:   object = 42
 
-let tinky : Optional<UUID> = nil
-// CHECK: {{tinky}}: UUID? = nil
+// COM: let tinky : Optional<UUID> = nil
+// COM:  CHECK: {{tinky}}: UUID? = nil
