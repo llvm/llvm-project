@@ -286,6 +286,42 @@ static void printNBits(raw_ostream &Out, object::Archive::Kind Kind,
     print<uint32_t>(Out, Kind, Val);
 }
 
+static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
+                                       uint64_t NumSyms, uint64_t OffsetSize,
+                                       StringRef StringTable,
+                                       uint32_t *Padding = nullptr) {
+  assert((OffsetSize == 4 || OffsetSize == 8) && "Unsupported OffsetSize");
+  uint64_t Size = OffsetSize; // Number of entries
+  if (isBSDLike(Kind))
+    Size += NumSyms * OffsetSize * 2; // Table
+  else
+    Size += NumSyms * OffsetSize; // Table
+  if (isBSDLike(Kind))
+    Size += OffsetSize; // byte count
+  Size += StringTable.size();
+  // ld64 expects the members to be 8-byte aligned for 64-bit content and at
+  // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
+  // uniformly.
+  // We do this for all bsd formats because it simplifies aligning members.
+  uint32_t Pad = offsetToAlignment(Size, Align(isBSDLike(Kind) ? 8 : 2));
+  Size += Pad;
+  if (Padding)
+    *Padding = Pad;
+  return Size;
+}
+
+static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
+                                   bool Deterministic, uint64_t Size) {
+  if (isBSDLike(Kind)) {
+    const char *Name = is64BitKind(Kind) ? "__.SYMDEF_64" : "__.SYMDEF";
+    printBSDMemberHeader(Out, Out.tell(), Name, now(Deterministic), 0, 0, 0,
+                         Size);
+  } else {
+    const char *Name = is64BitKind(Kind) ? "/SYM64" : "";
+    printGNUSmallMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
+  }
+}
+
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                              bool Deterministic, ArrayRef<MemberData> Members,
                              StringRef StringTable) {
@@ -298,33 +334,10 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   for (const MemberData &M : Members)
     NumSyms += M.Symbols.size();
 
-  unsigned Size = 0;
-  unsigned OffsetSize = is64BitKind(Kind) ? sizeof(uint64_t) : sizeof(uint32_t);
-
-  Size += OffsetSize; // Number of entries
-  if (isBSDLike(Kind))
-    Size += NumSyms * OffsetSize * 2; // Table
-  else
-    Size += NumSyms * OffsetSize; // Table
-  if (isBSDLike(Kind))
-    Size += OffsetSize; // byte count
-  Size += StringTable.size();
-  // ld64 expects the members to be 8-byte aligned for 64-bit content and at
-  // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
-  // uniformly.
-  // We do this for all bsd formats because it simplifies aligning members.
-  const Align Alignment(isBSDLike(Kind) ? 8 : 2);
-  unsigned Pad = offsetToAlignment(Size, Alignment);
-  Size += Pad;
-
-  if (isBSDLike(Kind)) {
-    const char *Name = is64BitKind(Kind) ? "__.SYMDEF_64" : "__.SYMDEF";
-    printBSDMemberHeader(Out, Out.tell(), Name, now(Deterministic), 0, 0, 0,
-                         Size);
-  } else {
-    const char *Name = is64BitKind(Kind) ? "/SYM64" : "";
-    printGNUSmallMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
-  }
+  uint64_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
+  uint32_t Pad;
+  uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize, StringTable, &Pad);
+  writeSymbolTableHeader(Out, Kind, Deterministic, Size);
 
   uint64_t Pos = Out.tell() + Size;
 
@@ -579,16 +592,27 @@ static Error writeArchiveToStream(raw_ostream &Out,
 
   // We would like to detect if we need to switch to a 64-bit symbol table.
   if (WriteSymtab) {
-    uint64_t MaxOffset = 0;
+    uint64_t MaxOffset = 8; // For the file signature.
     uint64_t LastOffset = MaxOffset;
+    uint64_t NumSyms = 0;
     for (const auto &M : Data) {
       // Record the start of the member's offset
       LastOffset = MaxOffset;
       // Account for the size of each part associated with the member.
       MaxOffset += M.Header.size() + M.Data.size() + M.Padding.size();
-      // We assume 32-bit symbols to see if 32-bit symbols are possible or not.
-      MaxOffset += M.Symbols.size() * 4;
+      NumSyms += M.Symbols.size();
     }
+
+    // We assume 32-bit offsets to see if 32-bit symbols are possible or not.
+    uint64_t SymtabSize = computeSymbolTableSize(Kind, NumSyms, 4, SymNamesBuf);
+    auto computeSymbolTableHeaderSize =
+        [=] {
+          SmallString<0> TmpBuf;
+          raw_svector_ostream Tmp(TmpBuf);
+          writeSymbolTableHeader(Tmp, Kind, Deterministic, SymtabSize);
+          return TmpBuf.size();
+        };
+    LastOffset += computeSymbolTableHeaderSize() + SymtabSize;
 
     // The SYM64 format is used when an archive's member offsets are larger than
     // 32-bits can hold. The need for this shift in format is detected by
@@ -597,15 +621,15 @@ static Error writeArchiveToStream(raw_ostream &Out,
     // speed the test up we use this environment variable to pretend like the
     // cutoff happens before 32-bits and instead happens at some much smaller
     // value.
+    uint64_t Sym64Threshold = 1ULL << 32;
     const char *Sym64Env = std::getenv("SYM64_THRESHOLD");
-    int Sym64Threshold = 32;
     if (Sym64Env)
       StringRef(Sym64Env).getAsInteger(10, Sym64Threshold);
 
     // If LastOffset isn't going to fit in a 32-bit varible we need to switch
     // to 64-bit. Note that the file can be larger than 4GB as long as the last
     // member starts before the 4GB offset.
-    if (LastOffset >= (1ULL << Sym64Threshold)) {
+    if (LastOffset >= Sym64Threshold) {
       if (Kind == object::Archive::K_DARWIN)
         Kind = object::Archive::K_DARWIN64;
       else
