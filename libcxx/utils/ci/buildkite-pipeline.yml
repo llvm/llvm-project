@@ -202,6 +202,17 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Documentation"
+    command: "libcxx/utils/ci/run-buildbot.sh documentation"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "Legacy standalone build"
     command: "libcxx/utils/ci/run-buildbot.sh legacy-standalone"
     artifact_paths:

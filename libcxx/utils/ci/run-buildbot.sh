@@ -169,6 +169,13 @@ benchmarks)
     generate-cmake
     check-cxx-benchmarks
 ;;
+documentation)
+  export CC=clang
+  export CXX=clang++
+  generate-cmake -DLLVM_ENABLE_SPHINX=ON
+  echo "+++ Generating documentation"
+  ninja -C "${BUILD_DIR}" docs-libcxx-html
+;;
 unified-standalone)
     export CC=clang
     export CXX=clang++
