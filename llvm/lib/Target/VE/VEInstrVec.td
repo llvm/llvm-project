@@ -522,6 +522,48 @@ multiclass RV0m<string opcStr, bits<8>opc, RegisterClass RC,
   let cy = 0, sy = 0 in
   defm "" : RVmm<opcStr, "", opc, RC, RCM, (ins)>;
 }
+// Generic RV multiclass with 2 arguments for shift operations.
+//   e.g. VSLL, VSRL, VSLA, and etc.
+let VE_VLIndex = 3 in
+multiclass RVSm<string opcStr, bits<8>opc, RegisterClass ScaRC,
+                RegisterClass RC, RegisterClass RCM> {
+  let cy = 0, sy = 0, vy = ?, vz = ? in
+  defm vv : RVmm<opcStr, ", $vz, $vy", opc, RC, RCM, (ins RC:$vz, RC:$vy)>;
+  let cs = 1, vz = ? in
+  defm vr : RVmm<opcStr, ", $vz, $sy", opc, RC, RCM, (ins RC:$vz, ScaRC:$sy)>;
+  let cs = 1, cy = 0, vz = ? in
+  defm vi : RVmm<opcStr, ", $vz, $sy", opc, RC, RCM, (ins RC:$vz, uimm7:$sy)>;
+}
+// Generic RV multiclass with 3 arguments for shift operations.
+//   e.g. VSLD and VSRD.
+let VE_VLIndex = 4 in
+multiclass RVSDm<string opcStr, bits<8>opc, RegisterClass RC,
+                 RegisterClass RCM> {
+  let vy = ?, vz = ? in
+  defm vvr : RVmm<opcStr, ", ($vy, ${vz}), $sy", opc, RC, RCM,
+                 (ins RC:$vy, RC:$vz, I64:$sy)>;
+  let cy = 0, vy = ?, vz = ? in
+  defm vvi : RVmm<opcStr, ", ($vy, ${vz}), $sy", opc, RC, RCM,
+                 (ins RC:$vy, RC:$vz, uimm7:$sy)>;
+}
+// Special RV multiclass with 3 arguments.
+//   e.g. VSFA
+let VE_VLIndex = 4 in
+multiclass RVSAm<string opcStr, bits<8>opc, RegisterClass RC,
+                 RegisterClass RCM> {
+  let cz = 1, sz = ?, vz = ? in
+  defm vrr : RVmm<opcStr, ", $vz, $sy, $sz", opc, RC, RCM,
+                  (ins RC:$vz, I64:$sy, I64:$sz)>;
+  let cz = 0, sz = ?, vz = ? in
+  defm vrm : RVmm<opcStr, ", $vz, $sy, $sz", opc, RC, RCM,
+                  (ins RC:$vz, I64:$sy, mimm:$sz)>;
+  let cy = 0, cz = 1, sz = ?, vz = ? in
+  defm vir : RVmm<opcStr, ", $vz, $sy, $sz", opc, RC, RCM,
+                  (ins RC:$vz, uimm3:$sy, I64:$sz)>;
+  let cy = 0, cz = 0, sz = ?, vz = ? in
+  defm vim : RVmm<opcStr, ", $vz, $sy, $sz", opc, RC, RCM,
+                  (ins RC:$vz, uimm3:$sy, mimm:$sz)>;
+}
 
 // Section 8.10.1 - VADD (Vector Add)
 let cx = 0, cx2 = 0 in
@@ -750,3 +792,60 @@ let cx = 0, cx2 = 0 in defm VSEQ : RV0m<"vseq", 0x99, V64, VM>;
 let cx = 0, cx2 = 1 in defm PVSEQLO : RV0m<"pvseq.lo", 0x99, V64, VM>;
 let cx = 1, cx2 = 0 in defm PVSEQUP : RV0m<"pvseq.up", 0x99, V64, VM>;
 let cx = 1, cx2 = 1 in defm PVSEQ : RV0m<"pvseq", 0x99, V64, VM512>;
+
+//-----------------------------------------------------------------------------
+// Section 8.12 - Vector Shift Operation Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.12.1 - VSLL (Vector Shift Left Logical)
+let cx = 0, cx2 = 0 in defm VSLL : RVSm<"vsll", 0xe5, I64, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVSLLLO : RVSm<"pvsll.lo", 0xe5, I32, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVSLLUP : RVSm<"pvsll.up", 0xe5, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVSLL : RVSm<"pvsll", 0xe5, I64, V64, VM512>;
+
+// Section 8.12.2 - VSLD (Vector Shift Left Double)
+defm VSLD : RVSDm<"vsld", 0xe4, V64, VM>;
+
+// Section 8.12.3 - VSRL (Vector Shift Right Logical)
+let cx = 0, cx2 = 0 in defm VSRL : RVSm<"vsrl", 0xf5, I64, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVSRLLO : RVSm<"pvsrl.lo", 0xf5, I32, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVSRLUP : RVSm<"pvsrl.up", 0xf5, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVSRL : RVSm<"pvsrl", 0xf5, I64, V64, VM512>;
+
+// Section 8.12.4 - VSRD (Vector Shift Right Double)
+defm VSRD : RVSDm<"vsrd", 0xf4, V64, VM>;
+
+// Section 8.12.5 - VSLA (Vector Shift Left Arithmetic)
+let cx = 0, cx2 = 0 in defm VSLAWSX : RVSm<"vsla.w.sx", 0xe6, I32, V64, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVSLALO : RVSm<"pvsla.lo", 0xe6, I32, V64, VM>;
+  let isCodeGenOnly = 1 in defm VSLAWZX : RVSm<"vsla.w.zx", 0xe6, I32, V64, VM>;
+}
+let cx = 1, cx2 = 0 in defm PVSLAUP : RVSm<"pvsla.up", 0xe6, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVSLA : RVSm<"pvsla", 0xe6, I64, V64, VM512>;
+def : MnemonicAlias<"pvsla.lo.sx", "vsla.w.sx">;
+def : MnemonicAlias<"vsla.w.zx", "pvsla.lo">;
+def : MnemonicAlias<"vsla.w", "pvsla.lo">;
+def : MnemonicAlias<"pvsla.lo.zx", "pvsla.lo">;
+
+// Section 8.12.6 - VSLAX (Vector Shift Left Arithmetic)
+defm VSLAL : RVSm<"vsla.l", 0xd4, I64, V64, VM>;
+
+// Section 8.12.7 - VSRA (Vector Shift Right Arithmetic)
+let cx = 0, cx2 = 0 in defm VSRAWSX : RVSm<"vsra.w.sx", 0xf6, I32, V64, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVSRALO : RVSm<"pvsra.lo", 0xf6, I32, V64, VM>;
+  let isCodeGenOnly = 1 in defm VSRAWZX : RVSm<"vsra.w.zx", 0xf6, I32, V64, VM>;
+}
+let cx = 1, cx2 = 0 in defm PVSRAUP : RVSm<"pvsra.up", 0xf6, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVSRA : RVSm<"pvsra", 0xf6, I64, V64, VM512>;
+def : MnemonicAlias<"pvsra.lo.sx", "vsra.w.sx">;
+def : MnemonicAlias<"vsra.w.zx", "pvsra.lo">;
+def : MnemonicAlias<"vsra.w", "pvsra.lo">;
+def : MnemonicAlias<"pvsra.lo.zx", "pvsra.lo">;
+
+// Section 8.12.8 - VSRAX (Vector Shift Right Arithmetic)
+defm VSRAL : RVSm<"vsra.l", 0xd5, I64, V64, VM>;
+
+// Section 8.12.9 - VSFA (Vector Shift Left and Add)
+defm VSFA : RVSAm<"vsfa", 0xd7, V64, VM>;
