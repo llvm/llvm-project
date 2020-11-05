@@ -89,7 +89,7 @@ public:
     const MachineFunction &MF) const override;
   bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
 
-  int64_t getMUBUFInstrOffset(const MachineInstr *MI) const;
+  int64_t getScratchInstrOffset(const MachineInstr *MI) const;
 
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;

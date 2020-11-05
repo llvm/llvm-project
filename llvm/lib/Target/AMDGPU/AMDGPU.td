@@ -1284,6 +1284,10 @@ def HasOffset3fBug : Predicate<"!Subtarget->hasOffset3fBug()">,
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;
 
+def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
+
+def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
+
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"
