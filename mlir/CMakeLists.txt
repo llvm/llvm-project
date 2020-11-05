@@ -12,7 +12,8 @@ include(AddMLIR)
 
 # Forbid implicit function declaration: this may lead to subtle bugs and we
 # don't have a reason to support this.
-add_flag_if_supported("-Werror-implicit-function-declaration" WERROR_IMPLICIT_FUNCTION_DECLARATION)
+check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
+append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
 
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
