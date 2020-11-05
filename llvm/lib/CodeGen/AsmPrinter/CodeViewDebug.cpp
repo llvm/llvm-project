@@ -588,12 +588,17 @@ void CodeViewDebug::endModule() {
     if (!P.first->isDeclarationForLinker())
       emitDebugInfoForFunction(P.first, *P.second);
 
-  // Emit global variable debug information.
-  setCurrentSubprogram(nullptr);
-  emitDebugInfoForGlobals();
+  // Get types used by globals without emitting anything.
+  // This is meant to collect all static const data members so they can be
+  // emitted as globals.
+  collectDebugInfoForGlobals();
 
   // Emit retained types.
   emitDebugInfoForRetainedTypes();
+
+  // Emit global variable debug information.
+  setCurrentSubprogram(nullptr);
+  emitDebugInfoForGlobals();
 
   // Switch back to the generic .debug$S section after potentially processing
   // comdat symbol sections.
@@ -2143,6 +2148,12 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
                                       const DIDerivedType *DDTy) {
   if (!DDTy->getName().empty()) {
     Info.Members.push_back({DDTy, 0});
+
+    // Collect static const data members.
+    if ((DDTy->getFlags() & DINode::FlagStaticMember) ==
+        DINode::FlagStaticMember)
+      StaticConstMembers.push_back(DDTy);
+
     return;
   }
 
@@ -3045,15 +3056,32 @@ void CodeViewDebug::collectGlobalVariableInfo() {
   }
 }
 
+void CodeViewDebug::collectDebugInfoForGlobals() {
+  for (const CVGlobalVariable &CVGV : GlobalVariables) {
+    const DIGlobalVariable *DIGV = CVGV.DIGV;
+    const DIScope *Scope = DIGV->getScope();
+    getCompleteTypeIndex(DIGV->getType());
+    getFullyQualifiedName(Scope, DIGV->getName());
+  }
+
+  for (const CVGlobalVariable &CVGV : ComdatVariables) {
+    const DIGlobalVariable *DIGV = CVGV.DIGV;
+    const DIScope *Scope = DIGV->getScope();
+    getCompleteTypeIndex(DIGV->getType());
+    getFullyQualifiedName(Scope, DIGV->getName());
+  }
+}
+
 void CodeViewDebug::emitDebugInfoForGlobals() {
   // First, emit all globals that are not in a comdat in a single symbol
   // substream. MSVC doesn't like it if the substream is empty, so only open
   // it if we have at least one global to emit.
   switchToDebugSectionForSymbol(nullptr);
-  if (!GlobalVariables.empty()) {
+  if (!GlobalVariables.empty() || !StaticConstMembers.empty()) {
     OS.AddComment("Symbol subsection for globals");
     MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
     emitGlobalVariableList(GlobalVariables);
+    emitStaticConstMemberList();
     endCVSubsection(EndLabel);
   }
 
@@ -3089,6 +3117,64 @@ void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
   for (const CVGlobalVariable &CVGV : Globals) {
     // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
     emitDebugInfoForGlobal(CVGV);
+  }
+}
+
+// Return true if type encoding is unsigned.
+static bool isStaticConstUnsigned(const DIType *Ty) {
+  if (const auto *CTy = dyn_cast<DICompositeType>(Ty)) {
+    if (CTy->getTag() == dwarf::DW_TAG_enumeration_type) {
+      assert(CTy->getBaseType() && "Expected valid base type");
+      return isStaticConstUnsigned(CTy->getBaseType());
+    }
+
+    return true;
+  }
+  if (const auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    assert(DTy->getBaseType() && "Expected valid base type");
+    return isStaticConstUnsigned(DTy->getBaseType());
+  }
+
+  const auto *BTy = cast<DIBasicType>(Ty);
+  unsigned Encoding = BTy->getEncoding();
+  return Encoding == dwarf::DW_ATE_unsigned ||
+         Encoding == dwarf::DW_ATE_unsigned_char ||
+         Encoding == dwarf::DW_ATE_UTF || Encoding == dwarf::DW_ATE_boolean ||
+         Ty->getTag() == dwarf::DW_TAG_unspecified_type;
+}
+
+void CodeViewDebug::emitStaticConstMemberList() {
+  for (const DIDerivedType *DTy : StaticConstMembers) {
+    const DIScope *Scope = DTy->getScope();
+
+    APSInt Value;
+    if (const ConstantInt *CI =
+            dyn_cast_or_null<ConstantInt>(DTy->getConstant()))
+      Value = APSInt(CI->getValue(), isStaticConstUnsigned(DTy->getBaseType()));
+    else if (const ConstantFP *CFP =
+                 dyn_cast_or_null<ConstantFP>(DTy->getConstant()))
+      Value = APSInt(CFP->getValueAPF().bitcastToAPInt(), true);
+    else
+      continue;
+
+    std::string QualifiedName = getFullyQualifiedName(Scope, DTy->getName());
+
+    MCSymbol *SConstantEnd = beginSymbolRecord(SymbolKind::S_CONSTANT);
+    OS.AddComment("Type");
+    OS.emitInt32(getTypeIndex(DTy->getBaseType()).getIndex());
+    OS.AddComment("Value");
+
+    // Encoded integers shouldn't need more than 10 bytes.
+    uint8_t Data[10];
+    BinaryStreamWriter Writer(Data, llvm::support::endianness::little);
+    CodeViewRecordIO IO(Writer);
+    cantFail(IO.mapEncodedInteger(Value));
+    StringRef SRef((char *)Data, Writer.getOffset());
+    OS.emitBinaryData(SRef);
+
+    OS.AddComment("Name");
+    emitNullTerminatedSymbolName(OS, QualifiedName);
+    endSymbolRecord(SConstantEnd);
   }
 }
 
