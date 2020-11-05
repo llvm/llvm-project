@@ -20,13 +20,13 @@ int main(int argc, char** argv) {
 }
 
 // CHECK: (lldb) target symbols add {{.*}}bar.pdb
-// CHECK: symbol file '{{.*}}/bar.pdb' has been added to '{{.*}}/foo.exe'
+// CHECK: symbol file '{{.*}}bar.pdb' has been added to '{{.*}}foo.exe'
 // CHECK: (lldb) b main
 // CHECK: Breakpoint 1: where = foo.exe`main + 23 at load-pdb.cpp:19, address = 0x0000000140001017
 // CHECK: (lldb) image dump symfile
 // CHECK: Types:
 // CHECK: {{.*}}: Type{0x00010024} , size = 0, compiler_type = {{.*}} int (int, char **)
 // CHECK: Compile units:
-// CHECK: {{.*}}: CompileUnit{0x00000000}, language = "c++", file = '{{.*}}/load-pdb.cpp'
+// CHECK: {{.*}}: CompileUnit{0x00000000}, language = "c++", file = '{{.*}}load-pdb.cpp'
 // CHECK: {{.*}}:   Function{{{.*}}}, demangled = main, type = {{.*}}
 // CHECK: {{.*}}:   Block{{{.*}}}
