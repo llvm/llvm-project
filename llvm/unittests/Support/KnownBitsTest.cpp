@@ -115,6 +115,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits KnownMul(KnownAnd);
       KnownBits KnownUDiv(KnownAnd);
       KnownBits KnownURem(KnownAnd);
+      KnownBits KnownSRem(KnownAnd);
       KnownBits KnownShl(KnownAnd);
       KnownBits KnownLShr(KnownAnd);
       KnownBits KnownAShr(KnownAnd);
@@ -163,6 +164,10 @@ TEST(KnownBitsTest, BinaryExhaustive) {
             Res = N1.urem(N2);
             KnownURem.One &= Res;
             KnownURem.Zero &= ~Res;
+
+            Res = N1.srem(N2);
+            KnownSRem.One &= Res;
+            KnownSRem.Zero &= ~Res;
           }
 
           if (N2.ult(1ULL << N1.getBitWidth())) {
@@ -226,6 +231,10 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits ComputedURem = KnownBits::urem(Known1, Known2);
       EXPECT_TRUE(ComputedURem.Zero.isSubsetOf(KnownURem.Zero));
       EXPECT_TRUE(ComputedURem.One.isSubsetOf(KnownURem.One));
+
+      KnownBits ComputedSRem = KnownBits::srem(Known1, Known2);
+      EXPECT_TRUE(ComputedSRem.Zero.isSubsetOf(KnownSRem.Zero));
+      EXPECT_TRUE(ComputedSRem.One.isSubsetOf(KnownSRem.One));
 
       KnownBits ComputedShl = KnownBits::shl(Known1, Known2);
       EXPECT_TRUE(ComputedShl.Zero.isSubsetOf(KnownShl.Zero));

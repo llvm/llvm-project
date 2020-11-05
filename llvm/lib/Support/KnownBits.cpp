@@ -345,6 +345,36 @@ KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
+KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
+    // The low bits of the first operand are unchanged by the srem.
+    APInt LowBits = RHS.getConstant() - 1;
+    Known.Zero = LHS.Zero & LowBits;
+    Known.One = LHS.One & LowBits;
+
+    // If the first operand is non-negative or has all low bits zero, then
+    // the upper bits are all zero.
+    if (LHS.isNonNegative() || LowBits.isSubsetOf(LHS.Zero))
+      Known.Zero |= ~LowBits;
+
+    // If the first operand is negative and not all low bits are zero, then
+    // the upper bits are all one.
+    if (LHS.isNegative() && LowBits.intersects(LHS.One))
+      Known.One |= ~LowBits;
+    return Known;
+  }
+
+  // The sign bit is the LHS's sign bit, except when the result of the
+  // remainder is zero. If it's known zero, our sign bit is also zero.
+  if (LHS.isNonNegative())
+    Known.makeNonNegative();
+  return Known;
+}
+
 KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
   // Result bit is 0 if either operand bit is 0.
   Zero |= RHS.Zero;
