@@ -1099,12 +1099,12 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_TLS_GTID_MIN INT_MAX
 #endif
 
-#define KMP_MASTER_TID(tid) ((tid) == 0)
-#define KMP_WORKER_TID(tid) ((tid) != 0)
+#define KMP_MASTER_TID(tid) (0 == (tid))
+#define KMP_WORKER_TID(tid) (0 != (tid))
 
-#define KMP_MASTER_GTID(gtid) (__kmp_tid_from_gtid((gtid)) == 0)
-#define KMP_WORKER_GTID(gtid) (__kmp_tid_from_gtid((gtid)) != 0)
-#define KMP_INITIAL_GTID(gtid) ((gtid) == 0)
+#define KMP_MASTER_GTID(gtid) (0 == __kmp_tid_from_gtid((gtid)))
+#define KMP_WORKER_GTID(gtid) (0 != __kmp_tid_from_gtid((gtid)))
+#define KMP_INITIAL_GTID(gtid) (0 == (gtid))
 
 #ifndef TRUE
 #define FALSE 0
@@ -2074,7 +2074,7 @@ extern kmp_uint64 __kmp_taskloop_min_tasks;
 // The tt_found_tasks flag is a signal to all threads in the team that tasks
 // were spawned and queued since the previous barrier release.
 #define KMP_TASKING_ENABLED(task_team)                                         \
-  (TCR_SYNC_4((task_team)->tt.tt_found_tasks) == TRUE)
+  (TRUE == TCR_SYNC_4((task_team)->tt.tt_found_tasks))
 /*!
 @ingroup BASIC_TYPES
 @{
