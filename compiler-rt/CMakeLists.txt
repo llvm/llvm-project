@@ -279,7 +279,7 @@ endif()
 # Provide some common commmandline flags for Sanitizer runtimes.
 if("${ANDROID_API_LEVEL}" GREATER_EQUAL 28)
   list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
-  list(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS -fno-emulated-tls)
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
 endif()
 if(NOT WIN32)
   append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC SANITIZER_COMMON_CFLAGS)
