@@ -109,13 +109,19 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
   // consumer's operand.
   // If both `numProducerIndices` and `numConsumerIndices` are zero, this is a
   // generic op. In this case, there are no indices in block arguments.
-  unsigned numProducerIndices =
-      isa<IndexedGenericOp>(producer.getOperation()) ? nloops : 0;
-  unsigned numConsumerIndices =
-      isa<IndexedGenericOp>(consumer.getOperation()) ? nloops : 0;
+  unsigned numProducerIndices = isa<IndexedGenericOp>(producer.getOperation())
+                                    ? producer.getNumLoops()
+                                    : 0;
+  unsigned numConsumerIndices = isa<IndexedGenericOp>(consumer.getOperation())
+                                    ? consumer.getNumLoops()
+                                    : 0;
+  unsigned numFusedOpIndices =
+      (isa<IndexedGenericOp>(producer.getOperation()) ||
+       isa<IndexedGenericOp>(consumer.getOperation()))
+          ? std::max(producer.getNumLoops(), consumer.getNumLoops())
+          : 0;
   // Firstly, add all the indices to the block arguments.
-  for (unsigned i = 0, e = std::max(numProducerIndices, numConsumerIndices);
-       i < e; ++i)
+  for (unsigned i = 0, e = numFusedOpIndices; i < e; ++i)
     fusedBlock->addArgument(rewriter.getIndexType());
   // Map the arguments for the unmodified args from the consumer.
   for (auto consumerArg : llvm::enumerate(consumerBlock.getArguments())) {
@@ -129,7 +135,7 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
           auto newIndex = rewriter.create<mlir::AffineApplyOp>(
               producer.getLoc(),
               consumerToProducerLoopsMap.getSubMap(producerArg.index()),
-              fusedBlock->getArguments().take_front(nloops));
+              fusedBlock->getArguments().take_front(numFusedOpIndices));
           mapper.map(producerArg.value(), newIndex);
         } else {
           mapper.map(producerArg.value(),
