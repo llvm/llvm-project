@@ -64,6 +64,14 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"
 		ARCHCFLAGS=""
+	elif [ "`uname -a | grep -i mips64`" != "" ]; then
+		if [ "`lscpu | grep -i Little`" != "" ]; then
+			SUFFIX="linux_mips64le"
+			ARCHCFLAGS="-mips64 -EL"
+		else
+			SUFFIX="linux_mips64"
+			ARCHCFLAGS="-mips64 -EB"
+		fi
 	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	# The resulting object still depends on libc.
