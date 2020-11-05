@@ -1,15 +1,15 @@
-/*===-- mlir-c/Diagnostics.h - MLIR Diagnostic subsystem C API ----*- C -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-|*===----------------------------------------------------------------------===*|
-|*                                                                            *|
-|* This header declares the C APIs accessing MLIR Diagnostics subsystem.      *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===-- mlir-c/Diagnostics.h - MLIR Diagnostic subsystem C API ----*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This header declares the C APIs accessing MLIR Diagnostics subsystem.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_C_DIAGNOSTICS_H
 #define MLIR_C_DIAGNOSTICS_H
@@ -28,7 +28,7 @@ struct MlirDiagnostic {
 };
 typedef struct MlirDiagnostic MlirDiagnostic;
 
-/** Severity of a diagnostic. */
+/// Severity of a diagnostic.
 enum MlirDiagnosticSeverity {
   MlirDiagnosticError,
   MlirDiagnosticWarning,
@@ -37,7 +37,7 @@ enum MlirDiagnosticSeverity {
 };
 typedef enum MlirDiagnosticSeverity MlirDiagnosticSeverity;
 
-/** Opaque identifier of a diagnostic handler, useful to detach a handler. */
+/// Opaque identifier of a diagnostic handler, useful to detach a handler.
 typedef uint64_t MlirDiagnosticHandlerID;
 
 /** Diagnostic handler type. Acceps a reference to a diagnostic, which is only
@@ -47,17 +47,17 @@ typedef uint64_t MlirDiagnosticHandlerID;
  * process the diagnostic. */
 typedef MlirLogicalResult (*MlirDiagnosticHandler)(MlirDiagnostic);
 
-/** Prints a diagnostic using the provided callback. */
+/// Prints a diagnostic using the provided callback.
 void mlirDiagnosticPrint(MlirDiagnostic diagnostic, MlirStringCallback callback,
                          void *userData);
 
-/** Returns the location at which the diagnostic is reported. */
+/// Returns the location at which the diagnostic is reported.
 MlirLocation mlirDiagnosticGetLocation(MlirDiagnostic diagnostic);
 
-/** Returns the severity of the diagnostic. */
+/// Returns the severity of the diagnostic.
 MlirDiagnosticSeverity mlirDiagnosticGetSeverity(MlirDiagnostic diagnostic);
 
-/** Returns the number of notes attached to the diagnostic. */
+/// Returns the number of notes attached to the diagnostic.
 intptr_t mlirDiagnosticGetNumNotes(MlirDiagnostic diagnostic);
 
 /** Returns `pos`-th note attached to the diagnostic. Expects `pos` to be a

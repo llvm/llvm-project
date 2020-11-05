@@ -1649,6 +1649,7 @@ def Vector_ShapeCastOp :
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Vector_BitCastOp :

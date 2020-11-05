@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7m -mcpu=cortex-m7 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BP
+; RUN: llc < %s -mtriple=thumbv7m -mattr=-no-branch-predictor | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BP
 ; RUN: llc < %s -mtriple=thumbv7m -mcpu=cortex-m3 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOBP
 
 declare void @otherfn()
@@ -64,6 +64,7 @@ if.then:
   store i32 1, i32* %p, align 4
   store i32 2, i32* %q, align 4
   store i32 3, i32* %r, align 4
+  store i32 4, i32* %p, align 4
   br label %if.end
 
 if.end:

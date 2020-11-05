@@ -213,10 +213,8 @@ SBType SBType::GetArrayElementType() {
 
   if (!IsValid())
     return LLDB_RECORD_RESULT(SBType());
-  CompilerType canonical_type =
-      m_opaque_sp->GetCompilerType(true).GetCanonicalType();
-  return LLDB_RECORD_RESULT(SBType(
-      TypeImplSP(new TypeImpl(canonical_type.GetArrayElementType(nullptr)))));
+  return LLDB_RECORD_RESULT(SBType(TypeImplSP(new TypeImpl(
+      m_opaque_sp->GetCompilerType(true).GetArrayElementType(nullptr)))));
 }
 
 SBType SBType::GetArrayType(uint64_t size) {

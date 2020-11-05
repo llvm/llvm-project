@@ -7,14 +7,22 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the PowerPC-specific builtin function database.  Users of
-// this file must define the BUILTIN macro to make use of this information.
+// this file must define the BUILTIN macro or the MMA_BUILTIN macro to make use
+// of this information.
 //
 //===----------------------------------------------------------------------===//
 
 // FIXME: this needs to be the full list supported by GCC.  Right now, I'm just
 // adding stuff on demand.
 
-// The format of this database matches clang/Basic/Builtins.def.
+// The format of this database matches clang/Basic/Builtins.def except for the
+// MMA builtins that are using their own format documented below.
+
+#if defined(BUILTIN) && !defined(MMA_BUILTIN)
+#   define MMA_BUILTIN(ID, TYPES, ACCUMULATE) BUILTIN(__builtin_mma_##ID, "i.", "t")
+#elif defined(MMA_BUILTIN) && !defined(BUILTIN)
+#   define BUILTIN(ID, TYPES, ATTRS)
+#endif
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
@@ -646,6 +654,92 @@ BUILTIN(__builtin_setflm, "dd", "")
 // Cache built-ins
 BUILTIN(__builtin_dcbf, "vvC*", "")
 
+// MMA built-ins
+// All MMA built-ins are declared here using the MMA_BUILTIN macro. Because
+// these built-ins rely on target-dependent types and to avoid pervasive change,
+// they are type checked manually in Sema using custom type descriptors.
+// The first argument of the MMA_BUILTIN macro is the name of the built-in, the
+// second argument specifies the type of the function (result value, then each
+// argument) as follows:
+//  i -> Unsigned integer followed by the greatest possible value for that
+//       argument or 0 if no constraint on the value.
+//       (e.g. i15 for a 4-bits value)
+//  v -> void
+//  V -> Vector type used with MMA builtins (vector unsigned char)
+//  W -> MMA vector type followed by the size of the vector type.
+//       (e.g. W512 for __vector_quad)
+// The 'C' suffix can be used as a suffix to specify the const type.
+// The '*' suffix can be used as a suffix to specify a pointer to a type.
+// The third argument is set to true if the builtin accumulates its result into
+// its given accumulator.
+
+MMA_BUILTIN(assemble_acc, "vW512*VVVV", false)
+MMA_BUILTIN(disassemble_acc, "vv*W512*", false)
+MMA_BUILTIN(assemble_pair, "vW256*VV", false)
+MMA_BUILTIN(disassemble_pair, "vv*W256*", false)
+MMA_BUILTIN(xxmtacc, "vW512*", true)
+MMA_BUILTIN(xxmfacc, "vW512*", true)
+MMA_BUILTIN(xxsetaccz, "vW512*", false)
+MMA_BUILTIN(xvi4ger8, "vW512*VV", false)
+MMA_BUILTIN(xvi8ger4, "vW512*VV", false)
+MMA_BUILTIN(xvi16ger2, "vW512*VV", false)
+MMA_BUILTIN(xvi16ger2s, "vW512*VV", false)
+MMA_BUILTIN(xvf16ger2, "vW512*VV", false)
+MMA_BUILTIN(xvf32ger, "vW512*VV", false)
+MMA_BUILTIN(xvf64ger, "vW512*W256V", false)
+MMA_BUILTIN(pmxvi4ger8, "vW512*VVi15i15i255", false)
+MMA_BUILTIN(pmxvi8ger4, "vW512*VVi15i15i15", false)
+MMA_BUILTIN(pmxvi16ger2, "vW512*VVi15i15i3", false)
+MMA_BUILTIN(pmxvi16ger2s, "vW512*VVi15i15i3", false)
+MMA_BUILTIN(pmxvf16ger2, "vW512*VVi15i15i3", false)
+MMA_BUILTIN(pmxvf32ger, "vW512*VVi15i15", false)
+MMA_BUILTIN(pmxvf64ger, "vW512*W256Vi15i3", false)
+MMA_BUILTIN(xvi4ger8pp, "vW512*VV", true)
+MMA_BUILTIN(xvi8ger4pp, "vW512*VV", true)
+MMA_BUILTIN(xvi8ger4spp, "vW512*VV", true)
+MMA_BUILTIN(xvi16ger2pp, "vW512*VV", true)
+MMA_BUILTIN(xvi16ger2spp, "vW512*VV", true)
+MMA_BUILTIN(pmxvi4ger8pp, "vW512*VVi15i15i255", true)
+MMA_BUILTIN(pmxvi8ger4pp, "vW512*VVi15i15i15", true)
+MMA_BUILTIN(pmxvi8ger4spp, "vW512*VVi15i15i15", true)
+MMA_BUILTIN(pmxvi16ger2pp, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvi16ger2spp, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(xvf16ger2pp, "vW512*VV", true)
+MMA_BUILTIN(xvf16ger2pn, "vW512*VV", true)
+MMA_BUILTIN(xvf16ger2np, "vW512*VV", true)
+MMA_BUILTIN(xvf16ger2nn, "vW512*VV", true)
+MMA_BUILTIN(pmxvf16ger2pp, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvf16ger2pn, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvf16ger2np, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvf16ger2nn, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(xvf32gerpp, "vW512*VV", true)
+MMA_BUILTIN(xvf32gerpn, "vW512*VV", true)
+MMA_BUILTIN(xvf32gernp, "vW512*VV", true)
+MMA_BUILTIN(xvf32gernn, "vW512*VV", true)
+MMA_BUILTIN(pmxvf32gerpp, "vW512*VVi15i15", true)
+MMA_BUILTIN(pmxvf32gerpn, "vW512*VVi15i15", true)
+MMA_BUILTIN(pmxvf32gernp, "vW512*VVi15i15", true)
+MMA_BUILTIN(pmxvf32gernn, "vW512*VVi15i15", true)
+MMA_BUILTIN(xvf64gerpp, "vW512*W256V", true)
+MMA_BUILTIN(xvf64gerpn, "vW512*W256V", true)
+MMA_BUILTIN(xvf64gernp, "vW512*W256V", true)
+MMA_BUILTIN(xvf64gernn, "vW512*W256V", true)
+MMA_BUILTIN(pmxvf64gerpp, "vW512*W256Vi15i3", true)
+MMA_BUILTIN(pmxvf64gerpn, "vW512*W256Vi15i3", true)
+MMA_BUILTIN(pmxvf64gernp, "vW512*W256Vi15i3", true)
+MMA_BUILTIN(pmxvf64gernn, "vW512*W256Vi15i3", true)
+MMA_BUILTIN(xvbf16ger2, "vW512*VV", false)
+MMA_BUILTIN(pmxvbf16ger2, "vW512*VVi15i15i3", false)
+MMA_BUILTIN(xvbf16ger2pp, "vW512*VV", true)
+MMA_BUILTIN(xvbf16ger2pn, "vW512*VV", true)
+MMA_BUILTIN(xvbf16ger2np, "vW512*VV", true)
+MMA_BUILTIN(xvbf16ger2nn, "vW512*VV", true)
+MMA_BUILTIN(pmxvbf16ger2pp, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvbf16ger2pn, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvbf16ger2np, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(pmxvbf16ger2nn, "vW512*VVi15i15i3", true)
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN
+#undef MMA_BUILTIN

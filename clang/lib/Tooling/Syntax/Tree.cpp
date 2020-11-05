@@ -57,8 +57,9 @@ bool syntax::Leaf::classof(const Node *N) {
 }
 
 syntax::Node::Node(NodeKind Kind)
-    : Parent(nullptr), NextSibling(nullptr), Kind(static_cast<unsigned>(Kind)),
-      Role(0), Original(false), CanModify(false) {
+    : Parent(nullptr), NextSibling(nullptr), PreviousSibling(nullptr),
+      Kind(static_cast<unsigned>(Kind)), Role(0), Original(false),
+      CanModify(false) {
   this->setRole(NodeRole::Detached);
 }
 
@@ -74,6 +75,30 @@ bool syntax::Tree::classof(const Node *N) {
   return N->getKind() > NodeKind::Leaf;
 }
 
+void syntax::Tree::appendChildLowLevel(Node *Child, NodeRole Role) {
+  assert(Child->getRole() == NodeRole::Detached);
+  assert(Role != NodeRole::Detached);
+
+  Child->setRole(Role);
+  appendChildLowLevel(Child);
+}
+
+void syntax::Tree::appendChildLowLevel(Node *Child) {
+  assert(Child->Parent == nullptr);
+  assert(Child->NextSibling == nullptr);
+  assert(Child->PreviousSibling == nullptr);
+  assert(Child->getRole() != NodeRole::Detached);
+
+  Child->Parent = this;
+  if (this->LastChild) {
+    Child->PreviousSibling = this->LastChild;
+    this->LastChild->NextSibling = Child;
+  } else
+    this->FirstChild = Child;
+
+  this->LastChild = Child;
+}
+
 void syntax::Tree::prependChildLowLevel(Node *Child, NodeRole Role) {
   assert(Child->getRole() == NodeRole::Detached);
   assert(Role != NodeRole::Detached);
@@ -85,21 +110,25 @@ void syntax::Tree::prependChildLowLevel(Node *Child, NodeRole Role) {
 void syntax::Tree::prependChildLowLevel(Node *Child) {
   assert(Child->Parent == nullptr);
   assert(Child->NextSibling == nullptr);
+  assert(Child->PreviousSibling == nullptr);
   assert(Child->getRole() != NodeRole::Detached);
 
   Child->Parent = this;
-  Child->NextSibling = this->FirstChild;
+  if (this->FirstChild) {
+    Child->NextSibling = this->FirstChild;
+    this->FirstChild->PreviousSibling = Child;
+  } else
+    this->LastChild = Child;
+
   this->FirstChild = Child;
 }
 
-void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
+void syntax::Tree::replaceChildRangeLowLevel(Node *Begin, Node *End,
                                              Node *New) {
-  assert((!BeforeBegin || BeforeBegin->Parent == this) &&
-         "`BeforeBegin` is not a child of `this`.");
+  assert((!Begin || Begin->Parent == this) &&
+         "`Begin` is not a child of `this`.");
   assert((!End || End->Parent == this) && "`End` is not a child of `this`.");
   assert(canModify() && "Cannot modify `this`.");
-
-  Node *&Begin = BeforeBegin ? BeforeBegin->NextSibling : FirstChild;
 
 #ifndef NDEBUG
   for (auto *N = New; N; N = N->NextSibling) {
@@ -116,9 +145,8 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
         return true;
     return false;
   };
-  assert(Reachable(FirstChild, BeforeBegin) &&
-         "`BeforeBegin` is not reachable.");
-  assert(Reachable(Begin, End) && "`End` is not after `BeforeBegin`.");
+  assert(Reachable(FirstChild, Begin) && "`Begin` is not reachable.");
+  assert(Reachable(Begin, End) && "`End` is not after `Begin`.");
 #endif
 
   if (!New && Begin == End)
@@ -128,6 +156,10 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
   for (auto *T = this; T && T->Original; T = T->Parent)
     T->Original = false;
 
+  // Save the node before the range to be removed. Later we insert the `New`
+  // range after this node.
+  auto *BeforeBegin = Begin ? Begin->PreviousSibling : LastChild;
+
   // Detach old nodes.
   for (auto *N = Begin; N != End;) {
     auto *Next = N->NextSibling;
@@ -135,24 +167,33 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
     N->setRole(NodeRole::Detached);
     N->Parent = nullptr;
     N->NextSibling = nullptr;
+    N->PreviousSibling = nullptr;
     if (N->Original)
       traverse(N, [](Node *C) { C->Original = false; });
 
     N = Next;
   }
 
+  // Attach new range.
+  auto *&NewFirst = BeforeBegin ? BeforeBegin->NextSibling : FirstChild;
+  auto *&NewLast = End ? End->PreviousSibling : LastChild;
+
   if (!New) {
-    Begin = End;
+    NewFirst = End;
+    NewLast = BeforeBegin;
     return;
   }
-  // Attach new nodes.
-  Begin = New;
-  auto *Last = New;
+
+  New->PreviousSibling = BeforeBegin;
+  NewFirst = New;
+
+  Node *LastInNew;
   for (auto *N = New; N != nullptr; N = N->NextSibling) {
-    Last = N;
+    LastInNew = N;
     N->Parent = this;
   }
-  Last->NextSibling = End;
+  LastInNew->NextSibling = End;
+  NewLast = LastInNew;
 }
 
 namespace {
@@ -248,6 +289,11 @@ void syntax::Node::assertInvariants() const {
       assert(C.isOriginal());
     assert(!C.isDetached());
     assert(C.getParent() == T);
+    const auto *Next = C.getNextSibling();
+    assert(!Next || &C == Next->getPreviousSibling());
+    if (!C.getNextSibling())
+      assert(&C == T->getLastChild() &&
+             "Last child is reachable by advancing from the first child.");
   }
 
   const auto *L = dyn_cast<List>(T);
@@ -282,14 +328,13 @@ const syntax::Leaf *syntax::Tree::findFirstLeaf() const {
 }
 
 const syntax::Leaf *syntax::Tree::findLastLeaf() const {
-  const syntax::Leaf *Last = nullptr;
-  for (const Node &C : getChildren()) {
-    if (const auto *L = dyn_cast<syntax::Leaf>(&C))
-      Last = L;
-    else if (const auto *L = cast<syntax::Tree>(C).findLastLeaf())
-      Last = L;
+  for (const auto *C = getLastChild(); C; C = C->getPreviousSibling()) {
+    if (const auto *L = dyn_cast<syntax::Leaf>(C))
+      return L;
+    if (const auto *L = cast<syntax::Tree>(C)->findLastLeaf())
+      return L;
   }
-  return Last;
+  return nullptr;
 }
 
 const syntax::Node *syntax::Tree::findChild(NodeRole R) const {

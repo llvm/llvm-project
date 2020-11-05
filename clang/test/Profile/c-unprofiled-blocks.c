@@ -16,7 +16,7 @@ int never_called(int i) {
   // PGOUSE: br i1 %{{[^,]*}}, label %{{[^,]*}}, label %{{[^,]*}}{{$}}
   while (--i) {}
 
-  // PGOUSE: br i1 %{{[^,]*}}, label %{{[^,]*}}, label %{{[^,]*}}{{$}}
+  // PGOUSE: br i1 %{{[^,]*}}, label %{{[^,]*}}, label %{{[^,]*}}, !llvm.loop [[LOOP1:!.*]]
   do {} while (i++ < 75);
 
   // PGOUSE: switch {{.*}} [
@@ -46,7 +46,7 @@ int dead_code(int i) {
     // PGOUSE: br i1 %{{[^,]*}}, label %{{[^,]*}}, label %{{[^,]*}}{{$}}
     while (--i) {}
 
-    // PGOUSE: br i1 %{{[^,]*}}, label %{{[^,]*}}, label %{{[^,]*}}{{$}}
+    // PGOUSE: br i1 %{{[^,]*}}, label %{{[^,]*}}, label %{{[^,]*}}, !llvm.loop [[LOOP2:!.*]]
     do {} while (i++ < 75);
 
     // PGOUSE: switch {{.*}} [

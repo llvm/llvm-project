@@ -83,7 +83,7 @@ class ProcessLaunchTestCase(TestBase):
     # The process launch flag '-w' for setting the current working directory
     # not working?
     @not_remote_testsuite_ready
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20265")
+    @expectedFailureAll(oslist=["freebsd", "linux"], bugnumber="llvm.org/pr20265")
     @expectedFailureNetBSD
     @skipIfReproducer
     def test_set_working_dir_nonexisting(self):

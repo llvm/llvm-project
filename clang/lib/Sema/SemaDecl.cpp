@@ -8037,6 +8037,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     NewVD->setInvalidDecl();
     return;
   }
+
+  // PPC MMA non-pointer types are not allowed as non-local variable types.
+  if (Context.getTargetInfo().getTriple().isPPC64() &&
+      !NewVD->isLocalVarDecl() &&
+      CheckPPCMMAType(T, NewVD->getLocation())) {
+    NewVD->setInvalidDecl();
+    return;
+  }
 }
 
 /// Perform semantic checking on a newly-created variable
@@ -10681,6 +10689,12 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
                                 MergeTypeWithPrevious, Previous))
     return Redeclaration;
 
+  // PPC MMA non-pointer types are not allowed as function return types.
+  if (Context.getTargetInfo().getTriple().isPPC64() &&
+      CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
+    NewFD->setInvalidDecl();
+  }
+
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
   //   a constructor declares that member function to be const.
@@ -13172,31 +13186,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  if (VD->isStaticLocal()) {
+  if (VD->isStaticLocal())
     CheckStaticLocalForDllExport(VD);
-
-    if (dyn_cast_or_null<FunctionDecl>(VD->getParentFunctionOrMethod())) {
-      // CUDA 8.0 E.3.9.4: Within the body of a __device__ or __global__
-      // function, only __shared__ variables or variables without any device
-      // memory qualifiers may be declared with static storage class.
-      // Note: It is unclear how a function-scope non-const static variable
-      // without device memory qualifier is implemented, therefore only static
-      // const variable without device memory qualifier is allowed.
-      [&]() {
-        if (!getLangOpts().CUDA)
-          return;
-        if (VD->hasAttr<CUDASharedAttr>())
-          return;
-        if (VD->getType().isConstQualified() &&
-            !(VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()))
-          return;
-        if (CUDADiagIfDeviceCode(VD->getLocation(),
-                                 diag::err_device_static_local_var)
-            << CurrentCUDATarget())
-          VD->setInvalidDecl();
-      }();
-    }
-  }
 
   // Perform check for initializers of device-side global variables.
   // CUDA allows empty constructors as initializers (see E.2.3.1, CUDA
@@ -13727,6 +13718,12 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       !(getLangOpts().OpenCL &&
         (T->isArrayType() || T.getAddressSpace() == LangAS::opencl_private))) {
     Diag(NameLoc, diag::err_arg_with_address_space);
+    New->setInvalidDecl();
+  }
+
+  // PPC MMA non-pointer types are not allowed as function argument types.
+  if (Context.getTargetInfo().getTriple().isPPC64() &&
+      CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
     New->setInvalidDecl();
   }
 
@@ -16778,6 +16775,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   if (T.isObjCGCWeak())
     Diag(Loc, diag::warn_attribute_weak_on_field);
+
+  // PPC MMA non-pointer types are not allowed as field types.
+  if (Context.getTargetInfo().getTriple().isPPC64() &&
+      CheckPPCMMAType(T, NewFD->getLocation()))
+    NewFD->setInvalidDecl();
 
   NewFD->setAccess(AS);
   return NewFD;

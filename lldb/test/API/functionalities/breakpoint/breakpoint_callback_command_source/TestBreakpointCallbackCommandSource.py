@@ -19,6 +19,8 @@ class BreakpointCallbackCommandSource(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    # times out
+    @skipIfFreeBSD
     def test_breakpoint_callback_command_source(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

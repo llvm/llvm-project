@@ -36,13 +36,12 @@ public:
   /// Parse a comma-separated list of elements up until the specified end token.
   ParseResult
   parseCommaSeparatedListUntil(Token::Kind rightToken,
-                               const std::function<ParseResult()> &parseElement,
+                               function_ref<ParseResult()> parseElement,
                                bool allowEmptyList = true);
 
   /// Parse a comma separated list of elements that must have at least one entry
   /// in it.
-  ParseResult
-  parseCommaSeparatedList(const std::function<ParseResult()> &parseElement);
+  ParseResult parseCommaSeparatedList(function_ref<ParseResult()> parseElement);
 
   ParseResult parsePrettyDialectSymbolName(StringRef &prettyName);
 

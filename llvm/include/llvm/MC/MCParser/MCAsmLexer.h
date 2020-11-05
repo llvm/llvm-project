@@ -51,6 +51,7 @@ protected: // Can only create subclasses.
   bool IsAtStartOfStatement = true;
   bool LexMasmHexFloats = false;
   bool LexMasmIntegers = false;
+  bool LexMasmStrings = false;
   bool UseMasmDefaultRadix = false;
   unsigned DefaultRadix = 10;
   AsmCommentConsumer *CommentConsumer = nullptr;
@@ -163,6 +164,10 @@ public:
 
   /// Set whether to lex masm-style hex float literals, such as 3f800000r.
   void setLexMasmHexFloats(bool V) { LexMasmHexFloats = V; }
+
+  /// Set whether to lex masm-style string literals, such as 'Can''t find file'
+  /// and "This ""value"" not found".
+  void setLexMasmStrings(bool V) { LexMasmStrings = V; }
 };
 
 } // end namespace llvm

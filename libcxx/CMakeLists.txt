@@ -159,7 +159,6 @@ cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBCXX_INSTALL_SHARED_LIBRARY
   "Install the shared libc++ library." ON
   "LIBCXX_ENABLE_SHARED;LIBCXX_INSTALL_LIBRARY" OFF)
-option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
@@ -388,11 +387,6 @@ if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY AND LIBCXX_ENABLE_ABI_LINKER_SC
     message(FATAL_ERROR "Conflicting options given.
         LIBCXX_ENABLE_STATIC_ABI_LIBRARY cannot be specified with
         LIBCXX_ENABLE_ABI_LINKER_SCRIPT")
-endif()
-
-if (LIBCXX_HAS_MUSL_LIBC AND NOT LIBCXX_INSTALL_SUPPORT_HEADERS)
-  message(FATAL_ERROR "LIBCXX_INSTALL_SUPPORT_HEADERS can not be turned off"
-                      "when building for Musl with LIBCXX_HAS_MUSL_LIBC.")
 endif()
 
 if (LIBCXX_ABI_FORCE_ITANIUM AND LIBCXX_ABI_FORCE_MICROSOFT)
@@ -869,6 +863,12 @@ endif()
 if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   message(STATUS "Generating custom __config for non-DLL Windows build")
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+endif()
+
+if (WIN32 AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  # If linking libcxxabi statically into libcxx, skip the dllimport attributes
+  # on symbols we refer to from libcxxabi.
+  add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
 # Setup all common build flags =================================================

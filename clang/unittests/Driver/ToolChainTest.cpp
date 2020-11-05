@@ -289,4 +289,28 @@ TEST(ToolChainTest, CommandOutput) {
   EXPECT_EQ("a.out", ExeFile);
 }
 
+TEST(ToolChainTest, PostCallback) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  // The executable path must not exist.
+  Driver CCDriver("/home/test/bin/clang", "arm-linux-gnueabi", Diags,
+                  "clang LLVM compiler", InMemoryFileSystem);
+  CCDriver.setCheckInputsExist(false);
+  std::unique_ptr<Compilation> CC(
+      CCDriver.BuildCompilation({"/home/test/bin/clang", "foo.cpp"}));
+  bool CallbackHasCalled = false;
+  CC->setPostCallback(
+      [&](const Command &C, int Ret) { CallbackHasCalled = true; });
+  const JobList &Jobs = CC->getJobs();
+  auto &CmdCompile = Jobs.getJobs().front();
+  const Command *FailingCmd = nullptr;
+  CC->ExecuteCommand(*CmdCompile, FailingCmd);
+  EXPECT_TRUE(CallbackHasCalled);
+}
+
 } // end anonymous namespace.

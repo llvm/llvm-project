@@ -2009,7 +2009,7 @@ def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
 // GlobalMemrefOp
 //===----------------------------------------------------------------------===//
 
-def GlobalMemrefOp : Std_Op<"global_memref", [NoSideEffect, Symbol]> {
+def GlobalMemrefOp : Std_Op<"global_memref", [Symbol]> {
   let summary = "declare or define a global memref variable";
   let description = [{
     The `global_memref` operation declares or defines a named global variable.
@@ -2032,15 +2032,16 @@ def GlobalMemrefOp : Std_Op<"global_memref", [NoSideEffect, Symbol]> {
 
     ```mlir
     // Private variable with an initial value.
-    global_memref @x : memref<2xf32> { sym_visibility = "private",
-                         initial_value = dense<0.0,2.0> : tensor<2xf32> }
+    global_memref "private" @x : memref<2xf32> = dense<0.0,2.0>
 
-    // External variable.
-    global_memref @y : memref<4xi32> { sym_visibility = "public" }
+    // Declaration of an external variable.
+    global_memref "private" @y : memref<4xi32>
 
     // Uninitialized externally visible variable.
-    global_memref @z : memref<3xf16> { sym_visibility = "public",
-                         initial_value }
+    global_memref @z : memref<3xf16> = uninitialized
+
+    // Externally visibile constant variable.
+    global_memref constant @c : memref<2xi32> = dense<1, 4>
     ```
   }];
 
@@ -2062,7 +2063,7 @@ def GlobalMemrefOp : Std_Op<"global_memref", [NoSideEffect, Symbol]> {
 
   let extraClassDeclaration = [{
      bool isExternal() { return !initial_value(); }
-     bool isUnitialized() {
+     bool isUninitialized() {
        return !isExternal() && initial_value().getValue().isa<UnitAttr>();
      }
   }];
@@ -2818,6 +2819,63 @@ def SignedDivIOp : IntArithmeticOp<"divi_signed"> {
 
     // Tensor element-wise integer division.
     %x = divis %y, %z : tensor<4x?xi8>
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SignedFloorDivIOp
+//===----------------------------------------------------------------------===//
+
+def SignedFloorDivIOp : IntArithmeticOp<"floordivi_signed"> {
+  let summary = "signed floor integer division operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `floordivi_signed` ssa-use `,` ssa-use `:` type
+    ```
+
+    Signed integer division. Rounds towards negative infinity, i.e. `5 / -2 = -3`.
+
+    Note: the semantics of division by zero or signed division overflow (minimum
+    value divided by -1) is TBD; do NOT assume any specific behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer division.
+    %a = floordivi_signed %b, %c : i64
+
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SignedCeilDivIOp
+//===----------------------------------------------------------------------===//
+
+def SignedCeilDivIOp : IntArithmeticOp<"ceildivi_signed"> {
+  let summary = "signed ceil integer division operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `ceildivi_signed` ssa-use `,` ssa-use `:` type
+    ```
+
+    Signed integer division. Rounds towards positive infinity, i.e. `7 / -2 = -3`.
+
+    Note: the semantics of division by zero or signed division overflow (minimum
+    value divided by -1) is TBD; do NOT assume any specific behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer division.
+    %a = ceildivi_signed %b, %c : i64
     ```
   }];
   let hasFolder = 1;

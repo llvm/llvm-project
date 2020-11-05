@@ -169,6 +169,46 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
+KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().ult(BitWidth)) {
+    unsigned Shift = RHS.getConstant().getZExtValue();
+    Known = LHS;
+    Known.Zero.lshrInPlace(Shift);
+    Known.One.lshrInPlace(Shift);
+    // High bits are known zero.
+    Known.Zero.setHighBits(Shift);
+    return Known;
+  }
+
+  // Minimum shift amount high bits are known zero.
+  if (RHS.getMinValue().ult(BitWidth))
+    Known.Zero.setHighBits(RHS.getMinValue().getZExtValue());
+
+  // No matter the shift amount, the leading zeros will stay zero.
+  Known.Zero.setHighBits(LHS.countMinLeadingZeros());
+  return Known;
+}
+
+KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().ult(BitWidth)) {
+    unsigned Shift = RHS.getConstant().getZExtValue();
+    Known = LHS;
+    Known.Zero.ashrInPlace(Shift);
+    Known.One.ashrInPlace(Shift);
+    return Known;
+  }
+
+  // TODO: Minimum shift amount high bits are known sign bits.
+  // TODO: No matter the shift amount, the leading sign bits will stay.
+  return Known;
+}
+
 KnownBits KnownBits::abs() const {
   // If the source's MSB is zero then we know the rest of the bits already.
   if (isNonNegative())
@@ -240,8 +280,8 @@ KnownBits KnownBits::computeForMul(const KnownBits &LHS, const KnownBits &RHS) {
   // Where C5, C6 describe the known bits of %a, %b
   // C1, C2 describe the known bottom bits of %a, %b.
   // C7 describes the mask of the known bits of the result.
-  APInt Bottom0 = LHS.One;
-  APInt Bottom1 = RHS.One;
+  const APInt &Bottom0 = LHS.One;
+  const APInt &Bottom1 = RHS.One;
 
   // How many times we'd be able to divide each argument by 2 (shr by 1).
   // This gives us the number of trailing zeros on the multiplication result.

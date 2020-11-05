@@ -253,7 +253,8 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     else
       return emitError("expected attribute name");
     if (!seenKeys.insert(*nameId).second)
-      return emitError("duplicate key in dictionary attribute");
+      return emitError("duplicate key '")
+             << *nameId << "' in dictionary attribute";
     consumeToken();
 
     // Lazy load a dialect in the context if there is a possible namespace.

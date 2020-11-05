@@ -23,19 +23,6 @@
 
 using namespace clang;
 
-static syntax::Node *findPrevious(syntax::Node *N) {
-  assert(N);
-  assert(N->getParent());
-  if (N->getParent()->getFirstChild() == N)
-    return nullptr;
-  for (syntax::Node *C = N->getParent()->getFirstChild(); C != nullptr;
-       C = C->getNextSibling()) {
-    if (C->getNextSibling() == N)
-      return C;
-  }
-  llvm_unreachable("could not find a child node");
-}
-
 // This class has access to the internals of tree nodes. Its sole purpose is to
 // define helpers that allow implementing the high-level mutation operations.
 class syntax::MutationsImpl {
@@ -46,12 +33,14 @@ public:
     assert(Anchor->Parent != nullptr);
     assert(New->Parent == nullptr);
     assert(New->NextSibling == nullptr);
+    assert(New->PreviousSibling == nullptr);
     assert(New->isDetached());
     assert(Role != NodeRole::Detached);
 
     New->setRole(Role);
     auto *P = Anchor->getParent();
-    P->replaceChildRangeLowLevel(Anchor, Anchor->getNextSibling(), New);
+    P->replaceChildRangeLowLevel(Anchor->getNextSibling(),
+                                 Anchor->getNextSibling(), New);
 
     P->assertInvariants();
   }
@@ -63,11 +52,12 @@ public:
     assert(Old->canModify());
     assert(New->Parent == nullptr);
     assert(New->NextSibling == nullptr);
+    assert(New->PreviousSibling == nullptr);
     assert(New->isDetached());
 
     New->Role = Old->Role;
     auto *P = Old->getParent();
-    P->replaceChildRangeLowLevel(findPrevious(Old), Old->getNextSibling(), New);
+    P->replaceChildRangeLowLevel(Old, Old->getNextSibling(), New);
 
     P->assertInvariants();
   }
@@ -79,7 +69,7 @@ public:
     assert(N->canModify());
 
     auto *P = N->getParent();
-    P->replaceChildRangeLowLevel(findPrevious(N), N->getNextSibling(),
+    P->replaceChildRangeLowLevel(N, N->getNextSibling(),
                                  /*New=*/nullptr);
 
     P->assertInvariants();

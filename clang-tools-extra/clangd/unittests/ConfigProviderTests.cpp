@@ -10,6 +10,7 @@
 #include "ConfigProvider.h"
 #include "ConfigTesting.h"
 #include "TestFS.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -91,7 +92,7 @@ TEST(ProviderTest, FromYAMLFile) {
   FS.Files["foo.yaml"] = AddFooWithErr;
 
   CapturedDiags Diags;
-  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), FS);
+  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
   auto Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
               ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
@@ -159,7 +160,7 @@ TEST(ProviderTest, Staleness) {
   Params MustBeFresh;
   MustBeFresh.FreshTime = StartTime + std::chrono::hours(1);
   CapturedDiags Diags;
-  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), FS);
+  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
 
   // Initial query always reads, regardless of policy.
   FS.Files["foo.yaml"] = AddFooWithErr;
@@ -187,6 +188,37 @@ TEST(ProviderTest, Staleness) {
   EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
 }
 
+TEST(ProviderTest, SourceInfo) {
+  MockFS FS;
+
+  FS.Files["baz/foo.yaml"] = R"yaml(
+If:
+  PathMatch: .*
+  PathExclude: bar.h
+CompileFlags:
+  Add: bar
+)yaml";
+  const auto BarPath = testPath("baz/bar.h", llvm::sys::path::Style::posix);
+  CapturedDiags Diags;
+  Params Bar;
+  Bar.Path = BarPath;
+
+  // This should be an absolute match/exclude hence baz/bar.h should not be
+  // excluded.
+  auto P =
+      Provider::fromYAMLFile(testPath("baz/foo.yaml"), /*Directory=*/"", FS);
+  auto Cfg = P->getConfig(Bar, Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar"));
+  Diags.Diagnostics.clear();
+
+  // This should be a relative match/exclude hence baz/bar.h should be excluded.
+  P = Provider::fromAncestorRelativeYAMLFiles("foo.yaml", FS);
+  Cfg = P->getConfig(Bar, Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
+  Diags.Diagnostics.clear();
+}
 } // namespace
 } // namespace config
 } // namespace clangd

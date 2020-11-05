@@ -156,7 +156,11 @@ private:
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
   Options Opts;
-  using SymbolRef = std::pair<SourceLocation, index::SymbolRoleSet>;
+  struct SymbolRef {
+    SourceLocation Loc;
+    index::SymbolRoleSet Roles;
+    const Decl *Container;
+  };
   // Symbols referenced from the current TU, flushed on finish().
   llvm::DenseSet<const NamedDecl *> ReferencedDecls;
   llvm::DenseSet<const IdentifierInfo *> ReferencedMacros;

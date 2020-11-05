@@ -18,10 +18,8 @@ if (CLANGD_ENABLE_REMOTE)
     RemoteIndexProto
     RemoteIndexServiceProto
     clangdRemoteMarshalling
-
     protobuf
     grpc++
-    clangDaemon
     clangdSupport
 
     DEPENDS

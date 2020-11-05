@@ -1770,13 +1770,39 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
+class StridedSliceConstantFolder final
+    : public OpRewritePattern<ExtractStridedSliceOp> {
+public:
+  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
+                                PatternRewriter &rewriter) const override {
+    // Return if 'extractStridedSliceOp' operand is not defined by a
+    // ConstantOp.
+    auto constantOp =
+        extractStridedSliceOp.vector().getDefiningOp<ConstantOp>();
+    if (!constantOp)
+      return failure();
+    auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
+    if (!dense)
+      return failure();
+    auto newAttr = DenseElementsAttr::get(
+        extractStridedSliceOp.getType().cast<VectorType>(),
+        dense.getSplatValue());
+    rewriter.replaceOpWithNewOp<ConstantOp>(extractStridedSliceOp, newAttr);
+    return success();
+  }
+};
+
 } // end anonymous namespace
 
 void ExtractStridedSliceOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
-  // ConstantMaskOp.
-  results.insert<StridedSliceConstantMaskFolder>(context);
+  // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
+  results.insert<StridedSliceConstantMaskFolder, StridedSliceConstantFolder>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2558,6 +2584,36 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
       return otherOp.source();
 
   return {};
+}
+
+namespace {
+// Pattern to rewrite a ShapeCast(splat ConstantOp) -> ConstantOp.
+class ShapeCastConstantFolder final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using OpRewritePattern<ShapeCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto constantOp = shapeCastOp.source().getDefiningOp<ConstantOp>();
+    if (!constantOp)
+      return failure();
+    // Only handle splat for now.
+    auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
+    if (!dense)
+      return failure();
+    auto newAttr = DenseElementsAttr::get(
+        shapeCastOp.getType().cast<VectorType>(), dense.getSplatValue());
+    rewriter.replaceOpWithNewOp<ConstantOp>(shapeCastOp, newAttr);
+    return success();
+  }
+};
+
+} // namespace
+
+void ShapeCastOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  // Pattern to rewrite a ShapeCastOp(ConstantOp) -> ConstantOp.
+  results.insert<ShapeCastConstantFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

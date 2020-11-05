@@ -90,7 +90,11 @@ public:
 
     /// An individual continuation function.
     Continuation,
+
+    /// An async resume function.
+    Async,
   };
+
 private:
   Function &OrigF;
   Function *NewF;
@@ -102,7 +106,8 @@ private:
   Value *NewFramePtr = nullptr;
   Value *SwiftErrorSlot = nullptr;
 
-  /// The active suspend instruction; meaningful only for continuation ABIs.
+  /// The active suspend instruction; meaningful only for continuation and async
+  /// ABIs.
   AnyCoroSuspendInst *ActiveSuspend = nullptr;
 
 public:
@@ -117,11 +122,11 @@ public:
   /// Create a cloner for a continuation lowering.
   CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
              Function *NewF, AnyCoroSuspendInst *ActiveSuspend)
-    : OrigF(OrigF), NewF(NewF), Suffix(Suffix), Shape(Shape),
-      FKind(Kind::Continuation), Builder(OrigF.getContext()),
-      ActiveSuspend(ActiveSuspend) {
+      : OrigF(OrigF), NewF(NewF), Suffix(Suffix), Shape(Shape),
+        FKind(Shape.ABI == coro::ABI::Async ? Kind::Async : Kind::Continuation),
+        Builder(OrigF.getContext()), ActiveSuspend(ActiveSuspend) {
     assert(Shape.ABI == coro::ABI::Retcon ||
-           Shape.ABI == coro::ABI::RetconOnce);
+           Shape.ABI == coro::ABI::RetconOnce || Shape.ABI == coro::ABI::Async);
     assert(NewF && "need existing function for continuation");
     assert(ActiveSuspend && "need active suspend point for continuation");
   }
@@ -136,6 +141,7 @@ public:
 private:
   bool isSwitchDestroyFunction() {
     switch (FKind) {
+    case Kind::Async:
     case Kind::Continuation:
     case Kind::SwitchResume:
       return false;
@@ -149,7 +155,7 @@ private:
   void createDeclaration();
   void replaceEntryBlock();
   Value *deriveNewFramePointer();
-  void replaceRetconSuspendUses();
+  void replaceRetconOrAsyncSuspendUses();
   void replaceCoroSuspends();
   void replaceCoroEnds();
   void replaceSwiftErrorOps();
@@ -185,6 +191,11 @@ static void replaceFallthroughCoroEnd(CoroEndInst *End,
     // in this lowering, because we need to deallocate the coroutine.
     if (!InResume)
       return;
+    Builder.CreateRetVoid();
+    break;
+
+  // In async lowering this returns.
+  case coro::ABI::Async:
     Builder.CreateRetVoid();
     break;
 
@@ -231,7 +242,9 @@ static void replaceUnwindCoroEnd(CoroEndInst *End, const coro::Shape &Shape,
     if (!InResume)
       return;
     break;
-
+  // In async lowering this does nothing.
+  case coro::ABI::Async:
+    break;
   // In continuation-lowering, this frees the continuation storage.
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
@@ -403,20 +416,24 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
                        OrigF.getName() + Suffix);
   NewF->addParamAttr(0, Attribute::NonNull);
-  NewF->addParamAttr(0, Attribute::NoAlias);
+
+  // For the async lowering ABI we can't guarantee that the context argument is
+  // not access via a different pointer not based on the argument.
+  if (Shape.ABI != coro::ABI::Async)
+    NewF->addParamAttr(0, Attribute::NoAlias);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
   return NewF;
 }
 
-/// Replace uses of the active llvm.coro.suspend.retcon call with the
+/// Replace uses of the active llvm.coro.suspend.retcon/async call with the
 /// arguments to the continuation function.
 ///
 /// This assumes that the builder has a meaningful insertion point.
-void CoroCloner::replaceRetconSuspendUses() {
-  assert(Shape.ABI == coro::ABI::Retcon ||
-         Shape.ABI == coro::ABI::RetconOnce);
+void CoroCloner::replaceRetconOrAsyncSuspendUses() {
+  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
+         Shape.ABI == coro::ABI::Async);
 
   auto NewS = VMap[ActiveSuspend];
   if (NewS->use_empty()) return;
@@ -424,7 +441,11 @@ void CoroCloner::replaceRetconSuspendUses() {
   // Copy out all the continuation arguments after the buffer pointer into
   // an easily-indexed data structure for convenience.
   SmallVector<Value*, 8> Args;
-  for (auto I = std::next(NewF->arg_begin()), E = NewF->arg_end(); I != E; ++I)
+  // The async ABI includes all arguments -- including the first argument.
+  bool IsAsyncABI = Shape.ABI == coro::ABI::Async;
+  for (auto I = IsAsyncABI ? NewF->arg_begin() : std::next(NewF->arg_begin()),
+            E = NewF->arg_end();
+       I != E; ++I)
     Args.push_back(&*I);
 
   // If the suspend returns a single scalar value, we can just do a simple
@@ -469,6 +490,10 @@ void CoroCloner::replaceCoroSuspends() {
   case coro::ABI::Switch:
     SuspendResult = Builder.getInt8(isSwitchDestroyFunction() ? 1 : 0);
     break;
+
+  // In async lowering there are no uses of the result.
+  case coro::ABI::Async:
+    return;
 
   // In returned-continuation lowering, the arguments from earlier
   // continuations are theoretically arbitrary, and they should have been
@@ -601,13 +626,18 @@ void CoroCloner::replaceEntryBlock() {
     Builder.CreateBr(SwitchBB);
     break;
   }
-
+  case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     // In continuation ABIs, we want to branch to immediately after the
     // active suspend point.  Earlier phases will have put the suspend in its
     // own basic block, so just thread our jump directly to its successor.
-    auto MappedCS = cast<CoroSuspendRetconInst>(VMap[ActiveSuspend]);
+    assert((Shape.ABI == coro::ABI::Async &&
+            isa<CoroSuspendAsyncInst>(ActiveSuspend)) ||
+           ((Shape.ABI == coro::ABI::Retcon ||
+             Shape.ABI == coro::ABI::RetconOnce) &&
+            isa<CoroSuspendRetconInst>(ActiveSuspend)));
+    auto *MappedCS = cast<AnyCoroSuspendInst>(VMap[ActiveSuspend]);
     auto Branch = cast<BranchInst>(MappedCS->getNextNode());
     assert(Branch->isUnconditional());
     Builder.CreateBr(Branch->getSuccessor(0));
@@ -624,7 +654,25 @@ Value *CoroCloner::deriveNewFramePointer() {
   // In switch-lowering, the argument is the frame pointer.
   case coro::ABI::Switch:
     return &*NewF->arg_begin();
-
+  case coro::ABI::Async: {
+    auto *CalleeContext = &*NewF->arg_begin();
+    auto *FramePtrTy = Shape.FrameTy->getPointerTo();
+    // The caller context is assumed to be stored at the begining of the callee
+    // context.
+    // struct async_context {
+    //    struct async_context *caller;
+    //    ...
+    auto &Context = Builder.getContext();
+    auto *Int8PtrPtrTy = Type::getInt8PtrTy(Context)->getPointerTo();
+    auto *CallerContextAddr =
+        Builder.CreateBitOrPointerCast(CalleeContext, Int8PtrPtrTy);
+    auto *CallerContext = Builder.CreateLoad(CallerContextAddr);
+    // The frame is located after the async_context header.
+    auto *FramePtrAddr = Builder.CreateConstInBoundsGEP1_32(
+        Type::getInt8Ty(Context), CallerContext,
+        Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr");
+    return Builder.CreateBitCast(FramePtrAddr, FramePtrTy);
+  }
   // In continuation-lowering, the argument is the opaque storage.
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
@@ -707,7 +755,8 @@ void CoroCloner::create() {
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
     break;
-
+  case coro::ABI::Async:
+    break;
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // If we have a continuation prototype, just use its attributes,
@@ -736,6 +785,12 @@ void CoroCloner::create() {
   // original returns and inserted returns before all the suspend points,
   // so we want to leave any returns in place.
   case coro::ABI::Retcon:
+    break;
+  // Async lowering will insert musttail call functions at all suspend points
+  // followed by a return.
+  // Don't change returns to unreachable because that will trip up the verifier.
+  // These returns should be unreachable from the clone.
+  case coro::ABI::Async:
     break;
   }
 
@@ -767,14 +822,14 @@ void CoroCloner::create() {
     if (Shape.SwitchLowering.HasFinalSuspend)
       handleFinalSuspend();
     break;
-
+  case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // Replace uses of the active suspend with the corresponding
     // continuation-function arguments.
     assert(ActiveSuspend != nullptr &&
            "no active suspend when lowering a continuation-style coroutine");
-    replaceRetconSuspendUses();
+    replaceRetconOrAsyncSuspendUses();
     break;
   }
 
@@ -811,7 +866,25 @@ static void removeCoroEnds(const coro::Shape &Shape, CallGraph *CG) {
   }
 }
 
+static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
+  assert(Shape.ABI == coro::ABI::Async);
+
+  auto *FuncPtrStruct = cast<ConstantStruct>(
+      Shape.AsyncLowering.AsyncFuncPointer->getInitializer());
+  auto *OrigContextSize = FuncPtrStruct->getOperand(0);
+  auto *OrigRelativeFunOffset = FuncPtrStruct->getOperand(1);
+  auto *NewContextSize = ConstantInt::get(OrigContextSize->getType(),
+                                          Shape.AsyncLowering.ContextSize);
+  auto *NewFuncPtrStruct = ConstantStruct::get(
+      FuncPtrStruct->getType(), NewContextSize, OrigRelativeFunOffset);
+
+  Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
+}
+
 static void replaceFrameSize(coro::Shape &Shape) {
+  if (Shape.ABI == coro::ABI::Async)
+    updateAsyncFuncPointerContextSize(Shape);
+
   if (Shape.CoroSizes.empty())
     return;
 
@@ -1075,7 +1148,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
     }
     break;
   }
-
+  case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     CoroBegin->replaceAllUsesWith(UndefValue::get(CoroBegin->getType()));
@@ -1271,6 +1344,98 @@ static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
   setCoroInfo(F, Shape, Clones);
 }
 
+static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
+                                       Value *Continuation) {
+  auto *ResumeIntrinsic = Suspend->getResumeFunction();
+  auto &Context = Suspend->getParent()->getParent()->getContext();
+  auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+
+  IRBuilder<> Builder(ResumeIntrinsic);
+  auto *Val = Builder.CreateBitOrPointerCast(Continuation, Int8PtrTy);
+  ResumeIntrinsic->replaceAllUsesWith(Val);
+  ResumeIntrinsic->eraseFromParent();
+  Suspend->setOperand(0, UndefValue::get(Int8PtrTy));
+}
+
+static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
+                                SmallVectorImpl<Function *> &Clones) {
+  assert(Shape.ABI == coro::ABI::Async);
+  assert(Clones.empty());
+  // Reset various things that the optimizer might have decided it
+  // "knows" about the coroutine function due to not seeing a return.
+  F.removeFnAttr(Attribute::NoReturn);
+  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
+  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+
+  auto &Context = F.getContext();
+  auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+
+  auto *Id = cast<CoroIdAsyncInst>(Shape.CoroBegin->getId());
+  IRBuilder<> Builder(Id);
+
+  auto *FramePtr = Id->getStorage();
+  FramePtr = Builder.CreateBitOrPointerCast(FramePtr, Int8PtrTy);
+  FramePtr = Builder.CreateConstInBoundsGEP1_32(
+      Type::getInt8Ty(Context), FramePtr, Shape.AsyncLowering.FrameOffset,
+      "async.ctx.frameptr");
+
+  // Map all uses of llvm.coro.begin to the allocated frame pointer.
+  {
+    // Make sure we don't invalidate Shape.FramePtr.
+    TrackingVH<Instruction> Handle(Shape.FramePtr);
+    Shape.CoroBegin->replaceAllUsesWith(FramePtr);
+    Shape.FramePtr = Handle.getValPtr();
+  }
+
+  // Create all the functions in order after the main function.
+  auto NextF = std::next(F.getIterator());
+
+  // Create a continuation function for each of the suspend points.
+  Clones.reserve(Shape.CoroSuspends.size());
+  for (size_t Idx = 0, End = Shape.CoroSuspends.size(); Idx != End; ++Idx) {
+    auto *Suspend = cast<CoroSuspendAsyncInst>(Shape.CoroSuspends[Idx]);
+
+    // Create the clone declaration.
+    auto *Continuation =
+        createCloneDeclaration(F, Shape, ".resume." + Twine(Idx), NextF);
+    Clones.push_back(Continuation);
+
+    // Insert a branch to a new return block immediately before the suspend
+    // point.
+    auto *SuspendBB = Suspend->getParent();
+    auto *NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
+    auto *Branch = cast<BranchInst>(SuspendBB->getTerminator());
+
+    // Place it before the first suspend.
+    auto *ReturnBB =
+        BasicBlock::Create(F.getContext(), "coro.return", &F, NewSuspendBB);
+    Branch->setSuccessor(0, ReturnBB);
+
+    IRBuilder<> Builder(ReturnBB);
+
+    // Insert the call to the tail call function.
+    auto *Fun = Suspend->getMustTailCallFunction();
+    SmallVector<Value *, 8> Args(Suspend->operand_values());
+    auto *TailCall = Builder.CreateCall(
+        cast<FunctionType>(Fun->getType()->getPointerElementType()), Fun,
+        ArrayRef<Value *>(Args).drop_front(3).drop_back(1));
+    TailCall->setTailCallKind(CallInst::TCK_MustTail);
+    TailCall->setCallingConv(Fun->getCallingConv());
+    Builder.CreateRetVoid();
+
+    // Replace the lvm.coro.async.resume intrisic call.
+    replaceAsyncResumeFunction(Suspend, Continuation);
+  }
+
+  assert(Clones.size() == Shape.CoroSuspends.size());
+  for (size_t Idx = 0, End = Shape.CoroSuspends.size(); Idx != End; ++Idx) {
+    auto *Suspend = Shape.CoroSuspends[Idx];
+    auto *Clone = Clones[Idx];
+
+    CoroCloner(F, "resume." + Twine(Idx), Shape, Clone, Suspend).create();
+  }
+}
+
 static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
                                  SmallVectorImpl<Function *> &Clones) {
   assert(Shape.ABI == coro::ABI::Retcon ||
@@ -1440,6 +1605,9 @@ static coro::Shape splitCoroutine(Function &F,
     switch (Shape.ABI) {
     case coro::ABI::Switch:
       splitSwitchCoroutine(F, Shape, Clones);
+      break;
+    case coro::ABI::Async:
+      splitAsyncCoroutine(F, Shape, Clones);
       break;
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:

@@ -122,7 +122,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void processPHINode(MachineInstr &MI);
+  MachineBasicBlock *processPHINode(MachineInstr &MI);
 
   StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
@@ -594,9 +594,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {
-    MachineBasicBlock &MBB = *BI;
-    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
-         I != E; ++I) {
+    MachineBasicBlock *MBB = &*BI;
+    for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
+         ++I) {
       MachineInstr &MI = *I;
 
       switch (MI.getOpcode()) {
@@ -620,9 +620,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             Register TmpReg
               = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
-            BuildMI(MBB, MI, MI.getDebugLoc(),
+            BuildMI(*MBB, MI, MI.getDebugLoc(),
                     TII->get(AMDGPU::V_READFIRSTLANE_B32), TmpReg)
-              .add(MI.getOperand(1));
+                .add(MI.getOperand(1));
             MI.getOperand(1).setReg(TmpReg);
           }
 
@@ -632,7 +632,15 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
           Register SrcReg = MI.getOperand(1).getReg();
           if (!SrcReg.isVirtual()) {
-            TII->moveToVALU(MI, MDT);
+            MachineBasicBlock *NewBB = TII->moveToVALU(MI, MDT);
+            if (NewBB && NewBB != MBB) {
+              MBB = NewBB;
+              E = MBB->end();
+              BI = MachineFunction::iterator(MBB);
+              BE = MF.end();
+            }
+            assert((!NewBB || NewBB == I->getParent()) &&
+                   "moveToVALU did not return the right basic block");
             break;
           }
 
@@ -647,7 +655,15 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             MI.setDesc(TII->get(SMovOp));
             break;
           }
-          TII->moveToVALU(MI, MDT);
+          MachineBasicBlock *NewBB = TII->moveToVALU(MI, MDT);
+          if (NewBB && NewBB != MBB) {
+            MBB = NewBB;
+            E = MBB->end();
+            BI = MachineFunction::iterator(MBB);
+            BE = MF.end();
+          }
+          assert((!NewBB || NewBB == I->getParent()) &&
+                 "moveToVALU did not return the right basic block");
         } else if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI)) {
           tryChangeVGPRtoSGPRinCopy(MI, TRI, TII);
         }
@@ -655,10 +671,18 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
       case AMDGPU::PHI: {
-        processPHINode(MI);
+        MachineBasicBlock *NewBB = processPHINode(MI);
+        if (NewBB && NewBB != MBB) {
+          MBB = NewBB;
+          E = MBB->end();
+          BI = MachineFunction::iterator(MBB);
+          BE = MF.end();
+        }
+        assert((!NewBB || NewBB == I->getParent()) &&
+               "moveToVALU did not return the right basic block");
         break;
       }
-      case AMDGPU::REG_SEQUENCE:
+      case AMDGPU::REG_SEQUENCE: {
         if (TRI->hasVectorRegisters(TII->getOpRegClass(MI, 0)) ||
             !hasVectorOperands(MI, TRI)) {
           foldVGPRCopyIntoRegSequence(MI, TRI, TII, *MRI);
@@ -667,8 +691,17 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         LLVM_DEBUG(dbgs() << "Fixing REG_SEQUENCE: " << MI);
 
-        TII->moveToVALU(MI, MDT);
+        MachineBasicBlock *NewBB = TII->moveToVALU(MI, MDT);
+        if (NewBB && NewBB != MBB) {
+          MBB = NewBB;
+          E = MBB->end();
+          BI = MachineFunction::iterator(MBB);
+          BE = MF.end();
+        }
+        assert((!NewBB || NewBB == I->getParent()) &&
+               "moveToVALU did not return the right basic block");
         break;
+      }
       case AMDGPU::INSERT_SUBREG: {
         const TargetRegisterClass *DstRC, *Src0RC, *Src1RC;
         DstRC = MRI->getRegClass(MI.getOperand(0).getReg());
@@ -678,7 +711,15 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             (TRI->hasVectorRegisters(Src0RC) ||
              TRI->hasVectorRegisters(Src1RC))) {
           LLVM_DEBUG(dbgs() << " Fixing INSERT_SUBREG: " << MI);
-          TII->moveToVALU(MI, MDT);
+          MachineBasicBlock *NewBB = TII->moveToVALU(MI, MDT);
+          if (NewBB && NewBB != MBB) {
+            MBB = NewBB;
+            E = MBB->end();
+            BI = MachineFunction::iterator(MBB);
+            BE = MF.end();
+          }
+          assert((!NewBB || NewBB == I->getParent()) &&
+                 "moveToVALU did not return the right basic block");
         }
         break;
       }
@@ -753,12 +794,13 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
+MachineBasicBlock *SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   unsigned numVGPRUses = 0;
   bool AllAGPRUses = true;
   SetVector<const MachineInstr *> worklist;
   SmallSet<const MachineInstr *, 4> Visited;
   SetVector<MachineInstr *> PHIOperands;
+  MachineBasicBlock *CreatedBB = nullptr;
   worklist.insert(&MI);
   Visited.insert(&MI);
   while (!worklist.empty()) {
@@ -850,7 +892,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
        RC0 != &AMDGPU::VReg_1RegClass) &&
     (hasVGPRInput || numVGPRUses > 1)) {
     LLVM_DEBUG(dbgs() << "Fixing PHI: " << MI);
-    TII->moveToVALU(MI);
+    CreatedBB = TII->moveToVALU(MI);
   }
   else {
     LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
@@ -861,4 +903,5 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   while (!PHIOperands.empty()) {
     processPHINode(*PHIOperands.pop_back_val());
   }
+  return CreatedBB;
 }

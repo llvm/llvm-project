@@ -1,15 +1,15 @@
-/*===-- mlir-c/StandardAttributes.h - C API for Std Attributes-----*- C -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-|*===----------------------------------------------------------------------===*|
-|*                                                                            *|
-|* This header declares the C interface to MLIR Standard attributes.          *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===-- mlir-c/StandardAttributes.h - C API for Std Attributes-----*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This header declares the C interface to MLIR Standard attributes.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_C_STANDARDATTRIBUTES_H
 #define MLIR_C_STANDARDATTRIBUTES_H
@@ -22,25 +22,25 @@
 extern "C" {
 #endif
 
-/*============================================================================*/
-/* Affine map attribute.                                                      */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Affine map attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is an affine map attribute. */
+/// Checks whether the given attribute is an affine map attribute.
 int mlirAttributeIsAAffineMap(MlirAttribute attr);
 
 /** Creates an affine map attribute wrapping the given map. The attribute
  * belongs to the same context as the affine map. */
 MlirAttribute mlirAffineMapAttrGet(MlirAffineMap map);
 
-/** Returns the affine map wrapped in the given affine map attribute. */
+/// Returns the affine map wrapped in the given affine map attribute.
 MlirAffineMap mlirAffineMapAttrGetValue(MlirAttribute attr);
 
-/*============================================================================*/
-/* Array attribute.                                                           */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Array attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is an array attribute. */
+/// Checks whether the given attribute is an array attribute.
 int mlirAttributeIsAArray(MlirAttribute attr);
 
 /** Creates an array element containing the given list of elements in the given
@@ -48,17 +48,17 @@ int mlirAttributeIsAArray(MlirAttribute attr);
 MlirAttribute mlirArrayAttrGet(MlirContext ctx, intptr_t numElements,
                                MlirAttribute *elements);
 
-/** Returns the number of elements stored in the given array attribute. */
+/// Returns the number of elements stored in the given array attribute.
 intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr);
 
-/** Returns pos-th element stored in the given array attribute. */
+/// Returns pos-th element stored in the given array attribute.
 MlirAttribute mlirArrayAttrGetElement(MlirAttribute attr, intptr_t pos);
 
-/*============================================================================*/
-/* Dictionary attribute.                                                      */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Dictionary attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a dictionary attribute. */
+/// Checks whether the given attribute is a dictionary attribute.
 int mlirAttributeIsADictionary(MlirAttribute attr);
 
 /** Creates a dictionary attribute containing the given list of elements in the
@@ -66,10 +66,10 @@ int mlirAttributeIsADictionary(MlirAttribute attr);
 MlirAttribute mlirDictionaryAttrGet(MlirContext ctx, intptr_t numElements,
                                     MlirNamedAttribute *elements);
 
-/** Returns the number of attributes contained in a dictionary attribute. */
+/// Returns the number of attributes contained in a dictionary attribute.
 intptr_t mlirDictionaryAttrGetNumElements(MlirAttribute attr);
 
-/** Returns pos-th element of the given dictionary attribute. */
+/// Returns pos-th element of the given dictionary attribute.
 MlirNamedAttribute mlirDictionaryAttrGetElement(MlirAttribute attr,
                                                 intptr_t pos);
 
@@ -78,14 +78,14 @@ MlirNamedAttribute mlirDictionaryAttrGetElement(MlirAttribute attr,
 MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,
                                                  const char *name);
 
-/*============================================================================*/
-/* Floating point attribute.                                                  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Floating point attribute.
+//===----------------------------------------------------------------------===//
 
 /* TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
  * relevant functions here. */
 
-/** Checks whether the given attribute is a floating point attribute. */
+/// Checks whether the given attribute is a floating point attribute.
 int mlirAttributeIsAFloat(MlirAttribute attr);
 
 /** Creates a floating point attribute in the given context with the given
@@ -102,14 +102,14 @@ MlirAttribute mlirFloatAttrDoubleGetChecked(MlirType type, double value,
  * the value as double. */
 double mlirFloatAttrGetValueDouble(MlirAttribute attr);
 
-/*============================================================================*/
-/* Integer attribute.                                                         */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Integer attribute.
+//===----------------------------------------------------------------------===//
 
 /* TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
  * relevant functions here. */
 
-/** Checks whether the given attribute is an integer attribute. */
+/// Checks whether the given attribute is an integer attribute.
 int mlirAttributeIsAInteger(MlirAttribute attr);
 
 /** Creates an integer attribute of the given type with the given integer
@@ -120,31 +120,31 @@ MlirAttribute mlirIntegerAttrGet(MlirType type, int64_t value);
  * fits into a 64-bit integer. */
 int64_t mlirIntegerAttrGetValueInt(MlirAttribute attr);
 
-/*============================================================================*/
-/* Bool attribute.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Bool attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a bool attribute. */
+/// Checks whether the given attribute is a bool attribute.
 int mlirAttributeIsABool(MlirAttribute attr);
 
-/** Creates a bool attribute in the given context with the given value. */
+/// Creates a bool attribute in the given context with the given value.
 MlirAttribute mlirBoolAttrGet(MlirContext ctx, int value);
 
-/** Returns the value stored in the given bool attribute. */
+/// Returns the value stored in the given bool attribute.
 int mlirBoolAttrGetValue(MlirAttribute attr);
 
-/*============================================================================*/
-/* Integer set attribute.                                                     */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Integer set attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is an integer set attribute. */
+/// Checks whether the given attribute is an integer set attribute.
 int mlirAttributeIsAIntegerSet(MlirAttribute attr);
 
-/*============================================================================*/
-/* Opaque attribute.                                                          */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Opaque attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is an opaque attribute. */
+/// Checks whether the given attribute is an opaque attribute.
 int mlirAttributeIsAOpaque(MlirAttribute attr);
 
 /** Creates an opaque attribute in the given context associated with the dialect
@@ -162,11 +162,11 @@ const char *mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr);
  * the context in which the attribute lives. */
 MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr);
 
-/*============================================================================*/
-/* String attribute.                                                          */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// String attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a string attribute. */
+/// Checks whether the given attribute is a string attribute.
 int mlirAttributeIsAString(MlirAttribute attr);
 
 /** Creates a string attribute in the given context containing the given string.
@@ -184,11 +184,11 @@ MlirAttribute mlirStringAttrTypedGet(MlirType type, intptr_t length,
  * long as the context in which the attribute lives. */
 MlirStringRef mlirStringAttrGetValue(MlirAttribute attr);
 
-/*============================================================================*/
-/* SymbolRef attribute.                                                       */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// SymbolRef attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a symbol reference attribute. */
+/// Checks whether the given attribute is a symbol reference attribute.
 int mlirAttributeIsASymbolRef(MlirAttribute attr);
 
 /** Creates a symbol reference attribute in the given context referencing a
@@ -211,15 +211,15 @@ MlirStringRef mlirSymbolRefAttrGetLeafReference(MlirAttribute attr);
  * attribute. */
 intptr_t mlirSymbolRefAttrGetNumNestedReferences(MlirAttribute attr);
 
-/** Returns pos-th reference nested in the given symbol reference attribute. */
+/// Returns pos-th reference nested in the given symbol reference attribute.
 MlirAttribute mlirSymbolRefAttrGetNestedReference(MlirAttribute attr,
                                                   intptr_t pos);
 
-/*============================================================================*/
-/* Flat SymbolRef attribute.                                                  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Flat SymbolRef attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a flat symbol reference attribute. */
+/// Checks whether the given attribute is a flat symbol reference attribute.
 int mlirAttributeIsAFlatSymbolRef(MlirAttribute attr);
 
 /** Creates a flat symbol reference attribute in the given context referencing a
@@ -232,38 +232,38 @@ MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, intptr_t length,
  * as long as the context in which the attribute lives. */
 MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr);
 
-/*============================================================================*/
-/* Type attribute.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Type attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a type attribute. */
+/// Checks whether the given attribute is a type attribute.
 int mlirAttributeIsAType(MlirAttribute attr);
 
 /** Creates a type attribute wrapping the given type in the same context as the
  * type. */
 MlirAttribute mlirTypeAttrGet(MlirType type);
 
-/** Returns the type stored in the given type attribute. */
+/// Returns the type stored in the given type attribute.
 MlirType mlirTypeAttrGetValue(MlirAttribute attr);
 
-/*============================================================================*/
-/* Unit attribute.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Unit attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a unit attribute. */
+/// Checks whether the given attribute is a unit attribute.
 int mlirAttributeIsAUnit(MlirAttribute attr);
 
-/** Creates a unit attribute in the given context. */
+/// Creates a unit attribute in the given context.
 MlirAttribute mlirUnitAttrGet(MlirContext ctx);
 
-/*============================================================================*/
-/* Elements attributes.                                                       */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Elements attributes.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is an elements attribute. */
+/// Checks whether the given attribute is an elements attribute.
 int mlirAttributeIsAElements(MlirAttribute attr);
 
-/** Returns the element at the given rank-dimensional index. */
+/// Returns the element at the given rank-dimensional index.
 MlirAttribute mlirElementsAttrGetValue(MlirAttribute attr, intptr_t rank,
                                        uint64_t *idxs);
 
@@ -277,15 +277,15 @@ int mlirElementsAttrIsValidIndex(MlirAttribute attr, intptr_t rank,
  * shaped type and use its sizes to build a multi-dimensional index. */
 int64_t mlirElementsAttrGetNumElements(MlirAttribute attr);
 
-/*============================================================================*/
-/* Dense elements attribute.                                                  */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Dense elements attribute.
+//===----------------------------------------------------------------------===//
 
-/* TODO: decide on the interface and add support for complex elements. */
+// TODO: decide on the interface and add support for complex elements.
 /* TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
  * relevant functions here. */
 
-/** Checks whether the given attribute is a dense elements attribute. */
+/// Checks whether the given attribute is a dense elements attribute.
 int mlirAttributeIsADenseElements(MlirAttribute attr);
 int mlirAttributeIsADenseIntElements(MlirAttribute attr);
 int mlirAttributeIsADenseFPElements(MlirAttribute attr);
@@ -381,20 +381,20 @@ double mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos);
 MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
                                                   intptr_t pos);
 
-/*============================================================================*/
-/* Opaque elements attribute.                                                 */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Opaque elements attribute.
+//===----------------------------------------------------------------------===//
 
-/* TODO: expose Dialect to the bindings and implement accessors here. */
+// TODO: expose Dialect to the bindings and implement accessors here.
 
-/** Checks whether the given attribute is an opaque elements attribute. */
+/// Checks whether the given attribute is an opaque elements attribute.
 int mlirAttributeIsAOpaqueElements(MlirAttribute attr);
 
-/*============================================================================*/
-/* Sparse elements attribute.                                                 */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Sparse elements attribute.
+//===----------------------------------------------------------------------===//
 
-/** Checks whether the given attribute is a sparse elements attribute. */
+/// Checks whether the given attribute is a sparse elements attribute.
 int mlirAttributeIsASparseElements(MlirAttribute attr);
 
 /** Creates a sparse elements attribute of the given shape from a list of

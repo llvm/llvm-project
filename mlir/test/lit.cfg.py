@@ -59,6 +59,7 @@ tools = [
     'mlir-tblgen',
     'mlir-translate',
     'mlir-capi-ir-test',
+    'mlir-capi-pass-test',
     'mlir-edsc-builder-api-test',
 ]
 

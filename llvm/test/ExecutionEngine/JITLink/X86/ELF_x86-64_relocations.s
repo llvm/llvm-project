@@ -17,8 +17,8 @@
         .type   main,@function
 main:
         retq
-.Lfunc_end0:
-        .size   main, .Lfunc_end0-main
+
+        .size   main, .-main
 
 # Test PCRel32 / R_X86_64_PC32 handling.
 # jitlink-check: decode_operand(test_pcrel32, 4) = named_data - next_pc(test_pcrel32)
@@ -27,16 +27,16 @@ main:
         .type   test_pcrel32,@function
 test_pcrel32:
         movl    named_data(%rip), %eax
-.Lend_test_pcrel32:
-         .size   test_pcrel32, .Lend_test_pcrel32-test_pcrel32
+
+         .size   test_pcrel32, .-test_pcrel32
 
         .globl  named_func
         .p2align       4, 0x90
         .type   named_func,@function
 named_func:
         xorq    %rax, %rax
-.Lend_named_func:
-        .size   named_func, .Lend_named_func-named_func
+
+        .size   named_func, .-named_func
 
 # Check R_X86_64_PLT32 handling with a call to a local function. This produces a
 # Branch32 edge that is resolved like a regular PCRel32 (no PLT entry created).
@@ -47,8 +47,8 @@ named_func:
         .type   test_call_local,@function
 test_call_local:
         callq   named_func
-.Lend_test_call_local:
-        .size   test_call_local, .Lend_test_call_local-test_call_local
+
+        .size   test_call_local, .-test_call_local
 
 # Check R_X86_64_PLT32 handling with a call to an external. This produces a
 # Branch32ToStub edge, because externals are not defined locally. During
@@ -61,8 +61,8 @@ test_call_local:
         .type   test_call_extern,@function
 test_call_extern:
         callq   extern_in_range32@plt
-.Lend_test_call_extern:
-        .size   test_call_extern, .Lend_test_call_extern-test_call_extern
+
+        .size   test_call_extern, .-test_call_extern
 
 # Check R_X86_64_PLT32 handling with a call to an external via PLT. This
 # produces a Branch32ToStub edge, because externals are not defined locally.
@@ -77,8 +77,8 @@ test_call_extern:
         .type   test_call_extern_plt,@function
 test_call_extern_plt:
         callq   extern_out_of_range32@plt
-.Lend_test_call_extern_plt:
-        .size   test_call_extern_plt, .Lend_test_call_extern_plt-test_call_extern_plt
+
+        .size   test_call_extern_plt, .-test_call_extern_plt
 
 # Test GOTPCREL handling. We want to check both the offset to the GOT entry and its
 # contents.
@@ -90,8 +90,8 @@ test_call_extern_plt:
         .type   test_gotpcrel,@function
 test_gotpcrel:
 	movl    named_data@GOTPCREL(%rip), %eax
-.Lend_test_gotpcrel:
-        .size   test_gotpcrel, .Lend_test_gotpcrel-test_gotpcrel
+
+        .size   test_gotpcrel, .-test_gotpcrel
 
 # Test REX_GOTPCRELX handling. We want to check both the offset to the GOT entry and its
 # contents.
@@ -103,8 +103,8 @@ test_gotpcrel:
         .type   test_rex_gotpcrelx,@function
 test_rex_gotpcrelx:
 	movq    external_data@GOTPCREL(%rip), %rax
-.Lend_test_rex_gotpcrelx:
-        .size   test_rex_gotpcrelx, .Lend_test_rex_gotpcrelx-test_rex_gotpcrelx
+
+        .size   test_rex_gotpcrelx, .-test_rex_gotpcrelx
 
         .type   named_data,@object
         .data

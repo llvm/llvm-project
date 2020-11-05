@@ -157,7 +157,16 @@ func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
   return
 }
 // CHECK-LABEL: func @test_vectorize_fill
-//       CHECK: vector.broadcast {{.*}} : f32 to vector<8x16xf32>
+//       CHECK: %[[V:.*]] = vector.broadcast {{.*}} : f32 to vector<8x16xf32>
+//       CHECK: vector.transfer_write %[[V]], {{.*}} : vector<8x16xf32>, memref<8x16xf32>
+
+func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
+  linalg.fill(%A, %arg0) { __internal_linalg_transform__ = "VECTORIZE"} :  memref<f32>, f32
+  return
+}
+// CHECK-LABEL: func @test_vectorize_fill
+//  CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[V:.*]]: f32)
+//       CHECK:   store %[[V]], %[[M]][] : memref<f32>
 
 func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
   linalg.copy(%A, %B) { __internal_linalg_transform__ = "VECTORIZE"} :  memref<8x16xf32>, memref<8x16xf32>

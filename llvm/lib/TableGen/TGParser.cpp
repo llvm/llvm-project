@@ -906,7 +906,7 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
 Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   switch (Lex.getCode()) {
   default:
-    TokError("unknown operation");
+    TokError("unknown bang operator");
     return nullptr;
   case tgtok::XNOT:
   case tgtok::XHead:
@@ -1092,6 +1092,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XListConcat:
   case tgtok::XListSplat:
   case tgtok::XStrConcat:
+  case tgtok::XInterleave:
   case tgtok::XSetDagOp: { // Value ::= !binop '(' Value ',' Value ')'
     tgtok::TokKind OpTok = Lex.getCode();
     SMLoc OpLoc = Lex.getLoc();
@@ -1119,6 +1120,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XListConcat: Code = BinOpInit::LISTCONCAT; break;
     case tgtok::XListSplat:  Code = BinOpInit::LISTSPLAT; break;
     case tgtok::XStrConcat:  Code = BinOpInit::STRCONCAT; break;
+    case tgtok::XInterleave: Code = BinOpInit::INTERLEAVE; break;
     case tgtok::XSetDagOp:   Code = BinOpInit::SETDAGOP; break;
     }
 
@@ -1167,6 +1169,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       Type = StringRecTy::get();
       ArgType = StringRecTy::get();
       break;
+    case tgtok::XInterleave:
+      Type = StringRecTy::get();
+      // The first argument type is not yet known.
     }
 
     if (Type && ItemType && !Type->typeIsConvertibleTo(ItemType)) {
@@ -1183,6 +1188,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
 
     SmallVector<Init*, 2> InitList;
 
+    // Note that this loop consumes an arbitrary number of arguments.
+    // The actual count is checked later.
     for (;;) {
       SMLoc InitLoc = Lex.getLoc();
       InitList.push_back(ParseValue(CurRec, ArgType));
@@ -1195,7 +1202,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
       RecTy *ListType = InitListBack->getType();
+
       if (!ArgType) {
+        // Argument type must be determined from the argument itself.
         ArgType = ListType;
 
         switch (Code) {
@@ -1242,9 +1251,34 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
             return nullptr;
           }
           break;
+        case BinOpInit::INTERLEAVE:
+          switch (InitList.size()) {
+          case 1: // First argument must be a list of strings or integers.
+            if (ArgType != StringRecTy::get()->getListTy() &&
+                !ArgType->typeIsConvertibleTo(IntRecTy::get()->getListTy())) {
+              Error(InitLoc, Twine("expected list of string, int, bits, or bit; "
+                                   "got value of type '") +
+                                   ArgType->getAsString() + "'");
+              return nullptr;
+            }
+            break;
+          case 2: // Second argument must be a string.
+            if (!isa<StringRecTy>(ArgType)) {
+              Error(InitLoc, Twine("expected second argument to be a string, "
+                                   "got value of type '") +
+                                 ArgType->getAsString() + "'");
+              return nullptr;
+            }
+            break;
+          default: ;
+          }
+          ArgType = nullptr; // Broken invariant: types not identical.
+          break;
         default: llvm_unreachable("other ops have fixed argument types");
         }
+
       } else {
+        // Desired argument type is a known and in ArgType.
         RecTy *Resolved = resolveTypes(ArgType, ListType);
         if (!Resolved) {
           Error(InitLoc, Twine("expected value of type '") +
@@ -2117,6 +2151,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XListConcat:
   case tgtok::XListSplat:
   case tgtok::XStrConcat:
+  case tgtok::XInterleave:
   case tgtok::XSetDagOp: // Value ::= !binop '(' Value ',' Value ')'
   case tgtok::XIf:
   case tgtok::XCond:

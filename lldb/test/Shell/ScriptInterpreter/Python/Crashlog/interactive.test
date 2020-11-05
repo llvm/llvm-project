@@ -1,0 +1,8 @@
+# RUN: echo "quit" | %S/../../../../../examples/python/crashlog.py -i %s 2>&1 | FileCheck %s
+# CHECK: 1 crash logs are loaded:
+# CHECK: [0] = {{.*}}interactive.test
+# CHECK: Interactive crashlogs prompt, type "help" to see a list of supported commands.
+
+Binary Images:
+       0x10ab87000 -        0x10abdafff +lldb (10.0.0) <87BD1384-BAE9-3625-A838-9D241CBAEF87> /Volumes/VOLUME/*/lldb
+       0x10ac45000 -        0x10ae94fff  com.apple.python3 (3.8.2 - 3.8.2) <20BC3FC4-CAAD-3002-ACDF-423A3188F24C> /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.8/Python3

@@ -1094,6 +1094,7 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, float* noc
 ; CHECK-NEXT:    ldrd r11, r8, [r12, #24]
 ; CHECK-NEXT:    vstrb.8 q0, [r9], #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r5], #32
+; CHECK-NEXT:    strd r9, r1, [sp, #24] @ 8-byte Folded Spill
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #-28]
 ; CHECK-NEXT:    vmul.f32 q0, q0, r7
 ; CHECK-NEXT:    vldrw.u32 q6, [r5, #-24]
@@ -1105,13 +1106,12 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, float* noc
 ; CHECK-NEXT:    vfma.f32 q0, q4, r6
 ; CHECK-NEXT:    vldrw.u32 q3, [r5, #-8]
 ; CHECK-NEXT:    vfma.f32 q0, q5, r3
-; CHECK-NEXT:    vldrw.u32 q1, [r5, #-4]
-; CHECK-NEXT:    vfma.f32 q0, q2, lr
 ; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    vfma.f32 q0, q2, lr
+; CHECK-NEXT:    vldrw.u32 q1, [r5, #-4]
 ; CHECK-NEXT:    vfma.f32 q0, q3, r11
-; CHECK-NEXT:    strd r9, r1, [sp, #24] @ 8-byte Folded Spill
-; CHECK-NEXT:    vfma.f32 q0, q1, r8
 ; CHECK-NEXT:    cmp r0, #16
+; CHECK-NEXT:    vfma.f32 q0, q1, r8
 ; CHECK-NEXT:    blo .LBB16_7
 ; CHECK-NEXT:  @ %bb.5: @ %for.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
