@@ -116,7 +116,7 @@ def use_support_substitutions(config):
             sdk_path = lit.util.to_string(out)
             llvm_config.lit_config.note('using SDKROOT: %r' % sdk_path)
             host_flags += ['-isysroot', sdk_path]
-    elif platform.system() in ['FreeBSD', 'NetBSD', 'OpenBSD', 'Linux']:
+    elif sys.platform != 'win32':
         host_flags += ['-pthread']
 
     if sys.platform.startswith('netbsd'):
