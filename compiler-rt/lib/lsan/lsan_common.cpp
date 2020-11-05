@@ -294,6 +294,20 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                                  kReachable);
         }
       }
+#if SANITIZER_ANDROID
+      auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
+                     void *arg) -> void {
+        ScanRangeForPointers(reinterpret_cast<uptr>(dtls_begin),
+                             reinterpret_cast<uptr>(dtls_end),
+                             reinterpret_cast<Frontier *>(arg), "DTLS",
+                             kReachable);
+      };
+
+      // FIXME: There might be a race-condition here (and in Bionic) if the
+      // thread is suspended in the middle of updating its DTLS. IOWs, we
+      // could scan already freed memory. (probably fine for now)
+      __libc_iterate_dynamic_tls(os_id, cb, frontier);
+#else
       if (dtls && !DTLSInDestruction(dtls)) {
         for (uptr j = 0; j < dtls->dtv_size; ++j) {
           uptr dtls_beg = dtls->dtv[j].beg;
@@ -309,6 +323,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
         // this and continue.
         LOG_THREADS("Thread %d has DTLS under destruction.\n", os_id);
       }
+#endif
     }
   }
 }
