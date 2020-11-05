@@ -126,18 +126,18 @@ steps:
       queue: "libcxx-builders"
 
   - label: "Legacy standalone build"
-  command: "libcxx/utils/ci/run-buildbot.sh legacy-standalone"
-  artifact_paths:
-    - "**/test-results.xml"
-  agents:
-    queue: "libcxx-builders"
+    command: "libcxx/utils/ci/run-buildbot.sh legacy-standalone"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
 
   - label: "Unified standalone build"
-  command: "libcxx/utils/ci/run-buildbot.sh unified-standalone"
-  artifact_paths:
-    - "**/test-results.xml"
-  agents:
-    queue: "libcxx-builders"
+    command: "libcxx/utils/ci/run-buildbot.sh unified-standalone"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
 
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
