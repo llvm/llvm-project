@@ -218,6 +218,7 @@ enum {
   KMP_IDENT_ATOMIC_HINT_CONTENDED = 0x020000,
   KMP_IDENT_ATOMIC_HINT_NONSPECULATIVE = 0x040000,
   KMP_IDENT_ATOMIC_HINT_SPECULATIVE = 0x080000,
+  KMP_IDENT_OPENMP_SPEC_VERSION_MASK = 0xFF000000
 };
 
 /*!
@@ -237,6 +238,10 @@ typedef struct ident {
                        The string is composed of semi-colon separated fields
                        which describe the source file, the function and a pair
                        of line numbers that delimit the construct. */
+  // Returns the OpenMP version in form major*10+minor (e.g., 50 for 5.0)
+  kmp_int32 get_openmp_version() {
+    return (((flags & KMP_IDENT_OPENMP_SPEC_VERSION_MASK) >> 24) & 0xFF);
+  }
 } ident_t;
 /*!
 @}
