@@ -439,7 +439,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
           if (!MO.isReg() || !MO.isUse())
             continue;
           Register Reg = MO.getReg();
-          auto &RDM = RegDefMaps[Register::isVirtualRegister(Reg)];
+          auto &RDM = RegDefMaps[Reg.isVirtual()];
           if (MachineInstr *DefMI = RDM.lookup(Reg)) {
             OperandToDefMap[&MO] = DefMI;
             DepthInfo Info = DepthMap.lookup(DefMI);
@@ -459,7 +459,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
           if (!MO.isReg() || !MO.isDef())
             continue;
           Register Reg = MO.getReg();
-          RegDefMaps[Register::isVirtualRegister(Reg)][Reg] = &MI;
+          RegDefMaps[Reg.isVirtual()][Reg] = &MI;
         }
 
         unsigned Latency = TSchedModel.computeInstrLatency(&MI);

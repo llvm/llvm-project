@@ -947,9 +947,9 @@ unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
 }
 
 /// Return true if register is PIC base; i.e.g defined by X86::MOVPC32r.
-static bool regIsPICBase(unsigned BaseReg, const MachineRegisterInfo &MRI) {
+static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   // Don't waste compile time scanning use-def chains of physregs.
-  if (!Register::isVirtualRegister(BaseReg))
+  if (!BaseReg.isVirtual())
     return false;
   bool isPICBase = false;
   for (MachineRegisterInfo::def_instr_iterator I = MRI.def_instr_begin(BaseReg),
@@ -1206,8 +1206,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     isKill = Src.isKill();
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
-    if (Register::isVirtualRegister(NewSrc) &&
-        !MF.getRegInfo().constrainRegClass(NewSrc, RC))
+    if (NewSrc.isVirtual() && !MF.getRegInfo().constrainRegClass(NewSrc, RC))
       return false;
 
     return true;
@@ -1215,7 +1214,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
   // This is for an LEA64_32r and incoming registers are 32-bit. One way or
   // another we need to add 64-bit registers to the final MI.
-  if (Register::isPhysicalRegister(SrcReg)) {
+  if (SrcReg.isPhysical()) {
     ImplicitOp = Src;
     ImplicitOp.setImplicit();
 
@@ -1410,9 +1409,8 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     if (!isTruncatedShiftCountForLEA(ShAmt)) return nullptr;
 
     // LEA can't handle RSP.
-    if (Register::isVirtualRegister(Src.getReg()) &&
-        !MF.getRegInfo().constrainRegClass(Src.getReg(),
-                                           &X86::GR64_NOSPRegClass))
+    if (Src.getReg().isVirtual() && !MF.getRegInfo().constrainRegClass(
+                                        Src.getReg(), &X86::GR64_NOSPRegClass))
       return nullptr;
 
     NewMI = BuildMI(MF, MI.getDebugLoc(), get(X86::LEA64r))
@@ -3532,11 +3530,10 @@ X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return None;
 }
 
-static unsigned getLoadStoreRegOpcode(unsigned Reg,
+static unsigned getLoadStoreRegOpcode(Register Reg,
                                       const TargetRegisterClass *RC,
-                                      bool isStackAligned,
-                                      const X86Subtarget &STI,
-                                      bool load) {
+                                      bool IsStackAligned,
+                                      const X86Subtarget &STI, bool load) {
   bool HasAVX = STI.hasAVX();
   bool HasAVX512 = STI.hasAVX512();
   bool HasVLX = STI.hasVLX();
@@ -3609,7 +3606,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
   case 16: {
     if (X86::VR128XRegClass.hasSubClassEq(RC)) {
       // If stack is realigned we can use aligned stores.
-      if (isStackAligned)
+      if (IsStackAligned)
         return load ?
           (HasVLX    ? X86::VMOVAPSZ128rm :
            HasAVX512 ? X86::VMOVAPSZ128rm_NOVLX :
@@ -3641,7 +3638,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
   case 32:
     assert(X86::VR256XRegClass.hasSubClassEq(RC) && "Unknown 32-byte regclass");
     // If stack is realigned we can use aligned stores.
-    if (isStackAligned)
+    if (IsStackAligned)
       return load ?
         (HasVLX    ? X86::VMOVAPSZ256rm :
          HasAVX512 ? X86::VMOVAPSZ256rm_NOVLX :
@@ -3660,7 +3657,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
   case 64:
     assert(X86::VR512RegClass.hasSubClassEq(RC) && "Unknown 64-byte regclass");
     assert(STI.hasAVX512() && "Using 512-bit register requires AVX512");
-    if (isStackAligned)
+    if (IsStackAligned)
       return load ? X86::VMOVAPSZrm : X86::VMOVAPSZmr;
     else
       return load ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
@@ -3778,19 +3775,17 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
   return true;
 }
 
-static unsigned getStoreRegOpcode(unsigned SrcReg,
+static unsigned getStoreRegOpcode(Register SrcReg,
                                   const TargetRegisterClass *RC,
-                                  bool isStackAligned,
+                                  bool IsStackAligned,
                                   const X86Subtarget &STI) {
-  return getLoadStoreRegOpcode(SrcReg, RC, isStackAligned, STI, false);
+  return getLoadStoreRegOpcode(SrcReg, RC, IsStackAligned, STI, false);
 }
 
-
-static unsigned getLoadRegOpcode(unsigned DestReg,
+static unsigned getLoadRegOpcode(Register DestReg,
                                  const TargetRegisterClass *RC,
-                                 bool isStackAligned,
-                                 const X86Subtarget &STI) {
-  return getLoadStoreRegOpcode(DestReg, RC, isStackAligned, STI, true);
+                                 bool IsStackAligned, const X86Subtarget &STI) {
+  return getLoadStoreRegOpcode(DestReg, RC, IsStackAligned, STI, true);
 }
 
 void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -4447,8 +4442,8 @@ static bool Expand2AddrUndef(MachineInstrBuilder &MIB,
 ///   %k4 = K_SET1
 /// to:
 ///   %k4 = KXNORrr %k0, %k0
-static bool Expand2AddrKreg(MachineInstrBuilder &MIB,
-                            const MCInstrDesc &Desc, unsigned Reg) {
+static bool Expand2AddrKreg(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
+                            Register Reg) {
   assert(Desc.getNumOperands() == 3 && "Expected two-addr instruction.");
   MIB->setDesc(Desc);
   MIB.addReg(Reg, RegState::Undef).addReg(Reg, RegState::Undef);
@@ -4894,7 +4889,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
   // If MI is marked as reading Reg, the partial register update is wanted.
   const MachineOperand &MO = MI.getOperand(0);
   Register Reg = MO.getReg();
-  if (Register::isVirtualRegister(Reg)) {
+  if (Reg.isVirtual()) {
     if (MO.readsReg() || MI.readsVirtualRegister(Reg))
       return 0;
   } else {
@@ -5279,7 +5274,7 @@ static void updateOperandRegConstraints(MachineFunction &MF,
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
 
     auto *NewRC = MRI.constrainRegClass(
@@ -5575,7 +5570,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // value and zero-extend the top bits. Change the destination register
       // to a 32-bit one.
       Register DstReg = NewMI->getOperand(0).getReg();
-      if (Register::isPhysicalRegister(DstReg))
+      if (DstReg.isPhysical())
         NewMI->getOperand(0).setReg(RI.getSubReg(DstReg, X86::sub_32bit));
       else
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
