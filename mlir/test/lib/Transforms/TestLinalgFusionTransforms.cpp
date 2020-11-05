@@ -97,7 +97,7 @@ static void applyFusionPatterns(MLIRContext *context, FuncOp funcOp) {
   LinalgDependenceGraph dependenceGraph =
       LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);
   fillFusionPatterns(context, dependenceGraph, fusionPatterns);
-  applyPatternsAndFoldGreedily(funcOp, fusionPatterns);
+  applyPatternsAndFoldGreedily(funcOp, std::move(fusionPatterns));
 }
 
 void TestLinalgFusionTransforms::runOnFunction() {

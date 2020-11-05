@@ -350,7 +350,8 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     populateWithBufferizeOpConversionPatterns<mlir::ReturnOp, mlir::ReturnOp,
                                               linalg::CopyOp>(
         &context, converter, patterns);
-    if (failed(applyFullConversion(this->getOperation(), target, patterns)))
+    if (failed(applyFullConversion(this->getOperation(), target,
+                                   std::move(patterns))))
       this->signalPassFailure();
   }
 };

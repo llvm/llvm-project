@@ -302,7 +302,8 @@ void ToyToAffineLoweringPass::runOnFunction() {
   // With the target and rewrite patterns defined, we can now attempt the
   // conversion. The conversion will signal failure if any of our `illegal`
   // operations were not converted successfully.
-  if (failed(applyPartialConversion(getFunction(), target, patterns)))
+  if (failed(
+          applyPartialConversion(getFunction(), target, std::move(patterns))))
     signalPassFailure();
 }
 

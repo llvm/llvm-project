@@ -148,8 +148,8 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
     populateStdBufferizePatterns(context, typeConverter, patterns);
     target.addIllegalOp<DynamicTensorFromElementsOp, ExtractElementOp,
                         TensorCastOp, TensorFromElementsOp>();
-
-    if (failed(applyPartialConversion(getFunction(), target, patterns)))
+    if (failed(
+            applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
   }
 };

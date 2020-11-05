@@ -37,7 +37,7 @@ namespace {
 class GreedyPatternRewriteDriver : public PatternRewriter {
 public:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
-                                      const OwningRewritePatternList &patterns)
+                                      const FrozenRewritePatternList &patterns)
       : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
     worklist.reserve(64);
 
@@ -219,13 +219,13 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 ///
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(Operation *op,
-                                   const OwningRewritePatternList &patterns) {
+                                   const FrozenRewritePatternList &patterns) {
   return applyPatternsAndFoldGreedily(op->getRegions(), patterns);
 }
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                                   const OwningRewritePatternList &patterns) {
+                                   const FrozenRewritePatternList &patterns) {
   if (regions.empty())
     return success();
 
@@ -259,7 +259,7 @@ namespace {
 class OpPatternRewriteDriver : public PatternRewriter {
 public:
   explicit OpPatternRewriteDriver(MLIRContext *ctx,
-                                  const OwningRewritePatternList &patterns)
+                                  const FrozenRewritePatternList &patterns)
       : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
     // Apply a simple cost model based solely on pattern benefit.
     matcher.applyDefaultCostModel();
@@ -343,7 +343,7 @@ LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
 /// folding. `erased` is set to true if the op is erased as a result of being
 /// folded, replaced, or dead.
 LogicalResult mlir::applyOpPatternsAndFold(
-    Operation *op, const OwningRewritePatternList &patterns, bool *erased) {
+    Operation *op, const FrozenRewritePatternList &patterns, bool *erased) {
   // Start the pattern driver.
   OpPatternRewriteDriver driver(op->getContext(), patterns);
   bool opErased;

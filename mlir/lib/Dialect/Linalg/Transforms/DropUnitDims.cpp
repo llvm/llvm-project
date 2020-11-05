@@ -518,7 +518,7 @@ struct LinalgFoldUnitExtentDimsPass
                       FoldUnitDimLoops<IndexedGenericOp>>(context);
     else
       populateLinalgFoldUnitExtentDimsPatterns(context, patterns);
-    applyPatternsAndFoldGreedily(funcOp.getBody(), patterns);
+    applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
   }
 };
 } // namespace

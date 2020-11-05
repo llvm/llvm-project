@@ -31,7 +31,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   // Emplace patterns one at a time while also maintaining a simple chained
   // state transition.
   unsigned stepCount = 0;
-  SmallVector<OwningRewritePatternList, 4> stage1Patterns;
+  SmallVector<FrozenRewritePatternList, 4> stage1Patterns;
   auto zeroState = Identifier::get(std::to_string(stepCount), context);
   auto currentState = zeroState;
   for (const std::unique_ptr<Transformation> &t : transformationSequence) {
@@ -60,7 +60,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
     hoistRedundantVectorTransfers(cast<FuncOp>(op));
     return success();
   };
-  linalg::applyStagedPatterns(func, stage1Patterns, stage2Patterns,
+  linalg::applyStagedPatterns(func, stage1Patterns, std::move(stage2Patterns),
                               stage3Transforms);
 
   //===--------------------------------------------------------------------===//
@@ -73,7 +73,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   OwningRewritePatternList patterns;
   patterns.insert<vector::VectorTransferFullPartialRewriter>(
       context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(module, patterns);
+  applyPatternsAndFoldGreedily(module, std::move(patterns));
 
   // Programmatic controlled lowering of vector.contract only.
   OwningRewritePatternList vectorContractLoweringPatterns;
@@ -81,13 +81,14 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
       .insert<ContractionOpToOuterProductOpLowering,
               ContractionOpToMatmulOpLowering, ContractionOpLowering>(
           vectorTransformsOptions, context);
-  applyPatternsAndFoldGreedily(module, vectorContractLoweringPatterns);
+  applyPatternsAndFoldGreedily(module,
+                               std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
   OwningRewritePatternList vectorToLoopsPatterns;
   populateVectorToSCFConversionPatterns(vectorToLoopsPatterns, context,
                                         vectorToSCFOptions);
-  applyPatternsAndFoldGreedily(module, vectorToLoopsPatterns);
+  applyPatternsAndFoldGreedily(module, std::move(vectorToLoopsPatterns));
 
   // Ensure we drop the marker in the end.
   module.walk([](LinalgOp op) {
