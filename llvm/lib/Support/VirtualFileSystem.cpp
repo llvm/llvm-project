@@ -792,14 +792,12 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
 }
 
 bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
-                                      llvm::MemoryBuffer *Buffer,
+                                      const llvm::MemoryBufferRef &Buffer,
                                       Optional<uint32_t> User,
                                       Optional<uint32_t> Group,
                                       Optional<llvm::sys::fs::file_type> Type,
                                       Optional<llvm::sys::fs::perms> Perms) {
-  return addFile(P, ModificationTime,
-                 llvm::MemoryBuffer::getMemBuffer(
-                     Buffer->getBuffer(), Buffer->getBufferIdentifier()),
+  return addFile(P, ModificationTime, llvm::MemoryBuffer::getMemBuffer(Buffer),
                  std::move(User), std::move(Group), std::move(Type),
                  std::move(Perms));
 }
