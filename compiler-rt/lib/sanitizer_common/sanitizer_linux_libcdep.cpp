@@ -445,10 +445,16 @@ int GetSizeFromHdr(struct dl_phdr_info *info, size_t size, void *data) {
 }
 #endif  // SANITIZER_NETBSD
 
+#if SANITIZER_ANDROID
+// Bionic provides this API since S.
+extern "C" SANITIZER_WEAK_ATTRIBUTE void __libc_get_static_tls_bounds(void **,
+                                                                      void **);
+#endif
+
 #if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
 #if SANITIZER_ANDROID
-  if (HAS_ANDROID_THREAD_PROPERTIES_API) {
+  if (&__libc_get_static_tls_bounds) {
     void *start_addr;
     void *end_addr;
     __libc_get_static_tls_bounds(&start_addr, &end_addr);
@@ -898,6 +904,13 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
 
   return shadow_start;
+}
+
+void InitializePlatformCommonFlags(CommonFlags *cf) {
+#if SANITIZER_ANDROID
+  if (&__libc_get_static_tls_bounds == nullptr)
+    cf->detect_leaks = false;
+#endif
 }
 
 } // namespace __sanitizer
