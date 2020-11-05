@@ -29,7 +29,7 @@ func @x2(%lo : index, %up : index, %ok : i1) {
   // CHECK-DAG: %[[count:.*]] = phi i64
   // CHECK-DAG: %[[exit:.*]] = phi i1
   // CHECK: %[[cond:.*]] = icmp slt i64 %[[count]], %
-  // CHECK: %[[and:.*]] = and i1 %[[cond]], %[[exit]]
+  // CHECK: %[[and:.*]] = and i1 %[[exit]], %[[cond]]
   // CHECK: br i1 %[[and]]
   %unused = fir.iterate_while (%i = %lo to %up step %c1) and (%ok1 = %ok) {
     %ok2 = fir.call @f2() : () -> i1
@@ -69,7 +69,7 @@ func @y3(%lo : index, %up : index) -> i1 {
   // CHECK-DAG: %[[ok3:.*]] = phi i1 {{.*}}[ true
   // CHECK-DAG: %[[j:.*]] = phi i1 {{.*}}[ %[[ok4]]
   // CHECK: %[[prev:.*]] = icmp slt i64 %[[count]],
-  // CHECK: = and i1 %[[prev]], %[[ok3]]
+  // CHECK: = and i1 %[[ok3]], %[[prev]]
   %ok2:2 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok3 = %ok1) iter_args(%j = %ok4) -> i1 {
     %ok = fir.call @f2() : () -> i1
     fir.result %ok3, %ok : i1, i1
@@ -160,7 +160,7 @@ func @y5(%lo : index, %up : index) -> index {
   // CHECK-DAG: %[[ok2:.*]] = phi i1 {{.*}}[ true, 
   // CHECK-DAG: %[[s:.*]] = phi i16 {{.*}}[ 42,
   // CHECK: icmp slt i64 %[[i]]
-  // CHECK: and i1 {{.*}}%[[ok2]]
+  // CHECK: and i1 %[[ok2]]
   %v:3 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok2 = %ok1) iter_args(%s = %s1) -> (index, i1, i16) {
     // CHECK: call i1 @f2
     %ok = fir.call @f2() : () -> i1
