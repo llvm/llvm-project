@@ -1020,13 +1020,15 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
     O << " mrt" << Tgt;
   else if (Tgt == 8)
     O << " mrtz";
-  else if (Tgt == 9)
+  else if (Tgt == 9 && !AMDGPU::isGFX11Plus(STI))
     O << " null";
-  else if ((Tgt >= 12 && Tgt <= 15) || (Tgt == 16 && AMDGPU::isGFX10(STI)))
+  else if (Tgt >= 12 && Tgt <= (AMDGPU::isGFX10Plus(STI) ? 16 : 15))
     O << " pos" << Tgt - 12;
-  else if (AMDGPU::isGFX10(STI) && Tgt == 20)
+  else if (Tgt == 20 && AMDGPU::isGFX10Plus(STI))
     O << " prim";
-  else if (Tgt >= 32 && Tgt <= 63)
+  else if (Tgt >= 21 && Tgt <= 22 && AMDGPU::isGFX11Plus(STI))
+    O << " dual_src_blend" << Tgt - 21;
+  else if (Tgt >= 32 && !AMDGPU::isGFX11Plus(STI))
     O << " param" << Tgt - 32;
   else {
     // Reserved values 10, 11

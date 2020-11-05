@@ -1210,6 +1210,10 @@ public:
     return AMDGPU::isGFX11(getSTI());
   }
 
+  bool isGFX11Plus() const {
+    return AMDGPU::isGFX11Plus(getSTI());
+  }
+
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
   }
@@ -5938,7 +5942,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
 
 OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
                                                       uint8_t &Val) {
-  if (Str == "null") {
+  if (!isGFX11Plus() && Str == "null") {
     Val = 9;
     return MatchOperand_Success;
   }
@@ -5964,19 +5968,19 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 4 || (Val == 4 && !isGFX10()))
+    if (Val > (isGFX10Plus() ? 4  : 3))
       return MatchOperand_ParseFail;
 
     Val += 12;
     return MatchOperand_Success;
   }
 
-  if (isGFX10() && Str == "prim") {
+  if (isGFX10Plus() && Str == "prim") {
     Val = 20;
     return MatchOperand_Success;
   }
 
-  if (Str.startswith("param")) {
+  if (!isGFX11Plus() && Str.startswith("param")) {
     Str = Str.drop_front(5);
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
@@ -5985,6 +5989,18 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
       return MatchOperand_ParseFail;
 
     Val += 32;
+    return MatchOperand_Success;
+  }
+
+  if (isGFX11Plus() && Str.startswith("dual_src_blend")) {
+    Str = Str.drop_front(14);
+    if (Str.getAsInteger(10, Val))
+      return MatchOperand_ParseFail;
+
+    if (Val >= 2)
+      return MatchOperand_ParseFail;
+
+    Val += 21;
     return MatchOperand_Success;
   }
 
