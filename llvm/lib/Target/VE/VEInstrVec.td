@@ -494,6 +494,34 @@ multiclass RVDIVm<string opcStr, bits<8>opc, RegisterClass VRC,
   let cs = 1, cy = 0, vz = ? in
   defm iv : RVmm<opcStr, ", $sy, $vz", opc, VRC, RCM, (ins SIMM:$sy, VRC:$vz)>;
 }
+// Generic RV multiclass with 2 arguments for logical operations.
+//   e.g. VAND, VOR, VXOR, and etc.
+let VE_VLIndex = 3 in
+multiclass RVLm<string opcStr, bits<8>opc, RegisterClass ScaRC,
+                RegisterClass RC, RegisterClass RCM> {
+  let cy = 0, sy = 0, vy = ?, vz = ? in
+  defm vv : RVmm<opcStr, ", $vy, $vz", opc, RC, RCM, (ins RC:$vy, RC:$vz)>;
+  let cs = 1, vz = ? in
+  defm rv : RVmm<opcStr, ", $sy, $vz", opc, RC, RCM, (ins ScaRC:$sy, RC:$vz)>;
+  let cs = 1, cy = 0, vz = ? in
+  defm mv : RVmm<opcStr, ", $sy, $vz", opc, RC, RCM, (ins mimm:$sy, RC:$vz)>;
+}
+// Generic RV multiclass with 1 argument.
+//   e.g. VLDZ, VPCNT, and VBRV.
+let VE_VLIndex = 2 in
+multiclass RV1m<string opcStr, bits<8>opc, RegisterClass RC,
+                RegisterClass RCM> {
+  let cy = 0, sy = 0, vz = ? in
+  defm v : RVmm<opcStr, ", $vz", opc, RC, RCM, (ins RC:$vz)>;
+}
+// Generic RV multiclass with no argument.
+//   e.g. VSEQ.
+let VE_VLIndex = 1 in
+multiclass RV0m<string opcStr, bits<8>opc, RegisterClass RC,
+                RegisterClass RCM> {
+  let cy = 0, sy = 0 in
+  defm "" : RVmm<opcStr, "", opc, RC, RCM, (ins)>;
+}
 
 // Section 8.10.1 - VADD (Vector Add)
 let cx = 0, cx2 = 0 in
@@ -670,3 +698,55 @@ def : MnemonicAlias<"pvmins.lo.zx", "pvmins.lo">;
 defm VMAXSL : RVm<"vmaxs.l", 0x9a, V64, I64, VM>;
 let cs2 = 1 in
 defm VMINSL : RVm<"vmins.l", 0x9a, V64, I64, VM>;
+
+//-----------------------------------------------------------------------------
+// Section 8.11 - Vector Logical Operation Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.11.1 - VAND (Vector And)
+let cx = 0, cx2 = 0 in defm VAND : RVLm<"vand", 0xc4, I64, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVANDLO : RVLm<"pvand.lo", 0xc4, I32, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVANDUP : RVLm<"pvand.up", 0xc4, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVAND : RVLm<"pvand", 0xc4, I64, V64, VM512>;
+
+// Section 8.11.2 - VOR (Vector Or)
+let cx = 0, cx2 = 0 in defm VOR : RVLm<"vor", 0xc5, I64, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVORLO : RVLm<"pvor.lo", 0xc5, I32, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVORUP : RVLm<"pvor.up", 0xc5, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVOR : RVLm<"pvor", 0xc5, I64, V64, VM512>;
+
+// Section 8.11.3 - VXOR (Vector Exclusive Or)
+let cx = 0, cx2 = 0 in defm VXOR : RVLm<"vxor", 0xc6, I64, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVXORLO : RVLm<"pvxor.lo", 0xc6, I32, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVXORUP : RVLm<"pvxor.up", 0xc6, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVXOR : RVLm<"pvxor", 0xc6, I64, V64, VM512>;
+
+// Section 8.11.4 - VEQV (Vector Equivalence)
+let cx = 0, cx2 = 0 in defm VEQV : RVLm<"veqv", 0xc7, I64, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVEQVLO : RVLm<"pveqv.lo", 0xc7, I32, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVEQVUP : RVLm<"pveqv.up", 0xc7, F32, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVEQV : RVLm<"pveqv", 0xc7, I64, V64, VM512>;
+
+// Section 8.11.5 - VLDZ (Vector Leading Zero Count)
+let cx = 0, cx2 = 0 in defm VLDZ : RV1m<"vldz", 0xe7, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVLDZLO : RV1m<"pvldz.lo", 0xe7, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVLDZUP : RV1m<"pvldz.up", 0xe7, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVLDZ : RV1m<"pvldz", 0xe7, V64, VM512>;
+
+// Section 8.11.6 - VPCNT (Vector Population Count)
+let cx = 0, cx2 = 0 in defm VPCNT : RV1m<"vpcnt", 0xac, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVPCNTLO : RV1m<"pvpcnt.lo", 0xac, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVPCNTUP : RV1m<"pvpcnt.up", 0xac, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVPCNT : RV1m<"pvpcnt", 0xac, V64, VM512>;
+
+// Section 8.11.7 - VBRV (Vector Bit Reverse)
+let cx = 0, cx2 = 0 in defm VBRV : RV1m<"vbrv", 0xf7, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVBRVLO : RV1m<"pvbrv.lo", 0xf7, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVBRVUP : RV1m<"pvbrv.up", 0xf7, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVBRV : RV1m<"pvbrv", 0xf7, V64, VM512>;
+
+// Section 8.11.8 - VSEQ (Vector Sequential Number)
+let cx = 0, cx2 = 0 in defm VSEQ : RV0m<"vseq", 0x99, V64, VM>;
+let cx = 0, cx2 = 1 in defm PVSEQLO : RV0m<"pvseq.lo", 0x99, V64, VM>;
+let cx = 1, cx2 = 0 in defm PVSEQUP : RV0m<"pvseq.up", 0x99, V64, VM>;
+let cx = 1, cx2 = 1 in defm PVSEQ : RV0m<"pvseq", 0x99, V64, VM512>;
