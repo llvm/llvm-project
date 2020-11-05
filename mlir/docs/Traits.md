@@ -263,7 +263,8 @@ assumption based on it.
 
 ### HasParent
 
-*   `OpTrait::HasParent<typename ParentOpType>` -- `HasParent<string op>`
+*   `OpTrait::HasParent<typename ParentOpType>` -- `HasParent<string op>` or
+    `ParentOneOf<list<string> opList>`
 
 This trait provides APIs and verifiers for operations that can only be nested
 within regions that are attached to operations of `ParentOpType`.
