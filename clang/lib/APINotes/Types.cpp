@@ -11,18 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/APINotes/Types.h"
-#include "llvm/Support/raw_ostream.h"
-
-void clang::api_notes::ObjCMethodInfo::dump(llvm::raw_ostream &os) {
-    os << DesignatedInit << " " << Unavailable << " "
-       << NullabilityAudited << " " << NumAdjustedNullable << " "
-       << NullabilityPayload << " " << UnavailableMsg << "\n";
-}
-
-void clang::api_notes::ObjCContextInfo::dump(llvm::raw_ostream &os) {
-  os << HasDefaultNullability << " " << DefaultNullability << " "
-     << HasDesignatedInits << "\n";
-}
 
 void clang::api_notes::ObjCMethodInfo::mergePropInfoIntoSetter(
       const ObjCPropertyInfo &pInfo) {

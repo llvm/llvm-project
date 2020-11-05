@@ -860,7 +860,7 @@ namespace {
 
       // Translate the initializer info.
       mInfo.DesignatedInit = meth.DesignatedInit;
-      mInfo.Required = meth.Required;
+      mInfo.RequiredInit = meth.Required;
       if (meth.FactoryAsInit != FactoryAsInitKind::Infer) {
         emitError("'FactoryAsInit' is no longer valid; "
                   "use 'SwiftName' instead");
