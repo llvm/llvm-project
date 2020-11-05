@@ -918,6 +918,12 @@ def SWaitMatchClass : AsmOperandClass {
   let ParserMethod = "parseSWaitCntOps";
 }
 
+def SDelayMatchClass : AsmOperandClass {
+  let Name = "SDelayAlu";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSDelayAluOps";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -942,6 +948,11 @@ def EndpgmImm : Operand<i16> {
 def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;
   let PrintMethod = "printWaitFlag";
+}
+
+def DELAY_FLAG : Operand <i32> {
+  let ParserMatchClass = SDelayMatchClass;
+  let PrintMethod = "printDelayFlag";
 }
 } // End OperandType = "OPERAND_IMMEDIATE"
 

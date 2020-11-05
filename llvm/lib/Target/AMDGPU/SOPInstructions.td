@@ -1354,9 +1354,10 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
-  def S_WAIT_EVENT                 : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16), "$simm16">;
-// TODO-GFX11 delay_alu
-/*def S_DELAY_ALU  : SOPP_Pseudo<"s_delay_alu", (ins), "$simm16">;*/
+  def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
+                                 "$simm16">;
+  def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins DELAY_FLAG:$simm16),
+                                "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
 
 //===----------------------------------------------------------------------===//
@@ -1917,8 +1918,7 @@ defm S_SETHALT                    : SOPP_Real_32_gfx11<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11<0x003>;
 defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11<0x005>;
-//TODO-GFX11 delay_alu
-/*defm S_DELAY_ALU                  : SOPP_Real_32_gfx11<0x007>;*/
+defm S_DELAY_ALU                  : SOPP_Real_32_gfx11<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;
 defm S_WAITCNT                    : SOPP_Real_32_gfx11<0x009>;
 defm S_WAITCNT_IDLE               : SOPP_Real_32_gfx11<0x00a>;
