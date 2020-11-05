@@ -1,10 +1,7 @@
-; RUN: llc < %s -O3 -mtriple=aarch64-eabi 2>&1 | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=aarch64-eabi | FileCheck %s 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @end_of_array = common global i8* null, align 8
-
-; The tests in this file should not produce a TypeSize warning.
-; CHECK-NOT: warning: {{.*}}TypeSize is not scalable
 
 ; CHECK-LABEL: @test
 ; CHECK: stur
@@ -26,23 +23,3 @@ entry:
   ret i8* %0
 }
 
-; #include <arm_sve.h>
-; #include <stdint.h>
-;
-; void redundant_store(uint32_t *x) {
-;     *x = 1;
-;     *(svint32_t *)x = svdup_s32(0);
-; }
-
-; CHECK-LABEL: @redundant_store
-define void @redundant_store(i32* nocapture %x) local_unnamed_addr #0 {
-  %1 = bitcast i32* %x to <vscale x 4 x i32>*
-  store i32 1, i32* %x, align 4
-  %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 0)
-  store <vscale x 4 x i32> %2, <vscale x 4 x i32>* %1, align 16
-  ret void
-}
-
-declare <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32)
-
-attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve,+v8.2a" }
