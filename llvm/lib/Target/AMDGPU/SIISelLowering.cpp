@@ -7455,17 +7455,6 @@ SDValue SITargetLowering::handleD16VData(SDValue VData, SelectionDAG &DAG,
         EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElements);
     SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, EquivStoreVT, IntVData);
     return DAG.UnrollVectorOp(ZExt.getNode());
-  } else if (NumElements == 3) {
-    EVT IntStoreVT =
-        EVT::getIntegerVT(*DAG.getContext(), StoreVT.getStoreSizeInBits());
-    SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
-
-    EVT WidenedStoreVT = EVT::getVectorVT(
-        *DAG.getContext(), StoreVT.getVectorElementType(), NumElements + 1);
-    EVT WidenedIntVT = EVT::getIntegerVT(*DAG.getContext(),
-                                         WidenedStoreVT.getStoreSizeInBits());
-    SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenedIntVT, IntVData);
-    return DAG.getNode(ISD::BITCAST, DL, WidenedStoreVT, ZExt);
   }
 
   // The sq block of gfx8.1 does not estimate register use correctly for d16
@@ -7488,14 +7477,35 @@ SDValue SITargetLowering::handleD16VData(SDValue VData, SelectionDAG &DAG,
       SDValue IntPair = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Pair);
       PackedElts.push_back(IntPair);
     }
+    if ((NumElements % 2) == 1) {
+      // Handle v3i16
+      unsigned I = Elts.size() / 2;
+      SDValue Pair = DAG.getBuildVector(MVT::v2i16, DL,
+                                        {Elts[I * 2], DAG.getUNDEF(MVT::i16)});
+      SDValue IntPair = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Pair);
+      PackedElts.push_back(IntPair);
+    }
 
     // Pad using UNDEF
-    PackedElts.resize(PackedElts.size() * 2, DAG.getUNDEF(MVT::i32));
+    PackedElts.resize(Elts.size(), DAG.getUNDEF(MVT::i32));
 
     // Build final vector
     EVT VecVT =
         EVT::getVectorVT(*DAG.getContext(), MVT::i32, PackedElts.size());
     return DAG.getBuildVector(VecVT, DL, PackedElts);
+  }
+
+  if (NumElements == 3) {
+    EVT IntStoreVT =
+        EVT::getIntegerVT(*DAG.getContext(), StoreVT.getStoreSizeInBits());
+    SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
+
+    EVT WidenedStoreVT = EVT::getVectorVT(
+        *DAG.getContext(), StoreVT.getVectorElementType(), NumElements + 1);
+    EVT WidenedIntVT = EVT::getIntegerVT(*DAG.getContext(),
+                                         WidenedStoreVT.getStoreSizeInBits());
+    SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenedIntVT, IntVData);
+    return DAG.getNode(ISD::BITCAST, DL, WidenedStoreVT, ZExt);
   }
 
   assert(isTypeLegal(StoreVT));
