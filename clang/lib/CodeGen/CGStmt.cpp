@@ -765,11 +765,6 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   JumpDest LoopHeader = getJumpDestInCurrentScope("while.cond");
   EmitBlock(LoopHeader.getBlock());
 
-  const SourceRange &R = S.getSourceRange();
-  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), CGM.getCodeGenOpts(),
-                 WhileAttrs, SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()));
-
   // Create an exit block for when the condition fails, which will
   // also become the break target.
   JumpDest LoopExit = getJumpDestInCurrentScope("while.end");
@@ -797,9 +792,19 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
   bool EmitBoolCondBranch = true;
-  if (llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal))
-    if (C->isOne())
+  bool LoopMustProgress = false;
+  if (llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal)) {
+    if (C->isOne()) {
       EmitBoolCondBranch = false;
+      FnIsMustProgress = false;
+    }
+  } else if (LanguageRequiresProgress())
+    LoopMustProgress = true;
+
+  const SourceRange &R = S.getSourceRange();
+  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), CGM.getCodeGenOpts(),
+                 WhileAttrs, SourceLocToDebugLoc(R.getBegin()),
+                 SourceLocToDebugLoc(R.getEnd()), LoopMustProgress);
 
   // As long as the condition is true, go to the loop body.
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
@@ -875,11 +880,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
   EmitBlock(LoopCond.getBlock());
 
-  const SourceRange &R = S.getSourceRange();
-  LoopStack.push(LoopBody, CGM.getContext(), CGM.getCodeGenOpts(), DoAttrs,
-                 SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()));
-
   // C99 6.8.5.2: "The evaluation of the controlling expression takes place
   // after each execution of the loop body."
 
@@ -893,9 +893,19 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // "do {} while (0)" is common in macros, avoid extra blocks.  Be sure
   // to correctly handle break/continue though.
   bool EmitBoolCondBranch = true;
-  if (llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal))
+  bool LoopMustProgress = false;
+  if (llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal)) {
     if (C->isZero())
       EmitBoolCondBranch = false;
+    else if (C->isOne())
+      FnIsMustProgress = false;
+  } else if (LanguageRequiresProgress())
+    LoopMustProgress = true;
+
+  const SourceRange &R = S.getSourceRange();
+  LoopStack.push(LoopBody, CGM.getContext(), CGM.getCodeGenOpts(), DoAttrs,
+                 SourceLocToDebugLoc(R.getBegin()),
+                 SourceLocToDebugLoc(R.getEnd()), LoopMustProgress);
 
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
@@ -933,10 +943,21 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   llvm::BasicBlock *CondBlock = Continue.getBlock();
   EmitBlock(CondBlock);
 
+  bool LoopMustProgress = false;
+  Expr::EvalResult Result;
+  if (LanguageRequiresProgress()) {
+    if (!S.getCond()) {
+      LoopMustProgress = true;
+      FnIsMustProgress = false;
+    } else if (!S.getCond()->EvaluateAsInt(Result, getContext())) {
+      LoopMustProgress = true;
+    }
+  }
+
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
                  SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()));
+                 SourceLocToDebugLoc(R.getEnd()), LoopMustProgress);
 
   // If the for loop doesn't have an increment we can just use the
   // condition as the continue block.  Otherwise we'll need to create
@@ -972,6 +993,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
     llvm::MDNode *Weights = createProfileOrBranchWeightsForLoop(
         S.getCond(), getProfileCount(S.getBody()), S.getBody());
+
+    if (llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal))
+      if (C->isOne())
+        FnIsMustProgress = false;
+
     Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
 
     if (ExitBlock != LoopExit.getBlock()) {
