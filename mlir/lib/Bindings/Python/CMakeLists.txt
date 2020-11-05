@@ -1,3 +1,7 @@
+if(NOT LLVM_BUILD_LLVM_DYLIB)
+  message(FATAL_ERROR "Building the MLIR Python bindings require -DLLVM_BUILD_LLVM_DYLIB=ON")
+endif()
+
 ################################################################################
 # Copy python source tree.
 ################################################################################
@@ -102,21 +106,10 @@ set_target_properties(
   MLIRBindingsPythonExtension PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
 set(PYEXT_DEPS)
-if(LLVM_BUILD_LLVM_DYLIB)
-  list(APPEND PYEXT_DEPS
-    # Depend on libMLIR.so first so that deps primarily come from the shared
-    # library.
-    MLIR
-  )
-endif()
-
-# Full static dependencies are also added and will augment what is in the
-# shared lib if needed (or in fully static builds, will result in mondo-built
-# extension).
 list(APPEND PYEXT_DEPS
-  # Depend only on the MLIR C-API.
-  MLIRCAPIIR
-  MLIRCAPIRegistration
+  # Depend on libMLIR.so first so that deps primarily come from the shared
+  # library.
+  MLIR
 )
 
 target_link_libraries(MLIRBindingsPythonExtension
