@@ -262,6 +262,10 @@ public:
   /// Pop last element from list.
   void pop_back() { attrs.pop_back(); }
 
+  /// Returns an entry with a duplicate name the list, if it exists, else
+  /// returns llvm::None.
+  Optional<NamedAttribute> findDuplicate() const;
+
   /// Return a dictionary attribute for the underlying dictionary. This will
   /// return an empty dictionary attribute if empty rather than null.
   DictionaryAttr getDictionary(MLIRContext *context) const;

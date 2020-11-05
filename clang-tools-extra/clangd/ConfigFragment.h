@@ -51,8 +51,8 @@ template <typename T> struct Located {
       : Range(Range), Value(std::move(Value)) {}
 
   llvm::SMRange Range;
-  T &operator->() { return Value; }
-  const T &operator->() const { return Value; }
+  T *operator->() { return &Value; }
+  const T *operator->() const { return &Value; }
   T &operator*() { return Value; }
   const T &operator*() const { return Value; }
 
@@ -91,6 +91,9 @@ struct Fragment {
     /// The start of the original source for this fragment.
     /// Only valid if SourceManager is set.
     llvm::SMLoc Location;
+    /// Absolute path to directory the fragment is associated with. Relative
+    /// paths mentioned in the fragment are resolved against this.
+    std::string Directory;
   };
   SourceInfo Source;
 

@@ -13,11 +13,12 @@ void while_test(int *List, int Length, int *List2, int Length2) {
 
   i = 0;
   while (i < Length2) {
-    // CHECK-NOT: br label {{.*}}, !llvm.loop
+    // CHECK: br label {{.*}}, !llvm.loop [[LOOP_2:![0-9]+]]
     List2[i] = i * 2;
     i++;
   }
 }
 
-// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[DISTRIBUTE_ENABLE:.*]]}
+// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[DISTRIBUTE_ENABLE:.*]]}
 // CHECK: ![[DISTRIBUTE_ENABLE]] = !{!"llvm.loop.distribute.enable", i1 true}
+// CHECK: [[LOOP_2]] = distinct !{[[LOOP_2]], [[MP]]}

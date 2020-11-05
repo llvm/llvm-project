@@ -8000,6 +8000,10 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Op = Node->getOperand(0);
   EVT VT = Op.getValueType();
 
+  if (VT.isScalableVector())
+    report_fatal_error(
+        "Expanding reductions for scalable vectors is undefined.");
+
   // Try to use a shuffle reduction for power of two vectors.
   if (VT.isPow2VectorType()) {
     while (VT.getVectorNumElements() > 1) {

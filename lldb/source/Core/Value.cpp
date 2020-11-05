@@ -39,27 +39,26 @@ using namespace lldb;
 using namespace lldb_private;
 
 Value::Value()
-    : m_value(), m_vector(), m_compiler_type(), m_context(nullptr),
+    : m_value(), m_compiler_type(), m_context(nullptr),
       m_value_type(eValueTypeScalar), m_context_type(eContextTypeInvalid),
       m_data_buffer() {}
 
 Value::Value(const Scalar &scalar)
-    : m_value(scalar), m_vector(), m_compiler_type(), m_context(nullptr),
+    : m_value(scalar), m_compiler_type(), m_context(nullptr),
       m_value_type(eValueTypeScalar), m_context_type(eContextTypeInvalid),
       m_data_buffer() {}
 
 Value::Value(const void *bytes, int len)
-    : m_value(), m_vector(), m_compiler_type(), m_context(nullptr),
+    : m_value(), m_compiler_type(), m_context(nullptr),
       m_value_type(eValueTypeHostAddress), m_context_type(eContextTypeInvalid),
       m_data_buffer() {
   SetBytes(bytes, len);
 }
 
 Value::Value(const Value &v)
-    : m_value(v.m_value), m_vector(v.m_vector),
-      m_compiler_type(v.m_compiler_type), m_context(v.m_context),
-      m_value_type(v.m_value_type), m_context_type(v.m_context_type),
-      m_data_buffer() {
+    : m_value(v.m_value), m_compiler_type(v.m_compiler_type),
+      m_context(v.m_context), m_value_type(v.m_value_type),
+      m_context_type(v.m_context_type), m_data_buffer() {
   const uintptr_t rhs_value =
       (uintptr_t)v.m_value.ULongLong(LLDB_INVALID_ADDRESS);
   if ((rhs_value != 0) &&
@@ -74,7 +73,6 @@ Value::Value(const Value &v)
 Value &Value::operator=(const Value &rhs) {
   if (this != &rhs) {
     m_value = rhs.m_value;
-    m_vector = rhs.m_vector;
     m_compiler_type = rhs.m_compiler_type;
     m_context = rhs.m_context;
     m_value_type = rhs.m_value_type;
@@ -115,7 +113,6 @@ Value::ValueType Value::GetValueType() const { return m_value_type; }
 
 AddressType Value::GetValueAddressType() const {
   switch (m_value_type) {
-  default:
   case eValueTypeScalar:
     break;
   case eValueTypeLoadAddress:
@@ -156,17 +153,6 @@ size_t Value::AppendDataToHostBuffer(const Value &rhs) {
                                     scalar_size, endian::InlHostByteOrder(),
                                     error);
         return scalar_size;
-      }
-    }
-  } break;
-  case eValueTypeVector: {
-    const size_t vector_size = rhs.m_vector.length;
-    if (vector_size > 0) {
-      const size_t new_size = curr_size + vector_size;
-      if (ResizeData(new_size) == new_size) {
-        ::memcpy(m_data_buffer.GetBytes() + curr_size, rhs.m_vector.bytes,
-                 vector_size);
-        return vector_size;
       }
     }
   } break;
@@ -291,9 +277,6 @@ lldb::Format Value::GetValueDefaultFormat() {
 
 bool Value::GetData(DataExtractor &data) {
   switch (m_value_type) {
-  default:
-    break;
-
   case eValueTypeScalar:
     if (m_value.GetData(data))
       return true;
@@ -329,14 +312,6 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     return error;
 
   switch (m_value_type) {
-  case eValueTypeVector:
-    if (ast_type.IsValid())
-      data.SetAddressByteSize(ast_type.GetPointerByteSize());
-    else
-      data.SetAddressByteSize(sizeof(void *));
-    data.SetData(m_vector.bytes, m_vector.length, m_vector.byte_order);
-    break;
-
   case eValueTypeScalar: {
     data.SetByteOrder(endian::InlHostByteOrder());
     if (ast_type.IsValid())
@@ -592,7 +567,6 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
     case eValueTypeScalar: // raw scalar value
       break;
 
-    default:
     case eValueTypeFileAddress:
     case eValueTypeLoadAddress: // load address value
     case eValueTypeHostAddress: // host address value (for memory in the process
@@ -634,7 +608,6 @@ Variable *Value::GetVariable() {
 
 void Value::Clear() {
   m_value.Clear();
-  m_vector.Clear();
   m_compiler_type.Clear();
   m_value_type = eValueTypeScalar;
   m_context = nullptr;
@@ -646,8 +619,6 @@ const char *Value::GetValueTypeAsCString(ValueType value_type) {
   switch (value_type) {
   case eValueTypeScalar:
     return "scalar";
-  case eValueTypeVector:
-    return "vector";
   case eValueTypeFileAddress:
     return "file address";
   case eValueTypeLoadAddress:

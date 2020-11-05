@@ -884,6 +884,10 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     Ex = Res.get();
   }
 
+  // PPC MMA non-pointer types are not allowed as throw expr types.
+  if (Ex && Context.getTargetInfo().getTriple().isPPC64())
+    CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
+
   return new (Context)
       CXXThrowExpr(Ex, Context.VoidTy, OpLoc, IsThrownVarInScope);
 }

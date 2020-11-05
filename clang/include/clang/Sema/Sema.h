@@ -12348,6 +12348,9 @@ private:
                                 int ArgNum, unsigned ExpectedFieldNum,
                                 bool AllowName);
   bool SemaBuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool SemaBuiltinPPCMMACall(CallExpr *TheCall, const char *TypeDesc);
+
+  bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
   // Matrix builtin handling.
   ExprResult SemaBuiltinMatrixTranspose(CallExpr *TheCall,

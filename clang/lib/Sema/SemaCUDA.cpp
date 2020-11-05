@@ -519,7 +519,6 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
       VD->hasAttr<CUDASharedAttr>()) {
     if (LangOpts.GPUAllowDeviceInit)
       return;
-    assert(!VD->isStaticLocal() || VD->hasAttr<CUDASharedAttr>());
     bool AllowedInit = false;
     if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(Init))
       AllowedInit =

@@ -35,6 +35,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -321,7 +322,7 @@ unsigned GCNRegBankReassign::getPhysRegBank(Register Reg,
     return RegNo % NUM_VGPR_BANKS;
   }
 
-  unsigned RegNo = TRI->getEncodingValue(Reg) / 2;
+  unsigned RegNo = TRI->getEncodingValue(AMDGPU::getMCReg(Reg, *ST)) / 2;
   return RegNo % NUM_SGPR_BANKS + SGPR_BANK_OFFSET;
 }
 
@@ -366,7 +367,7 @@ uint32_t GCNRegBankReassign::getRegBankMask(Register Reg, unsigned SubReg,
   }
 
   // SGPRs have 8 banks holding 2 consequitive registers each.
-  unsigned RegNo = TRI->getEncodingValue(Reg) / 2;
+  unsigned RegNo = TRI->getEncodingValue(AMDGPU::getMCReg(Reg, *ST)) / 2;
   unsigned StartBit = AMDGPU::VGPR_32RegClass.getNumRegs();
   if (RegNo + StartBit >= RegsUsed.size())
     return 0;
@@ -818,9 +819,10 @@ bool GCNRegBankReassign::runOnMachineFunction(MachineFunction &MF) {
   MaxNumSGPRs = std::min(ST->getMaxNumSGPRs(Occupancy, true), MaxNumSGPRs);
 
   CSRegs = MRI->getCalleeSavedRegs();
-
-  RegsUsed.resize(AMDGPU::VGPR_32RegClass.getNumRegs() +
-                  TRI->getEncodingValue(AMDGPU::SGPR_NULL) / 2 + 1);
+  unsigned NumRegBanks = AMDGPU::VGPR_32RegClass.getNumRegs() +
+                         // Not a tight bound
+                         AMDGPU::SReg_32RegClass.getNumRegs() / 2 + 1;
+  RegsUsed.resize(NumRegBanks);
 
   LLVM_DEBUG(dbgs() << "=== RegBanks reassign analysis on function " << MF.getName()
                << '\n');

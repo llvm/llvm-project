@@ -188,6 +188,7 @@ struct TestLinalgGreedyFusion
 } // namespace
 
 namespace mlir {
+namespace test {
 void registerTestLinalgFusionTransforms() {
   PassRegistration<TestLinalgFusionTransforms> testFusionTransformsPass(
       "test-linalg-fusion-transform-patterns",
@@ -198,4 +199,5 @@ void registerTestLinalgGreedyFusion() {
       "test-linalg-greedy-fusion",
       "Test Linalg fusion by applying a greedy test transformation.");
 }
+} // namespace test
 } // namespace mlir

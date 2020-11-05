@@ -44,7 +44,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      HasUmbrellaDir(false), NameVisibility(Hidden) {
+      NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
@@ -247,7 +247,7 @@ Module::DirectoryName Module::getUmbrellaDir() const {
   if (Header U = getUmbrellaHeader())
     return {"", U.Entry->getDir()};
 
-  return {UmbrellaAsWritten, static_cast<const DirectoryEntry *>(Umbrella)};
+  return {UmbrellaAsWritten, Umbrella.dyn_cast<const DirectoryEntry *>()};
 }
 
 void Module::addTopHeader(const FileEntry *File) {

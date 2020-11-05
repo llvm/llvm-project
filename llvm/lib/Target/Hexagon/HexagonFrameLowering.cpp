@@ -1104,7 +1104,8 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       Offset = MFI.getObjectOffset(F->getFrameIdx());
     } else {
       Register FrameReg;
-      Offset = getFrameIndexReference(MF, F->getFrameIdx(), FrameReg);
+      Offset =
+          getFrameIndexReference(MF, F->getFrameIdx(), FrameReg).getFixed();
     }
     // Subtract 8 to make room for R30 and R31, which are added above.
     Offset -= 8;
@@ -1256,9 +1257,9 @@ static const char *getSpillFunctionFor(unsigned MaxReg, SpillKind SpillType,
   return nullptr;
 }
 
-int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                                 int FI,
-                                                 Register &FrameReg) const {
+StackOffset
+HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                             Register &FrameReg) const {
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
@@ -1354,7 +1355,7 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   int RealOffset = Offset;
   if (!UseFP && !UseAP)
     RealOffset = FrameSize+Offset;
-  return RealOffset;
+  return StackOffset::getFixed(RealOffset);
 }
 
 bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,

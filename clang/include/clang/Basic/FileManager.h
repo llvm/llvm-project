@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_FILEMANAGER_H
 #define LLVM_CLANG_BASIC_FILEMANAGER_H
 
+#include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -41,36 +42,6 @@ class MemoryBuffer;
 namespace clang {
 
 class FileSystemStatCache;
-
-/// Cached information about one directory (either on disk or in
-/// the virtual file system).
-class DirectoryEntry {
-  friend class FileManager;
-
-  // FIXME: We should not be storing a directory entry name here.
-  StringRef Name; // Name of the directory.
-
-public:
-  StringRef getName() const { return Name; }
-};
-
-/// A reference to a \c DirectoryEntry  that includes the name of the directory
-/// as it was accessed by the FileManager's client.
-class DirectoryEntryRef {
-public:
-  const DirectoryEntry &getDirEntry() const { return *Entry->getValue(); }
-
-  StringRef getName() const { return Entry->getKey(); }
-
-private:
-  friend class FileManager;
-
-  DirectoryEntryRef(
-      llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry)
-      : Entry(Entry) {}
-
-  const llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry;
-};
 
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.

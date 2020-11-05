@@ -45,7 +45,7 @@ class VETargetLowering : public TargetLowering {
 
   void initRegisterClasses();
   void initSPUActions();
-  // TODO void initVPUActions();
+  void initVPUActions();
 
 public:
   VETargetLowering(const TargetMachine &TM, const VESubtarget &STI);

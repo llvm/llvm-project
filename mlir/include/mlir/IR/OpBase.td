@@ -38,14 +38,15 @@ class StrFunc<string r> {
   string result = r;
 }
 
+// TODO: Use !interleave() directly rather than through StrJoin/StrJoinInt.
+
 // Concatenates a list of strings with a separator (default ", ")
 class StrJoin<list<string> strings, string sep = ", "> :
-    StrFunc<!if(!empty(strings), "",
-         !foldl(!head(strings), !tail(strings), prev, cur, prev # sep # cur))>;
+    StrFunc<!interleave(strings, sep)>;
 
 // Concatenates a list of integers into a string with a separator (default ", ")
 class StrJoinInt<list<int> integers, string sep = ", "> :
-    StrJoin<!foreach(i, integers, !cast<string>(i)), sep>;
+    StrFunc<!interleave(integers, sep)>;
 
 //===----------------------------------------------------------------------===//
 // Predicate definitions
@@ -1585,8 +1586,7 @@ class Confined<Attr attr, list<AttrConstraint> constraints> : Attr<
 class AllAttrConstraintsOf<list<AttrConstraint> constraints> : AttrConstraint<
     And<!listconcat([!head(constraints).predicate],
                       !foreach(pred, !tail(constraints), pred.predicate))>,
-    !foldl(/*init*/!head(constraints).description, /*list*/!tail(constraints),
-           prev, cur, prev # " and " # cur.description)> {
+    !interleave(!foreach(con, constraints, con.description), " and ")> {
 }
 
 class IntMinValue<int n> : AttrConstraint<

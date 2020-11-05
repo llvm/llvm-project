@@ -487,7 +487,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  unsigned Reg = TRI->getEncodingValue(Op.getReg());
+  unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST));
 
   if (TRI->isVGPR(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.VGPR0 && Reg <= RegisterEncoding.VGPRL);
@@ -624,8 +624,9 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           MachineOperand &DefMO = Inst.getOperand(I);
           if (DefMO.isReg() && DefMO.isDef() &&
               TRI->isVGPR(*MRI, DefMO.getReg())) {
-            setRegScore(TRI->getEncodingValue(DefMO.getReg()), EXP_CNT,
-                        CurrScore);
+            setRegScore(
+                TRI->getEncodingValue(AMDGPU::getMCReg(DefMO.getReg(), *ST)),
+                EXP_CNT, CurrScore);
           }
         }
       }

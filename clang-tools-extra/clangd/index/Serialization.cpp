@@ -345,6 +345,7 @@ void writeRefs(const SymbolID &ID, llvm::ArrayRef<Ref> Refs,
   for (const auto &Ref : Refs) {
     OS.write(static_cast<unsigned char>(Ref.Kind));
     writeLocation(Ref.Location, Strings, OS);
+    OS << Ref.Container.raw();
   }
 }
 
@@ -356,6 +357,7 @@ readRefs(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   for (auto &Ref : Result.second) {
     Ref.Kind = static_cast<RefKind>(Data.consume8());
     Ref.Location = readLocation(Data, Strings);
+    Ref.Container = Data.consumeID();
   }
   return Result;
 }

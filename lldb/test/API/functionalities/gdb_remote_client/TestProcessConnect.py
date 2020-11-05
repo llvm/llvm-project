@@ -36,6 +36,7 @@ class TestProcessConnect(GDBRemoteTestBase):
             self.dbg.GetSelectedPlatform().DisconnectRemote()
 
     @skipIfWindows
+    @expectedFailureAll(oslist=["freebsd"])
     def test_process_connect_sync(self):
         """Test the gdb-remote command in synchronous mode"""
         try:
@@ -47,6 +48,7 @@ class TestProcessConnect(GDBRemoteTestBase):
             self.dbg.GetSelectedPlatform().DisconnectRemote()
 
     @skipIfWindows
+    @expectedFailureAll(oslist=["freebsd"])
     @skipIfReproducer # Reproducer don't support async.
     def test_process_connect_async(self):
         """Test the gdb-remote command in asynchronous mode"""

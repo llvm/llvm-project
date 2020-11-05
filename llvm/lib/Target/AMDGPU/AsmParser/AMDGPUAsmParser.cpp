@@ -335,6 +335,9 @@ public:
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isDLC() const { return isImmTy(ImmTyDLC); }
   bool isGLC() const { return isImmTy(ImmTyGLC); }
+  // "GLC_1" is a MatchClass of the GLC_1 operand with the default and forced
+  // value of the GLC operand.
+  bool isGLC_1() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
   bool isSWZ() const { return isImmTy(ImmTySWZ); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
@@ -1378,6 +1381,8 @@ private:
   bool validateVOP3Literal(const MCInst &Inst) const;
   bool validateMAIAccWrite(const MCInst &Inst);
   bool validateDivScale(const MCInst &Inst);
+  bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
+                             const SMLoc &IDLoc);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -1445,6 +1450,7 @@ public:
 
   AMDGPUOperand::Ptr defaultDLC() const;
   AMDGPUOperand::Ptr defaultGLC() const;
+  AMDGPUOperand::Ptr defaultGLC_1() const;
   AMDGPUOperand::Ptr defaultSLC() const;
 
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
@@ -3002,7 +3008,8 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   } else if (MO.isReg()) {
     auto Reg = MO.getReg();
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-    return isSGPR(mc2PseudoReg(Reg), TRI) && Reg != SGPR_NULL;
+    auto PReg = mc2PseudoReg(Reg);
+    return isSGPR(PReg, TRI) && PReg != SGPR_NULL;
   } else {
     return true;
   }
@@ -3734,6 +3741,23 @@ bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
          (NumLiterals == 1 && getFeatureBits()[AMDGPU::FeatureVOP3Literal]);
 }
 
+bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
+                                            const OperandVector &Operands,
+                                            const SMLoc &IDLoc) {
+  int GLCPos = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
+                                          AMDGPU::OpName::glc1);
+  if (GLCPos != -1) {
+    // -1 is set by GLC_1 default operand. In all cases "glc" must be present
+    // in the asm string, and the default value means it is not present.
+    if (Inst.getOperand(GLCPos).getImm() == -1) {
+      Error(IDLoc, "instruction must use glc");
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -3816,6 +3840,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateDivScale(Inst)) {
+    return false;
+  }
+  if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
     return false;
   }
 
@@ -6426,6 +6453,10 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultGLC() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyGLC);
 }
 
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultGLC_1() const {
+  return AMDGPUOperand::CreateImm(this, -1, SMLoc(), AMDGPUOperand::ImmTyGLC);
+}
+
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSLC() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTySLC);
 }
@@ -6490,7 +6521,7 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
-  if (!IsAtomic) { // glc is hard-coded.
+  if (!IsAtomic || IsAtomicReturn) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
   }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);

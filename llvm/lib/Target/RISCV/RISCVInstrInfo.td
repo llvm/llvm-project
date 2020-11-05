@@ -291,6 +291,11 @@ def immbottomxlenset : ImmLeaf<XLenVT, [{
   return countTrailingOnes<uint64_t>(Imm) >= 5;
 }]>;
 
+// A 6-bit constant greater than 32.
+def uimm6gt32 : ImmLeaf<XLenVT, [{
+  return isUInt<6>(Imm) && Imm > 32;
+}]>;
+
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
@@ -313,6 +318,12 @@ def HI20 : SDNodeXForm<imm, [{
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Return an immediate value minus 32.
+def ImmSub32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() - 32, SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -1128,6 +1139,8 @@ def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
           (SLLIW GPR:$rs1, uimm5:$shamt)>;
 // (srl (zexti32 ...), uimm5:$shamt) is matched with custom code due to the
 // need to undo manipulation of the mask value performed by DAGCombine.
+def : Pat<(srl (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt),
+          (SRLIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
 def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
 

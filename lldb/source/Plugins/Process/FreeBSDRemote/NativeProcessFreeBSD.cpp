@@ -125,10 +125,6 @@ NativeProcessFreeBSD::Factory::Attach(
   if (!status.Success())
     return status.ToError();
 
-  status = process_up->SetupTrace();
-  if (status.Fail())
-    return status.ToError();
-
   return std::move(process_up);
 }
 

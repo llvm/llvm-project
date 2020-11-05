@@ -952,8 +952,9 @@ def run_suite():
             "netbsd" in target_platform or
             "windows" in target_platform)
 
-    # Don't do lldb-server (llgs) tests on anything except Linux and Windows.
+    # Don't do lldb-server (llgs) tests on platforms not supporting it.
     configuration.dont_do_llgs_test = not (
+            "freebsd" in target_platform or
             "linux" in target_platform or
             "netbsd" in target_platform or
             "windows" in target_platform)

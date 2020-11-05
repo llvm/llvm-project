@@ -207,7 +207,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FI = MI.getOperand(FIOp).getIndex();
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.
-  int Offset = HFI.getFrameIndexReference(MF, FI, BP);
+  int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
   bool IsKill = false;

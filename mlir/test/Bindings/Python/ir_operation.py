@@ -293,3 +293,34 @@ def testOperationPrint():
       pretty_debug_info=True, print_generic_op_form=True, use_local_scope=True)
 
 run(testOperationPrint)
+
+
+def testKnownOpView():
+  with Context(), Location.unknown():
+    Context.current.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      %1 = "custom.f32"() : () -> f32
+      %2 = "custom.f32"() : () -> f32
+      %3 = addf %1, %2 : f32
+    """)
+    print(module)
+
+    # addf should map to a known OpView class in the std dialect.
+    # We know the OpView for it defines an 'lhs' attribute.
+    addf = module.body.operations[2]
+    # CHECK: <mlir.dialects.std._AddFOp object
+    print(repr(addf))
+    # CHECK: "custom.f32"()
+    print(addf.lhs)
+
+    # One of the custom ops should resolve to the default OpView.
+    custom = module.body.operations[0]
+    # CHECK: <_mlir.ir.OpView object
+    print(repr(custom))
+
+    # Check again to make sure negative caching works.
+    custom = module.body.operations[0]
+    # CHECK: <_mlir.ir.OpView object
+    print(repr(custom))
+
+run(testKnownOpView)

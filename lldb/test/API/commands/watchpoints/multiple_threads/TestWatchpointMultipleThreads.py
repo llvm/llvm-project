@@ -22,6 +22,7 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         """Test that we can hit a watchpoint we set before starting another thread"""
         self.do_watchpoint_test("Before running the thread")
 
+    @expectedFailureAll(oslist=["freebsd"])
     def test_watchpoint_after_thread_start(self):
         """Test that we can hit a watchpoint we set after starting another thread"""
         self.do_watchpoint_test("After running the thread")

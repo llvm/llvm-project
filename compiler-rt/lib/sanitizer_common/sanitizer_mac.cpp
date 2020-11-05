@@ -1333,6 +1333,8 @@ u32 GetNumberOfCPUs() {
   return (u32)sysconf(_SC_NPROCESSORS_ONLN);
 }
 
+void InitializePlatformCommonFlags(CommonFlags *cf) {}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC

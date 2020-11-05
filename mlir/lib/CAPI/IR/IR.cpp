@@ -21,9 +21,9 @@
 
 using namespace mlir;
 
-/* ========================================================================== */
-/* Context API.                                                               */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Context API.
+//===----------------------------------------------------------------------===//
 
 MlirContext mlirContextCreate() {
   auto *context = new MLIRContext;
@@ -58,9 +58,9 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
   return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
 }
 
-/* ========================================================================== */
-/* Dialect API.                                                               */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Dialect API.
+//===----------------------------------------------------------------------===//
 
 MlirContext mlirDialectGetContext(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getContext());
@@ -74,9 +74,9 @@ MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getNamespace());
 }
 
-/* ========================================================================== */
-/* Printing flags API.                                                        */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Printing flags API.
+//===----------------------------------------------------------------------===//
 
 MlirOpPrintingFlags mlirOpPrintingFlagsCreate() {
   return wrap(new OpPrintingFlags());
@@ -104,9 +104,9 @@ void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
   unwrap(flags)->useLocalScope();
 }
 
-/* ========================================================================== */
-/* Location API.                                                              */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Location API.
+//===----------------------------------------------------------------------===//
 
 MlirLocation mlirLocationFileLineColGet(MlirContext context,
                                         const char *filename, unsigned line,
@@ -126,12 +126,11 @@ void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
                        void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(location).print(stream);
-  stream.flush();
 }
 
-/* ========================================================================== */
-/* Module API.                                                                */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Module API.
+//===----------------------------------------------------------------------===//
 
 MlirModule mlirModuleCreateEmpty(MlirLocation location) {
   return wrap(ModuleOp::create(unwrap(location)));
@@ -161,9 +160,9 @@ MlirOperation mlirModuleGetOperation(MlirModule module) {
   return wrap(unwrap(module).getOperation());
 }
 
-/* ========================================================================== */
-/* Operation state API.                                                       */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Operation state API.
+//===----------------------------------------------------------------------===//
 
 MlirOperationState mlirOperationStateGet(const char *name, MlirLocation loc) {
   MlirOperationState state;
@@ -210,9 +209,9 @@ void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
   APPEND_ELEMS(MlirNamedAttribute, nAttributes, attributes);
 }
 
-/* ========================================================================== */
-/* Operation API.                                                             */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Operation API.
+//===----------------------------------------------------------------------===//
 
 MlirOperation mlirOperationCreate(const MlirOperationState *state) {
   assert(state);
@@ -325,21 +324,19 @@ void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream);
-  stream.flush();
 }
 
 void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
                                  MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream, *unwrap(flags));
-  stream.flush();
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
 
-/* ========================================================================== */
-/* Region API.                                                                */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Region API.
+//===----------------------------------------------------------------------===//
 
 MlirRegion mlirRegionCreate() { return wrap(new Region); }
 
@@ -389,9 +386,9 @@ void mlirRegionDestroy(MlirRegion region) {
   delete static_cast<Region *>(region.ptr);
 }
 
-/* ========================================================================== */
-/* Block API.                                                                 */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Block API.
+//===----------------------------------------------------------------------===//
 
 MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args) {
   Block *b = new Block;
@@ -476,12 +473,11 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(block)->print(stream);
-  stream.flush();
 }
 
-/* ========================================================================== */
-/* Value API.                                                                 */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Value API.
+//===----------------------------------------------------------------------===//
 
 int mlirValueIsABlockArgument(MlirValue value) {
   return unwrap(value).isa<BlockArgument>();
@@ -523,12 +519,11 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(value).print(stream);
-  stream.flush();
 }
 
-/* ========================================================================== */
-/* Type API.                                                                  */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Type API.
+//===----------------------------------------------------------------------===//
 
 MlirType mlirTypeParseGet(MlirContext context, const char *type) {
   return wrap(mlir::parseType(type, unwrap(context)));
@@ -543,14 +538,13 @@ int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }
 void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(type).print(stream);
-  stream.flush();
 }
 
 void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
 
-/* ========================================================================== */
-/* Attribute API.                                                             */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// Attribute API.
+//===----------------------------------------------------------------------===//
 
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr) {
   return wrap(mlir::parseAttribute(attr, unwrap(context)));
@@ -572,7 +566,6 @@ void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(attr).print(stream);
-  stream.flush();
 }
 
 void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
@@ -581,9 +574,9 @@ MlirNamedAttribute mlirNamedAttributeGet(const char *name, MlirAttribute attr) {
   return MlirNamedAttribute{name, attr};
 }
 
-/*============================================================================*/
-/* Identifier API.                                                            */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// Identifier API.
+//===----------------------------------------------------------------------===//
 
 MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
   return wrap(Identifier::get(unwrap(str), unwrap(context)));

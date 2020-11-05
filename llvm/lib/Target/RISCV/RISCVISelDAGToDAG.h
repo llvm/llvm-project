@@ -47,7 +47,6 @@ public:
 
   bool SelectSLOI(SDValue N, SDValue &RS1, SDValue &Shamt);
   bool SelectSROI(SDValue N, SDValue &RS1, SDValue &Shamt);
-  bool SelectRORI(SDValue N, SDValue &RS1, SDValue &Shamt);
   bool SelectSLLIUW(SDValue N, SDValue &RS1, SDValue &Shamt);
   bool SelectSLOIW(SDValue N, SDValue &RS1, SDValue &Shamt);
   bool SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt);

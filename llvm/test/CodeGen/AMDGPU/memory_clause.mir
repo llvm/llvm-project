@@ -362,8 +362,8 @@ body:             |
 
 # GCN-LABEL: {{^}}name: atomic{{$}}
 # GCN:      %1:vgpr_32 = IMPLICIT_DEF
-# GCN-NEXT: dead %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
-# GCN-NEXT: dead %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: dead %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, -1, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: dead %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, -1, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: S_ENDPGM 0
@@ -380,8 +380,8 @@ body:             |
   bb.0:
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
-    %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
-    %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, 0, implicit $exec, implicit $flat_scr
+    %2:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, -1, 0, implicit $exec, implicit $flat_scr
+    %3:vgpr_32 = FLAT_ATOMIC_ADD_RTN %0, %1, 0, -1, 0, implicit $exec, implicit $flat_scr
     FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
     FLAT_ATOMIC_ADD %0, %1, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0

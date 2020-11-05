@@ -12,8 +12,6 @@ TableGen Programmer's Reference
 
    BackEnds
    BackGuide
-   Index
-   ../CommandGuide/tblgen
 
 Introduction
 ============
@@ -198,14 +196,14 @@ Note that, unlike most languages, TableGen allows :token:`TokIdentifier` to
 begin with an integer. In case of ambiguity, a token is interpreted as a
 numeric literal rather than an identifier.
 
-TableGen has the following reserved words, which cannot be used as
+TableGen has the following reserved keywords, which cannot be used as
 identifiers::
 
    bit        bits          class         code          dag
-   def        else          foreach       defm          defset
-   defvar     field         if            in            include
-   int        let           list          multiclass    string
-   then
+   def        else          false         foreach       defm
+   defset     defvar        field         if            in
+   include    int           let           list          multiclass
+   string     then          true
 
 .. warning::
   The ``field`` reserved word is deprecated.
@@ -217,13 +215,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag
+               : !add        !and         !cast        !con         !dag 
                : !empty      !eq          !foldl       !foreach     !ge
-               : !getdagop   !gt          !head        !if          !isa
-               : !le         !listconcat  !listsplat   !lt          !mul
-               : !ne         !not         !or          !setdagop    !shl
-               : !size       !sra         !srl         !strconcat   !sub
-               : !subst      !tail        !xor
+               : !getdagop   !gt          !head        !if          !interleave
+               : !isa        !le          !listconcat  !listsplat   !lt
+               : !mul        !ne          !not         !or          !setdagop
+               : !shl        !size        !sra         !srl         !strconcat
+               : !sub        !subst       !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -364,12 +362,20 @@ simple value is the concatenation of the strings. Code fragments become
 strings and then are indistinguishable from them.
 
 .. productionlist::
-   SimpleValue2: "?"
+   SimpleValue2: "true" | "false"
+
+The ``true`` and ``false`` literals are essentially syntactic sugar for the
+integer values 1 and 0. They improve the readability of TableGen files when
+boolean values are used in field values, bit sequences, ``if`` statements.
+etc. When parsed, these literals are converted to integers.
+
+.. productionlist::
+   SimpleValue3: "?"
 
 A question mark represents an uninitialized value.
 
 .. productionlist::
-   SimpleValue3: "{" [`ValueList`] "}"
+   SimpleValue4: "{" [`ValueList`] "}"
    ValueList: `ValueListNE`
    ValueListNE: `Value` ("," `Value`)*
 
@@ -378,7 +384,7 @@ This value represents a sequence of bits, which can be used to initialize a
 must represent a total of *n* bits.
 
 .. productionlist::
-   SimpleValue4: "[" `ValueList` "]" ["<" `Type` ">"]
+   SimpleValue5: "[" `ValueList` "]" ["<" `Type` ">"]
 
 This value is a list initializer (note the brackets). The values in brackets
 are the elements of the list. The optional :token:`Type` can be used to
@@ -387,7 +393,7 @@ from the given values. TableGen can usually infer the type, although
 sometimes not when the value is the empty list (``[]``).
 
 .. productionlist::
-   SimpleValue5: "(" `DagArg` [`DagArgList`] ")"
+   SimpleValue6: "(" `DagArg` [`DagArgList`] ")"
    DagArgList: `DagArg` ("," `DagArg`)*
    DagArg: `Value` [":" `TokVarName`] | `TokVarName`
 
@@ -396,7 +402,7 @@ This represents a DAG initializer (note the parentheses).  The first
 See `Directed acyclic graphs (DAGs)`_ for more details.
 
 .. productionlist::
-   SimpleValue6: `TokIdentifier`
+   SimpleValue7: `TokIdentifier`
 
 The resulting value is the value of the entity named by the identifier. The
 possible identifiers are described here, but the descriptions will make more
@@ -455,7 +461,7 @@ sense after reading the remainder of this guide.
        def Foo#i;
 
 .. productionlist::
-   SimpleValue7: `ClassID` "<" `ValueListNE` ">"
+   SimpleValue8: `ClassID` "<" `ValueListNE` ">"
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed ``def`` inheriting from the given class with the given template
@@ -466,7 +472,7 @@ Invoking a class in this manner can provide a simple subroutine facility.
 See `Using Classes as Subroutines`_ for more information.
 
 .. productionlist::
-   SimpleValue8: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
+   SimpleValue9: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
               :| `CondOperator` "(" `CondClause` ("," `CondClause`)* ")"
    CondClause: `Value` ":" `Value`
 
@@ -1618,6 +1624,12 @@ and non-0 as true.
   This operator evaluates the *test*, which must produce a ``bit`` or
   ``int``. If the result is not 0, the *then* expression is produced; otherwise
   the *else* expression is produced.
+
+``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
+    This operator concatenates the items in the *list*, interleaving the
+    *delim* string between each pair, and produces the resulting string.
+    The list can be a list of string, int, bits, or bit. An empty list
+    results in an empty string. The delimiter can be the empty string.
 
 ``!isa<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator produces 1 if the type of *a* is a subtype of the given *type*; 0

@@ -94,9 +94,7 @@ def sourceBuilds(config, source):
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
-    ])
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, ['%{build}'])
     _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
@@ -116,15 +114,11 @@ def programOutput(config, program, args=None, testPrefix=''):
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
     try:
-      _, _, exitCode, _ = _executeScriptInternal(test, [
-        "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
-      ])
+      _, _, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
       if exitCode != 0:
         return None
 
-      out, err, exitCode, _ = _executeScriptInternal(test, [
-        "%{{exec}} %t.exe {}".format(' '.join(args))
-      ])
+      out, err, exitCode, _ = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
       if exitCode != 0:
         return None
 

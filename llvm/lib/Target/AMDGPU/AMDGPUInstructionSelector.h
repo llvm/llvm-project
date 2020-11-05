@@ -203,8 +203,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffset(MachineOperand &Root) const;
 
-  bool isDSOffsetLegal(Register Base, int64_t Offset,
-                       unsigned OffsetBits) const;
+  bool isDSOffsetLegal(Register Base, int64_t Offset) const;
+  bool isDSOffset2Legal(Register Base, int64_t Offset0, int64_t Offset1,
+                        unsigned Size) const;
 
   std::pair<Register, unsigned>
   selectDS1Addr1OffsetImpl(MachineOperand &Root) const;
@@ -217,10 +218,10 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS128Bit8ByteAligned(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned>
-  selectDSReadWrite2Impl(MachineOperand &Root, bool IsDS128) const;
+  std::pair<Register, unsigned> selectDSReadWrite2Impl(MachineOperand &Root,
+                                                       unsigned size) const;
   InstructionSelector::ComplexRendererFns
-  selectDSReadWrite2(MachineOperand &Root, bool IsDS128) const;
+  selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
   std::pair<Register, int64_t>
   getPtrBaseWithConstantOffset(Register Root,

@@ -126,11 +126,14 @@ protected:
 
   template <typename R>
   void testRule(R Rule, StringRef Input, StringRef Expected) {
-    Transformer T(std::move(Rule), consumer());
-    T.registerMatchers(&MatchFinder);
+    Transformers.push_back(
+        std::make_unique<Transformer>(std::move(Rule), consumer()));
+    Transformers.back()->registerMatchers(&MatchFinder);
     compareSnippets(Expected, rewrite(Input));
   }
 
+  // Transformers are referenced by MatchFinder.
+  std::vector<std::unique_ptr<Transformer>> Transformers;
   clang::ast_matchers::MatchFinder MatchFinder;
   // Records whether any errors occurred in individual changes.
   int ErrorCount = 0;
