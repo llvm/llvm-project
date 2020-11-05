@@ -441,6 +441,7 @@ class Target : public std::enable_shared_from_this<Target>,
                public ModuleList::Notifier {
 public:
   friend class TargetList;
+  friend class Debugger;
 
   /// Broadcaster event bits definitions.
   enum {
