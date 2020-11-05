@@ -324,6 +324,27 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
+KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
+    // The upper bits are all zero, the lower ones are unchanged.
+    APInt LowBits = RHS.getConstant() - 1;
+    Known.Zero = LHS.Zero | ~LowBits;
+    Known.One = LHS.One & LowBits;
+    return Known;
+  }
+
+  // Since the result is less than or equal to either operand, any leading
+  // zero bits in either operand must also exist in the result.
+  uint32_t Leaders =
+      std::max(LHS.countMinLeadingZeros(), RHS.countMinLeadingZeros());
+  Known.Zero.setHighBits(Leaders);
+  return Known;
+}
+
 KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
   // Result bit is 0 if either operand bit is 0.
   Zero |= RHS.Zero;

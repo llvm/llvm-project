@@ -3274,28 +3274,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   case ISD::UREM: {
-    if (ConstantSDNode *Rem = isConstOrConstSplat(Op.getOperand(1))) {
-      const APInt &RA = Rem->getAPIntValue();
-      if (RA.isPowerOf2()) {
-        APInt LowBits = (RA - 1);
-        Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-
-        // The upper bits are all zero, the lower ones are unchanged.
-        Known.Zero = Known2.Zero | ~LowBits;
-        Known.One = Known2.One & LowBits;
-        break;
-      }
-    }
-
-    // Since the result is less than or equal to either operand, any leading
-    // zero bits in either operand must also exist in the result.
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-
-    uint32_t Leaders =
-        std::max(Known.countMinLeadingZeros(), Known2.countMinLeadingZeros());
-    Known.resetAll();
-    Known.Zero.setHighBits(Leaders);
+    Known = KnownBits::urem(Known, Known2);
     break;
   }
   case ISD::EXTRACT_ELEMENT: {
