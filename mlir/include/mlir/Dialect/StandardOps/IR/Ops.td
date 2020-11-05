@@ -2032,15 +2032,16 @@ def GlobalMemrefOp : Std_Op<"global_memref", [Symbol]> {
 
     ```mlir
     // Private variable with an initial value.
-    global_memref @x : memref<2xf32> { sym_visibility = "private",
-                         initial_value = dense<0.0,2.0> : tensor<2xf32> }
+    global_memref "private" @x : memref<2xf32> = dense<0.0,2.0>
 
-    // External variable.
-    global_memref @y : memref<4xi32> { sym_visibility = "public" }
+    // Declaration of an external variable.
+    global_memref "private" @y : memref<4xi32>
 
     // Uninitialized externally visible variable.
-    global_memref @z : memref<3xf16> { sym_visibility = "public",
-                         initial_value }
+    global_memref @z : memref<3xf16> = uninitialized
+
+    // Externally visibile constant variable.
+    global_memref constant @c : memref<2xi32> = dense<1, 4>
     ```
   }];
 
