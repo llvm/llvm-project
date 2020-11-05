@@ -640,6 +640,8 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   //
   // (build_vector_trunc (lshr_oneuse $src0, 16), (lshr_oneuse $src1, 16)
   //  => (S_PACK_HH_B32_B16 $src0, $src1)
+  // (build_vector_trunc (lshr_oneuse SReg_32:$src0, 16), $src1)
+  //  => (S_PACK_HL_B32_B16 $src0, $src1)
   // (build_vector_trunc $src0, (lshr_oneuse SReg_32:$src1, 16))
   //  => (S_PACK_LH_B32_B16 $src0, $src1)
   // (build_vector_trunc $src0, $src1)
@@ -662,14 +664,20 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   } else if (Shift1) {
     Opc = AMDGPU::S_PACK_LH_B32_B16;
     MI.getOperand(2).setReg(ShiftSrc1);
-  } else if (Shift0 && ConstSrc1 && ConstSrc1->Value == 0) {
-    // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
-    auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
-      .addReg(ShiftSrc0)
-      .addImm(16);
+  } else if (Shift0) {
+    if (ConstSrc1 && ConstSrc1->Value == 0) {
+      // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
+      auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
+        .addReg(ShiftSrc0)
+        .addImm(16);
 
-    MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+      MI.eraseFromParent();
+      return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    }
+    if (STI.hasSPackHL()) {
+      Opc = AMDGPU::S_PACK_HL_B32_B16;
+      MI.getOperand(1).setReg(ShiftSrc0);
+    }
   }
 
   MI.setDesc(TII.get(Opc));
@@ -2887,13 +2895,19 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
         .addReg(SrcVec)
         .addImm(16);
     } else {
-      Register TmpReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg)
-        .addReg(SrcVec)
-        .addImm(16);
-      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), DstReg)
-        .addReg(TmpReg)
-        .addReg(SrcVec);
+      if (STI.hasSPackHL()) {
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_HL_B32_B16), DstReg)
+          .addReg(SrcVec)
+          .addReg(SrcVec);
+      } else {
+        Register TmpReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg)
+          .addReg(SrcVec)
+          .addImm(16);
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), DstReg)
+          .addReg(TmpReg)
+          .addReg(SrcVec);
+      }
     }
   } else
     llvm_unreachable("all shuffle masks should be handled");

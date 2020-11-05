@@ -2981,19 +2981,23 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
 }
 
 unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
-  if (!isGFX10())
+  if (!isGFX10Plus())
     return 1;
 
   switch (Opcode) {
   // 64-bit shift instructions can use only one scalar value input
   case AMDGPU::V_LSHLREV_B64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
+  // TODO-GFX11
+  //case AMDGPU::V_LSHLREV_B64_gfx11:
   case AMDGPU::V_LSHL_B64:
   case AMDGPU::V_LSHRREV_B64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
+  //case AMDGPU::V_LSHRREV_B64_gfx11:
   case AMDGPU::V_LSHR_B64:
   case AMDGPU::V_ASHRREV_I64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
+  //case AMDGPU::V_ASHRREV_I64_gfx11:
   case AMDGPU::V_ASHR_I64:
     return 1;
   default:
@@ -4797,13 +4801,13 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case AMDGPU::TMA:
   case AMDGPU::TMA_LO:
   case AMDGPU::TMA_HI:
-    return !isGFX9() && !isGFX10();
+    return !isGFX9Plus();
   case AMDGPU::XNACK_MASK:
   case AMDGPU::XNACK_MASK_LO:
   case AMDGPU::XNACK_MASK_HI:
-    return !isCI() && !isSI() && !isGFX10() && hasXNACK();
+    return (isVI() || isGFX9()) && hasXNACK();
   case AMDGPU::SGPR_NULL:
-    return isGFX10();
+    return isGFX10Plus();
   default:
     break;
   }
@@ -4811,9 +4815,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   if (isCI())
     return true;
 
-  if (isSI() || isGFX10()) {
+  if (isSI() || isGFX10Plus()) {
     // No flat_scr on SI.
-    // On GFX10 flat scratch is not a valid register operand and can only be
+    // On GFX10Plus flat scratch is not a valid register operand and can only be
     // accessed with s_setreg/s_getreg.
     switch (RegNo) {
     case AMDGPU::FLAT_SCR:

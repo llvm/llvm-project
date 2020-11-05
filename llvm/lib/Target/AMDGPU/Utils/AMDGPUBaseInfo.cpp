@@ -64,9 +64,8 @@ unsigned getBitMask(unsigned Shift, unsigned Width) {
 ///
 /// \returns Packed \p Dst.
 unsigned packBits(unsigned Src, unsigned Dst, unsigned Shift, unsigned Width) {
-  Dst &= ~(1 << Shift) & ~getBitMask(Shift, Width);
-  Dst |= (Src << Shift) & getBitMask(Shift, Width);
-  return Dst;
+  unsigned Mask = getBitMask(Shift, Width);
+  return ((Src << Shift) & Mask) | (Dst & ~Mask);
 }
 
 /// Unpacks bits from \p Src for given bit \p Shift and bit \p Width.
@@ -77,30 +76,40 @@ unsigned unpackBits(unsigned Src, unsigned Shift, unsigned Width) {
 }
 
 /// \returns Vmcnt bit shift (lower bits).
-unsigned getVmcntBitShiftLo() { return 0; }
+unsigned getVmcntBitShiftLo(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 10 : 0;
+}
 
 /// \returns Vmcnt bit width (lower bits).
-unsigned getVmcntBitWidthLo() { return 4; }
+unsigned getVmcntBitWidthLo(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 6 : 4;
+}
 
 /// \returns Expcnt bit shift.
-unsigned getExpcntBitShift() { return 4; }
+unsigned getExpcntBitShift(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 0 : 4;
+}
 
 /// \returns Expcnt bit width.
-unsigned getExpcntBitWidth() { return 3; }
+unsigned getExpcntBitWidth(unsigned VersionMajor) { return 3; }
 
 /// \returns Lgkmcnt bit shift.
-unsigned getLgkmcntBitShift() { return 8; }
+unsigned getLgkmcntBitShift(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 4 : 8;
+}
 
 /// \returns Lgkmcnt bit width.
 unsigned getLgkmcntBitWidth(unsigned VersionMajor) {
-  return (VersionMajor >= 10) ? 6 : 4;
+  return VersionMajor >= 10 ? 6 : 4;
 }
 
 /// \returns Vmcnt bit shift (higher bits).
-unsigned getVmcntBitShiftHi() { return 14; }
+unsigned getVmcntBitShiftHi(unsigned VersionMajor) { return 14; }
 
 /// \returns Vmcnt bit width (higher bits).
-unsigned getVmcntBitWidthHi() { return 2; }
+unsigned getVmcntBitWidthHi(unsigned VersionMajor) {
+  return (VersionMajor == 9 || VersionMajor == 10) ? 2 : 0;
+}
 
 } // end namespace anonymous
 
@@ -306,6 +315,7 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
   return 0;
 }
 
+// TODO-GFX11
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". For gfx10 in CU mode this is the CU, which contains
@@ -335,6 +345,7 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
+  // TODO-GFX11
   if (!isGFX10(*STI))
     return 10;
   return hasGFX10_3Insts(*STI) ? 16 : 20;
@@ -648,16 +659,13 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
-  unsigned VmcntLo = (1 << getVmcntBitWidthLo()) - 1;
-  if (Version.Major < 9)
-    return VmcntLo;
-
-  unsigned VmcntHi = ((1 << getVmcntBitWidthHi()) - 1) << getVmcntBitWidthLo();
-  return VmcntLo | VmcntHi;
+  return (1 << (getVmcntBitWidthLo(Version.Major) +
+                getVmcntBitWidthHi(Version.Major))) -
+         1;
 }
 
 unsigned getExpcntBitMask(const IsaVersion &Version) {
-  return (1 << getExpcntBitWidth()) - 1;
+  return (1 << getExpcntBitWidth(Version.Major)) - 1;
 }
 
 unsigned getLgkmcntBitMask(const IsaVersion &Version) {
@@ -665,36 +673,32 @@ unsigned getLgkmcntBitMask(const IsaVersion &Version) {
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
-  unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(), getVmcntBitWidthLo());
-  unsigned Expcnt = getBitMask(getExpcntBitShift(), getExpcntBitWidth());
-  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(),
+  unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
+                                getVmcntBitWidthLo(Version.Major));
+  unsigned Expcnt = getBitMask(getExpcntBitShift(Version.Major),
+                               getExpcntBitWidth(Version.Major));
+  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(Version.Major),
                                 getLgkmcntBitWidth(Version.Major));
-  unsigned Waitcnt = VmcntLo | Expcnt | Lgkmcnt;
-  if (Version.Major < 9)
-    return Waitcnt;
-
-  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(), getVmcntBitWidthHi());
-  return Waitcnt | VmcntHi;
+  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(Version.Major),
+                                getVmcntBitWidthHi(Version.Major));
+  return VmcntLo | Expcnt | Lgkmcnt | VmcntHi;
 }
 
 unsigned decodeVmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  unsigned VmcntLo =
-      unpackBits(Waitcnt, getVmcntBitShiftLo(), getVmcntBitWidthLo());
-  if (Version.Major < 9)
-    return VmcntLo;
-
-  unsigned VmcntHi =
-      unpackBits(Waitcnt, getVmcntBitShiftHi(), getVmcntBitWidthHi());
-  VmcntHi <<= getVmcntBitWidthLo();
-  return VmcntLo | VmcntHi;
+  unsigned VmcntLo = unpackBits(Waitcnt, getVmcntBitShiftLo(Version.Major),
+                                getVmcntBitWidthLo(Version.Major));
+  unsigned VmcntHi = unpackBits(Waitcnt, getVmcntBitShiftHi(Version.Major),
+                                getVmcntBitWidthHi(Version.Major));
+  return VmcntLo | VmcntHi << getVmcntBitWidthLo(Version.Major);
 }
 
 unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getExpcntBitShift(), getExpcntBitWidth());
+  return unpackBits(Waitcnt, getExpcntBitShift(Version.Major),
+                    getExpcntBitWidth(Version.Major));
 }
 
 unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getLgkmcntBitShift(),
+  return unpackBits(Waitcnt, getLgkmcntBitShift(Version.Major),
                     getLgkmcntBitWidth(Version.Major));
 }
 
@@ -715,24 +719,23 @@ Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
 
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt) {
-  Waitcnt =
-      packBits(Vmcnt, Waitcnt, getVmcntBitShiftLo(), getVmcntBitWidthLo());
-  if (Version.Major < 9)
-    return Waitcnt;
-
-  Vmcnt >>= getVmcntBitWidthLo();
-  return packBits(Vmcnt, Waitcnt, getVmcntBitShiftHi(), getVmcntBitWidthHi());
+  Waitcnt = packBits(Vmcnt, Waitcnt, getVmcntBitShiftLo(Version.Major),
+                     getVmcntBitWidthLo(Version.Major));
+  return packBits(Vmcnt >> getVmcntBitWidthLo(Version.Major), Waitcnt,
+                  getVmcntBitShiftHi(Version.Major),
+                  getVmcntBitWidthHi(Version.Major));
 }
 
 unsigned encodeExpcnt(const IsaVersion &Version, unsigned Waitcnt,
                       unsigned Expcnt) {
-  return packBits(Expcnt, Waitcnt, getExpcntBitShift(), getExpcntBitWidth());
+  return packBits(Expcnt, Waitcnt, getExpcntBitShift(Version.Major),
+                  getExpcntBitWidth(Version.Major));
 }
 
 unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt) {
-  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(),
-                                    getLgkmcntBitWidth(Version.Major));
+  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(Version.Major),
+                  getLgkmcntBitWidth(Version.Major));
 }
 
 unsigned encodeWaitcnt(const IsaVersion &Version,
@@ -1120,6 +1123,10 @@ bool isGFX11(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
 }
 
+bool isGFX11Plus(const MCSubtargetInfo &STI) {
+  return isGFX11(STI);
+}
+
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
 }
@@ -1185,6 +1192,8 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
   CASE_VI_GFX9_GFX10(TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11) \
   CASE_VI_GFX9_GFX10(TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
   CASE_VI_GFX9_GFX10(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
+  CASE_GFXPRE11_GFX11PLUS(M0) \
+  CASE_GFXPRE11_GFX11PLUS(SGPR_NULL) \
   }
 
 #define CASE_CI_VI(node) \
@@ -1194,6 +1203,9 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
 #define CASE_VI_GFX9_GFX10(node) \
   case node: return (isGFX9(STI) || isGFX10(STI)) ? node##_gfx9_gfx10 : node##_vi;
 
+#define CASE_GFXPRE11_GFX11PLUS(node) \
+  case node: return isGFX11Plus(STI) ? node##_gfx11plus : node##_gfxpre11;
+
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
     return Reg;
@@ -1202,9 +1214,11 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9_GFX10
+#undef CASE_GFXPRE11_GFX11PLUS
 
 #define CASE_CI_VI(node)   case node##_ci: case node##_vi:   return node;
 #define CASE_VI_GFX9_GFX10(node) case node##_vi: case node##_gfx9_gfx10: return node;
+#define CASE_GFXPRE11_GFX11PLUS(node) case node##_gfx11plus: case node##_gfxpre11: return node;
 
 unsigned mc2PseudoReg(unsigned Reg) {
   MAP_REG2REG
@@ -1212,6 +1226,7 @@ unsigned mc2PseudoReg(unsigned Reg) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9_GFX10
+#undef CASE_GFXPRE11_GFX11PLUS
 #undef MAP_REG2REG
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {

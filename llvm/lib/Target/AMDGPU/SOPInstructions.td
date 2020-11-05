@@ -688,7 +688,6 @@ let SubtargetPredicate = isGFX9Plus in {
 } // End SubtargetPredicate = isGFX9Plus
 
 let SubtargetPredicate = isGFX11Plus in {
-  // TODO-GFX11 check isel
   def S_PACK_HL_B32_B16 : SOP2_32<"s_pack_hl_b32_b16">;
   // TODO-GFX11 ASIC_SCALAR_FLOAT
   /*def S_SUB_F32         : SOP2_32<"s_sub_f32">;*/
@@ -1449,12 +1448,12 @@ def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 //===----------------------------------------------------------------------===//
 
 class Select_gfx11<string opName> : SIMCInstr<opName, SIEncodingFamily.GFX11> {
-  Predicate AssemblerPredicate = isGFX11;
+  Predicate AssemblerPredicate = isGFX11Only;
   string DecoderNamespace      = "GFX11";
 }
 
 class Select_gfx10<string opName> : SIMCInstr<opName, SIEncodingFamily.GFX10> {
-  Predicate AssemblerPredicate = isGFX10;
+  Predicate AssemblerPredicate = isGFX10Only;
   string DecoderNamespace      = "GFX10";
 }
 

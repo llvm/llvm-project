@@ -1123,6 +1123,11 @@ public:
 
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
 
+  /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
+  bool hasSPackHL() const {
+    return GFX11Insts;
+  }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;

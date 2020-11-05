@@ -5464,6 +5464,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
 
     case AMDGPU::S_PACK_LL_B32_B16:
     case AMDGPU::S_PACK_LH_B32_B16:
+    case AMDGPU::S_PACK_HL_B32_B16:
     case AMDGPU::S_PACK_HH_B32_B16:
       movePackToVALU(Worklist, MRI, Inst);
       Inst.eraseFromParent();
@@ -6339,6 +6340,17 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
       .add(Src1);
     break;
   }
+  case AMDGPU::S_PACK_HL_B32_B16: {
+    Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+      .addImm(16)
+      .add(Src0);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32), ResultReg)
+      .add(Src1)
+      .addImm(16)
+      .addReg(TmpReg, RegState::Kill);
+    break;
+  }
   case AMDGPU::S_PACK_HH_B32_B16: {
     Register ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -6989,6 +7001,7 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
 
 
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+// and the columns of the getMCOpcodeGen table.
 enum SIEncodingFamily {
   SI = 0,
   VI = 1,
@@ -6998,7 +7011,7 @@ enum SIEncodingFamily {
   GFX9 = 5,
   GFX10 = 6,
   SDWA10 = 7,
-  GFX11 = 11,
+  GFX11 = 8,
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
