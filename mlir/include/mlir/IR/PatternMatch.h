@@ -58,15 +58,23 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// Pattern class
+// Pattern
 //===----------------------------------------------------------------------===//
 
-/// Instances of Pattern can be matched against SSA IR.  These matches get used
-/// in ways dependent on their subclasses and the driver doing the matching.
-/// For example, RewritePatterns implement a rewrite from one matched pattern
-/// to a replacement DAG tile.
+/// This class contains all of the data related to a pattern, but does not
+/// contain any methods or logic for the actual matching. This class is solely
+/// used to interface with the metadata of a pattern, such as the benefit or
+/// root operation.
 class Pattern {
 public:
+  /// Return a list of operations that may be generated when rewriting an
+  /// operation instance with this pattern.
+  ArrayRef<OperationName> getGeneratedOps() const { return generatedOps; }
+
+  /// Return the root node that this pattern matches. Patterns that can match
+  /// multiple root types return None.
+  Optional<OperationName> getRootKind() const { return rootKind; }
+
   /// Return the benefit (the inverse of "cost") of matching this pattern.  The
   /// benefit of a Pattern is always static - rewrites that may have dynamic
   /// benefit can be instantiated multiple times (different Pattern instances)
@@ -74,19 +82,11 @@ public:
   /// condition predicates.
   PatternBenefit getBenefit() const { return benefit; }
 
-  /// Return the root node that this pattern matches. Patterns that can match
-  /// multiple root types return None.
-  Optional<OperationName> getRootKind() const { return rootKind; }
-
-  //===--------------------------------------------------------------------===//
-  // Implementation hooks for patterns to implement.
-  //===--------------------------------------------------------------------===//
-
-  /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind().
-  virtual LogicalResult match(Operation *op) const = 0;
-
-  virtual ~Pattern() {}
+  /// Returns true if this pattern is known to result in recursive application,
+  /// i.e. this pattern may generate IR that also matches this pattern, but is
+  /// known to bound the recursion. This signals to a rewrite driver that it is
+  /// safe to apply this pattern recursively to generated IR.
+  bool hasBoundedRewriteRecursion() const { return hasBoundedRecursion; }
 
 protected:
   /// This class acts as a special tag that makes the desire to match "any"
@@ -94,19 +94,38 @@ protected:
   /// feature, and ensures that the user is making a conscious decision.
   struct MatchAnyOpTypeTag {};
 
-  /// This constructor is used for patterns that match against a specific
-  /// operation type. The `benefit` is the expected benefit of matching this
-  /// pattern.
+  /// Construct a pattern with a certain benefit that matches the operation
+  /// with the given root name.
   Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context);
+  /// Construct a pattern with a certain benefit that matches any operation
+  /// type. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
+  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
+  /// always be supplied here.
+  Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag);
+  /// Construct a pattern with a certain benefit that matches the operation with
+  /// the given root name. `generatedNames` contains the names of operations
+  /// that may be generated during a successful rewrite.
+  Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
+          PatternBenefit benefit, MLIRContext *context);
+  /// Construct a pattern that may match any operation type. `generatedNames`
+  /// contains the names of operations that may be generated during a successful
+  /// rewrite. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
+  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
+  /// always be supplied here.
+  Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+          MLIRContext *context, MatchAnyOpTypeTag tag);
 
-  /// This constructor is used when a pattern may match against multiple
-  /// different types of operations. The `benefit` is the expected benefit of
-  /// matching this pattern. `MatchAnyOpTypeTag` is just a tag to ensure that
-  /// the "match any" behavior is what the user actually desired,
-  /// `MatchAnyOpTypeTag()` should always be supplied here.
-  Pattern(PatternBenefit benefit, MatchAnyOpTypeTag);
+  /// Set the flag detailing if this pattern has bounded rewrite recursion or
+  /// not.
+  void setHasBoundedRewriteRecursion(bool hasBoundedRecursionArg = true) {
+    hasBoundedRecursion = hasBoundedRecursionArg;
+  }
 
 private:
+  /// A list of the potential operations that may be generated when rewriting
+  /// an op with this pattern.
+  SmallVector<OperationName, 2> generatedOps;
+
   /// The root operation of the pattern. If the pattern matches a specific
   /// operation, this contains the name of that operation. Contains None
   /// otherwise.
@@ -115,8 +134,13 @@ private:
   /// The expected benefit of matching this pattern.
   const PatternBenefit benefit;
 
-  virtual void anchor();
+  /// A boolean flag of whether this pattern has bounded recursion or not.
+  bool hasBoundedRecursion = false;
 };
+
+//===----------------------------------------------------------------------===//
+// RewritePattern
+//===----------------------------------------------------------------------===//
 
 /// RewritePattern is the common base class for all DAG to DAG replacements.
 /// There are two possible usages of this class:
@@ -129,6 +153,8 @@ private:
 ///
 class RewritePattern : public Pattern {
 public:
+  virtual ~RewritePattern() {}
+
   /// Rewrite the IR rooted at the specified operation with the result of
   /// this pattern, generating any new operations with the specified
   /// builder.  If an unexpected error is encountered (an internal
@@ -138,7 +164,7 @@ public:
 
   /// Attempt to match against code rooted at the specified operation,
   /// which is the same operation code as getRootKind().
-  LogicalResult match(Operation *op) const override;
+  virtual LogicalResult match(Operation *op) const;
 
   /// Attempt to match against code rooted at the specified operation,
   /// which is the same operation code as getRootKind(). If successful, this
@@ -152,44 +178,12 @@ public:
     return failure();
   }
 
-  /// Returns true if this pattern is known to result in recursive application,
-  /// i.e. this pattern may generate IR that also matches this pattern, but is
-  /// known to bound the recursion. This signals to a rewriter that it is safe
-  /// to apply this pattern recursively to generated IR.
-  virtual bool hasBoundedRewriteRecursion() const { return false; }
-
-  /// Return a list of operations that may be generated when rewriting an
-  /// operation instance with this pattern.
-  ArrayRef<OperationName> getGeneratedOps() const { return generatedOps; }
-
 protected:
-  /// Construct a rewrite pattern with a certain benefit that matches the
-  /// operation with the given root name.
-  RewritePattern(StringRef rootName, PatternBenefit benefit,
-                 MLIRContext *context)
-      : Pattern(rootName, benefit, context) {}
-  /// Construct a rewrite pattern with a certain benefit that matches any
-  /// operation type. `MatchAnyOpTypeTag` is just a tag to ensure that the
-  /// "match any" behavior is what the user actually desired,
-  /// `MatchAnyOpTypeTag()` should always be supplied here.
-  RewritePattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
-      : Pattern(benefit, tag) {}
-  /// Construct a rewrite pattern with a certain benefit that matches the
-  /// operation with the given root name. `generatedNames` contains the names of
-  /// operations that may be generated during a successful rewrite.
-  RewritePattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
-                 PatternBenefit benefit, MLIRContext *context);
-  /// Construct a rewrite pattern that may match any operation type.
-  /// `generatedNames` contains the names of operations that may be generated
-  /// during a successful rewrite. `MatchAnyOpTypeTag` is just a tag to ensure
-  /// that the "match any" behavior is what the user actually desired,
-  /// `MatchAnyOpTypeTag()` should always be supplied here.
-  RewritePattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
-                 MLIRContext *context, MatchAnyOpTypeTag tag);
+  /// Inherit the base constructors from `Pattern`.
+  using Pattern::Pattern;
 
-  /// A list of the potential operations that may be generated when rewriting
-  /// an op with this pattern.
-  SmallVector<OperationName, 2> generatedOps;
+  /// An anchor for the virtual table.
+  virtual void anchor();
 };
 
 /// OpRewritePattern is a wrapper around RewritePattern that allows for
@@ -232,7 +226,7 @@ template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
 };
 
 //===----------------------------------------------------------------------===//
-// PatternRewriter class
+// PatternRewriter
 //===----------------------------------------------------------------------===//
 
 /// This class coordinates the application of a pattern to the current function,
@@ -498,7 +492,7 @@ public:
   /// pattern. Users can query contained patterns and pass analysis results to
   /// applyCostModel. Patterns to be discarded should have a benefit of
   /// `impossibleToMatch`.
-  using CostModel = function_ref<PatternBenefit(const RewritePattern &)>;
+  using CostModel = function_ref<PatternBenefit(const Pattern &)>;
 
   explicit PatternApplicator(const OwningRewritePatternList &owningPatternList)
       : owningPatternList(owningPatternList) {}
@@ -512,11 +506,11 @@ public:
   /// onFailure: called when a pattern fails to match to perform cleanup.
   /// onSuccess: called when a pattern match succeeds; return failure() to
   ///            invalidate the match and try another pattern.
-  LogicalResult matchAndRewrite(
-      Operation *op, PatternRewriter &rewriter,
-      function_ref<bool(const RewritePattern &)> canApply = {},
-      function_ref<void(const RewritePattern &)> onFailure = {},
-      function_ref<LogicalResult(const RewritePattern &)> onSuccess = {});
+  LogicalResult
+  matchAndRewrite(Operation *op, PatternRewriter &rewriter,
+                  function_ref<bool(const Pattern &)> canApply = {},
+                  function_ref<void(const Pattern &)> onFailure = {},
+                  function_ref<LogicalResult(const Pattern &)> onSuccess = {});
 
   /// Apply a cost model to the patterns within this applicator.
   void applyCostModel(CostModel model);
@@ -524,22 +518,22 @@ public:
   /// Apply the default cost model that solely uses the pattern's static
   /// benefit.
   void applyDefaultCostModel() {
-    applyCostModel(
-        [](const RewritePattern &pattern) { return pattern.getBenefit(); });
+    applyCostModel([](const Pattern &pattern) { return pattern.getBenefit(); });
   }
 
-  /// Walk all of the rewrite patterns within the applicator.
-  void walkAllPatterns(function_ref<void(const RewritePattern &)> walk);
+  /// Walk all of the patterns within the applicator.
+  void walkAllPatterns(function_ref<void(const Pattern &)> walk);
 
 private:
   /// Attempt to match and rewrite the given op with the given pattern, allowing
   /// a predicate to decide if a pattern can be applied or not, and hooks for if
   /// the pattern match was a success or failure.
-  LogicalResult matchAndRewrite(
-      Operation *op, const RewritePattern &pattern, PatternRewriter &rewriter,
-      function_ref<bool(const RewritePattern &)> canApply,
-      function_ref<void(const RewritePattern &)> onFailure,
-      function_ref<LogicalResult(const RewritePattern &)> onSuccess);
+  LogicalResult
+  matchAndRewrite(Operation *op, const RewritePattern &pattern,
+                  PatternRewriter &rewriter,
+                  function_ref<bool(const Pattern &)> canApply,
+                  function_ref<void(const Pattern &)> onFailure,
+                  function_ref<LogicalResult(const Pattern &)> onSuccess);
 
   /// The list that owns the patterns used within this applicator.
   const OwningRewritePatternList &owningPatternList;

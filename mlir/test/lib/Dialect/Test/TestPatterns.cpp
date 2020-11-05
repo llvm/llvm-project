@@ -452,7 +452,11 @@ struct TestNonRootReplacement : public RewritePattern {
 /// bounded recursion.
 struct TestBoundedRecursiveRewrite
     : public OpRewritePattern<TestRecursiveRewriteOp> {
-  using OpRewritePattern<TestRecursiveRewriteOp>::OpRewritePattern;
+  TestBoundedRecursiveRewrite(MLIRContext *ctx)
+      : OpRewritePattern<TestRecursiveRewriteOp>(ctx) {
+    // The conversion target handles bounding the recursion of this pattern.
+    setHasBoundedRewriteRecursion();
+  }
 
   LogicalResult matchAndRewrite(TestRecursiveRewriteOp op,
                                 PatternRewriter &rewriter) const final {
@@ -462,9 +466,6 @@ struct TestBoundedRecursiveRewrite
     });
     return success();
   }
-
-  /// The conversion target handles bounding the recursion of this pattern.
-  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 struct TestNestedOpCreationUndoRewrite

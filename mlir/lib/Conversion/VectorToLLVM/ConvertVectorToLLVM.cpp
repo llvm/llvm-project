@@ -1042,7 +1042,12 @@ public:
 class VectorInsertStridedSliceOpSameRankRewritePattern
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+  VectorInsertStridedSliceOpSameRankRewritePattern(MLIRContext *ctx)
+      : OpRewritePattern<InsertStridedSliceOp>(ctx) {
+    // This pattern creates recursive InsertStridedSliceOp, but the recursion is
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1093,9 +1098,6 @@ public:
     rewriter.replaceOp(op, res);
     return success();
   }
-  /// This pattern creates recursive InsertStridedSliceOp, but the recursion is
-  /// bounded as the rank is strictly decreasing.
-  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 /// Returns the strides if the memory underlying `memRefType` has a contiguous
@@ -1505,7 +1507,12 @@ private:
 class VectorExtractStridedSliceOpConversion
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+  VectorExtractStridedSliceOpConversion(MLIRContext *ctx)
+      : OpRewritePattern<ExtractStridedSliceOp>(ctx) {
+    // This pattern creates recursive ExtractStridedSliceOp, but the recursion
+    // is bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1552,9 +1559,6 @@ public:
     rewriter.replaceOp(op, res);
     return success();
   }
-  /// This pattern creates recursive ExtractStridedSliceOp, but the recursion is
-  /// bounded as the rank is strictly decreasing.
-  bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
 } // namespace
