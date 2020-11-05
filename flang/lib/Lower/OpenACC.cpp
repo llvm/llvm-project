@@ -725,6 +725,62 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
     exitDataOp.finalizeAttr(firOpBuilder.getUnitAttr());
 }
 
+template <typename Op>
+static void
+genACCInitShutdownOp(Fortran::lower::AbstractConverter &converter,
+                     const Fortran::parser::AccClauseList &accClauseList) {
+  mlir::Value ifCond, deviceNum;
+  SmallVector<Value, 2> deviceTypeOperands;
+
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto currentLocation = converter.getCurrentLocation();
+
+  // Lower clauses values mapped to operands.
+  // Keep track of each group of operands separatly as clauses can appear
+  // more than once.
+  for (const auto &clause : accClauseList.v) {
+    if (const auto *ifClause =
+            std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
+      mlir::Value cond = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(ifClause->v)));
+      ifCond = firOpBuilder.createConvert(currentLocation,
+                                          firOpBuilder.getI1Type(), cond);
+    } else if (const auto *deviceNumClause =
+                   std::get_if<Fortran::parser::AccClause::DeviceNum>(
+                       &clause.u)) {
+      deviceNum = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(deviceNumClause->v)));
+    } else if (const auto *deviceTypeClause =
+                   std::get_if<Fortran::parser::AccClause::DeviceType>(
+                       &clause.u)) {
+
+      const auto &deviceTypeValue = deviceTypeClause->v;
+      if (deviceTypeValue) {
+        for (const auto &scalarIntExpr : *deviceTypeValue) {
+          mlir::Value expr = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(scalarIntExpr)));
+          deviceTypeOperands.push_back(expr);
+        }
+      } else {
+        // * was passed as value and will be represented as a -1 constant
+        // integer.
+        mlir::Value star = firOpBuilder.createIntegerConstant(
+            currentLocation, firOpBuilder.getIntegerType(32), /* STAR */ -1);
+        deviceTypeOperands.push_back(star);
+      }
+    }
+  }
+
+  // Prepare the operand segement size attribute and the operands value range.
+  SmallVector<mlir::Value, 6> operands;
+  SmallVector<int32_t, 3> operandSegments;
+  addOperands(operands, operandSegments, deviceTypeOperands);
+  addOperand(operands, operandSegments, deviceNum);
+  addOperand(operands, operandSegments, ifCond);
+
+  createSimpleOp<Op>(firOpBuilder, currentLocation, operands, operandSegments);
+}
+
 static void
 genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
                const Fortran::parser::AccClauseList &accClauseList) {
@@ -845,9 +901,9 @@ genACC(Fortran::lower::AbstractConverter &converter,
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_exit_data) {
     genACCExitDataOp(converter, accClauseList);
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_init) {
-    TODO("OpenACC init directive not lowered yet!");
+    genACCInitShutdownOp<mlir::acc::InitOp>(converter, accClauseList);
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_shutdown) {
-    TODO("OpenACC shutdown directive not lowered yet!");
+    genACCInitShutdownOp<mlir::acc::ShutdownOp>(converter, accClauseList);
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_set) {
     TODO("OpenACC set directive not lowered yet!");
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_update) {
