@@ -133,10 +133,10 @@ namespace {
         return !isPotentiallyReachableFromMany(Worklist, BB, nullptr, DT);
       }
 
-      // If the value is defined in the same basic block as use and BeforeHere,
-      // there is no need to explore the use if BeforeHere dominates use.
-      // Check whether there is a path from I to BeforeHere.
-      if (BeforeHere != I && DT->dominates(BeforeHere, I) &&
+      // If the value is defined in a different basic block than BeforeHere,
+      // there is no need to explore the use if there is no path from I to
+      // BeforeHere.
+      if (BeforeHere != I &&
           !isPotentiallyReachable(I, BeforeHere, nullptr, DT))
         return true;
 
