@@ -911,6 +911,81 @@ genACC(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static void genACC(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
+
+  const auto &waitArgument =
+      std::get<std::optional<Fortran::parser::AccWaitArgument>>(
+          waitConstruct.t);
+  const auto &accClauseList =
+      std::get<Fortran::parser::AccClauseList>(waitConstruct.t);
+
+  mlir::Value ifCond, asyncOperand, waitDevnum, async;
+  SmallVector<mlir::Value, 2> waitOperands;
+
+  // Async clause have optional values but can be present with
+  // no value as well. When there is no value, the op has an attribute to
+  // represent the clause.
+  bool addAsyncAttr = false;
+
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto currentLocation = converter.getCurrentLocation();
+
+  if (waitArgument) { // wait has a value.
+    const Fortran::parser::AccWaitArgument &waitArg = *waitArgument;
+    const std::list<Fortran::parser::ScalarIntExpr> &waitList =
+        std::get<std::list<Fortran::parser::ScalarIntExpr>>(waitArg.t);
+    for (const Fortran::parser::ScalarIntExpr &value : waitList) {
+      mlir::Value v = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(value)));
+      waitOperands.push_back(v);
+    }
+
+    const std::optional<Fortran::parser::ScalarIntExpr> &waitDevnumValue =
+        std::get<std::optional<Fortran::parser::ScalarIntExpr>>(waitArg.t);
+    if (waitDevnumValue)
+      waitDevnum = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(*waitDevnumValue)));
+  }
+
+  // Lower clauses values mapped to operands.
+  // Keep track of each group of operands separatly as clauses can appear
+  // more than once.
+  for (const auto &clause : accClauseList.v) {
+    if (const auto *ifClause =
+            std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
+      mlir::Value cond = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(ifClause->v)));
+      ifCond = firOpBuilder.createConvert(currentLocation,
+                                          firOpBuilder.getI1Type(), cond);
+    } else if (const auto *asyncClause =
+                   std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
+      const auto &asyncClauseValue = asyncClause->v;
+      if (asyncClauseValue) { // async has a value.
+        async = fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(*asyncClauseValue)));
+      } else {
+        addAsyncAttr = true;
+      }
+    }
+  }
+
+  // Prepare the operand segement size attribute and the operands value range.
+  SmallVector<mlir::Value, 8> operands;
+  SmallVector<int32_t, 4> operandSegments;
+  addOperands(operands, operandSegments, waitOperands);
+  addOperand(operands, operandSegments, async);
+  addOperand(operands, operandSegments, waitDevnum);
+  addOperand(operands, operandSegments, ifCond);
+
+  auto waitOp = createSimpleOp<mlir::acc::WaitOp>(firOpBuilder, currentLocation,
+                                                  operands, operandSegments);
+
+  if (addAsyncAttr)
+    waitOp.asyncAttr(firOpBuilder.getUnitAttr());
+}
+
 void Fortran::lower::genOpenACCConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval,
@@ -940,7 +1015,7 @@ void Fortran::lower::genOpenACCConstruct(
             TODO("OpenACC Cache construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
-            TODO("OpenACC Wait construct not lowered yet!");
+            genACC(converter, eval, waitConstruct);
           },
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
             TODO("OpenACC Atomic construct not lowered yet!");
