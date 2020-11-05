@@ -124,8 +124,10 @@ void TestConvVectorization::runOnOperation() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestConvVectorization() {
   PassRegistration<TestConvVectorization> testTransformPatternsPass(
       "test-conv-vectorization", "Test vectorization of convolutions");
 }
+} // namespace test
 } // namespace mlir

@@ -82,8 +82,10 @@ struct TestOpaqueLoc
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestOpaqueLoc() {
   PassRegistration<TestOpaqueLoc> pass(
       "test-opaque-loc", "Changes all leaf locations to opaque locations");
 }
+} // namespace test
 } // namespace mlir

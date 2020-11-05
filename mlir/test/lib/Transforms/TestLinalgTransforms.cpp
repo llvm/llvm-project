@@ -503,9 +503,11 @@ void TestLinalgTransforms::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestLinalgTransforms() {
   PassRegistration<TestLinalgTransforms> testTransformPatternsPass(
       "test-linalg-transform-patterns",
       "Test Linalg transformation patterns by applying them greedily.");
 }
+} // namespace test
 } // namespace mlir

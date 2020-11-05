@@ -50,15 +50,15 @@ struct TestFinalizingBufferizePass
   /// Converts tensor based test operations to buffer based ones using
   /// bufferize.
   class TensorBasedOpConverter
-      : public BufferizeOpConversionPattern<mlir::TensorBasedOp> {
+      : public BufferizeOpConversionPattern<test::TensorBasedOp> {
   public:
     using BufferizeOpConversionPattern<
-        mlir::TensorBasedOp>::BufferizeOpConversionPattern;
+        test::TensorBasedOp>::BufferizeOpConversionPattern;
 
     LogicalResult
-    matchAndRewrite(mlir::TensorBasedOp op, ArrayRef<Value> operands,
+    matchAndRewrite(test::TensorBasedOp op, ArrayRef<Value> operands,
                     ConversionPatternRewriter &rewriter) const final {
-      mlir::TensorBasedOpAdaptor adaptor(
+      mlir::test::TensorBasedOpAdaptor adaptor(
           operands, op.getOperation()->getAttrDictionary());
 
       // The input needs to be turned into a buffer first. Until then, bail out.
@@ -76,9 +76,9 @@ struct TestFinalizingBufferizePass
       Value newOutputBuffer = rewriter.create<AllocOp>(loc, memrefType);
 
       // Generate a new test operation that works on buffers.
-      rewriter.create<mlir::BufferBasedOp>(loc,
-                                           /*input=*/adaptor.input(),
-                                           /*output=*/newOutputBuffer);
+      rewriter.create<mlir::test::BufferBasedOp>(loc,
+                                                 /*input=*/adaptor.input(),
+                                                 /*output=*/newOutputBuffer);
 
       // Replace the results of the old op with the new output buffers.
       rewriter.replaceOp(op, newOutputBuffer);
@@ -87,7 +87,7 @@ struct TestFinalizingBufferizePass
   };
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<TestDialect>();
+    registry.insert<test::TestDialect>();
   }
 
   void runOnOperation() override {
@@ -97,8 +97,8 @@ struct TestFinalizingBufferizePass
 
     // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect>();
-    target.addLegalOp<MakeTupleOp>();
-    target.addLegalOp<GetTupleElementOp>();
+    target.addLegalOp<test::MakeTupleOp>();
+    target.addLegalOp<test::GetTupleElementOp>();
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<ModuleTerminatorOp>();
 
@@ -106,7 +106,7 @@ struct TestFinalizingBufferizePass
     auto isLegalOperation = [&](Operation *op) {
       return converter.isLegal(op);
     };
-    target.addDynamicallyLegalDialect<TestDialect>(isLegalOperation);
+    target.addDynamicallyLegalDialect<test::TestDialect>(isLegalOperation);
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
@@ -144,7 +144,8 @@ struct TestFinalizingBufferizePass
           TypeRange TypeRange = inputs.getTypes();
           SmallVector<Type, 2> types(TypeRange.begin(), TypeRange.end());
           TupleType tuple = TupleType::get(types, builder.getContext());
-          mlir::Value value = builder.create<MakeTupleOp>(loc, tuple, inputs);
+          mlir::Value value =
+              builder.create<test::MakeTupleOp>(loc, tuple, inputs);
           return value;
         });
 
@@ -152,7 +153,7 @@ struct TestFinalizingBufferizePass
                                              TupleType resultType, Value value,
                                              SmallVectorImpl<Value> &values) {
       for (unsigned i = 0, e = resultType.size(); i < e; ++i) {
-        Value res = builder.create<GetTupleElementOp>(
+        Value res = builder.create<test::GetTupleElementOp>(
             loc, resultType.getType(i), value, builder.getI32IntegerAttr(i));
         values.push_back(res);
       }
@@ -160,8 +161,7 @@ struct TestFinalizingBufferizePass
     });
 
     OwningRewritePatternList patterns;
-    populateWithBufferizeOpConversionPatterns<mlir::ReturnOp, mlir::ReturnOp,
-                                              mlir::CopyOp>(
+    populateWithBufferizeOpConversionPatterns<ReturnOp, ReturnOp, test::CopyOp>(
         &context, converter, patterns);
     patterns.insert<TensorBasedOpConverter>(&context, converter);
 
@@ -173,6 +173,7 @@ struct TestFinalizingBufferizePass
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestFinalizingBufferizePass() {
   PassRegistration<
       TestFinalizingBufferizePass</*allowMemrefFunctionResults=*/false>>(
@@ -186,4 +187,5 @@ void registerTestPreparationPassWithAllowedMemrefResults() {
       "Tests finalizing buffierize conversions, allowing functions to have "
       "memref typed results.");
 }
-} // end namespace mlir
+} // namespace test
+} // namespace mlir
