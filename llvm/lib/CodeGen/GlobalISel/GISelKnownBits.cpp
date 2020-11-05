@@ -416,7 +416,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
-    Register NumOps = MI.getNumOperands();
+    unsigned NumOps = MI.getNumOperands();
     unsigned OpSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
 
     for (unsigned I = 0; I != NumOps - 1; ++I) {
@@ -428,7 +428,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    Register NumOps = MI.getNumOperands();
+    unsigned NumOps = MI.getNumOperands();
     Register SrcReg = MI.getOperand(NumOps - 1).getReg();
     if (MRI.getType(SrcReg).isVector())
       return; // TODO: Handle vectors.
