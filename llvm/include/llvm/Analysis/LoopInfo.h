@@ -840,6 +840,9 @@ public:
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
 
+  /// Add llvm.loop.mustprogress to this loop's loop id metadata.
+  void setLoopMustProgress();
+
   void dump() const;
   void dumpVerbose() const;
 
