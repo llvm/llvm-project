@@ -13,6 +13,7 @@
 // RUN: readability-identifier-naming %t -- \
 // RUN:  -config='{ InheritParentConfig: true, CheckOptions: [ \
 // RUN:   {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
+// RUN:   {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
 // RUN:   {key: readability-identifier-naming.GetConfigPerFile, value: true} \
 // RUN:  ]}' -header-filter='.*' -- -I%theaders
 
@@ -21,20 +22,14 @@
 // RUN: cp -R %S/Inputs/readability-identifier-naming/. %theaders
 // RUN: %check_clang_tidy -check-suffixes=DISABLED,SHARED -std=c++11 %s \
 // RUN: readability-identifier-naming %t -- \
-// RUN:  -config='{ InheritParentConfig: true, CheckOptions: [ \
+// RUN:  -config='{ InheritParentConfig: false, CheckOptions: [ \
 // RUN:   {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
+// RUN:   {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
 // RUN:   {key: readability-identifier-naming.GetConfigPerFile, value: false} \
 // RUN:  ]}' -header-filter='.*' -- -I%theaders
 
-#include "global-style-disabled/header.h"
 #include "global-style1/header.h"
 #include "global-style2/header.h"
-// CHECK-MESSAGES-ENABLED-DAG: global-style1/header.h:5:6: warning: invalid case style for global function 'styleFirstBad'
-// CHECK-MESSAGES-ENABLED-DAG: global-style2/header.h:5:6: warning: invalid case style for global function 'styleSecondBad'
-// CHECK-MESSAGES-DISABLED-DAG: global-style1/header.h:3:6: warning: invalid case style for function 'style_first_good'
-// CHECK-MESSAGES-DISABLED-DAG: global-style2/header.h:3:6: warning: invalid case style for function 'STYLE_SECOND_GOOD'
-// CHECK-MESSAGES-DISABLED-DAG: global-style-disabled/header.h:1:6: warning: invalid case style for function 'disabled_style_1'
-// CHECK-MESSAGES-DISABLED-DAG: global-style-disabled/header.h:3:6: warning: invalid case style for function 'DISABLED_STYLE_3'
 
 void goodStyle() {
   style_first_good();
@@ -42,7 +37,7 @@ void goodStyle() {
   //      CHECK-FIXES-DISABLED: styleFirstGood();
   // CHECK-FIXES-DISABLED-NEXT: styleSecondGood();
 }
-// CHECK-MESSAGES-SHARED-DAG: :[[@LINE+1]]:6: warning: invalid case style for function 'bad_style'
+// CHECK-MESSAGES-SHARED: :[[@LINE+1]]:6: warning: invalid case style for function 'bad_style'
 void bad_style() {
   styleFirstBad();
   styleSecondBad();
@@ -54,11 +49,14 @@ void bad_style() {
 //  CHECK-FIXES-ENABLED-NEXT:   STYLE_SECOND_BAD();
 //   CHECK-FIXES-SHARED-NEXT: }
 
-void expectNoStyle() {
-  disabled_style_1();
-  disabledStyle2();
-  DISABLED_STYLE_3();
-  //      CHECK-FIXES-DISABLED: disabledStyle1();
-  // CHECK-FIXES-DISABLED-NEXT: disabledStyle2();
-  // CHECK-FIXES-DISABLED-NEXT: disabledStyle3();
-}
+// CHECK-MESSAGES-DISABLED: global-style1/header.h:3:6: warning: invalid case style for function 'style_first_good'
+// CHECK-MESSAGES-ENABLED:  global-style1/header.h:5:6: warning: invalid case style for global function 'styleFirstBad'
+// CHECK-MESSAGES-ENABLED:  global-style1/header.h:7:5: warning: invalid case style for global function 'thisIsMainLikeIgnored'
+// CHECK-MESSAGES-DISABLED: global-style1/header.h:7:31: warning: invalid case style for parameter 'argc'
+// CHECK-MESSAGES-DISABLED: global-style1/header.h:7:49: warning: invalid case style for parameter 'argv'
+
+// CHECK-MESSAGES-DISABLED: global-style2/header.h:3:6: warning: invalid case style for function 'STYLE_SECOND_GOOD'
+// CHECK-MESSAGES-ENABLED:  global-style2/header.h:5:6: warning: invalid case style for global function 'styleSecondBad'
+// CHECK-MESSAGES-ENABLED:  global-style2/header.h:7:5: warning: invalid case style for global function 'thisIsMainLikeNotIgnored'
+// CHECK-MESSAGES-SHARED:   global-style2/header.h:7:34: warning: invalid case style for parameter 'argc'
+// CHECK-MESSAGES-SHARED:   global-style2/header.h:7:52: warning: invalid case style for parameter 'argv'

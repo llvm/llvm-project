@@ -35,17 +35,9 @@ namespace {
 /// otherwise the IR will end up invalid. Thus, finalizing bufferization passes
 /// require an atomic change to the entire program (e.g. the whole module).
 ///
-/// `allowMemrefFunctionResults` informs the buffer finalization policy to allow
-/// functions that have memref typed results. Patterns involved with converting
-/// func/call/return respect the finalization policy to ensure a consistent
-/// atomic conversion of the entire module. `allowMemrefFunctionResults` also
-/// allows memref typed results to escape from the deallocation.
-///
 /// TODO: Split out BufferizeFinalizationPolicy from BufferizeTypeConverter.
-template <bool allowMemrefFunctionResults>
 struct TestFinalizingBufferizePass
-    : mlir::PassWrapper<TestFinalizingBufferizePass<allowMemrefFunctionResults>,
-                        OperationPass<ModuleOp>> {
+    : mlir::PassWrapper<TestFinalizingBufferizePass, OperationPass<ModuleOp>> {
 
   /// Converts tensor based test operations to buffer based ones using
   /// bufferize.
@@ -123,13 +115,6 @@ struct TestFinalizingBufferizePass
              converter.isLegal(&funcOp.getBody());
     });
 
-    auto kind = allowMemrefFunctionResults
-                    ? BufferizeTypeConverter::KeepAsFunctionResult
-                    : BufferizeTypeConverter::AppendToArgumentsList;
-    converter.setResultConversionKind<RankedTensorType, MemRefType>(kind);
-    converter.setResultConversionKind<UnrankedTensorType, UnrankedMemRefType>(
-        kind);
-
     converter.addDecomposeTypeConversion(
         [](TupleType tupleType, SmallVectorImpl<Type> &types) {
           tupleType.getFlattenedTypes(types);
@@ -175,17 +160,8 @@ struct TestFinalizingBufferizePass
 namespace mlir {
 namespace test {
 void registerTestFinalizingBufferizePass() {
-  PassRegistration<
-      TestFinalizingBufferizePass</*allowMemrefFunctionResults=*/false>>(
+  PassRegistration<TestFinalizingBufferizePass>(
       "test-finalizing-bufferize", "Tests finalizing bufferize conversions");
-}
-
-void registerTestPreparationPassWithAllowedMemrefResults() {
-  PassRegistration<
-      TestFinalizingBufferizePass</*allowMemrefFunctionResults=*/true>>(
-      "test-finalizing-bufferize-with-allowed-memref-results",
-      "Tests finalizing buffierize conversions, allowing functions to have "
-      "memref typed results.");
 }
 } // namespace test
 } // namespace mlir

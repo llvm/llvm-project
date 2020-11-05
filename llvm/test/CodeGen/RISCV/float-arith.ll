@@ -396,6 +396,38 @@ define float @fnmadd_s(float %a, float %b, float %c) nounwind {
   ret float %1
 }
 
+define float @fnmadd_s_2(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmadd_s_2:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    fmv.w.x ft1, a2
+; RV32IF-NEXT:    fmv.w.x ft2, a1
+; RV32IF-NEXT:    fmv.w.x ft3, zero
+; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV32IF-NEXT:    fadd.s ft1, ft1, ft3
+; RV32IF-NEXT:    fnmadd.s ft0, ft0, ft2, ft1
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fnmadd_s_2:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    fmv.w.x ft1, a2
+; RV64IF-NEXT:    fmv.w.x ft2, a1
+; RV64IF-NEXT:    fmv.w.x ft3, zero
+; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV64IF-NEXT:    fadd.s ft1, ft1, ft3
+; RV64IF-NEXT:    fnmadd.s ft0, ft0, ft2, ft1
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %b_ = fadd float 0.0, %b
+  %c_ = fadd float 0.0, %c
+  %negb = fsub float -0.0, %b_
+  %negc = fsub float -0.0, %c_
+  %1 = call float @llvm.fma.f32(float %a, float %negb, float %negc)
+  ret float %1
+}
+
 define float @fnmsub_s(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fnmsub_s:
 ; RV32IF:       # %bb.0:
@@ -421,5 +453,33 @@ define float @fnmsub_s(float %a, float %b, float %c) nounwind {
   %a_ = fadd float 0.0, %a
   %nega = fsub float -0.0, %a_
   %1 = call float @llvm.fma.f32(float %nega, float %b, float %c)
+  ret float %1
+}
+
+define float @fnmsub_s_2(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmsub_s_2:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    fmv.w.x ft1, a0
+; RV32IF-NEXT:    fmv.w.x ft2, a1
+; RV32IF-NEXT:    fmv.w.x ft3, zero
+; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV32IF-NEXT:    fnmsub.s ft0, ft1, ft2, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fnmsub_s_2:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a2
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fmv.w.x ft2, a1
+; RV64IF-NEXT:    fmv.w.x ft3, zero
+; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
+; RV64IF-NEXT:    fnmsub.s ft0, ft1, ft2, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %b_ = fadd float 0.0, %b
+  %negb = fsub float -0.0, %b_
+  %1 = call float @llvm.fma.f32(float %a, float %negb, float %c)
   ret float %1
 }

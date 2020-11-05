@@ -15,16 +15,29 @@ def TDLC_ClauseA : Clause<"clausea"> {
 def TDLC_ClauseB : Clause<"clauseb"> {
 }
 
+def TDLC_ClauseC : Clause<"clausec"> {
+}
+
+def TDLC_ClauseD : Clause<"claused"> {
+}
+
 def TDL_DirA : Directive<"dira"> {
   let allowedClauses = [
     VersionedClause<TDLC_ClauseA>,
-    VersionedClause<TDLC_ClauseB>
+    VersionedClause<TDLC_ClauseB>,
+    VersionedClause<TDLC_ClauseD>
   ];
   let allowedOnceClauses = [
-    VersionedClause<TDLC_ClauseA>
+    VersionedClause<TDLC_ClauseA>,
+    VersionedClause<TDLC_ClauseC>
+  ];
+  let requiredClauses = [
+    VersionedClause<TDLC_ClauseC>,
+    VersionedClause<TDLC_ClauseD>
   ];
   let isDefault = 1;
 }
 
 // CHECK: error: Clause TDLC_ClauseA already defined on directive TDL_DirA
+// CHECK: error: Clause TDLC_ClauseD already defined on directive TDL_DirA
 // CHECK: error: One or more clauses are defined multiple times on directive TDL_DirA
