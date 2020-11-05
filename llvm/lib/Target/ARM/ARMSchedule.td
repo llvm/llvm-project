@@ -185,6 +185,10 @@ def IsLDMBaseRegInList : CheckFunctionPredicate<
 let FunctionMapper = "ARM_AM::getAM3Op" in {
   class CheckAM3OpSub<int n> : CheckImmOperand_s<n, "ARM_AM::sub"> {}
 }
+
+// LDM, base reg in list
+def IsLDMBaseRegInListPred : MCSchedPredicate<IsLDMBaseRegInList>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
 //

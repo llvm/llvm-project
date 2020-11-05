@@ -63,9 +63,6 @@ def IsLdstsoMinusRegPredX0 : MCSchedPredicate<CheckAM2OpSub<2>>;
 def IsLdstsoMinusRegPred : MCSchedPredicate<CheckAM2OpSub<3>>;
 def IsLdstsoMinusRegPredX2 : MCSchedPredicate<CheckAM2OpSub<4>>;
 
-// LDM, base reg in list
-def IsLDMBaseRegInListPred : MCSchedPredicate<IsLDMBaseRegInList>;
-
 class A57WriteLMOpsListType<list<SchedWriteRes> writes> {
   list <SchedWriteRes> Writes = writes;
   SchedMachineModel SchedModel = ?;
