@@ -127,28 +127,40 @@ bool HasDuplicateClauses(const std::vector<Record *> &Clauses,
   return hasError;
 }
 
+// Check for duplicate clauses in lists. Clauses cannot appear twice in the
+// three allowed list. Also, since required implies allowed, clauses cannot
+// appear in both the allowedClauses and requiredClauses lists.
 bool HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
+  bool hasDuplicate = false;
   for (const auto &D : Directives) {
     Directive Dir{D};
     llvm::StringSet<> Clauses;
+    // Check for duplicates in the three allowed lists.
     if (HasDuplicateClauses(Dir.getAllowedClauses(), Dir, Clauses) ||
         HasDuplicateClauses(Dir.getAllowedOnceClauses(), Dir, Clauses) ||
-        HasDuplicateClauses(Dir.getAllowedExclusiveClauses(), Dir, Clauses) ||
-        HasDuplicateClauses(Dir.getRequiredClauses(), Dir, Clauses)) {
-      PrintFatalError(
-          "One or more clauses are defined multiple times on directive " +
-          Dir.getRecordName());
-      return true;
+        HasDuplicateClauses(Dir.getAllowedExclusiveClauses(), Dir, Clauses)) {
+      hasDuplicate = true;
     }
+    // Check for duplicate between allowedClauses and required
+    Clauses.clear();
+    if (HasDuplicateClauses(Dir.getAllowedClauses(), Dir, Clauses) ||
+        HasDuplicateClauses(Dir.getRequiredClauses(), Dir, Clauses)) {
+      hasDuplicate = true;
+    }
+    if (hasDuplicate)
+      PrintFatalError("One or more clauses are defined multiple times on"
+                      " directive " +
+                      Dir.getRecordName());
   }
-  return false;
+
+  return hasDuplicate;
 }
 
 // Check consitency of records. Return true if an error has been detected.
 // Return false if the records are valid.
 bool DirectiveLanguage::CheckRecordsValidity() const {
   if (getDirectiveLanguages().size() != 1) {
-    PrintError("A single definition of DirectiveLanguage is needed.");
+    PrintFatalError("A single definition of DirectiveLanguage is needed.");
     return true;
   }
 
