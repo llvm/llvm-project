@@ -300,8 +300,8 @@ TEST_F(AArch64GISelMITest, TestKnownBits) {
   GISelKnownBits Info(*MF);
   KnownBits Known = Info.getKnownBits(SrcReg);
   EXPECT_FALSE(Known.hasConflict());
-  EXPECT_EQ(0u, Known.One.getZExtValue());
-  EXPECT_EQ(31u, Known.Zero.getZExtValue());
+  EXPECT_EQ(32u, Known.One.getZExtValue());
+  EXPECT_EQ(95u, Known.Zero.getZExtValue());
   APInt Zeroes = Info.getKnownZeroes(SrcReg);
   EXPECT_EQ(Known.Zero, Zeroes);
 }
