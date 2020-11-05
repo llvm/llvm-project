@@ -11,6 +11,7 @@
 #define _LIBCPP___LOCALE
 
 #include <__config>
+#include <__availability>
 #include <string>
 #include <memory>
 #include <utility>

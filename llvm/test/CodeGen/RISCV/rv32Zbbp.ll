@@ -693,9 +693,8 @@ define i64 @rori_i64(i64 %a) nounwind {
 ;
 ; RV32IB-LABEL: rori_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    addi a3, zero, 31
-; RV32IB-NEXT:    fsl a2, a1, a0, a3
-; RV32IB-NEXT:    fsl a1, a0, a1, a3
+; RV32IB-NEXT:    fsri a2, a0, a1, 1
+; RV32IB-NEXT:    fsri a1, a1, a0, 1
 ; RV32IB-NEXT:    mv a0, a2
 ; RV32IB-NEXT:    ret
 ;
@@ -738,9 +737,8 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 ;
 ; RV32IB-LABEL: rori_i64_fshr:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    addi a3, zero, 1
-; RV32IB-NEXT:    fsl a2, a0, a1, a3
-; RV32IB-NEXT:    fsl a1, a1, a0, a3
+; RV32IB-NEXT:    fsri a2, a1, a0, 31
+; RV32IB-NEXT:    fsri a1, a0, a1, 31
 ; RV32IB-NEXT:    mv a0, a2
 ; RV32IB-NEXT:    ret
 ;

@@ -27,6 +27,9 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/Host.h"
+
 // Define these constants from FreeBSD mman.h for use when targeting remote
 // FreeBSD systems even when host has different values.
 #define MAP_PRIVATE 0x0002
@@ -245,15 +248,25 @@ PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
 }
 
 bool PlatformFreeBSD::CanDebugProcess() {
-  if (getenv("FREEBSD_REMOTE_PLUGIN")) {
-    if (IsHost()) {
-      return true;
-    } else {
-      // If we're connected, we can debug.
-      return IsConnected();
+  if (IsHost()) {
+    llvm::Triple host_triple{llvm::sys::getProcessTriple()};
+    bool use_legacy_plugin;
+
+    switch (host_triple.getArch()) {
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        // FreeBSDRemote plugin supports x86 only at the moment
+        use_legacy_plugin = !!getenv("FREEBSD_LEGACY_PLUGIN");
+        break;
+      default:
+        use_legacy_plugin = true;
     }
+
+    return !use_legacy_plugin;
+  } else {
+    // If we're connected, we can debug.
+    return IsConnected();
   }
-  return false;
 }
 
 void PlatformFreeBSD::CalculateTrapHandlerSymbolNames() {

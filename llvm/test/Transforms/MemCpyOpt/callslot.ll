@@ -186,39 +186,6 @@ define void @capture_before_call_argmemonly() {
   ret void
 }
 
-; There is no path from the capture back to the memcpy.
-; So we can perform the call slot optimization.
-define void @capture_nopath_call_argmemonly(i1 %cond) {
-; CHECK-LABEL: @capture_nopath_call_argmemonly(
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    [[DEST_I8:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
-; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [16 x i8]* [[SRC]] to i8*
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[CAPTURES:%.*]], label [[NOCAPTURES:%.*]]
-; CHECK:       captures:
-; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST_I8]])
-; CHECK-NEXT:    ret void
-; CHECK:       nocaptures:
-; CHECK-NEXT:    [[DEST1:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
-; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST1]]) [[ATTR5:#.*]]
-; CHECK-NEXT:    ret void
-;
-  %dest = alloca [16 x i8]
-  %src = alloca [16 x i8]
-  %dest.i8 = bitcast [16 x i8]* %dest to i8*
-  %src.i8 = bitcast [16 x i8]* %src to i8*
-  br i1 %cond, label %captures, label %nocaptures
-
-captures:
-  call void @accept_ptr(i8* %dest.i8) ; capture
-  ret void
-
-nocaptures:
-  call void @accept_ptr(i8* %src.i8) argmemonly nounwind
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 16, i1 false)
-  ret void
-}
-
 define void @capture_before_call_argmemonly_nounwind() {
 ; CHECK-LABEL: @capture_before_call_argmemonly_nounwind(
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
