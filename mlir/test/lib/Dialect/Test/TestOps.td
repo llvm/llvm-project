@@ -661,7 +661,7 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilder<[{FuncOp function}]>];
+  let builders = [OpBuilderDAG<(ins "FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -1142,16 +1142,15 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // We will use this op in a nested result pattern, where we cannot deduce the
   // result type. So need to provide a builder not requiring result types.
   let builders = [
-    OpBuilder<
-      "IntegerAttr count",
-      [{
-        auto i32Type = $_builder.getIntegerType(32);
-        $_state.addTypes(i32Type); // $output1
-        SmallVector<Type, 4> types(count.getInt(), i32Type);
-        $_state.addTypes(types); // $output2
-        $_state.addTypes(types); // $output3
-        $_state.addAttribute("count", count);
-      }]>
+    OpBuilderDAG<(ins "IntegerAttr":$count),
+    [{
+      auto i32Type = $_builder.getIntegerType(32);
+      $_state.addTypes(i32Type); // $output1
+      SmallVector<Type, 4> types(count.getInt(), i32Type);
+      $_state.addTypes(types); // $output2
+      $_state.addTypes(types); // $output3
+      $_state.addAttribute("count", count);
+    }]>
   ];
 }
 
@@ -1202,13 +1201,14 @@ def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def IllegalOpTerminator : TEST_Op<"illegal_op_terminator", [Terminator]>;
 def IllegalOpWithRegion : TEST_Op<"illegal_op_with_region"> {
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<"",
-                  [{ Region *bodyRegion = $_state.addRegion();
-                     OpBuilder::InsertionGuard g($_builder);
-                     Block *body = $_builder.createBlock(bodyRegion);
-                     $_builder.setInsertionPointToEnd(body);
-                     $_builder.create<IllegalOpTerminator>($_state.location);
-                  }]>];
+  let builders = [OpBuilderDAG<(ins),
+    [{
+       Region *bodyRegion = $_state.addRegion();
+       OpBuilder::InsertionGuard g($_builder);
+       Block *body = $_builder.createBlock(bodyRegion);
+       $_builder.setInsertionPointToEnd(body);
+       $_builder.create<IllegalOpTerminator>($_state.location);
+    }]>];
 }
 def IllegalOpWithRegionAnchor : TEST_Op<"illegal_op_with_region_anchor">;
 
@@ -1245,8 +1245,8 @@ def TestRecursiveRewriteOp : TEST_Op<"recursive_rewrite"> {
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
 def TestReturnOp : TEST_Op<"return", [ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
-  let builders = [
-    OpBuilder<"", [{ build($_builder, $_state, {}); }]>
+  let builders = [OpBuilderDAG<(ins),
+    [{ build($_builder, $_state, {}); }]>
   ];
 }
 def TestCastOp : TEST_Op<"cast">,

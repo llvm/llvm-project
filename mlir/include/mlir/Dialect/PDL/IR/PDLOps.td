@@ -59,8 +59,8 @@ def PDL_ApplyConstraintOp
   }];
 
   let builders = [
-    OpBuilder<"StringRef name, "
-              "ValueRange args = {}, ArrayRef<Attribute> params = {}", [{
+    OpBuilderDAG<(ins "StringRef":$name, CArg<"ValueRange", "{}">:$args,
+      CArg<"ArrayRef<Attribute>", "{}">:$params), [{
       build($_builder, $_state, $_builder.getStringAttr(name), args,
             params.empty() ? ArrayAttr() : $_builder.getArrayAttr(params));
     }]>,
@@ -103,11 +103,11 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
   let assemblyFormat = "attr-dict (`:` $type^)? ($value^)?";
 
   let builders = [
-    OpBuilder<"Value type = Value()", [{
+    OpBuilderDAG<(ins CArg<"Value", "Value()">:$type), [{
       build($_builder, $_state, $_builder.getType<AttributeType>(), type,
             Attribute());
     }]>,
-    OpBuilder<"Attribute attr", [{
+    OpBuilderDAG<(ins "Attribute":$attr), [{
       build($_builder, $_state, $_builder.getType<AttributeType>(), Value(), attr);
     }]>,
   ];
@@ -199,7 +199,7 @@ def PDL_InputOp : PDL_Op<"input", [HasParent<"pdl::PatternOp">]> {
   let assemblyFormat = "(`:` $type^)? attr-dict";
 
   let builders = [
-    OpBuilder<"", [{
+    OpBuilderDAG<(ins), [{
       build($_builder, $_state, $_builder.getType<ValueType>(), Value());
     }]>,
   ];
@@ -253,11 +253,11 @@ def PDL_OperationOp
   let results = (outs PDL_Operation:$op,
                       Variadic<PDL_Value>:$results);
   let builders = [
-    OpBuilder<"Optional<StringRef> name  = llvm::None, "
-              "ValueRange operandValues = llvm::None, "
-              "ArrayRef<StringRef> attrNames = llvm::None, "
-              "ValueRange attrValues  = llvm::None, "
-              "ValueRange resultTypes = llvm::None", [{
+    OpBuilderDAG<(ins CArg<"Optional<StringRef>", "llvm::None">:$name,
+      CArg<"ValueRange", "llvm::None">:$operandValues,
+      CArg<"ArrayRef<StringRef>", "llvm::None">:$attrNames,
+      CArg<"ValueRange", "llvm::None">:$attrValues,
+      CArg<"ValueRange", "llvm::None">:$resultTypes), [{
       auto nameAttr = name ? StringAttr() : $_builder.getStringAttr(*name);
       build($_builder, $_state, $_builder.getType<OperationType>(), {}, nameAttr,
             operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),
@@ -311,9 +311,9 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
   }];
 
   let builders = [
-    OpBuilder<"Optional<StringRef> rootKind = llvm::None, "
-              "Optional<uint16_t> benefit = 1, "
-              "Optional<StringRef> name = llvm::None">,
+    OpBuilderDAG<(ins CArg<"Optional<StringRef>", "llvm::None">:$rootKind,
+      CArg<"Optional<uint16_t>", "1">:$benefit,
+      CArg<"Optional<StringRef>", "llvm::None">:$name)>,
   ];
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
@@ -452,7 +452,7 @@ def PDL_TypeOp : PDL_Op<"type"> {
   let assemblyFormat = "attr-dict (`:` $type^)?";
 
   let builders = [
-    OpBuilder<"Type ty = Type()", [{
+    OpBuilderDAG<(ins CArg<"Type", "Type()">:$ty), [{
       build($_builder, $_state, $_builder.getType<AttributeType>(),
             ty ? TypeAttr::get(ty) : TypeAttr());
     }]>,
