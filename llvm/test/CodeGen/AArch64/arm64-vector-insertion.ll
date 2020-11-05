@@ -29,3 +29,35 @@ entry:
   ; CHECK: str q[[TEMP]], [x0]
   ; CHECK: ret
 }
+
+; TODO: This should jsut be a dup + clearing lane 4.
+define <4 x float> @test2(float %a) {
+; CHECK-LABEL: test2:
+; CHECK:       bb.0:
+; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    // kill
+; CHECK-NEXT:    mov.s  v1[0], v0[0]
+; CHECK-NEXT:    mov.s   v1[1], v0[0]
+; CHECK-NEXT:    mov.s   v1[2], v0[0]
+; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:   ret
+;
+entry:
+  %0 = insertelement <4 x float> <float undef, float undef, float undef, float 0.000000e+00>, float %a, i32 0
+  %1 = insertelement <4 x float> %0, float %a, i32 1
+  %vecinit3 = insertelement <4 x float> %1, float %a, i32 2
+  ret <4 x float> %vecinit3
+}
+
+; TODO: This should jsut be a mov.s v0[3], wzr
+define <4 x float> @test3(<4 x float> %a) #0 {
+; CHECK-LABEL: test3:
+; CHECK:       bb.0:
+; CHECK-NEXT:    fmov    s1, wzr
+; CHECK-NEXT:    mov.s   v0[3], v1[0]
+; CHECK-NEXT:    ret
+
+entry:
+  %vecinit5 = insertelement <4 x float> %a, float 0.000000e+00, i32 3
+  ret <4 x float> %vecinit5
+}
