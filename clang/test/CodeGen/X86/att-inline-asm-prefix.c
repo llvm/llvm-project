@@ -1,3 +1,5 @@
+// REQUIRES: x86-registered-target
+
 // RUN:%clang_cc1 %s -ferror-limit 0 -triple=x86_64-pc -target-feature +avx512f -target-feature +avx2 -target-feature +avx512vl -S -o -  | FileCheck %s -check-prefix CHECK
 
 // This test is to check if the prefix in inline assembly is correctly
