@@ -17,6 +17,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/ConstantRange.h"
@@ -43,6 +44,8 @@ static cl::opt<bool> AndImmShrink("x86-and-imm-shrink", cl::init(true),
 static cl::opt<bool> EnablePromoteAnyextLoad(
     "x86-promote-anyext-load", cl::init(true),
     cl::desc("Enable promoting aligned anyext load to wider load"), cl::Hidden);
+
+extern cl::opt<bool> IndirectBranchTracking;
 
 //===----------------------------------------------------------------------===//
 //                      Pattern Matcher Implementation
@@ -797,11 +800,68 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
   return false;
 }
 
+static bool isEndbrImm64(uint64_t Imm) {
+// There may be some other prefix bytes between 0xF3 and 0x0F1EFA.
+// i.g: 0xF3660F1EFA, 0xF3670F1EFA
+  if ((Imm & 0x00FFFFFF) != 0x0F1EFA)
+    return false;
+
+  uint8_t OptionalPrefixBytes [] = {0x26, 0x2e, 0x36, 0x3e, 0x64,
+                                    0x65, 0x66, 0x67, 0xf0, 0xf2};
+  int i = 24; // 24bit 0x0F1EFA has matched
+  while (i < 64) {
+    uint8_t Byte = (Imm >> i) & 0xFF;
+    if (Byte == 0xF3)
+      return true;
+    if (!llvm::is_contained(OptionalPrefixBytes, Byte))
+      return false;
+    i += 8;
+  }
+
+  return false;
+}
+
 void X86DAGToDAGISel::PreprocessISelDAG() {
   bool MadeChange = false;
   for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
        E = CurDAG->allnodes_end(); I != E; ) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
+
+    // This is for CET enhancement.
+    //
+    // ENDBR32 and ENDBR64 have specific opcodes:
+    // ENDBR32: F3 0F 1E FB
+    // ENDBR64: F3 0F 1E FA
+    // And we want that attackers won’t find unintended ENDBR32/64
+    // opcode matches in the binary
+    // Here’s an example:
+    // If the compiler had to generate asm for the following code:
+    // a = 0xF30F1EFA
+    // it could, for example, generate:
+    // mov 0xF30F1EFA, dword ptr[a]
+    // In such a case, the binary would include a gadget that starts
+    // with a fake ENDBR64 opcode. Therefore, we split such generation
+    // into multiple operations, let it not shows in the binary
+    if (N->getOpcode() == ISD::Constant) {
+      MVT VT = N->getSimpleValueType(0);
+      int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
+      int32_t EndbrImm = Subtarget->is64Bit() ? 0xF30F1EFA : 0xF30F1EFB;
+      if (Imm == EndbrImm || isEndbrImm64(Imm)) {
+        // Check that the cf-protection-branch is enabled.
+        Metadata *CFProtectionBranch =
+          MF->getMMI().getModule()->getModuleFlag("cf-protection-branch");
+        if (CFProtectionBranch || IndirectBranchTracking) {
+          SDLoc dl(N);
+          SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);
+          Complement = CurDAG->getNOT(dl, Complement, VT);
+          --I;
+          CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Complement);
+          ++I;
+          MadeChange = true;
+          continue;
+        }
+      }
+    }
 
     // If this is a target specific AND node with no flag usages, turn it back
     // into ISD::AND to enable test instruction matching.
