@@ -124,15 +124,30 @@ private:
   // memory into this process in a platform-specific way. Pointer and size
   // arguments are expected to be page-aligned. These functions will never
   // return on error, instead electing to kill the calling process on failure.
-  // Note that memory is initially mapped inaccessible. In order for RW
-  // mappings, call mapMemory() followed by markReadWrite() on the returned
-  // pointer. Each mapping is named on platforms that support it, primarily
-  // Android. This name must be a statically allocated string, as the Android
-  // kernel uses the string pointer directly.
-  void *mapMemory(size_t Size, const char *Name) const;
-  void unmapMemory(void *Ptr, size_t Size, const char *Name) const;
-  void markReadWrite(void *Ptr, size_t Size, const char *Name) const;
-  void markInaccessible(void *Ptr, size_t Size, const char *Name) const;
+  // The pool memory is initially reserved and inaccessible, and RW mappings are
+  // subsequently created and destroyed via allocateInGuardedPool() and
+  // deallocateInGuardedPool(). Each mapping is named on platforms that support
+  // it, primarily Android. This name must be a statically allocated string, as
+  // the Android kernel uses the string pointer directly.
+  void *map(size_t Size, const char *Name) const;
+  void unmap(void *Ptr, size_t Size) const;
+
+  // The pool is managed separately, as some platforms (particularly Fuchsia)
+  // manage virtual memory regions as a chunk where individual pages can still
+  // have separate permissions. These platforms maintain metadata about the
+  // region in order to perform operations. The pool is unique as it's the only
+  // thing in GWP-ASan that treats pages in a single VM region on an individual
+  // basis for page protection.
+  // The pointer returned by reserveGuardedPool() is the reserved address range
+  // of (at least) Size bytes.
+  void *reserveGuardedPool(size_t Size);
+  // allocateInGuardedPool() Ptr and Size must be a subrange of the previously
+  // reserved pool range.
+  void allocateInGuardedPool(void *Ptr, size_t Size) const;
+  // deallocateInGuardedPool() Ptr and Size must be an exact pair previously
+  // passed to allocateInGuardedPool().
+  void deallocateInGuardedPool(void *Ptr, size_t Size) const;
+  void unreserveGuardedPool();
 
   // Get the page size from the platform-specific implementation. Only needs to
   // be called once, and the result should be cached in PageSize in this class.
