@@ -30,8 +30,10 @@ void TestExpandMemRefReshapePass::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestExpandMemRefReshapePass() {
   PassRegistration<TestExpandMemRefReshapePass> pass(
       "test-expand-memref-reshape", "Test expanding memref reshape");
 }
+} // namespace test
 } // namespace mlir

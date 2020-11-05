@@ -1127,19 +1127,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::UDiv: {
-    // For the purposes of computing leading zeros we can conservatively
-    // treat a udiv as a logical right shift by the power of 2 known to
-    // be less than the denominator.
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-    unsigned LeadZ = Known2.countMinLeadingZeros();
-
-    Known2.resetAll();
+    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
-    unsigned RHSMaxLeadingZeros = Known2.countMaxLeadingZeros();
-    if (RHSMaxLeadingZeros != BitWidth)
-      LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
-
-    Known.Zero.setHighBits(LeadZ);
+    Known = KnownBits::udiv(Known, Known2);
     break;
   }
   case Instruction::Select: {
@@ -1337,29 +1327,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Known.makeNonNegative();
 
     break;
-  case Instruction::URem: {
-    if (ConstantInt *Rem = dyn_cast<ConstantInt>(I->getOperand(1))) {
-      const APInt &RA = Rem->getValue();
-      if (RA.isPowerOf2()) {
-        APInt LowBits = (RA - 1);
-        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-        Known.Zero |= ~LowBits;
-        Known.One &= LowBits;
-        break;
-      }
-    }
-
-    // Since the result is less than or equal to either operand, any leading
-    // zero bits in either operand must also exist in the result.
+  case Instruction::URem:
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
-
-    unsigned Leaders =
-        std::max(Known.countMinLeadingZeros(), Known2.countMinLeadingZeros());
-    Known.resetAll();
-    Known.Zero.setHighBits(Leaders);
+    Known = KnownBits::urem(Known, Known2);
     break;
-  }
   case Instruction::Alloca:
     Known.Zero.setLowBits(Log2(cast<AllocaInst>(I)->getAlign()));
     break;
