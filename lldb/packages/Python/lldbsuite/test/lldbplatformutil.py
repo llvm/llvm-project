@@ -124,8 +124,7 @@ def getHostPlatform():
 
 
 def getDarwinOSTriples():
-    return ['darwin', 'macosx', 'ios', 'watchos', 'tvos', 'bridgeos']
-
+    return lldbplatform.translate(lldbplatform.darwin_all)
 
 def getPlatform():
     """Returns the target platform which the tests are running on."""
