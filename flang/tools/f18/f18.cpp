@@ -525,7 +525,6 @@ int main(int argc, char *const argv[]) {
       driver.measureTree = true;
     } else if (arg == "-fdebug-instrumented-parse") {
       options.instrumentedParse = true;
-    } else if (arg == "-fdebug-semantics") {
     } else if (arg == "-fdebug-no-semantics") {
       driver.debugNoSemantics = true;
     } else if (arg == "-funparse") {
@@ -565,8 +564,6 @@ int main(int argc, char *const argv[]) {
       } else {
         driver.F18_FCArgs.push_back("-fdefault-integer-8");
       }
-    } else if (arg == "-Mlargearray") {
-    } else if (arg == "-Mnolargearray") {
     } else if (arg == "-flarge-sizes") {
       defaultKinds.set_sizeIntegerKind(8);
     } else if (arg == "-fno-large-sizes") {
