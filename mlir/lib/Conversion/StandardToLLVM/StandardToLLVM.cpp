@@ -2416,6 +2416,114 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
   }
 };
 
+struct MemRefReinterpretCastOpLowering
+    : public ConvertOpToLLVMPattern<MemRefReinterpretCastOp> {
+  using ConvertOpToLLVMPattern<MemRefReinterpretCastOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto castOp = cast<MemRefReinterpretCastOp>(op);
+    MemRefReinterpretCastOp::Adaptor adaptor(operands, op->getAttrDictionary());
+    Type srcType = castOp.source().getType();
+
+    Value descriptor;
+    if (failed(convertSourceMemRefToDescriptor(rewriter, srcType, castOp,
+                                               adaptor, &descriptor)))
+      return failure();
+    rewriter.replaceOp(op, {descriptor});
+    return success();
+  }
+
+private:
+  LogicalResult
+  convertSourceMemRefToDescriptor(ConversionPatternRewriter &rewriter,
+                                  Type srcType, MemRefReinterpretCastOp castOp,
+                                  MemRefReinterpretCastOp::Adaptor adaptor,
+                                  Value *descriptor) const {
+    MemRefType targetMemRefType =
+        castOp.getResult().getType().cast<MemRefType>();
+    auto llvmTargetDescriptorTy = typeConverter.convertType(targetMemRefType)
+                                      .dyn_cast_or_null<LLVM::LLVMType>();
+    if (!llvmTargetDescriptorTy || !llvmTargetDescriptorTy.isStructTy())
+      return failure();
+
+    // Create descriptor.
+    Location loc = castOp.getLoc();
+    auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
+
+    // Set allocated and aligned pointers.
+    Value allocatedPtr, alignedPtr;
+    extractPointers(loc, rewriter, castOp.source(), adaptor.source(),
+                    &allocatedPtr, &alignedPtr);
+    desc.setAllocatedPtr(rewriter, loc, allocatedPtr);
+    desc.setAlignedPtr(rewriter, loc, alignedPtr);
+
+    // Set offset.
+    if (castOp.isDynamicOffset(0))
+      desc.setOffset(rewriter, loc, adaptor.offsets()[0]);
+    else
+      desc.setConstantOffset(rewriter, loc, castOp.getStaticOffset(0));
+
+    // Set sizes and strides.
+    unsigned dynSizeId = 0;
+    unsigned dynStrideId = 0;
+    for (unsigned i = 0, e = targetMemRefType.getRank(); i < e; ++i) {
+      if (castOp.isDynamicSize(i))
+        desc.setSize(rewriter, loc, i, adaptor.sizes()[dynSizeId++]);
+      else
+        desc.setConstantSize(rewriter, loc, i, castOp.getStaticSize(i));
+
+      if (castOp.isDynamicStride(i))
+        desc.setStride(rewriter, loc, i, adaptor.strides()[dynStrideId++]);
+      else
+        desc.setConstantStride(rewriter, loc, i, castOp.getStaticStride(i));
+    }
+    *descriptor = desc;
+    return success();
+  }
+
+  void extractPointers(Location loc, ConversionPatternRewriter &rewriter,
+                       Value originalOperand, Value convertedOperand,
+                       Value *allocatedPtr, Value *alignedPtr) const {
+    Type operandType = originalOperand.getType();
+    if (operandType.isa<MemRefType>()) {
+      MemRefDescriptor desc(convertedOperand);
+      *allocatedPtr = desc.allocatedPtr(rewriter, loc);
+      *alignedPtr = desc.alignedPtr(rewriter, loc);
+      return;
+    }
+
+    unsigned memorySpace =
+        operandType.cast<UnrankedMemRefType>().getMemorySpace();
+    Type elementType = operandType.cast<UnrankedMemRefType>().getElementType();
+    LLVM::LLVMType llvmElementType =
+        typeConverter.convertType(elementType).cast<LLVM::LLVMType>();
+    LLVM::LLVMType elementPtrPtrType =
+        llvmElementType.getPointerTo(memorySpace).getPointerTo();
+
+    // Extract pointer to the underlying ranked memref descriptor and cast it to
+    // ElemType**.
+    UnrankedMemRefDescriptor unrankedDesc(convertedOperand);
+    Value underlyingDescPtr = unrankedDesc.memRefDescPtr(rewriter, loc);
+    Value elementPtrPtr = rewriter.create<LLVM::BitcastOp>(
+        loc, elementPtrPtrType, underlyingDescPtr);
+
+    LLVM::LLVMType int32Type =
+        typeConverter.convertType(rewriter.getI32Type()).cast<LLVM::LLVMType>();
+
+    // Extract and set allocated pointer.
+    *allocatedPtr = rewriter.create<LLVM::LoadOp>(loc, elementPtrPtr);
+
+    // Extract and set aligned pointer.
+    Value one = rewriter.create<LLVM::ConstantOp>(
+        loc, int32Type, rewriter.getI32IntegerAttr(1));
+    Value alignedGep = rewriter.create<LLVM::GEPOp>(
+        loc, elementPtrPtrType, elementPtrPtr, ValueRange({one}));
+    *alignedPtr = rewriter.create<LLVM::LoadOp>(loc, alignedGep);
+  }
+};
+
 struct DialectCastOpLowering
     : public ConvertOpToLLVMPattern<LLVM::DialectCastOp> {
   using ConvertOpToLLVMPattern<LLVM::DialectCastOp>::ConvertOpToLLVMPattern;
@@ -3532,6 +3640,7 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       DimOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
+      MemRefReinterpretCastOpLowering,
       RankOpLowering,
       StoreOpLowering,
       SubViewOpLowering,
