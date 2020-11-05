@@ -473,7 +473,6 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 #ifndef NDEBUG
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
-#endif
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI));
 
@@ -482,6 +481,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
           SOffset->getReg() ==
               MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg()) ||
          (SOffset->isImm() && SOffset->getImm() == 0));
+#endif
 
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;
