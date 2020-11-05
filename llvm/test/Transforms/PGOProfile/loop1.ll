@@ -32,7 +32,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.end
 ; USE: br i1 %cmp, label %for.body, label %for.end
 ; USE-SAME: !prof ![[BW_FOR_COND:[0-9]+]]
-; USE: ![[BW_FOR_COND]] = !{!"branch_weights", i32 96, i32 4}
+; USE: ![[BW_FOR_COND]] = !{!"branch_weights", i64 96, i64 4}
 
 for.body:
 ; GEN: for.body:

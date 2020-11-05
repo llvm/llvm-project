@@ -28,7 +28,7 @@ ret i32 %val
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"MaxFunctionCount", i32 10000}
 !1 = !{!"function_entry_count", i64 10000}
-!2 = !{!"branch_weights", i32 5, i32 5}
-!3 = !{!"branch_weights", i32 4, i32 1}
+!2 = !{!"branch_weights", i64 5, i64 5}
+!3 = !{!"branch_weights", i64 4, i64 1}
 
-; CHECK: [[COUNT1]] = !{!"branch_weights", i32 31, i32 8}
+; CHECK: [[COUNT1]] = !{!"branch_weights", i64 31, i64 8}
