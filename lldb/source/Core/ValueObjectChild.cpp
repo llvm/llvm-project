@@ -190,9 +190,6 @@ bool ValueObjectChild::UpdateValue() {
           m_value.GetScalar() = scalar;
         }
         break;
-      default:
-        m_error.SetErrorString("parent has invalid value.");
-        break;
       }
 
       if (m_error.Success()) {
