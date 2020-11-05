@@ -4,7 +4,7 @@
 ; RUN: split-file %s %t
 ; RUN: llvm-as %t/a.ll -o %ta.o
 ; RUN: llvm-as %t/b.ll -o %tb.o
-; RUN: ld.lld --warn-backrefs --start-lib %tb.o --end-lib %ta.o 2>&1 | FileCheck %s
+; RUN: ld.lld --warn-backrefs --start-lib %tb.o --end-lib %ta.o -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: warning: backward reference detected: f in {{.*}}a.o refers to {{.*}}b.o
 
