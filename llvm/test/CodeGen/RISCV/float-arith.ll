@@ -405,8 +405,7 @@ define float @fnmadd_s_2(float %a, float %b, float %c) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft3, zero
 ; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
 ; RV32IF-NEXT:    fadd.s ft1, ft1, ft3
-; RV32IF-NEXT:    fneg.s ft2, ft2
-; RV32IF-NEXT:    fmsub.s ft0, ft0, ft2, ft1
+; RV32IF-NEXT:    fnmadd.s ft0, ft0, ft2, ft1
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
@@ -418,8 +417,7 @@ define float @fnmadd_s_2(float %a, float %b, float %c) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft3, zero
 ; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
 ; RV64IF-NEXT:    fadd.s ft1, ft1, ft3
-; RV64IF-NEXT:    fneg.s ft2, ft2
-; RV64IF-NEXT:    fmsub.s ft0, ft0, ft2, ft1
+; RV64IF-NEXT:    fnmadd.s ft0, ft0, ft2, ft1
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %b_ = fadd float 0.0, %b
@@ -466,8 +464,7 @@ define float @fnmsub_s_2(float %a, float %b, float %c) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft2, a1
 ; RV32IF-NEXT:    fmv.w.x ft3, zero
 ; RV32IF-NEXT:    fadd.s ft2, ft2, ft3
-; RV32IF-NEXT:    fneg.s ft2, ft2
-; RV32IF-NEXT:    fmadd.s ft0, ft1, ft2, ft0
+; RV32IF-NEXT:    fnmsub.s ft0, ft1, ft2, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
@@ -478,8 +475,7 @@ define float @fnmsub_s_2(float %a, float %b, float %c) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft2, a1
 ; RV64IF-NEXT:    fmv.w.x ft3, zero
 ; RV64IF-NEXT:    fadd.s ft2, ft2, ft3
-; RV64IF-NEXT:    fneg.s ft2, ft2
-; RV64IF-NEXT:    fmadd.s ft0, ft1, ft2, ft0
+; RV64IF-NEXT:    fnmsub.s ft0, ft1, ft2, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %b_ = fadd float 0.0, %b
