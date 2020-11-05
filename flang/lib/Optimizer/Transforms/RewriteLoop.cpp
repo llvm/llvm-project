@@ -258,10 +258,23 @@ public:
 
     // With the body block done, we can fill in the condition block.
     rewriter.setInsertionPointToEnd(conditionBlock);
-    auto comp1 =
+    // The comparison depends on the sign of the step value. We fully expect
+    // this expression to be folded by the optimizer or LLVM. This expression
+    // is written this way so that `step == 0` always returns `false`.
+    auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
+    auto compl0 =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, zero, step);
+    auto compl1 =
         rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, iv, upperBound);
+    auto compl2 =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, step, zero);
+    auto compl3 =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, upperBound, iv);
+    auto cmp0 = rewriter.create<mlir::AndOp>(loc, compl0, compl1);
+    auto cmp1 = rewriter.create<mlir::AndOp>(loc, compl2, compl3);
+    auto cmp2 = rewriter.create<mlir::OrOp>(loc, cmp0, cmp1);
     // Remember to AND in the early-exit bool.
-    auto comparison = rewriter.create<mlir::AndOp>(loc, comp1, iterateVar);
+    auto comparison = rewriter.create<mlir::AndOp>(loc, iterateVar, cmp2);
     rewriter.create<mlir::CondBranchOp>(loc, comparison, firstBodyBlock,
                                         llvm::ArrayRef<mlir::Value>(), endBlock,
                                         llvm::ArrayRef<mlir::Value>());
