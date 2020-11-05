@@ -28,7 +28,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
         self.build()
@@ -67,7 +67,6 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfiOSSimulator
     # "register read fstat" always return 0xffff
     @expectedFailureAndroid(archs=["i386"])
-    @skipIfFreeBSD  # llvm.org/pr25057
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")

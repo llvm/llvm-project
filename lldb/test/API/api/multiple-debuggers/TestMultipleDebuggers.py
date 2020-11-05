@@ -19,7 +19,7 @@ class TestMultipleSimultaneousDebuggers(TestBase):
 
     @skipIfNoSBHeaders
     @skipIfWindows
-    @expectedFailureAll(oslist=['freebsd'])
+    @expectedFailureAll(oslist=["freebsd"])
     def test_multiple_debuggers(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
