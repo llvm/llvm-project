@@ -15,6 +15,7 @@
 
 #include "VE.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
@@ -48,8 +49,8 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;
 
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
 
   const SpillSlot *
   getCalleeSavedSpillSlots(unsigned &NumEntries) const override {
