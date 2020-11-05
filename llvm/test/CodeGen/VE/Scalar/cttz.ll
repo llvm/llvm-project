@@ -10,16 +10,16 @@ define i128 @func128(i128 %p) {
 ; CHECK-LABEL: func128:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmps.l %s3, %s0, %s2
-; CHECK-NEXT:    lea %s4, -1(, %s0)
-; CHECK-NEXT:    nnd %s0, %s0, %s4
-; CHECK-NEXT:    pcnt %s4, %s0
+; CHECK-NEXT:    cmps.l %s2, %s0, %s2
+; CHECK-NEXT:    lea %s3, -1(, %s0)
+; CHECK-NEXT:    nnd %s0, %s0, %s3
+; CHECK-NEXT:    pcnt %s3, %s0
 ; CHECK-NEXT:    lea %s0, -1(, %s1)
 ; CHECK-NEXT:    nnd %s0, %s1, %s0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    lea %s0, 64(, %s0)
-; CHECK-NEXT:    cmov.l.ne %s0, %s4, %s3
-; CHECK-NEXT:    or %s1, 0, %s2
+; CHECK-NEXT:    cmov.l.ne %s0, %s3, %s2
+; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i128 @llvm.cttz.i128(i128 %p, i1 true)
   ret i128 %r
