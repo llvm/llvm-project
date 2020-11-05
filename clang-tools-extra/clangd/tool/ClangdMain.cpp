@@ -13,6 +13,9 @@
 #include "Protocol.h"
 #include "Transport.h"
 #include "index/Background.h"
+#include "index/Index.h"
+#include "index/Merge.h"
+#include "index/ProjectAware.h"
 #include "index/Serialization.h"
 #include "index/remote/Client.h"
 #include "refactor/Rename.h"
@@ -40,6 +43,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -551,6 +555,27 @@ const char TestScheme::TestDir[] = "C:\\clangd-test";
 const char TestScheme::TestDir[] = "/clangd-test";
 #endif
 
+std::unique_ptr<SymbolIndex>
+loadExternalIndex(const Config::ExternalIndexSpec &External,
+                  AsyncTaskRunner &Tasks) {
+  switch (External.Kind) {
+  case Config::ExternalIndexSpec::Server:
+    log("Associating {0} with remote index at {1}.", External.MountPoint,
+        External.Location);
+    return remote::getClient(External.Location, External.MountPoint);
+  case Config::ExternalIndexSpec::File:
+    log("Associating {0} with monolithic index at {1}.", External.MountPoint,
+        External.Location);
+    auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
+    Tasks.runAsync("Load-index:" + External.Location,
+                   [File = External.Location, PlaceHolder = NewIndex.get()] {
+                     if (auto Idx = loadIndex(File, /*UseDex=*/true))
+                       PlaceHolder->reset(std::move(Idx));
+                   });
+    return std::move(NewIndex);
+  }
+  llvm_unreachable("Invalid ExternalIndexKind.");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
@@ -726,6 +751,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   Opts.CollectMainFileRefs = CollectMainFileRefs;
+  std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {
@@ -757,7 +783,15 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
 #endif
   Opts.BackgroundIndex = EnableBackgroundIndex;
-  Opts.StaticIndex = StaticIdx.get();
+  auto PAI = createProjectAwareIndex(loadExternalIndex);
+  if (StaticIdx) {
+    IdxStack.emplace_back(std::move(StaticIdx));
+    IdxStack.emplace_back(
+        std::make_unique<MergedIndex>(PAI.get(), IdxStack.back().get()));
+    Opts.StaticIndex = IdxStack.back().get();
+  } else {
+    Opts.StaticIndex = PAI.get();
+  }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.BuildRecoveryAST = RecoveryAST;
   Opts.PreserveRecoveryASTType = RecoveryASTType;

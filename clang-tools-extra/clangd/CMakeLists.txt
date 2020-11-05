@@ -151,7 +151,6 @@ target_link_libraries(clangDaemon
   clangTidy
   ${ALL_CLANG_TIDY_CHECKS}
 
-  clangdRemoteIndex
   clangdSupport
   )
 

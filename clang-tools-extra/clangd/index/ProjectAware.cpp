@@ -15,7 +15,6 @@
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
-#include "index/remote/Client.h"
 #include "support/Logger.h"
 #include "support/Threading.h"
 #include "support/Trace.h"
@@ -124,33 +123,11 @@ SymbolIndex *ProjectAwareIndex::getIndex() const {
     Entry.first->getSecond() = Gen(External, Tasks);
   return Entry.first->second.get();
 }
-
-std::unique_ptr<SymbolIndex>
-defaultFactory(const Config::ExternalIndexSpec &External,
-               AsyncTaskRunner &Tasks) {
-  switch (External.Kind) {
-  case Config::ExternalIndexSpec::Server:
-    log("Associating {0} with remote index at {1}.", External.MountPoint,
-        External.Location);
-    return remote::getClient(External.Location, External.MountPoint);
-  case Config::ExternalIndexSpec::File:
-    log("Associating {0} with monolithic index at {1}.", External.MountPoint,
-        External.Location);
-    auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
-    Tasks.runAsync("Load-index:" + External.Location,
-                   [File = External.Location, PlaceHolder = NewIndex.get()] {
-                     if (auto Idx = loadIndex(File, /*UseDex=*/true))
-                       PlaceHolder->reset(std::move(Idx));
-                   });
-    return std::move(NewIndex);
-  }
-  llvm_unreachable("Invalid ExternalIndexKind.");
-}
 } // namespace
 
 std::unique_ptr<SymbolIndex> createProjectAwareIndex(IndexFactory Gen) {
-  return std::make_unique<ProjectAwareIndex>(Gen ? std::move(Gen)
-                                                 : defaultFactory);
+  assert(Gen);
+  return std::make_unique<ProjectAwareIndex>(std::move(Gen));
 }
 } // namespace clangd
 } // namespace clang
