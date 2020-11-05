@@ -56,6 +56,10 @@ struct ObjCARCAPElimPass : public PassInfoMixin<ObjCARCAPElimPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+struct ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
+  PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
+};
+
 } // End llvm namespace
 
 #endif
