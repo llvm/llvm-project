@@ -495,7 +495,7 @@ define i1 @ctpop_ugt_bitwidth_minus_one_i8(i8 %x, i8* %p) {
 ; CHECK-LABEL: @ctpop_ugt_bitwidth_minus_one_i8(
 ; CHECK-NEXT:    [[POP:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), [[RNG2:!range !.*]]
 ; CHECK-NEXT:    store i8 [[POP]], i8* [[P:%.*]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[POP]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %pop = tail call i8 @llvm.ctpop.i8(i8 %x)
@@ -506,8 +506,7 @@ define i1 @ctpop_ugt_bitwidth_minus_one_i8(i8 %x, i8* %p) {
 
 define <2 x i1> @ctpop_ult_bitwidth_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_ult_bitwidth_v2i32(
-; CHECK-NEXT:    [[POP:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[POP]], <i32 32, i32 32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %pop = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)
