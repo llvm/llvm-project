@@ -261,3 +261,15 @@ func @composite_insert_invalid_result_type(%arg0: !spv.array<4xf32>, %arg1 : f32
   %0 = "spv.CompositeInsert"(%arg1, %arg0) {indices = [0: i32]} : (f32, !spv.array<4xf32>) -> !spv.array<4xf64>
   return %0: !spv.array<4xf64>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.VectorExtractDynamic
+//===----------------------------------------------------------------------===//
+
+func @vector_dynamic_extract(%vec: vector<4xf32>, %id : i32) -> f32 {
+  // CHECK: spv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xf32>, i32
+  %0 = spv.VectorExtractDynamic %vec[%id] : vector<4xf32>, i32
+  return %0 : f32
+}
