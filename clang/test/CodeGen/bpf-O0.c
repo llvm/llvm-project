@@ -1,4 +1,5 @@
 // RUN: %clang -O0 %s -target bpf -g -c -o /dev/null -fexperimental-new-pass-manager
+// REQUIRES: bpf-registered-target
 
 struct ss {
   int a;
