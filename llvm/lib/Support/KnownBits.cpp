@@ -306,6 +306,75 @@ KnownBits KnownBits::computeForMul(const KnownBits &LHS, const KnownBits &RHS) {
   return Res;
 }
 
+KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+  KnownBits Known(BitWidth);
+
+  // For the purposes of computing leading zeros we can conservatively
+  // treat a udiv as a logical right shift by the power of 2 known to
+  // be less than the denominator.
+  unsigned LeadZ = LHS.countMinLeadingZeros();
+  unsigned RHSMaxLeadingZeros = RHS.countMaxLeadingZeros();
+
+  if (RHSMaxLeadingZeros != BitWidth)
+    LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
+
+  Known.Zero.setHighBits(LeadZ);
+  return Known;
+}
+
+KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
+    // The upper bits are all zero, the lower ones are unchanged.
+    APInt LowBits = RHS.getConstant() - 1;
+    Known.Zero = LHS.Zero | ~LowBits;
+    Known.One = LHS.One & LowBits;
+    return Known;
+  }
+
+  // Since the result is less than or equal to either operand, any leading
+  // zero bits in either operand must also exist in the result.
+  uint32_t Leaders =
+      std::max(LHS.countMinLeadingZeros(), RHS.countMinLeadingZeros());
+  Known.Zero.setHighBits(Leaders);
+  return Known;
+}
+
+KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+  KnownBits Known(BitWidth);
+
+  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
+    // The low bits of the first operand are unchanged by the srem.
+    APInt LowBits = RHS.getConstant() - 1;
+    Known.Zero = LHS.Zero & LowBits;
+    Known.One = LHS.One & LowBits;
+
+    // If the first operand is non-negative or has all low bits zero, then
+    // the upper bits are all zero.
+    if (LHS.isNonNegative() || LowBits.isSubsetOf(LHS.Zero))
+      Known.Zero |= ~LowBits;
+
+    // If the first operand is negative and not all low bits are zero, then
+    // the upper bits are all one.
+    if (LHS.isNegative() && LowBits.intersects(LHS.One))
+      Known.One |= ~LowBits;
+    return Known;
+  }
+
+  // The sign bit is the LHS's sign bit, except when the result of the
+  // remainder is zero. If it's known zero, our sign bit is also zero.
+  if (LHS.isNonNegative())
+    Known.makeNonNegative();
+  return Known;
+}
+
 KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
   // Result bit is 0 if either operand bit is 0.
   Zero |= RHS.Zero;

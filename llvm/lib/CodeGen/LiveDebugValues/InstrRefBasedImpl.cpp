@@ -1576,8 +1576,10 @@ InstrRefBasedLDV::extractSpillBaseRegAndOffset(const MachineInstr &MI) {
   int FI = cast<FixedStackPseudoSourceValue>(PVal)->getFrameIndex();
   const MachineBasicBlock *MBB = MI.getParent();
   Register Reg;
-  int Offset = TFI->getFrameIndexReference(*MBB->getParent(), FI, Reg);
-  return {Reg, Offset};
+  StackOffset Offset = TFI->getFrameIndexReference(*MBB->getParent(), FI, Reg);
+  assert(!Offset.getScalable() &&
+         "Frame offsets with a scalable component are not supported");
+  return {Reg, static_cast<int>(Offset.getFixed())};
 }
 
 /// End all previous ranges related to @MI and start a new range from @MI

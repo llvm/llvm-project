@@ -2884,18 +2884,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::UDIV: {
-    // For the purposes of computing leading zeros we can conservatively
-    // treat a udiv as a logical right shift by the power of 2 known to
-    // be less than the denominator.
-    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    unsigned LeadZ = Known2.countMinLeadingZeros();
-
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    unsigned RHSMaxLeadingZeros = Known2.countMaxLeadingZeros();
-    if (RHSMaxLeadingZeros != BitWidth)
-      LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
-
-    Known.Zero.setHighBits(LeadZ);
+    Known = KnownBits::udiv(Known, Known2);
     break;
   }
   case ISD::SELECT:
@@ -3258,53 +3249,16 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
     break;
   }
-  case ISD::SREM:
-    if (ConstantSDNode *Rem = isConstOrConstSplat(Op.getOperand(1))) {
-      const APInt &RA = Rem->getAPIntValue().abs();
-      if (RA.isPowerOf2()) {
-        APInt LowBits = RA - 1;
-        Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-
-        // The low bits of the first operand are unchanged by the srem.
-        Known.Zero = Known2.Zero & LowBits;
-        Known.One = Known2.One & LowBits;
-
-        // If the first operand is non-negative or has all low bits zero, then
-        // the upper bits are all zero.
-        if (Known2.isNonNegative() || LowBits.isSubsetOf(Known2.Zero))
-          Known.Zero |= ~LowBits;
-
-        // If the first operand is negative and not all low bits are zero, then
-        // the upper bits are all one.
-        if (Known2.isNegative() && LowBits.intersects(Known2.One))
-          Known.One |= ~LowBits;
-        assert((Known.Zero & Known.One) == 0&&"Bits known to be one AND zero?");
-      }
-    }
-    break;
-  case ISD::UREM: {
-    if (ConstantSDNode *Rem = isConstOrConstSplat(Op.getOperand(1))) {
-      const APInt &RA = Rem->getAPIntValue();
-      if (RA.isPowerOf2()) {
-        APInt LowBits = (RA - 1);
-        Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-
-        // The upper bits are all zero, the lower ones are unchanged.
-        Known.Zero = Known2.Zero | ~LowBits;
-        Known.One = Known2.One & LowBits;
-        break;
-      }
-    }
-
-    // Since the result is less than or equal to either operand, any leading
-    // zero bits in either operand must also exist in the result.
+  case ISD::SREM: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-
-    uint32_t Leaders =
-        std::max(Known.countMinLeadingZeros(), Known2.countMinLeadingZeros());
-    Known.resetAll();
-    Known.Zero.setHighBits(Leaders);
+    Known = KnownBits::srem(Known, Known2);
+    break;
+  }
+  case ISD::UREM: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::urem(Known, Known2);
     break;
   }
   case ISD::EXTRACT_ELEMENT: {

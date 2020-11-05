@@ -192,8 +192,10 @@ void TestLoopFusion::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestLoopFusion() {
   PassRegistration<TestLoopFusion>("test-loop-fusion",
                                    "Tests loop fusion utility functions.");
 }
+} // namespace test
 } // namespace mlir

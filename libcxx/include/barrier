@@ -44,6 +44,7 @@ namespace std
 */
 
 #include <__config>
+#include <__availability>
 #include <atomic>
 #ifndef _LIBCPP_HAS_NO_TREE_BARRIER
 # include <memory>

@@ -20,7 +20,6 @@ class DataFormatterVarScriptFormatting(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', ' // Set breakpoint here.')
 
-    @skipIfFreeBSD  # llvm.org/pr20545 bogus output confuses buildbot parser
     def test_with_run_command(self):
         """Test using Python synthetic children provider."""
         self.build()

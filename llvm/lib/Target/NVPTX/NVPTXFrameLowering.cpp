@@ -63,12 +63,13 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
-int NVPTXFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                               int FI,
-                                               Register &FrameReg) const {
+StackOffset
+NVPTXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                           Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   FrameReg = NVPTX::VRDepot;
-  return MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
+  return StackOffset::getFixed(MFI.getObjectOffset(FI) -
+                               getOffsetOfLocalArea());
 }
 
 void NVPTXFrameLowering::emitEpilogue(MachineFunction &MF,

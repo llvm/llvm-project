@@ -52,7 +52,8 @@ class MapAllocatorNoCache {
 public:
   void initLinkerInitialized(UNUSED s32 ReleaseToOsInterval) {}
   void init(UNUSED s32 ReleaseToOsInterval) {}
-  bool retrieve(UNUSED uptr Size, UNUSED LargeBlock::Header **H) {
+  bool retrieve(UNUSED uptr Size, UNUSED LargeBlock::Header **H,
+                UNUSED bool *Zeroed) {
     return false;
   }
   bool store(UNUSED LargeBlock::Header *H) { return false; }
@@ -126,7 +127,7 @@ public:
     return EntryCached;
   }
 
-  bool retrieve(uptr Size, LargeBlock::Header **H) {
+  bool retrieve(uptr Size, LargeBlock::Header **H, bool *Zeroed) {
     const uptr PageSize = getPageSizeCached();
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     ScopedLock L(Mutex);
@@ -141,6 +142,7 @@ public:
       if (Size < BlockSize - PageSize * 4U)
         continue;
       *H = reinterpret_cast<LargeBlock::Header *>(Entries[I].Block);
+      *Zeroed = Entries[I].Time == 0;
       Entries[I].Block = 0;
       (*H)->BlockEnd = Entries[I].BlockEnd;
       (*H)->MapBase = Entries[I].MapBase;
@@ -328,12 +330,13 @@ void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
 
   if (AlignmentHint < PageSize && Cache.canCache(RoundedSize)) {
     LargeBlock::Header *H;
-    if (Cache.retrieve(RoundedSize, &H)) {
+    bool Zeroed;
+    if (Cache.retrieve(RoundedSize, &H, &Zeroed)) {
       if (BlockEnd)
         *BlockEnd = H->BlockEnd;
       void *Ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(H) +
                                            LargeBlock::getHeaderSize());
-      if (FillContents)
+      if (FillContents && !Zeroed)
         memset(Ptr, FillContents == ZeroFill ? 0 : PatternFillByte,
                H->BlockEnd - reinterpret_cast<uptr>(Ptr));
       const uptr BlockSize = H->BlockEnd - reinterpret_cast<uptr>(H);

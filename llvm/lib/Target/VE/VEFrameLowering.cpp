@@ -320,8 +320,9 @@ bool VEFrameLowering::hasBP(const MachineFunction &MF) const {
   return MFI.hasVarSizedObjects() && TRI->needsStackRealignment(MF);
 }
 
-int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                            Register &FrameReg) const {
+StackOffset VEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                    int FI,
+                                                    Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const VERegisterInfo *RegInfo = STI.getRegisterInfo();
   const VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
@@ -333,7 +334,8 @@ int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // If there's a leaf proc, all offsets need to be %sp-based,
     // because we haven't caused %fp to actually point to our frame.
     FrameReg = VE::SX11; // %sp
-    return FrameOffset + MF.getFrameInfo().getStackSize();
+    return StackOffset::getFixed(FrameOffset +
+                                 MF.getFrameInfo().getStackSize());
   }
   if (RegInfo->needsStackRealignment(MF) && !isFixed) {
     // If there is dynamic stack realignment, all local object
@@ -343,11 +345,12 @@ int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       FrameReg = VE::SX17; // %bp
     else
       FrameReg = VE::SX11; // %sp
-    return FrameOffset + MF.getFrameInfo().getStackSize();
+    return StackOffset::getFixed(FrameOffset +
+                                 MF.getFrameInfo().getStackSize());
   }
   // Finally, default to using %fp.
   FrameReg = RegInfo->getFrameRegister(MF);
-  return FrameOffset;
+  return StackOffset::getFixed(FrameOffset);
 }
 
 bool VEFrameLowering::isLeafProc(MachineFunction &MF) const {

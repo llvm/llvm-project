@@ -175,7 +175,7 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   Register FrameReg;
   int Offset;
-  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
+  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
 
   Offset += MI.getOperand(FIOperandNum + 1).getImm();
 

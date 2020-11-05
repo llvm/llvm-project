@@ -626,8 +626,10 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
-    int Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
-    FI.ChangeToImmediate(Offset);
+    StackOffset Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
+    assert(!Offset.getScalable() &&
+           "Frame offsets with a scalable component are not supported");
+    FI.ChangeToImmediate(Offset.getFixed());
     return;
   }
 

@@ -30,8 +30,10 @@ void TestExpandTanhPass::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestExpandTanhPass() {
   PassRegistration<TestExpandTanhPass> pass("test-expand-tanh",
                                             "Test expanding tanh");
 }
+} // namespace test
 } // namespace mlir

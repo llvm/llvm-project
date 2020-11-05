@@ -180,6 +180,7 @@ typedef basic_fstream<wchar_t> wfstream;
 */
 
 #include <__config>
+#include <__availability>
 #include <ostream>
 #include <istream>
 #include <__locale>
