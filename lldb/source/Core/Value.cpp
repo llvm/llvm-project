@@ -113,7 +113,6 @@ Value::ValueType Value::GetValueType() const { return m_value_type; }
 
 AddressType Value::GetValueAddressType() const {
   switch (m_value_type) {
-  default:
   case eValueTypeScalar:
     break;
   case eValueTypeLoadAddress:
@@ -278,9 +277,6 @@ lldb::Format Value::GetValueDefaultFormat() {
 
 bool Value::GetData(DataExtractor &data) {
   switch (m_value_type) {
-  default:
-    break;
-
   case eValueTypeScalar:
     if (m_value.GetData(data))
       return true;
@@ -571,7 +567,6 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
     case eValueTypeScalar: // raw scalar value
       break;
 
-    default:
     case eValueTypeFileAddress:
     case eValueTypeLoadAddress: // load address value
     case eValueTypeHostAddress: // host address value (for memory in the process
