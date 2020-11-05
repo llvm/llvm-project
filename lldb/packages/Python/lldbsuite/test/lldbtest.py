@@ -2607,6 +2607,9 @@ FileCheck output:
         """Platform specific way to build the default binaries."""
         module = builder_module()
 
+        if not architecture and configuration.arch:
+            architecture = configuration.arch
+
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if self.getDebugInfo() is None:
             return self.buildDefault(architecture, compiler, dictionary)
