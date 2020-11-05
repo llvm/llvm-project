@@ -19,7 +19,7 @@
 
 #include "filesystem_include.h"
 #include <cassert>
-#include <fstream>
+#include <cstdio>
 #include <string>
 
 #include "test_macros.h"
@@ -50,20 +50,20 @@ TEST_CASE(large_file) {
   }
 
   // Create a file right at the size limit. The file is full of '\0's.
-  const path file = env.create_file("source", sendfile_size_limit);
+  const path source = env.create_file("source", sendfile_size_limit);
   const std::string additional_data(additional_size, 'x');
   // Append known data to the end of the source file.
   {
-    std::ofstream outf(file.string(), std::ios_base::app);
-    TEST_REQUIRE(outf.good());
-    outf << additional_data;
-    TEST_REQUIRE(outf);
+    std::FILE* outf = std::fopen(source.string().c_str(), "a");
+    TEST_REQUIRE(outf != nullptr);
+    std::fputs(additional_data.c_str(), outf);
+    std::fclose(outf);
   }
-  TEST_REQUIRE(file_size(file) == test_file_size);
+  TEST_REQUIRE(file_size(source) == test_file_size);
   const path dest = env.make_env_path("dest");
 
   std::error_code ec = GetTestEC();
-  TEST_CHECK(copy_file(file, dest, ec));
+  TEST_CHECK(copy_file(source, dest, ec));
   TEST_CHECK(!ec);
 
   TEST_REQUIRE(is_regular_file(dest));
@@ -71,15 +71,13 @@ TEST_CASE(large_file) {
 
   // Read the data from the end of the destination file, and ensure it matches
   // the data at the end of the source file.
-  std::string out_data;
-  out_data.reserve(additional_size);
+  std::string out_data(additional_size, 'z');
   {
-    std::ifstream dest_file(dest.string());
-    TEST_REQUIRE(dest_file);
-    dest_file.seekg(sendfile_size_limit);
-    TEST_REQUIRE(dest_file);
-    dest_file >> out_data;
-    TEST_CHECK(dest_file.eof());
+    std::FILE* dest_file = std::fopen(dest.string().c_str(), "rb");
+    TEST_REQUIRE(dest_file != nullptr);
+    TEST_REQUIRE(std::fseek(dest_file, sendfile_size_limit, SEEK_SET) == 0);
+    TEST_REQUIRE(std::fread(out_data.data(), sizeof(out_data[0]), additional_size, dest_file) == additional_size);
+    std::fclose(dest_file);
   }
   TEST_CHECK(out_data.size() == additional_data.size());
   TEST_CHECK(out_data == additional_data);
