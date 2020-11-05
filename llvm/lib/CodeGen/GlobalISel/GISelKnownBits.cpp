@@ -369,44 +369,31 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
     break;
   }
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_SHL: {
-    KnownBits RHSKnown;
+  case TargetOpcode::G_ASHR: {
+    KnownBits LHSKnown, RHSKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
                          Depth + 1);
-    if (!RHSKnown.isConstant()) {
-      LLVM_DEBUG(
-          MachineInstr *RHSMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-          dbgs() << '[' << Depth << "] Shift not known constant: " << *RHSMI);
-      break;
-    }
-    uint64_t Shift = RHSKnown.getConstant().getZExtValue();
-    LLVM_DEBUG(dbgs() << '[' << Depth << "] Shift is " << Shift << '\n');
-
-    // Guard against oversized shift amounts
-    if (Shift >= MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits())
-      break;
-
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+    Known = KnownBits::ashr(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_LSHR: {
+    KnownBits LHSKnown, RHSKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
                          Depth + 1);
-
-    switch (Opcode) {
-    case TargetOpcode::G_ASHR:
-      Known.Zero = Known.Zero.ashr(Shift);
-      Known.One = Known.One.ashr(Shift);
-      break;
-    case TargetOpcode::G_LSHR:
-      Known.Zero = Known.Zero.lshr(Shift);
-      Known.One = Known.One.lshr(Shift);
-      Known.Zero.setBitsFrom(Known.Zero.getBitWidth() - Shift);
-      break;
-    case TargetOpcode::G_SHL:
-      Known.Zero = Known.Zero.shl(Shift);
-      Known.One = Known.One.shl(Shift);
-      Known.Zero.setBits(0, Shift);
-      break;
-    }
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::lshr(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_SHL: {
+    KnownBits LHSKnown, RHSKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::shl(LHSKnown, RHSKnown);
     break;
   }
   case TargetOpcode::G_INTTOPTR:
