@@ -39,7 +39,6 @@ add_mlir_python_extension(MLIRBindingsPythonExtension _mlir
   SOURCES
     MainModule.cpp
     IRModules.cpp
-    Pass.cpp
     PybindUtils.cpp
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonSources)
