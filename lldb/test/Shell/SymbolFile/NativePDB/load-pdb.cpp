@@ -28,5 +28,5 @@ int main(int argc, char** argv) {
 // CHECK: {{.*}}: Type{0x00010024} , size = 0, compiler_type = {{.*}} int (int, char **)
 // CHECK: Compile units:
 // CHECK: {{.*}}: CompileUnit{0x00000000}, language = "c++", file = '{{.*}}/load-pdb.cpp'
-// CHECK: {{.*}}:   Function{0x08400001}, demangled = main, type = {{.*}}
-// CHECK: {{.*}}:   Block{0x08400001}
+// CHECK: {{.*}}:   Function{{{.*}}}, demangled = main, type = {{.*}}
+// CHECK: {{.*}}:   Block{{{.*}}}
