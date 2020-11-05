@@ -61,10 +61,10 @@ main_body:
 ;CHECK: s_wqm_b64 exec, exec
 ;CHECK: buffer_load_dword
 ;CHECK: buffer_load_dword
+;CHECK: v_add_f32_e32
+;CHECK: v_add_f32_e32
 ;CHECK: s_and_b64 exec, exec, [[ORIG]]
 ;CHECK: buffer_store_dword
-;CHECK; s_wqm_b64 exec, exec
-;CHECK: v_add_f32_e32
 define amdgpu_ps float @test_softwqm2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
   %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
@@ -80,12 +80,14 @@ main_body:
 ; Make sure the transition from Exact to WWM then softwqm does not trigger WQM.
 ;
 ;CHECK-LABEL: {{^}}test_wwm1:
+;CHECK: s_or_saveexec_b64 [[ORIG0:s\[[0-9]+:[0-9]+\]]], -1
 ;CHECK: buffer_load_dword
+;CHECK: s_mov_b64 exec, [[ORIG0]]
 ;CHECK: buffer_store_dword
-;CHECK: s_or_saveexec_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], -1
+;CHECK: s_or_saveexec_b64 [[ORIG1:s\[[0-9]+:[0-9]+\]]], -1
 ;CHECK: buffer_load_dword
 ;CHECK: v_add_f32_e32
-;CHECK: s_mov_b64 exec, [[ORIG]]
+;CHECK: s_mov_b64 exec, [[ORIG1]]
 ;CHECK-NOT: s_wqm_b64
 define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
