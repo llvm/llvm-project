@@ -296,7 +296,10 @@ void GCMachineCodeAnalysis::FindStackOffsets(MachineFunction &MF) {
     } else {
       Register FrameReg; // FIXME: surely GCRoot ought to store the
                          // register that the offset is from?
-      RI->StackOffset = TFI->getFrameIndexReference(MF, RI->Num, FrameReg);
+      auto FrameOffset = TFI->getFrameIndexReference(MF, RI->Num, FrameReg);
+      assert(!FrameOffset.getScalable() &&
+             "Frame offsets with a scalable component are not supported");
+      RI->StackOffset = FrameOffset.getFixed();
       ++RI;
     }
   }
