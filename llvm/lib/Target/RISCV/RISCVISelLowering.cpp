@@ -212,8 +212,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
 
-  if (Subtarget.is64Bit() &&
-      !(Subtarget.hasStdExtD() || Subtarget.hasStdExtF())) {
+  if (Subtarget.is64Bit()) {
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
@@ -941,6 +940,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     SDValue Op0 = IsStrict ? N->getOperand(1) : N->getOperand(0);
+    // If the FP type needs to be softened, emit a library call using the 'si'
+    // version. If we left it to default legalization we'd end up with 'di'. If
+    // the FP type doesn't need to be softened just let generic type
+    // legalization promote the result type.
+    if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
+        TargetLowering::TypeSoftenFloat)
+      return;
     RTLIB::Libcall LC;
     if (N->getOpcode() == ISD::FP_TO_SINT ||
         N->getOpcode() == ISD::STRICT_FP_TO_SINT)
