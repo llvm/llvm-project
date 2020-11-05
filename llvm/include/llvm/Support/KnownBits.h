@@ -264,6 +264,9 @@ public:
   /// Compute known bits for urem(LHS, RHS).
   static KnownBits urem(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for srem(LHS, RHS).
+  static KnownBits srem(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Compute known bits for umax(LHS, RHS).
   static KnownBits umax(const KnownBits &LHS, const KnownBits &RHS);
 

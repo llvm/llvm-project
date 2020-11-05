@@ -1294,39 +1294,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::SRem:
-    if (ConstantInt *Rem = dyn_cast<ConstantInt>(I->getOperand(1))) {
-      APInt RA = Rem->getValue().abs();
-      if (RA.isPowerOf2()) {
-        APInt LowBits = RA - 1;
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-
-        // The low bits of the first operand are unchanged by the srem.
-        Known.Zero = Known2.Zero & LowBits;
-        Known.One = Known2.One & LowBits;
-
-        // If the first operand is non-negative or has all low bits zero, then
-        // the upper bits are all zero.
-        if (Known2.isNonNegative() || LowBits.isSubsetOf(Known2.Zero))
-          Known.Zero |= ~LowBits;
-
-        // If the first operand is negative and not all low bits are zero, then
-        // the upper bits are all one.
-        if (Known2.isNegative() && LowBits.intersects(Known2.One))
-          Known.One |= ~LowBits;
-
-        assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
-        break;
-      }
-    }
-
-    // The sign bit is the LHS's sign bit, except when the result of the
-    // remainder is zero.
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-    // If it's known zero, our sign bit is also zero.
-    if (Known2.isNonNegative())
-      Known.makeNonNegative();
-
+    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    Known = KnownBits::srem(Known, Known2);
     break;
+
   case Instruction::URem:
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
