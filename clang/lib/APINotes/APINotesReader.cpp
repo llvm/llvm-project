@@ -527,7 +527,7 @@ namespace {
 
       uint8_t payload = *data++;
       if (payload > 0) {
-        info.SwiftWrapper = static_cast<SwiftWrapperKind>((payload & 0x3) - 1);
+        info.SwiftWrapper = static_cast<SwiftNewTypeKind>((payload & 0x3) - 1);
       }
 
       readCommonTypeInfo(data, info);
