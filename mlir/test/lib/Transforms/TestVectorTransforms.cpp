@@ -176,7 +176,7 @@ struct TestVectorDistributePatterns
       Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
           builder, op.getOperation(), func.getArgument(0), multiplicity);
       if (ops.hasValue()) {
-        SmallPtrSet<Operation *, 1> extractOp({ops->extract});
+        SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
         op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
       }
     });

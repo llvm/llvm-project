@@ -999,17 +999,18 @@ void ExtractMapOp::build(OpBuilder &builder, OperationState &result,
   VectorType type = vector.getType().cast<VectorType>();
   VectorType resultType = VectorType::get(type.getNumElements() / multiplicity,
                                           type.getElementType());
-  ExtractMapOp::build(builder, result, resultType, vector, id, multiplicity);
+  ExtractMapOp::build(builder, result, resultType, vector, id);
 }
 
 static LogicalResult verify(ExtractMapOp op) {
   if (op.getSourceVectorType().getShape().size() != 1 ||
       op.getResultType().getShape().size() != 1)
     return op.emitOpError("expects source and destination vectors of rank 1");
-  if (op.getResultType().getNumElements() * (int64_t)op.multiplicity() !=
-      op.getSourceVectorType().getNumElements())
-    return op.emitOpError("vector sizes mismatch. Source size must be equal "
-                          "to destination size * multiplicity");
+  if (op.getSourceVectorType().getNumElements() %
+          op.getResultType().getNumElements() !=
+      0)
+    return op.emitOpError(
+        "source vector size must be a multiple of destination vector size");
   return success();
 }
 
@@ -1248,22 +1249,23 @@ void InsertSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 //===----------------------------------------------------------------------===//
 
 void InsertMapOp::build(OpBuilder &builder, OperationState &result,
-                        Value vector, Value id, int64_t multiplicity) {
+                        Value vector, Value dest, Value id,
+                        int64_t multiplicity) {
   VectorType type = vector.getType().cast<VectorType>();
   VectorType resultType = VectorType::get(type.getNumElements() * multiplicity,
                                           type.getElementType());
-  InsertMapOp::build(builder, result, resultType, vector, id, multiplicity);
+  InsertMapOp::build(builder, result, resultType, vector, dest, id);
 }
 
 static LogicalResult verify(InsertMapOp op) {
   if (op.getSourceVectorType().getShape().size() != 1 ||
       op.getResultType().getShape().size() != 1)
     return op.emitOpError("expected source and destination vectors of rank 1");
-  if ((int64_t)op.multiplicity() * op.getSourceVectorType().getNumElements() !=
-      op.getResultType().getNumElements())
+  if (op.getResultType().getNumElements() %
+          op.getSourceVectorType().getNumElements() !=
+      0)
     return op.emitOpError(
-        "vector sizes mismatch. Destination size must be equal "
-        "to source size * multiplicity");
+        "destination vector size must be a multiple of source vector size");
   return success();
 }
 

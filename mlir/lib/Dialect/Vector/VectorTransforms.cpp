@@ -2507,8 +2507,8 @@ mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
   DistributeOps ops;
   ops.extract =
       builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
-  ops.insert =
-      builder.create<vector::InsertMapOp>(loc, ops.extract, id, multiplicity);
+  ops.insert = builder.create<vector::InsertMapOp>(loc, ops.extract, result, id,
+                                                   multiplicity);
   return ops;
 }
 
@@ -2532,8 +2532,10 @@ struct TransferReadExtractPattern
     Value newRead = vector_transfer_read(extract.getType(), read.memref(),
                                          indices, read.permutation_map(),
                                          read.padding(), ArrayAttr());
+    Value dest = rewriter.create<ConstantOp>(
+        read.getLoc(), read.getType(), rewriter.getZeroAttr(read.getType()));
     newRead = rewriter.create<vector::InsertMapOp>(
-        read.getLoc(), newRead, extract.id(), extract.multiplicity());
+        read.getLoc(), newRead, dest, extract.id(), extract.multiplicity());
     rewriter.replaceOp(read, newRead);
     return success();
   }
