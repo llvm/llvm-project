@@ -132,6 +132,7 @@ unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
     unsigned int minpackets = numCu * waverPerCu;
     //  For now, we create one bufer and one consumer per ATMI hsa queue
     buffer_t *hcb = atl_hcq_create_buffer(minpackets);
+    hcb->device_id = device_id;
     amd_hostcall_register_buffer(atl_hcq_consumer, hcb);
     // create element of linked list hcq.
     llq_elem = atl_hcq_push(hcb, this_Q, device_id);

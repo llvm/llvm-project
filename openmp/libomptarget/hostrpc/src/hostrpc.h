@@ -83,8 +83,8 @@ EXTERN hostrpc_result_t hostrpc_invoke(uint32_t id, uint64_t arg0,
 // implmented host version of the service.
 //
 #define HOSTRPC_VERSION 0
-#define HOSTRPC_RELEASE 6
-#define HOSTRPC_PATCH 3
+#define HOSTRPC_RELEASE 7
+#define HOSTRPC_PATCH 0
 // HOSTRPC_VRM fits in two bytes allowing for 64 patches, 64 releases, and 15
 // versions
 #define HOSTRPC_VRM                                                            \

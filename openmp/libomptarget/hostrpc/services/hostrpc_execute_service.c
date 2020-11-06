@@ -133,7 +133,8 @@ static hostrpc_status_t hostrpc_varfn_uint64_(char *buf, size_t bufsz,
 static hostrpc_status_t hostrpc_varfn_double_(char *buf, size_t bufsz,
                                               double *rc);
 
-static void hostrpc_handler_SERVICE_PRINTF(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_PRINTF(uint32_t device_id,
+                                           uint64_t *payload) {
   size_t bufsz = (size_t)payload[0];
   char *device_buffer = (char *)payload[1];
   uint uint_value;
@@ -143,7 +144,8 @@ static void hostrpc_handler_SERVICE_PRINTF(uint64_t *payload) {
   atmi_free(device_buffer);
 }
 
-static void hostrpc_handler_SERVICE_VARFNUINT(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_VARFNUINT(uint32_t device_id,
+                                              uint64_t *payload) {
   size_t bufsz = (size_t)payload[0];
   char *device_buffer = (char *)payload[1];
   uint uint_value;
@@ -153,7 +155,8 @@ static void hostrpc_handler_SERVICE_VARFNUINT(uint64_t *payload) {
   atmi_free(device_buffer);
 }
 
-static void hostrpc_handler_SERVICE_VARFNUINT64(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_VARFNUINT64(uint32_t device_id,
+                                                uint64_t *payload) {
   size_t bufsz = (size_t)payload[0];
   char *device_buffer = (char *)payload[1];
   uint64_t uint64_value;
@@ -165,7 +168,8 @@ static void hostrpc_handler_SERVICE_VARFNUINT64(uint64_t *payload) {
   atmi_free(device_buffer);
 }
 
-static void hostrpc_handler_SERVICE_VARFNDOUBLE(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_VARFNDOUBLE(uint32_t device_id,
+                                                uint64_t *payload) {
   size_t bufsz = (size_t)payload[0];
   char *device_buffer = (char *)payload[1];
   double double_value;
@@ -176,7 +180,8 @@ static void hostrpc_handler_SERVICE_VARFNDOUBLE(uint64_t *payload) {
   atmi_free(device_buffer);
 }
 
-static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint32_t device_id,
+                                                  uint64_t *payload) {
   void *ptr = NULL;
   // CPU device ID 0 is the fine grain memory
   int cpu_device_id = 0;
@@ -187,20 +192,23 @@ static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint64_t *payload) {
   payload[1] = (uint64_t)ptr;
 }
 
-static void hostrpc_handler_SERVICE_MALLOC(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_MALLOC(uint32_t device_id,
+                                           uint64_t *payload) {
   void *ptr = NULL;
-  int device_id = 0;
   atmi_mem_place_t place = ATMI_MEM_PLACE_GPU_MEM(0, device_id, 0);
   atmi_status_t err = atmi_malloc(&ptr, payload[0], place);
   payload[0] = (uint64_t)err;
   payload[1] = (uint64_t)ptr;
 }
-static void hostrpc_handler_SERVICE_FREE(uint64_t *payload) {
+
+static void hostrpc_handler_SERVICE_FREE(uint32_t device_id,
+                                         uint64_t *payload) {
   char *device_buffer = (char *)payload[0];
   atmi_free(device_buffer);
 }
 
-static void hostrpc_handler_SERVICE_FUNCTIONCALL(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_FUNCTIONCALL(uint32_t device_id,
+                                                 uint64_t *payload) {
   void (*fptr)() = (void *)payload[0];
   (*fptr)();
 }
@@ -217,7 +225,8 @@ static int local_vector_product_zeros(int N, int *A, int *B, int *C) {
 }
 
 // This is the service for the demo of vector_product_zeros
-static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
+static void hostrpc_handler_SERVICE_DEMO(uint32_t device_id,
+                                         uint64_t *payload) {
   atmi_status_t copyerr;
   int N = (int)payload[0];
   int *A_D = (int *)payload[1];
@@ -278,7 +287,8 @@ static void hostrpc_abort(int rc) {
 // The architecture-specific implementation of hostrpc will
 // call this single external function for each service request.
 // Host service functions are architecturally independent.
-extern void hostrpc_execute_service(uint32_t service, uint64_t *payload) {
+extern void hostrpc_execute_service(uint32_t service, uint32_t device_id,
+                                    uint64_t *payload) {
 
   // split the 32-bit service number into service_id and VRM to be checked
   // if device hostrpc or stubs are ahead of this host runtime.
@@ -293,31 +303,31 @@ extern void hostrpc_execute_service(uint32_t service, uint64_t *payload) {
 
   switch (service_id) {
   case HOSTRPC_SERVICE_PRINTF:
-    hostrpc_handler_SERVICE_PRINTF(payload);
+    hostrpc_handler_SERVICE_PRINTF(device_id, payload);
     break;
   case HOSTRPC_SERVICE_VARFNUINT:
-    hostrpc_handler_SERVICE_VARFNUINT(payload);
+    hostrpc_handler_SERVICE_VARFNUINT(device_id, payload);
     break;
   case HOSTRPC_SERVICE_VARFNUINT64:
-    hostrpc_handler_SERVICE_VARFNUINT64(payload);
+    hostrpc_handler_SERVICE_VARFNUINT64(device_id, payload);
     break;
   case HOSTRPC_SERVICE_VARFNDOUBLE:
-    hostrpc_handler_SERVICE_VARFNDOUBLE(payload);
+    hostrpc_handler_SERVICE_VARFNDOUBLE(device_id, payload);
     break;
   case HOSTRPC_SERVICE_MALLOC_PRINTF:
-    hostrpc_handler_SERVICE_MALLOC_PRINTF(payload);
+    hostrpc_handler_SERVICE_MALLOC_PRINTF(device_id, payload);
     break;
   case HOSTRPC_SERVICE_MALLOC:
-    hostrpc_handler_SERVICE_MALLOC(payload);
+    hostrpc_handler_SERVICE_MALLOC(device_id, payload);
     break;
   case HOSTRPC_SERVICE_FREE:
-    hostrpc_handler_SERVICE_FREE(payload);
+    hostrpc_handler_SERVICE_FREE(device_id, payload);
     break;
   case HOSTRPC_SERVICE_FUNCTIONCALL:
-    hostrpc_handler_SERVICE_FUNCTIONCALL(payload);
+    hostrpc_handler_SERVICE_FUNCTIONCALL(device_id, payload);
     break;
   case HOSTRPC_SERVICE_DEMO:
-    hostrpc_handler_SERVICE_DEMO(payload);
+    hostrpc_handler_SERVICE_DEMO(device_id, payload);
     break;
   default:
     hostrpc_abort(HOSTRPC_INVALIDSERVICE_ERROR);

@@ -152,7 +152,8 @@ static payload_t *get_payload(buffer_t *buffer, ulong ptr) {
   return buffer->payloads + get_ptr_index(ptr, buffer->index_size);
 }
 
-extern "C" void hostrpc_execute_service(uint32_t service, uint64_t *payload);
+extern "C" void hostrpc_execute_service(uint32_t service, uint32_t device_id,
+                                        uint64_t *payload);
 
 void amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
                                               uint64_t ready_stack) const {
@@ -192,7 +193,7 @@ void amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
       if (flag == 0)
         continue;
       uint64_t *slot = payload->slots[wi];
-      hostrpc_execute_service(header->service, slot);
+      hostrpc_execute_service(header->service, buffer->device_id, slot);
     }
     __atomic_store_n(&header->control, reset_ready_flag(header->control),
                      std::memory_order_release);
