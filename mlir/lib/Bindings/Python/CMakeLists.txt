@@ -6,6 +6,8 @@ add_custom_target(MLIRBindingsPythonExtension)
 
 set(PY_SRC_FILES
   mlir/__init__.py
+  mlir/_dlloader.py
+  mlir/ir.py
   mlir/dialects/__init__.py
   mlir/ir.py
   mlir/passmanager.py
