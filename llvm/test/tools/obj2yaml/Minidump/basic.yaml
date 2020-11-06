@@ -96,7 +96,7 @@ Streams:
 # CHECK-NEXT:     Platform ID:     Linux
 # CHECK-NEXT:     CSD Version:     Linux 3.13.0-91-generic
 # CHECK-NEXT:     CPU:
-# CHECK-NEXT:       CPUID:           0x05060708
+# CHECK-NEXT:       CPUID:           0x5060708
 # CHECK-NEXT:   - Type:            LinuxAuxv
 # CHECK-NEXT:     Content:         DEADBEEFBAADF00D
 # CHECK-NEXT:   - Type:            LinuxMaps
@@ -106,9 +106,9 @@ Streams:
 # CHECK-EMPTY:
 # CHECK-NEXT:   - Type:            ModuleList
 # CHECK-NEXT:     Modules:
-# CHECK-NEXT:       - Base of Image:   0x0001020304050607
-# CHECK-NEXT:         Size of Image:   0x08090A0B
-# CHECK-NEXT:         Checksum:        0x0C0D0E0F
+# CHECK-NEXT:       - Base of Image:   0x1020304050607
+# CHECK-NEXT:         Size of Image:   0x8090A0B
+# CHECK-NEXT:         Checksum:        0xC0D0E0F
 # CHECK-NEXT:         Time Date Stamp: 47
 # CHECK-NEXT:         Module Name:     a.out
 # CHECK-NEXT:         Version Info:
@@ -141,15 +141,15 @@ Streams:
 # CHECK-NEXT:           Start of Memory Range: 0x6C6D6E6F70717273
 # CHECK-NEXT:           Content:               7475767778797A7B
 # CHECK-NEXT:   - Type:            Exception
-# CHECK-NEXT:     Thread ID:       0x00000007
+# CHECK-NEXT:     Thread ID:       0x7
 # CHECK-NEXT:     Exception Record:
-# CHECK-NEXT:       Exception Code:       0x00000010
-# CHECK-NEXT:       Exception Flags:      0x00000005
-# CHECK-NEXT:       Exception Record:     0x0102030405060708
-# CHECK-NEXT:       Exception Address:    0x0A0B0C0D0E0F1011
+# CHECK-NEXT:       Exception Code:       0x10
+# CHECK-NEXT:       Exception Flags:      0x5
+# CHECK-NEXT:       Exception Record:     0x102030405060708
+# CHECK-NEXT:       Exception Address:    0xA0B0C0D0E0F1011
 # CHECK-NEXT:       Number of Parameters: 2
-# CHECK-NEXT:       Parameter 0: 0x0000000000000022
-# CHECK-NEXT:       Parameter 1: 0x0000000000000024
+# CHECK-NEXT:       Parameter 0: 0x22
+# CHECK-NEXT:       Parameter 1: 0x24
 # CHECK-NEXT:     Thread Context:  '8182838485868788'
 # CHECK-NEXT:   - Type:            MemoryList
 # CHECK-NEXT:     Memory Ranges:   
@@ -157,22 +157,22 @@ Streams:
 # CHECK-NEXT:         Content:               '8485868788'
 # CHECK-NEXT:   - Type:            MemoryInfoList
 # CHECK-NEXT:     Memory Ranges:
-# CHECK-NEXT:       - Base Address:       0x0000000000000000
+# CHECK-NEXT:       - Base Address:       0x0
 # CHECK-NEXT:         Allocation Protect: [  ]
-# CHECK-NEXT:         Region Size:        0x0000000000010000
+# CHECK-NEXT:         Region Size:        0x10000
 # CHECK-NEXT:         State:              [ MEM_FREE ]
 # CHECK-NEXT:         Protect:            [ PAGE_NO_ACCESS ]
 # CHECK-NEXT:         Type:               [  ]
-# CHECK-NEXT:       - Base Address:       0x0000000000010000
+# CHECK-NEXT:       - Base Address:       0x10000
 # CHECK-NEXT:         Allocation Protect: [ PAGE_READ_WRITE ]
-# CHECK-NEXT:         Region Size:        0x0000000000010000
+# CHECK-NEXT:         Region Size:        0x10000
 # CHECK-NEXT:         State:              [ MEM_COMMIT ]
 # CHECK-NEXT:         Type:               [ MEM_MAPPED ]
-# CHECK-NEXT:       - Base Address:       0x0000000000020000
-# CHECK-NEXT:         Allocation Base:    0x0000000000000000
+# CHECK-NEXT:       - Base Address:       0x20000
+# CHECK-NEXT:         Allocation Base:    0x0
 # CHECK-NEXT:         Allocation Protect: [ PAGE_READ_WRITE, PAGE_WRITECOMBINE ]
 # CHECK-NEXT:         Reserved0:          0xDEADBEEF
-# CHECK-NEXT:         Region Size:        0x0000000000010000
+# CHECK-NEXT:         Region Size:        0x10000
 # CHECK-NEXT:         State:              [ MEM_COMMIT, MEM_FREE ]
 # CHECK-NEXT:         Type:               [ MEM_PRIVATE, MEM_MAPPED ]
 # CHECK-NEXT:         Reserved1:          0xBAADF00D

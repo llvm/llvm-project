@@ -6,7 +6,7 @@
 # CHECK:      - Name:            .rodata.cst4
 # CHECK-NEXT:   Type:            SHT_PROGBITS
 # CHECK-NEXT:   Flags:           [ SHF_ALLOC, SHF_MERGE ]
-# CHECK-NEXT:   EntSize:         0x0000000000000004
+# CHECK-NEXT:   EntSize:         0x4
 
 --- !ELF
 FileHeader:

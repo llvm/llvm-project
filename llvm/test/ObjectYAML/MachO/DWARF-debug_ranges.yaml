@@ -41,22 +41,22 @@
 
 # YAML:      - sectname:        __debug_ranges
 # YAML-NEXT:   segname:         __DWARF
-# YAML-NEXT:   addr:            0x000000000000007A
+# YAML-NEXT:   addr:            0x7A
 # YAML-NEXT:   size:            80
-# YAML-NEXT:   offset:          0x0000028A
+# YAML-NEXT:   offset:          0x28A
 
 # YAML:      debug_ranges:
-# YAML-NEXT:   - Offset:          0x00000000
-# YAML-NEXT:     AddrSize:        0x08
+# YAML-NEXT:   - Offset:          0x0
+# YAML-NEXT:     AddrSize:        0x8
 # YAML-NEXT:     Entries:
-# YAML-NEXT:       - LowOffset:       0x0000000000000000
-# YAML-NEXT:         HighOffset:      0x0000000000000020
-# YAML-NEXT:       - LowOffset:       0x0000000000000000
-# YAML-NEXT:         HighOffset:      0x0000000000000030
+# YAML-NEXT:       - LowOffset:       0x0
+# YAML-NEXT:         HighOffset:      0x20
+# YAML-NEXT:       - LowOffset:       0x0
+# YAML-NEXT:         HighOffset:      0x30
 # YAML-NEXT:       - LowOffset:       0xFFFFFFFFFFFFFFFF
-# YAML-NEXT:         HighOffset:      0x0000000000001000
-# YAML-NEXT:       - LowOffset:       0x0000000000000000
-# YAML-NEXT:         HighOffset:      0x0000000000001000
+# YAML-NEXT:         HighOffset:      0x1000
+# YAML-NEXT:       - LowOffset:       0x0
+# YAML-NEXT:         HighOffset:      0x1000
 
 --- !mach-o
 FileHeader:
@@ -296,15 +296,15 @@ LoadCommands:
 #      FAILS: Sections:
 # FAILS-NEXT:   - sectname:  __debug_ranges
 # FAILS-NEXT:     segname:   __DWARF
-# FAILS-NEXT:     addr:      0x0000000000000000
+# FAILS-NEXT:     addr:      0x0
 # FAILS-NEXT:     size:      3
-# FAILS-NEXT:     offset:    0x00000210
+# FAILS-NEXT:     offset:    0x210
 # FAILS-NEXT:     align:     0
-# FAILS-NEXT:     reloff:    0x00000000
+# FAILS-NEXT:     reloff:    0x0
 # FAILS-NEXT:     nreloc:    0
-# FAILS-NEXT:     flags:     0x00000000
-# FAILS-NEXT:     reserved1: 0x00000000
-# FAILS-NEXT:     reserved2: 0x00000000
-# FAILS-NEXT:     reserved3: 0x00000000
+# FAILS-NEXT:     flags:     0x0
+# FAILS-NEXT:     reserved1: 0x0
+# FAILS-NEXT:     reserved2: 0x0
+# FAILS-NEXT:     reserved3: 0x0
 # FAILS-NEXT:     content:   '010203'
 # FAILS-NEXT: ...
