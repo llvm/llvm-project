@@ -147,6 +147,42 @@ ConstantRange ConstantRange::makeExactICmpRegion(CmpInst::Predicate Pred,
   return makeAllowedICmpRegion(Pred, C);
 }
 
+bool ConstantRange::areInsensitiveToSignednessOfICmpPredicate(
+    const ConstantRange &CR1, const ConstantRange &CR2) {
+  if (CR1.isEmptySet() || CR2.isEmptySet())
+    return true;
+
+  return (CR1.isAllNonNegative() && CR2.isAllNonNegative()) ||
+         (CR1.isAllNegative() && CR2.isAllNegative());
+}
+
+bool ConstantRange::areInsensitiveToSignednessOfInvertedICmpPredicate(
+    const ConstantRange &CR1, const ConstantRange &CR2) {
+  if (CR1.isEmptySet() || CR2.isEmptySet())
+    return true;
+
+  return (CR1.isAllNonNegative() && CR2.isAllNegative()) ||
+         (CR1.isAllNegative() && CR2.isAllNonNegative());
+}
+
+CmpInst::Predicate ConstantRange::getEquivalentPredWithFlippedSignedness(
+    CmpInst::Predicate Pred, const ConstantRange &CR1,
+    const ConstantRange &CR2) {
+  assert(CmpInst::isIntPredicate(Pred) && CmpInst::isRelational(Pred) &&
+         "Only for relational integer predicates!");
+
+  CmpInst::Predicate FlippedSignednessPred =
+      CmpInst::getFlippedSignednessPredicate(Pred);
+
+  if (areInsensitiveToSignednessOfICmpPredicate(CR1, CR2))
+    return FlippedSignednessPred;
+
+  if (areInsensitiveToSignednessOfInvertedICmpPredicate(CR1, CR2))
+    return CmpInst::getInversePredicate(FlippedSignednessPred);
+
+  return CmpInst::Predicate::BAD_ICMP_PREDICATE;
+}
+
 bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
                                       APInt &RHS) const {
   bool Success = false;
