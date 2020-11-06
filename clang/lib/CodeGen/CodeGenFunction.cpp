@@ -25,6 +25,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
@@ -131,9 +132,23 @@ void CodeGenFunction::SetFastMathFlags(FPOptions FPFeatures) {
 }
 
 CodeGenFunction::CGFPOptionsRAII::CGFPOptionsRAII(CodeGenFunction &CGF,
+                                                  const Expr *E)
+    : CGF(CGF) {
+  ConstructorHelper(E->getFPFeaturesInEffect(CGF.getLangOpts()));
+}
+
+CodeGenFunction::CGFPOptionsRAII::CGFPOptionsRAII(CodeGenFunction &CGF,
                                                   FPOptions FPFeatures)
-    : CGF(CGF), OldFPFeatures(CGF.CurFPFeatures) {
+    : CGF(CGF) {
+  ConstructorHelper(FPFeatures);
+}
+
+void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
+  OldFPFeatures = CGF.CurFPFeatures;
   CGF.CurFPFeatures = FPFeatures;
+
+  OldExcept = CGF.Builder.getDefaultConstrainedExcept();
+  OldRounding = CGF.Builder.getDefaultConstrainedRounding();
 
   if (OldFPFeatures == FPFeatures)
     return;
@@ -175,6 +190,8 @@ CodeGenFunction::CGFPOptionsRAII::CGFPOptionsRAII(CodeGenFunction &CGF,
 
 CodeGenFunction::CGFPOptionsRAII::~CGFPOptionsRAII() {
   CGF.CurFPFeatures = OldFPFeatures;
+  CGF.Builder.setDefaultConstrainedExcept(OldExcept);
+  CGF.Builder.setDefaultConstrainedRounding(OldRounding);
 }
 
 LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
