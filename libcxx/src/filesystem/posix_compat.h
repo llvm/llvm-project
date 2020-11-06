@@ -12,6 +12,8 @@
 // These generally behave like the proper posix functions, with these
 // exceptions:
 // On Windows, they take paths in wchar_t* form, instead of char* form.
+// The symlink() function is split into two frontends, symlink_file()
+// and symlink_dir().
 //
 // These are provided within an anonymous namespace within the detail
 // namespace - callers need to include this header and call them as
@@ -81,6 +83,8 @@ namespace {
 #define S_ISBLK(m)      (((m) & _S_IFMT) == _S_IFBLK)
 #define S_ISLNK(m)      (((m) & _S_IFMT) == _S_IFLNK)
 #define S_ISSOCK(m)     (((m) & _S_IFMT) == _S_IFSOCK)
+
+#define O_NONBLOCK 0
 
 
 // There were 369 years and 89 leap days from the Windows epoch
@@ -190,10 +194,108 @@ int fstat(int fd, StatT *buf) {
   HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
   return stat_handle(h, buf);
 }
+
+int mkdir(const wchar_t *path, int permissions) {
+  (void)permissions;
+  return _wmkdir(path);
+}
+
+int symlink_file_dir(const wchar_t *oldname, const wchar_t *newname,
+                     bool is_dir) {
+  DWORD flags = is_dir ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
+  if (CreateSymbolicLinkW(newname, oldname,
+                          flags | SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+    return 0;
+  int e = GetLastError();
+  if (e != ERROR_INVALID_PARAMETER)
+    return set_errno(e);
+  if (CreateSymbolicLinkW(newname, oldname, flags))
+    return 0;
+  return set_errno();
+}
+
+int symlink_file(const wchar_t *oldname, const wchar_t *newname) {
+  return symlink_file_dir(oldname, newname, false);
+}
+
+int symlink_dir(const wchar_t *oldname, const wchar_t *newname) {
+  return symlink_file_dir(oldname, newname, true);
+}
+
+int link(const wchar_t *oldname, const wchar_t *newname) {
+  if (CreateHardLinkW(newname, oldname, nullptr))
+    return 0;
+  return set_errno();
+}
+
+int remove(const wchar_t *path) {
+  detail::WinHandle h(path, DELETE, FILE_FLAG_OPEN_REPARSE_POINT);
+  if (!h)
+    return set_errno();
+  FILE_DISPOSITION_INFO info;
+  info.DeleteFile = TRUE;
+  if (!SetFileInformationByHandle(h, FileDispositionInfo, &info, sizeof(info)))
+    return set_errno();
+  return 0;
+}
+
+int truncate_handle(HANDLE h, off_t length) {
+  LARGE_INTEGER size_param;
+  size_param.QuadPart = length;
+  if (!SetFilePointerEx(h, size_param, 0, FILE_BEGIN))
+    return set_errno();
+  if (!SetEndOfFile(h))
+    return set_errno();
+  return 0;
+}
+
+int ftruncate(int fd, off_t length) {
+  HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+  return truncate_handle(h, length);
+}
+
+int truncate(const wchar_t *path, off_t length) {
+  detail::WinHandle h(path, GENERIC_WRITE, 0);
+  if (!h)
+    return set_errno();
+  return truncate_handle(h, length);
+}
+
+int rename(const wchar_t *from, const wchar_t *to) {
+  if (!(MoveFileExW(from, to,
+                    MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING |
+                        MOVEFILE_WRITE_THROUGH)))
+    return set_errno();
+  return 0;
+}
+
+template <class... Args> int open(const wchar_t *filename, Args... args) {
+  return _wopen(filename, args...);
+}
+int close(int fd) { return _close(fd); }
+int chdir(const wchar_t *path) { return _wchdir(path); }
 #else
+int symlink_file(const char *oldname, const char *newname) {
+  return ::symlink(oldname, newname);
+}
+int symlink_dir(const char *oldname, const char *newname) {
+  return ::symlink(oldname, newname);
+}
+using ::chdir;
+using ::close;
 using ::fstat;
+using ::ftruncate;
+using ::link;
 using ::lstat;
+using ::mkdir;
+using ::open;
+using ::remove;
+using ::rename;
 using ::stat;
+using ::truncate;
+
+#define O_BINARY 0
+
 #endif
 
 } // namespace
