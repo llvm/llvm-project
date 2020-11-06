@@ -148,7 +148,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
              "Section's address cannot be smaller than Segment's one");
       uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
       if (IsObjectFile) {
-        if (Sec->isVirtualSection()) {
+        if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
           uint64_t PaddingSize =
@@ -158,7 +158,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           SegFileSize += PaddingSize + Sec->Size;
         }
       } else {
-        if (Sec->isVirtualSection()) {
+        if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
           Sec->Offset = SegOffset + SectOffset;
