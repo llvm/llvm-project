@@ -72,12 +72,8 @@ namespace utils {
     using ::ftruncate;
     inline int symlink(const char* oldname, const char* newname, bool is_dir) { (void)is_dir; return ::symlink(oldname, newname); }
     using ::link;
-    inline int setenv(const char *var, const char *val, int overwrite) {
-        return ::setenv(var, val, overwrite);
-    }
-    inline int unsetenv(const char *var) {
-        return ::unsetenv(var);
-    }
+    using ::setenv;
+    using ::unsetenv;
     inline bool space(std::string path, std::uintmax_t &capacity,
                       std::uintmax_t &free, std::uintmax_t &avail) {
         struct statvfs expect;
