@@ -131,6 +131,12 @@ public:
   void setEdgeProbability(const BasicBlock *Src,
                           const SmallVectorImpl<BranchProbability> &Probs);
 
+  /// Copy outgoing edge probabilities from \p Src to \p Dst.
+  ///
+  /// This allows to keep probabilities unset for the destination if they were
+  /// unset for source.
+  void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
+
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();

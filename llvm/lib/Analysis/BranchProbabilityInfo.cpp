@@ -1157,6 +1157,25 @@ void BranchProbabilityInfo::setEdgeProbability(
   assert(TotalNumerator >= BranchProbability::getDenominator() - Probs.size());
 }
 
+void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
+                                                  BasicBlock *Dst) {
+  eraseBlock(Dst); // Erase stale data if any.
+  unsigned NumSuccessors = Src->getTerminator()->getNumSuccessors();
+  assert(NumSuccessors == Dst->getTerminator()->getNumSuccessors());
+  if (NumSuccessors == 0)
+    return; // Nothing to set.
+  if (this->Probs.find(std::make_pair(Src, 0)) == this->Probs.end())
+    return; // No probability is set for edges from Src. Keep the same for Dst.
+
+  Handles.insert(BasicBlockCallbackVH(Dst, this));
+  for (unsigned SuccIdx = 0; SuccIdx < NumSuccessors; ++SuccIdx) {
+    auto Prob = this->Probs[std::make_pair(Src, SuccIdx)];
+    this->Probs[std::make_pair(Dst, SuccIdx)] = Prob;
+    LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << SuccIdx
+                      << " successor probability to " << Prob << "\n");
+  }
+}
+
 raw_ostream &
 BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
                                             const BasicBlock *Src,
