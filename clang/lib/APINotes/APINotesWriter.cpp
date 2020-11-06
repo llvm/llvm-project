@@ -204,7 +204,7 @@ static void emitRecordID(llvm::BitstreamWriter &out, unsigned ID,
 
 void APINotesWriter::Implementation::writeBlockInfoBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, llvm::bitc::BLOCKINFO_BLOCK_ID, 2);  
+  llvm::BCBlockRAII restoreBlock(writer, llvm::bitc::BLOCKINFO_BLOCK_ID, 2);  
 
   SmallVector<unsigned char, 64> nameBuffer;
 #define BLOCK(X) emitBlockID(writer, X ## _ID, #X, nameBuffer)
@@ -240,7 +240,7 @@ void APINotesWriter::Implementation::writeBlockInfoBlock(
 
 void APINotesWriter::Implementation::writeControlBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, CONTROL_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, CONTROL_BLOCK_ID, 3);
   control_block::MetadataLayout metadata(writer);
   metadata.emit(ScratchRecord, VERSION_MAJOR, VERSION_MINOR);
 
@@ -299,7 +299,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeIdentifierBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, IDENTIFIER_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, IDENTIFIER_BLOCK_ID, 3);
 
   if (IdentifierIDs.empty())
     return;
@@ -641,7 +641,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeObjCContextBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, OBJC_CONTEXT_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, OBJC_CONTEXT_BLOCK_ID, 3);
 
   if (ObjCContexts.empty())
     return;  
@@ -686,7 +686,7 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
 
 void APINotesWriter::Implementation::writeObjCPropertyBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, OBJC_PROPERTY_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, OBJC_PROPERTY_BLOCK_ID, 3);
 
   if (ObjCProperties.empty())
     return;  
@@ -805,7 +805,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeObjCMethodBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, OBJC_METHOD_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, OBJC_METHOD_BLOCK_ID, 3);
 
   if (ObjCMethods.empty())
     return;  
@@ -873,7 +873,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeObjCSelectorBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, OBJC_SELECTOR_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, OBJC_SELECTOR_BLOCK_ID, 3);
 
   if (SelectorIDs.empty())
     return;  
@@ -924,7 +924,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeGlobalVariableBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, GLOBAL_VARIABLE_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, GLOBAL_VARIABLE_BLOCK_ID, 3);
 
   if (GlobalVariables.empty())
     return;  
@@ -975,7 +975,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeGlobalFunctionBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, GLOBAL_FUNCTION_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, GLOBAL_FUNCTION_BLOCK_ID, 3);
 
   if (GlobalFunctions.empty())
     return;  
@@ -1026,7 +1026,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeEnumConstantBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, ENUM_CONSTANT_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, ENUM_CONSTANT_BLOCK_ID, 3);
 
   if (EnumConstants.empty())
     return;  
@@ -1105,7 +1105,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeTagBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, TAG_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, TAG_BLOCK_ID, 3);
 
   if (Tags.empty())
     return;  
@@ -1155,7 +1155,7 @@ namespace {
 
 void APINotesWriter::Implementation::writeTypedefBlock(
        llvm::BitstreamWriter &writer) {
-  BCBlockRAII restoreBlock(writer, TYPEDEF_BLOCK_ID, 3);
+  llvm::BCBlockRAII restoreBlock(writer, TYPEDEF_BLOCK_ID, 3);
 
   if (Typedefs.empty())
     return;  
