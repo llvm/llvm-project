@@ -2466,24 +2466,11 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
     // encoding is supported.
     DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
-      DwarfExpr.addExpression(std::move(ExprCursor));
-      return;
+    DwarfExpr.addExpression(std::move(ExprCursor));
+    return;
   } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE()) {
-      DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
-      return;
-    } else if (Value.getConstantFP()
-                   ->getValueAPF()
-                   .bitcastToAPInt()
-                   .getBitWidth() <= 64 /*bits*/)
-      DwarfExpr.addUnsignedConstant(
-          Value.getConstantFP()->getValueAPF().bitcastToAPInt());
-    else
-      LLVM_DEBUG(
-          dbgs()
-          << "Skipped DwarfExpression creation for ConstantFP of size"
-          << Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth()
-          << " bits\n");
+    DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
+    return;
   }
   DwarfExpr.addExpression(std::move(ExprCursor));
 }
