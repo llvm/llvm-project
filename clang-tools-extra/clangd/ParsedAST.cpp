@@ -303,9 +303,18 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTChecks = CTFactories.createChecks(CTContext.getPointer());
-    ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
-                                           const clang::Diagnostic &Info) {
-      if (CTContext) {
+    llvm::erase_if(CTChecks, [&](const auto &Check) {
+      return !Check->isLanguageVersionSupported(CTContext->getLangOpts());
+    });
+    Preprocessor *PP = &Clang->getPreprocessor();
+    for (const auto &Check : CTChecks) {
+      Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
+      Check->registerMatchers(&CTFinder);
+    }
+
+    if (!CTChecks.empty()) {
+      ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
+                                             const clang::Diagnostic &Info) {
         std::string CheckName = CTContext->getCheckName(Info.getID());
         bool IsClangTidyDiag = !CheckName.empty();
         if (IsClangTidyDiag) {
@@ -330,17 +339,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             return DiagnosticsEngine::Error;
           }
         }
-      }
-      return DiagLevel;
-    });
-    Preprocessor *PP = &Clang->getPreprocessor();
-    for (const auto &Check : CTChecks) {
-      if (!Check->isLanguageVersionSupported(CTContext->getLangOpts()))
-        continue;
-      // FIXME: the PP callbacks skip the entire preamble.
-      // Checks that want to see #includes in the main file do not see them.
-      Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
-      Check->registerMatchers(&CTFinder);
+        return DiagLevel;
+      });
     }
   }
 
@@ -415,7 +415,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
   // AST traversals should exclude the preamble, to avoid performance cliffs.
   Clang->getASTContext().setTraversalScope(ParsedDecls);
-  {
+  if (!CTChecks.empty()) {
     // Run the AST-dependent part of the clang-tidy checks.
     // (The preprocessor part ran already, via PPCallbacks).
     trace::Span Tracer("ClangTidyMatch");
