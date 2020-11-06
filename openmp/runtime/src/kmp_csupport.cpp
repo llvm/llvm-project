@@ -4213,6 +4213,12 @@ void *omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t allocator) {
   return __kmpc_calloc(__kmp_entry_gtid(), nmemb, size, allocator);
 }
 
+void *omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
+                  omp_allocator_handle_t free_allocator) {
+  return __kmpc_realloc(__kmp_entry_gtid(), ptr, size, allocator,
+                        free_allocator);
+}
+
 void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   __kmpc_free(__kmp_entry_gtid(), ptr, allocator);
 }
