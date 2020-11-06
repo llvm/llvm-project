@@ -308,7 +308,9 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)Addr)
                         << " flags: " << *FlagsOrErr << "\n");
-      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, *JITSymFlags);
+      if (!Name.empty()) // Skip absolute symbol relocations.
+        GlobalSymbolTable[Name] =
+            SymbolTableEntry(SectionID, Addr, *JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
                SymType == object::SymbolRef::ST_Unknown ||
@@ -340,8 +342,9 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)SectOffset)
                         << " flags: " << *FlagsOrErr << "\n");
-      GlobalSymbolTable[Name] =
-          SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
+      if (!Name.empty()) // Skip absolute symbol relocations
+        GlobalSymbolTable[Name] =
+            SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
     }
   }
 
@@ -769,8 +772,9 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
 
     LLVM_DEBUG(dbgs() << "Allocating common symbol " << Name << " address "
                       << format("%p", Addr) << "\n");
-    GlobalSymbolTable[Name] =
-        SymbolTableEntry(SectionID, Offset, std::move(*JITSymFlags));
+    if (!Name.empty()) // Skip absolute symbol relocations.
+      GlobalSymbolTable[Name] =
+          SymbolTableEntry(SectionID, Offset, std::move(*JITSymFlags));
     Offset += Size;
     Addr += Size;
   }
@@ -930,6 +934,8 @@ void RuntimeDyldImpl::addRelocationForSymbol(const RelocationEntry &RE,
   if (Loc == GlobalSymbolTable.end()) {
     ExternalSymbolRelocations[SymbolName].push_back(RE);
   } else {
+    assert(!SymbolName.empty() &&
+           "Empty symbol should not be in GlobalSymbolTable");
     // Copy the RE since we want to modify its addend.
     RelocationEntry RECopy = RE;
     const auto &SymInfo = Loc->second;
@@ -1234,7 +1240,8 @@ void RuntimeDyldImpl::finalizeAsync(
 
   for (auto &RelocKV : SharedThis->ExternalSymbolRelocations) {
     StringRef Name = RelocKV.first();
-    assert(!Name.empty() && "Symbol has no name?");
+    if (Name.empty()) // Skip absolute symbol relocations.
+      continue;
     assert(!SharedThis->GlobalSymbolTable.count(Name) &&
            "Name already processed. RuntimeDyld instances can not be re-used "
            "when finalizing with finalizeAsync.");
