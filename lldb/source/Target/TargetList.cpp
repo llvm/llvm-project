@@ -42,12 +42,6 @@ TargetList::TargetList(Debugger &debugger)
   CheckInWithManager();
 }
 
-// Destructor
-TargetList::~TargetList() {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  m_target_list.clear();
-}
-
 Status TargetList::CreateTarget(Debugger &debugger,
                                 llvm::StringRef user_exe_path,
                                 llvm::StringRef triple_str,
