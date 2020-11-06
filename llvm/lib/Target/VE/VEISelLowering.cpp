@@ -40,10 +40,26 @@ using namespace llvm;
 
 #include "VEGenCallingConv.inc"
 
+CCAssignFn *getReturnCC(CallingConv::ID CallConv) {
+  switch (CallConv) {
+  default:
+    return RetCC_VE_C;
+  }
+}
+
+CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
+  if (IsVarArg)
+    return CC_VE2;
+  switch (CallConv) {
+  default:
+    return CC_VE_C;
+  }
+}
+
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
-  CCAssignFn *RetCC = RetCC_VE;
+  CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC);
@@ -282,7 +298,7 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
 
   // Analyze return values.
-  CCInfo.AnalyzeReturn(Outs, RetCC_VE);
+  CCInfo.AnalyzeReturn(Outs, getReturnCC(CallConv));
 
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -363,7 +379,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
   // by CC_VE would be correct now.
-  CCInfo.AnalyzeFormalArguments(Ins, CC_VE);
+  CCInfo.AnalyzeFormalArguments(Ins, getParamCC(CallConv, false));
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -511,7 +527,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
   // by CC_VE would be correct now.
-  CCInfo.AnalyzeCallOperands(CLI.Outs, CC_VE);
+  CCInfo.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, false));
 
   // VE requires to use both register and stack for varargs or no-prototyped
   // functions.
@@ -522,7 +538,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCState CCInfo2(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(),
                   ArgLocs2, *DAG.getContext());
   if (UseBoth)
-    CCInfo2.AnalyzeCallOperands(CLI.Outs, CC_VE2);
+    CCInfo2.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, true));
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -707,7 +723,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CB)
     CLI.Ins[0].Flags.setInReg();
 
-  RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_VE);
+  RVInfo.AnalyzeCallResult(CLI.Ins, getReturnCC(CLI.CallConv));
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {

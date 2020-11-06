@@ -181,29 +181,46 @@ In async-continuation lowering, signaled by the use of `llvm.coro.id.async`,
 handling of control-flow must be handled explicitly by the frontend.
 
 In this lowering, a coroutine is assumed to take the current `async context` as
-its first argument. It is used to marshal arguments and return values of the
-coroutine. Therefore a async coroutine returns `void`.
+one of its arguments (the argument position is determined by
+`llvm.coro.id.async`). It is used to marshal arguments and return values of the
+coroutine. Therefore an async coroutine returns `void`.
 
 .. code-block:: llvm
 
   define swiftcc void @async_coroutine(i8* %async.ctxt, i8*, i8*) {
   }
 
+Values live accross a suspend point need to be stored in the coroutine frame to
+be available in the continuation function. This frame is stored as a tail to the
+`async context`.
 
-Every suspend point takes an `async context` argument which provides the context
-and the coroutine frame of the callee function. Every
-suspend point has an associated `resume function` denoted by the
-`llvm.coro.async.resume` intrinsic. The coroutine is resumed by
-calling this `resume function` passing the `async context` as the first
-argument. It is assumed that the `resume function` can restore its (the
-caller's) `async context` by loading the first field in the `async context`.
+Every suspend point takes an `context projection function` argument which
+describes how-to obtain the continuations `async context` and every suspend
+point has an associated `resume function` denoted by the
+`llvm.coro.async.resume` intrinsic. The coroutine is resumed by calling this
+`resume function` passing the `async context` as the one of its arguments
+argument. The `resume function` can restore its (the caller's) `async context`
+by applying a `context projection function` that is provided by the frontend as
+a parameter to the `llvm.coro.suspend.async` intrinsic.
 
 .. code-block:: c
 
+  // For example:
   struct async_context {
     struct async_context *caller_context;
     ...
   }
+
+  char *context_projection_function(struct async_context *callee_ctxt) {
+     return callee_ctxt->caller_context;
+  }
+
+.. code-block:: llvm
+
+  %resume_func_ptr = call i8* @llvm.coro.async.resume()
+  call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+                                              i8* %resume_func_ptr,
+                                              i8* %context_projection_function
 
 The frontend should provide a `async function pointer` struct associated with
 each async coroutine by `llvm.coro.id.async`'s argument. The initial size and
@@ -216,8 +233,8 @@ to obtain the required size.
 .. code-block:: c
 
   struct async_function_pointer {
-    uint32_t context_size;
     uint32_t relative_function_pointer_to_async_impl;
+    uint32_t context_size;
   }
 
 Lowering will split an async coroutine into a ramp function and one resume
@@ -230,6 +247,14 @@ The suspend point takes a function and its arguments. The function is intended
 to model the transfer to the callee function. It will be tail called by
 lowering and therefore must have the same signature and calling convention as
 the async coroutine.
+
+.. code-block:: llvm
+
+  call {i8*, i8*, i8*} (i8*, i8*, ...) @llvm.coro.suspend.async(
+                   i8* %resume_func_ptr,
+                   i8* %context_projection_function,
+                   i8* (bitcast void (i8*, i8*, i8*)* to i8*) %suspend_function,
+                   i8* %arg1, i8* %arg2, i8 %arg3)
 
 Coroutines by Example
 =====================
@@ -1482,10 +1507,11 @@ to the coroutine:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare {i8*, i8*, i8*} @llvm.coro.suspend.async(i8* <resume function>,
-                                                   i8* <callee context>,
-                                                   ... <function to call>
-                                                   ... <arguments to function>)
+  declare {i8*, i8*, i8*} @llvm.coro.suspend.async(
+                             i8* <resume function>,
+                             i8* <context projection function>,
+                             ... <function to call>
+                             ... <arguments to function>)
 
 Overview:
 """""""""
@@ -1500,8 +1526,9 @@ The first argument should be the result of the `llvm.coro.async.resume` intrinsi
 Lowering will replace this intrinsic with the resume function for this suspend
 point.
 
-The second argument is the `async context` allocation for the callee. It should
-provide storage the `async context` header and the coroutine frame.
+The second argument is the `context projection function`. It should describe
+how-to restore the `async context` in the continuation function from the first
+argument of the continuation function. Its type is `i8* (i8*)`.
 
 The third argument is the function that models tranfer to the callee at the
 suspend point. It should take 3 arguments. Lowering will `musttail` call this
@@ -1515,6 +1542,26 @@ Semantics:
 The result of the intrinsic are mapped to the arguments of the resume function.
 Execution is suspended at this intrinsic and resumed when the resume function is
 called.
+
+.. _coro.prepare.async:
+
+'llvm.coro.prepare.async' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i8* @llvm.coro.prepare.async(i8* <coroutine function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.prepare.async``' intrinsic is used to block inlining of the
+async coroutine until after coroutine splitting.
+
+Arguments:
+""""""""""
+
+The first argument should be an async coroutine of type `void (i8*, i8*, i8*)`.
+Lowering will replace this intrinsic with its coroutine function argument.
 
 .. _coro.suspend.retcon:
 

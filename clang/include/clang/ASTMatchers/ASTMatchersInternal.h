@@ -1060,7 +1060,7 @@ public:
 
   virtual ASTContext &getASTContext() const = 0;
 
-  virtual bool isMatchingInImplicitTemplateInstantiation() const = 0;
+  virtual bool IsMatchingInTemplateInstantiationNotSpelledInSource() const = 0;
 
 protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,

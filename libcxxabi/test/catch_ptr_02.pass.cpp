@@ -14,6 +14,9 @@
 //        See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97675.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-error
 
+// The fix for PR17222 made it in the dylib for macOS 10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+
 #include <cassert>
 
 // Clang emits  warnings about exceptions of type 'Child' being caught by

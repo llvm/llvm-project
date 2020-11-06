@@ -17,7 +17,7 @@ class Configuration(LibcxxConfiguration):
         super(Configuration, self).__init__(lit_config, config)
         self.libunwind_src_root = None
         self.libunwind_obj_root = None
-        self.abi_library_path = None
+        self.abi_library_root = None
         self.libcxx_src_root = None
 
     def configure_src_root(self):
