@@ -44,10 +44,10 @@ define amdgpu_ps void @test_vopc_vcmpx(float %x) {
 }
 
 ; GCN-LABEL: {{^}}test_vopc_2xf16:
-; GFX1032: v_cmp_le_f16_sdwa [[SC:s[0-9]+]], {{[vs][0-9]+}}, v{{[0-9]+}} src0_sel:WORD_1 src1_sel:DWORD
-; GFX1032: v_cndmask_b32_e64 v{{[0-9]+}}, 0x3c003c00, v{{[0-9]+}}, [[SC]]
-; GFX1064: v_cmp_le_f16_sdwa [[SC:s\[[0-9:]+\]]], {{[vs][0-9]+}}, v{{[0-9]+}} src0_sel:WORD_1 src1_sel:DWORD
-; GFX1064: v_cndmask_b32_e64 v{{[0-9]+}}, 0x3c003c00, v{{[0-9]+}}, [[SC]]
+; GFX1032: v_cmp_le_f16_sdwa [[SC:vcc_lo|s[0-9]+]], {{[vs][0-9]+}}, v{{[0-9]+}} src0_sel:WORD_1 src1_sel:DWORD
+; GFX1032: v_cndmask_b32_e32 v{{[0-9]+}}, 0x3c003c00, v{{[0-9]+}}, [[SC]]
+; GFX1064: v_cmp_le_f16_sdwa [[SC:vcc|s\[[0-9:]+\]]], {{[vs][0-9]+}}, v{{[0-9]+}} src0_sel:WORD_1 src1_sel:DWORD
+; GFX1064: v_cndmask_b32_e32 v{{[0-9]+}}, 0x3c003c00, v{{[0-9]+}}, [[SC]]
 define amdgpu_kernel void @test_vopc_2xf16(<2 x half> addrspace(1)* %arg) {
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %arg, i32 %lid

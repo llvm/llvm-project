@@ -1,0 +1,31 @@
+{
+  "trace": {
+    "type": "intel-pt",
+    "pt_cpu": {
+      "vendor": "intel",
+      "family": 6,
+      "model": 79,
+      "stepping": 1
+    }
+  },
+  "processes": [
+    {
+      "pid": 1234,
+      "triple": "x86_64-*-linux",
+      "threads": [
+        {
+          "tid": 3842849,
+          "traceFile": "3842849.trace"
+        }
+      ],
+      "modules": [
+        {
+          "file": "a.out",
+          "systemPath": "a.out",
+          "loadAddress": "0x0000000000FFFFF0",
+          "uuid": "6AA9A4E2-6F28-2F33-377D-59FECE874C71-5B41261A"
+        }
+      ]
+    }
+  ]
+}

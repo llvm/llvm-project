@@ -343,6 +343,42 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ilogb
+  SRCS
+    ilogb.cpp
+  HDRS
+    ilogb.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  ilogbf
+  SRCS
+    ilogbf.cpp
+  HDRS
+    ilogbf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  ilogbl
+  SRCS
+    ilogbl.cpp
+  HDRS
+    ilogbl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   logb
   SRCS
     logb.cpp

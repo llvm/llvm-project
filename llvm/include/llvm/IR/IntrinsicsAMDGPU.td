@@ -1593,6 +1593,10 @@ def int_amdgcn_wqm_vote : Intrinsic<[llvm_i1_ty],
 // FIXME: Should this be IntrNoMem, IntrHasSideEffects, or IntrWillReturn?
 def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], []>;
 
+def int_amdgcn_endpgm : GCCBuiltin<"__builtin_amdgcn_endpgm">,
+  Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrNoMem, IntrHasSideEffects]
+>;
+
 // If false, mark all active lanes as helper lanes until the end of program.
 def int_amdgcn_wqm_demote : Intrinsic<[], [llvm_i1_ty], []>;
 

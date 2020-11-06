@@ -1118,6 +1118,7 @@ let isTerminator = 1 in {
 def S_ENDPGM : SOPP_Pseudo<"s_endpgm", (ins EndpgmImm:$simm16), "$simm16"> {
   let isBarrier = 1;
   let isReturn = 1;
+  let hasSideEffects = 1;
 }
 
 def S_ENDPGM_SAVED : SOPP_Pseudo<"s_endpgm_saved", (ins)> {
@@ -1325,6 +1326,11 @@ let SubtargetPredicate = isGFX10Plus in {
 
 def : GCNPat <
   (AMDGPUendpgm),
+    (S_ENDPGM (i16 0))
+>;
+
+def : GCNPat <
+  (int_amdgcn_endpgm),
     (S_ENDPGM (i16 0))
 >;
 

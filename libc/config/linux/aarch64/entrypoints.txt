@@ -65,6 +65,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.frexpf
     libc.src.math.frexpl
     libc.src.math.hypotf
+    libc.src.math.ilogb
+    libc.src.math.ilogbf
+    libc.src.math.ilogbl
     libc.src.math.logb
     libc.src.math.logbf
     libc.src.math.logbl

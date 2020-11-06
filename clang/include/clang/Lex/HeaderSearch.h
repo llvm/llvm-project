@@ -183,9 +183,6 @@ class HeaderSearch {
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
 
-  /// The hash used for module cache paths.
-  std::string ModuleHash;
-
   /// The path to the module cache.
   std::string ModuleCachePath;
 
@@ -322,16 +319,10 @@ public:
     return {};
   }
 
-  /// Set the hash to use for module cache paths.
-  void setModuleHash(StringRef Hash) { ModuleHash = std::string(Hash); }
-
   /// Set the path to the module cache.
   void setModuleCachePath(StringRef CachePath) {
     ModuleCachePath = std::string(CachePath);
   }
-
-  /// Retrieve the module hash.
-  StringRef getModuleHash() const { return ModuleHash; }
 
   /// Retrieve the path to the module cache.
   StringRef getModuleCachePath() const { return ModuleCachePath; }
@@ -521,15 +512,6 @@ public:
   std::string getPrebuiltModuleFileName(StringRef ModuleName,
                                         bool FileMapOnly = false);
 
-  /// Retrieve the name of the prebuilt module file that should be used
-  /// to load the given module.
-  ///
-  /// \param Module The module whose module file name will be returned.
-  ///
-  /// \returns The name of the module file that corresponds to this module,
-  /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltImplicitModuleFileName(Module *Module);
-
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
   ///
@@ -631,22 +613,6 @@ private:
   /// \returns The module named ModuleName.
   Module *lookupModule(StringRef ModuleName, StringRef SearchName,
                        bool AllowExtraModuleMapSearch = false);
-
-  /// Retrieve the name of the (to-be-)cached module file that should
-  /// be used to load a module with the given name.
-  ///
-  /// \param ModuleName The module whose module file name will be returned.
-  ///
-  /// \param ModuleMapPath A path that when combined with \c ModuleName
-  /// uniquely identifies this module. See Module::ModuleMap.
-  ///
-  /// \param CachePath A path to the module cache.
-  ///
-  /// \returns The name of the module file that corresponds to this module,
-  /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileNameImpl(StringRef ModuleName,
-                                          StringRef ModuleMapPath,
-                                          StringRef CachePath);
 
   /// Retrieve a module with the given name, which may be part of the
   /// given framework.
