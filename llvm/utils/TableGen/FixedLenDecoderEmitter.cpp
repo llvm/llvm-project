@@ -941,7 +941,7 @@ emitPredicateFunction(formatted_raw_ostream &OS, PredicateSet &Predicates,
   // The predicate function is just a big switch statement based on the
   // input predicate index.
   OS.indent(Indentation) << "static bool checkDecoderPredicate(unsigned Idx, "
-    << "const FeatureBitset& Bits) {\n";
+    << "const FeatureBitset &Bits) {\n";
   Indentation += 2;
   if (!Predicates.empty()) {
     OS.indent(Indentation) << "switch (Idx) {\n";
@@ -965,7 +965,7 @@ emitDecoderFunction(formatted_raw_ostream &OS, DecoderSet &Decoders,
                     unsigned Indentation) const {
   // The decoder function is just a big switch statement based on the
   // input decoder index.
-  OS.indent(Indentation) << "template<typename InsnType>\n";
+  OS.indent(Indentation) << "template <typename InsnType>\n";
   OS.indent(Indentation) << "static DecodeStatus decodeToMCInst(DecodeStatus S,"
     << " unsigned Idx, InsnType insn, MCInst &MI,\n";
   OS.indent(Indentation) << "                                   uint64_t "
@@ -2162,7 +2162,7 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
      << "// * Support shift (<<, >>) with signed and unsigned integers on the "
         "RHS\n"
      << "// * Support put (<<) to raw_ostream&\n"
-     << "template<typename InsnType>\n"
+     << "template <typename InsnType>\n"
      << "#if defined(_MSC_VER) && !defined(__clang__)\n"
      << "__declspec(noinline)\n"
      << "#endif\n"
@@ -2182,7 +2182,7 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
      << "  return (insn & fieldMask) >> startBit;\n"
      << "}\n"
      << "\n"
-     << "template<typename InsnType>\n"
+     << "template <typename InsnType>\n"
      << "static InsnType fieldFromInstruction(InsnType insn, unsigned "
         "startBit,\n"
      << "                                     unsigned numBits, "
@@ -2193,7 +2193,7 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
      << "  return (insn >> startBit) & fieldMask;\n"
      << "}\n"
      << "\n"
-     << "template<typename InsnType>\n"
+     << "template <typename InsnType>\n"
      << "static InsnType fieldFromInstruction(InsnType insn, unsigned "
         "startBit,\n"
      << "                                     unsigned numBits) {\n"
@@ -2205,14 +2205,14 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS) {
-  OS << "template<typename InsnType>\n"
+  OS << "template <typename InsnType>\n"
      << "static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], "
         "MCInst &MI,\n"
      << "                                      InsnType insn, uint64_t "
         "Address,\n"
      << "                                      const void *DisAsm,\n"
      << "                                      const MCSubtargetInfo &STI) {\n"
-     << "  const FeatureBitset& Bits = STI.getFeatureBits();\n"
+     << "  const FeatureBitset &Bits = STI.getFeatureBits();\n"
      << "\n"
      << "  const uint8_t *Ptr = DecodeTable;\n"
      << "  InsnType CurFieldValue = 0;\n"
@@ -2374,7 +2374,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      if (Fail)\n"
      << "        S = MCDisassembler::SoftFail;\n"
      << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_SoftFail: \" << (Fail ? "
-        "\"FAIL\\n\":\"PASS\\n\"));\n"
+        "\"FAIL\\n\" : \"PASS\\n\"));\n"
      << "      break;\n"
      << "    }\n"
      << "    case MCD::OPC_Fail: {\n"
@@ -2392,8 +2392,8 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
 void FixedLenDecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
   OS << "#include \"llvm/MC/MCInst.h\"\n";
-  OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/DataTypes.h\"\n";
+  OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/LEB128.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n";
   OS << "#include <assert.h>\n";

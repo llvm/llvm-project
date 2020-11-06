@@ -1709,7 +1709,7 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
   }
 
   OS << "  InitMCProcessorInfo(CPU, TuneCPU, FS);\n"
-     << "  const FeatureBitset& Bits = getFeatureBits();\n";
+     << "  const FeatureBitset &Bits = getFeatureBits();\n";
 
   for (Record *R : Features) {
     // Next record
@@ -1755,7 +1755,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const override {\n"
      << "    return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID); \n";
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n";
   OS << "  }\n";
   if (TGT.getHwModes().getNumModeIds() > 1)
     OS << "  unsigned getHwMode() const override;\n";
