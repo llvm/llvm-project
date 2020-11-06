@@ -18,6 +18,25 @@
 #include <stddef.h>
 #include <stdint.h>
 
+//===----------------------------------------------------------------------===//
+// Visibility annotations.
+// Use MLIR_CAPI_EXPORTED for exported functions.
+//===----------------------------------------------------------------------===//
+
+#if defined(MLIR_CAPI_DISABLE_VISIBILITY_ANNOTATIONS)
+#define MLIR_CAPI_EXPORTED
+#elif defined(_WIN32) || defined(__CYGWIN__)
+// Windows visibility declarations.
+#if MLIR_CAPI_BUILDING_LIBRARY
+#define MLIR_CAPI_EXPORTED __declspec(dllexport)
+#else
+#define MLIR_CAPI_EXPORTED __declspec(dllimport)
+#endif
+#else
+// Non-windows: use visibility attributes.
+#define MLIR_CAPI_EXPORTED __attribute__((visibility("default")))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -49,7 +68,8 @@ inline static MlirStringRef mlirStringRefCreate(const char *str,
 /** Constructs a string reference from a null-terminated C string. Prefer
  * mlirStringRefCreate if the length of the string is known.
  */
-MlirStringRef mlirStringRefCreateFromCString(const char *str);
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirStringRefCreateFromCString(const char *str);
 
 /** A callback for returning string references.
  *
