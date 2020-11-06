@@ -1,6 +1,7 @@
 
 /*
- *   hostrpc_execute_service.c:  These are the host services for the hostrpc system
+ *   hostrpc_execute_service.c:  These are the host services for the hostrpc
+system
  *
  *   Written by Greg Rodgers
 
@@ -266,27 +267,26 @@ static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
            dev_ver, dev_rel, dev_mod, host_ver, host_rel, host_mod);
     printf("          Consider rebuild binary with more recent compiler.\n");
   }
-  return HOSTRPC_SUCCESS; 
+  return HOSTRPC_SUCCESS;
 }
 
-static void hostrpc_abort(int rc){ 
-  printf("hostrpc_abort called with code %d\n",rc);
-  abort(); 
+static void hostrpc_abort(int rc) {
+  printf("hostrpc_abort called with code %d\n", rc);
+  abort();
 }
 
-// The architecture-specific implementation of hostrpc will 
-// call this single external function for each service request. 
+// The architecture-specific implementation of hostrpc will
+// call this single external function for each service request.
 // Host service functions are architecturally independent.
 extern void hostrpc_execute_service(uint32_t service, uint64_t *payload) {
-  
+
   // split the 32-bit service number into service_id and VRM to be checked
   // if device hostrpc or stubs are ahead of this host runtime.
-  uint service_id = (service <<16 ) >> 16;
+  uint service_id = (service << 16) >> 16;
   if (!hostrpc_version_checked) {
-    uint device_vrm = ((uint) service >> 16 );
-    hostrpc_status_t err =
-    hostrpc_version_check(device_vrm);
-    if ( err != HOSTRPC_SUCCESS)
+    uint device_vrm = ((uint)service >> 16);
+    hostrpc_status_t err = hostrpc_version_check(device_vrm);
+    if (err != HOSTRPC_SUCCESS)
       hostrpc_abort(err);
     hostrpc_version_checked = true;
   }

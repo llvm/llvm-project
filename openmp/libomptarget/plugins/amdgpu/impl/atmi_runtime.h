@@ -155,20 +155,16 @@ atmi_status_t atmi_malloc(void **ptr, size_t size, atmi_mem_place_t place);
  */
 atmi_status_t atmi_free(void *ptr);
 
-atmi_status_t atmi_memcpy_h2d(hsa_signal_t signal,
-                              void *deviceDest,
-                              const void *hostSrc,
-                              size_t size,
+atmi_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
+                              const void *hostSrc, size_t size,
                               hsa_agent_t agent);
 
-atmi_status_t atmi_memcpy_d2h(hsa_signal_t sig,
-                              void *hostDest,
-                              const void *deviceSrc,
-                              size_t size,
+atmi_status_t atmi_memcpy_d2h(hsa_signal_t sig, void *hostDest,
+                              const void *deviceSrc, size_t size,
                               hsa_agent_t agent);
 
-atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src,
-                                    size_t size, bool host2Device);
+atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src, size_t size,
+                                    bool host2Device);
 /** @} */
 
 #ifdef __cplusplus

@@ -27,17 +27,17 @@ extern "C" {
  */
 
 typedef enum {
-    AMD_HOSTCALL_SUCCESS,
-    AMD_HOSTCALL_ERROR_CONSUMER_ACTIVE,
-    AMD_HOSTCALL_ERROR_CONSUMER_INACTIVE,
-    AMD_HOSTCALL_ERROR_CONSUMER_LAUNCH_FAILED,
-    AMD_HOSTCALL_ERROR_INVALID_REQUEST,
-    AMD_HOSTCALL_ERROR_SERVICE_UNKNOWN,
-    AMD_HOSTCALL_ERROR_INCORRECT_ALIGNMENT,
-    AMD_HOSTCALL_ERROR_NULLPTR
+  AMD_HOSTCALL_SUCCESS,
+  AMD_HOSTCALL_ERROR_CONSUMER_ACTIVE,
+  AMD_HOSTCALL_ERROR_CONSUMER_INACTIVE,
+  AMD_HOSTCALL_ERROR_CONSUMER_LAUNCH_FAILED,
+  AMD_HOSTCALL_ERROR_INVALID_REQUEST,
+  AMD_HOSTCALL_ERROR_SERVICE_UNKNOWN,
+  AMD_HOSTCALL_ERROR_INCORRECT_ALIGNMENT,
+  AMD_HOSTCALL_ERROR_NULLPTR
 } amd_hostcall_error_t;
 
-const char * amd_hostcall_error_string(amd_hostcall_error_t error);
+const char *amd_hostcall_error_string(amd_hostcall_error_t error);
 
 /// Opaque struct that encapsulates a consumer thread.
 typedef struct amd_hostcall_consumer_t amd_hostcall_consumer_t;
@@ -59,7 +59,7 @@ typedef struct amd_hostcall_consumer_t amd_hostcall_consumer_t;
  *  buffers created in the application. The client may safely launch
  *  multiple consumers based on factors external to this library.
  */
-amd_hostcall_consumer_t * amd_hostcall_create_consumer(void);
+amd_hostcall_consumer_t *amd_hostcall_create_consumer(void);
 
 /** \brief Destroy a consumer instance.
  *
@@ -99,7 +99,8 @@ uint32_t amd_hostcall_get_buffer_alignment(void);
  *      pointer is not aligned to the value returned by
  *      amd_hostcall_get_buffer_alignment().
  */
-amd_hostcall_error_t amd_hostcall_initialize_buffer(void *buffer, uint32_t num_packets);
+amd_hostcall_error_t amd_hostcall_initialize_buffer(void *buffer,
+                                                    uint32_t num_packets);
 
 /** \brief Register a buffer with a consumer.
  *
@@ -116,7 +117,8 @@ amd_hostcall_error_t amd_hostcall_initialize_buffer(void *buffer, uint32_t num_p
  *  buffer is associated with a unique command queue across all
  *  devices.
  */
-void amd_hostcall_register_buffer(amd_hostcall_consumer_t *consumer, void *buffer);
+void amd_hostcall_register_buffer(amd_hostcall_consumer_t *consumer,
+                                  void *buffer);
 
 /** \brief Deregister a buffer that is no longer in use.
  *
@@ -129,7 +131,8 @@ void amd_hostcall_register_buffer(amd_hostcall_consumer_t *consumer, void *buffe
  *  \li \c AMD_HOSTCALL_ERROR_INVALID_REQUEST if the buffer was
  *      previously deregistered or not registered with this consumer.
  */
-amd_hostcall_error_t amd_hostcall_deregister_buffer(amd_hostcall_consumer_t *consumer, void *buffer);
+amd_hostcall_error_t
+amd_hostcall_deregister_buffer(amd_hostcall_consumer_t *consumer, void *buffer);
 
 /** \brief Launch the consumer in its own thread.
  *
@@ -140,38 +143,38 @@ amd_hostcall_error_t amd_hostcall_deregister_buffer(amd_hostcall_consumer_t *con
  *  \li \c AMD_HOSTCALL_ERROR_CONSUMER_LAUNCH_FAILED if the thread was
  *      not already running and it failed to launch.
  */
-amd_hostcall_error_t amd_hostcall_launch_consumer(amd_hostcall_consumer_t *consumer);
-
+amd_hostcall_error_t
+amd_hostcall_launch_consumer(amd_hostcall_consumer_t *consumer);
 
 /** Opaque wrapper for signal */
 typedef struct {
-    uint64_t handle;
+  uint64_t handle;
 } signal_t;
 
 /** Field offsets in the packet control field */
 typedef enum {
-    CONTROL_OFFSET_READY_FLAG = 0,
-    CONTROL_OFFSET_RESERVED0 = 1,
+  CONTROL_OFFSET_READY_FLAG = 0,
+  CONTROL_OFFSET_RESERVED0 = 1,
 } control_offset_t;
 
 /** Field widths in the packet control field */
 typedef enum {
-    CONTROL_WIDTH_READY_FLAG = 1,
-    CONTROL_WIDTH_RESERVED0 = 31,
+  CONTROL_WIDTH_READY_FLAG = 1,
+  CONTROL_WIDTH_RESERVED0 = 31,
 } control_width_t;
 
 /** Packet header */
 typedef struct {
-    /** Tagged pointer to the next packet in an intrusive stack */
-    uint64_t next;
-    /** Bitmask that represents payload slots with valid data */
-    uint64_t activemask;
-    /** Service ID requested by the wave */
-    uint32_t service;
-    /** Control bits.
-     *  \li \c READY flag is bit 0. Indicates packet awaiting a host response.
-     */
-    uint32_t control;
+  /** Tagged pointer to the next packet in an intrusive stack */
+  uint64_t next;
+  /** Bitmask that represents payload slots with valid data */
+  uint64_t activemask;
+  /** Service ID requested by the wave */
+  uint32_t service;
+  /** Control bits.
+   *  \li \c READY flag is bit 0. Indicates packet awaiting a host response.
+   */
+  uint32_t control;
 } header_t;
 
 /** \brief Packet payload
@@ -181,7 +184,7 @@ typedef struct {
  *  corresponding bit in header_t::activemask is set.
  */
 typedef struct {
-    uint64_t slots[64][8];
+  uint64_t slots[64][8];
 } payload_t;
 
 /** \brief Hostcall state.
@@ -191,18 +194,18 @@ typedef struct {
  *  device queue.
  */
 typedef struct {
-    /** Array of 2^index_size packet headers */
-    header_t *headers;
-    /** Array of 2^index_size packet payloads */
-    payload_t *payloads;
-    /** Signal used by kernels to indicate new work */
-    signal_t doorbell;
-    /** Stack of free packets */
-    uint64_t free_stack;
-    /** Stack of ready packets */
-    uint64_t ready_stack;
-    /** Number of LSBs in the tagged pointer can index into the packet arrays */
-    uint32_t index_size;
+  /** Array of 2^index_size packet headers */
+  header_t *headers;
+  /** Array of 2^index_size packet payloads */
+  payload_t *payloads;
+  /** Signal used by kernels to indicate new work */
+  signal_t doorbell;
+  /** Stack of free packets */
+  uint64_t free_stack;
+  /** Stack of ready packets */
+  uint64_t ready_stack;
+  /** Number of LSBs in the tagged pointer can index into the packet arrays */
+  uint32_t index_size;
 } buffer_t;
 
 #include "../../plugins/amdgpu/impl/atmi_runtime.h"

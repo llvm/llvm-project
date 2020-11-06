@@ -162,13 +162,13 @@ EXTERN uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
       return (uint32_t)(i + 1);
   return maxstrlen;
 }
-// NOTE: if you add a new interface above, also add it to libomptarget/src/exports
-// and to libomptarget/src/slib_hostrpc.cpp
+// NOTE: if you add a new interface above, also add it to
+// libomptarget/src/exports and to libomptarget/src/slib_hostrpc.cpp
 
 // ---------------------------------------------------
 #else
 // ---------------------------------------------------
 // This stub is needed to satisfy omp pragma syntax.
-static int stub() {};
+static int stub(){};
 #endif
 #pragma omp end declare target

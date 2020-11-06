@@ -28,9 +28,9 @@ SOFTWARE.
 
 #include "hostrpc_internal.h"
 #include "hsa_ext_amd.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 
 // FIXME, move some of this to hostrpc_internal.h
 typedef struct atl_hcq_element_s atl_hcq_element_t;
@@ -105,8 +105,7 @@ static buffer_t *atl_hcq_create_buffer(unsigned int num_packets) {
 
 // The following  three external functions are called by plugin.
 //
-unsigned long hostrpc_assign_buffer(hsa_agent_t agent,
-                                    hsa_queue_t *this_Q,
+unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
                                     uint32_t device_id) {
   atl_hcq_element_t *llq_elem;
   llq_elem = atl_hcq_find_by_hsa_q(this_Q);
