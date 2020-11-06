@@ -114,24 +114,24 @@ void GenerateEnumClauseVal(const std::vector<Record *> &Records,
 bool HasDuplicateClauses(const std::vector<Record *> &Clauses,
                          const Directive &Directive,
                          llvm::StringSet<> &CrtClauses) {
-  bool hasError = false;
+  bool HasError = false;
   for (const auto &C : Clauses) {
     VersionedClause VerClause{C};
     const auto insRes = CrtClauses.insert(VerClause.getClause().getName());
     if (!insRes.second) {
       PrintError("Clause " + VerClause.getClause().getRecordName() +
                  " already defined on directive " + Directive.getRecordName());
-      hasError = true;
+      HasError = true;
     }
   }
-  return hasError;
+  return HasError;
 }
 
 // Check for duplicate clauses in lists. Clauses cannot appear twice in the
 // three allowed list. Also, since required implies allowed, clauses cannot
 // appear in both the allowedClauses and requiredClauses lists.
 bool HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
-  bool hasDuplicate = false;
+  bool HasDuplicate = false;
   for (const auto &D : Directives) {
     Directive Dir{D};
     llvm::StringSet<> Clauses;
@@ -139,26 +139,26 @@ bool HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
     if (HasDuplicateClauses(Dir.getAllowedClauses(), Dir, Clauses) ||
         HasDuplicateClauses(Dir.getAllowedOnceClauses(), Dir, Clauses) ||
         HasDuplicateClauses(Dir.getAllowedExclusiveClauses(), Dir, Clauses)) {
-      hasDuplicate = true;
+      HasDuplicate = true;
     }
     // Check for duplicate between allowedClauses and required
     Clauses.clear();
     if (HasDuplicateClauses(Dir.getAllowedClauses(), Dir, Clauses) ||
         HasDuplicateClauses(Dir.getRequiredClauses(), Dir, Clauses)) {
-      hasDuplicate = true;
+      HasDuplicate = true;
     }
-    if (hasDuplicate)
+    if (HasDuplicate)
       PrintFatalError("One or more clauses are defined multiple times on"
                       " directive " +
                       Dir.getRecordName());
   }
 
-  return hasDuplicate;
+  return HasDuplicate;
 }
 
 // Check consitency of records. Return true if an error has been detected.
 // Return false if the records are valid.
-bool DirectiveLanguage::CheckRecordsValidity() const {
+bool DirectiveLanguage::HasValidityErrors() const {
   if (getDirectiveLanguages().size() != 1) {
     PrintFatalError("A single definition of DirectiveLanguage is needed.");
     return true;
@@ -171,7 +171,7 @@ bool DirectiveLanguage::CheckRecordsValidity() const {
 // language
 void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
-  if (DirLang.CheckRecordsValidity())
+  if (DirLang.HasValidityErrors())
     return;
 
   OS << "#ifndef LLVM_" << DirLang.getName() << "_INC\n";
@@ -649,7 +649,7 @@ void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
 // language.
 void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
-  if (DirLang.CheckRecordsValidity())
+  if (DirLang.HasValidityErrors())
     return;
 
   EmitDirectivesFlangImpl(DirLang, OS);
@@ -659,7 +659,7 @@ void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
 // language. This code can be included in library.
 void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
-  if (DirLang.CheckRecordsValidity())
+  if (DirLang.HasValidityErrors())
     return;
 
   if (!DirLang.getIncludeHeader().empty())
