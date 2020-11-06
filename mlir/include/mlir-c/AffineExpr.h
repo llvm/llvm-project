@@ -42,132 +42,116 @@ DEFINE_C_API_STRUCT(MlirAffineExpr, const void);
 #undef DEFINE_C_API_STRUCT
 
 /// Gets the context that owns the affine expression.
-MLIR_CAPI_EXPORTED MlirContext
-mlirAffineExprGetContext(MlirAffineExpr affineExpr);
+MlirContext mlirAffineExprGetContext(MlirAffineExpr affineExpr);
 
 /** Prints an affine expression by sending chunks of the string representation
  * and forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-MLIR_CAPI_EXPORTED void mlirAffineExprPrint(MlirAffineExpr affineExpr,
-                                            MlirStringCallback callback,
-                                            void *userData);
+void mlirAffineExprPrint(MlirAffineExpr affineExpr, MlirStringCallback callback,
+                         void *userData);
 
 /// Prints the affine expression to the standard error stream.
-MLIR_CAPI_EXPORTED void mlirAffineExprDump(MlirAffineExpr affineExpr);
+void mlirAffineExprDump(MlirAffineExpr affineExpr);
 
 /** Checks whether the given affine expression is made out of only symbols and
  * constants. */
-MLIR_CAPI_EXPORTED int
-mlirAffineExprIsSymbolicOrConstant(MlirAffineExpr affineExpr);
+int mlirAffineExprIsSymbolicOrConstant(MlirAffineExpr affineExpr);
 
 /** Checks whether the given affine expression is a pure affine expression, i.e.
  * mul, floordiv, ceildic, and mod is only allowed w.r.t constants. */
-MLIR_CAPI_EXPORTED int mlirAffineExprIsPureAffine(MlirAffineExpr affineExpr);
+int mlirAffineExprIsPureAffine(MlirAffineExpr affineExpr);
 
 /** Returns the greatest known integral divisor of this affine expression. The
  * result is always positive. */
-MLIR_CAPI_EXPORTED int64_t
-mlirAffineExprGetLargestKnownDivisor(MlirAffineExpr affineExpr);
+int64_t mlirAffineExprGetLargestKnownDivisor(MlirAffineExpr affineExpr);
 
 /// Checks whether the given affine expression is a multiple of 'factor'.
-MLIR_CAPI_EXPORTED int mlirAffineExprIsMultipleOf(MlirAffineExpr affineExpr,
-                                                  int64_t factor);
+int mlirAffineExprIsMultipleOf(MlirAffineExpr affineExpr, int64_t factor);
 
 /** Checks whether the given affine expression involves AffineDimExpr
  * 'position'. */
-MLIR_CAPI_EXPORTED int mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr,
-                                                     intptr_t position);
+int mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr, intptr_t position);
 
 //===----------------------------------------------------------------------===//
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//
 
 /// Creates an affine dimension expression with 'position' in the context.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineDimExprGet(MlirContext ctx,
-                                                       intptr_t position);
+MlirAffineExpr mlirAffineDimExprGet(MlirContext ctx, intptr_t position);
 
 /// Returns the position of the given affine dimension expression.
-MLIR_CAPI_EXPORTED intptr_t
-mlirAffineDimExprGetPosition(MlirAffineExpr affineExpr);
+intptr_t mlirAffineDimExprGetPosition(MlirAffineExpr affineExpr);
 
 //===----------------------------------------------------------------------===//
 // Affine Symbol Expression.
 //===----------------------------------------------------------------------===//
 
 /// Creates an affine symbol expression with 'position' in the context.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineSymbolExprGet(MlirContext ctx,
-                                                          intptr_t position);
+MlirAffineExpr mlirAffineSymbolExprGet(MlirContext ctx, intptr_t position);
 
 /// Returns the position of the given affine symbol expression.
-MLIR_CAPI_EXPORTED intptr_t
-mlirAffineSymbolExprGetPosition(MlirAffineExpr affineExpr);
+intptr_t mlirAffineSymbolExprGetPosition(MlirAffineExpr affineExpr);
 
 //===----------------------------------------------------------------------===//
 // Affine Constant Expression.
 //===----------------------------------------------------------------------===//
 
 /// Creates an affine constant expression with 'constant' in the context.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineConstantExprGet(MlirContext ctx,
-                                                            int64_t constant);
+MlirAffineExpr mlirAffineConstantExprGet(MlirContext ctx, int64_t constant);
 
 /// Returns the value of the given affine constant expression.
-MLIR_CAPI_EXPORTED int64_t
-mlirAffineConstantExprGetValue(MlirAffineExpr affineExpr);
+int64_t mlirAffineConstantExprGetValue(MlirAffineExpr affineExpr);
 
 //===----------------------------------------------------------------------===//
 // Affine Add Expression.
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given affine expression is an add expression.
-MLIR_CAPI_EXPORTED int mlirAffineExprIsAAdd(MlirAffineExpr affineExpr);
+int mlirAffineExprIsAAdd(MlirAffineExpr affineExpr);
 
 /// Creates an affine add expression with 'lhs' and 'rhs'.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineAddExprGet(MlirAffineExpr lhs,
-                                                       MlirAffineExpr rhs);
+MlirAffineExpr mlirAffineAddExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs);
 
 //===----------------------------------------------------------------------===//
 // Affine Mul Expression.
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given affine expression is an mul expression.
-MLIR_CAPI_EXPORTED int mlirAffineExprIsAMul(MlirAffineExpr affineExpr);
+int mlirAffineExprIsAMul(MlirAffineExpr affineExpr);
 
 /// Creates an affine mul expression with 'lhs' and 'rhs'.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineMulExprGet(MlirAffineExpr lhs,
-                                                       MlirAffineExpr rhs);
+MlirAffineExpr mlirAffineMulExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs);
 
 //===----------------------------------------------------------------------===//
 // Affine Mod Expression.
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given affine expression is an mod expression.
-MLIR_CAPI_EXPORTED int mlirAffineExprIsAMod(MlirAffineExpr affineExpr);
+int mlirAffineExprIsAMod(MlirAffineExpr affineExpr);
 
 /// Creates an affine mod expression with 'lhs' and 'rhs'.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineModExprGet(MlirAffineExpr lhs,
-                                                       MlirAffineExpr rhs);
+MlirAffineExpr mlirAffineModExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs);
 
 //===----------------------------------------------------------------------===//
 // Affine FloorDiv Expression.
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given affine expression is an floordiv expression.
-MLIR_CAPI_EXPORTED int mlirAffineExprIsAFloorDiv(MlirAffineExpr affineExpr);
+int mlirAffineExprIsAFloorDiv(MlirAffineExpr affineExpr);
 
 /// Creates an affine floordiv expression with 'lhs' and 'rhs'.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineFloorDivExprGet(MlirAffineExpr lhs,
-                                                            MlirAffineExpr rhs);
+MlirAffineExpr mlirAffineFloorDivExprGet(MlirAffineExpr lhs,
+                                         MlirAffineExpr rhs);
 
 //===----------------------------------------------------------------------===//
 // Affine CeilDiv Expression.
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given affine expression is an ceildiv expression.
-MLIR_CAPI_EXPORTED int mlirAffineExprIsACeilDiv(MlirAffineExpr affineExpr);
+int mlirAffineExprIsACeilDiv(MlirAffineExpr affineExpr);
 
 /// Creates an affine ceildiv expression with 'lhs' and 'rhs'.
-MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineCeilDivExprGet(MlirAffineExpr lhs,
-                                                           MlirAffineExpr rhs);
+MlirAffineExpr mlirAffineCeilDivExprGet(MlirAffineExpr lhs, MlirAffineExpr rhs);
 
 //===----------------------------------------------------------------------===//
 // Affine Binary Operation Expression.
@@ -175,13 +159,11 @@ MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineCeilDivExprGet(MlirAffineExpr lhs,
 
 /** Returns the left hand side affine expression of the given affine binary
  * operation expression. */
-MLIR_CAPI_EXPORTED MlirAffineExpr
-mlirAffineBinaryOpExprGetLHS(MlirAffineExpr affineExpr);
+MlirAffineExpr mlirAffineBinaryOpExprGetLHS(MlirAffineExpr affineExpr);
 
 /** Returns the right hand side affine expression of the given affine binary
  * operation expression. */
-MLIR_CAPI_EXPORTED MlirAffineExpr
-mlirAffineBinaryOpExprGetRHS(MlirAffineExpr affineExpr);
+MlirAffineExpr mlirAffineBinaryOpExprGetRHS(MlirAffineExpr affineExpr);
 
 #ifdef __cplusplus
 }

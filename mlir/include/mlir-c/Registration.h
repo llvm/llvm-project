@@ -19,7 +19,7 @@ extern "C" {
 /** Registers all dialects known to core MLIR with the provided Context.
  * This is needed before creating IR for these Dialects.
  */
-MLIR_CAPI_EXPORTED void mlirRegisterAllDialects(MlirContext context);
+void mlirRegisterAllDialects(MlirContext context);
 
 #ifdef __cplusplus
 }

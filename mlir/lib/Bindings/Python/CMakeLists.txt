@@ -1,3 +1,7 @@
+if(NOT LLVM_BUILD_LLVM_DYLIB)
+  message(FATAL_ERROR "Building the MLIR Python bindings require -DLLVM_BUILD_LLVM_DYLIB=ON")
+endif()
+
 include(AddMLIRPythonExtension)
 add_custom_target(MLIRBindingsPythonExtension)
 ################################################################################
