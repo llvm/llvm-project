@@ -1614,15 +1614,13 @@ Instruction *InstCombinerImpl::foldICmpXorConstant(ICmpInst &Cmp,
   if (Xor->hasOneUse()) {
     // (icmp u/s (xor X SignMask), C) -> (icmp s/u X, (xor C SignMask))
     if (!Cmp.isEquality() && XorC->isSignMask()) {
-      Pred = Cmp.isSigned() ? Cmp.getUnsignedPredicate()
-                            : Cmp.getSignedPredicate();
+      Pred = Cmp.getFlippedSignednessPredicate();
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), C ^ *XorC));
     }
 
     // (icmp u/s (xor X ~SignMask), C) -> (icmp s/u X, (xor C ~SignMask))
     if (!Cmp.isEquality() && XorC->isMaxSignedValue()) {
-      Pred = Cmp.isSigned() ? Cmp.getUnsignedPredicate()
-                            : Cmp.getSignedPredicate();
+      Pred = Cmp.getFlippedSignednessPredicate();
       Pred = Cmp.getSwappedPredicate(Pred);
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), C ^ *XorC));
     }
@@ -4053,15 +4051,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       if (match(BO0->getOperand(1), m_APInt(C))) {
         // icmp u/s (a ^ signmask), (b ^ signmask) --> icmp s/u a, b
         if (C->isSignMask()) {
-          ICmpInst::Predicate NewPred =
-              I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
+          ICmpInst::Predicate NewPred = I.getFlippedSignednessPredicate();
           return new ICmpInst(NewPred, BO0->getOperand(0), BO1->getOperand(0));
         }
 
         // icmp u/s (a ^ maxsignval), (b ^ maxsignval) --> icmp s/u' a, b
         if (BO0->getOpcode() == Instruction::Xor && C->isMaxSignedValue()) {
-          ICmpInst::Predicate NewPred =
-              I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
+          ICmpInst::Predicate NewPred = I.getFlippedSignednessPredicate();
           NewPred = I.getSwappedPredicate(NewPred);
           return new ICmpInst(NewPred, BO0->getOperand(0), BO1->getOperand(0));
         }

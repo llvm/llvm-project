@@ -3898,6 +3898,18 @@ bool CmpInst::isSigned(Predicate predicate) {
   }
 }
 
+CmpInst::Predicate CmpInst::getFlippedSignednessPredicate(Predicate pred) {
+  assert(CmpInst::isRelational(pred) &&
+         "Call only with non-equality predicates!");
+
+  if (isSigned(pred))
+    return getUnsignedPredicate(pred);
+  if (isUnsigned(pred))
+    return getSignedPredicate(pred);
+
+  llvm_unreachable("Unknown predicate!");
+}
+
 bool CmpInst::isOrdered(Predicate predicate) {
   switch (predicate) {
     default: return false;
