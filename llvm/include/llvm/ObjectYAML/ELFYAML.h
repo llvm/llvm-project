@@ -126,6 +126,16 @@ struct DynamicEntry {
   llvm::yaml::Hex64 Val;
 };
 
+struct BBAddrMapEntry {
+  struct BBEntry {
+    llvm::yaml::Hex32 AddressOffset;
+    llvm::yaml::Hex32 Size;
+    llvm::yaml::Hex32 Metadata;
+  };
+  llvm::yaml::Hex64 Address;
+  Optional<std::vector<BBEntry>> BBEntries;
+};
+
 struct StackSizeEntry {
   llvm::yaml::Hex64 Address;
   llvm::yaml::Hex64 Size;
@@ -159,7 +169,8 @@ struct Chunk {
     Fill,
     LinkerOptions,
     DependentLibraries,
-    CallGraphProfile
+    CallGraphProfile,
+    BBAddrMap
   };
 
   ChunkKind Kind;
@@ -238,6 +249,16 @@ struct Fill : Chunk {
   Fill() : Chunk(ChunkKind::Fill) {}
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Fill; }
+};
+
+struct BBAddrMapSection : Section {
+  Optional<std::vector<BBAddrMapEntry>> Entries;
+
+  BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::BBAddrMap;
+  }
 };
 
 struct StackSizesSection : Section {
@@ -640,6 +661,8 @@ struct Object {
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntry)
@@ -799,6 +822,14 @@ struct MappingTraits<ELFYAML::Symbol> {
 
 template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
   static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
+  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
+  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {

@@ -492,6 +492,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_SYMPART);
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
+  ECase(SHT_LLVM_BB_ADDR_MAP);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
   ECase(SHT_GNU_verdef);
@@ -1146,6 +1147,12 @@ static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
   IO.mapOptional("Info", Section.Info);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::BBAddrMapSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::StackSizesSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Entries", Section.Entries);
@@ -1405,6 +1412,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::CallGraphProfileSection());
     sectionMapping(IO, *cast<ELFYAML::CallGraphProfileSection>(Section.get()));
     break;
+  case ELF::SHT_LLVM_BB_ADDR_MAP:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::BBAddrMapSection());
+    sectionMapping(IO, *cast<ELFYAML::BBAddrMapSection>(Section.get()));
+    break;
   default:
     if (!IO.outputting()) {
       StringRef Name;
@@ -1485,6 +1497,12 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     return "";
   }
 
+  if (const auto *BBAM = dyn_cast<ELFYAML::BBAddrMapSection>(C.get())) {
+    if ((BBAM->Content || BBAM->Size) && BBAM->Entries)
+      return "\"Entries\" cannot be used with \"Content\" or \"Size\"";
+    return "";
+  }
+
   return "";
 }
 
@@ -1518,6 +1536,21 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapRequired("Size", E.Size);
+}
+
+void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
+    IO &IO, ELFYAML::BBAddrMapEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("Address", E.Address, Hex64(0));
+  IO.mapOptional("BBEntries", E.BBEntries);
+}
+
+void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
+    IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("AddressOffset", E.AddressOffset);
+  IO.mapRequired("Size", E.Size);
+  IO.mapRequired("Metadata", E.Metadata);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,
