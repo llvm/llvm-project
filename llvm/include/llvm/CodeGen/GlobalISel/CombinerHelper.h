@@ -423,13 +423,13 @@ public:
                                std::tuple<Register, int64_t> &MatchInfo);
   bool applyAshShlToSextInreg(MachineInstr &MI,
                               std::tuple<Register, int64_t> &MatchInfo);
-  /// \return true if \p MI is a G_AND instruction whose RHS is a mask where
-  /// LHS & mask == LHS. (E.g., an all-ones value.)
+  /// \return true if \p MI is a G_AND instruction whose operands are x and y
+  /// where x & y == x or x & y == y. (E.g., one of operands is all-ones value.)
   ///
   /// \param [in] MI - The G_AND instruction.
   /// \param [out] Replacement - A register the G_AND should be replaced with on
   /// success.
-  bool matchAndWithTrivialMask(MachineInstr &MI, Register &Replacement);
+  bool matchRedundantAnd(MachineInstr &MI, Register &Replacement);
 
   /// \return true if \p MI is a G_SEXT_INREG that can be erased.
   bool matchRedundantSExtInReg(MachineInstr &MI);

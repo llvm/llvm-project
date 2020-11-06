@@ -2833,15 +2833,15 @@ bool CombinerHelper::applyAshShlToSextInreg(
   return true;
 }
 
-bool CombinerHelper::matchAndWithTrivialMask(MachineInstr &MI,
-                                             Register &Replacement) {
+bool CombinerHelper::matchRedundantAnd(MachineInstr &MI,
+                                       Register &Replacement) {
   // Given
   //
-  // %mask:_(sN) = G_CONSTANT iN 000...0111...1
+  // %y:_(sN) = G_SOMETHING
   // %x:_(sN) = G_SOMETHING
-  // %y:_(sN) = G_AND %x, %mask
+  // %res:_(sN) = G_AND %x, %y
   //
-  // Eliminate the G_AND when it is known that x & mask == x.
+  // Eliminate the G_AND when it is known that x & y == x or x & y == y.
   //
   // Patterns like this can appear as a result of legalization. E.g.
   //
@@ -2854,29 +2854,38 @@ bool CombinerHelper::matchAndWithTrivialMask(MachineInstr &MI,
   if (!KB)
     return false;
 
-  // Replacement = %x, AndDst = %y. Check that we can replace AndDst with the
-  // LHS of the G_AND.
-  Replacement = MI.getOperand(1).getReg();
   Register AndDst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(AndDst);
 
   // FIXME: This should be removed once GISelKnownBits supports vectors.
   if (DstTy.isVector())
     return false;
-  if (!canReplaceReg(AndDst, Replacement, MRI))
-    return false;
 
-  // Check that we have a constant on the RHS of the G_AND, which is of the form
-  // 000...0111...1.
-  int64_t Cst;
-  if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Cst)))
-    return false;
-  APInt Mask(DstTy.getSizeInBits(), Cst);
-  if (!Mask.isMask())
-    return false;
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  KnownBits LHSBits = KB->getKnownBits(LHS);
+  KnownBits RHSBits = KB->getKnownBits(RHS);
 
-  // Now, let's check that x & Mask == x. If this is true, then x & ~Mask == 0.
-  return KB->maskedValueIsZero(Replacement, ~Mask);
+  // Check that x & Mask == x.
+  // x & 1 == x, always
+  // x & 0 == x, only if x is also 0
+  // Meaning Mask has no effect if every bit is either one in Mask or zero in x.
+  //
+  // Check if we can replace AndDst with the LHS of the G_AND
+  if (canReplaceReg(AndDst, LHS, MRI) &&
+      (LHSBits.Zero | RHSBits.One).isAllOnesValue()) {
+    Replacement = LHS;
+    return true;
+  }
+
+  // Check if we can replace AndDst with the RHS of the G_AND
+  if (canReplaceReg(AndDst, RHS, MRI) &&
+      (LHSBits.One | RHSBits.Zero).isAllOnesValue()) {
+    Replacement = RHS;
+    return true;
+  }
+
+  return false;
 }
 
 bool CombinerHelper::matchRedundantSExtInReg(MachineInstr &MI) {
