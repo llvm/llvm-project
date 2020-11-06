@@ -121,3 +121,9 @@ exp param0 v4, v3, v2, v1
 
 exp param31 v4, v3, v2, v1
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid exp target
+
+exp mrt0 v4, v3, v2, v1 vm
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+exp mrtz, v3, v3, off, off compr
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
