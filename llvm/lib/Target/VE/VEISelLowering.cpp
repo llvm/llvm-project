@@ -940,23 +940,19 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (isa<ConstantPoolSDNode>(Op) ||
         (GlobalN && GlobalN->getGlobal()->hasLocalLinkage())) {
       // Create following instructions for local linkage PIC code.
-      //     lea %s35, %gotoff_lo(.LCPI0_0)
-      //     and %s35, %s35, (32)0
-      //     lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35)
-      //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
-      // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+      //     lea %reg, label@gotoff_lo
+      //     and %reg, %reg, (32)0
+      //     lea.sl %reg, label@gotoff_hi(%reg, %got)
       SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
                                   VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
       SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
       return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
     }
     // Create following instructions for not local linkage PIC code.
-    //     lea %s35, %got_lo(.LCPI0_0)
-    //     and %s35, %s35, (32)0
-    //     lea.sl %s35, %got_hi(.LCPI0_0)(%s35)
-    //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
-    //     ld     %s35, (,%s35)
-    // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+    //     lea %reg, label@got_lo
+    //     and %reg, %reg, (32)0
+    //     lea.sl %reg, label@got_hi(%reg)
+    //     ld %reg, (%reg, %got)
     SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOT_HI32,
                                 VEMCExpr::VK_VE_GOT_LO32, DAG);
     SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
