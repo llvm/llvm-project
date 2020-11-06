@@ -238,6 +238,8 @@ static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
 // FIXME: Clean up this diagnostic and die properly
 static bool hostrpc_version_checked;
 static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
+  if (device_vrm == (unsigned int)HOSTRPC_VRM)
+    return HOSTRPC_SUCCESS;
   uint device_version_release = device_vrm >> 6;
   if (device_version_release != HOSTRPC_VERSION_RELEASE) {
     printf("ERROR Incompatible device and host release\n      Device "
@@ -249,6 +251,7 @@ static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
     printf("ERROR Incompatible device and host version \n       Device "
            "version(%d)\n      Host version(%d)\n",
            device_vrm, HOSTRPC_VERSION_RELEASE);
+    printf("          Upgrade libomptarget runtime on your system.\n");
     return HOSTRPC_OLDHOSTVERSIONMOD_ERROR;
   }
   if (device_vrm < HOSTRPC_VRM) {
@@ -261,7 +264,7 @@ static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
     printf("WARNING:  Device mod version < host mod version \n          Device "
            "version: %d.%d.%d\n          Host version:   %d.%d.%d\n",
            dev_ver, dev_rel, dev_mod, host_ver, host_rel, host_mod);
-    printf("          Please consider upgrading hostrpc on your host\n");
+    printf("          Consider rebuild binary with more recent compiler.\n");
   }
   return HOSTRPC_SUCCESS; 
 }
