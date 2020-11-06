@@ -366,6 +366,11 @@ void *omp_alloc(size_t size, const omp_allocator_handle_t allocator) {
   i;
   return malloc(size);
 }
+void *omp_calloc(size_t nmemb, size_t size,
+                 const omp_allocator_handle_t allocator) {
+  i;
+  return calloc(nmemb, size);
+}
 void omp_free(void *ptr, const omp_allocator_handle_t allocator) {
   i;
   free(ptr);
