@@ -265,11 +265,11 @@ public:
     auto compl0 =
         rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, zero, step);
     auto compl1 =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, iv, upperBound);
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sle, iv, upperBound);
     auto compl2 =
         rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, step, zero);
     auto compl3 =
-        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt, upperBound, iv);
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sle, upperBound, iv);
     auto cmp0 = rewriter.create<mlir::AndOp>(loc, compl0, compl1);
     auto cmp1 = rewriter.create<mlir::AndOp>(loc, compl2, compl3);
     auto cmp2 = rewriter.create<mlir::OrOp>(loc, cmp0, cmp1);
