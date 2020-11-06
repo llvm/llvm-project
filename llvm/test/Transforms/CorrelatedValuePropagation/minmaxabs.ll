@@ -60,7 +60,7 @@ define void @test_smax(i32 %x) {
 ; CHECK-LABEL: @test_smax(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 10
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -110,7 +110,7 @@ define void @test_abs3(i32 %x) {
 ; CHECK-LABEL: @test_abs3(
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[A]], 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;

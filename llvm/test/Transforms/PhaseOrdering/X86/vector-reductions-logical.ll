@@ -583,7 +583,7 @@ define i32 @test_separate_anyof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i4 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[IF_END:%.*]], label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[T_FR]], <i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i32> [[T_FR]], <i32 255, i32 255, i32 255, i32 255>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
 ; CHECK-NEXT:    [[DOTNOT7:%.*]] = icmp eq i4 [[TMP3]], 0
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
