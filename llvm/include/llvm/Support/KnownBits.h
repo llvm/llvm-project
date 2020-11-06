@@ -97,6 +97,9 @@ public:
   /// Returns true if this value is known to be non-negative.
   bool isNonNegative() const { return Zero.isSignBitSet(); }
 
+  /// Returns true if this value is known to be non-zero.
+  bool isNonZero() const { return One.countPopulation() != 0; }
+
   /// Returns true if this value is known to be positive.
   bool isStrictlyPositive() const { return Zero.isSignBitSet() && !One.isNullValue(); }
 
