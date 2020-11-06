@@ -1126,8 +1126,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
         Prob += MapI->second;
       }
     }
-  uint32_t succ_num = std::distance(succ_begin(Src), succ_end(Src));
-  return FoundProb ? Prob : BranchProbability(EdgeCount, succ_num);
+  return FoundProb ? Prob : BranchProbability(EdgeCount, succ_size(Src));
 }
 
 /// Set the edge probability for all edges at once.
