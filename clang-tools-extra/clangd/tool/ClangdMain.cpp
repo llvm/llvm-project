@@ -809,6 +809,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (EnableClangTidy) {
     auto EmptyDefaults = tidy::ClangTidyOptions::getDefaults();
     EmptyDefaults.Checks.reset(); // So we can tell if checks were ever set.
+    EmptyDefaults.User = llvm::sys::Process::GetEnv("USER");
+#ifdef _WIN32
+    if (!EmptyDefaults.User)
+      EmptyDefaults.User = llvm::sys::Process::GetEnv("USERNAME");
+#endif
     tidy::ClangTidyOptions OverrideClangTidyOptions;
     if (!ClangTidyChecks.empty())
       OverrideClangTidyOptions.Checks = ClangTidyChecks;
