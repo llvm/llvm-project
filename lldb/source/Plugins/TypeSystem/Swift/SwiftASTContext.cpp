@@ -7823,6 +7823,8 @@ bool SwiftASTContext::IsImportedType(opaque_compiler_type_t type,
                                      CompilerType *original_type) {
   bool success = false;
 
+  if (!type)
+    return false;
   if (swift::CanType swift_can_type = GetCanonicalSwiftType(type)) {
     do {
       swift::NominalType *nominal_type =
