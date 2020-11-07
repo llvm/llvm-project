@@ -93,7 +93,8 @@ void TosaDialect::initialize() {
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
-template <typename T> static LogicalResult verifyConvOp(T op) {
+template <typename T>
+static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
   auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
   auto weightType = op.weight().getType().template dyn_cast<RankedTensorType>();
@@ -127,10 +128,10 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
 /// This builder is called on all convolution operators except TransposeConv,
 /// which has specialized output shape semantics. The builder also defines the
 /// bitwidth of the output given the bit width of the input & weight content.
-void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                              Type outputType, Value input, Value weight,
-                              Value bias, ArrayAttr pad, ArrayAttr stride,
-                              ArrayAttr dilation) {
+static void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                                     Type outputType, Value input, Value weight,
+                                     Value bias, ArrayAttr pad,
+                                     ArrayAttr stride, ArrayAttr dilation) {
 
   result.addOperands({input, weight, bias});
   result.addAttribute("pad", pad);
@@ -148,11 +149,11 @@ void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 }
 
 /// Handles tosa.transpose_conv2d which has outpad and output shape attributes.
-void buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                                   Type outputType, Value input, Value weight,
-                                   Value bias, ArrayAttr outpad,
-                                   ArrayAttr stride, ArrayAttr dilation,
-                                   ArrayAttr outputShape) {
+static void
+buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                              Type outputType, Value input, Value weight,
+                              Value bias, ArrayAttr outpad, ArrayAttr stride,
+                              ArrayAttr dilation, ArrayAttr outputShape) {
   result.addOperands({input, weight, bias});
   result.addAttribute("out_pad", outpad);
   result.addAttribute("stride", stride);
@@ -171,9 +172,9 @@ void buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 
 /// The tosa.fully_connected op has its own builder as it does not have
 /// strides/dilation/padding.
-void buildFCOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                            Type outputType, Value input, Value weight,
-                            Value bias) {
+static void buildFCOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                                   Type outputType, Value input, Value weight,
+                                   Value bias) {
 
   result.addOperands({input, weight, bias});
   auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
@@ -190,8 +191,9 @@ void buildFCOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 /// op must be constructed where the weight is not a constant. In this case,
 /// the fully_connected op must be expressed using matmul.
 /// TODO: Add link to the leglization document explaining this.
-void buildMatMulOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                                Type outputType, Value a, Value b) {
+static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
+                                       OperationState &result, Type outputType,
+                                       Value a, Value b) {
   result.addOperands({a, b});
   auto quantAttr = ::buildMatMulOpQuantizationAttr(builder, a, b);
 
@@ -227,10 +229,11 @@ void buildMatMulOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 /// Both the tosa.avg_pool2d and unary ops use the same UnaruOpQuantizationAttr
 /// but avg_pool operator has its own builder as it has additional parameters
 /// not part of the unary ops.
-void buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                                   Type outputType, Value input,
-                                   ArrayAttr kernel, ArrayAttr stride,
-                                   ArrayAttr pad) {
+static void buildAvgPool2dOpWithQuantInfo(OpBuilder &builder,
+                                          OperationState &result,
+                                          Type outputType, Value input,
+                                          ArrayAttr kernel, ArrayAttr stride,
+                                          ArrayAttr pad) {
   result.addOperands(input);
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
@@ -244,8 +247,9 @@ void buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 /// This builder is called on single-parameter unary operators that have scale
 /// relationship between their input and output, expressed by the
 /// UnaryOpQuantizationAttr.
-void buildUnaryOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                               Type outputType, Value input) {
+static void buildUnaryOpWithQuantInfo(OpBuilder &builder,
+                                      OperationState &result, Type outputType,
+                                      Value input) {
   result.addOperands(input);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
   if (quantAttr)
@@ -256,8 +260,9 @@ void buildUnaryOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 /// This builder is called on TOSA pad operator that needs to create its own
 /// OptionalAttr quantization_attr parameter to scale the padding values
 /// correctly.
-void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                             Type outputType, Value input, Value paddings) {
+static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                                    Type outputType, Value input,
+                                    Value paddings) {
   result.addOperands({input, paddings});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
   if (quantAttr)

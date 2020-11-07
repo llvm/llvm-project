@@ -128,8 +128,6 @@ static int reshapeLowerToHigher(PatternRewriter &rewriter, Location loc,
   }
 
   ArrayRef<int64_t> outputRankShape = outputType.getShape();
-  ArrayRef<int64_t> higherRankShape =
-      higherTensorValue.getType().cast<RankedTensorType>().getShape();
   ArrayRef<int64_t> lowerRankShape =
       lowerTensorValue.getType().cast<RankedTensorType>().getShape();
 

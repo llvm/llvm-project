@@ -114,9 +114,9 @@ def Tosa_ConvOpQuantInfoBuilder : OpBuilderDAG<
   (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias,
        "ArrayAttr":$pad, "ArrayAttr":$stride, "ArrayAttr":$dilation),
   [{
-    ::buildConvOpWithQuantInfo($_builder, $_state, outputType,
-                               input, weight, bias,
-                               pad, stride, dilation);
+    buildConvOpWithQuantInfo($_builder, $_state, outputType,
+                             input, weight, bias,
+                             pad, stride, dilation);
   }]>;
 
 // Handles tosa.transpose_conv2d which has an outpad and output shape attribute.
@@ -125,10 +125,10 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilderDAG<
        "ArrayAttr":$outpad, "ArrayAttr":$stride, "ArrayAttr":$dilation,
        "ArrayAttr":$outputShape),
   [{
-    ::buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
-                                    input, weight, bias,
-                                    outpad, stride, dilation,
-                                    outputShape);
+    buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
+                                  input, weight, bias,
+                                  outpad, stride, dilation,
+                                  outputShape);
   }]>;
 
 // The tosa.fully_connected op has its own builder as it does not have
@@ -136,8 +136,8 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilderDAG<
 def Tosa_FCOpQuantInfoBuilder : OpBuilderDAG<
   (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias),
   [{
-    ::buildFCOpWithQuantInfo($_builder, $_state, outputType,
-                             input, weight, bias);
+    buildFCOpWithQuantInfo($_builder, $_state, outputType,
+                           input, weight, bias);
   }]>;
 
 // The tosa.matmul op is also intended to be generated where a fully_connected
@@ -147,8 +147,8 @@ def Tosa_FCOpQuantInfoBuilder : OpBuilderDAG<
 def Tosa_MatMulOpQuantInfoBuilder : OpBuilderDAG<
   (ins "Type":$outputType, "Value":$a, "Value":$b),
   [{
-    ::buildMatMulOpWithQuantInfo($_builder, $_state, outputType,
-                                 a, b);
+    buildMatMulOpWithQuantInfo($_builder, $_state, outputType,
+                               a, b);
   }]>;
 
 // Both the tosa.avg_pool2d and unary ops use the same
@@ -158,8 +158,8 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilderDAG<
   (ins "Type":$outputType, "Value":$input, "ArrayAttr":$kernel,
        "ArrayAttr":$stride, "ArrayAttr":$pad),
   [{
-    ::buildAvgPool2dOpWithQuantInfo($_builder, $_state, outputType,
-                                    input, kernel, stride, pad);
+    buildAvgPool2dOpWithQuantInfo($_builder, $_state, outputType,
+                                  input, kernel, stride, pad);
   }]>;
 
 // This builder is called on single-parameter unary operators that have a scale
@@ -168,7 +168,7 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilderDAG<
 def Tosa_UnaryOpQuantInfoBuilder : OpBuilderDAG<
   (ins "Type":$outputType, "Value":$input),
   [{
-    ::buildUnaryOpWithQuantInfo($_builder, $_state, outputType, input);
+    buildUnaryOpWithQuantInfo($_builder, $_state, outputType, input);
   }]>;
 
 // This builder is called on the TOSA pad operator that needs to create its own
@@ -177,8 +177,8 @@ def Tosa_UnaryOpQuantInfoBuilder : OpBuilderDAG<
 def Tosa_PadOpQuantInfoBuilder : OpBuilderDAG<
   (ins "Type":$outputType, "Value":$input, "Value":$paddings),
   [{
-    ::buildPadOpWithQuantInfo($_builder, $_state, outputType,
-                              input, paddings);
+    buildPadOpWithQuantInfo($_builder, $_state, outputType,
+                            input, paddings);
   }]>;
 
 //===----------------------------------------------------------------------===//
