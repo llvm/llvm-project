@@ -276,6 +276,16 @@ checkDeducedTemplateArguments(ASTContext &Context,
     // All other combinations are incompatible.
     return DeducedTemplateArgument();
 
+  case TemplateArgument::UncommonValue:
+    // If we deduced a value and a dependent expression, keep the value.
+    if (Y.getKind() == TemplateArgument::Expression ||
+        (Y.getKind() == TemplateArgument::UncommonValue &&
+         X.structurallyEquals(Y)))
+      return X;
+
+    // All other combinations are incompatible.
+    return DeducedTemplateArgument();
+
   case TemplateArgument::Template:
     if (Y.getKind() == TemplateArgument::Template &&
         Context.hasSameTemplateName(X.getAsTemplate(), Y.getAsTemplate()))
@@ -2361,20 +2371,18 @@ DeduceTemplateArguments(Sema &S,
     return Sema::TDK_NonDeducedMismatch;
 
   case TemplateArgument::Integral:
-    if (Arg.getKind() == TemplateArgument::Integral) {
-      if (hasSameExtendedValue(Param.getAsIntegral(), Arg.getAsIntegral()))
-        return Sema::TDK_Success;
+    if (Arg.getKind() == TemplateArgument::Integral &&
+        hasSameExtendedValue(Param.getAsIntegral(), Arg.getAsIntegral()))
+      return Sema::TDK_Success;
 
-      Info.FirstArg = Param;
-      Info.SecondArg = Arg;
-      return Sema::TDK_NonDeducedMismatch;
-    }
+    Info.FirstArg = Param;
+    Info.SecondArg = Arg;
+    return Sema::TDK_NonDeducedMismatch;
 
-    if (Arg.getKind() == TemplateArgument::Expression) {
-      Info.FirstArg = Param;
-      Info.SecondArg = Arg;
-      return Sema::TDK_NonDeducedMismatch;
-    }
+  case TemplateArgument::UncommonValue:
+    if (Arg.getKind() == TemplateArgument::UncommonValue &&
+        Arg.structurallyEquals(Param))
+      return Sema::TDK_Success;
 
     Info.FirstArg = Param;
     Info.SecondArg = Arg;
@@ -2383,28 +2391,34 @@ DeduceTemplateArguments(Sema &S,
   case TemplateArgument::Expression:
     if (const NonTypeTemplateParmDecl *NTTP =
             getDeducedParameterFromExpr(Info, Param.getAsExpr())) {
-      if (Arg.getKind() == TemplateArgument::Integral)
-        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
-                                             Arg.getAsIntegral(),
-                                             Arg.getIntegralType(),
-                                             /*ArrayBound=*/false,
-                                             Info, Deduced);
-      if (Arg.getKind() == TemplateArgument::NullPtr)
-        return DeduceNullPtrTemplateArgument(S, TemplateParams, NTTP,
-                                             Arg.getNullPtrType(),
-                                             Info, Deduced);
-      if (Arg.getKind() == TemplateArgument::Expression)
-        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
-                                             Arg.getAsExpr(), Info, Deduced);
-      if (Arg.getKind() == TemplateArgument::Declaration)
-        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
-                                             Arg.getAsDecl(),
-                                             Arg.getParamTypeForDecl(),
-                                             Info, Deduced);
+      switch (Arg.getKind()) {
+      case TemplateArgument::Integral:
+      case TemplateArgument::Expression:
+      case TemplateArgument::UncommonValue:
+        return DeduceNonTypeTemplateArgument(
+            S, TemplateParams, NTTP, DeducedTemplateArgument(Arg),
+            Arg.getNonTypeTemplateArgumentType(), Info, Deduced);
 
-      Info.FirstArg = Param;
-      Info.SecondArg = Arg;
-      return Sema::TDK_NonDeducedMismatch;
+      case TemplateArgument::NullPtr:
+        return DeduceNullPtrTemplateArgument(
+            S, TemplateParams, NTTP, Arg.getNullPtrType(), Info, Deduced);
+
+
+      case TemplateArgument::Declaration:
+        return DeduceNonTypeTemplateArgument(
+            S, TemplateParams, NTTP, Arg.getAsDecl(), Arg.getParamTypeForDecl(),
+            Info, Deduced);
+
+      case TemplateArgument::Null:
+      case TemplateArgument::Type:
+      case TemplateArgument::Template:
+      case TemplateArgument::TemplateExpansion:
+      case TemplateArgument::Pack:
+        Info.FirstArg = Param;
+        Info.SecondArg = Arg;
+        return Sema::TDK_NonDeducedMismatch;
+      }
+      llvm_unreachable("Unknown template argument kind");
     }
 
     // Can't deduce anything, but that's okay.
@@ -2592,6 +2606,9 @@ static bool isSameTemplateArg(ASTContext &Context,
     case TemplateArgument::Integral:
       return hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral());
 
+    case TemplateArgument::UncommonValue:
+      return X.structurallyEquals(Y);
+
     case TemplateArgument::Expression: {
       llvm::FoldingSetNodeID XID, YID;
       X.getAsExpr()->Profile(XID, Context, true);
@@ -2657,9 +2674,9 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
                                E);
   }
 
-  case TemplateArgument::Integral: {
-    Expr *E =
-        BuildExpressionFromIntegralTemplateArgument(Arg, Loc).getAs<Expr>();
+  case TemplateArgument::Integral:
+  case TemplateArgument::UncommonValue: {
+    Expr *E = BuildExpressionFromNonTypeTemplateArgument(Arg, Loc).get();
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
 
@@ -6101,11 +6118,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
-    break;
-
   case TemplateArgument::NullPtr:
-    MarkUsedTemplateParameters(Ctx, TemplateArg.getNullPtrType(), OnlyDeduced,
-                               Depth, Used);
+  case TemplateArgument::UncommonValue:
     break;
 
   case TemplateArgument::Type:
