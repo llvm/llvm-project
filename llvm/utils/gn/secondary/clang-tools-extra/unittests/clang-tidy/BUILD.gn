@@ -32,6 +32,7 @@ unittest("ClangTidyTests") {
     "LLVMModuleTest.cpp",
     "NamespaceAliaserTest.cpp",
     "ObjCModuleTest.cpp",
+    "OptionsProviderTest.cpp",
     "OverlappingReplacementsTest.cpp",
     "ReadabilityModuleTest.cpp",
     "TransformerClangTidyCheckTest.cpp",
