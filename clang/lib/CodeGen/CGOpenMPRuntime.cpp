@@ -8568,9 +8568,10 @@ public:
 
       // If there is an entry in PartialStruct it means we have a struct with
       // individual members mapped. Emit an extra combined entry.
-      if (PartialStruct.Base.isValid())
+      if (PartialStruct.Base.isValid()) {
         CurInfo.NonContigInfo.Dims.push_back(0);
         emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct);
+      }
 
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(CurInfo);
