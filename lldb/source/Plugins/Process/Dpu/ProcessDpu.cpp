@@ -268,27 +268,26 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   SetState(StateType::eStateStopped, false);
 
   dpu_description_t desc = rank->GetDesc();
-  unsigned int iram_size =
-      desc->hw.memories.iram_size * sizeof(dpuinstruction_t);
-  unsigned int mram_size = desc->hw.memories.mram_size;
-  unsigned int wram_size = desc->hw.memories.wram_size * sizeof(dpuword_t);
+  m_iram_size = desc->hw.memories.iram_size * sizeof(dpuinstruction_t);
+  m_mram_size = desc->hw.memories.mram_size;
+  m_wram_size = desc->hw.memories.wram_size * sizeof(dpuword_t);
 
   m_iram_region.GetRange().SetRangeBase(k_dpu_iram_base);
-  m_iram_region.GetRange().SetRangeEnd(k_dpu_iram_base + iram_size);
+  m_iram_region.GetRange().SetRangeEnd(k_dpu_iram_base + m_iram_size);
   m_iram_region.SetReadable(MemoryRegionInfo::eYes);
   m_iram_region.SetWritable(MemoryRegionInfo::eYes);
   m_iram_region.SetExecutable(MemoryRegionInfo::eYes);
   m_iram_region.SetMapped(MemoryRegionInfo::eYes);
 
   m_mram_region.GetRange().SetRangeBase(k_dpu_mram_base);
-  m_mram_region.GetRange().SetRangeEnd(k_dpu_mram_base + mram_size);
+  m_mram_region.GetRange().SetRangeEnd(k_dpu_mram_base + m_mram_size);
   m_mram_region.SetReadable(MemoryRegionInfo::eYes);
   m_mram_region.SetWritable(MemoryRegionInfo::eYes);
   m_mram_region.SetExecutable(MemoryRegionInfo::eNo);
   m_mram_region.SetMapped(MemoryRegionInfo::eYes);
 
   m_wram_region.GetRange().SetRangeBase(k_dpu_wram_base);
-  m_wram_region.GetRange().SetRangeEnd(k_dpu_wram_base + wram_size);
+  m_wram_region.GetRange().SetRangeEnd(k_dpu_wram_base + m_wram_size);
   m_wram_region.SetReadable(MemoryRegionInfo::eYes);
   m_wram_region.SetWritable(MemoryRegionInfo::eYes);
   m_wram_region.SetExecutable(MemoryRegionInfo::eNo);
@@ -518,15 +517,20 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
   bytes_read = 0;
-  if (addr >= k_dpu_iram_base) {
+  if (addr >= k_dpu_iram_base &&
+      (addr + size) < (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->ReadIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy from IRAM");
-  } else if (addr >= k_dpu_mram_base) {
+  } else if (addr >= k_dpu_mram_base &&
+             (addr + size) < (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->ReadMRAM(addr - k_dpu_mram_base, buf, size))
       return Status("Cannot copy from MRAM");
-  } else {
+  } else if (addr >= k_dpu_wram_base &&
+             (addr + size) < (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->ReadWRAM(addr, buf, size))
       return Status("Cannot copy from WRAM");
+  } else {
+    return Status("Cannot read, unknown address space");
   }
   bytes_read = size;
 
@@ -539,15 +543,20 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
   LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
   bytes_written = 0;
-  if (addr >= k_dpu_iram_base) {
+  if (addr >= k_dpu_iram_base &&
+      (addr + size) < (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy to IRAM");
-  } else if (addr >= k_dpu_mram_base) {
+  } else if (addr >= k_dpu_mram_base &&
+             (addr + size) < (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->WriteMRAM(addr - k_dpu_mram_base, buf, size))
       return Status("Cannot copy to MRAM");
-  } else {
+  } else if (addr >= k_dpu_wram_base &&
+             (addr + size) < (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->WriteWRAM(addr, buf, size))
       return Status("Cannot copy to WRAM");
+  } else {
+    return Status("Cannot write, unknown address space");
   }
   bytes_written = size;
 

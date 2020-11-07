@@ -154,6 +154,10 @@ private:
   MemoryRegionInfo m_iram_region;
   MemoryRegionInfo m_mram_region;
   MemoryRegionInfo m_wram_region;
+
+  lldb::addr_t m_iram_size;
+  lldb::addr_t m_mram_size;
+  lldb::addr_t m_wram_size;
 };
 
 } // namespace process_dpu
