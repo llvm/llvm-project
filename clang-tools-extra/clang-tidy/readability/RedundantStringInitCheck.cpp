@@ -18,7 +18,8 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-const char DefaultStringNames[] = "::std::basic_string";
+const char DefaultStringNames[] =
+    "::std::basic_string_view;::std::basic_string";
 
 static ast_matchers::internal::Matcher<NamedDecl>
 hasAnyNameStdString(std::vector<std::string> Names) {
