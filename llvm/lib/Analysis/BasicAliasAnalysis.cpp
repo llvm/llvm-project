@@ -549,9 +549,10 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       // FIXME: C1*Scale and the other operations in the decomposed
       // (C1*Scale)*V+C2*Scale can also overflow. We should check for this
       // possibility.
-      APInt WideScaledOffset = IndexOffset.sextOrTrunc(MaxPointerSize*2) *
-                                 Scale.sext(MaxPointerSize*2);
-      if (WideScaledOffset.getMinSignedBits() > MaxPointerSize) {
+      bool Overflow;
+      APInt ScaledOffset = IndexOffset.sextOrTrunc(MaxPointerSize)
+                           .smul_ov(Scale, Overflow);
+      if (Overflow) {
         Index = OrigIndex;
         IndexScale = 1;
         IndexOffset = 0;
@@ -560,7 +561,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (PointerSize > Width)
           SExtBits += PointerSize - Width;
       } else {
-        Decomposed.OtherOffset += IndexOffset.sextOrTrunc(MaxPointerSize) * Scale;
+        Decomposed.OtherOffset += ScaledOffset;
         Scale *= IndexScale.sextOrTrunc(MaxPointerSize);
       }
 
