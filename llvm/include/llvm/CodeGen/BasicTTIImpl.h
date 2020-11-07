@@ -224,6 +224,10 @@ public:
     return getTLI()->getTargetMachine().isNoopAddrSpaceCast(FromAS, ToAS);
   }
 
+  unsigned getAssumedAddrSpace(const Value *V) const {
+    return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
+  }
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const {
     return nullptr;

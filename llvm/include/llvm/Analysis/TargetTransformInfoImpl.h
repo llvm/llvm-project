@@ -89,6 +89,8 @@ public:
 
   bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
 
+  unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const {
     return nullptr;
