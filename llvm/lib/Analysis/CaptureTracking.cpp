@@ -254,7 +254,6 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
-    V = U->get();
 
     switch (I->getOpcode()) {
     case Instruction::Call:
@@ -292,13 +291,11 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // that loading a value from a pointer does not cause the pointer to be
       // captured, even though the loaded value might be the pointer itself
       // (think of self-referential objects).
-      for (auto IdxOpPair : enumerate(Call->data_ops())) {
-        int Idx = IdxOpPair.index();
-        Value *A = IdxOpPair.value();
-        if (A == V && !Call->doesNotCapture(Idx))
-          // The parameter is not marked 'nocapture' - captured.
-          if (Tracker->captured(U))
-            return;
+      if (Call->isDataOperand(U) &&
+          !Call->doesNotCapture(Call->getDataOperandNo(U))) {
+        // The parameter is not marked 'nocapture' - captured.
+        if (Tracker->captured(U))
+          return;
       }
       break;
     }
@@ -312,9 +309,9 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // "va-arg" from a pointer does not cause it to be captured.
       break;
     case Instruction::Store:
-        // Stored the pointer - conservatively assume it may be captured.
-        // Volatile stores make the address observable.
-      if (V == I->getOperand(0) || cast<StoreInst>(I)->isVolatile())
+      // Stored the pointer - conservatively assume it may be captured.
+      // Volatile stores make the address observable.
+      if (U->getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
         if (Tracker->captured(U))
           return;
       break;
@@ -325,7 +322,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // but the value being stored is.
       // Volatile stores make the address observable.
       auto *ARMWI = cast<AtomicRMWInst>(I);
-      if (ARMWI->getValOperand() == V || ARMWI->isVolatile())
+      if (U->getOperandNo() == 1 || ARMWI->isVolatile())
         if (Tracker->captured(U))
           return;
       break;
@@ -337,7 +334,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // but the value being stored is.
       // Volatile stores make the address observable.
       auto *ACXI = cast<AtomicCmpXchgInst>(I);
-      if (ACXI->getCompareOperand() == V || ACXI->getNewValOperand() == V ||
+      if (U->getOperandNo() == 1 || U->getOperandNo() == 2 ||
           ACXI->isVolatile())
         if (Tracker->captured(U))
           return;
@@ -352,14 +349,14 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       AddUses(I);
       break;
     case Instruction::ICmp: {
-      unsigned Idx = (I->getOperand(0) == V) ? 0 : 1;
+      unsigned Idx = U->getOperandNo();
       unsigned OtherIdx = 1 - Idx;
       if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(OtherIdx))) {
         // Don't count comparisons of a no-alias return value against null as
         // captures. This allows us to ignore comparisons of malloc results
         // with null, for example.
         if (CPN->getType()->getAddressSpace() == 0)
-          if (isNoAliasCall(V->stripPointerCasts()))
+          if (isNoAliasCall(U->get()->stripPointerCasts()))
             break;
         if (!I->getFunction()->nullPointerIsDefined()) {
           auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
