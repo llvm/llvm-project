@@ -49,3 +49,25 @@ void g() {
 // HAVECTOR: "_CT??@c14087f0ec22b387aea7c59083f4f546@??@4ef4f8979c81f9d2224b32bf327e6bdf@4"
 }
 #endif
+
+// Verify the threshold where md5 mangling kicks in
+// Test an ident with 4088 characters, pre-hash, MangleName.size() is 4095
+#define X4088(X)                                \
+    C2(C2(                                      \
+      C4(X,       X4(X),   X4(X),    X8(X)),    \
+      C4(X8(X),   X32(X),  X64(X),   X128(X))), \
+      C4(X256(X), X512(X), X1024(X), X2048(X)))
+#define Z4088 X4088(z)
+// Use initialization to verify mangled name association in the il
+int X4088(z) = 1515;
+// CHECK-DAG: @"?{{z+}}@@3HA" = dso_local global i32 1515, align 4
+
+// Test an ident with 4089 characters, pre-hash, MangleName.size() is 4096
+#define X4089(X)                                \
+    C2(C2(                                      \
+      C4(X2(X),   X4(X),   X4(X),    X8(X)),    \
+      C4(X8(X),   X32(X),  X64(X),   X128(X))), \
+      C4(X256(X), X512(X), X1024(X), X2048(X)))
+// Use initialization to verify mangled name association in the il
+int X4089(z) = 1717;
+// CHECK-DAG: @"??@0269945400a3474730d6880df0967d8f@" = dso_local global i32 1717, align 4
