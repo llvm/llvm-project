@@ -24,6 +24,7 @@
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
 #include <cstdlib>
@@ -54,6 +55,7 @@ inline void registerAllPasses() {
   registerShapePasses();
   spirv::registerSPIRVPasses();
   registerStandardPasses();
+  tosa::registerTosaOptPasses();
 }
 
 } // namespace mlir
