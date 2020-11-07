@@ -17,7 +17,8 @@ include "mlir/IR/OpBase.td"
 
 def TosaOpInterface : OpInterface<"TosaOp"> {
   let description = [{
-    Implemented by ops that correspond to the Tosa specification.
+    Implements interfaces implemented by ops that correspond to the Tosa
+    specification.
   }];
 }
 
