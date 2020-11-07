@@ -21,7 +21,7 @@
 //===----------------------------------------------------------------------===//
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
-#include "mlir/Dialect/Tosa/IR/TosaDialect.h.inc"
+#include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
 #include "mlir/Dialect/Tosa/IR/TosaStructs.h.inc"
 
 namespace mlir {
