@@ -1366,11 +1366,11 @@ llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   if (!CE->hasAPValueResult())
     return nullptr;
   const Expr *Inner = CE->getSubExpr()->IgnoreImplicit();
-  QualType RetType;
-  if (auto *Call = dyn_cast<CallExpr>(Inner))
-    RetType = Call->getCallReturnType(CGF->getContext());
-  else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Inner))
-    RetType = Ctor->getType();
+  QualType RetType = Inner->getType();
+  if (Inner->isLValue())
+    RetType = CGF->getContext().getLValueReferenceType(RetType);
+  else if (Inner->isXValue())
+    RetType = CGF->getContext().getRValueReferenceType(RetType);
   llvm::Constant *Res =
       emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
   return Res;

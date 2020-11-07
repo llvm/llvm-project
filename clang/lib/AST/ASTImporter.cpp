@@ -808,6 +808,17 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/true);
   }
 
+  case TemplateArgument::UncommonValue: {
+    ExpectedType ToTypeOrErr = import(From.getUncommonValueType());
+    if (!ToTypeOrErr)
+      return ToTypeOrErr.takeError();
+    Expected<APValue> ToValueOrErr = import(From.getAsUncommonValue());
+    if (!ToValueOrErr)
+      return ToValueOrErr.takeError();
+    return TemplateArgument(Importer.getToContext(), *ToTypeOrErr,
+                            *ToValueOrErr);
+  }
+
   case TemplateArgument::Template: {
     Expected<TemplateName> ToTemplateOrErr = import(From.getAsTemplate());
     if (!ToTemplateOrErr)

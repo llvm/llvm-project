@@ -169,6 +169,8 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       break;
     case TemplateArgument::NullPtr:
     case TemplateArgument::Integral:
+    case TemplateArgument::UncommonValue:
+      // FIXME: Include a representation of these arguments.
       break;
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
