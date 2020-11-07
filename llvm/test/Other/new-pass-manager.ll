@@ -356,12 +356,16 @@
 ; CHECK-CALLGRAPH: Running analysis: CallGraphAnalysis
 ; CHECK-CALLGRAPH: Finished llvm::Module pass manager run
 
+;; If Polly is enabled, registerPollyPasses adds an ep-vectorizer-start callback.
+;; There may or may not be a function pass manager run.
+;; Add a no-op-function to unify the two cases.
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
-; RUN:     -passes='default<O0>' %s 2>&1 \
+; RUN:     -passes='default<O0>' -passes-ep-vectorizer-start=no-op-function %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O0
 ; CHECK-O0: Starting llvm::Module pass manager run
 ; CHECK-O0-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-O0-NEXT: Starting llvm::Function pass manager run
+; CHECK-O0-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O0-NEXT: Finished llvm::Function pass manager run
 ; CHECK-O0-NEXT: Finished llvm::Module pass manager run
 
