@@ -14,7 +14,7 @@
 ; DELETED-BUT-PRINTED: IR Dump {{.*}}LoopDeletionPass {{.*invalidated:}}
 ; DELETED-BUT-PRINTED-NOT: IR Dump {{.*}}LoopInstSimplifyPass
 
-define void @deleteme() willreturn {
+define void @deleteme() {
 entry:
   br label %loop
 loop:

@@ -8,7 +8,7 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,AFTER
 
 
-define void @foo(i64 %n, i64 %m) nounwind willreturn {
+define void @foo(i64 %n, i64 %m) nounwind {
 ; CHECK-LABEL: @foo(
 
 entry:

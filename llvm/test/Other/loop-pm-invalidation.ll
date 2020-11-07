@@ -227,7 +227,7 @@ exit:
   ret void
 }
 
-define void @dead_loop() willreturn {
+define void @dead_loop() {
 ; CHECK-LOOP-INV: Starting {{.*}}Function pass manager run
 ; CHECK-LOOP-INV-NEXT: Starting {{.*}}Function pass manager run
 ; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
