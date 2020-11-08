@@ -343,7 +343,7 @@ struct Object {
   /// Creates a new segment load command in the object and returns a reference
   /// to the newly created load command. The caller should verify that SegName
   /// is not too long (SegName.size() should be less than or equal to 16).
-  LoadCommand &addSegment(StringRef SegName);
+  LoadCommand &addSegment(StringRef SegName, uint64_t SegVMSize);
 
   bool is64Bit() const {
     return Header.Magic == MachO::MH_MAGIC_64 ||

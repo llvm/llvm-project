@@ -280,6 +280,7 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
   StringRef TargetSegName = Pair.first;
   Section Sec(TargetSegName, Pair.second);
   Sec.Content = Obj.NewSectionsContents.save(Buf->getBuffer());
+  Sec.Size = Sec.Content.size();
 
   // Add the a section into an existing segment.
   for (LoadCommand &LC : Obj.LoadCommands) {
@@ -296,7 +297,8 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
 
   // There's no segment named TargetSegName. Create a new load command and
   // Insert a new section into it.
-  LoadCommand &NewSegment = Obj.addSegment(TargetSegName);
+  LoadCommand &NewSegment =
+      Obj.addSegment(TargetSegName, alignTo(Sec.Size, 16384));
   NewSegment.Sections.push_back(std::make_unique<Section>(Sec));
   NewSegment.Sections.back()->Addr = *NewSegment.getSegmentVMAddr();
   return Error::success();
