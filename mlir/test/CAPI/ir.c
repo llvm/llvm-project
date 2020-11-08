@@ -903,6 +903,26 @@ int printStandardAttributes(MlirContext ctx) {
       fabs(mlirDenseElementsAttrGetDoubleSplatValue(splatDouble) - 1.0) > 1E-6)
     return 17;
 
+  uint32_t *uint32RawData =
+      (uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
+  int32_t *int32RawData =
+      (int32_t *)mlirDenseElementsAttrGetRawData(int32Elements);
+  uint64_t *uint64RawData =
+      (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
+  int64_t *int64RawData =
+      (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
+  float *floatRawData =
+      (float *)mlirDenseElementsAttrGetRawData(floatElements);
+  double *doubleRawData =
+      (double *)mlirDenseElementsAttrGetRawData(doubleElements);
+  if (uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
+      int32RawData[0] != 0 || int32RawData[1] != 1 ||
+      uint64RawData[0] != 0u || uint64RawData[1] != 1u ||
+      int64RawData[0] != 0 || int64RawData[1] != 1 ||
+      floatRawData[0] != 0.0f || floatRawData[1] != 1.0f ||
+      doubleRawData[0] != 0.0 || doubleRawData[1] != 1.0)
+    return 18;
+
   mlirAttributeDump(splatBool);
   mlirAttributeDump(splatUInt32);
   mlirAttributeDump(splatInt32);
