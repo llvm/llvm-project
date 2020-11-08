@@ -20,6 +20,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#define PASS_NAME "tosa-test-quant-utils"
+
 using namespace mlir;
 using namespace mlir::tosa;
 
@@ -176,7 +178,7 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
 namespace {
 
 struct TosaTestQuantUtilAPI
-    : public TosaTestQuantUtilsBase<TosaTestQuantUtilAPI> {
+    : public PassWrapper<TosaTestQuantUtilAPI, FunctionPass> {
   void runOnFunction() override;
 };
 
@@ -192,6 +194,9 @@ void TosaTestQuantUtilAPI::runOnFunction() {
 
 } // anonymous namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaTestQuantUtilAPIPass() {
-  return std::make_unique<TosaTestQuantUtilAPI>();
+namespace mlir {
+void registerTosaTestQuantUtilAPIPass() {
+  PassRegistration<TosaTestQuantUtilAPI>(
+      PASS_NAME, "TOSA Test: Exercise the APIs in QuantUtils.cpp.");
 }
+} // namespace mlir
