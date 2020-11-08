@@ -175,8 +175,10 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN-64: s_wqm_b64 exec, exec
 ; GCN: image_sample
 ; GCN: v_cmp_gt_f32_e32 vcc
-; GCN-32-NEXT: s_and_b32 [[LIVE:s[0-9]+]], [[ORIG]], vcc
-; GCN-64-NEXT: s_and_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], vcc
+; GCN-32-NEXT: s_xor_b32 [[TMP:s[0-9]+]], vcc_lo, exec
+; GCN-64-NEXT: s_xor_b64 [[TMP:s\[[0-9]+:[0-9]+\]]], vcc, exec
+; GCN-32-NEXT: s_andn2_b32 [[LIVE:s[0-9]+]], [[ORIG]], [[TMP]]
+; GCN-64-NEXT: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], [[TMP]]
 ; GCN-NEXT: s_cbranch_scc0 [[EARLYTERM:BB[0-9]+_[0-9]+]]
 ; GCN-32: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
 ; GCN-64: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
