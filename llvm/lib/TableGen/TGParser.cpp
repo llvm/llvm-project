@@ -1148,15 +1148,12 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       break;
     case tgtok::XEq:
     case tgtok::XNe:
-      Type = BitRecTy::get();
-      // ArgType for Eq / Ne is not known at this point
-      break;
     case tgtok::XLe:
     case tgtok::XLt:
     case tgtok::XGe:
     case tgtok::XGt:
       Type = BitRecTy::get();
-      ArgType = IntRecTy::get();
+      // ArgType for the comparison operators is not yet known.
       break;
     case tgtok::XListConcat:
       // We don't know the list type until we parse the first argument
@@ -1245,9 +1242,23 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         case BinOpInit::EQ:
         case BinOpInit::NE:
           if (!ArgType->typeIsConvertibleTo(IntRecTy::get()) &&
+              !ArgType->typeIsConvertibleTo(StringRecTy::get()) &&
+              !ArgType->typeIsConvertibleTo(RecordRecTy::get({}))) {
+            Error(InitLoc, Twine("expected bit, bits, int, string, or record; "
+                                 "got value of type '") + ArgType->getAsString() + 
+                                 "'");
+            return nullptr;
+          }
+          break;
+        case BinOpInit::LE:
+        case BinOpInit::LT:
+        case BinOpInit::GE:
+        case BinOpInit::GT:
+          if (!ArgType->typeIsConvertibleTo(IntRecTy::get()) &&
               !ArgType->typeIsConvertibleTo(StringRecTy::get())) {
-            Error(InitLoc, Twine("expected int, bits, or string; got value of "
-                                 "type '") + ArgType->getAsString() + "'");
+            Error(InitLoc, Twine("expected bit, bits, int, or string; "
+                                 "got value of type '") + ArgType->getAsString() + 
+                                 "'");
             return nullptr;
           }
           break;
