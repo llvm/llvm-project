@@ -34,12 +34,7 @@ class MachOLayoutBuilder {
   Error layoutTail(uint64_t Offset);
 
   static StringTableBuilder::Kind getStringTableBuilderKind(const Object &O,
-                                                            bool Is64Bit) {
-    if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT)
-      return Is64Bit ? StringTableBuilder::MachO64 : StringTableBuilder::MachO;
-    return Is64Bit ? StringTableBuilder::MachO64Linked
-                   : StringTableBuilder::MachOLinked;
-  }
+                                                            bool Is64Bit);
 
 public:
   MachOLayoutBuilder(Object &O, bool Is64Bit, uint64_t PageSize)
