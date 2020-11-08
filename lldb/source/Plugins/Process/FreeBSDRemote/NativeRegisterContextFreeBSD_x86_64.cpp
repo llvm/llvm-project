@@ -1169,4 +1169,19 @@ int NativeRegisterContextFreeBSD_x86_64::GetDR(int num) const {
   }
 }
 
+llvm::Error NativeRegisterContextFreeBSD_x86_64::CopyHardwareWatchpointsFrom(
+    NativeRegisterContextFreeBSD &source) {
+  auto &r_source = static_cast<NativeRegisterContextFreeBSD_x86_64 &>(source);
+  Status res = r_source.ReadRegisterSet(DBRegSet);
+  if (!res.Fail()) {
+    // copy dbregs only if any watchpoints were set
+    if ((r_source.m_dbr.dr[7] & 0xFF) == 0)
+      return llvm::Error::success();
+
+    m_dbr = r_source.m_dbr;
+    res = WriteRegisterSet(DBRegSet);
+  }
+  return res.ToError();
+}
+
 #endif // defined(__x86_64__)
