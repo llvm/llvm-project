@@ -90,7 +90,7 @@ struct DDetector {
   virtual DDReport *GetReport(DDCallback *cb) { return nullptr; }
 
  protected:
-  ~DDetector(){};
+  ~DDetector() {}
 };
 
 } // namespace __sanitizer

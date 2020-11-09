@@ -32,7 +32,7 @@ class ThreadContextLsanBase : public ThreadContextBase {
                           void *onstarted_arg);
 
  protected:
-  ~ThreadContextLsanBase(){};
+  ~ThreadContextLsanBase() {}
   uptr stack_begin_ = 0;
   uptr stack_end_ = 0;
   uptr cache_begin_ = 0;
