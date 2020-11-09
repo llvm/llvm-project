@@ -76,7 +76,7 @@ TEST_CASE(large_file) {
     std::FILE* dest_file = std::fopen(dest.string().c_str(), "rb");
     TEST_REQUIRE(dest_file != nullptr);
     TEST_REQUIRE(std::fseek(dest_file, sendfile_size_limit, SEEK_SET) == 0);
-    TEST_REQUIRE(std::fread(out_data.data(), sizeof(out_data[0]), additional_size, dest_file) == additional_size);
+    TEST_REQUIRE(std::fread(&out_data[0], sizeof(out_data[0]), additional_size, dest_file) == additional_size);
     std::fclose(dest_file);
   }
   TEST_CHECK(out_data.size() == additional_data.size());
