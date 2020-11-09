@@ -10653,21 +10653,32 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
   }
 
   // For unsigned, try to reduce it to corresponding signed comparison.
-  if (Pred == ICmpInst::ICMP_UGT)
+  if (Pred == ICmpInst::ICMP_UGT) {
     // We can replace unsigned predicate with its signed counterpart if all
-    // involved values are non-negative.
+    // involved values are non-negative or non-positive.
     // TODO: We could have better support for unsigned.
-    if (isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) {
-      // Knowing that both FoundLHS and FoundRHS are non-negative, and knowing
-      // FoundLHS >u FoundRHS, we also know that FoundLHS >s FoundRHS. Let us
-      // use this fact to prove that LHS and RHS are non-negative.
+    auto IsNonNegativeOrNonPositive = [this](const SCEV *S) {
+      return isKnownNonNegative(S) || isKnownNonPositive(S);
+    };
+    if (IsNonNegativeOrNonPositive(FoundLHS) &&
+        IsNonNegativeOrNonPositive(FoundRHS)) {
+      // Knowing that both FoundLHS and FoundRHS are non-negative/non-
+      // positive, and knowing FoundLHS >u FoundRHS, we also know that
+      // FoundLHS >s FoundRHS. Let us use this fact to prove that LHS and RHS
+      // are non-negative or non-positive.
+      const SCEV *One = getMinusOne(LHS->getType());
       const SCEV *MinusOne = getMinusOne(LHS->getType());
-      if (isImpliedCondOperands(ICmpInst::ICMP_SGT, LHS, MinusOne, FoundLHS,
-                                FoundRHS) &&
-          isImpliedCondOperands(ICmpInst::ICMP_SGT, RHS, MinusOne, FoundLHS,
-                                FoundRHS))
+      auto IsImpliedNonNegativeOrNonPositive = [&](const SCEV *S) {
+        return isImpliedCondOperands(ICmpInst::ICMP_SGT, S, MinusOne, FoundLHS,
+                                     FoundRHS) ||
+               isImpliedCondOperands(ICmpInst::ICMP_SGT, One, S, FoundLHS,
+                                     FoundRHS);
+      };
+      if (IsImpliedNonNegativeOrNonPositive(LHS) &&
+          IsImpliedNonNegativeOrNonPositive(RHS))
         Pred = ICmpInst::ICMP_SGT;
     }
+  }
 
   if (Pred != ICmpInst::ICMP_SGT)
     return false;
