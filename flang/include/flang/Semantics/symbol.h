@@ -271,6 +271,8 @@ public:
     }
   }
 
+  const Symbol *GetFinalForRank(int) const;
+
 private:
   // These are (1) the names of the derived type parameters in the order
   // in which they appear on the type definition statement(s), and (2) the
