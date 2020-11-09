@@ -341,6 +341,7 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VECREDUCE_SEQ_FADD:
     return ISD::FADD;
   case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_SEQ_FMUL:
     return ISD::FMUL;
   case ISD::VECREDUCE_ADD:
     return ISD::ADD;
