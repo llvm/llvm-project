@@ -1,8 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
-  Support
-  )
+  Support)
 
 add_clang_library(clangAPINotes
   APINotesManager.cpp
@@ -12,5 +11,5 @@ add_clang_library(clangAPINotes
   Types.cpp
 
   LINK_LIBS
-  clangBasic
+    clangBasic
 )

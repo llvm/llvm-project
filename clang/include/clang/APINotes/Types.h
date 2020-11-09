@@ -1,29 +1,47 @@
-//===--- Types.h - API Notes Data Types --------------------------*- C++ -*-===//
+//===-- Types.h - API Notes Data Types --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// This file defines data types used in the representation of API notes data.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_API_NOTES_TYPES_H
-#define LLVM_CLANG_API_NOTES_TYPES_H
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include <cassert>
-#include <climits>
+#ifndef LLVM_CLANG_APINOTES_TYPES_H
+#define LLVM_CLANG_APINOTES_TYPES_H
 
 namespace clang {
 namespace api_notes {
+enum class RetainCountConventionKind {
+  None,
+  CFReturnsRetained,
+  CFReturnsNotRetained,
+  NSReturnsRetained,
+  NSReturnsNotRetained,
+};
 
+/// The payload for an enum_extensibility attribute. This is a tri-state rather
+/// than just a boolean because the presence of the attribute indicates
+/// auditing.
+enum class EnumExtensibilityKind {
+  None,
+  Open,
+  Closed,
+};
+
+/// The kind of a swift_wrapper/swift_newtype.
+enum class SwiftNewTypeKind {
+  None,
+  Struct,
+  Enum,
+};
+} // namespace api_notes
+} // namespace clang
+
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
+
+namespace clang {
+namespace api_notes {
 /// The file extension used for the source representation of API notes.
 static const char SOURCE_APINOTES_EXTENSION[] = "apinotes";
 
@@ -34,15 +52,6 @@ public:
 
   explicit ContextID(unsigned value) : Value(value) { }
 };
-
-enum class RetainCountConventionKind {
-  None,
-  CFReturnsRetained,
-  CFReturnsNotRetained,
-  NSReturnsRetained,
-  NSReturnsNotRetained,
-};
-
 
 /// Describes API notes data for any entity.
 ///
@@ -73,12 +82,12 @@ public:
     : Unavailable(0), UnavailableInSwift(0), SwiftPrivateSpecified(0),
       SwiftPrivate(0) { }
 
-  Optional<bool> isSwiftPrivate() const {
-    if (!SwiftPrivateSpecified) return None;
+  llvm::Optional<bool> isSwiftPrivate() const {
+    if (!SwiftPrivateSpecified) return llvm::None;
     return SwiftPrivate;
   }
 
-  void setSwiftPrivate(Optional<bool> swiftPrivate) {
+  void setSwiftPrivate(llvm::Optional<bool> swiftPrivate) {
     if (swiftPrivate) {
       SwiftPrivateSpecified = 1;
       SwiftPrivate = *swiftPrivate;
@@ -140,40 +149,42 @@ class CommonTypeInfo : public CommonEntityInfo {
   /// The Swift type to which a given type is bridged.
   ///
   /// Reflects the swift_bridge attribute.
-  Optional<std::string> SwiftBridge;
+  llvm::Optional<std::string> SwiftBridge;
 
   /// The NS error domain for this type.
-  Optional<std::string> NSErrorDomain;
+  llvm::Optional<std::string> NSErrorDomain;
 
 public:
   CommonTypeInfo() : CommonEntityInfo() { }
 
-  const Optional<std::string> &getSwiftBridge() const { return SwiftBridge; }
+  const llvm::Optional<std::string> &getSwiftBridge() const {
+    return SwiftBridge;
+  }
 
-  void setSwiftBridge(const Optional<std::string> &swiftType) {
+  void setSwiftBridge(const llvm::Optional<std::string> &swiftType) {
     SwiftBridge = swiftType;
   }
 
-  void setSwiftBridge(const Optional<StringRef> &swiftType) {
+  void setSwiftBridge(const llvm::Optional<llvm::StringRef> &swiftType) {
     if (swiftType)
       SwiftBridge = std::string(*swiftType);
     else
-      SwiftBridge = None;
+      SwiftBridge = llvm::None;
   }
 
-  const Optional<std::string> &getNSErrorDomain() const {
+  const llvm::Optional<std::string> &getNSErrorDomain() const {
     return NSErrorDomain;
   }
 
-  void setNSErrorDomain(const Optional<std::string> &domain) {
+  void setNSErrorDomain(const llvm::Optional<std::string> &domain) {
     NSErrorDomain = domain;
   }
 
-  void setNSErrorDomain(const Optional<StringRef> &domain) {
+  void setNSErrorDomain(const llvm::Optional<llvm::StringRef> &domain) {
     if (domain)
       NSErrorDomain = std::string(*domain);
     else
-      NSErrorDomain = None;
+      NSErrorDomain = llvm::None;
   }
 
   friend CommonTypeInfo &operator|=(CommonTypeInfo &lhs,
@@ -232,11 +243,11 @@ public:
   /// class.
   ///
   /// \returns the default nullability, if implied, or None if there is no
-  Optional<NullabilityKind> getDefaultNullability() const {
+  llvm::Optional<NullabilityKind> getDefaultNullability() const {
     if (HasDefaultNullability)
       return static_cast<NullabilityKind>(DefaultNullability);
 
-    return None;
+    return llvm::None;
   }
 
   /// Set the default nullability for properties and methods of this class.
@@ -248,12 +259,12 @@ public:
   bool hasDesignatedInits() const { return HasDesignatedInits; }
   void setHasDesignatedInits(bool value) { HasDesignatedInits = value; }
 
-  Optional<bool> getSwiftImportAsNonGeneric() const {
+  llvm::Optional<bool> getSwiftImportAsNonGeneric() const {
     if (SwiftImportAsNonGenericSpecified)
       return SwiftImportAsNonGeneric;
-    return None;
+    return llvm::None;
   }
-  void setSwiftImportAsNonGeneric(Optional<bool> value) {
+  void setSwiftImportAsNonGeneric(llvm::Optional<bool> value) {
     if (value.hasValue()) {
       SwiftImportAsNonGenericSpecified = true;
       SwiftImportAsNonGeneric = value.getValue();
@@ -263,12 +274,12 @@ public:
     }
   }
 
-  Optional<bool> getSwiftObjCMembers() const {
+  llvm::Optional<bool> getSwiftObjCMembers() const {
     if (SwiftObjCMembersSpecified)
       return SwiftObjCMembers;
-    return None;
+    return llvm::None;
   }
-  void setSwiftObjCMembers(Optional<bool> value) {
+  void setSwiftObjCMembers(llvm::Optional<bool> value) {
     SwiftObjCMembersSpecified = value.hasValue();
     SwiftObjCMembers = value.hasValue() ? *value : false;
   }
@@ -342,11 +353,11 @@ public:
       NullabilityAudited(false),
       Nullable(0) { }
 
-  Optional<NullabilityKind> getNullability() const {
+  llvm::Optional<NullabilityKind> getNullability() const {
     if (NullabilityAudited)
       return static_cast<NullabilityKind>(Nullable);
 
-    return None;
+    return llvm::None;
   }
 
   void setNullabilityAudited(NullabilityKind kind) {
@@ -404,12 +415,12 @@ public:
     return lhs;
   }
 
-  Optional<bool> getSwiftImportAsAccessors() const {
+  llvm::Optional<bool> getSwiftImportAsAccessors() const {
     if (SwiftImportAsAccessorsSpecified)
       return SwiftImportAsAccessors;
-    return None;
+    return llvm::None;
   }
-  void setSwiftImportAsAccessors(Optional<bool> value) {
+  void setSwiftImportAsAccessors(llvm::Optional<bool> value) {
     if (value.hasValue()) {
       SwiftImportAsAccessorsSpecified = true;
       SwiftImportAsAccessors = value.getValue();
@@ -454,11 +465,11 @@ public:
   ParamInfo() : VariableInfo(), NoEscapeSpecified(false), NoEscape(false),
       RawRetainCountConvention() { }
 
-  Optional<bool> isNoEscape() const {
-    if (!NoEscapeSpecified) return None;
+  llvm::Optional<bool> isNoEscape() const {
+    if (!NoEscapeSpecified) return llvm::None;
     return NoEscape;
   }
-  void setNoEscape(Optional<bool> noescape) {
+  void setNoEscape(llvm::Optional<bool> noescape) {
     if (noescape) {
       NoEscapeSpecified = true;
       NoEscape = *noescape;
@@ -468,12 +479,13 @@ public:
     }
   }
 
-  Optional<RetainCountConventionKind> getRetainCountConvention() const {
+  llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
     if (!RawRetainCountConvention)
-      return None;
+      return llvm::None;
     return static_cast<RetainCountConventionKind>(RawRetainCountConvention - 1);
   }
-  void setRetainCountConvention(Optional<RetainCountConventionKind> convention){
+  void setRetainCountConvention(
+      llvm::Optional<RetainCountConventionKind> convention) {
     if (convention)
       RawRetainCountConvention = static_cast<unsigned>(convention.getValue())+1;
     else
@@ -512,7 +524,7 @@ public:
 /// referenced by the identifier list persists.
 struct ObjCSelectorRef {
   unsigned NumPieces;
-  ArrayRef<StringRef> Identifiers;
+  llvm::ArrayRef<llvm::StringRef> Identifiers;
 };
 
 /// API notes for a function or method.
@@ -603,12 +615,13 @@ public:
     return getTypeInfo(0);
   }
 
-  Optional<RetainCountConventionKind> getRetainCountConvention() const {
+  llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
     if (!RawRetainCountConvention)
-      return None;
+      return llvm::None;
     return static_cast<RetainCountConventionKind>(RawRetainCountConvention - 1);
   }
-  void setRetainCountConvention(Optional<RetainCountConventionKind> convention){
+  void setRetainCountConvention(
+      llvm::Optional<RetainCountConventionKind> convention) {
     if (convention)
       RawRetainCountConvention = static_cast<unsigned>(convention.getValue())+1;
     else
@@ -695,28 +708,19 @@ public:
   EnumConstantInfo() : CommonEntityInfo() { }
 };
 
-/// The payload for an enum_extensibility attribute. This is a tri-state rather
-/// than just a boolean because the presence of the attribute indicates
-/// auditing.
-enum class EnumExtensibilityKind {
-  None,
-  Open,
-  Closed,
-};
-
 /// Describes API notes data for a tag.
 class TagInfo : public CommonTypeInfo {
   unsigned HasFlagEnum : 1;
   unsigned IsFlagEnum : 1;
 public:
-  Optional<EnumExtensibilityKind> EnumExtensibility;
+  llvm::Optional<EnumExtensibilityKind> EnumExtensibility;
 
-  Optional<bool> isFlagEnum() const {
+  llvm::Optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
       return IsFlagEnum;
-    return None;
+    return llvm::None;
   }
-  void setFlagEnum(Optional<bool> Value) {
+  void setFlagEnum(llvm::Optional<bool> Value) {
     if (Value.hasValue()) {
       HasFlagEnum = true;
       IsFlagEnum = Value.getValue();
@@ -745,17 +749,10 @@ public:
   }
 };
 
-/// The kind of a swift_wrapper/swift_newtype.
-enum class SwiftWrapperKind {
-  None,
-  Struct,
-  Enum
-};
-
 /// Describes API notes data for a typedef.
 class TypedefInfo : public CommonTypeInfo {
 public:
-  Optional<SwiftWrapperKind> SwiftWrapper;
+  llvm::Optional<SwiftNewTypeKind> SwiftWrapper;
 
   TypedefInfo() : CommonTypeInfo() { }
 
@@ -776,8 +773,7 @@ public:
 struct ModuleOptions {
   bool SwiftInferImportAsMember = false;
 };
+}
+}
 
-} // end namespace api_notes
-} // end namespace clang
-
-#endif // LLVM_CLANG_API_NOTES_TYPES_H
+#endif

@@ -677,7 +677,7 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
                             const api_notes::TypedefInfo &info,
                             VersionedInfoMetadata metadata) {
   // swift_wrapper
-  using SwiftWrapperKind = api_notes::SwiftWrapperKind;
+  using SwiftWrapperKind = api_notes::SwiftNewTypeKind;
 
   if (auto swiftWrapper = info.SwiftWrapper) {
     handleAPINotedAttribute<SwiftNewTypeAttr>(S, D,
