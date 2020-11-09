@@ -52,7 +52,7 @@ class IndexClient : public clangd::SymbolIndex {
     unsigned FailedToParse = 0;
     while (Reader->Read(&Reply)) {
       if (!Reply.has_stream_result()) {
-        FinalResult = Reply.final_result();
+        FinalResult = Reply.final_result().has_more();
         continue;
       }
       auto Response = ProtobufMarshaller->fromProtobuf(Reply.stream_result());

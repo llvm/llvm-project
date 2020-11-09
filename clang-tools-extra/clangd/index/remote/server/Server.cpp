@@ -109,7 +109,7 @@ private:
       ++Sent;
     });
     LookupReply LastMessage;
-    LastMessage.set_final_result(true);
+    LastMessage.mutable_final_result()->set_has_more(true);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
@@ -142,7 +142,7 @@ private:
       ++Sent;
     });
     FuzzyFindReply LastMessage;
-    LastMessage.set_final_result(HasMore);
+    LastMessage.mutable_final_result()->set_has_more(HasMore);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
@@ -173,7 +173,7 @@ private:
       ++Sent;
     });
     RefsReply LastMessage;
-    LastMessage.set_final_result(HasMore);
+    LastMessage.mutable_final_result()->set_has_more(HasMore);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
@@ -207,7 +207,7 @@ private:
           ++Sent;
         });
     RelationsReply LastMessage;
-    LastMessage.set_final_result(true);
+    LastMessage.mutable_final_result()->set_has_more(true);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
