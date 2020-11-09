@@ -24,14 +24,85 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "aarch64-postlegalizer-combiner"
 
 using namespace llvm;
+
+/// This combine tries do what performExtractVectorEltCombine does in SDAG.
+/// Rewrite for pairwise fadd pattern
+///   (s32 (g_extract_vector_elt
+///           (g_fadd (vXs32 Other)
+///                  (g_vector_shuffle (vXs32 Other) undef <1,X,...> )) 0))
+/// ->
+///   (s32 (g_fadd (g_extract_vector_elt (vXs32 Other) 0)
+///              (g_extract_vector_elt (vXs32 Other) 1))
+bool matchExtractVecEltPairwiseAdd(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    std::tuple<unsigned, LLT, Register> &MatchInfo) {
+  Register Src1 = MI.getOperand(1).getReg();
+  Register Src2 = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  auto Cst = getConstantVRegValWithLookThrough(Src2, MRI);
+  if (!Cst || Cst->Value != 0)
+    return false;
+  // SDAG also checks for FullFP16, but this looks to be beneficial anyway.
+
+  // Now check for an fadd operation. TODO: expand this for integer add?
+  auto *FAddMI = getOpcodeDef(TargetOpcode::G_FADD, Src1, MRI);
+  if (!FAddMI)
+    return false;
+
+  // If we add support for integer add, must restrict these types to just s64.
+  unsigned DstSize = DstTy.getSizeInBits();
+  if (DstSize != 16 && DstSize != 32 && DstSize != 64)
+    return false;
+
+  Register Src1Op1 = FAddMI->getOperand(1).getReg();
+  Register Src1Op2 = FAddMI->getOperand(2).getReg();
+  MachineInstr *Shuffle =
+      getOpcodeDef(TargetOpcode::G_SHUFFLE_VECTOR, Src1Op2, MRI);
+  MachineInstr *Other = MRI.getVRegDef(Src1Op1);
+  if (!Shuffle) {
+    Shuffle = getOpcodeDef(TargetOpcode::G_SHUFFLE_VECTOR, Src1Op1, MRI);
+    Other = MRI.getVRegDef(Src1Op2);
+  }
+
+  // We're looking for a shuffle that moves the second element to index 0.
+  if (Shuffle && Shuffle->getOperand(3).getShuffleMask()[0] == 1 &&
+      Other == MRI.getVRegDef(Shuffle->getOperand(1).getReg())) {
+    std::get<0>(MatchInfo) = TargetOpcode::G_FADD;
+    std::get<1>(MatchInfo) = DstTy;
+    std::get<2>(MatchInfo) = Other->getOperand(0).getReg();
+    return true;
+  }
+  return false;
+}
+
+bool applyExtractVecEltPairwiseAdd(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    std::tuple<unsigned, LLT, Register> &MatchInfo) {
+  unsigned Opc = std::get<0>(MatchInfo);
+  assert(Opc == TargetOpcode::G_FADD && "Unexpected opcode!");
+  // We want to generate two extracts of elements 0 and 1, and add them.
+  LLT Ty = std::get<1>(MatchInfo);
+  Register Src = std::get<2>(MatchInfo);
+  LLT s64 = LLT::scalar(64);
+  B.setInstrAndDebugLoc(MI);
+  auto Elt0 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 0));
+  auto Elt1 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 1));
+  B.buildInstr(Opc, {MI.getOperand(0).getReg()}, {Elt0, Elt1});
+  MI.eraseFromParent();
+  return true;
+}
 
 #define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGICombiner.inc"
