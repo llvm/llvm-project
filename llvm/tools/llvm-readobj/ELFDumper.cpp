@@ -239,6 +239,7 @@ public:
   void printDynamicRelocations() override;
   void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) override;
   void printHashSymbols() override;
+  void printSectionDetails() override;
   void printUnwindInfo() override;
 
   void printDynamicTable() override;
@@ -736,6 +737,7 @@ public:
   virtual void printSectionHeaders() = 0;
   virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) = 0;
   virtual void printHashSymbols() {}
+  virtual void printSectionDetails() {}
   virtual void printDependentLibs() = 0;
   virtual void printDynamic() {}
   virtual void printDynamicRelocations() = 0;
@@ -814,6 +816,7 @@ public:
   void printSectionHeaders() override;
   void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) override;
   void printHashSymbols() override;
+  void printSectionDetails() override;
   void printDependentLibs() override;
   void printDynamic() override;
   void printDynamicRelocations() override;
@@ -2303,6 +2306,10 @@ void ELFDumper<ELFT>::printSymbols(bool PrintSymbols,
 
 template <class ELFT> void ELFDumper<ELFT>::printHashSymbols() {
   ELFDumperStyle->printHashSymbols();
+}
+
+template <class ELFT> void ELFDumper<ELFT>::printSectionDetails() {
+  ELFDumperStyle->printSectionDetails();
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printHashHistograms() {
@@ -4156,6 +4163,115 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols() {
       this->reportUniqueWarning(std::move(E));
     else
       printGnuHashTableSymbols(*GnuHash);
+  }
+}
+
+template <class ELFT> void GNUStyle<ELFT>::printSectionDetails() {
+  ArrayRef<Elf_Shdr> Sections = cantFail(this->Obj.sections());
+  OS << "There are " << to_string(Sections.size())
+     << " section headers, starting at offset "
+     << "0x" << to_hexString(this->Obj.getHeader().e_shoff, false) << ":\n\n";
+
+  OS << "Section Headers:\n";
+
+  auto PrintFields = [&](ArrayRef<Field> V) {
+    for (const Field &F : V)
+      printField(F);
+    OS << "\n";
+  };
+
+  PrintFields({{"[Nr]", 2}, {"Name", 7}});
+
+  constexpr bool Is64 = ELFT::Is64Bits;
+  PrintFields({{"Type", 7},
+               {Is64 ? "Address" : "Addr", 23},
+               {"Off", Is64 ? 40 : 32},
+               {"Size", Is64 ? 47 : 39},
+               {"ES", Is64 ? 54 : 46},
+               {"Lk", Is64 ? 59 : 51},
+               {"Inf", Is64 ? 62 : 54},
+               {"Al", Is64 ? 66 : 57}});
+  PrintFields({{"Flags", 7}});
+
+  StringRef SecStrTable;
+  if (Expected<StringRef> SecStrTableOrErr = this->Obj.getSectionStringTable(
+          Sections, this->dumper().WarningHandler))
+    SecStrTable = *SecStrTableOrErr;
+  else
+    this->reportUniqueWarning(SecStrTableOrErr.takeError());
+
+  size_t SectionIndex = 0;
+  const unsigned AddrSize = Is64 ? 16 : 8;
+  for (const Elf_Shdr &S : Sections) {
+    StringRef Name = "<?>";
+    if (Expected<StringRef> NameOrErr =
+            this->Obj.getSectionName(S, SecStrTable))
+      Name = *NameOrErr;
+    else
+      this->reportUniqueWarning(NameOrErr.takeError());
+
+    OS.PadToColumn(2);
+    OS << "[" << right_justify(to_string(SectionIndex), 2) << "]";
+    PrintFields({{Name, 7}});
+    PrintFields(
+        {{getSectionTypeString(this->Obj.getHeader().e_machine, S.sh_type), 7},
+         {to_string(format_hex_no_prefix(S.sh_addr, AddrSize)), 23},
+         {to_string(format_hex_no_prefix(S.sh_offset, 6)), Is64 ? 39 : 32},
+         {to_string(format_hex_no_prefix(S.sh_size, 6)), Is64 ? 47 : 39},
+         {to_string(format_hex_no_prefix(S.sh_entsize, 2)), Is64 ? 54 : 46},
+         {to_string(S.sh_link), Is64 ? 59 : 51},
+         {to_string(S.sh_info), Is64 ? 63 : 55},
+         {to_string(S.sh_addralign), Is64 ? 66 : 58}});
+
+    OS.PadToColumn(7);
+    OS << "[" << to_string(format_hex_no_prefix(S.sh_flags, AddrSize)) << "]: ";
+
+    DenseMap<unsigned, StringRef> FlagToName = {
+        {SHF_WRITE, "WRITE"},           {SHF_ALLOC, "ALLOC"},
+        {SHF_EXECINSTR, "EXEC"},        {SHF_MERGE, "MERGE"},
+        {SHF_STRINGS, "STRINGS"},       {SHF_INFO_LINK, "INFO LINK"},
+        {SHF_LINK_ORDER, "LINK ORDER"}, {SHF_OS_NONCONFORMING, "OS NONCONF"},
+        {SHF_GROUP, "GROUP"},           {SHF_TLS, "TLS"},
+        {SHF_COMPRESSED, "COMPRESSED"}, {SHF_EXCLUDE, "EXCLUDE"}};
+
+    uint64_t Flags = S.sh_flags;
+    uint64_t UnknownFlags = 0;
+    bool NeedsComma = false;
+    while (Flags) {
+      // Take the least significant bit as a flag.
+      uint64_t Flag = Flags & -Flags;
+      Flags -= Flag;
+
+      auto It = FlagToName.find(Flag);
+      if (It != FlagToName.end()) {
+        if (NeedsComma)
+          OS << ", ";
+        NeedsComma = true;
+        OS << It->second;
+      } else {
+        UnknownFlags |= Flag;
+      }
+    }
+
+    auto PrintUnknownFlags = [&](uint64_t Mask, StringRef Name) {
+      uint64_t FlagsToPrint = UnknownFlags & Mask;
+      if (!FlagsToPrint)
+        return;
+
+      if (NeedsComma)
+        OS << ", ";
+      OS << Name << " ("
+         << to_string(format_hex_no_prefix(FlagsToPrint, AddrSize)) << ")";
+      UnknownFlags &= ~Mask;
+      NeedsComma = true;
+    };
+
+    PrintUnknownFlags(SHF_MASKOS, "OS");
+    PrintUnknownFlags(SHF_MASKPROC, "PROC");
+    PrintUnknownFlags(uint64_t(-1), "UNKNOWN");
+
+    OS << "\n";
+    ++SectionIndex;
   }
 }
 
