@@ -954,7 +954,7 @@ private:
       } else if (Itr->second.hasValue() && Itr->second.getValue() != Offset) {
         // If we have seen two different possible values for this alias, we set
         // it to empty.
-        AliasOffetMap[&I] = {};
+        AliasOffetMap[&I].reset();
       }
     }
   }
