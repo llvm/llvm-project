@@ -10,4 +10,5 @@ add_public_tablegen_target(OptsTestTableGen)
 
 add_llvm_unittest(OptionTests
   OptionParsingTest.cpp
+  OptionMarshallingTest.cpp
   )
