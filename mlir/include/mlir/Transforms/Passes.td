@@ -217,6 +217,31 @@ def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
   ];
 }
 
+def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp">  {
+  let summary = "Converts memref-typed function results to out-params";
+  let description = [{
+    Some calling conventions prefer to pass output memrefs as "out params". The
+    conversion to this calling convention must be done as an atomic
+    transformation of the entire program (hence this is a module pass).
+
+    For example, if a call is rewritten, the callee needs to be rewritten
+    otherwise the IR will end up invalid. Thus, this transformation
+    require an atomic change to the entire program (e.g. the whole module).
+
+    This pass is expected to run immediately after bufferization is finished.
+    At that point, tensor-typed results will have been converted to memref-typed
+    results, and can be consistently converted to out params.
+
+    All memref-typed results are appended to the function argument list.
+
+    The main issue with this pass (and the out-param calling convention) is that
+    buffers for results need to be allocated in the caller. This currently only
+    works for static shaped memrefs.
+  }];
+  let constructor = "mlir::createBufferResultsToOutParamsPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
