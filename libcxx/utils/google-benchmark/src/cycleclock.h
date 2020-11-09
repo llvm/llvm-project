@@ -92,7 +92,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   uint32_t tbl, tbu0, tbu1;
   asm volatile(
       "mftbu %0\n"
-      "mftbl %1\n"
+      "mftb %1\n"
       "mftbu %2"
       : "=r"(tbu0), "=r"(tbl), "=r"(tbu1));
   tbl &= -static_cast<int32_t>(tbu0 == tbu1);
