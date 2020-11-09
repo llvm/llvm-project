@@ -1577,6 +1577,10 @@ def int_amdgcn_wqm_vote : Intrinsic<[llvm_i1_ty],
 // FIXME: Should this be IntrNoMem, IntrHasSideEffects, or IntrWillReturn?
 def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], []>;
 
+def int_amdgcn_endpgm : GCCBuiltin<"__builtin_amdgcn_endpgm">,
+  Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrNoMem, IntrHasSideEffects]
+>;
+
 // Copies the active channels of the source value to the destination value,
 // with the guarantee that the source value is computed as if the entire
 // program were executed in Whole Wavefront Mode, i.e. with all channels
