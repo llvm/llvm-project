@@ -399,7 +399,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 // specification or abstract origin attributes and including those in the
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
-size_t DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
+size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
                                           DWARFAttributes &attributes,
                                           Recurse recurse,
                                           uint32_t curr_depth) const {
