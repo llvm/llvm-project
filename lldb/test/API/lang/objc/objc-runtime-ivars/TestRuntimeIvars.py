@@ -3,5 +3,4 @@ from lldbsuite.test import decorators
 
 lldbinline.MakeInlineTest(
     __file__, globals(), [
-        decorators.skipUnlessDarwin,
         decorators.skipIf(archs=["i386", "i686"])])

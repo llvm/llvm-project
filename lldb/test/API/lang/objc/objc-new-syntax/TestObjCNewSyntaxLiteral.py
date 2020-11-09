@@ -11,7 +11,6 @@ from ObjCNewSyntaxTest import ObjCNewSyntaxTest
 
 class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_char_literal(self):
@@ -20,7 +19,6 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
         self.expect("expr --object-description -- @'a'",
                     VARIABLES_DISPLAYED_CORRECTLY, substrs=[str(ord('a'))])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_integer_literals(self):
@@ -51,7 +49,6 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["1"])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_float_literal(self):
@@ -60,7 +57,6 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
         self.expect("expr -- @123.45", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["NSNumber", "123.45"])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_expressions_in_literals(self):
