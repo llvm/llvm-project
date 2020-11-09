@@ -172,16 +172,6 @@ public:
   // counters are defined for this CPU).
   const PfmCountersInfo &getPfmCounters(StringRef CpuName) const;
 
-  // Saves the CPU state that needs to be preserved when running a benchmark,
-  // and returns and RAII object that restores the state on destruction.
-  // By default no state is preserved.
-  struct SavedState {
-    virtual ~SavedState();
-  };
-  virtual std::unique_ptr<SavedState> withSavedState() const {
-    return std::make_unique<SavedState>();
-  }
-
 private:
   virtual bool matchesArch(Triple::ArchType Arch) const = 0;
 
