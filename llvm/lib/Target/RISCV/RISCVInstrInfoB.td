@@ -934,28 +934,22 @@ def : Pat<(xor (riscv_srlw (xor GPR:$rs1, -1), GPR:$rs2), -1),
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
-def : Pat<(or (riscv_sllw (assertsexti32 GPR:$rs1), (assertsexti32 GPR:$rs2)),
-              (riscv_srlw (assertsexti32 GPR:$rs1),
-                          (sub (i64 0), (assertsexti32 GPR:$rs2)))),
+def : Pat<(or (riscv_sllw GPR:$rs1, GPR:$rs2),
+              (riscv_srlw GPR:$rs1, (ineg GPR:$rs2))),
           (ROLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (riscv_sllw (assertsexti32 GPR:$rs1),
-                          (sub (i64 0), (assertsexti32 GPR:$rs2))),
-              (riscv_srlw (assertsexti32 GPR:$rs1), (assertsexti32 GPR:$rs2))),
+def : Pat<(or (riscv_sllw GPR:$rs1, (ineg GPR:$rs2)),
+              (riscv_srlw GPR:$rs1, GPR:$rs2)),
           (RORW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
-def : Pat<(and (xor (riscv_sllw 1, (assertsexti32 GPR:$rs2)), -1),
-               (assertsexti32 GPR:$rs1)),
+def : Pat<(and (not (riscv_sllw 1, GPR:$rs2)), (assertsexti32 GPR:$rs1)),
           (SBCLRW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (riscv_sllw 1, (assertsexti32 GPR:$rs2)),
-              (assertsexti32 GPR:$rs1)),
+def : Pat<(or (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
           (SBSETW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(xor (riscv_sllw 1, (assertsexti32 GPR:$rs2)),
-               (assertsexti32 GPR:$rs1)),
+def : Pat<(xor (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
           (SBINVW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(and (riscv_srlw (assertsexti32 GPR:$rs1), (assertsexti32 GPR:$rs2)),
-               1),
+def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
           (SBEXTW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbs, IsRV64]
 
