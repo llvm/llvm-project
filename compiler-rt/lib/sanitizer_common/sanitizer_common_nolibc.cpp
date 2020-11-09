@@ -10,9 +10,10 @@
 // libc in no-libcdep sources.
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_platform.h"
 #include "sanitizer_common.h"
+#include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
+#include "sanitizer_platform.h"
 
 namespace __sanitizer {
 
@@ -29,6 +30,7 @@ void SleepForSeconds(int seconds) { internal_sleep(seconds); }
 
 #if !SANITIZER_WINDOWS && !SANITIZER_MAC
 void ListOfModules::init() {}
+void InitializePlatformCommonFlags(CommonFlags *cf) {}
 #endif
 
 }  // namespace __sanitizer
