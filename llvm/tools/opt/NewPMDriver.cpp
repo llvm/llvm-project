@@ -190,11 +190,10 @@ static void registerEPCallbacks(PassBuilder &PB) {
           Err(PB.parsePassPipeline(PM, VectorizerStartEPPipeline));
         });
   if (tryParsePipelineText<ModulePassManager>(PB, PipelineStartEPPipeline))
-    PB.registerPipelineStartEPCallback(
-        [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
-          ExitOnError Err("Unable to parse PipelineStartEP pipeline: ");
-          Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline));
-        });
+    PB.registerPipelineStartEPCallback([&PB](ModulePassManager &PM) {
+      ExitOnError Err("Unable to parse PipelineStartEP pipeline: ");
+      Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline));
+    });
   if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(
         [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
