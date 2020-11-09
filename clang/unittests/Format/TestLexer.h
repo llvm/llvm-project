@@ -59,12 +59,15 @@ inline std::string text(llvm::ArrayRef<FormatToken *> Tokens) {
 
 class TestLexer : public UnwrappedLineConsumer {
 public:
-  TestLexer(FormatStyle Style = getLLVMStyle())
-      : Style(Style), SourceMgr("test.cpp", ""),
-        IdentTable(getFormattingLangOpts(Style)) {}
+  TestLexer(llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
+            std::vector<std::unique_ptr<llvm::MemoryBuffer>> &Buffers,
+            FormatStyle Style = getLLVMStyle())
+      : Allocator(Allocator), Buffers(Buffers), Style(Style),
+        SourceMgr("test.cpp", ""), IdentTable(getFormattingLangOpts(Style)) {}
 
   TokenList lex(llvm::StringRef Code) {
-    auto Result = getNewLexer(Code).lex();
+    FormatTokenLexer Lex = getNewLexer(Code);
+    ArrayRef<FormatToken *> Result = Lex.lex();
     return TokenList(Result.begin(), Result.end());
   }
 
@@ -77,6 +80,7 @@ public:
     for (auto &Line : UnwrappedLines) {
       AnnotatedLine Annotated(Line);
       Annotator.annotate(Annotated);
+      Annotator.calculateFormattingInformation(Annotated);
     }
     UnwrappedLines.clear();
     return TokenList(Tokens.begin(), Tokens.end());
@@ -99,18 +103,16 @@ protected:
         llvm::MemoryBuffer::getMemBufferCopy(Code, "<scratch space>"));
     clang::FileID FID =
         SourceMgr.get().createFileID(Buffers.back()->getMemBufferRef());
-    FormatTokenLexer Lex(SourceMgr.get(), FID, 0, Style, Encoding, Allocator,
-                         IdentTable);
     return FormatTokenLexer(SourceMgr.get(), FID, 0, Style, Encoding, Allocator,
                             IdentTable);
   }
 
 public:
+  llvm::SpecificBumpPtrAllocator<FormatToken>& Allocator;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>>& Buffers;
   FormatStyle Style;
   encoding::Encoding Encoding = encoding::Encoding_UTF8;
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
   clang::SourceManagerForFile SourceMgr;
-  llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   IdentifierTable IdentTable;
   SmallVector<UnwrappedLine, 16> UnwrappedLines;
 };
