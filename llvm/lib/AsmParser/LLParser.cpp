@@ -4670,6 +4670,39 @@ bool LLParser::parseDISubrange(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDIGenericSubrange:
+///   ::= !DIGenericSubrange(lowerBound: !node1, upperBound: !node2, stride:
+///   !node3)
+bool LLParser::parseDIGenericSubrange(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(count, MDSignedOrMDField, );                                        \
+  OPTIONAL(lowerBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(upperBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(stride, MDSignedOrMDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  auto ConvToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+    if (Bound.isMDSignedField())
+      return DIExpression::get(
+          Context, {dwarf::DW_OP_consts,
+                    static_cast<uint64_t>(Bound.getMDSignedValue())});
+    if (Bound.isMDField())
+      return Bound.getMDFieldValue();
+    return nullptr;
+  };
+
+  Metadata *Count = ConvToMetadata(count);
+  Metadata *LowerBound = ConvToMetadata(lowerBound);
+  Metadata *UpperBound = ConvToMetadata(upperBound);
+  Metadata *Stride = ConvToMetadata(stride);
+
+  Result = GET_OR_DISTINCT(DIGenericSubrange,
+                           (Context, Count, LowerBound, UpperBound, Stride));
+
+  return false;
+}
+
 /// parseDIEnumerator:
 ///   ::= !DIEnumerator(value: 30, isUnsigned: true, name: "SomeKind")
 bool LLParser::parseDIEnumerator(MDNode *&Result, bool IsDistinct) {
