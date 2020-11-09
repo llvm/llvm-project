@@ -24,22 +24,22 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
   if (!F)
     return EHPersonality::Unknown;
   return StringSwitch<EHPersonality>(F->getName())
-    .Case("__gnat_eh_personality",     EHPersonality::GNU_Ada)
-    .Case("__gxx_personality_v0",      EHPersonality::GNU_CXX)
-    .Case("__gxx_personality_seh0",    EHPersonality::GNU_CXX)
-    .Case("__gxx_personality_sj0",     EHPersonality::GNU_CXX_SjLj)
-    .Case("__gcc_personality_v0",      EHPersonality::GNU_C)
-    .Case("__gcc_personality_seh0",    EHPersonality::GNU_C)
-    .Case("__gcc_personality_sj0",     EHPersonality::GNU_C_SjLj)
-    .Case("__objc_personality_v0",     EHPersonality::GNU_ObjC)
-    .Case("_except_handler3",          EHPersonality::MSVC_X86SEH)
-    .Case("_except_handler4",          EHPersonality::MSVC_X86SEH)
-    .Case("__C_specific_handler",      EHPersonality::MSVC_Win64SEH)
-    .Case("__CxxFrameHandler3",        EHPersonality::MSVC_CXX)
-    .Case("ProcessCLRException",       EHPersonality::CoreCLR)
-    .Case("rust_eh_personality",       EHPersonality::Rust)
-    .Case("__gxx_wasm_personality_v0", EHPersonality::Wasm_CXX)
-    .Default(EHPersonality::Unknown);
+      .Case("__gnat_eh_personality", EHPersonality::GNU_Ada)
+      .Case("__gxx_personality_v0", EHPersonality::GNU_CXX)
+      .Case("__gxx_personality_seh0", EHPersonality::GNU_CXX)
+      .Case("__gxx_personality_sj0", EHPersonality::GNU_CXX_SjLj)
+      .Case("__gcc_personality_v0", EHPersonality::GNU_C)
+      .Case("__gcc_personality_seh0", EHPersonality::GNU_C)
+      .Case("__gcc_personality_sj0", EHPersonality::GNU_C_SjLj)
+      .Case("__objc_personality_v0", EHPersonality::GNU_ObjC)
+      .Case("_except_handler3", EHPersonality::MSVC_X86SEH)
+      .Case("_except_handler4", EHPersonality::MSVC_X86SEH)
+      .Case("__C_specific_handler", EHPersonality::MSVC_TableSEH)
+      .Case("__CxxFrameHandler3", EHPersonality::MSVC_CXX)
+      .Case("ProcessCLRException", EHPersonality::CoreCLR)
+      .Case("rust_eh_personality", EHPersonality::Rust)
+      .Case("__gxx_wasm_personality_v0", EHPersonality::Wasm_CXX)
+      .Default(EHPersonality::Unknown);
 }
 
 StringRef llvm::getEHPersonalityName(EHPersonality Pers) {
@@ -51,7 +51,8 @@ StringRef llvm::getEHPersonalityName(EHPersonality Pers) {
   case EHPersonality::GNU_C_SjLj:    return "__gcc_personality_sj0";
   case EHPersonality::GNU_ObjC:      return "__objc_personality_v0";
   case EHPersonality::MSVC_X86SEH:   return "_except_handler3";
-  case EHPersonality::MSVC_Win64SEH: return "__C_specific_handler";
+  case EHPersonality::MSVC_TableSEH:
+    return "__C_specific_handler";
   case EHPersonality::MSVC_CXX:      return "__CxxFrameHandler3";
   case EHPersonality::CoreCLR:       return "ProcessCLRException";
   case EHPersonality::Rust:          return "rust_eh_personality";
