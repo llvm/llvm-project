@@ -78,6 +78,6 @@ for.end.outer:
   ret i32 %sum.0
 }
 
-; USE-DAG: ![[BW_FOR_COND_OUTER]] = !{!"branch_weights", i64 10, i64 6}
-; USE-DAG: ![[BW_FOR_COND_INNER]] = !{!"branch_weights", i64 33, i64 10}
+; USE-DAG: ![[BW_FOR_COND_OUTER]] = !{!"branch_weights", i32 10, i32 6}
+; USE-DAG: ![[BW_FOR_COND_INNER]] = !{!"branch_weights", i32 33, i32 10}
 

@@ -636,38 +636,40 @@ exit:
   ret i32 %outval
 }
 
-!0 = !{!"branch_weights", i64 3, i64 5}
-!1 = !{!"branch_weights", i64 1, i64 1}
-!2 = !{!"branch_weights", i64 1, i64 2}
-!3 = !{!"branch_weights", i64 4, i64 3, i64 2, i64 1}
-!4 = !{!"branch_weights", i64 4, i64 3, i64 2, i64 1}
-!5 = !{!"branch_weights", i64 7, i64 6, i64 5}
-!6 = !{!"branch_weights", i64 1, i64 3}
-!7 = !{!"branch_weights", i64 33, i64 9, i64 8, i64 7}
-!8 = !{!"branch_weights", i64 33, i64 9, i64 8}
-!9 = !{!"branch_weights", i64 7, i64 6}
-!10 = !{!"branch_weights", i64 672646, i64 21604207}
-!11 = !{!"branch_weights", i64 6960, i64 21597248}
-!12 = !{!"these_are_not_the_branch_weights_you_are_looking_for", i64 3, i64 5}
-!13 = !{!"branch_weights", i64 2, i64 3}
-!14 = !{!"branch_weights", i64 4, i64 7}
+!0 = !{!"branch_weights", i32 3, i32 5}
+!1 = !{!"branch_weights", i32 1, i32 1}
+!2 = !{!"branch_weights", i32 1, i32 2}
+!3 = !{!"branch_weights", i32 4, i32 3, i32 2, i32 1}
+!4 = !{!"branch_weights", i32 4, i32 3, i32 2, i32 1}
+!5 = !{!"branch_weights", i32 7, i32 6, i32 5}
+!6 = !{!"branch_weights", i32 1, i32 3}
+!7 = !{!"branch_weights", i32 33, i32 9, i32 8, i32 7}
+!8 = !{!"branch_weights", i32 33, i32 9, i32 8}
+!9 = !{!"branch_weights", i32 7, i32 6}
+!10 = !{!"branch_weights", i32 672646, i32 21604207}
+!11 = !{!"branch_weights", i32 6960, i32 21597248}
+!12 = !{!"these_are_not_the_branch_weights_you_are_looking_for", i32 3, i32 5}
+!13 = !{!"branch_weights", i32 2, i32 3}
+!14 = !{!"branch_weights", i32 4, i32 7}
 
-; CHECK: !0 = !{!"branch_weights", i64 5, i64 11}
-; CHECK: !1 = !{!"branch_weights", i64 1, i64 3}
-; CHECK: !2 = !{!"branch_weights", i64 1, i64 5}
-; CHECK: !3 = !{!"branch_weights", i64 7, i64 1, i64 2}
-; CHECK: !4 = !{!"branch_weights", i64 49, i64 12, i64 24, i64 35}
-; CHECK: !5 = !{!"branch_weights", i64 11, i64 5}
-; CHECK: !6 = !{!"branch_weights", i64 17, i64 15}
-; CHECK: !7 = !{!"branch_weights", i64 9, i64 7}
-; CHECK: !8 = !{!"branch_weights", i64 17, i64 9, i64 8, i64 7, i64 17}
-; CHECK: !9 = !{!"branch_weights", i64 24, i64 33}
-; CHECK: !10 = !{!"branch_weights", i64 8, i64 33}
-; CHECK: !11 = !{!"branch_weights", i64 14682349375088, i64 466591416422336}
-; CHECK: !12 = !{!"branch_weights", i64 3, i64 5}
-; CHECK: !13 = !{!"branch_weights", i64 22, i64 12}
-; CHECK: !14 = !{!"branch_weights", i64 34, i64 21}
-; CHECK: !15 = !{!"branch_weights", i64 33, i64 14}
-; CHECK: !16 = !{!"branch_weights", i64 47, i64 8}
-; CHECK: !17 = !{!"branch_weights", i64 6, i64 2}
-; CHECK: !18 = !{!"branch_weights", i64 8, i64 2}
+; CHECK: !0 = !{!"branch_weights", i32 5, i32 11}
+; CHECK: !1 = !{!"branch_weights", i32 1, i32 3}
+; CHECK: !2 = !{!"branch_weights", i32 1, i32 5}
+; CHECK: !3 = !{!"branch_weights", i32 7, i32 1, i32 2}
+; CHECK: !4 = !{!"branch_weights", i32 49, i32 12, i32 24, i32 35}
+; CHECK: !5 = !{!"branch_weights", i32 11, i32 5}
+; CHECK: !6 = !{!"branch_weights", i32 17, i32 15}
+; CHECK: !7 = !{!"branch_weights", i32 9, i32 7}
+; CHECK: !8 = !{!"branch_weights", i32 17, i32 9, i32 8, i32 7, i32 17}
+; CHECK: !9 = !{!"branch_weights", i32 24, i32 33}
+; CHECK: !10 = !{!"branch_weights", i32 8, i32 33}
+;; The false weight prints out as a negative integer here, but inside llvm, we
+;; treat the weight as an unsigned integer.
+; CHECK: !11 = !{!"branch_weights", i32 112017436, i32 -735157296}
+; CHECK: !12 = !{!"branch_weights", i32 3, i32 5}
+; CHECK: !13 = !{!"branch_weights", i32 22, i32 12}
+; CHECK: !14 = !{!"branch_weights", i32 34, i32 21}
+; CHECK: !15 = !{!"branch_weights", i32 33, i32 14}
+; CHECK: !16 = !{!"branch_weights", i32 47, i32 8}
+; CHECK: !17 = !{!"branch_weights", i32 6, i32 2}
+; CHECK: !18 = !{!"branch_weights", i32 8, i32 2}

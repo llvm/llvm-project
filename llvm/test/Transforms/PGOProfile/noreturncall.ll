@@ -41,5 +41,5 @@ if.end7:
   %mul = mul nsw i32 %ret.0, %ret.0
   ret i32 %mul
 }
-; USE: ![[BW_ENTRY]] = !{!"branch_weights", i64 21, i64 0}
-; USE: ![[BW_IF]] = !{!"branch_weights", i64 0, i64 21}
+; USE: ![[BW_ENTRY]] = !{!"branch_weights", i32 21, i32 0}
+; USE: ![[BW_IF]] = !{!"branch_weights", i32 0, i32 21}

@@ -4060,7 +4060,7 @@ MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
          "num of prof branch_weights must accord with num of successors");
 
   bool AllZeroes =
-      all_of(Weights.getValue(), [](uint64_t W) { return W == 0; });
+      all_of(Weights.getValue(), [](uint32_t W) { return W == 0; });
 
   if (AllZeroes || Weights.getValue().size() < 2)
     return nullptr;
@@ -4078,10 +4078,10 @@ void SwitchInstProfUpdateWrapper::init() {
                      "not correspond to number of succesors");
   }
 
-  SmallVector<uint64_t, 8> Weights;
+  SmallVector<uint32_t, 8> Weights;
   for (unsigned CI = 1, CE = SI.getNumSuccessors(); CI <= CE; ++CI) {
     ConstantInt *C = mdconst::extract<ConstantInt>(ProfileData->getOperand(CI));
-    uint64_t CW = C->getValue().getZExtValue();
+    uint32_t CW = C->getValue().getZExtValue();
     Weights.push_back(CW);
   }
   this->Weights = std::move(Weights);
@@ -4109,7 +4109,7 @@ void SwitchInstProfUpdateWrapper::addCase(
 
   if (!Weights && W && *W) {
     Changed = true;
-    Weights = SmallVector<uint64_t, 8>(SI.getNumSuccessors(), 0);
+    Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
     Weights.getValue()[SI.getNumSuccessors() - 1] = *W;
   } else if (Weights) {
     Changed = true;
@@ -4142,7 +4142,7 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
     return;
 
   if (!Weights && *W)
-    Weights = SmallVector<uint64_t, 8>(SI.getNumSuccessors(), 0);
+    Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
 
   if (Weights) {
     auto &OldW = Weights.getValue()[idx];

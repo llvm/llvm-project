@@ -117,6 +117,6 @@ entry:
   ret i32 %i
 }
 
-; USE: ![[BW_SWITCH]] = !{!"branch_weights", i64 2, i64 1, i64 0, i64 2, i64 1, i64 1}
-; USE: ![[BW_SW_BB2]] = !{!"branch_weights", i64 2, i64 2}
-; USE: ![[BW_SW_DEFAULT]] = !{!"branch_weights", i64 1, i64 1}
+; USE: ![[BW_SWITCH]] = !{!"branch_weights", i32 2, i32 1, i32 0, i32 2, i32 1, i32 1}
+; USE: ![[BW_SW_BB2]] = !{!"branch_weights", i32 2, i32 2}
+; USE: ![[BW_SW_DEFAULT]] = !{!"branch_weights", i32 1, i32 1}
