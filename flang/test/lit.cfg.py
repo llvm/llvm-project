@@ -86,7 +86,12 @@ else:
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
-tools = []
+tools = [
+  ToolSubst('%bbc', command=FindTool('bbc'),
+    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
+    unresolved='fatal')
+]
+
 if config.include_flang_new_driver_test:
    tools.append(ToolSubst('%flang', command=FindTool('flang-new'), unresolved='fatal'))
    tools.append(ToolSubst('%flang_fc1', command=FindTool('flang-new'),
