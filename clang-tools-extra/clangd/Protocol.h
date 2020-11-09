@@ -1053,7 +1053,7 @@ struct SymbolDetails {
   /// (See USRGeneration.h)
   std::string USR;
 
-  llvm::Optional<SymbolID> ID;
+  SymbolID ID;
 };
 llvm::json::Value toJSON(const SymbolDetails &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
