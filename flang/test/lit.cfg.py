@@ -87,6 +87,9 @@ else:
 tools = [
   ToolSubst('%f18', command=FindTool('f18'),
     extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
+    unresolved='fatal'),
+  ToolSubst('%bbc', command=FindTool('bbc'),
+    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
     unresolved='fatal')
 ]
 
