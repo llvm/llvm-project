@@ -853,14 +853,13 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPRecipeBase, public VPUser {
-  /// Hold the call to be widened.
-  CallInst &Ingredient;
+class VPWidenCallRecipe : public VPRecipeBase, public VPValue, public VPUser {
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
-      : VPRecipeBase(VPWidenCallSC), VPUser(CallArguments), Ingredient(I) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenCallSC),
+        VPValue(VPValue::VPVWidenCallSC, &I), VPUser(CallArguments) {}
 
   ~VPWidenCallRecipe() override = default;
 

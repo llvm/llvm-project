@@ -106,6 +106,8 @@ VPValue *VPRecipeBase::toVPValue() {
     return V;
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
     return V;
+  if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
+    return V;
   return nullptr;
 }
 
@@ -113,6 +115,8 @@ const VPValue *VPRecipeBase::toVPValue() const {
   if (auto *V = dyn_cast<VPInstruction>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
     return V;
   return nullptr;
 }
@@ -822,7 +826,19 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, const Value *V) {
 
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-CALL " << VPlanIngredient(&Ingredient);
+  O << "\"WIDEN-CALL ";
+
+  auto *CI = cast<CallInst>(getUnderlyingInstr());
+  if (CI->getType()->isVoidTy())
+    O << "void ";
+  else {
+    printAsOperand(O, SlotTracker);
+    O << " = ";
+  }
+
+  O << "call @" << CI->getCalledFunction()->getName() << "(";
+  printOperands(O, SlotTracker);
+  O << ")";
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
