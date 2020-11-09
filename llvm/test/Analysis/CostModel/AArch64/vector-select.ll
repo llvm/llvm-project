@@ -3,7 +3,7 @@
 
 ; COST-LABEL: v8i8_select_eq
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp eq <8 x i8> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <8 x i1> %cmp.1, <8 x i8> %a, <8 x i8> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 29 for instruction:  %s.1 = select <8 x i1> %cmp.1, <8 x i8> %a, <8 x i8> %c
 
 ; CODE-LABEL: v8i8_select_eq
 ; CODE:       bb.0
@@ -19,7 +19,7 @@ define <8 x i8> @v8i8_select_eq(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 
 ; COST-LABEL: v16i8_select_sgt
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp sgt <16 x i8> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <16 x i1> %cmp.1, <16 x i8> %a, <16 x i8> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 61 for instruction:  %s.1 = select <16 x i1> %cmp.1, <16 x i8> %a, <16 x i8> %c
 
 ; CODE-LABEL: v16i8_select_sgt
 ; CODE:       bb.0
@@ -35,7 +35,7 @@ define <16 x i8> @v16i8_select_sgt(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 
 ; COST-LABEL: v4i16_select_ne
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp ne <4 x i16> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x i16> %a, <4 x i16> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x i16> %a, <4 x i16> %c
 
 ; CODE-LABEL: v4i16_select_ne
 ; CODE:       bb.0
@@ -51,7 +51,7 @@ define <4 x i16> @v4i16_select_ne(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 
 ; COST-LABEL: v8i16_select_ugt
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp ugt <8 x i16> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <8 x i1> %cmp.1, <8 x i16> %a, <8 x i16> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 29 for instruction:  %s.1 = select <8 x i1> %cmp.1, <8 x i16> %a, <8 x i16> %c
 
 ; CODE-LABEL: v8i16_select_ugt
 ; CODE:       bb.0
@@ -67,7 +67,7 @@ define <8 x i16> @v8i16_select_ugt(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
 
 ; COST-LABEL: v2i32_select_ule
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp ule <2 x i32> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <2 x i1> %cmp.1, <2 x i32> %a, <2 x i32> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 5 for instruction:   %s.1 = select <2 x i1> %cmp.1, <2 x i32> %a, <2 x i32> %c
 
 ; CODE-LABEL: v2i32_select_ule
 ; CODE:       bb.0
@@ -83,7 +83,7 @@ define <2 x i32> @v2i32_select_ule(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 
 ; COST-LABEL: v4i32_select_ult
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp ult <4 x i32> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x i32> %a, <4 x i32> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x i32> %a, <4 x i32> %c
 
 ; CODE-LABEL: v4i32_select_ult
 ; CODE:       bb.0
@@ -99,7 +99,7 @@ define <4 x i32> @v4i32_select_ult(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 
 ; COST-LABEL: v2i64_select_sle
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp sle <2 x i64> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <2 x i1> %cmp.1, <2 x i64> %a, <2 x i64> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 5 for instruction:   %s.1 = select <2 x i1> %cmp.1, <2 x i64> %a, <2 x i64> %c
 
 ; CODE-LABEL: v2i64_select_sle
 ; CODE:       bb.0
@@ -115,7 +115,7 @@ define <2 x i64> @v2i64_select_sle(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
 
 ; COST-LABEL: v3i64_select_sle
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction:   %cmp.1 = icmp sle <3 x i64> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction:   %s.1 = select <3 x i1> %cmp.1, <3 x i64> %a, <3 x i64> %c
+; COST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction:   %s.1 = select <3 x i1> %cmp.1, <3 x i64> %a, <3 x i64> %c
 
 ; CODE-LABEL: v3i64_select_sle
 ; CODE:       bb.0
