@@ -182,6 +182,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfLinux # shell argument expansion doesn't seem to work on Linux
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"])
     @skipIfRemote
     def test_shellExpandArguments_enabled(self):
         '''
