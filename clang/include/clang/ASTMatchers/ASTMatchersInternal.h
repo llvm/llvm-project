@@ -1206,6 +1206,8 @@ public:
   }
 
   llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+    if (auto NestedKind = this->InnerMatcher.getTraversalKind())
+      return NestedKind;
     return Traversal;
   }
 };

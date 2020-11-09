@@ -2372,6 +2372,11 @@ void foo()
                              callExpr(has(callExpr(traverse(
                                  TK_AsIs, callExpr(has(implicitCastExpr(
                                               has(floatLiteral())))))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreImplicitCastsAndParentheses,
+               traverse(TK_AsIs, implicitCastExpr(has(floatLiteral()))))));
 }
 
 TEST(Traversal, traverseMatcherThroughImplicit) {
