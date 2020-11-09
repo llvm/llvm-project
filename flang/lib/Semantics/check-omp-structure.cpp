@@ -95,9 +95,18 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   const auto &endBlockDir{std::get<parser::OmpEndBlockDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
   const auto &endDir{std::get<parser::OmpBlockDirective>(endBlockDir.t)};
+  const parser::Block &block{std::get<parser::Block>(x.t)};
+
   CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
+
+  switch (beginDir.v) {
+  case llvm::omp::OMPD_parallel:
+    CheckNoBranching(block, llvm::omp::OMPD_parallel, beginDir.source);
+  default:
+    break;
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
