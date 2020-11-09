@@ -23,6 +23,11 @@
 
 namespace Fortran::lower {
 
+struct SymbolBox;
+class SymMap;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SymbolBox &symMap);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SymMap &symMap);
+
 //===----------------------------------------------------------------------===//
 // Symbol information
 //===----------------------------------------------------------------------===//
@@ -142,6 +147,12 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
 
   const VT &matchee() const { return box; }
 
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                       const SymbolBox &symBox);
+
+  /// Dump the map. For debugging.
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+
 private:
   VT box;
 };
@@ -157,19 +168,18 @@ private:
 /// etc.
 class SymMap {
 public:
+  SymMap() { pushScope(); }
+  SymMap(const SymMap &) = delete;
+
+  void pushScope() { symbolMapStack.emplace_back(); }
+  void popScope() {
+    symbolMapStack.pop_back();
+    assert(symbolMapStack.size() >= 1);
+  }
+
   /// Add an extended value to the symbol table.
   void addSymbol(semantics::SymbolRef sym, const fir::ExtendedValue &ext,
-                 bool force = false) {
-    ext.match([&](const fir::UnboxedValue &v) { addSymbol(sym, v, force); },
-              [&](const fir::CharBoxValue &v) { makeSym(sym, v, force); },
-              [&](const fir::ArrayBoxValue &v) { makeSym(sym, v, force); },
-              [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
-              [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
-              [](auto) {
-                llvm::report_fatal_error(
-                    "box value should not be added to symbol table");
-              });
-  }
+                 bool force = false);
 
   /// Add a trivial symbol mapping to an address.
   void addSymbol(semantics::SymbolRef sym, mlir::Value value,
@@ -226,25 +236,24 @@ public:
   }
 
   /// Find `symbol` and return its value if it appears in the current mappings.
-  SymbolBox lookupSymbol(semantics::SymbolRef sym) {
-    auto iter = symbolMap.find(&*sym);
-    if (iter != symbolMap.end())
-      return iter->second;
-    // Follow host association
-    if (const auto *details =
-            sym->detailsIf<Fortran::semantics::HostAssocDetails>())
-      return lookupSymbol(details->symbol());
-    return SymbolBox::None{};
-  }
+  SymbolBox lookupSymbol(semantics::SymbolRef sym);
 
   /// Remove `sym` from the map.
-  void erase(semantics::SymbolRef sym) { symbolMap.erase(&*sym); }
+  /// FIXME: Get rid of this as it's likely not what is expected.
+  void erase(semantics::SymbolRef sym) { symbolMapStack.back().erase(&*sym); }
 
   /// Remove all symbols from the map.
-  void clear() { symbolMap.clear(); }
+  void clear() {
+    symbolMapStack.clear();
+    symbolMapStack.emplace_back();
+    assert(symbolMapStack.size() == 1);
+  }
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                       const SymMap &symMap);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
 
 private:
   /// Add `symbol` to the current map and bind a `box`.
@@ -253,10 +262,11 @@ private:
     if (force)
       erase(sym);
     assert(box && "cannot add an undefined symbol box");
-    symbolMap.try_emplace(&*sym, box);
+    symbolMapStack.back().try_emplace(&*sym, box);
   }
 
-  llvm::DenseMap<const semantics::Symbol *, SymbolBox> symbolMap;
+  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>, 4>
+      symbolMapStack;
 };
 
 } // namespace Fortran::lower

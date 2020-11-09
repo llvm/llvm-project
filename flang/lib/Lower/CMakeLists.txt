@@ -19,6 +19,7 @@ add_flang_library(FortranLower
   OpenMP.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  SymbolMap.cpp
 
   DEPENDS
   FIROptimizer
