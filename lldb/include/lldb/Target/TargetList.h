@@ -42,8 +42,6 @@ public:
     return GetStaticBroadcasterClass();
   }
 
-  ~TargetList() override;
-
   /// Create a new Target.
   ///
   /// Clients must use this function to create a Target. This allows
