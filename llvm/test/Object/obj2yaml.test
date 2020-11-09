@@ -362,6 +362,7 @@
 # ELF-MIPSEL-NEXT:     Type:            SHT_REL
 # ELF-MIPSEL-NEXT:     Link:            .symtab
 # ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:     Offset:          0x434
 # ELF-MIPSEL-NEXT:     Info:            .text
 # ELF-MIPSEL-NEXT:     Relocations:
 # ELF-MIPSEL-NEXT:       - Symbol:          _gp_disp
@@ -385,6 +386,7 @@
 # ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
 # ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 # ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:     Offset:          0x80
 # ELF-MIPSEL-NEXT:   - Name:            .bss
 # ELF-MIPSEL-NEXT:     Type:            SHT_NOBITS
 # ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
@@ -482,6 +484,7 @@
 # ELF-MIPS64EL-NEXT:     Type:            SHT_RELA
 # ELF-MIPS64EL-NEXT:     Link:            .symtab
 # ELF-MIPS64EL-NEXT:     AddressAlign:    0x8
+# ELF-MIPS64EL-NEXT:     Offset:          0x410
 # ELF-MIPS64EL-NEXT:     Info:            .data
 # ELF-MIPS64EL-NEXT:     Relocations:
 # ELF-MIPS64EL-NEXT:       - Symbol:          zed
@@ -490,6 +493,7 @@
 # ELF-MIPS64EL-NEXT:     Type:            SHT_NOBITS
 # ELF-MIPS64EL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 # ELF-MIPS64EL-NEXT:     AddressAlign:    0x10
+# ELF-MIPS64EL-NEXT:     Offset:          0x50
 # ELF-MIPS64EL-NEXT:   - Name:            .MIPS.options
 # ELF-MIPS64EL-NEXT:     Type:            SHT_MIPS_OPTIONS
 # ELF-MIPS64EL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MIPS_NOSTRIP ]

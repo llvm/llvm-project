@@ -232,6 +232,40 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   return true;
 }
 
+template <class ELFT>
+static void dumpSectionOffsets(const typename ELFT::Ehdr &Header,
+                               ArrayRef<ELFYAML::ProgramHeader> Phdrs,
+                               std::vector<std::unique_ptr<ELFYAML::Chunk>> &V,
+                               ArrayRef<typename ELFT::Shdr> S) {
+  uint64_t ExpectedOffset;
+  if (Header.e_phoff > 0)
+    ExpectedOffset = Header.e_phoff + Header.e_phentsize * Header.e_phnum;
+  else
+    ExpectedOffset = sizeof(typename ELFT::Ehdr);
+
+  for (const std::unique_ptr<ELFYAML::Chunk> &C :
+       makeArrayRef(V).drop_front()) {
+    ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
+    const typename ELFT::Shdr &SecHdr = S[Sec.OriginalSecNdx];
+
+    ExpectedOffset =
+        alignTo(ExpectedOffset, SecHdr.sh_addralign ? SecHdr.sh_addralign : 1);
+
+    // We only set the "Offset" field when it can't be naturally derived
+    // from the offset and size of the previous section. This reduces
+    // the noise in the YAML output.
+    if (SecHdr.sh_offset != ExpectedOffset)
+      Sec.Offset = (yaml::Hex64)SecHdr.sh_offset;
+
+    if (Sec.Type == ELF::SHT_NOBITS &&
+        !ELFYAML::shouldAllocateFileSpace(Phdrs,
+                                          *cast<ELFYAML::NoBitsSection>(&Sec)))
+      ExpectedOffset = SecHdr.sh_offset;
+    else
+      ExpectedOffset = SecHdr.sh_offset + SecHdr.sh_size;
+  }
+}
+
 template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   auto Y = std::make_unique<ELFYAML::Object>();
 
@@ -321,6 +355,9 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     return PhdrsOrErr.takeError();
   Y->ProgramHeaders = std::move(*PhdrsOrErr);
 
+  dumpSectionOffsets<ELFT>(Obj.getHeader(), Y->ProgramHeaders, Chunks,
+                           Sections);
+
   // Dump DWARF sections.
   Y->DWARF = dumpDWARFSections(Chunks);
 
@@ -397,6 +434,7 @@ ELFDumper<ELFT>::dumpProgramHeaders(
         if (!PH.FirstSec)
           PH.FirstSec = S.Name;
         PH.LastSec = S.Name;
+        PH.Chunks.push_back(C.get());
       }
     }
 
