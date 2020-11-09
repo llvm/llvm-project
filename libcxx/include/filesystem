@@ -560,7 +560,7 @@ __is_separator(_ECharT __e) {
   return __e == _ECharT('/');
 }
 
-struct _NullSentinal {};
+struct _NullSentinel {};
 
 template <class _Tp>
 using _Void = void;
@@ -615,9 +615,9 @@ struct __is_pathable_char_array<_Source, _ECharT*, _UPtr, true>
   static _ECharT const* __range_begin(const _ECharT* __b) { return __b; }
   static _ECharT const* __range_end(const _ECharT* __b) {
     using _Iter = const _ECharT*;
-    const _ECharT __sentinal = _ECharT{};
+    const _ECharT __sentinel = _ECharT{};
     _Iter __e = __b;
-    for (; *__e != __sentinal; ++__e)
+    for (; *__e != __sentinel; ++__e)
       ;
     return __e;
   }
@@ -639,7 +639,7 @@ struct __is_pathable_iter<
   using _Base = __can_convert_char<_ECharT>;
 
   static _Iter __range_begin(_Iter __b) { return __b; }
-  static _NullSentinal __range_end(_Iter) { return _NullSentinal{}; }
+  static _NullSentinel __range_end(_Iter) { return _NullSentinel{}; }
 
   static _ECharT __first_or_null(_Iter __b) { return *__b; }
 };
@@ -684,13 +684,13 @@ struct _PathCVT {
   }
 
   template <class _Iter>
-  static void __append_range(string& __dest, _Iter __b, _NullSentinal) {
+  static void __append_range(string& __dest, _Iter __b, _NullSentinel) {
     static_assert(!is_same<_Iter, _ECharT*>::value, "Call const overload");
-    const _ECharT __sentinal = _ECharT{};
-    if (*__b == __sentinal)
+    const _ECharT __sentinel = _ECharT{};
+    if (*__b == __sentinel)
       return;
     basic_string<_ECharT> __tmp;
-    for (; *__b != __sentinal; ++__b)
+    for (; *__b != __sentinel; ++__b)
       __tmp.push_back(*__b);
     _Narrower()(back_inserter(__dest), __tmp.data(),
                 __tmp.data() + __tmp.length());
@@ -721,9 +721,9 @@ struct _PathCVT<char> {
   }
 
   template <class _Iter>
-  static void __append_range(string& __dest, _Iter __b, _NullSentinal) {
-    const char __sentinal = char{};
-    for (; *__b != __sentinal; ++__b)
+  static void __append_range(string& __dest, _Iter __b, _NullSentinel) {
+    const char __sentinel = char{};
+    for (; *__b != __sentinel; ++__b)
       __dest.push_back(*__b);
   }
 
