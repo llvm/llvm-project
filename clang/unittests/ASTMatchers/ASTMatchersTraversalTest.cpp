@@ -2372,6 +2372,11 @@ void foo()
                              callExpr(has(callExpr(traverse(
                                  TK_AsIs, callExpr(has(implicitCastExpr(
                                               has(floatLiteral())))))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreImplicitCastsAndParentheses,
+               traverse(TK_AsIs, implicitCastExpr(has(floatLiteral()))))));
 }
 
 TEST(Traversal, traverseMatcherThroughImplicit) {
@@ -3807,24 +3812,24 @@ TEST(CXXNewExpr, PlacementArgs) {
   StatementMatcher IsPlacementNew = cxxNewExpr(hasAnyPlacementArg(anything()));
 
   EXPECT_TRUE(matches(R"(
-    void* operator new(decltype(sizeof(void*)), void*); 
+    void* operator new(decltype(sizeof(void*)), void*);
     int *foo(void* Storage) {
-      return new (Storage) int; 
+      return new (Storage) int;
     })",
                       IsPlacementNew));
 
   EXPECT_TRUE(matches(R"(
-    void* operator new(decltype(sizeof(void*)), void*, unsigned); 
+    void* operator new(decltype(sizeof(void*)), void*, unsigned);
     int *foo(void* Storage) {
-      return new (Storage, 16) int; 
+      return new (Storage, 16) int;
     })",
                       cxxNewExpr(hasPlacementArg(
                           1, ignoringImpCasts(integerLiteral(equals(16)))))));
 
   EXPECT_TRUE(notMatches(R"(
-    void* operator new(decltype(sizeof(void*)), void*); 
+    void* operator new(decltype(sizeof(void*)), void*);
     int *foo(void* Storage) {
-      return new int; 
+      return new int;
     })",
                          IsPlacementNew));
 }

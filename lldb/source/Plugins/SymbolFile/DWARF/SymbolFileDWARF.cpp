@@ -497,25 +497,6 @@ void SymbolFileDWARF::InitializeObject() {
 
   m_index =
       std::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(), *this);
-
-  const SectionList *section_list = m_objfile_sp->GetModule()->GetSectionList();
-  if (section_list)
-    InitializeFirstCodeAddress(*section_list);
-}
-
-void SymbolFileDWARF::InitializeFirstCodeAddress(
-    const lldb_private::SectionList &section_list) {
-  const uint32_t num_sections = section_list.GetSize();
-  for (uint32_t i = 0; i < num_sections; ++i) {
-    SectionSP section_sp(section_list.GetSectionAtIndex(i));
-    if (section_sp->GetChildren().GetSize() > 0) {
-      InitializeFirstCodeAddress(section_sp->GetChildren());
-    } else if (section_sp->GetType() == eSectionTypeCode) {
-      const addr_t section_file_address = section_sp->GetFileAddress();
-      if (m_first_code_address > section_file_address)
-        m_first_code_address = section_file_address;
-    }
-  }
 }
 
 bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
@@ -1059,12 +1040,6 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // The Sequences view contains only valid line sequences. Don't iterate over
   // the Rows directly.
   for (const llvm::DWARFDebugLine::Sequence &seq : line_table->Sequences) {
-    // Ignore line sequences that do not start after the first code address.
-    // All addresses generated in a sequence are incremental so we only need
-    // to check the first one of the sequence. Check the comment at the
-    // m_first_code_address declaration for more details on this.
-    if (seq.LowPC < m_first_code_address)
-      continue;
     std::unique_ptr<LineSequence> sequence =
         LineTable::CreateLineSequenceContainer();
     for (unsigned idx = seq.FirstRowIndex; idx < seq.LastRowIndex; ++idx) {

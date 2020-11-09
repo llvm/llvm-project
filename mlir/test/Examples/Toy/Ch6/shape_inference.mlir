@@ -2,8 +2,7 @@
 
 // Check the result of inlining+shape inference on an input module.
 
-func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64>
-    attributes { sym_visibility = "private" } {
+func private @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
   %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
   %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64>
   %2 = toy.mul %0, %1 : tensor<*xf64>
