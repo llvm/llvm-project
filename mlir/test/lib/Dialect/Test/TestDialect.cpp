@@ -35,6 +35,30 @@ namespace {
 struct TestOpAsmInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
+  LogicalResult getAlias(Attribute attr, raw_ostream &os) const final {
+    StringAttr strAttr = attr.dyn_cast<StringAttr>();
+    if (!strAttr)
+      return failure();
+
+    // Check the contents of the string attribute to see what the test alias
+    // should be named.
+    Optional<StringRef> aliasName =
+        StringSwitch<Optional<StringRef>>(strAttr.getValue())
+            .Case("alias_test:dot_in_name", StringRef("test.alias"))
+            .Case("alias_test:trailing_digit", StringRef("test_alias0"))
+            .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
+            .Case("alias_test:sanitize_conflict_a",
+                  StringRef("test_alias_conflict0"))
+            .Case("alias_test:sanitize_conflict_b",
+                  StringRef("test_alias_conflict0_"))
+            .Default(llvm::None);
+    if (!aliasName)
+      return failure();
+
+    os << *aliasName;
+    return success();
+  }
+
   void getAsmResultNames(Operation *op,
                          OpAsmSetValueNameFn setNameFn) const final {
     if (auto asmOp = dyn_cast<AsmDialectInterfaceOp>(op))
