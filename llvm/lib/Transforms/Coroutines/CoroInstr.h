@@ -293,11 +293,13 @@ public:
   }
 
   /// The async context parameter.
-  Value *getStorage() const { return getArgOperand(StorageArg); }
+  Value *getStorage() const {
+    return getParent()->getParent()->getArg(getStorageArgumentIndex());
+  }
 
   unsigned getStorageArgumentIndex() const {
-    auto *Arg = cast<Argument>(getArgOperand(StorageArg)->stripPointerCasts());
-    return Arg->getArgNo();
+    auto *Arg = cast<ConstantInt>(getArgOperand(StorageArg));
+    return Arg->getZExtValue();
   }
 
   /// Return the async function pointer address. This should be the address of
