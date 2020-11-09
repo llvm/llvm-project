@@ -424,6 +424,12 @@ public:
       this->grow(N);
   }
 
+  void pop_back_n(size_type NumItems) {
+    assert(this->size() >= NumItems);
+    this->destroy_range(this->end() - NumItems, this->end());
+    this->set_size(this->size() - NumItems);
+  }
+
   LLVM_NODISCARD T pop_back_val() {
     T Result = ::std::move(this->back());
     this->pop_back();

@@ -82,9 +82,7 @@ define i8 @test10a(i8 %A) {
   ret i8 %C
 }
 
-;; This transformation is deferred to DAGCombine:
 ;; (A >> 3) << 4 === (A & 0x1F) << 1
-;; The shl may be valuable to scalar evolution.
 define i8 @test11(i8 %x) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], 6
@@ -109,7 +107,6 @@ define i8 @test11a(i8 %A) {
   ret i8 %C
 }
 
-;; This is deferred to DAGCombine unless %B is single-use.
 ;; (A >> 8) << 8 === A & -256
 define i32 @test12(i32 %A) {
 ; CHECK-LABEL: @test12(
@@ -137,9 +134,7 @@ define i8 @shishi(i8 %x) {
   ret i8 %r
 }
 
-;; This transformation is deferred to DAGCombine:
 ;; (A >> 3) << 4 === (A & -8) * 2
-;; The shl may be valuable to scalar evolution.
 define i8 @test13(i8 %x) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], 6

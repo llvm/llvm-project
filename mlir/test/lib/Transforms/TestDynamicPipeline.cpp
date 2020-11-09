@@ -25,7 +25,8 @@ class TestDynamicPipelinePass
     : public PassWrapper<TestDynamicPipelinePass, OperationPass<>> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
-    OpPassManager pm(ModuleOp::getOperationName(), false);
+    OpPassManager pm(ModuleOp::getOperationName(),
+                     OpPassManager::Nesting::Implicit);
     parsePassPipeline(pipeline, pm, llvm::errs());
     pm.getDependentDialects(registry);
   }
@@ -54,7 +55,8 @@ public:
     }
     if (!pm) {
       pm = std::make_unique<OpPassManager>(
-          getOperation()->getName().getIdentifier(), false);
+          getOperation()->getName().getIdentifier(),
+          OpPassManager::Nesting::Implicit);
       parsePassPipeline(pipeline, *pm, llvm::errs());
     }
 
@@ -101,12 +103,14 @@ public:
       *this, "op-name", llvm::cl::MiscFlags::CommaSeparated,
       llvm::cl::desc("List of function name to apply the pipeline to")};
 };
-} // end namespace
+} // namespace
 
 namespace mlir {
+namespace test {
 void registerTestDynamicPipelinePass() {
   PassRegistration<TestDynamicPipelinePass>(
       "test-dynamic-pipeline", "Tests the dynamic pipeline feature by applying "
                                "a pipeline on a selected set of functions");
 }
+} // namespace test
 } // namespace mlir

@@ -35,8 +35,8 @@ using llvm::SourceMgr;
 
 /// Parse a comma separated list of elements that must have at least one entry
 /// in it.
-ParseResult Parser::parseCommaSeparatedList(
-    const std::function<ParseResult()> &parseElement) {
+ParseResult
+Parser::parseCommaSeparatedList(function_ref<ParseResult()> parseElement) {
   // Non-empty case starts with an element.
   if (parseElement())
     return failure();
@@ -55,9 +55,10 @@ ParseResult Parser::parseCommaSeparatedList(
 ///   abstract-list ::= rightToken                  // if allowEmptyList == true
 ///   abstract-list ::= element (',' element)* rightToken
 ///
-ParseResult Parser::parseCommaSeparatedListUntil(
-    Token::Kind rightToken, const std::function<ParseResult()> &parseElement,
-    bool allowEmptyList) {
+ParseResult
+Parser::parseCommaSeparatedListUntil(Token::Kind rightToken,
+                                     function_ref<ParseResult()> parseElement,
+                                     bool allowEmptyList) {
   // Handle the empty case.
   if (getToken().is(rightToken)) {
     if (!allowEmptyList)
@@ -145,8 +146,8 @@ public:
   /// returns null on failure.
   Value resolveSSAUse(SSAUseInfo useInfo, Type type);
 
-  ParseResult parseSSADefOrUseAndType(
-      const std::function<ParseResult(SSAUseInfo, Type)> &action);
+  ParseResult
+  parseSSADefOrUseAndType(function_ref<ParseResult(SSAUseInfo, Type)> action);
 
   ParseResult parseOptionalSSAUseAndTypeList(SmallVectorImpl<Value> &results);
 
@@ -506,7 +507,7 @@ Value OperationParser::resolveSSAUse(SSAUseInfo useInfo, Type type) {
 ///
 ///   ssa-use-and-type ::= ssa-use `:` type
 ParseResult OperationParser::parseSSADefOrUseAndType(
-    const std::function<ParseResult(SSAUseInfo, Type)> &action) {
+    function_ref<ParseResult(SSAUseInfo, Type)> action) {
   SSAUseInfo useInfo;
   if (parseSSAUse(useInfo) ||
       parseToken(Token::colon, "expected ':' and type for SSA operand"))
@@ -845,6 +846,15 @@ public:
   ParseResult parseOperation(OperationState &opState) {
     if (opDefinition->parseAssembly(*this, opState))
       return failure();
+    // Verify that the parsed attributes does not have duplicate attributes.
+    // This can happen if an attribute set during parsing is also specified in
+    // the attribute dictionary in the assembly, or the attribute is set
+    // multiple during parsing.
+    Optional<NamedAttribute> duplicate = opState.attributes.findDuplicate();
+    if (duplicate)
+      return emitError(getNameLoc(), "attribute '")
+             << duplicate->first
+             << "' occurs more than once in the attribute list";
     return success();
   }
 
@@ -1470,10 +1480,13 @@ public:
   }
 
   /// Parse a list of assignments of the form
-  /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
-  /// The list must contain at least one entry
-  ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
-                                  SmallVectorImpl<OperandType> &rhs) override {
+  ///   (%x1 = %y1, %x2 = %y2, ...).
+  OptionalParseResult
+  parseOptionalAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                              SmallVectorImpl<OperandType> &rhs) override {
+    if (failed(parseOptionalLParen()))
+      return llvm::None;
+
     auto parseElt = [&]() -> ParseResult {
       OperandType regionArg, operand;
       if (parseRegionArgument(regionArg) || parseEqual() ||
@@ -1483,8 +1496,6 @@ public:
       rhs.push_back(operand);
       return success();
     };
-    if (parseLParen())
-      return failure();
     return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 

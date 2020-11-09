@@ -597,13 +597,12 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setbe %al
 ; X86-NEXT:    fldz
-; X86-NEXT:    ja .LBB18_2
+; X86-NEXT:    jbe .LBB18_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    fstp %st(0)
-; X86-NEXT:    fldz
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:  .LBB18_2:
 ; X86-NEXT:    fstp %st(1)
+; X86-NEXT:    fldz
+; X86-NEXT:  .LBB18_2:
+; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    fsubrp %st, %st(1)
 ; X86-NEXT:    wait
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
@@ -632,8 +631,7 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X64-NEXT:    wait
 ; X64-NEXT:    setbe %al
 ; X64-NEXT:    fldz
-; X64-NEXT:    fxch %st(1)
-; X64-NEXT:    fcmovnbe %st(1), %st
+; X64-NEXT:    fcmovbe %st(1), %st
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    fsubrp %st, %st(1)
 ; X64-NEXT:    wait

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -DERR -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-error-vec-elem-size -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-error=vec-elem-size
 // RUN: %clang_cc1 -fsyntax-only -DEXT -DERR -verify %s
-// RUN: %clang_cc1 -fsyntax-only -DEXT -Wno-error-vec-elem-size -verify %s
+// RUN: %clang_cc1 -fsyntax-only -DEXT -verify %s -Wno-error=vec-elem-size
 
 #ifdef EXT
 typedef __attribute__((__ext_vector_type__(8))) char vector_char8;

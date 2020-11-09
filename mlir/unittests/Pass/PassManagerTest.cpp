@@ -108,13 +108,16 @@ TEST(PassManagerTest, InvalidPass) {
 
   // Instantiate and run our pass.
   PassManager pm(&context);
-  pm.addPass(std::make_unique<InvalidPass>());
+  pm.nest("invalid_op").addPass(std::make_unique<InvalidPass>());
   LogicalResult result = pm.run(module.get());
   EXPECT_TRUE(failed(result));
   ASSERT_TRUE(diagnostic.get() != nullptr);
   EXPECT_EQ(
       diagnostic->str(),
       "'invalid_op' op trying to schedule a pass on an unregistered operation");
+
+  // Check that adding the pass at the top-level triggers a fatal error.
+  ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()), "");
 }
 
 } // end namespace

@@ -46,7 +46,7 @@ t1 foobar <>
 ; CHECK-NEXT: .byte 101
 ; CHECK-NEXT: .zero 1
 
-t2 FOOBAR <"gh",,<10,11>,<12>,"ijk">
+t2 FOOBAR <"gh",,<10,11>,<12>,'ijk'>
 
 ; CHECK: t2:
 ;

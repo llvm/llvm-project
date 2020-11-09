@@ -24,6 +24,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/CopyOpInterface.h"
 #include "mlir/Interfaces/DerivedAttributeOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -37,7 +38,9 @@
 #include "TestOps.h.inc"
 
 namespace mlir {
+namespace test {
 void registerTestDialect(DialectRegistry &registry);
-} // end namespace mlir
+} // namespace test
+} // namespace mlir
 
 #endif // MLIR_TESTDIALECT_H

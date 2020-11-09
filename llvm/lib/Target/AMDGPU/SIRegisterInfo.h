@@ -133,6 +133,7 @@ public:
 
   StringRef getRegAsmName(MCRegister Reg) const override;
 
+  // Pseudo regs are not allowed
   unsigned getHWRegIndex(MCRegister Reg) const {
     return getEncodingValue(Reg) & 0xff;
   }

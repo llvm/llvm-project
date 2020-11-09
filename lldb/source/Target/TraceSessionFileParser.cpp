@@ -37,7 +37,6 @@ Error TraceSessionFileParser::ParseModule(lldb::TargetSP &target_sp,
   ModuleSpec module_spec;
   module_spec.GetFileSpec() = local_file_spec;
   module_spec.GetPlatformFileSpec() = system_file_spec;
-  module_spec.SetObjectOffset(module.load_address.value);
 
   if (module.uuid.hasValue())
     module_spec.GetUUID().SetFromStringRef(*module.uuid);
@@ -45,7 +44,14 @@ Error TraceSessionFileParser::ParseModule(lldb::TargetSP &target_sp,
   Status error;
   ModuleSP module_sp =
       target_sp->GetOrCreateModule(module_spec, /*notify*/ false, &error);
-  return error.ToError();
+
+  if (error.Fail())
+    return error.ToError();
+
+  bool load_addr_changed = false;
+  module_sp->SetLoadAddress(*target_sp, module.load_address.value, false,
+                            load_addr_changed);
+  return llvm::Error::success();
 }
 
 Error TraceSessionFileParser::CreateJSONError(json::Path::Root &root,

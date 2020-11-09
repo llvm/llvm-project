@@ -22,6 +22,11 @@ def StdBufferize : FunctionPass<"std-bufferize"> {
   let dependentDialects = ["scf::SCFDialect"];
 }
 
+def StdExpandDivs : FunctionPass<"std-expand-divs"> {
+  let summary = "Legalize div std dialect operations to be convertible to LLVM.";
+  let constructor = "mlir::createStdExpandDivsPass()";
+}
+
 def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
   let summary = "Bufferize func/call/return ops";
   let description = [{

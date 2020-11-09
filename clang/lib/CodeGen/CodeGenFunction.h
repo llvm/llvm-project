@@ -502,6 +502,26 @@ public:
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
+  /// True if the current function should be marked mustprogress.
+  bool FnIsMustProgress = false;
+
+  /// True if the C++ Standard Requires Progress.
+  bool CPlusPlusWithProgress() {
+    return getLangOpts().CPlusPlus11 || getLangOpts().CPlusPlus14 ||
+           getLangOpts().CPlusPlus17 || getLangOpts().CPlusPlus20;
+  }
+
+  /// True if the C Standard Requires Progress.
+  bool CWithProgress() {
+    return getLangOpts().C11 || getLangOpts().C17 || getLangOpts().C2x;
+  }
+
+  /// True if the language standard requires progress in functions or
+  /// in infinite loops with non-constant conditionals.
+  bool LanguageRequiresProgress() {
+    return CWithProgress() || CPlusPlusWithProgress();
+  }
+
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
 
@@ -608,11 +628,15 @@ public:
   class CGFPOptionsRAII {
   public:
     CGFPOptionsRAII(CodeGenFunction &CGF, FPOptions FPFeatures);
+    CGFPOptionsRAII(CodeGenFunction &CGF, const Expr *E);
     ~CGFPOptionsRAII();
 
   private:
+    void ConstructorHelper(FPOptions FPFeatures);
     CodeGenFunction &CGF;
     FPOptions OldFPFeatures;
+    llvm::fp::ExceptionBehavior OldExcept;
+    llvm::RoundingMode OldRounding;
     Optional<CGBuilderTy::FastMathFlagGuard> FMFGuard;
   };
   FPOptions CurFPFeatures;
@@ -4111,7 +4135,7 @@ private:
 public:
   llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E);
 
-  llvm::Value *EmitBuiltinAvailable(ArrayRef<llvm::Value *> Args);
+  llvm::Value *EmitBuiltinAvailable(const VersionTuple &Version);
 
   llvm::Value *EmitObjCProtocolExpr(const ObjCProtocolExpr *E);
   llvm::Value *EmitObjCStringLiteral(const ObjCStringLiteral *E);

@@ -1593,7 +1593,7 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
   ExprResult SubstReplacement = TransformExpr(E->getReplacement());
   if (SubstReplacement.isInvalid())
     return true;
-  QualType SubstType = TransformType(E->getType());
+  QualType SubstType = TransformType(E->getParameterType(getSema().Context));
   if (SubstType.isNull())
     return true;
   // The type may have been previously dependent and not now, which means we

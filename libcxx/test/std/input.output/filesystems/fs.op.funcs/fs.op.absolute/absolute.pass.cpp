@@ -42,8 +42,8 @@ TEST_CASE(basic_test)
     } TestCases [] = {
         {"", cwd / ""},
         {"foo", cwd / "foo"},
-        {"foo/", cwd / "foo/"},
-        {"/already_absolute", "/already_absolute"}
+        {"foo/", cwd / "foo" / ""},
+        {"/already_absolute", cwd.root_path() / "already_absolute"}
     };
     for (auto& TC : TestCases) {
         std::error_code ec = GetTestEC();

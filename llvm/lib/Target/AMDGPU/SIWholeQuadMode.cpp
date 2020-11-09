@@ -653,6 +653,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
       MachineInstr *EndMI = LIS->getInstructionFromIndex(S->end.getBaseIndex());
       assert(EndMI && "Segment does not end on valid instruction");
       auto NextI = std::next(EndMI->getIterator());
+      if (NextI == MBB.end())
+        break;
       SlotIndex Next = LIS->getInstructionIndex(*NextI);
       if (Next > LastIdx)
         break;

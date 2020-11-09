@@ -1,0 +1,30 @@
+RUN: apinotes-test %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes > %t.result
+RUN: not diff -b %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes %t.result | FileCheck %s
+
+Avoid Windows as the diff output differs due to line-endings and different diff
+implementations.
+UNSUPPORTED: system-windows
+
+We expect only the nullability to be different as it is canonicalized during the
+roudtrip.
+
+CHECK:      7c8
+CHECK-NEXT: <         Nullability:     N
+CHECK-NEXT: ---
+CHECK-NEXT: >         Nullability:     Nonnull
+CHECK-NEXT: 13c14
+CHECK-NEXT: <         Nullability:     O
+CHECK-NEXT: ---
+CHECK-NEXT: >         Nullability:     Optional
+CHECK-NEXT: 19c20
+CHECK-NEXT: <         Nullability:     U
+CHECK-NEXT: ---
+CHECK-NEXT: >         Nullability:     Unspecified
+CHECK-NEXT: 25c26
+CHECK-NEXT: <         Nullability:     S
+CHECK-NEXT: ---
+CHECK-NEXT: >         Nullability:     Unspecified
+CHECK-NEXT: 28c29,30
+CHECK-NEXT: <         Nullability:     Scalar
+CHECK-NEXT: ---
+CHECK-NEXT: >         Nullability:     Unspecified

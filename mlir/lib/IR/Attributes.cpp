@@ -99,8 +99,6 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
       storage.assign({value[0]});
     break;
   case 2: {
-    assert(value[0].first != value[1].first &&
-           "DictionaryAttr element names must be unique");
     bool isSorted = value[0] < value[1];
     if (inPlace) {
       if (!isSorted)
@@ -122,25 +120,49 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
       llvm::array_pod_sort(storage.begin(), storage.end());
       value = storage;
     }
-
-    // Ensure that the attribute elements are unique.
-    assert(std::adjacent_find(value.begin(), value.end(),
-                              [](NamedAttribute l, NamedAttribute r) {
-                                return l.first == r.first;
-                              }) == value.end() &&
-           "DictionaryAttr element names must be unique");
     return !isSorted;
   }
   return false;
 }
 
+/// Returns an entry with a duplicate name from the given sorted array of named
+/// attributes. Returns llvm::None if all elements have unique names.
+static Optional<NamedAttribute>
+findDuplicateElement(ArrayRef<NamedAttribute> value) {
+  const Optional<NamedAttribute> none{llvm::None};
+  if (value.size() < 2)
+    return none;
+
+  if (value.size() == 2)
+    return value[0].first == value[1].first ? value[0] : none;
+
+  auto it = std::adjacent_find(
+      value.begin(), value.end(),
+      [](NamedAttribute l, NamedAttribute r) { return l.first == r.first; });
+  return it != value.end() ? *it : none;
+}
+
 bool DictionaryAttr::sort(ArrayRef<NamedAttribute> value,
                           SmallVectorImpl<NamedAttribute> &storage) {
-  return dictionaryAttrSort</*inPlace=*/false>(value, storage);
+  bool isSorted = dictionaryAttrSort</*inPlace=*/false>(value, storage);
+  assert(!findDuplicateElement(storage) &&
+         "DictionaryAttr element names must be unique");
+  return isSorted;
 }
 
 bool DictionaryAttr::sortInPlace(SmallVectorImpl<NamedAttribute> &array) {
-  return dictionaryAttrSort</*inPlace=*/true>(array, array);
+  bool isSorted = dictionaryAttrSort</*inPlace=*/true>(array, array);
+  assert(!findDuplicateElement(array) &&
+         "DictionaryAttr element names must be unique");
+  return isSorted;
+}
+
+Optional<NamedAttribute>
+DictionaryAttr::findDuplicate(SmallVectorImpl<NamedAttribute> &array,
+                              bool isSorted) {
+  if (!isSorted)
+    dictionaryAttrSort</*inPlace=*/true>(array, array);
+  return findDuplicateElement(array);
 }
 
 DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
@@ -155,7 +177,8 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
   SmallVector<NamedAttribute, 8> storage;
   if (dictionaryAttrSort</*inPlace=*/false>(value, storage))
     value = storage;
-
+  assert(!findDuplicateElement(value) &&
+         "DictionaryAttr element names must be unique");
   return Base::get(context, value);
 }
 /// Construct a dictionary with an array of values that is known to already be
@@ -170,10 +193,7 @@ DictionaryAttr DictionaryAttr::getWithSorted(ArrayRef<NamedAttribute> value,
                            return l.first.strref() < r.first.strref();
                          }) &&
          "expected attribute values to be sorted");
-  assert(std::adjacent_find(value.begin(), value.end(),
-                            [](NamedAttribute l, NamedAttribute r) {
-                              return l.first == r.first;
-                            }) == value.end() &&
+  assert(!findDuplicateElement(value) &&
          "DictionaryAttr element names must be unique");
   return Base::get(context, value);
 }

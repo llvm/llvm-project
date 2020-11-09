@@ -1,6 +1,7 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1031 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1032 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1033 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 global_load_dword_addtid v1, s[2:3] offset:16
 // GFX10: encoding: [0x10,0x80,0x58,0xdc,0x00,0x00,0x02,0x01]
@@ -17,10 +18,10 @@ global_store_dword v254, v1, s[2:3] offset:16
 global_atomic_csub v2, v[0:1], v2, off offset:100 glc slc
 // GFX10: encoding: [0x64,0x80,0xd3,0xdc,0x00,0x02,0x7d,0x02]
 
-global_atomic_csub v2, v[0:1], v2, off
+global_atomic_csub v2, v[0:1], v2, off glc
 // GFX10: encoding: [0x00,0x80,0xd1,0xdc,0x00,0x02,0x7d,0x02]
 
-global_atomic_csub v2, v0, v2, s[2:3]
+global_atomic_csub v2, v0, v2, s[2:3] glc
 // GFX10: encoding: [0x00,0x80,0xd1,0xdc,0x00,0x02,0x02,0x02]
 
 global_atomic_csub v2, v0, v2, s[2:3] offset:100 glc slc

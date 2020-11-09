@@ -7,14 +7,6 @@ TableGen Programmer's Reference
 .. contents::
    :local:
 
-.. toctree::
-   :hidden:
-
-   BackEnds
-   BackGuide
-   Index
-   ../CommandGuide/tblgen
-
 Introduction
 ============
 
@@ -198,14 +190,14 @@ Note that, unlike most languages, TableGen allows :token:`TokIdentifier` to
 begin with an integer. In case of ambiguity, a token is interpreted as a
 numeric literal rather than an identifier.
 
-TableGen has the following reserved words, which cannot be used as
+TableGen has the following reserved keywords, which cannot be used as
 identifiers::
 
    bit        bits          class         code          dag
-   def        else          foreach       defm          defset
-   defvar     field         if            in            include
-   int        let           list          multiclass    string
-   then
+   def        else          false         foreach       defm
+   defset     defvar        field         if            in
+   include    int           let           list          multiclass
+   string     then          true
 
 .. warning::
   The ``field`` reserved word is deprecated.
@@ -217,13 +209,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag
+               : !add        !and         !cast        !con         !dag 
                : !empty      !eq          !foldl       !foreach     !ge
-               : !getdagop   !gt          !head        !if          !isa
-               : !le         !listconcat  !listsplat   !lt          !mul
-               : !ne         !not         !or          !setdagop    !shl
-               : !size       !sra         !srl         !strconcat   !sub
-               : !subst      !tail        !xor
+               : !getdagop   !gt          !head        !if          !interleave
+               : !isa        !le          !listconcat  !listsplat   !lt
+               : !mul        !ne          !not         !or          !setdagop
+               : !shl        !size        !sra         !srl         !strconcat
+               : !sub        !subst       !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -364,12 +356,26 @@ simple value is the concatenation of the strings. Code fragments become
 strings and then are indistinguishable from them.
 
 .. productionlist::
-   SimpleValue2: "?"
+   SimpleValue2: "true" | "false"
+
+The ``true`` and ``false`` literals are essentially syntactic sugar for the
+integer values 1 and 0. They improve the readability of TableGen files when
+boolean values are used in field initializations, bit sequences, ``if``
+statements.  etc. When parsed, these literals are converted to integers.
+
+.. note::
+
+  Although ``true`` and ``false`` are literal names for 1 and 0, we
+  recommend as a stylistic rule that you use them for boolean
+  values only.
+
+.. productionlist::
+   SimpleValue3: "?"
 
 A question mark represents an uninitialized value.
 
 .. productionlist::
-   SimpleValue3: "{" [`ValueList`] "}"
+   SimpleValue4: "{" [`ValueList`] "}"
    ValueList: `ValueListNE`
    ValueListNE: `Value` ("," `Value`)*
 
@@ -378,7 +384,7 @@ This value represents a sequence of bits, which can be used to initialize a
 must represent a total of *n* bits.
 
 .. productionlist::
-   SimpleValue4: "[" `ValueList` "]" ["<" `Type` ">"]
+   SimpleValue5: "[" `ValueList` "]" ["<" `Type` ">"]
 
 This value is a list initializer (note the brackets). The values in brackets
 are the elements of the list. The optional :token:`Type` can be used to
@@ -387,7 +393,7 @@ from the given values. TableGen can usually infer the type, although
 sometimes not when the value is the empty list (``[]``).
 
 .. productionlist::
-   SimpleValue5: "(" `DagArg` [`DagArgList`] ")"
+   SimpleValue6: "(" `DagArg` [`DagArgList`] ")"
    DagArgList: `DagArg` ("," `DagArg`)*
    DagArg: `Value` [":" `TokVarName`] | `TokVarName`
 
@@ -396,7 +402,7 @@ This represents a DAG initializer (note the parentheses).  The first
 See `Directed acyclic graphs (DAGs)`_ for more details.
 
 .. productionlist::
-   SimpleValue6: `TokIdentifier`
+   SimpleValue7: `TokIdentifier`
 
 The resulting value is the value of the entity named by the identifier. The
 possible identifiers are described here, but the descriptions will make more
@@ -455,7 +461,7 @@ sense after reading the remainder of this guide.
        def Foo#i;
 
 .. productionlist::
-   SimpleValue7: `ClassID` "<" `ValueListNE` ">"
+   SimpleValue8: `ClassID` "<" `ValueListNE` ">"
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed ``def`` inheriting from the given class with the given template
@@ -466,7 +472,7 @@ Invoking a class in this manner can provide a simple subroutine facility.
 See `Using Classes as Subroutines`_ for more information.
 
 .. productionlist::
-   SimpleValue8: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
+   SimpleValue9: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
               :| `CondOperator` "(" `CondClause` ("," `CondClause`)* ")"
    CondClause: `Value` ":" `Value`
 
@@ -1407,7 +1413,7 @@ from the resulting anonymous record.
                     !eq(size,  4): 1,
                     !eq(size,  8): 1,
                     !eq(size, 16): 1,
-                    1: 0);
+                    true: 0);
   }
 
   def Data1 {
@@ -1532,21 +1538,21 @@ and non-0 as true.
 
     This example produces the sign word for an integer::
 
-    !cond(!lt(x, 0) : "negative", !eq(x, 0) : "zero", 1 : "positive")
+    !cond(!lt(x, 0) : "negative", !eq(x, 0) : "zero", true : "positive")
 
-``!dag(``\ *op*\ ``,`` *children*\ ``,`` *names*\ ``)``
-    This operator creates a DAG node.
-    The *children* and *names* arguments must be lists
+``!dag(``\ *op*\ ``,`` *arguments*\ ``,`` *names*\ ``)``
+    This operator creates a DAG node with the given operator and
+    arguments. The *arguments* and *names* arguments must be lists
     of equal length or uninitialized (``?``). The *names* argument
     must be of type ``list<string>``.
 
-    Due to limitations of the type system, *children* must be a list of items
+    Due to limitations of the type system, *arguments* must be a list of items
     of a common type. In practice, this means that they should either have the
     same type or be records with a common superclass. Mixing ``dag`` and
     non-``dag`` items is not possible. However, ``?`` can be used.
 
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
-    ``(op a1:$name1, a2:$name2, ?:$name3)``.
+    ``(op a1-value:$name1, a2-value:$name2, ?:$name3)``.
 
 ``!empty(``\ *a*\ ``)``
     This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
@@ -1554,34 +1560,36 @@ and non-0 as true.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``int``, or ``string`` values.
+    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
-``!foldl(``\ *start*\ ``,`` *list*\ ``,`` *a*\ ``,`` *b*\ ``,`` *expr*\ ``)``
+``!foldl(``\ *init*\ ``,`` *list*\ ``,`` *acc*\ ``,`` *var*\ ``,`` *expr*\ ``)``
     This operator performs a left-fold over the items in *list*. The
-    variable *a* acts as the accumulator and is initialized to *start*.
-    The variable *b* is bound to each element in the *list*. The *expr*
-    expression is evaluated for each element and presumably uses *a* and *b*
-    to calculate the accumulated value, which ``!foldl`` stores in *a*. The
-    type of *a* is the same as *start*; the type of *b* is the same as the
-    elements of *list*; *expr* must have the same type as *start*.
+    variable *acc* acts as the accumulator and is initialized to *init*.
+    The variable *var* is bound to each element in the *list*. The
+    expression is evaluated for each element and presumably uses *acc* and
+    *var* to calculate the accumulated value, which ``!foldl`` stores back in
+    *acc*. The type of *acc* is the same as *init*; the type of *var* is the
+    same as the elements of *list*; *expr* must have the same type as *init*.
 
     The following example computes the total of the ``Number`` field in the
     list of records in ``RecList``::
 
       int x = !foldl(0, RecList, total, rec, !add(total, rec.Number));
 
-``!foreach(``\ *var*\ ``,`` *seq*\ ``,`` *form*\ ``)``
+``!foreach(``\ *var*\ ``,`` *sequence*\ ``,`` *expr*\ ``)``
     This operator creates a new ``list``/``dag`` in which each element is a
-    function of the corresponding element in the *seq* ``list``/``dag``. To
-    perform the function, TableGen binds the variable *var* to an element and
-    then evaluates the *form* expression. The form presumably refers to the
-    variable *var* and calculates the result value.
+    function of the corresponding element in the *sequence* ``list``/``dag``.
+    To perform the function, TableGen binds the variable *var* to an element
+    and then evaluates the expression. The expression presumably refers
+    to the variable *var* and calculates the result value.
+
+    If you simply want to create a list of a certain length containing
+    the same value repeated multiple times, see ``!listsplat``.
 
 ``!ge(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than or equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``int``, or ``string`` values.
-    Use ``!cast<string>`` to compare other types of objects.
+    The arguments must be ``bit``, ``bits``, or ``int`` values.
 
 ``!getdagop(``\ *dag*\ ``)`` --or-- ``!getdagop<``\ *type*\ ``>(``\ *dag*\ ``)``
     This operator produces the operator of the given *dag* node.
@@ -1607,8 +1615,7 @@ and non-0 as true.
 
 ``!gt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than *b*; 0 otherwise.
-    The arguments must be ``bit``, ``int``, or ``string`` values.
-    Use ``!cast<string>`` to compare other types of objects.
+    The arguments must be ``bit``, ``bits``, or ``int`` values.
 
 ``!head(``\ *a*\ ``)``
     This operator produces the zeroth element of the list *a*.
@@ -1619,14 +1626,19 @@ and non-0 as true.
   ``int``. If the result is not 0, the *then* expression is produced; otherwise
   the *else* expression is produced.
 
+``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
+    This operator concatenates the items in the *list*, interleaving the
+    *delim* string between each pair, and produces the resulting string.
+    The list can be a list of string, int, bits, or bit. An empty list
+    results in an empty string. The delimiter can be the empty string.
+
 ``!isa<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator produces 1 if the type of *a* is a subtype of the given *type*; 0
     otherwise.
 
 ``!le(``\ *a*\ ``,`` *b*\ ``)``
     This operator produces 1 if *a* is less than or equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``int``, or ``string`` values.
-    Use ``!cast<string>`` to compare other types of objects.
+    The arguments must be ``bit``, ``bits``, or ``int`` values.
 
 ``!listconcat(``\ *list1*\ ``,`` *list2*\ ``, ...)``
     This operator concatenates the list arguments *list1*, *list2*, etc., and
@@ -1639,15 +1651,14 @@ and non-0 as true.
 
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.
-    The arguments must be ``bit``, ``int``, or ``string`` values.
-    Use ``!cast<string>`` to compare other types of objects.
+    The arguments must be ``bit``, ``bits``, or ``int`` values.
 
 ``!mul(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator multiplies *a*, *b*, etc., and produces the product.
 
 ``!ne(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is not equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``int``, or ``string`` values.
+    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
 ``!not(``\ *a*\ ``)``

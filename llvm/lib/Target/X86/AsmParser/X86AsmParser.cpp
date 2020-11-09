@@ -1693,8 +1693,24 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(Tok.getLoc(), "unknown token in expression");
       }
       LLVM_FALLTHROUGH;
+    case AsmToken::String: {
+      if (Parser.isParsingMasm()) {
+        // MASM parsers handle strings in expressions as constants.
+        SMLoc ValueLoc = Tok.getLoc();
+        int64_t Res;
+        const MCExpr *Val;
+        if (Parser.parsePrimaryExpr(Val, End, nullptr))
+          return true;
+        UpdateLocLex = false;
+        if (!Val->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
+          return Error(ValueLoc, "expected absolute value");
+        if (SM.onInteger(Res, ErrMsg))
+          return Error(ValueLoc, ErrMsg);
+        break;
+      }
+      LLVM_FALLTHROUGH;
+    }
     case AsmToken::At:
-    case AsmToken::String:
     case AsmToken::Identifier: {
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();

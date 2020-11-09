@@ -1106,6 +1106,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               bool TargetExecutesOncePerLoop,
                               SinkAndHoistLICMFlags *Flags,
                               OptimizationRemarkEmitter *ORE) {
+  assert(((CurAST != nullptr) ^ (MSSAU != nullptr)) &&
+         "Either AliasSetTracker or MemorySSA should be initialized.");
+
   // If we don't understand the instruction, bail early.
   if (!isHoistableAndSinkableInst(I))
     return false;
@@ -1158,6 +1161,13 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
     // Don't sink calls which can throw.
     if (CI->mayThrow())
+      return false;
+
+    // Convergent attribute has been used on operations that involve
+    // inter-thread communication which results are implicitly affected by the
+    // enclosing control flows. It is not safe to hoist or sink such operations
+    // across control flow.
+    if (CI->isConvergent())
       return false;
 
     using namespace PatternMatch;

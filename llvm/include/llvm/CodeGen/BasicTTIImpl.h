@@ -1135,6 +1135,11 @@ public:
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
       return 0;
 
+    // Assume that target intrinsics are cheap.
+    Intrinsic::ID IID = ICA.getID();
+    if (Function::isTargetIntrinsic(IID))
+      return TargetTransformInfo::TCC_Basic;
+
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
@@ -1151,7 +1156,6 @@ public:
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
-    Intrinsic::ID IID = ICA.getID();
     switch (IID) {
     default:
       // FIXME: all cost kinds should default to the same thing?
@@ -1583,10 +1587,10 @@ public:
       unsigned Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost += 3 * thisT()->getCmpSelInstrCost(
-                      BinaryOperator::ICmp, SumTy, OverflowTy,
+                      Instruction::ICmp, SumTy, OverflowTy,
                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Cost += 2 * thisT()->getCmpSelInstrCost(
-                      BinaryOperator::ICmp, OverflowTy, OverflowTy,
+                      Instruction::Select, OverflowTy, OverflowTy,
                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
       Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, OverflowTy,
                                               CostKind);

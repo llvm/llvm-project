@@ -88,6 +88,29 @@ def G_DUP: AArch64GenericInstruction {
   let InOperandList = (ins type1:$lane);
   let hasSideEffects = 0;
 }
+
+// Represents a lane duplicate operation.
+def G_DUPLANE8 : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type1:$lane);
+  let hasSideEffects = 0;
+}
+def G_DUPLANE16 : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type1:$lane);
+  let hasSideEffects = 0;
+}
+def G_DUPLANE32 : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type1:$lane);
+  let hasSideEffects = 0;
+}
+def G_DUPLANE64 : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type1:$lane);
+  let hasSideEffects = 0;
+}
+
 // Represents a trn1 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_TRN1 : AArch64GenericInstruction {
@@ -131,8 +154,17 @@ def : GINodeEquiv<G_UZP2, AArch64uzp2>;
 def : GINodeEquiv<G_ZIP1, AArch64zip1>;
 def : GINodeEquiv<G_ZIP2, AArch64zip2>;
 def : GINodeEquiv<G_DUP, AArch64dup>;
+def : GINodeEquiv<G_DUPLANE8, AArch64duplane8>;
+def : GINodeEquiv<G_DUPLANE16, AArch64duplane16>;
+def : GINodeEquiv<G_DUPLANE32, AArch64duplane32>;
+def : GINodeEquiv<G_DUPLANE64, AArch64duplane64>;
 def : GINodeEquiv<G_TRN1, AArch64trn1>;
 def : GINodeEquiv<G_TRN2, AArch64trn2>;
 def : GINodeEquiv<G_EXT, AArch64ext>;
 def : GINodeEquiv<G_VASHR, AArch64vashr>;
 def : GINodeEquiv<G_VLSHR, AArch64vlshr>;
+
+// These are patterns that we only use for GlobalISel via the importer.
+def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
+                     (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),
+           (f32 (FADDPv2i32p (v2f32 FPR64:$Rn)))>;

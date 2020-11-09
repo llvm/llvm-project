@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+sve < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ERROR %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+sve < %s 2>&1 | FileCheck %s
 
 foo:
 // CHECK: error: sve predicate register without type specifier expected

@@ -5,18 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: libcpp-has-no-threads
 
-// This test uses the POSIX header <sys/time.h> which Windows doesn't provide
-// UNSUPPORTED: windows
-
-// This test depends on signal behaviour until r210210, so some system libs
-// don't pass.
-//
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// Until 58a0a70fb2f1, this_thread::sleep_for could sometimes get interrupted
+// by signals and this test would fail spuriously. Disable the test on the
+// corresponding system libraries.
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
 
 // <thread>
 
@@ -24,36 +21,11 @@
 //   void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 #include <thread>
-#include <cstdlib>
 #include <cassert>
-#include <cstring>
-#include <signal.h>
-#include <sys/time.h>
-
-#include "test_macros.h"
-
-void sig_action(int) {}
+#include <chrono>
 
 int main(int, char**)
 {
-  int ec;
-  struct sigaction action;
-  action.sa_handler = &sig_action;
-  sigemptyset(&action.sa_mask);
-  action.sa_flags = 0;
-
-  ec = sigaction(SIGALRM, &action, nullptr);
-  assert(!ec);
-
-  struct itimerval it;
-  std::memset(&it, 0, sizeof(itimerval));
-  it.it_value.tv_sec = 0;
-  it.it_value.tv_usec = 250000;
-  // This will result in a SIGALRM getting fired resulting in the nanosleep
-  // inside sleep_for getting EINTR.
-  ec = setitimer(ITIMER_REAL, &it, nullptr);
-  assert(!ec);
-
   typedef std::chrono::system_clock Clock;
   typedef Clock::time_point time_point;
   std::chrono::milliseconds ms(500);

@@ -132,6 +132,29 @@ def testBlockArgumentList():
 run(testBlockArgumentList)
 
 
+# CHECK-LABEL: TEST: testOperationOperands
+def testOperationOperands():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      func @f1(%arg0: i32) {
+        %0 = "test.producer"() : () -> i64
+        "test.consumer"(%arg0, %0) : (i32, i64) -> ()
+        return
+      }""")
+    func = module.body.operations[0]
+    entry_block = func.regions[0].blocks[0]
+    consumer = entry_block.operations[1]
+    assert len(consumer.operands) == 2
+    # CHECK: Operand 0, type i32
+    # CHECK: Operand 1, type i64
+    for i, operand in enumerate(consumer.operands):
+      print(f"Operand {i}, type {operand.type}")
+
+
+run(testOperationOperands)
+
+
 # CHECK-LABEL: TEST: testDetachedOperation
 def testDetachedOperation():
   ctx = Context()
@@ -293,3 +316,34 @@ def testOperationPrint():
       pretty_debug_info=True, print_generic_op_form=True, use_local_scope=True)
 
 run(testOperationPrint)
+
+
+def testKnownOpView():
+  with Context(), Location.unknown():
+    Context.current.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      %1 = "custom.f32"() : () -> f32
+      %2 = "custom.f32"() : () -> f32
+      %3 = addf %1, %2 : f32
+    """)
+    print(module)
+
+    # addf should map to a known OpView class in the std dialect.
+    # We know the OpView for it defines an 'lhs' attribute.
+    addf = module.body.operations[2]
+    # CHECK: <mlir.dialects.std._AddFOp object
+    print(repr(addf))
+    # CHECK: "custom.f32"()
+    print(addf.lhs)
+
+    # One of the custom ops should resolve to the default OpView.
+    custom = module.body.operations[0]
+    # CHECK: <_mlir.ir.OpView object
+    print(repr(custom))
+
+    # Check again to make sure negative caching works.
+    custom = module.body.operations[0]
+    # CHECK: <_mlir.ir.OpView object
+    print(repr(custom))
+
+run(testKnownOpView)

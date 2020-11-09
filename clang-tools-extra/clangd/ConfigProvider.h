@@ -18,6 +18,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGPROVIDER_H
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include <chrono>
@@ -61,8 +62,10 @@ class Provider {
 public:
   virtual ~Provider() = default;
 
-  // Reads fragments from a single YAML file with a fixed path.
-  static std::unique_ptr<Provider> fromYAMLFile(llvm::StringRef AbsPathPath,
+  /// Reads fragments from a single YAML file with a fixed path. If non-empty,
+  /// Directory will be used to resolve relative paths in the fragments.
+  static std::unique_ptr<Provider> fromYAMLFile(llvm::StringRef AbsPath,
+                                                llvm::StringRef Directory,
                                                 const ThreadsafeFS &);
   // Reads fragments from YAML files found relative to ancestors of Params.Path.
   //

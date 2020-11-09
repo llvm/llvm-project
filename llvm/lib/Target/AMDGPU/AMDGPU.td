@@ -886,6 +886,13 @@ def FeatureISAVersion9_0_9 : FeatureSet<
    FeatureXNACK,
    FeatureImageGather4D16Bug]>;
 
+def FeatureISAVersion9_0_C : FeatureSet<
+  [FeatureGFX9,
+   FeatureMadMixInsts,
+   FeatureLDSBankCount32,
+   FeatureXNACK,
+   FeatureImageGather4D16Bug]>;
+
 // TODO: Organize more features into groups.
 def FeatureGroup {
   // Bugs present on gfx10.1.

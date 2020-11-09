@@ -535,6 +535,7 @@ include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 include "AArch64SchedThunderX3T110.td"
+include "AArch64SchedTSV110.td"
 
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors", [
@@ -1058,8 +1059,7 @@ def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
 // Marvell ThunderX3T110 Processors.
 def : ProcessorModel<"thunderx3t110", ThunderX3T110Model, [ProcThunderX3T110]>;
-// FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
-def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
+def : ProcessorModel<"tsv110", TSV110Model, [ProcTSV110]>;
 
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, [ProcAppleA7]>;

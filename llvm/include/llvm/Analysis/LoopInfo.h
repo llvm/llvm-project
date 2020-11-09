@@ -302,6 +302,9 @@ public:
   /// Otherwise return null.
   BlockT *getUniqueExitBlock() const;
 
+  /// Return true if this loop does not have any exit blocks.
+  bool hasNoExitBlocks() const;
+
   /// Edge type.
   typedef std::pair<BlockT *, BlockT *> Edge;
 
@@ -839,6 +842,9 @@ public:
   /// from being unrolled more than is directed by a pragma if the loop
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
+
+  /// Add llvm.loop.mustprogress to this loop's loop id metadata.
+  void setLoopMustProgress();
 
   void dump() const;
   void dumpVerbose() const;

@@ -11,6 +11,7 @@
 #define _LIBCPP_THREADING_SUPPORT
 
 #include <__config>
+#include <__availability>
 #include <chrono>
 #include <iosfwd>
 #include <errno.h>

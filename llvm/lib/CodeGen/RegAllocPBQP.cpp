@@ -146,12 +146,6 @@ public:
   }
 
 private:
-  using LI2NodeMap = std::map<const LiveInterval *, unsigned>;
-  using Node2LIMap = std::vector<const LiveInterval *>;
-  using AllowedSet = std::vector<unsigned>;
-  using AllowedSetMap = std::vector<AllowedSet>;
-  using RegPair = std::pair<unsigned, unsigned>;
-  using CoalesceMap = std::map<RegPair, PBQP::PBQPNum>;
   using RegSet = std::set<Register>;
 
   char *customPassID;
@@ -660,8 +654,9 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
       spillVReg(VReg, NewVRegs, MF, LIS, VRM, VRegSpiller);
       Worklist.insert(Worklist.end(), NewVRegs.begin(), NewVRegs.end());
       continue;
-    } else
-      VRegAllowedMap[VReg] = std::move(VRegAllowed);
+    }
+
+    VRegAllowedMap[VReg.id()] = std::move(VRegAllowed);
   }
 
   for (auto &KV : VRegAllowedMap) {
@@ -774,7 +769,7 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
     if (PReg == 0) {
       const TargetRegisterClass &RC = *MRI.getRegClass(LI.reg());
       const ArrayRef<MCPhysReg> RawPRegOrder = RC.getRawAllocationOrder(MF);
-      for (unsigned CandidateReg : RawPRegOrder) {
+      for (MCRegister CandidateReg : RawPRegOrder) {
         if (!VRM.getRegInfo().isReserved(CandidateReg)) {
           PReg = CandidateReg;
           break;

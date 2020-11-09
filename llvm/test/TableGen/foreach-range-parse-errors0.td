@@ -10,8 +10,8 @@ class ConstantsImpl {
 
 def Constants : ConstantsImpl;
 
-// CHECK-NOT:  error: Unknown token when parsing a value
-// CHECK: [[FILE]]:[[@LINE+3]]:22: error: Unknown token when parsing a value
+// CHECK-NOT:  error: Unknown or reserved token when parsing a value
+// CHECK: [[FILE]]:[[@LINE+3]]:22: error: Unknown or reserved token when parsing a value
 // CHECK: [[FILE]]:[[@LINE+2]]:22: error: expected integer value as end of range
 // CHECK: [[FILE]]:[[@LINE+1]]:22: error: expected declaration in for
 foreach Index = 0 -  in {

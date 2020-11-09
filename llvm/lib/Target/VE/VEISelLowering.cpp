@@ -40,10 +40,26 @@ using namespace llvm;
 
 #include "VEGenCallingConv.inc"
 
+CCAssignFn *getReturnCC(CallingConv::ID CallConv) {
+  switch (CallConv) {
+  default:
+    return RetCC_VE_C;
+  }
+}
+
+CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
+  if (IsVarArg)
+    return CC_VE2;
+  switch (CallConv) {
+  default:
+    return CC_VE_C;
+  }
+}
+
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
-  CCAssignFn *RetCC = RetCC_VE;
+  CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC);
@@ -57,46 +73,48 @@ void VETargetLowering::initRegisterClasses() {
   addRegisterClass(MVT::f64, &VE::I64RegClass);
   addRegisterClass(MVT::f128, &VE::F128RegClass);
 
-  addRegisterClass(MVT::v2i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v4i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v8i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v16i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v32i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v64i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v128i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v256i32, &VE::V64RegClass);
-  addRegisterClass(MVT::v512i32, &VE::V64RegClass);
+  if (Subtarget->enableVPU()) {
+    addRegisterClass(MVT::v2i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v4i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v8i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v16i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v32i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v64i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v128i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v256i32, &VE::V64RegClass);
+    addRegisterClass(MVT::v512i32, &VE::V64RegClass);
 
-  addRegisterClass(MVT::v2i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v4i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v8i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v16i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v32i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v64i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v128i64, &VE::V64RegClass);
-  addRegisterClass(MVT::v256i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v2i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v4i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v8i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v16i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v32i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v64i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v128i64, &VE::V64RegClass);
+    addRegisterClass(MVT::v256i64, &VE::V64RegClass);
 
-  addRegisterClass(MVT::v2f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v4f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v8f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v16f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v32f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v64f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v128f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v256f32, &VE::V64RegClass);
-  addRegisterClass(MVT::v512f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v2f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v4f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v8f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v16f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v32f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v64f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v128f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v256f32, &VE::V64RegClass);
+    addRegisterClass(MVT::v512f32, &VE::V64RegClass);
 
-  addRegisterClass(MVT::v2f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v4f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v8f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v16f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v32f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v64f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v128f64, &VE::V64RegClass);
-  addRegisterClass(MVT::v256f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v2f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v4f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v8f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v16f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v32f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v64f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v128f64, &VE::V64RegClass);
+    addRegisterClass(MVT::v256f64, &VE::V64RegClass);
 
-  addRegisterClass(MVT::v256i1, &VE::VMRegClass);
-  addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+    addRegisterClass(MVT::v256i1, &VE::VMRegClass);
+    addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+  }
 }
 
 void VETargetLowering::initSPUActions() {
@@ -262,6 +280,10 @@ void VETargetLowering::initSPUActions() {
   /// } Atomic isntructions
 }
 
+void VETargetLowering::initVPUActions() {
+  // TODO upstream vector isel
+}
+
 SDValue
 VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                               bool IsVarArg,
@@ -276,7 +298,7 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
 
   // Analyze return values.
-  CCInfo.AnalyzeReturn(Outs, RetCC_VE);
+  CCInfo.AnalyzeReturn(Outs, getReturnCC(CallConv));
 
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -357,7 +379,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
   // by CC_VE would be correct now.
-  CCInfo.AnalyzeFormalArguments(Ins, CC_VE);
+  CCInfo.AnalyzeFormalArguments(Ins, getParamCC(CallConv, false));
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -505,7 +527,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
   // by CC_VE would be correct now.
-  CCInfo.AnalyzeCallOperands(CLI.Outs, CC_VE);
+  CCInfo.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, false));
 
   // VE requires to use both register and stack for varargs or no-prototyped
   // functions.
@@ -516,7 +538,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCState CCInfo2(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(),
                   ArgLocs2, *DAG.getContext());
   if (UseBoth)
-    CCInfo2.AnalyzeCallOperands(CLI.Outs, CC_VE2);
+    CCInfo2.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, true));
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -701,7 +723,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CB)
     CLI.Ins[0].Flags.setInReg();
 
-  RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_VE);
+  RVInfo.AnalyzeCallResult(CLI.Ins, getReturnCC(CLI.CallConv));
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -842,7 +864,7 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
 
   initRegisterClasses();
   initSPUActions();
-  // TODO initVPUActions();
+  initVPUActions();
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
@@ -934,23 +956,19 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (isa<ConstantPoolSDNode>(Op) ||
         (GlobalN && GlobalN->getGlobal()->hasLocalLinkage())) {
       // Create following instructions for local linkage PIC code.
-      //     lea %s35, %gotoff_lo(.LCPI0_0)
-      //     and %s35, %s35, (32)0
-      //     lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35)
-      //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
-      // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+      //     lea %reg, label@gotoff_lo
+      //     and %reg, %reg, (32)0
+      //     lea.sl %reg, label@gotoff_hi(%reg, %got)
       SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
                                   VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
       SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
       return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
     }
     // Create following instructions for not local linkage PIC code.
-    //     lea %s35, %got_lo(.LCPI0_0)
-    //     and %s35, %s35, (32)0
-    //     lea.sl %s35, %got_hi(.LCPI0_0)(%s35)
-    //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
-    //     ld     %s35, (,%s35)
-    // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+    //     lea %reg, label@got_lo
+    //     and %reg, %reg, (32)0
+    //     lea.sl %reg, label@got_hi(%reg)
+    //     ld %reg, (%reg, %got)
     SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOT_HI32,
                                 VEMCExpr::VK_VE_GOT_LO32, DAG);
     SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);

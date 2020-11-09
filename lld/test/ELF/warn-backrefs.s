@@ -20,8 +20,8 @@
 # RUN: ld.lld --warn-backrefs %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --warn-backrefs %t2.a '-(' %t1.o '-)' -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --warn-backrefs --warn-backrefs-exclude='*3.a' %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
-# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a' %t2.a %t1.o -o /dev/null
-# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude '*2.a' \
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a(*2.o)' %t2.a %t1.o -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude '*2.a(*2.o)' \
 # RUN:   --warn-backrefs-exclude not_exist %t2.a %t1.o -o /dev/null
 ## Without --warn-backrefs, --warn-backrefs-exclude is ignored.
 # RUN: ld.lld --fatal-warnings --warn-backrefs-exclude=not_exist %t2.a %t1.o -o /dev/null
@@ -35,7 +35,7 @@
 # RUN: echo 'GROUP("%t2.a")' > %t3.lds
 # RUN: ld.lld --warn-backrefs %t3.lds %t1.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --fatal-warnings --warn-backrefs '-(' %t3.lds %t1.o '-)' -o /dev/null
-# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a' -o /dev/null %t3.lds %t1.o
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a(*2.o)' -o /dev/null %t3.lds %t1.o
 ## If a lazy definition appears after the backward reference, don't warn.
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t3.lds %t1.o %t3.lds -o /dev/null
 

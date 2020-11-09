@@ -2,8 +2,9 @@
 // RUN: mlir-linalg-ods-gen %s -gen-impl=1 | FileCheck %s --check-prefix=IMPL
 
 // ODS-LABEL: def Test1Op : LinalgStructuredBase_Op<"test1", [
-//  ODS-NEXT:   NamedStructuredOpTrait
 //  ODS-NEXT:   AttrSizedOperandSegments
+//  ODS-NEXT:   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+//  ODS-NEXT:   NamedStructuredOpTrait
 //  ODS-NEXT:   SingleBlockImplicitTerminator<"YieldOp">
 //
 // IMPL-LABEL:  ArrayAttr Test1Op::iterator_types() {
@@ -26,8 +27,9 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
 }
 
 // ODS-LABEL: def Test2Op : LinalgStructuredBase_Op<"test2", [
-//  ODS-NEXT:   NamedStructuredOpTrait
 //  ODS-NEXT:   AttrSizedOperandSegments
+//  ODS-NEXT:   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+//  ODS-NEXT:   NamedStructuredOpTrait
 //  ODS-NEXT:   SingleBlockImplicitTerminator<"YieldOp">
 //
 // IMPL-LABEL:  ArrayAttr Test2Op::iterator_types() {
@@ -50,8 +52,9 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 }
 
 // ODS-LABEL: def Test3Op : LinalgStructuredBase_Op<"test3", [
-//  ODS-NEXT:   NamedStructuredOpTrait
 //  ODS-NEXT:   AttrSizedOperandSegments
+//  ODS-NEXT:   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+//  ODS-NEXT:   NamedStructuredOpTrait
 //  ODS-NEXT:   SingleBlockImplicitTerminator<"YieldOp">
 //
 // IMPL-LABEL:  ArrayAttr Test3Op::iterator_types() {

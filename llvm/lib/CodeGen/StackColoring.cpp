@@ -373,6 +373,36 @@ STATISTIC(EscapedAllocas, "Number of allocas that escaped the lifetime region");
 // before visiting the memcpy block (which will contain the lifetime start
 // for "b" then it will appear that 'b' has a degenerate lifetime.
 //
+// Handle Windows Exception with LifetimeStartOnFirstUse:
+// -----------------
+//
+// There was a bug for using LifetimeStartOnFirstUse in win32.
+// class Type1 {
+// ...
+// ~Type1(){ write memory;}
+// }
+// ...
+// try{
+// Type1 V
+// ...
+// } catch (Type2 X){
+// ...
+// }
+// For variable X in catch(X), we put point pX=&(&X) into ConservativeSlots
+// to prevent using LifetimeStartOnFirstUse. Because pX may merged with
+// object V which may call destructor after implicitly writing pX. All these
+// are done in C++ EH runtime libs (through CxxThrowException), and can't
+// obviously check it in IR level.
+//
+// The loader of pX, without obvious writing IR, is usually the first LOAD MI
+// in EHPad, Some like:
+// bb.x.catch.i (landing-pad, ehfunclet-entry):
+// ; predecessors: %bb...
+//   successors: %bb...
+//  %n:gr32 = MOV32rm %stack.pX ...
+//  ...
+// The Type2** %stack.pX will only be written in EH runtime libs, so we
+// check the StoreSlots to screen it out.
 
 namespace {
 
@@ -433,6 +463,9 @@ class StackColoring : public MachineFunctionPass {
   /// FI slots that need to be handled conservatively (for these
   /// slots lifetime-start-on-first-use is disabled).
   BitVector ConservativeSlots;
+
+  /// Record the FI slots referenced by a 'may write to memory'.
+  BitVector StoreSlots;
 
   /// Number of iterations taken during data flow analysis.
   unsigned NumIterations;
@@ -629,10 +662,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   InterestingSlots.resize(NumSlot);
   ConservativeSlots.clear();
   ConservativeSlots.resize(NumSlot);
+  StoreSlots.clear();
+  StoreSlots.resize(NumSlot);
 
   // number of start and end lifetime ops for each slot
   SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
   SmallVector<int, 8> NumEndLifetimes(NumSlot, 0);
+  SmallVector<int, 8> NumLoadInCatchPad(NumSlot, 0);
 
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
@@ -687,6 +723,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
           if (! BetweenStartEnd.test(Slot)) {
             ConservativeSlots.set(Slot);
           }
+          // Here we check the StoreSlots to screen catch point out. For more
+          // information, please refer "Handle Windows Exception with
+          // LifetimeStartOnFirstUse" at the head of this file.
+          if (MI.mayStore())
+            StoreSlots.set(Slot);
+          if (MF->getWinEHFuncInfo() && MBB->isEHPad() && MI.mayLoad())
+            NumLoadInCatchPad[Slot] += 1;
         }
       }
     }
@@ -697,11 +740,14 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
     return 0;
   }
 
-  // PR27903: slots with multiple start or end lifetime ops are not
+  // 1) PR27903: slots with multiple start or end lifetime ops are not
   // safe to enable for "lifetime-start-on-first-use".
-  for (unsigned slot = 0; slot < NumSlot; ++slot)
-    if (NumStartLifetimes[slot] > 1 || NumEndLifetimes[slot] > 1)
+  // 2) And also not safe for variable X in catch(X) in windows.
+  for (unsigned slot = 0; slot < NumSlot; ++slot) {
+    if (NumStartLifetimes[slot] > 1 || NumEndLifetimes[slot] > 1 ||
+        (NumLoadInCatchPad[slot] > 1 && !StoreSlots.test(slot)))
       ConservativeSlots.set(slot);
+  }
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block
@@ -1241,7 +1287,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // This is a simple greedy algorithm for merging allocas. First, sort the
   // slots, placing the largest slots first. Next, perform an n^2 scan and look
-  // for disjoint slots. When you find disjoint slots, merge the samller one
+  // for disjoint slots. When you find disjoint slots, merge the smaller one
   // into the bigger one and update the live interval. Remove the small alloca
   // and continue.
 

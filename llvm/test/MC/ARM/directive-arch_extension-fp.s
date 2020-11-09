@@ -1,11 +1,11 @@
 @ RUN: not llvm-mc -triple armv7-eabi -filetype asm -o /dev/null 2>&1 %s \
 @ RUN:   | FileCheck %s -check-prefix CHECK-V7 -check-prefix CHECK
 @ RUN: not llvm-mc -triple armv8-eabi -filetype asm -o /dev/null 2>&1 %s \
-@ RUN:   | FileCheck %s -check-prefix CHECK-V8 -check-prefix CHECK
+@ RUN:   | FileCheck %s -check-prefix CHECK
 @ RUN: not llvm-mc -triple thumbv7-eabi -filetype asm -o /dev/null 2>&1 %s \
 @ RUN:   | FileCheck %s -check-prefix CHECK-V7 -check-prefix CHECK
 @ RUN: not llvm-mc -triple thumbv8-eabi -filetype asm -o /dev/null 2>&1 %s \
-@ RUN:   | FileCheck %s -check-prefix CHECK-V8 -check-prefix CHECK
+@ RUN:   | FileCheck %s -check-prefix CHECK
 
 	.syntax unified
 

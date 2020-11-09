@@ -1,0 +1,340 @@
+#!/usr/bin/env bash
+#===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===##
+
+set -ex
+
+PROGNAME="$(basename "${0}")"
+
+function usage() {
+cat <<EOF
+Usage:
+${PROGNAME} [options] <BUILDER>
+
+[-h|--help]         Display this help and exit.
+
+--llvm-root <DIR>   Path to the root of the LLVM monorepo. By default, we try
+                    to figure it out based on the current working directory.
+
+--build-dir <DIR>   The directory to use for building the library. By default,
+                    this is '<llvm-root>/build/<builder>'.
+
+--osx-roots <DIR>   Path to pre-downloaded macOS dylibs. By default, we download
+                    them from Green Dragon. This is only relevant at all when
+                    running back-deployment testing if one wants to override
+                    the old dylibs we use to run the tests with different ones.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case ${1} in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --llvm-root)
+            MONOREPO_ROOT="${2}"
+            shift; shift
+            ;;
+        --build-dir)
+            BUILD_DIR="${2}"
+            shift; shift
+            ;;
+        --osx-roots)
+            OSX_ROOTS="${2}"
+            shift; shift
+            ;;
+        *)
+            BUILDER="${1}"
+            shift
+            ;;
+    esac
+done
+
+MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
+BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
+INSTALL_DIR="${BUILD_DIR}/install}"
+
+function clean() {
+    rm -rf "${BUILD_DIR}"
+}
+
+function generate-cmake() {
+    echo "--- Generating CMake"
+    cmake -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
+          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          "${@}"
+}
+
+function check-cxx-cxxabi() {
+    echo "+++ Running the libc++ tests"
+    ninja -C "${BUILD_DIR}" check-cxx
+
+    echo "+++ Running the libc++abi tests"
+    ninja -C "${BUILD_DIR}" check-cxxabi
+
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ninja -C "${BUILD_DIR}" install-cxx install-cxxabi
+}
+
+function check-cxx-benchmarks() {
+    echo "--- Running the benchmarks"
+    ninja -C "${BUILD_DIR}" check-cxx-benchmarks
+}
+
+case "${BUILDER}" in
+generic-cxx03)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
+    check-cxx-cxxabi
+;;
+generic-cxx11)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    check-cxx-cxxabi
+;;
+generic-cxx14)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake"
+    check-cxx-cxxabi
+;;
+generic-cxx17)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake"
+    check-cxx-cxxabi
+;;
+generic-cxx2a)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2a.cmake"
+    check-cxx-cxxabi
+;;
+generic-noexceptions)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
+    check-cxx-cxxabi
+;;
+generic-32bit)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake"
+    check-cxx-cxxabi
+;;
+generic-gcc)
+    export CC=gcc
+    export CXX=g++
+    clean
+    # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
+    #        in which we link -lc++experimental, which causes issues.
+    generate-cmake -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    check-cxx-cxxabi
+;;
+generic-asan)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
+    check-cxx-cxxabi
+;;
+generic-msan)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake"
+    check-cxx-cxxabi
+;;
+generic-tsan)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake"
+    check-cxx-cxxabi
+;;
+generic-ubsan)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake"
+    check-cxx-cxxabi
+;;
+generic-with_llvm_unwinder)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
+    check-cxx-cxxabi
+;;
+generic-singlethreaded)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake"
+    check-cxx-cxxabi
+;;
+generic-nodebug)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake"
+    check-cxx-cxxabi
+;;
+generic-no-random_device)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
+    check-cxx-cxxabi
+;;
+generic-no-localization)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
+    check-cxx-cxxabi
+;;
+x86_64-apple-system)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
+    check-cxx-cxxabi
+;;
+x86_64-apple-system-noexceptions)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+                   -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    check-cxx-cxxabi
+;;
+x86_64-apple-system-backdeployment-*)
+    clean
+
+    if [[ "${OSX_ROOTS}" == "" ]]; then
+        echo "--- Downloading previous macOS dylibs"
+        PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
+        OSX_ROOTS="${BUILD_DIR}/macos-roots"
+        mkdir -p "${OSX_ROOTS}"
+        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
+    fi
+
+    DEPLOYMENT_TARGET="${BUILDER#x86_64-apple-system-backdeployment-}"
+    PARAMS="target_triple=x86_64-apple-macosx${DEPLOYMENT_TARGET}"
+    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
+    PARAMS+=";abi_library_path=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+    PARAMS+=";use_system_cxx_lib=True"
+    # Filesystem is supported on Apple platforms starting with macosx10.15.
+    if [[ ${DEPLOYMENT_TARGET} =~ ^10.9|10.10|10.11|10.12|10.13|10.14$ ]]; then
+        PARAMS+=";enable_filesystem=False"
+    fi
+
+    export CC=clang
+    export CXX=clang++
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
+                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
+
+    # TODO: Also run the libc++abi tests
+    echo "+++ Running the libc++ tests"
+    ninja -C "${BUILD_DIR}" check-cxx
+;;
+benchmarks)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake
+    check-cxx-benchmarks
+;;
+documentation)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -DLLVM_ENABLE_SPHINX=ON
+
+    echo "+++ Generating documentation"
+    ninja -C "${BUILD_DIR}" docs-libcxx-html
+;;
+unified-standalone)
+    export CC=clang
+    export CXX=clang++
+
+    clean
+
+    echo "--- Generating CMake"
+    cmake -S "${MONOREPO_ROOT}/libcxx/utils/ci/runtimes" \
+          -B "${BUILD_DIR}" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi;libunwind"
+
+    check-cxx-cxxabi
+;;
+legacy-standalone)
+    export CC=clang
+    export CXX=clang++
+
+    clean
+
+    echo "--- Generating CMake"
+    cmake -S "${MONOREPO_ROOT}/libcxx" \
+          -B "${BUILD_DIR}/libcxx" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
+          -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
+
+    cmake -S "${MONOREPO_ROOT}/libcxxabi" \
+          -B "${BUILD_DIR}/libcxxabi" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
+          -DLIBCXXABI_LIBCXX_PATH="${MONOREPO_ROOT}/libcxx" \
+          -DLIBCXXABI_LIBCXX_INCLUDES="${MONOREPO_ROOT}/libcxx/include" \
+          -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
+
+    echo "+++ Building libc++abi"
+    ninja -C "${BUILD_DIR}/libcxxabi" cxxabi
+
+    echo "+++ Building libc++"
+    ninja -C "${BUILD_DIR}/libcxx" cxx
+
+    echo "+++ Running the libc++ tests"
+    ninja -C "${BUILD_DIR}/libcxx" check-cxx
+
+    echo "+++ Running the libc++abi tests"
+    ninja -C "${BUILD_DIR}/libcxxabi" check-cxxabi
+;;
+*)
+    echo "${BUILDER} is not a known configuration"
+    exit 1
+;;
+esac

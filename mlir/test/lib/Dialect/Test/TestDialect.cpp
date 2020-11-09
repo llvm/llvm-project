@@ -20,8 +20,9 @@
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
+using namespace mlir::test;
 
-void mlir::registerTestDialect(DialectRegistry &registry) {
+void mlir::test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
 }
 

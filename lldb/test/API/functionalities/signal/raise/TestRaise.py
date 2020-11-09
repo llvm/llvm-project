@@ -30,6 +30,7 @@ class RaiseTestCase(TestBase):
         self.signal_test('SIGRTMIN', True)
 
     @skipIfNetBSD  # Hangs on NetBSD
+    @skipIfFreeBSD  # hangs
     def test_sigtrap(self):
         self.build()
         self.signal_test('SIGTRAP', True)

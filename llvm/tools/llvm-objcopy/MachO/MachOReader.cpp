@@ -35,7 +35,7 @@ Section constructSectionCommon(SectionType Sec, uint32_t Index) {
   S.Index = Index;
   S.Addr = Sec.addr;
   S.Size = Sec.size;
-  S.Offset = Sec.offset;
+  S.OriginalOffset = Sec.offset;
   S.Align = Sec.align;
   S.RelOff = Sec.reloff;
   S.NReloc = Sec.nreloc;

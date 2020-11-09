@@ -50,7 +50,7 @@ define void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32* %a5) {
 ; CHECK-NEXT:    movslq (%r9), %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movb $1, %r10b
+; CHECK-NEXT:    movb $1, %r9b
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_9: # %b1606
@@ -87,7 +87,7 @@ define void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32* %a5) {
 ; CHECK-NEXT:    je .LBB0_37
 ; CHECK-NEXT:  .LBB0_18: # %b188
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    testb %r10b, %r10b
+; CHECK-NEXT:    testb %r9b, %r9b
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_19: # %a30b294
@@ -97,27 +97,23 @@ define void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32* %a5) {
 ; CHECK-NEXT:    je .LBB0_19
 ; CHECK-NEXT:  .LBB0_4: # %a33b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    orl %r8d, %eax
-; CHECK-NEXT:    movl %eax, %r9d
-; CHECK-NEXT:    shrl $31, %r9d
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    movl %esi, %r10d
+; CHECK-NEXT:    orl %r8d, %r10d
 ; CHECK-NEXT:    jns .LBB0_20
 ; CHECK-NEXT:  .LBB0_5: # %a50b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    shrl $31, %r10d
 ; CHECK-NEXT:    movl %r8d, %eax
 ; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    movl %eax, %r11d
-; CHECK-NEXT:    shrl $31, %r11d
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jns .LBB0_26
 ; CHECK-NEXT:  .LBB0_6: # %a57b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    testb %r9b, %r9b
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    je .LBB0_30
 ; CHECK-NEXT:  .LBB0_7: # %a66b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    testb %r11b, %r11b
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_34: # %a74b
@@ -187,7 +183,7 @@ define void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32* %a5) {
 ; CHECK-NEXT:    je .LBB0_38
 ; CHECK-NEXT:  .LBB0_27: # %b879
 ; CHECK-NEXT:    # in Loop: Header=BB0_26 Depth=2
-; CHECK-NEXT:    testb %r10b, %r10b
+; CHECK-NEXT:    testb %r9b, %r9b
 ; CHECK-NEXT:    jne .LBB0_28
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_29: # %a53b1019

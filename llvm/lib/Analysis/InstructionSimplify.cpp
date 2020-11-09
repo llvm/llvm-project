@@ -2992,40 +2992,38 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
     }
   }
 
-  // handle:
-  //   CI2 << X == CI
-  //   CI2 << X != CI
-  //
-  //   where CI2 is a power of 2 and CI isn't
-  if (auto *CI = dyn_cast<ConstantInt>(RHS)) {
-    const APInt *CI2Val, *CIVal = &CI->getValue();
-    if (LBO && match(LBO, m_Shl(m_APInt(CI2Val), m_Value())) &&
-        CI2Val->isPowerOf2()) {
-      if (!CIVal->isPowerOf2()) {
-        // CI2 << X can equal zero in some circumstances,
-        // this simplification is unsafe if CI is zero.
-        //
-        // We know it is safe if:
-        // - The shift is nsw, we can't shift out the one bit.
-        // - The shift is nuw, we can't shift out the one bit.
-        // - CI2 is one
-        // - CI isn't zero
-        if (Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(LBO)) ||
-            Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(LBO)) ||
-            CI2Val->isOneValue() || !CI->isZero()) {
-          if (Pred == ICmpInst::ICMP_EQ)
-            return ConstantInt::getFalse(RHS->getContext());
-          if (Pred == ICmpInst::ICMP_NE)
-            return ConstantInt::getTrue(RHS->getContext());
-        }
-      }
-      if (CIVal->isSignMask() && CI2Val->isOneValue()) {
-        if (Pred == ICmpInst::ICMP_UGT)
-          return ConstantInt::getFalse(RHS->getContext());
-        if (Pred == ICmpInst::ICMP_ULE)
-          return ConstantInt::getTrue(RHS->getContext());
-      }
+  //   If C2 is a power-of-2 and C is not:
+  //   (C2 << X) == C --> false
+  //   (C2 << X) != C --> true
+  const APInt *C;
+  if (match(LHS, m_Shl(m_Power2(), m_Value())) &&
+      match(RHS, m_APIntAllowUndef(C)) && !C->isPowerOf2()) {
+    // C2 << X can equal zero in some circumstances.
+    // This simplification might be unsafe if C is zero.
+    //
+    // We know it is safe if:
+    // - The shift is nsw. We can't shift out the one bit.
+    // - The shift is nuw. We can't shift out the one bit.
+    // - C2 is one.
+    // - C isn't zero.
+    if (Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(LBO)) ||
+        Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(LBO)) ||
+        match(LHS, m_Shl(m_One(), m_Value())) || !C->isNullValue()) {
+      if (Pred == ICmpInst::ICMP_EQ)
+        return ConstantInt::getFalse(GetCompareTy(RHS));
+      if (Pred == ICmpInst::ICMP_NE)
+        return ConstantInt::getTrue(GetCompareTy(RHS));
     }
+  }
+
+  // TODO: This is overly constrained. LHS can be any power-of-2.
+  // (1 << X)  >u 0x8000 --> false
+  // (1 << X) <=u 0x8000 --> true
+  if (match(LHS, m_Shl(m_One(), m_Value())) && match(RHS, m_SignMask())) {
+    if (Pred == ICmpInst::ICMP_UGT)
+      return ConstantInt::getFalse(GetCompareTy(RHS));
+    if (Pred == ICmpInst::ICMP_ULE)
+      return ConstantInt::getTrue(GetCompareTy(RHS));
   }
 
   if (MaxRecurse && LBO && RBO && LBO->getOpcode() == RBO->getOpcode() &&

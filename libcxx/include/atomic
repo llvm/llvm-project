@@ -482,7 +482,7 @@ typedef atomic<int_fast8_t>   atomic_int_fast8_t;
 typedef atomic<uint_fast8_t>  atomic_uint_fast8_t;
 typedef atomic<int_fast16_t>  atomic_int_fast16_t;
 typedef atomic<uint_fast16_t> atomic_uint_fast16_t;
-typedef atomic<int_fast32_t>  atomic_int_fast32_t;    
+typedef atomic<int_fast32_t>  atomic_int_fast32_t;
 typedef atomic<uint_fast32_t> atomic_uint_fast32_t;
 typedef atomic<int_fast64_t>  atomic_int_fast64_t;
 typedef atomic<uint_fast64_t> atomic_uint_fast64_t;
@@ -573,6 +573,7 @@ template <class T>
 */
 
 #include <__config>
+#include <__availability>
 #include <__threading_support>
 #include <cstddef>
 #include <cstdint>
@@ -2185,7 +2186,7 @@ atomic_fetch_add(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-_Tp* 
+_Tp*
 atomic_fetch_add(volatile atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_add(__op);
@@ -2193,7 +2194,7 @@ atomic_fetch_add(volatile atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_t
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-_Tp* 
+_Tp*
 atomic_fetch_add(atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_add(__op);

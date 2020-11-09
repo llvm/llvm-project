@@ -1138,6 +1138,8 @@ void LogFullErrorReport(const char *buffer) {
 }
 #endif // SANITIZER_WIN_TRACE
 
+void InitializePlatformCommonFlags(CommonFlags *cf) {}
+
 }  // namespace __sanitizer
 
 #endif  // _WIN32

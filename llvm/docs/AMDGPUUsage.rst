@@ -257,6 +257,22 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                                              Add product
                                                                                              names.
 
+     ``gfx90c``                  ``amdgcn``   APU   - xnack                               - Ryzen 7 4700G
+                                                      [on]                                - Ryzen 7 4700GE
+                                                                                          - Ryzen 7 4700G
+                                                                                          - Ryzen 7 4700GE
+                                                                                          - Ryzen 5 4600G
+                                                                                          - Ryzen 5 4600GE
+                                                                                          - Ryzen 3 4300G
+                                                                                          - Ryzen 3 4300GE
+                                                                                          - Ryzen Pro 4000G
+                                                                                          - Ryzen 7 Pro 4700G
+                                                                                          - Ryzen 7 Pro 4750GE
+                                                                                          - Ryzen 5 Pro 4650G
+                                                                                          - Ryzen 5 Pro 4650GE
+                                                                                          - Ryzen 3 Pro 4350G
+                                                                                          - Ryzen 3 Pro 4350GE
+
      **GCN GFX10** [AMD-GCN-GFX10]_
      -----------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - xnack                               - Radeon RX 5700
@@ -305,7 +321,13 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                     - cumode
                                                       [off]
                                                                                           .. TODO::
-
+                                                                                             Add product
+                                                                                             names.
+     ``gfx1033``                 ``amdgcn``   APU   - wavefrontsize64                     *TBA*
+                                                      [off]
+                                                    - cumode
+                                                      [off]
+                                                                                          .. TODO::
                                                                                              Add product
                                                                                              names.
 
@@ -848,14 +870,14 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX906``     0x02f      ``gfx906``
      ``EF_AMDGPU_MACH_AMDGCN_GFX908``     0x030      ``gfx908``
      ``EF_AMDGPU_MACH_AMDGCN_GFX909``     0x031      ``gfx909``
-     *reserved*                           0x032      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX90C``     0x032      ``gfx90c``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1010``    0x033      ``gfx1010``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1011``    0x034      ``gfx1011``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012``    0x035      ``gfx1012``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1030``    0x036      ``gfx1030``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1031``    0x037      ``gfx1031``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1032``    0x038      ``gfx1032``
-     *reserved*                           0x039      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1033``    0x039      ``gfx1033``
      ``EF_AMDGPU_MACH_AMDGCN_GFX602``     0x03a      ``gfx602``
      ``EF_AMDGPU_MACH_AMDGCN_GFX705``     0x03b      ``gfx705``
      ``EF_AMDGPU_MACH_AMDGCN_GFX805``     0x03c      ``gfx805``
@@ -4306,7 +4328,7 @@ For GFX6-GFX9:
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
-address space and global address space for program scope const variables.
+address space and global address space for program scope ``const`` variables.
 Therefore, the kernel machine code does not have to maintain the scalar cache to
 ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
@@ -4380,8 +4402,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
      ------------------------------------------------------------------------------------
      load atomic  unordered    *any*          *any*      *Same as non-atomic*.
      store atomic unordered    *any*          *any*      *Same as non-atomic*.
-     atomicrmw    unordered    *any*          *any*      *Same as monotonic
-                                                         atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic atomic*.
      **Monotonic Atomic**
      ------------------------------------------------------------------------------------
      load atomic  monotonic    - singlethread - global   1. buffer/global/ds/flat_load
@@ -5559,7 +5580,7 @@ For GFX10:
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
-address space and global address space for program scope const variables.
+address space and global address space for program scope ``const`` variables.
 Therefore, the kernel machine code does not have to maintain the scalar cache to
 ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
@@ -5653,8 +5674,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
      ------------------------------------------------------------------------------------
      load atomic  unordered    *any*          *any*      *Same as non-atomic*.
      store atomic unordered    *any*          *any*      *Same as non-atomic*.
-     atomicrmw    unordered    *any*          *any*      *Same as monotonic
-                                                         atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic atomic*.
      **Monotonic Atomic**
      ------------------------------------------------------------------------------------
      load atomic  monotonic    - singlethread - global   1. buffer/global/flat_load

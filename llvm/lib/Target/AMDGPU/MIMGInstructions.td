@@ -186,8 +186,7 @@ class MIMGNSAHelper<int num_addrs> {
     !foldl([]<string>, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], lhs, i,
            !if(!lt(i, num_addrs), !listconcat(lhs, ["vaddr"#!size(lhs)]), lhs));
   dag AddrIns = !dag(ins, !foreach(arg, AddrAsmNames, VGPR_32), AddrAsmNames);
-  string AddrAsm = "[" # !foldl("$" # !head(AddrAsmNames), !tail(AddrAsmNames), lhs, rhs,
-                                lhs # ", $" # rhs) # "]";
+  string AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
 
   int NSA = !if(!le(num_addrs, 1), ?,
             !if(!le(num_addrs, 5), 1,

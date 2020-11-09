@@ -15,8 +15,9 @@ add_tablegen(mlir-tblgen MLIR
   OpFormatGen.cpp
   OpInterfacesGen.cpp
   OpenMPCommonGen.cpp
-  PassGen.cpp
+  PassCAPIGen.cpp
   PassDocGen.cpp
+  PassGen.cpp
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
   StructsGen.cpp

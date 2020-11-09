@@ -120,6 +120,11 @@ public:
   DIEInfo &getInfo(unsigned Idx) { return Info[Idx]; }
   const DIEInfo &getInfo(unsigned Idx) const { return Info[Idx]; }
 
+  DIEInfo &getInfo(const DWARFDie &Die) {
+    unsigned Idx = getOrigUnit().getDIEIndex(Die);
+    return Info[Idx];
+  }
+
   uint64_t getStartOffset() const { return StartOffset; }
   uint64_t getNextUnitOffset() const { return NextUnitOffset; }
   void setStartOffset(uint64_t DebugInfoSize) { StartOffset = DebugInfoSize; }

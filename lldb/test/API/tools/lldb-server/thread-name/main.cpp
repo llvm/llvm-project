@@ -4,9 +4,7 @@
 void set_thread_name(const char *name) {
 #if defined(__APPLE__)
   ::pthread_setname_np(name);
-#elif defined(__FreeBSD__)
-  ::pthread_set_name_np(::pthread_self(), name);
-#elif defined(__linux__)
+#elif defined(__FreeBSD__) || defined(__linux__)
   ::pthread_setname_np(::pthread_self(), name);
 #elif defined(__NetBSD__)
   ::pthread_setname_np(::pthread_self(), "%s", const_cast<char *>(name));

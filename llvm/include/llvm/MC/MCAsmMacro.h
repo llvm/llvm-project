@@ -143,10 +143,14 @@ struct MCAsmMacro {
   StringRef Name;
   StringRef Body;
   MCAsmMacroParameters Parameters;
+  std::vector<std::string> Locals;
 
 public:
   MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)
       : Name(N), Body(B), Parameters(std::move(P)) {}
+  MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P,
+             std::vector<std::string> L)
+      : Name(N), Body(B), Parameters(std::move(P)), Locals(std::move(L)) {}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { dump(dbgs()); }

@@ -790,7 +790,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     if (llvm::sys::path::user_config_directory(UserConfig)) {
       llvm::sys::path::append(UserConfig, "clangd", "config.yaml");
       vlog("User config file is {0}", UserConfig);
-      ProviderStack.push_back(config::Provider::fromYAMLFile(UserConfig, TFS));
+      ProviderStack.push_back(
+          config::Provider::fromYAMLFile(UserConfig, /*Directory=*/"", TFS));
     } else {
       elog("Couldn't determine user config file, not loading");
     }
@@ -808,6 +809,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (EnableClangTidy) {
     auto EmptyDefaults = tidy::ClangTidyOptions::getDefaults();
     EmptyDefaults.Checks.reset(); // So we can tell if checks were ever set.
+    EmptyDefaults.User = llvm::sys::Process::GetEnv("USER");
+#ifdef _WIN32
+    if (!EmptyDefaults.User)
+      EmptyDefaults.User = llvm::sys::Process::GetEnv("USERNAME");
+#endif
     tidy::ClangTidyOptions OverrideClangTidyOptions;
     if (!ClangTidyChecks.empty())
       OverrideClangTidyOptions.Checks = ClangTidyChecks;

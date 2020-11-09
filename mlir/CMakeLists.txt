@@ -10,6 +10,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 include(AddMLIR)
 
+# Forbid implicit function declaration: this may lead to subtle bugs and we
+# don't have a reason to support this.
+check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
+append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
+
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
 # mlir-generic-headers are dialect-independent.
@@ -76,9 +81,13 @@ if(MLIR_BINDINGS_PYTHON_ENABLED)
   find_package(PythonInterp REQUIRED)
   find_package(PythonLibs REQUIRED)
   message(STATUS "Found python include dirs: ${PYTHON_INCLUDE_DIRS}")
-  message(STATUS "Found ppython libraries: ${PYTHON_LIBRARIES}")
+  message(STATUS "Found python libraries: ${PYTHON_LIBRARIES}")
   find_package(pybind11 CONFIG REQUIRED)
-  message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIRS}")
+  # TODO: pybind11 v2.6 switched from pybind11_INCLUDE_DIRS (plural) to
+  # pybind11_INCLUDE_DIR (singular). A lot has changed in this area since this
+  # was written and overall python config and pybind11 should be modernized.
+  set(pybind11_INCLUDE_DIR ${pybind11_INCLUDE_DIR} ${pybind11_INCLUDE_DIRS})
+  message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIR}")
   message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
                  "suffix = '${PYTHON_MODULE_SUFFIX}', "
                  "extension = '${PYTHON_MODULE_EXTENSION}")

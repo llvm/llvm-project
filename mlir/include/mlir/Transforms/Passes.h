@@ -94,7 +94,7 @@ std::unique_ptr<Pass> createStripDebugInfoPass();
 
 /// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.
-std::unique_ptr<OperationPass<ModuleOp>> createPrintOpStatsPass();
+std::unique_ptr<Pass> createPrintOpStatsPass();
 
 /// Creates a pass which inlines calls and callable operations as defined by
 /// the CallGraph.

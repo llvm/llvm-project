@@ -35,7 +35,7 @@ int main() {
   // CHECK-DAG: [[SLDBG1]] = !DILocation(line: 100, column: 3, scope: !{{.*}})
   // CHECK-DAG: [[ELDBG1]] = !DILocation(line: 105, column: 3, scope: !{{.*}})
 
-  // CHECK-DAG: [[L2]] = distinct !{[[L2]], [[SLDBG2:![0-9]*]], [[ELDBG2:![0-9]*]]}
+  // CHECK-DAG: [[L2]] = distinct !{[[L2]], [[SLDBG2:![0-9]*]], [[ELDBG2:![0-9]*]], [[MP:![0-9]+]]}
   // CHECK-DAG: [[SLDBG2]] = !DILocation(line: 200, column: 3, scope: !{{.*}})
   // CHECK-DAG: [[ELDBG2]] = !DILocation(line: 204, column: 9, scope: !{{.*}})
 
@@ -43,7 +43,7 @@ int main() {
   // CHECK-DAG: [[SLDBG3]] = !DILocation(line: 302, column: 5, scope: !{{.*}})
   // CHECK-DAG: [[ELDBG3]] = !DILocation(line: 303, column: 9, scope: !{{.*}})
   //
-  // CHECK-DAG: [[L4]] = distinct !{[[L4]], [[SLDBG4:![0-9]*]], [[ELDBG4:![0-9]*]]}
+  // CHECK-DAG: [[L4]] = distinct !{[[L4]], [[SLDBG4:![0-9]*]], [[ELDBG4:![0-9]*]], [[MP]]}
   // CHECK-DAG: [[SLDBG4]] = !DILocation(line: 300, column: 3, scope: !{{.*}})
   // CHECK-DAG: [[ELDBG4]] = !DILocation(line: 304, column: 3, scope: !{{.*}})
 }

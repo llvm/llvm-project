@@ -33,16 +33,35 @@ class VETTIImpl : public BasicTTIImplBase<VETTIImpl> {
   const VESubtarget *getST() const { return ST; }
   const VETargetLowering *getTLI() const { return TLI; }
 
+  bool enableVPU() const { return getST()->enableVPU(); }
+
 public:
   explicit VETTIImpl(const VETargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  unsigned getNumberOfRegisters(unsigned ClassID) const { return 64; }
+  unsigned getNumberOfRegisters(unsigned ClassID) const {
+    bool VectorRegs = (ClassID == 1);
+    if (VectorRegs) {
+      // TODO report vregs once vector isel is stable.
+      return 0;
+    }
 
-  unsigned getRegisterBitWidth(bool Vector) const { return 64; }
+    return 64;
+  }
 
-  unsigned getMinVectorRegisterBitWidth() const { return 64; }
+  unsigned getRegisterBitWidth(bool Vector) const {
+    if (Vector) {
+      // TODO report vregs once vector isel is stable.
+      return 0;
+    }
+    return 64;
+  }
+
+  unsigned getMinVectorRegisterBitWidth() const {
+    // TODO report vregs once vector isel is stable.
+    return 0;
+  }
 };
 
 } // namespace llvm

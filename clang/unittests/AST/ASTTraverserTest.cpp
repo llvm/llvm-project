@@ -1075,6 +1075,26 @@ void instantiate()
   (void)timesTwo<int>(2);
   (void)timesTwo<double>(2);
 }
+
+template class TemplStruct<float>;
+
+extern template class TemplStruct<long>;
+
+template<> class TemplStruct<bool> {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+  void foo() {}
+private:
+  bool m_t;
+};
+
+// Explicit instantiation of template functions do not appear in the AST
+template float timesTwo(float);
+
+template<> bool timesTwo<bool>(bool) {
+  return true;
+}
 )cpp");
   {
     auto BN = ast_matchers::match(
@@ -1121,18 +1141,90 @@ ClassTemplateDecl 'TemplStruct'
 | |-FieldDecl 'm_t'
 | `-CXXConstructorDecl 'TemplStruct'
 |   `-ParmVarDecl ''
+|-ClassTemplateSpecializationDecl 'TemplStruct'
+| |-TemplateArgument type double
+| | `-BuiltinType
+| |-CXXRecordDecl 'TemplStruct'
+| |-CXXConstructorDecl 'TemplStruct'
+| | `-CompoundStmt
+| |-CXXDestructorDecl '~TemplStruct'
+| | `-CompoundStmt
+| |-AccessSpecDecl
+| |-FieldDecl 'm_t'
+| `-CXXConstructorDecl 'TemplStruct'
+|   `-ParmVarDecl ''
+|-ClassTemplateSpecializationDecl 'TemplStruct'
+| |-TemplateArgument type float
+| | `-BuiltinType
+| |-CXXRecordDecl 'TemplStruct'
+| |-CXXConstructorDecl 'TemplStruct'
+| | `-CompoundStmt
+| |-CXXDestructorDecl '~TemplStruct'
+| | `-CompoundStmt
+| |-AccessSpecDecl
+| `-FieldDecl 'm_t'
+|-ClassTemplateSpecializationDecl 'TemplStruct'
+| |-TemplateArgument type long
+| | `-BuiltinType
+| |-CXXRecordDecl 'TemplStruct'
+| |-CXXConstructorDecl 'TemplStruct'
+| |-CXXDestructorDecl '~TemplStruct'
+| |-AccessSpecDecl
+| `-FieldDecl 'm_t'
 `-ClassTemplateSpecializationDecl 'TemplStruct'
-  |-TemplateArgument type double
+  |-TemplateArgument type _Bool
   | `-BuiltinType
   |-CXXRecordDecl 'TemplStruct'
   |-CXXConstructorDecl 'TemplStruct'
   | `-CompoundStmt
   |-CXXDestructorDecl '~TemplStruct'
   | `-CompoundStmt
+  |-CXXMethodDecl 'foo'
+  | `-CompoundStmt
   |-AccessSpecDecl
-  |-FieldDecl 'm_t'
-  `-CXXConstructorDecl 'TemplStruct'
-    `-ParmVarDecl ''
+  `-FieldDecl 'm_t'
+)cpp");
+  }
+  {
+    auto BN = ast_matchers::match(
+        classTemplateSpecializationDecl(
+            hasTemplateArgument(
+                0, templateArgument(refersToType(asString("_Bool")))))
+            .bind("templSpec"),
+        AST->getASTContext());
+    EXPECT_EQ(BN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("templSpec")),
+              R"cpp(
+ClassTemplateSpecializationDecl 'TemplStruct'
+|-TemplateArgument type _Bool
+| `-BuiltinType
+|-CXXRecordDecl 'TemplStruct'
+|-CXXConstructorDecl 'TemplStruct'
+| `-CompoundStmt
+|-CXXDestructorDecl '~TemplStruct'
+| `-CompoundStmt
+|-CXXMethodDecl 'foo'
+| `-CompoundStmt
+|-AccessSpecDecl
+`-FieldDecl 'm_t'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            BN[0].getNodeAs<Decl>("templSpec")),
+              R"cpp(
+ClassTemplateSpecializationDecl 'TemplStruct'
+|-TemplateArgument type _Bool
+| `-BuiltinType
+|-CXXRecordDecl 'TemplStruct'
+|-CXXConstructorDecl 'TemplStruct'
+| `-CompoundStmt
+|-CXXDestructorDecl '~TemplStruct'
+| `-CompoundStmt
+|-CXXMethodDecl 'foo'
+| `-CompoundStmt
+|-AccessSpecDecl
+`-FieldDecl 'm_t'
 )cpp");
   }
   {
@@ -1176,17 +1268,72 @@ FunctionTemplateDecl 'timesTwo'
 |       |-ImplicitCastExpr
 |       | `-DeclRefExpr 'input'
 |       `-IntegerLiteral
+|-FunctionDecl 'timesTwo'
+| |-TemplateArgument type double
+| | `-BuiltinType
+| |-ParmVarDecl 'input'
+| `-CompoundStmt
+|   `-ReturnStmt
+|     `-BinaryOperator
+|       |-ImplicitCastExpr
+|       | `-DeclRefExpr 'input'
+|       `-ImplicitCastExpr
+|         `-IntegerLiteral
+|-FunctionDecl 'timesTwo'
+| |-TemplateArgument type float
+| | `-BuiltinType
+| |-ParmVarDecl 'input'
+| `-CompoundStmt
+|   `-ReturnStmt
+|     `-BinaryOperator
+|       |-ImplicitCastExpr
+|       | `-DeclRefExpr 'input'
+|       `-ImplicitCastExpr
+|         `-IntegerLiteral
+|-FunctionDecl 'timesTwo'
+| |-TemplateArgument type _Bool
+| | `-BuiltinType
+| |-ParmVarDecl ''
+| `-CompoundStmt
+|   `-ReturnStmt
+|     `-CXXBoolLiteralExpr
 `-FunctionDecl 'timesTwo'
-  |-TemplateArgument type double
+  |-TemplateArgument type _Bool
   | `-BuiltinType
-  |-ParmVarDecl 'input'
-  `-CompoundStmt
-    `-ReturnStmt
-      `-BinaryOperator
-        |-ImplicitCastExpr
-        | `-DeclRefExpr 'input'
-        `-ImplicitCastExpr
-          `-IntegerLiteral
+  `-ParmVarDecl 'input'
+)cpp");
+  }
+  {
+    auto BN = ast_matchers::match(
+        classTemplateSpecializationDecl(
+            hasName("TemplStruct"),
+            hasTemplateArgument(
+                0, templateArgument(refersToType(asString("float")))),
+            hasParent(translationUnitDecl()))
+            .bind("rec"),
+        AST->getASTContext());
+    EXPECT_EQ(BN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            BN[0].getNodeAs<Decl>("rec")),
+              R"cpp(
+ClassTemplateSpecializationDecl 'TemplStruct'
+`-TemplateArgument type float
+  `-BuiltinType
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("rec")),
+              R"cpp(
+ClassTemplateSpecializationDecl 'TemplStruct'
+|-TemplateArgument type float
+| `-BuiltinType
+|-CXXRecordDecl 'TemplStruct'
+|-CXXConstructorDecl 'TemplStruct'
+| `-CompoundStmt
+|-CXXDestructorDecl '~TemplStruct'
+| `-CompoundStmt
+|-AccessSpecDecl
+`-FieldDecl 'm_t'
 )cpp");
   }
 }

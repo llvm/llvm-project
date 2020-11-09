@@ -251,7 +251,7 @@ func @indexed_generic_op_zero_dim_constant_fusion
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 func @generic_op_indexed_generic_op_fusion(%arg0: tensor<?x?xi32>,
-                                           %arg1: tensor<?x?xi32>) {
+                                           %arg1: tensor<?x?xi32>) -> tensor<?x?xi32> {
     %0 = linalg.generic {
       indexing_maps = [#map0, #map0, #map0],
       iterator_types = ["parallel", "parallel"] }
@@ -271,7 +271,7 @@ func @generic_op_indexed_generic_op_fusion(%arg0: tensor<?x?xi32>,
       %5 = subi %4, %3 : i32
       linalg.yield %5 : i32
     } -> tensor<?x?xi32>
-  return
+  return %1 : tensor<?x?xi32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @generic_op_indexed_generic_op_fusion
@@ -294,7 +294,7 @@ func @generic_op_indexed_generic_op_fusion(%arg0: tensor<?x?xi32>,
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 func @indexed_generic_op_generic_op_fusion(%arg0: tensor<?x?xi32>,
-                                           %arg1: tensor<?x?xi32>) {
+                                           %arg1: tensor<?x?xi32>) -> tensor<?x?xi32> {
   %0 = linalg.indexed_generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel", "parallel"] }
@@ -314,7 +314,7 @@ func @indexed_generic_op_generic_op_fusion(%arg0: tensor<?x?xi32>,
     %10 = addi %arg2, %arg3 : i32
     linalg.yield %10 : i32
   } -> tensor<?x?xi32>
-  return
+  return %1 : tensor<?x?xi32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @indexed_generic_op_generic_op_fusion
@@ -338,7 +338,7 @@ func @indexed_generic_op_generic_op_fusion(%arg0: tensor<?x?xi32>,
 // The indices of the first indexed_generic op are swapped after fusion.
 #map0 = affine_map<(d0, d1) -> (d1, d0)>
 #map1 = affine_map<(d0, d1) -> (d0, d1)>
-func @indexed_generic_op_fusion(%arg0: tensor<?x?xi32>) {
+func @indexed_generic_op_fusion(%arg0: tensor<?x?xi32>) -> tensor<?x?xi32> {
     %0 = linalg.indexed_generic {
       indexing_maps = [#map0, #map0],
       iterator_types = ["parallel", "parallel"] }
@@ -361,7 +361,7 @@ func @indexed_generic_op_fusion(%arg0: tensor<?x?xi32>) {
       %5 = subi %4, %3 : i32
       linalg.yield %5 : i32
     } -> tensor<?x?xi32>
-  return
+  return %1 : tensor<?x?xi32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @indexed_generic_op_fusion

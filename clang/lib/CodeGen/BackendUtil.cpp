@@ -1302,16 +1302,18 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // test assume sequences inserted for whole program vtables so that
       // codegen doesn't complain.
       if (!CodeGenOpts.ThinLTOIndexFile.empty())
-        PB.registerPipelineStartEPCallback([](ModulePassManager &MPM) {
-          MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
-                                         /*ImportSummary=*/nullptr,
-                                         /*DropTypeTests=*/true));
-        });
+        PB.registerPipelineStartEPCallback(
+            [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
+                                             /*ImportSummary=*/nullptr,
+                                             /*DropTypeTests=*/true));
+            });
 
-      PB.registerPipelineStartEPCallback([](ModulePassManager &MPM) {
-        MPM.addPass(createModuleToFunctionPassAdaptor(
-            EntryExitInstrumenterPass(/*PostInlining=*/false)));
-      });
+      PB.registerPipelineStartEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(createModuleToFunctionPassAdaptor(
+                EntryExitInstrumenterPass(/*PostInlining=*/false)));
+          });
 
       // Register callbacks to schedule sanitizer passes at the appropriate part of
       // the pipeline.
@@ -1394,14 +1396,18 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       }
 
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
-        PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
-          MPM.addPass(GCOVProfilerPass(*Options));
-        });
+        PB.registerPipelineStartEPCallback(
+            [Options](ModulePassManager &MPM,
+                      PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(GCOVProfilerPass(*Options));
+            });
       if (Optional<InstrProfOptions> Options =
               getInstrProfOptions(CodeGenOpts, LangOpts))
-        PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
-          MPM.addPass(InstrProfiling(*Options, false));
-        });
+        PB.registerPipelineStartEPCallback(
+            [Options](ModulePassManager &MPM,
+                      PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(InstrProfiling(*Options, false));
+            });
 
       if (IsThinLTO) {
         MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);

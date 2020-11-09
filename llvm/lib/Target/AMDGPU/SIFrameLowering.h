@@ -11,6 +11,7 @@
 
 #include "AMDGPUFrameLowering.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
@@ -31,8 +32,8 @@ public:
                     MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override;
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;

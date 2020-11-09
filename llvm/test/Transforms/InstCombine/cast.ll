@@ -694,7 +694,6 @@ define i64 @test50(i64 %x) {
   %D = add i32 %B, -1
   %E = sext i32 %D to i64
   ret i64 %E
-; lshr+shl will be handled by DAGCombine.
 }
 
 define i64 @test51(i64 %A, i1 %cond) {

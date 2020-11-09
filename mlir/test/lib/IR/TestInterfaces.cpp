@@ -10,6 +10,7 @@
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
+using namespace mlir::test;
 
 namespace {
 /// This test checks various aspects of Type interface generation and
@@ -34,8 +35,10 @@ struct TestTypeInterfaces
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestInterfaces() {
   PassRegistration<TestTypeInterfaces> pass("test-type-interfaces",
                                             "Test type interface support.");
 }
+} // namespace test
 } // namespace mlir
