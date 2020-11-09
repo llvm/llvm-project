@@ -152,8 +152,9 @@ static void TestUnsignedBinOpExhaustive(Fn1 RangeFn, Fn2 IntFn,
         }
 
         EXPECT_TRUE(CR.contains(Exact));
-        if (Exact.isEmptySet())
+        if (Exact.isEmptySet()) {
           EXPECT_TRUE(CR.isEmptySet());
+        }
       });
 }
 
