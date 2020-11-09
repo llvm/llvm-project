@@ -2955,6 +2955,13 @@ void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
     Entry.setID(ID);
     Entry.setFlags(Flags);
   } else {
+    if (Flags ==
+            OffloadEntriesInfoManagerTy::OMPTargetRegionEntryTargetRegion &&
+        hasTargetRegionEntryInfo(DeviceID, FileID, ParentName, LineNum,
+                                 /*IgnoreAddressId*/ true))
+      return;
+    assert(!hasTargetRegionEntryInfo(DeviceID, FileID, ParentName, LineNum) &&
+           "Target region entry already registered!");
     OffloadEntryInfoTargetRegion Entry(OffloadingEntriesNum, Addr, ID, Flags);
     OffloadEntriesTargetRegion[DeviceID][FileID][ParentName][LineNum] = Entry;
     ++OffloadingEntriesNum;
@@ -2962,8 +2969,8 @@ void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
 }
 
 bool CGOpenMPRuntime::OffloadEntriesInfoManagerTy::hasTargetRegionEntryInfo(
-    unsigned DeviceID, unsigned FileID, StringRef ParentName,
-    unsigned LineNum) const {
+    unsigned DeviceID, unsigned FileID, StringRef ParentName, unsigned LineNum,
+    bool IgnoreAddressId) const {
   auto PerDevice = OffloadEntriesTargetRegion.find(DeviceID);
   if (PerDevice == OffloadEntriesTargetRegion.end())
     return false;
@@ -2977,7 +2984,8 @@ bool CGOpenMPRuntime::OffloadEntriesInfoManagerTy::hasTargetRegionEntryInfo(
   if (PerLine == PerParentName->second.end())
     return false;
   // Fail if this entry is already registered.
-  if (PerLine->second.getAddress() || PerLine->second.getID())
+  if (!IgnoreAddressId &&
+      (PerLine->second.getAddress() || PerLine->second.getID()))
     return false;
   return true;
 }

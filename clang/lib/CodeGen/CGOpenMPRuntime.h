@@ -613,7 +613,8 @@ private:
     /// Return true if a target region entry with the provided information
     /// exists.
     bool hasTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                  StringRef ParentName, unsigned LineNum) const;
+                                  StringRef ParentName, unsigned LineNum,
+                                  bool IgnoreAddressId = false) const;
     /// brief Applies action \a Action on all registered entries.
     typedef llvm::function_ref<void(unsigned, unsigned, StringRef, unsigned,
                                     const OffloadEntryInfoTargetRegion &)>
