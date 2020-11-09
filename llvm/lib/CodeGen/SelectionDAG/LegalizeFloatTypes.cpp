@@ -1636,16 +1636,14 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   // though.
   if (SrcVT.bitsLE(MVT::i32)) {
     // The integer can be represented exactly in an f64.
-    Src = DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
-                      MVT::i32, Src);
     Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
                                    APInt(NVT.getSizeInBits(), 0)), dl, NVT);
     if (Strict) {
-      Hi = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl,
-                       DAG.getVTList(NVT, MVT::Other), {Chain, Src}, Flags);
+      Hi = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
+                       {Chain, Src}, Flags);
       Chain = Hi.getValue(1);
     } else
-      Hi = DAG.getNode(ISD::SINT_TO_FP, dl, NVT, Src);
+      Hi = DAG.getNode(N->getOpcode(), dl, NVT, Src);
   } else {
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
     if (SrcVT.bitsLE(MVT::i64)) {
@@ -1667,7 +1665,8 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     GetPairElements(Tmp.first, Lo, Hi);
   }
 
-  if (isSigned) {
+  // No need to complement for unsigned 32-bit integers
+  if (isSigned || SrcVT.bitsLE(MVT::i32)) {
     if (Strict)
       ReplaceValueWith(SDValue(N, 1), Chain);
 
