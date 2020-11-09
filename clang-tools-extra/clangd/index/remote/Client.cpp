@@ -11,7 +11,6 @@
 #include "Client.h"
 #include "Service.grpc.pb.h"
 #include "index/Index.h"
-#include "index/Serialization.h"
 #include "marshalling/Marshalling.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
