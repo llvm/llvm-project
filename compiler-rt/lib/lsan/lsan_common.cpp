@@ -215,6 +215,12 @@ static void ProcessThreads(SuspendedThreadsList const &, Frontier *) {}
 
 #else
 
+#if SANITIZER_ANDROID
+// FIXME: Move this out into *libcdep.cpp
+extern "C" SANITIZER_WEAK_ATTRIBUTE void __libc_iterate_dynamic_tls(
+    pid_t, void (*cb)(void *, void *, uptr, void *), void *);
+#endif
+
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
