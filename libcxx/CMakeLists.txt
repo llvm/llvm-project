@@ -159,7 +159,6 @@ cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBCXX_INSTALL_SHARED_LIBRARY
   "Install the shared libc++ library." ON
   "LIBCXX_ENABLE_SHARED;LIBCXX_INSTALL_LIBRARY" OFF)
-option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
@@ -388,11 +387,6 @@ if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY AND LIBCXX_ENABLE_ABI_LINKER_SC
     message(FATAL_ERROR "Conflicting options given.
         LIBCXX_ENABLE_STATIC_ABI_LIBRARY cannot be specified with
         LIBCXX_ENABLE_ABI_LINKER_SCRIPT")
-endif()
-
-if (LIBCXX_HAS_MUSL_LIBC AND NOT LIBCXX_INSTALL_SUPPORT_HEADERS)
-  message(FATAL_ERROR "LIBCXX_INSTALL_SUPPORT_HEADERS can not be turned off"
-                      "when building for Musl with LIBCXX_HAS_MUSL_LIBC.")
 endif()
 
 if (LIBCXX_ABI_FORCE_ITANIUM AND LIBCXX_ABI_FORCE_MICROSOFT)
