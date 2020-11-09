@@ -3421,9 +3421,9 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   SCEV::NoWrapFlags Wrap = GEP->isInBounds() ? SCEV::FlagNSW
                                              : SCEV::FlagAnyWrap;
 
-  const SCEV *TotalOffset = getZero(IntIdxTy);
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
+  SmallVector<const SCEV *, 4> AddOps{BaseExpr};
   for (const SCEV *IndexExpr : IndexExprs) {
     // Compute the (potentially symbolic) offset in bytes for this index.
     if (StructType *STy = dyn_cast<StructType>(CurTy)) {
@@ -3431,9 +3431,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       ConstantInt *Index = cast<SCEVConstant>(IndexExpr)->getValue();
       unsigned FieldNo = Index->getZExtValue();
       const SCEV *FieldOffset = getOffsetOfExpr(IntIdxTy, STy, FieldNo);
-
-      // Add the field offset to the running total offset.
-      TotalOffset = getAddExpr(TotalOffset, FieldOffset);
+      AddOps.push_back(FieldOffset);
 
       // Update CurTy to the type of the field at Index.
       CurTy = STy->getTypeAtIndex(Index);
@@ -3454,14 +3452,12 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
 
       // Multiply the index by the element size to compute the element offset.
       const SCEV *LocalOffset = getMulExpr(IndexExpr, ElementSize, Wrap);
-
-      // Add the element offset to the running total offset.
-      TotalOffset = getAddExpr(TotalOffset, LocalOffset);
+      AddOps.push_back(LocalOffset);
     }
   }
 
-  // Add the total offset from all the GEP indices to the base.
-  return getAddExpr(BaseExpr, TotalOffset, Wrap);
+  // Add the base and all the offsets together.
+  return getAddExpr(AddOps, Wrap);
 }
 
 std::tuple<SCEV *, FoldingSetNodeID, void *>
