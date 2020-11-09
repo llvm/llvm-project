@@ -46,8 +46,8 @@ class CompilerInvocation : public CompilerInvocationBase {
 public:
   CompilerInvocation() = default;
 
-  FrontendOptions &GetFrontendOpts() { return frontendOpts_; }
-  const FrontendOptions &GetFrontendOpts() const { return frontendOpts_; }
+  FrontendOptions &frontendOpts() { return frontendOpts_; }
+  const FrontendOptions &frontendOpts() const { return frontendOpts_; }
 
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
