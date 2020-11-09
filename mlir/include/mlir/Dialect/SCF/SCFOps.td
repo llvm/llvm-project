@@ -36,6 +36,25 @@ class SCF_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
+def ConditionOp : SCF_Op<"condition",
+                         [HasParent<"WhileOp">, NoSideEffect, Terminator]> {
+  let summary = "loop continuation condition";
+  let description = [{
+    This operation accepts the continuation (i.e., inverse of exit) condition
+    of the `scf.while` construct. If its first argument is true, the "after"
+    region of `scf.while` is executed, with the remaining arguments forwarded
+    to the entry block of the region. Otherwise, the loop terminates.
+  }];
+
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$args);
+
+  let assemblyFormat =
+      [{ `(` $condition `)` attr-dict ($args^ `:` type($args))? }];
+
+  // Override the default verifier, everything is checked by traits.
+  let verifier = ?;
+}
+
 def ForOp : SCF_Op<"for",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -413,8 +432,135 @@ def ReduceReturnOp :
   let assemblyFormat = "$result attr-dict `:` type($result)";
 }
 
+def WhileOp : SCF_Op<"while",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+     RecursiveSideEffects]> {
+  let summary = "a generic 'while' loop";
+  let description = [{
+    This operation represents a generic "while"/"do-while" loop that keeps
+    iterating as long as a condition is satisfied. There is no restriction on
+    the complexity of the condition. It consists of two regions (with single
+    block each): "before" region and "after" region. The names of regions
+    indicates whether they execute before or after the condition check.
+    Therefore, if the main loop payload is located in the "before" region, the
+    operation is a "do-while" loop. Otherwise, it is a "while" loop.
+
+    The "before" region terminates with a special operation, `scf.condition`,
+    that accepts as its first operand an `i1` value indicating whether to
+    proceed to the "after" region (value is `true`) or not. The two regions
+    communicate by means of region arguments. Initially, the "before" region
+    accepts as arguments the operands of the `scf.while` operation and uses them
+    to evaluate the condition. It forwards the trailing, non-condition operands
+    of the `scf.condition` terminator either to the "after" region if the
+    control flow is transferred there or to results of the `scf.while` operation
+    otherwise. The "after" region takes as arguments the values produced by the
+    "before" region and uses `scf.yield` to supply new arguments for the "after"
+    region, into which it transfers the control flow unconditionally.
+
+    A simple "while" loop can be represented as follows.
+
+    ```mlir
+    %res = scf.while (%arg1 = %init1) : (f32) -> f32 {
+      /* "Before" region.
+       * In a "while" loop, this region computes the condition. */
+      %condition = call @evaluate_condition(%arg1) : (f32) -> i1
+
+      /* Forward the argument (as result or "after" region argument). */
+      scf.condition(%condition) %arg1 : f32
+
+    } do {
+    ^bb0(%arg2: f32):
+      /* "After region.
+       * In a "while" loop, this region is the loop body. */
+      %next = call @payload(%arg2) : (f32) -> f32
+
+      /* Forward the new value to the "before" region.
+       * The operand types must match the types of the `scf.while` operands. */
+      scf.yield %next : f32
+    }
+    ```
+
+    A simple "do-while" loop can be represented by reducing the "after" block
+    to a simple forwarder.
+
+    ```mlir
+    %res = scf.while (%arg1 = %init1) : (f32) -> f32 {
+      /* "Before" region.
+       * In a "do-while" loop, this region contains the loop body. */
+      %next = call @payload(%arg1) : (f32) -> f32
+
+      /* And also evalutes the condition. */
+      %condition = call @evaluate_condition(%arg1) : (f32) -> i1
+
+      /* Loop through the "after" region. */
+      scf.condition(%condition) %next : f32
+
+    } do {
+    ^bb0(%arg2: f32):
+      /* "After" region.
+       * Forwards the values back to "before" region unmodified. */
+      scf.yield %arg2 : f32
+    }
+    ```
+
+    Note that the types of region arguments need not to match with each other.
+    The op expects the operand types to match with argument types of the
+    "before" region"; the result types to match with the trailing operand types
+    of the terminator of the "before" region, and with the argument types of the
+    "after" region. The following scheme can be used to share the results of
+    some operations executed in the "before" region with the "after" region,
+    avoiding the need to recompute them.
+
+    ```mlir
+    %res = scf.while (%arg1 = %init1) : (f32) -> i64 {
+      /* One can perform some computations, e.g., necessary to evaluate the
+       * condition, in the "before" region and forward their results to the
+       * "after" region. */
+      %shared = call @shared_compute(%arg1) : (f32) -> i64
+
+      /* Evalute the condition. */
+      %condition = call @evaluate_condition(%arg1, %shared) : (f32, i64) -> i1
+
+      /* Forward the result of the shared computation to the "after" region.
+       * The types must match the arguments of the "after" region as well as
+       * those of the `scf.while` results. */
+      scf.condition(%condition) %shared : i64
+
+    } do {
+    ^bb0(%arg2: i64) {
+      /* Use the partial result to compute the rest of the payload in the
+       * "after" region. */
+      %res = call @payload(%arg2) : (i64) -> f32
+
+      /* Forward the new value to the "before" region.
+       * The operand types must match the types of the `scf.while` operands. */
+      scf.yield %res : f32
+    }
+    ```
+
+    The custom syntax for this operation is as follows.
+
+    ```
+    op ::= `scf.while` assignments `:` function-type region `do` region
+           `attributes` attribute-dict
+    initializer ::= /* empty */ | `(` assignment-list `)`
+    assignment-list ::= assignment | assignment `,` assignment-list
+    assignment ::= ssa-value `=` ssa-value
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$inits);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
+
+  let extraClassDeclaration = [{
+    OperandRange getSuccessorEntryOperands(unsigned index);
+  }];
+}
+
 def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
-                               ParentOneOf<["IfOp, ForOp", "ParallelOp"]>]> {
+                               ParentOneOf<["IfOp, ForOp", "ParallelOp",
+                                            "WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "scf.yield" yields an SSA value from the SCF dialect op region and
@@ -434,4 +580,5 @@ def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
   // needed.
   let verifier = ?;
 }
+
 #endif // MLIR_DIALECT_SCF_SCFOPS
