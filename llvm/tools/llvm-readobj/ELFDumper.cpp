@@ -1998,9 +1998,6 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
   else
     ELFDumperStyle.reset(new LLVMStyle<ELFT>(Writer, *this));
 
-  if (!O.IsContentValid())
-    return;
-
   typename ELFT::ShdrRange Sections = cantFail(Obj.sections());
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
@@ -3450,17 +3447,10 @@ static std::string getSectionHeadersNumString(const ELFFile<ELFT> &Obj,
   if (ElfHeader.e_shnum != 0)
     return to_string(ElfHeader.e_shnum);
 
-  Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
-  if (!ArrOrErr) {
-    // In this case we can ignore an error, because we have already reported a
-    // warning about the broken section header table earlier.
-    consumeError(ArrOrErr.takeError());
-    return "<?>";
-  }
-
-  if (ArrOrErr->empty())
+  ArrayRef<typename ELFT::Shdr> Arr = cantFail(Obj.sections());
+  if (Arr.empty())
     return "0";
-  return "0 (" + to_string((*ArrOrErr)[0].sh_size) + ")";
+  return "0 (" + to_string(Arr[0].sh_size) + ")";
 }
 
 template <class ELFT>
@@ -3470,18 +3460,11 @@ static std::string getSectionHeaderTableIndexString(const ELFFile<ELFT> &Obj,
   if (ElfHeader.e_shstrndx != SHN_XINDEX)
     return to_string(ElfHeader.e_shstrndx);
 
-  Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
-  if (!ArrOrErr) {
-    // In this case we can ignore an error, because we have already reported a
-    // warning about the broken section header table earlier.
-    consumeError(ArrOrErr.takeError());
-    return "<?>";
-  }
-
-  if (ArrOrErr->empty())
+  ArrayRef<typename ELFT::Shdr> Arr = cantFail(Obj.sections());
+  if (Arr.empty())
     return "65535 (corrupt: out of range)";
-  return to_string(ElfHeader.e_shstrndx) + " (" +
-         to_string((*ArrOrErr)[0].sh_link) + ")";
+  return to_string(ElfHeader.e_shstrndx) + " (" + to_string(Arr[0].sh_link) +
+         ")";
 }
 
 template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {

@@ -61,15 +61,15 @@ ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
 
 template <class ELFT>
 static Expected<std::unique_ptr<ELFObjectFile<ELFT>>>
-createPtr(MemoryBufferRef Object, bool InitContent) {
-  auto Ret = ELFObjectFile<ELFT>::create(Object, InitContent);
+createPtr(MemoryBufferRef Object) {
+  auto Ret = ELFObjectFile<ELFT>::create(Object);
   if (Error E = Ret.takeError())
     return std::move(E);
   return std::make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
 }
 
 Expected<std::unique_ptr<ObjectFile>>
-ObjectFile::createELFObjectFile(MemoryBufferRef Obj, bool InitContent) {
+ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
   std::pair<unsigned char, unsigned char> Ident =
       getElfArchType(Obj.getBuffer());
   std::size_t MaxAlignment =
@@ -80,16 +80,16 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj, bool InitContent) {
 
   if (Ident.first == ELF::ELFCLASS32) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      return createPtr<ELF32LE>(Obj, InitContent);
+      return createPtr<ELF32LE>(Obj);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      return createPtr<ELF32BE>(Obj, InitContent);
+      return createPtr<ELF32BE>(Obj);
     else
       return createError("Invalid ELF data");
   } else if (Ident.first == ELF::ELFCLASS64) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      return createPtr<ELF64LE>(Obj, InitContent);
+      return createPtr<ELF64LE>(Obj);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      return createPtr<ELF64BE>(Obj, InitContent);
+      return createPtr<ELF64BE>(Obj);
     else
       return createError("Invalid ELF data");
   }
