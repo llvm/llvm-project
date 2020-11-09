@@ -658,4 +658,40 @@ main:
     # CHECK: f64x2.qfms # encoding: [0xfd,0xff,0x01]
     f64x2.qfms
 
+    # CHECK: i16x8.extmul_low_i8x16_s # encoding: [0xfd,0x9a,0x01]
+    i16x8.extmul_low_i8x16_s
+
+    # CHECK: i16x8.extmul_high_i8x16_s # encoding: [0xfd,0x9d,0x01]
+    i16x8.extmul_high_i8x16_s
+
+    # CHECK: i16x8.extmul_low_i8x16_u # encoding: [0xfd,0x9e,0x01]
+    i16x8.extmul_low_i8x16_u
+
+    # CHECK: i16x8.extmul_high_i8x16_u # encoding: [0xfd,0x9f,0x01]
+    i16x8.extmul_high_i8x16_u
+
+    # CHECK: i32x4.extmul_low_i16x8_s # encoding: [0xfd,0xbb,0x01]
+    i32x4.extmul_low_i16x8_s
+
+    # CHECK: i32x4.extmul_high_i16x8_s # encoding: [0xfd,0xbd,0x01]
+    i32x4.extmul_high_i16x8_s
+
+    # CHECK: i32x4.extmul_low_i16x8_u # encoding: [0xfd,0xbe,0x01]
+    i32x4.extmul_low_i16x8_u
+
+    # CHECK: i32x4.extmul_high_i16x8_u # encoding: [0xfd,0xbf,0x01]
+    i32x4.extmul_high_i16x8_u
+
+    # CHECK: i64x2.extmul_low_i32x4_s # encoding: [0xfd,0xd2,0x01]
+    i64x2.extmul_low_i32x4_s
+
+    # CHECK: i64x2.extmul_high_i32x4_s # encoding: [0xfd,0xd3,0x01]
+    i64x2.extmul_high_i32x4_s
+
+    # CHECK: i64x2.extmul_low_i32x4_u # encoding: [0xfd,0xd6,0x01]
+    i64x2.extmul_low_i32x4_u
+
+    # CHECK: i64x2.extmul_high_i32x4_u # encoding: [0xfd,0xd7,0x01]
+    i64x2.extmul_high_i32x4_u
+
     end_function

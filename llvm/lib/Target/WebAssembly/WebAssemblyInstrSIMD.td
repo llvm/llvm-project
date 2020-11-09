@@ -16,7 +16,9 @@ multiclass SIMD_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                   list<dag> pattern_r, string asmstr_r = "",
                   string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
-              !or(0xfd00, !and(0xff, simdop))>,
+              !if(!ge(simdop, 0x100),
+                  !or(0xfd0000, !and(0xffff, simdop)),
+                  !or(0xfd00, !and(0xff, simdop)))>,
             Requires<[HasSIMD128]>;
 }
 
@@ -934,6 +936,57 @@ defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   [(set V128:$dst, (int_wasm_dot V128:$lhs, V128:$rhs))],
                   "i32x4.dot_i16x8_s\t$dst, $lhs, $rhs", "i32x4.dot_i16x8_s",
                   186>;
+
+// Extending multiplication: extmul_{low,high}_P, extmul_high
+multiclass SIMDExtBinary<ValueType vec_t, ValueType arg_t, string vec,
+                         SDNode node, string name, bits<32> simdop> {
+  defm _#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
+                        (outs), (ins),
+                        [(set (vec_t V128:$dst),
+                          (node (arg_t V128:$lhs), (arg_t V128:$rhs))
+                        )],
+                        vec#"."#name#"\t$dst, $lhs, $rhs", vec#"."#name,
+                        simdop>;
+}
+
+defm EXTMUL_LOW_S :
+  SIMDExtBinary<v8i16, v16i8, "i16x8", int_wasm_extmul_low_signed,
+                "extmul_low_i8x16_s", 154>;
+defm EXTMUL_HIGH_S :
+  SIMDExtBinary<v8i16, v16i8, "i16x8", int_wasm_extmul_high_signed,
+                "extmul_high_i8x16_s", 157>;
+defm EXTMUL_LOW_U :
+  SIMDExtBinary<v8i16, v16i8, "i16x8", int_wasm_extmul_low_unsigned,
+                "extmul_low_i8x16_u", 158>;
+defm EXTMUL_HIGH_U :
+  SIMDExtBinary<v8i16, v16i8, "i16x8", int_wasm_extmul_high_unsigned,
+                "extmul_high_i8x16_u", 159>;
+
+defm EXTMUL_LOW_S :
+  SIMDExtBinary<v4i32, v8i16, "i32x4", int_wasm_extmul_low_signed,
+                "extmul_low_i16x8_s", 187>;
+defm EXTMUL_HIGH_S :
+  SIMDExtBinary<v4i32, v8i16, "i32x4", int_wasm_extmul_high_signed,
+                "extmul_high_i16x8_s", 189>;
+defm EXTMUL_LOW_U :
+  SIMDExtBinary<v4i32, v8i16, "i32x4", int_wasm_extmul_low_unsigned,
+                "extmul_low_i16x8_u", 190>;
+defm EXTMUL_HIGH_U :
+  SIMDExtBinary<v4i32, v8i16, "i32x4", int_wasm_extmul_high_unsigned,
+                "extmul_high_i16x8_u", 191>;
+
+defm EXTMUL_LOW_S :
+  SIMDExtBinary<v2i64, v4i32, "i64x2", int_wasm_extmul_low_signed,
+                "extmul_low_i32x4_s", 210>;
+defm EXTMUL_HIGH_S :
+  SIMDExtBinary<v2i64, v4i32, "i64x2", int_wasm_extmul_high_signed,
+                "extmul_high_i32x4_s", 211>;
+defm EXTMUL_LOW_U :
+  SIMDExtBinary<v2i64, v4i32, "i64x2", int_wasm_extmul_low_unsigned,
+               "extmul_low_i32x4_u", 214>;
+defm EXTMUL_HIGH_U :
+  SIMDExtBinary<v2i64, v4i32, "i64x2", int_wasm_extmul_high_unsigned,
+                "extmul_high_i32x4_u", 215>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic
