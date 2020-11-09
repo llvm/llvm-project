@@ -26,6 +26,7 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     uint64_t AbbrevTableID = 0;
     for (auto AbbrvDeclSet : *AbbrevSetPtr) {
       Y.DebugAbbrev.emplace_back();
+      Y.DebugAbbrev.back().ID = AbbrevTableID++;
       for (auto AbbrvDecl : AbbrvDeclSet.second) {
         DWARFYAML::Abbrev Abbrv;
         Abbrv.Code = AbbrvDecl.getCode();
@@ -40,7 +41,6 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
             AttAbrv.Value = Attribute.getImplicitConstValue();
           Abbrv.Attributes.push_back(AttAbrv);
         }
-        Y.DebugAbbrev.back().ID = AbbrevTableID++;
         Y.DebugAbbrev.back().Table.push_back(Abbrv);
       }
     }
