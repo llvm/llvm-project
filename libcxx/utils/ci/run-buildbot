@@ -21,6 +21,9 @@ ${PROGNAME} [options] <BUILDER>
 --llvm-root <DIR>   Path to the root of the LLVM monorepo. By default, we try
                     to figure it out based on the current working directory.
 
+--build-dir <DIR>   The directory to use for building the library. By default,
+                    this is '<llvm-root>/build/<builder>'.
+
 --osx-roots <DIR>   Path to pre-downloaded macOS dylibs. By default, we download
                     them from Green Dragon. This is only relevant at all when
                     running back-deployment testing if one wants to override
@@ -38,6 +41,10 @@ while [[ $# -gt 0 ]]; do
             MONOREPO_ROOT="${2}"
             shift; shift
             ;;
+        --build-dir)
+            BUILD_DIR="${2}"
+            shift; shift
+            ;;
         --osx-roots)
             OSX_ROOTS="${2}"
             shift; shift
@@ -50,8 +57,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
-BUILD_DIR="${MONOREPO_ROOT}/build/${BUILDER}"
-INSTALL_DIR="${MONOREPO_ROOT}/build/${BUILDER}/install"
+BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
+INSTALL_DIR="${BUILD_DIR}/install}"
 
 function clean() {
     rm -rf "${BUILD_DIR}"
