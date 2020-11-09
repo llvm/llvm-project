@@ -1267,9 +1267,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
     ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
     unsigned OffsetValue0 = C1->getZExtValue() / Align;
     unsigned OffsetValue1 = OffsetValue0 + 1;
-    bool OffsetIsAligned = Align * OffsetValue0 == C1->getZExtValue();
     // (add n0, c0)
-    if (isDSOffsetLegal(N0, OffsetValue1, 8) && OffsetIsAligned) {
+    if (isDSOffsetLegal(N0, OffsetValue1, 8)) {
       Base = N0;
       Offset0 = CurDAG->getTargetConstant(OffsetValue0, DL, MVT::i8);
       Offset1 = CurDAG->getTargetConstant(OffsetValue1, DL, MVT::i8);
@@ -1281,9 +1280,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
             dyn_cast<ConstantSDNode>(Addr.getOperand(0))) {
       unsigned OffsetValue0 = C->getZExtValue() / Align;
       unsigned OffsetValue1 = OffsetValue0 + 1;
-      bool OffsetIsAligned = Align * OffsetValue0 == C->getZExtValue();
 
-      if (isUInt<8>(OffsetValue0) && OffsetIsAligned) {
+      if (isUInt<8>(OffsetValue0)) {
         SDLoc DL(Addr);
         SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
 
