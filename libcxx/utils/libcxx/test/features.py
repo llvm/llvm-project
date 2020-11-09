@@ -14,11 +14,19 @@ _isAppleClang = lambda cfg: '__apple_build_version__' in compilerMacros(cfg)
 _isGCC        = lambda cfg: '__GNUC__' in compilerMacros(cfg) and '__clang__' not in compilerMacros(cfg)
 
 DEFAULT_FEATURES = [
-  Feature(name='fcoroutines-ts', compileFlag='-fcoroutines-ts',
+  Feature(name='fcoroutines-ts',
           when=lambda cfg: hasCompileFlag(cfg, '-fcoroutines-ts') and
-                           featureTestMacros(cfg, flags='-fcoroutines-ts').get('__cpp_coroutines', 0) >= 201703),
+                           featureTestMacros(cfg, flags='-fcoroutines-ts').get('__cpp_coroutines', 0) >= 201703,
+          actions=[AddCompileFlag('-fcoroutines-ts')]),
 
-  Feature(name='thread-safety',                 when=lambda cfg: hasCompileFlag(cfg, '-Werror=thread-safety'), compileFlag='-Werror=thread-safety'),
+  Feature(name='thread-safety',
+          when=lambda cfg: hasCompileFlag(cfg, '-Werror=thread-safety'),
+          actions=[AddCompileFlag('-Werror=thread-safety')]),
+
+  Feature(name='diagnose-if-support',
+          when=lambda cfg: hasCompileFlag(cfg, '-Wuser-defined-warnings'),
+          actions=[AddCompileFlag('-Wuser-defined-warnings')]),
+
   Feature(name='has-fblocks',                   when=lambda cfg: hasCompileFlag(cfg, '-fblocks')),
   Feature(name='-fsized-deallocation',          when=lambda cfg: hasCompileFlag(cfg, '-fsized-deallocation')),
   Feature(name='-faligned-allocation',          when=lambda cfg: hasCompileFlag(cfg, '-faligned-allocation')),
@@ -30,7 +38,6 @@ DEFAULT_FEATURES = [
   Feature(name='has-fobjc-arc',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc') and
                                                                  sys.platform.lower().strip() == 'darwin'), # TODO: this doesn't handle cross-compiling to Apple platforms.
   Feature(name='objective-c++',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc')),
-  Feature(name='diagnose-if-support',           when=lambda cfg: hasCompileFlag(cfg, '-Wuser-defined-warnings'), compileFlag='-Wuser-defined-warnings'),
   Feature(name='modules-support',               when=lambda cfg: hasCompileFlag(cfg, '-fmodules')),
   Feature(name='non-lockfree-atomics',          when=lambda cfg: sourceBuilds(cfg, """
                                                                   #include <atomic>
@@ -87,9 +94,11 @@ for macro, feature in macros.items():
             # FIXME: This is a hack that should be fixed using module maps.
             # If modules are enabled then we have to lift all of the definitions
             # in <__config_site> onto the command line.
-            compileFlag=lambda cfg, m=macro: '-Wno-macro-redefined -D{}'.format(m) + (
-              '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
-            )
+            actions=lambda cfg, m=macro: [
+              AddCompileFlag('-Wno-macro-redefined -D{}'.format(m) + (
+                '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
+              ))
+            ]
     )
   ]
 

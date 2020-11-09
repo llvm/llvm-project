@@ -217,6 +217,124 @@ def featureTestMacros(config, flags=''):
   return {m: int(v.rstrip('LlUu')) for (m, v) in allMacros.items() if m.startswith('__cpp_')}
 
 
+def _addToSubstitution(substitutions, key, value):
+  return [(k, v + ' ' + value) if k == key else (k, v) for (k, v) in substitutions]
+
+
+class ConfigAction(object):
+  """
+  This class represents an action that can be performed on a Lit TestingConfig
+  object.
+
+  Examples of such actions are adding or modifying substitutions, Lit features,
+  etc. This class only provides the interface of such actions, and it is meant
+  to be subclassed appropriately to create new actions.
+  """
+  def applyTo(self, config):
+    """
+    Applies the action to the given configuration.
+
+    This should modify the configuration object in place, and return nothing.
+
+    If applying the action to the configuration would yield an invalid
+    configuration, and it is possible to diagnose it here, this method
+    should produce an error. For example, it should be an error to modify
+    a substitution in a way that we know for sure is invalid (e.g. adding
+    a compiler flag when we know the compiler doesn't support it). Failure
+    to do so early may lead to difficult-to-diagnose issues down the road.
+    """
+    pass
+
+  def pretty(self, config, litParams):
+    """
+    Returns a short and human-readable string describing what this action does.
+
+    This is used for logging purposes when running the test suite, so it should
+    be kept concise.
+    """
+    pass
+
+
+class AddFeature(ConfigAction):
+  """
+  This action defines the given Lit feature when running the test suite.
+
+  The name of the feature can be a string or a callable, in which case it is
+  called with the configuration to produce the feature name (as a string).
+  """
+  def __init__(self, name):
+    self._name = name
+
+  def _getName(self, config):
+    name = self._name(config) if callable(self._name) else self._name
+    if not isinstance(name, str):
+      raise ValueError("Lit feature did not resolve to a string (got {})".format(name))
+    return name
+
+  def applyTo(self, config):
+    config.available_features.add(self._getName(config))
+
+  def pretty(self, config, litParams):
+    return 'add Lit feature {}'.format(self._getName(config))
+
+
+class AddFlag(ConfigAction):
+  """
+  This action adds the given flag to the %{flags} substitution.
+
+  The flag can be a string or a callable, in which case it is called with the
+  configuration to produce the actual flag (as a string).
+  """
+  def __init__(self, flag):
+    self._getFlag = lambda config: flag(config) if callable(flag) else flag
+
+  def applyTo(self, config):
+    flag = self._getFlag(config)
+    assert hasCompileFlag(config, flag), "Trying to enable flag {}, which is not supported".format(flag)
+    config.substitutions = _addToSubstitution(config.substitutions, '%{flags}', flag)
+
+  def pretty(self, config, litParams):
+    return 'add {} to %{{flags}}'.format(self._getFlag(config))
+
+
+class AddCompileFlag(ConfigAction):
+  """
+  This action adds the given flag to the %{compile_flags} substitution.
+
+  The flag can be a string or a callable, in which case it is called with the
+  configuration to produce the actual flag (as a string).
+  """
+  def __init__(self, flag):
+    self._getFlag = lambda config: flag(config) if callable(flag) else flag
+
+  def applyTo(self, config):
+    flag = self._getFlag(config)
+    assert hasCompileFlag(config, flag), "Trying to enable compile flag {}, which is not supported".format(flag)
+    config.substitutions = _addToSubstitution(config.substitutions, '%{compile_flags}', flag)
+
+  def pretty(self, config, litParams):
+    return 'add {} to %{{compile_flags}}'.format(self._getFlag(config))
+
+
+class AddLinkFlag(ConfigAction):
+  """
+  This action adds the given flag to the %{link_flags} substitution.
+
+  The flag can be a string or a callable, in which case it is called with the
+  configuration to produce the actual flag (as a string).
+  """
+  def __init__(self, flag):
+    self._getFlag = lambda config: flag(config) if callable(flag) else flag
+
+  def applyTo(self, config):
+    flag = self._getFlag(config)
+    assert hasCompileFlag(config, flag), "Trying to enable link flag {}, which is not supported".format(flag)
+    config.substitutions = _addToSubstitution(config.substitutions, '%{link_flags}', flag)
+
+  def pretty(self, config, litParams):
+    return 'add {} to %{{link_flags}}'.format(self._getFlag(config))
+
+
 class Feature(object):
   """
   Represents a Lit available feature that is enabled whenever it is supported.
@@ -226,7 +344,7 @@ class Feature(object):
   control whether a Feature is enabled -- it should be enabled whenever it
   is supported.
   """
-  def __init__(self, name, compileFlag=None, linkFlag=None, when=lambda _: True):
+  def __init__(self, name, actions=None, when=lambda _: True):
     """
     Create a Lit feature for consumption by a test suite.
 
@@ -236,17 +354,13 @@ class Feature(object):
         callable, in which case it is passed the TestingConfig and should
         generate a string representing the name of the feature.
 
-    - compileFlag
-        An optional compile flag to add when this feature is added to a
-        TestingConfig. If provided, this must be a string representing a
-        compile flag that will be appended to the end of the %{compile_flags}
-        substitution of the TestingConfig.
-
-    - linkFlag
-        An optional link flag to add when this feature is added to a
-        TestingConfig. If provided, this must be a string representing a
-        link flag that will be appended to the end of the %{link_flags}
-        substitution of the TestingConfig.
+    - actions
+        An optional list of ConfigActions to apply when the feature is supported.
+        An AddFeature action is always created regardless of any actions supplied
+        here -- these actions are meant to perform more than setting a corresponding
+        Lit feature (e.g. adding compiler flags). If 'actions' is a callable, it
+        is called with the current configuration object to generate the actual
+        list of actions.
 
     - when
         A callable that gets passed a TestingConfig and should return a
@@ -257,52 +371,35 @@ class Feature(object):
         supported.
     """
     self._name = name
-    self._compileFlag = compileFlag
-    self._linkFlag = linkFlag
+    self._actions = [] if actions is None else actions
     self._isSupported = when
 
-  def isSupported(self, config):
-    """
-    Return whether the feature is supported by the given TestingConfig.
-    """
-    return self._isSupported(config)
-
-  def getName(self, config):
-    """
-    Return the name of the feature.
-
-    It is an error to call `f.getName(cfg)` if the feature `f` is not supported.
-    """
-    assert self.isSupported(config), \
-      "Trying to get the name of a feature that is not supported in the given configuration"
+  def _getName(self, config):
     name = self._name(config) if callable(self._name) else self._name
     if not isinstance(name, str):
       raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
     return name
 
-  def enableIn(self, config):
+  def getActions(self, config):
     """
-    Enable a feature in a TestingConfig.
+    Return the list of actions associated to this feature.
 
-    The name of the feature is added to the set of available features of
-    `config`, and any compile or link flags provided upon construction of
-    the Feature are added to the end of the corresponding substitution in
-    the config.
-
-    It is an error to call `f.enableIn(cfg)` if the feature `f` is not
-    supported in that TestingConfig (i.e. if `not f.isSupported(cfg)`).
+    If the feature is not supported, an empty list is returned.
+    If the feature is supported, an `AddFeature` action is automatically added
+    to the returned list of actions, in addition to any actions provided on
+    construction.
     """
-    assert self.isSupported(config), \
-      "Trying to enable feature {} that is not supported in the given configuration".format(self._name)
+    if not self._isSupported(config):
+      return []
+    else:
+      actions = self._actions(config) if callable(self._actions) else self._actions
+      return [AddFeature(self._getName(config))] + actions
 
-    addTo = lambda subs, sub, flag: [(s, x + ' ' + flag) if s == sub else (s, x) for (s, x) in subs]
-    if self._compileFlag:
-      compileFlag = self._compileFlag(config) if callable(self._compileFlag) else self._compileFlag
-      config.substitutions = addTo(config.substitutions, '%{compile_flags}', compileFlag)
-    if self._linkFlag:
-      linkFlag = self._linkFlag(config) if callable(self._linkFlag) else self._linkFlag
-      config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
-    config.available_features.add(self.getName(config))
+  def pretty(self, config):
+    """
+    Returns the Feature's name.
+    """
+    return self._getName(config)
 
 
 def _str_to_bool(s):
@@ -339,11 +436,13 @@ class Parameter(object):
   that use that `config` object.
 
   Parameters can have multiple possible values, and they can have a default
-  value when left unspecified. They can also have a Feature associated to them,
-  in which case the Feature is added to the TestingConfig if the parameter is
-  enabled. It is an error if the Parameter is enabled but the Feature associated
-  to it is not supported, for example trying to set the compilation standard to
-  C++17 when `-std=c++17` is not supported by the compiler.
+  value when left unspecified. They can also have any number of ConfigActions
+  associated to them, in which case the actions will be performed on the
+  TestingConfig if the parameter is enabled. Depending on the actions
+  associated to a Parameter, it may be an error to enable the Parameter
+  if some actions are not supported in the given configuration. For example,
+  trying to set the compilation standard to C++23 when `-std=c++23` is not
+  supported by the compiler would be an error.
 
   One important point is that Parameters customize the behavior of the test
   suite in a bounded way, i.e. there should be a finite set of possible choices
@@ -356,7 +455,7 @@ class Parameter(object):
   compiler), it can be handled in the `lit.cfg`, but it shouldn't be
   represented with a Parameter.
   """
-  def __init__(self, name, choices, type, help, feature, default=None):
+  def __init__(self, name, choices, type, help, actions, default=None):
     """
     Create a Lit parameter to customize the behavior of a test suite.
 
@@ -380,10 +479,11 @@ class Parameter(object):
         A string explaining the parameter, for documentation purposes.
         TODO: We should be able to surface those from the Lit command-line.
 
-    - feature
+    - actions
         A callable that gets passed the parsed value of the parameter (either
         the one passed on the command-line or the default one), and that returns
-        either None or a Feature.
+        a list of ConfigAction to perform given the value of the parameter.
+        All the ConfigAction must be supported in the given configuration.
 
     - default
         An optional default value to use for the parameter when no value is
@@ -403,8 +503,22 @@ class Parameter(object):
     self._parse = lambda x: (_str_to_bool(x) if type is bool and isinstance(x, str)
                                              else type(x))
     self._help = help
-    self._feature = feature
+    self._actions = actions
     self._default = default
+
+  def _getValue(self, config, litParams):
+    """
+    Return the value of the parameter given the configuration objects.
+    """
+    param = getattr(config, self.name, None)
+    param = litParams.get(self.name, param)
+    if param is None and self._default is None:
+      raise ValueError("Parameter {} doesn't have a default value, but it was not specified in the Lit parameters or in the Lit config".format(self.name))
+    getDefault = lambda: self._default(config) if callable(self._default) else self._default
+    value = self._parse(param) if param is not None else getDefault()
+    if value not in self._choices:
+      raise ValueError("Got value '{}' for parameter '{}', which is not in the provided set of possible choices: {}".format(value, self.name, self._choices))
+    return value
 
   @property
   def name(self):
@@ -416,13 +530,14 @@ class Parameter(object):
     """
     return self._name
 
-  def getFeature(self, config, litParams):
-    param = getattr(config, self.name, None)
-    param = litParams.get(self.name, param)
-    if param is None and self._default is None:
-      raise ValueError("Parameter {} doesn't have a default value, but it was not specified in the Lit parameters or in the Lit config".format(self.name))
-    getDefault = lambda: self._default(config) if callable(self._default) else self._default
-    value = self._parse(param) if param is not None else getDefault()
-    if value not in self._choices:
-      raise ValueError("Got value '{}' for parameter '{}', which is not in the provided set of possible choices: {}".format(value, self.name, self._choices))
-    return self._feature(value)
+  def getActions(self, config, litParams):
+    """
+    Return the list of actions associated to this value of the parameter.
+    """
+    return self._actions(self._getValue(config, litParams))
+
+  def pretty(self, config, litParams):
+    """
+    Return a pretty representation of the parameter's name and value.
+    """
+    return "{}={}".format(self.name, self._getValue(config, litParams))
