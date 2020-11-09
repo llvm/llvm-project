@@ -420,7 +420,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 
   for (llvm::GlobalValue &GV : M.global_values()) {
     if (GV.hasAppendingLinkage() || GV.hasLocalLinkage())
-      return;
+      continue;
 
     if (GV.isDeclarationForLinker()) {
       GV.setVisibility(GV.getDLLStorageClass() ==
@@ -726,7 +726,7 @@ void CodeGenModule::Release() {
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
 
-  // Set visibility from DLL export class
+  // Set visibility from DLL storage class
   // We do this at the end of LLVM IR generation; after any operation
   // that might affect the DLL storage class or the visibility, and
   // before anything that might act on these.
