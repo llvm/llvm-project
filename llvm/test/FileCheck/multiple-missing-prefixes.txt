@@ -1,6 +1,6 @@
 // RUN: FileCheck -check-prefix=ANOTHER-PREFIX -input-file %s %s
-// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=PREFIX1 -check-prefix=PREFIX2 -input-file %s %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK-NONEXISTENT-PREFIX -check-prefix=ALSO-NONEXISTENT %s
-// RUN: %ProtectFileCheckOutput not FileCheck -check-prefixes=PREFIX1,PREFIX2 -input-file %s %s 2>&1 | FileCheck -strict-whitespace -check-prefixes=CHECK-NONEXISTENT-PREFIX,ALSO-NONEXISTENT %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=PREFIX1 -check-prefix=PREFIX2 -input-file %s %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK-NONEXISTENT-PREFIX -check-prefix=ALSO-NONEXISTENT -allow-unused-prefixes %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefixes=PREFIX1,PREFIX2 -input-file %s %s 2>&1 | FileCheck -strict-whitespace -check-prefixes=CHECK-NONEXISTENT-PREFIX,ALSO-NONEXISTENT -allow-unused-prefixes %s
 
 foobar
 ; ANOTHER-PREFIX: foobar
