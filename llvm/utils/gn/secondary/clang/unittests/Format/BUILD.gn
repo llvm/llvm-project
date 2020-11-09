@@ -28,6 +28,7 @@ unittest("FormatTests") {
     "SortImportsTestJS.cpp",
     "SortImportsTestJava.cpp",
     "SortIncludesTest.cpp",
+    "TokenAnnotatorTest.cpp",
     "UsingDeclarationsSorterTest.cpp",
   ]
 }
