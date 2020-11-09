@@ -7,10 +7,14 @@ define i32 @fshl(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[OR]], [[FSHBB]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
@@ -34,10 +38,14 @@ define i32 @fshl_commute_phi(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[A]], [[ENTRY:%.*]] ], [ [[OR]], [[FSHBB]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
@@ -61,10 +69,14 @@ define i32 @fshl_commute_or(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[A]], [[ENTRY:%.*]] ], [ [[OR]], [[FSHBB]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
@@ -90,11 +102,15 @@ define i32 @fshl_insert_valid_location(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[OTHER:%.*]] = phi i32 [ 1, [[FSHBB]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP0]], [[OTHER]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[OR]], [[FSHBB]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[OTHER:%.*]] = phi i32 [ 1, [[FSHBB]] ], [ 2, [[ENTRY]] ]
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[COND]], [[OTHER]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -121,10 +137,14 @@ define i32 @fshr(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[OR]], [[FSHBB]] ], [ [[B]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
@@ -148,10 +168,14 @@ define i32 @fshr_commute_phi(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[OR]], [[FSHBB]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
@@ -175,10 +199,14 @@ define i32 @fshr_commute_or(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[OR]], [[FSHBB]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
@@ -368,7 +396,7 @@ end:
   ret i32 %cond
 }
 
-; Negative test - wrong shift for rotate (but can be folded to a generic funnel shift).
+; Negative test - wrong shift.
 
 define i32 @not_fshr_5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @not_fshr_5(
@@ -376,10 +404,14 @@ define i32 @not_fshr_5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[FSHBB:%.*]]
 ; CHECK:       fshbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[C]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[C]], [[SUB]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[C]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[OR]], [[FSHBB]] ]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0
