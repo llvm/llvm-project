@@ -1857,9 +1857,13 @@ struct DSEState {
         getUnderlyingObject(MaybeTermLoc->first.Ptr))
       return false;
 
+    auto TermLoc = MaybeTermLoc->first;
+    if (MaybeTermLoc->second) {
+      const Value *LocUO = getUnderlyingObject(Loc.Ptr);
+      return BatchAA.isMustAlias(TermLoc.Ptr, LocUO);
+    }
     int64_t InstWriteOffset, DepWriteOffset;
-    return MaybeTermLoc->second ||
-           isOverwrite(MaybeTerm, AccessI, MaybeTermLoc->first, Loc, DL, TLI,
+    return isOverwrite(MaybeTerm, AccessI, TermLoc, Loc, DL, TLI,
                        DepWriteOffset, InstWriteOffset, BatchAA,
                        &F) == OW_Complete;
   }

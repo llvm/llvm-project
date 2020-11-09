@@ -90,9 +90,12 @@ bb:
 
 ; Test case inspired by PR48036.
 define void @delete_field_after(%struct* %ptr) {
+;
 ; CHECK-LABEL: @delete_field_after(
 ; CHECK-NEXT:    [[PTR_F0:%.*]] = getelementptr [[STRUCT:%.*]], %struct* [[PTR:%.*]], i32 1
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast %struct* [[PTR_F0]] to i8*
+; CHECK-NEXT:    [[PTR_F1:%.*]] = getelementptr [[STRUCT]], %struct* [[PTR]], i32 0, i32 1
+; CHECK-NEXT:    store i32 0, i32* [[PTR_F1]], align 4
 ; CHECK-NEXT:    call void @free(i8* [[BC]])
 ; CHECK-NEXT:    ret void
 ;
