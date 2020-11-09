@@ -365,7 +365,7 @@ public:
   ~PlaceholderQueue() {
     assert(empty() && "PlaceholderQueue hasn't been flushed before being destroyed");
   }
-  bool empty() { return PHs.empty(); }
+  bool empty() const { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
   void flush(BitcodeReaderMetadataList &MetadataList);
 
@@ -676,7 +676,7 @@ public:
     return FunctionsWithSPs.lookup(F);
   }
 
-  bool hasSeenOldLoopTags() { return HasSeenOldLoopTags; }
+  bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
 
   Error parseMetadataAttachment(
       Function &F, const SmallVectorImpl<Instruction *> &InstructionList);
@@ -684,7 +684,7 @@ public:
   Error parseMetadataKinds();
 
   void setStripTBAA(bool Value) { StripTBAA = Value; }
-  bool isStrippingTBAA() { return StripTBAA; }
+  bool isStrippingTBAA() const { return StripTBAA; }
 
   unsigned size() const { return MetadataList.size(); }
   void shrinkTo(unsigned N) { MetadataList.shrinkTo(N); }
