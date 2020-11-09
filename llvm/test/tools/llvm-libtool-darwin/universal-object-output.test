@@ -1,5 +1,5 @@
 ## This test checks that a correct universal binary is produced when
-## llvm-libtool-darwin is given inputs for multiple architectures.
+## llvm-libtool-darwin is given object files for multiple architectures.
 
 ## Check that the subtypes of cputype CPU_TYPE_ARM are stored in a fat file:
 # RUN: yaml2obj %s -o %t.armv6 -DTYPE=0xC -DSUBTYPE=0x6 -DSTRING=_armv6
