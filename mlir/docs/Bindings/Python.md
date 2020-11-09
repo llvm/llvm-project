@@ -2,7 +2,6 @@
 
 Current status: Under development and not enabled by default
 
-
 ## Building
 
 ### Pre-requisites
@@ -32,7 +31,6 @@ Current status: Under development and not enabled by default
   multiple Python implementations, setting this explicitly to the preferred
   `python3` executable is strongly recommended.
 
-
 ## Design
 
 ### Use cases
@@ -42,14 +40,13 @@ There are likely two primary use cases for the MLIR python bindings:
 1. Support users who expect that an installed version of LLVM/MLIR will yield
    the ability to `import mlir` and use the API in a pure way out of the box.
 
-2. Downstream integrations will likely want to include parts of the API in their
+1. Downstream integrations will likely want to include parts of the API in their
    private namespace or specially built libraries, probably mixing it with other
    python native bits.
 
-
 ### Composable modules
 
-In order to support use case #2, the Python bindings are organized into
+In order to support use case \#2, the Python bindings are organized into
 composable modules that downstream integrators can include and re-export into
 their own namespace if desired. This forces several design points:
 
@@ -119,7 +116,6 @@ boundary. In addition, factoring in this way side-steps some very difficult
 issues that arise when combining RTTI-based modules (which pybind derived things
 are) with non-RTTI polymorphic C++ code (the default compilation mode of LLVM).
 
-
 ### Ownership in the Core IR
 
 There are several top-level types in the core IR that are strongly owned by their python-side reference:
@@ -128,7 +124,13 @@ There are several top-level types in the core IR that are strongly owned by thei
 * `PyModule` (`mlir.ir.Module`)
 * `PyOperation` (`mlir.ir.Operation`) - but with caveats
 
-All other objects are dependent. All objects maintain a back-reference (keep-alive) to their closest containing top-level object. Further, dependent objects fall into two categories: a) uniqued (which live for the life-time of the context) and b) mutable. Mutable objects need additional machinery for keeping track of when the C++ instance that backs their Python object is no longer valid (typically due to some specific mutation of the IR, deletion, or bulk operation).
+All other objects are dependent. All objects maintain a back-reference
+(keep-alive) to their closest containing top-level object. Further, dependent
+objects fall into two categories: a) uniqued (which live for the life-time of
+the context) and b) mutable. Mutable objects need additional machinery for
+keeping track of when the C++ instance that backs their Python object is no
+longer valid (typically due to some specific mutation of the IR, deletion, or
+bulk operation).
 
 ### Optionality and argument ordering in the Core IR
 
@@ -138,23 +140,65 @@ The following types support being bound to the current thread as a context manag
 * `PyInsertionPoint` (`ip: mlir.ir.InsertionPoint = None`)
 * `PyMlirContext` (`context: mlir.ir.Context = None`)
 
-In order to support composability of function arguments, when these types appear as arguments, they should always be the last and appear in the above order and with the given names (which is generally the order in which they are expected to need to be expressed explicitly in special cases) as necessary. Each should carry a default value of `py::none()` and use either a manual or automatic conversion for resolving either with the explicit value or a value from the thread context manager (i.e. `DefaultingPyMlirContext` or `DefaultingPyLocation`).
+In order to support composability of function arguments, when these types appear
+as arguments, they should always be the last and appear in the above order and
+with the given names (which is generally the order in which they are expected to
+need to be expressed explicitly in special cases) as necessary. Each should
+carry a default value of `py::none()` and use either a manual or automatic
+conversion for resolving either with the explicit value or a value from the
+thread context manager (i.e. `DefaultingPyMlirContext` or
+`DefaultingPyLocation`).
 
-The rationale for this is that in Python, trailing keyword arguments to the *right* are the most composable, enabling a variety of strategies such as kwarg passthrough, default values, etc. Keeping function signatures composable increases the chances that interesting DSLs and higher level APIs can be constructed without a lot of exotic boilerplate.
+The rationale for this is that in Python, trailing keyword arguments to the
+*right* are the most composable, enabling a variety of strategies such as kwarg
+passthrough, default values, etc. Keeping function signatures composable
+increases the chances that interesting DSLs and higher level APIs can be
+constructed without a lot of exotic boilerplate.
 
-Used consistently, this enables a style of IR construction that rarely needs to use explicit contexts, locations, or insertion points but is free to do so when extra control is needed.
+Used consistently, this enables a style of IR construction that rarely needs to
+use explicit contexts, locations, or insertion points but is free to do so when
+extra control is needed.
 
 #### Operation hierarchy
 
-As mentioned above, `PyOperation` is special because it can exist in either a top-level or dependent state. The life-cycle is unidirectional: operations can be created detached (top-level) and once added to another operation, they are then dependent for the remainder of their lifetime. The situation is more complicated when considering construction scenarios where an operation is added to a transitive parent that is still detached, necessitating further accounting at such transition points (i.e. all such added children are initially added to the IR with a parent of their outer-most detached operation, but then once it is added to an attached operation, they need to be re-parented to the containing module).
+As mentioned above, `PyOperation` is special because it can exist in either a
+top-level or dependent state. The life-cycle is unidirectional: operations can
+be created detached (top-level) and once added to another operation, they are
+then dependent for the remainder of their lifetime. The situation is more
+complicated when considering construction scenarios where an operation is added
+to a transitive parent that is still detached, necessitating further accounting
+at such transition points (i.e. all such added children are initially added to
+the IR with a parent of their outer-most detached operation, but then once it is
+added to an attached operation, they need to be re-parented to the containing
+module).
 
-Due to the validity and parenting accounting needs, `PyOperation` is the owner for regions and blocks and needs to be a top-level type that we can count on not aliasing. This let's us do things like selectively invalidating instances when mutations occur without worrying that there is some alias to the same operation in the hierarchy. Operations are also the only entity that are allowed to be in a detached state, and they are interned at the context level so that there is never more than one Python `mlir.ir.Operation` object for a unique `MlirOperation`, regardless of how it is obtained.
+Due to the validity and parenting accounting needs, `PyOperation` is the owner
+for regions and blocks and needs to be a top-level type that we can count on not
+aliasing. This let's us do things like selectively invalidating instances when
+mutations occur without worrying that there is some alias to the same operation
+in the hierarchy. Operations are also the only entity that are allowed to be in
+a detached state, and they are interned at the context level so that there is
+never more than one Python `mlir.ir.Operation` object for a unique
+`MlirOperation`, regardless of how it is obtained.
 
-The C/C++ API allows for Region/Block to also be detached, but it simplifies the ownership model a lot to eliminate that possibility in this API, allowing the Region/Block to be completely dependent on its owning operation for accounting. The aliasing of Python `Region`/`Block` instances to underlying `MlirRegion`/`MlirBlock` is considered benign and these objects are not interned in the context (unlike operations).
+The C/C++ API allows for Region/Block to also be detached, but it simplifies the
+ownership model a lot to eliminate that possibility in this API, allowing the
+Region/Block to be completely dependent on its owning operation for accounting.
+The aliasing of Python `Region`/`Block` instances to underlying
+`MlirRegion`/`MlirBlock` is considered benign and these objects are not interned
+in the context (unlike operations).
 
-If we ever want to re-introduce detached regions/blocks, we could do so with new "DetachedRegion" class or similar and also avoid the complexity of accounting. With the way it is now, we can avoid having a global live list for regions and blocks. We may end up needing an op-local one at some point TBD, depending on how hard it is to guarantee how mutations interact with their Python peer objects. We can cross that bridge easily when we get there.
+If we ever want to re-introduce detached regions/blocks, we could do so with new
+"DetachedRegion" class or similar and also avoid the complexity of accounting.
+With the way it is now, we can avoid having a global live list for regions and
+blocks. We may end up needing an op-local one at some point TBD, depending on
+how hard it is to guarantee how mutations interact with their Python peer
+objects. We can cross that bridge easily when we get there.
 
-Module, when used purely from the Python API, can't alias anyway, so we can use it as a top-level ref type without a live-list for interning. If the API ever changes such that this cannot be guaranteed (i.e. by letting you marshal a native-defined Module in), then there would need to be a live table for it too.
+Module, when used purely from the Python API, can't alias anyway, so we can use
+it as a top-level ref type without a live-list for interning. If the API ever
+changes such that this cannot be guaranteed (i.e. by letting you marshal a
+native-defined Module in), then there would need to be a live table for it too.
 
 ## Style
 
@@ -163,7 +207,7 @@ isomorphic with the underlying C++ structures. However, concessions are made
 either for practicality or to give the resulting library an appropriately
 "Pythonic" flavor.
 
-### Properties vs get*() methods
+### Properties vs get\*() methods
 
 Generally favor converting trivial methods like `getContext()`, `getName()`,
 `isEntryBlock()`, etc to read-only Python properties (i.e. `context`). It is
@@ -188,7 +232,7 @@ Things that have nice printed representations are really great :)  If there is a
 reasonable printed form, it can be a significant productivity boost to wire that
 to the `__repr__` method (and verify it with a [doctest](#sample-doctest)).
 
-### CamelCase vs snake_case
+### CamelCase vs snake\_case
 
 Name functions/methods/properties in `snake_case` and classes in `CamelCase`. As
 a mechanical concession to Python style, this can go a long way to making the
