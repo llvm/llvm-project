@@ -24,6 +24,7 @@
 // These three variables hold the host's OS version.
 static int32_t GlobalMajor, GlobalMinor, GlobalSubminor;
 static dispatch_once_t DispatchOnceCounter;
+static dispatch_once_t CompatibilityDispatchOnceCounter;
 
 // _availability_version_check darwin API support.
 typedef uint32_t dyld_platform_t;
@@ -85,15 +86,24 @@ typedef Boolean (*CFStringGetCStringFuncTy)(CFStringRef, char *, CFIndex,
                                             CFStringEncoding);
 typedef void (*CFReleaseFuncTy)(CFTypeRef);
 
-// Find and parse the SystemVersion.plist file.
-static void initializeAvailabilityCheck(void *Unused) {
-  (void)Unused;
+static void _initializeAvailabilityCheck(bool LoadPlist) {
+  if (AvailabilityVersionCheck && !LoadPlist) {
+    // New API is supported and we're not being asked to load the plist,
+    // exit early!
+    return;
+  }
 
-  // Use the new API if it's is available. Still load the PLIST to ensure that the
-  // existing calls to __isOSVersionAtLeast still work even with new
-  // compiler-rt and new OSes.
+  // Use the new API if it's is available.
   AvailabilityVersionCheck = (AvailabilityVersionCheckFuncTy)dlsym(
       RTLD_DEFAULT, "_availability_version_check");
+
+  if (AvailabilityVersionCheck && !LoadPlist) {
+    // New API is supported and we're not being asked to load the plist,
+    // exit early!
+    return;
+  }
+  // Still load the PLIST to ensure that the existing calls to
+  // __isOSVersionAtLeast still work even with new compiler-rt and old OSes.
 
   // Load CoreFoundation dynamically
   const void *NullAllocator = dlsym(RTLD_DEFAULT, "kCFAllocatorNull");
@@ -221,12 +231,24 @@ Fail:
   fclose(PropertyList);
 }
 
-// This old API entry point is no longer used by Clang. We still need to keep it
-// around to ensure that object files that reference it are still usable when
-// linked with new compiler-rt.
+// Find and parse the SystemVersion.plist file.
+static void compatibilityInitializeAvailabilityCheck(void *Unused) {
+  (void)Unused;
+  _initializeAvailabilityCheck(/*LoadPlist=*/true);
+}
+
+static void initializeAvailabilityCheck(void *Unused) {
+  (void)Unused;
+  _initializeAvailabilityCheck(/*LoadPlist=*/false);
+}
+
+// This old API entry point is no longer used by Clang for Darwin. We still need
+// to keep it around to ensure that object files that reference it are still
+// usable when linked with new compiler-rt.
 int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
   // Populate the global version variables, if they haven't already.
-  dispatch_once_f(&DispatchOnceCounter, NULL, initializeAvailabilityCheck);
+  dispatch_once_f(&CompatibilityDispatchOnceCounter, NULL,
+                  compatibilityInitializeAvailabilityCheck);
 
   if (Major < GlobalMajor)
     return 1;
