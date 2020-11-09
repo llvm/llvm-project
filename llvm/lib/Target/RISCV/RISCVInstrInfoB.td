@@ -675,37 +675,17 @@ def : Pat<(rotl GPR:$rs1, GPR:$rs2), (ROL GPR:$rs1, GPR:$rs2)>;
 def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
-let Predicates = [HasStdExtZbs, IsRV32] in
-def : Pat<(and (not (shl 1, (and GPR:$rs2, 31))), GPR:$rs1),
+let Predicates = [HasStdExtZbs] in {
+def : Pat<(and (not (shiftop<shl> 1, GPR:$rs2)), GPR:$rs1),
           (SBCLR GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbs, IsRV64] in
-def : Pat<(and (not (shl 1, (and GPR:$rs2, 63))), GPR:$rs1),
-          (SBCLR GPR:$rs1, GPR:$rs2)>;
-
-let Predicates = [HasStdExtZbs] in
 def : Pat<(and (rotl -2, GPR:$rs2), GPR:$rs1), (SBCLR GPR:$rs1, GPR:$rs2)>;
-
-let Predicates = [HasStdExtZbs, IsRV32] in
-def : Pat<(or (shl 1, (and GPR:$rs2, 31)), GPR:$rs1),
+def : Pat<(or (shiftop<shl> 1, GPR:$rs2), GPR:$rs1),
           (SBSET GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbs, IsRV64] in
-def : Pat<(or (shl 1, (and GPR:$rs2, 63)), GPR:$rs1),
-          (SBSET GPR:$rs1, GPR:$rs2)>;
-
-let Predicates = [HasStdExtZbs, IsRV32] in
-def : Pat<(xor (shl 1, (and GPR:$rs2, 31)), GPR:$rs1),
+def : Pat<(xor (shiftop<shl> 1, GPR:$rs2), GPR:$rs1),
           (SBINV GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbs, IsRV64] in
-def : Pat<(xor (shl 1, (and GPR:$rs2, 63)), GPR:$rs1),
-          (SBINV GPR:$rs1, GPR:$rs2)>;
-
-let Predicates = [HasStdExtZbs, IsRV32] in
-def : Pat<(and (srl GPR:$rs1, (and GPR:$rs2, 31)), 1),
+def : Pat<(and (shiftop<srl> GPR:$rs1, GPR:$rs2), 1),
           (SBEXT GPR:$rs1, GPR:$rs2)>;
-
-let Predicates = [HasStdExtZbs, IsRV64] in
-def : Pat<(and (srl GPR:$rs1, (and GPR:$rs2, 63)), 1),
-          (SBEXT GPR:$rs1, GPR:$rs2)>;
+}
 
 let Predicates = [HasStdExtZbb] in {
 def : Pat<(SLOIPat GPR:$rs1, uimmlog2xlen:$shamt),
