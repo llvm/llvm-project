@@ -2576,6 +2576,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     A.recordDependence(NoAliasAA, *this, DepClassTy::OPTIONAL);
 
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
+    const Function *ScopeFn = VIRP.getAnchorScope();
     auto &NoCaptureAA =
         A.getAAFor<AANoCapture>(*this, VIRP, /* TrackDependence */ false);
     // Check whether the value is captured in the scope using AANoCapture.
@@ -2591,7 +2592,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       if (UserI == getCtxI() && UserI->getNumOperands() == 1)
         return true;
 
-      const Function *ScopeFn = VIRP.getAnchorScope();
       if (ScopeFn) {
         const auto &ReachabilityAA =
             A.getAAFor<AAReachability>(*this, IRPosition::function(*ScopeFn));
