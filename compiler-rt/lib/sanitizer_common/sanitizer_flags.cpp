@@ -13,9 +13,10 @@
 #include "sanitizer_flags.h"
 
 #include "sanitizer_common.h"
-#include "sanitizer_libc.h"
-#include "sanitizer_list.h"
 #include "sanitizer_flag_parser.h"
+#include "sanitizer_libc.h"
+#include "sanitizer_linux.h"
+#include "sanitizer_list.h"
 
 namespace __sanitizer {
 
@@ -124,6 +125,9 @@ void InitializeCommonFlags(CommonFlags *cf) {
   // need to record coverage to generate coverage report.
   cf->coverage |= cf->html_cov_report;
   SetVerbosity(cf->verbosity);
+
+  if (SANITIZER_ANDROID && !HAS_ANDROID_THREAD_PROPERTIES_API)
+    cf->detect_leaks = false;
 }
 
 }  // namespace __sanitizer
