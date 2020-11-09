@@ -573,7 +573,7 @@ define internal i32 @ret(i32* %arg) {
 ; Function Attrs: nounwind optsize
 define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@strtox
-; CHECK-SAME: (i8* noalias [[S:%.*]]) unnamed_addr {
+; CHECK-SAME: (i8* [[S:%.*]]) unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
@@ -601,7 +601,7 @@ define dso_local double @strtod(i8* noalias %s, i8** noalias %p) {
 ; CHECK-LABEL: define {{[^@]+}}@strtod
 ; CHECK-SAME: (i8* noalias [[S:%.*]], i8** noalias nocapture nofree readnone [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call fastcc double @strtox(i8* noalias [[S]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call fastcc double @strtox(i8* [[S]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
 entry:
