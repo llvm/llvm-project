@@ -256,6 +256,10 @@ struct BBAddrMapSection : Section {
 
   BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
 
+  std::vector<std::pair<StringRef, bool>> getEntries() const override {
+    return {{"Entries", Entries.hasValue()}};
+  };
+
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::BBAddrMap;
   }
