@@ -1850,3 +1850,47 @@ void testVectorInt128Pack(){
 // CHECK-NEXT-LE: %{{[0-9]+}} = extractelement <2 x i64> %[[V1]], i32 0
 
 }
+
+void test_vector_cpsgn_float(vector float a, vector float b) {
+// CHECK-LABEL: test_vector_cpsgn_float
+// CHECK-DAG: load{{.*}}%__a
+// CHECK-DAG: load{{.*}}%__b
+// CHECK-NOT: SEPARATOR
+// CHECK-DAG: [[RA:%[0-9]+]] = load <4 x float>, <4 x float>* %__a.addr
+// CHECK-DAG: [[RB:%[0-9]+]] = load <4 x float>, <4 x float>* %__b.addr
+// CHECK-NEXT: call <4 x float> @llvm.copysign.v4f32(<4 x float> [[RB]], <4 x float> [[RA]])
+  vec_cpsgn(a, b);
+}
+
+void test_vector_cpsgn_double(vector double a, vector double b) {
+// CHECK-LABEL: test_vector_cpsgn_double
+// CHECK-DAG: load{{.*}}%__a
+// CHECK-DAG: load{{.*}}%__b
+// CHECK-NOT: SEPARATOR
+// CHECK-DAG: [[RA:%[0-9]+]] = load <2 x double>, <2 x double>* %__a.addr
+// CHECK-DAG: [[RB:%[0-9]+]] = load <2 x double>, <2 x double>* %__b.addr
+// CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> [[RB]], <2 x double> [[RA]])
+  vec_cpsgn(a, b);
+}
+
+void test_builtin_xvcpsgnsp(vector float a, vector float b) {
+// CHECK-LABEL: test_builtin_xvcpsgnsp
+// CHECK-DAG: load{{.*}}%a
+// CHECK-DAG: load{{.*}}%b
+// CHECK-NOT: SEPARATOR
+// CHECK-DAG: [[RA:%[0-9]+]] = load <4 x float>, <4 x float>* %a.addr
+// CHECK-DAG: [[RB:%[0-9]+]] = load <4 x float>, <4 x float>* %b.addr
+// CHECK-NEXT: call <4 x float> @llvm.copysign.v4f32(<4 x float> [[RA]], <4 x float> [[RB]])
+  __builtin_vsx_xvcpsgnsp(a, b);
+}
+
+void test_builtin_xvcpsgndp(vector double a, vector double b) {
+// CHECK-LABEL: test_builtin_xvcpsgndp
+// CHECK-DAG: load{{.*}}%a
+// CHECK-DAG: load{{.*}}%b
+// CHECK-NOT: SEPARATOR
+// CHECK-DAG: [[RA:%[0-9]+]] = load <2 x double>, <2 x double>* %a.addr
+// CHECK-DAG: [[RB:%[0-9]+]] = load <2 x double>, <2 x double>* %b.addr
+// CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> [[RA]], <2 x double> [[RB]])
+  __builtin_vsx_xvcpsgndp(a, b);
+}
