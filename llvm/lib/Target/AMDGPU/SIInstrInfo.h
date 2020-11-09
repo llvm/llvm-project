@@ -81,8 +81,9 @@ public:
 private:
   void swapOperands(MachineInstr &Inst) const;
 
-  bool moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
-                        MachineDominatorTree *MDT = nullptr) const;
+  std::pair<bool, MachineBasicBlock *>
+  moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
+                   MachineDominatorTree *MDT = nullptr) const;
 
   void lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
                    MachineDominatorTree *MDT = nullptr) const;
@@ -906,13 +907,15 @@ public:
   /// Legalize all operands in this instruction.  This function may create new
   /// instructions and control-flow around \p MI.  If present, \p MDT is
   /// updated.
-  void legalizeOperands(MachineInstr &MI,
-                        MachineDominatorTree *MDT = nullptr) const;
+  /// \returns A new basic block that contains \p MI if new blocks were created.
+  MachineBasicBlock *
+  legalizeOperands(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
 
   /// Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the
   /// VALU if necessary. If present, \p MDT is updated.
-  void moveToVALU(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
+  MachineBasicBlock *moveToVALU(MachineInstr &MI,
+                                MachineDominatorTree *MDT = nullptr) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
