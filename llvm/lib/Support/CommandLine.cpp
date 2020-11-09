@@ -832,7 +832,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
     // Consume runs of whitespace.
     if (Token.empty()) {
       while (I != E && isWhitespace(Src[I])) {
-        // Mark the end of lines in response files
+        // Mark the end of lines in response files.
         if (MarkEOLs && Src[I] == '\n')
           NewArgv.push_back(nullptr);
         ++I;
@@ -869,6 +869,9 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
     if (isWhitespace(C)) {
       if (!Token.empty())
         NewArgv.push_back(Saver.save(StringRef(Token)).data());
+      // Mark the end of lines in response files.
+      if (MarkEOLs && C == '\n')
+        NewArgv.push_back(nullptr);
       Token.clear();
       continue;
     }
@@ -880,9 +883,6 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
   // Append the last token after hitting EOF with no whitespace.
   if (!Token.empty())
     NewArgv.push_back(Saver.save(StringRef(Token)).data());
-  // Mark the end of response files
-  if (MarkEOLs)
-    NewArgv.push_back(nullptr);
 }
 
 /// Backslashes are interpreted in a rather complicated way in the Windows-style
@@ -956,11 +956,11 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
         ++I;
       StringRef NormalChars = Src.slice(Start, I);
       if (I >= E || isWhitespaceOrNull(Src[I])) {
-        if (I < E && Src[I] == '\n')
-          MarkEOL();
         // No special characters: slice out the substring and start the next
         // token. Copy the string if the caller asks us to.
         AddToken(AlwaysCopy ? Saver.save(NormalChars) : NormalChars);
+        if (I < E && Src[I] == '\n')
+          MarkEOL();
       } else if (Src[I] == '\"') {
         Token += NormalChars;
         State = QUOTED;
