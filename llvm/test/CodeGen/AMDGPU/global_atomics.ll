@@ -25,9 +25,8 @@ entry:
 ; SIVI: s_mov_b32 [[SREG:s[0-9]+]], 0x8ca0
 ; SIVI: buffer_atomic_add v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], [[SREG]]{{$}}
 
-; GFX9: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0x8000,
-; GFX9-NEXT: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
-; GFX9: global_atomic_add v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off offset:3232{{$}}
+; GFX9: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8000{{$}}
+; GFX9: global_atomic_add [[OFFSET]], v{{[0-9]+}}, s{{\[[0-9]:[0-9]+\]}} offset:3232{{$}}
 define amdgpu_kernel void @atomic_add_i32_soffset(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 9000
