@@ -1,114 +1,170 @@
 # RUN: yaml2obj --docnum=1 %s -o %t.o.1
 # RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-ALL,ELF-R600 %s
 # RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-R600 %s
+
 # RUN: yaml2obj --docnum=2 %s -o %t.o.2
 # RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-ALL,ELF-R630 %s
 # RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-R630 %s
+
 # RUN: yaml2obj --docnum=3 %s -o %t.o.3
 # RUN: llvm-readobj -S --file-headers %t.o.3 | FileCheck --check-prefixes=ELF-ALL,ELF-RS880 %s
 # RUN: obj2yaml %t.o.3 | FileCheck --check-prefixes=YAML-RS880 %s
+
 # RUN: yaml2obj --docnum=4 %s -o %t.o.4
 # RUN: llvm-readobj -S --file-headers %t.o.4 | FileCheck --check-prefixes=ELF-ALL,ELF-RV670 %s
 # RUN: obj2yaml %t.o.4 | FileCheck --check-prefixes=YAML-RV670 %s
+
 # RUN: yaml2obj --docnum=5 %s -o %t.o.5
 # RUN: llvm-readobj -S --file-headers %t.o.5 | FileCheck --check-prefixes=ELF-ALL,ELF-RV710 %s
 # RUN: obj2yaml %t.o.5 | FileCheck --check-prefixes=YAML-RV710 %s
+
 # RUN: yaml2obj --docnum=6 %s -o %t.o.6
 # RUN: llvm-readobj -S --file-headers %t.o.6 | FileCheck --check-prefixes=ELF-ALL,ELF-RV730 %s
 # RUN: obj2yaml %t.o.6 | FileCheck --check-prefixes=YAML-RV730 %s
+
 # RUN: yaml2obj --docnum=7 %s -o %t.o.7
 # RUN: llvm-readobj -S --file-headers %t.o.7 | FileCheck --check-prefixes=ELF-ALL,ELF-RV770 %s
 # RUN: obj2yaml %t.o.7 | FileCheck --check-prefixes=YAML-RV770 %s
+
 # RUN: yaml2obj --docnum=8 %s -o %t.o.8
 # RUN: llvm-readobj -S --file-headers %t.o.8 | FileCheck --check-prefixes=ELF-ALL,ELF-CEDAR %s
 # RUN: obj2yaml %t.o.8 | FileCheck --check-prefixes=YAML-CEDAR %s
+
 # RUN: yaml2obj --docnum=9 %s -o %t.o.9
 # RUN: llvm-readobj -S --file-headers %t.o.9 | FileCheck --check-prefixes=ELF-ALL,ELF-CYPRESS %s
 # RUN: obj2yaml %t.o.9 | FileCheck --check-prefixes=YAML-CYPRESS %s
+
 # RUN: yaml2obj --docnum=10 %s -o %t.o.10
 # RUN: llvm-readobj -S --file-headers %t.o.10 | FileCheck --check-prefixes=ELF-ALL,ELF-JUNIPER %s
 # RUN: obj2yaml %t.o.10 | FileCheck --check-prefixes=YAML-JUNIPER %s
+
 # RUN: yaml2obj --docnum=11 %s -o %t.o.11
 # RUN: llvm-readobj -S --file-headers %t.o.11 | FileCheck --check-prefixes=ELF-ALL,ELF-REDWOOD %s
 # RUN: obj2yaml %t.o.11 | FileCheck --check-prefixes=YAML-REDWOOD %s
+
 # RUN: yaml2obj --docnum=12 %s -o %t.o.12
 # RUN: llvm-readobj -S --file-headers %t.o.12 | FileCheck --check-prefixes=ELF-ALL,ELF-SUMO %s
 # RUN: obj2yaml %t.o.12 | FileCheck --check-prefixes=YAML-SUMO %s
+
 # RUN: yaml2obj --docnum=13 %s -o %t.o.13
 # RUN: llvm-readobj -S --file-headers %t.o.13 | FileCheck --check-prefixes=ELF-ALL,ELF-BARTS %s
 # RUN: obj2yaml %t.o.13 | FileCheck --check-prefixes=YAML-BARTS %s
+
 # RUN: yaml2obj --docnum=14 %s -o %t.o.14
 # RUN: llvm-readobj -S --file-headers %t.o.14 | FileCheck --check-prefixes=ELF-ALL,ELF-CAICOS %s
 # RUN: obj2yaml %t.o.14 | FileCheck --check-prefixes=YAML-CAICOS %s
+
 # RUN: yaml2obj --docnum=15 %s -o %t.o.15
 # RUN: llvm-readobj -S --file-headers %t.o.15 | FileCheck --check-prefixes=ELF-ALL,ELF-CAYMAN %s
 # RUN: obj2yaml %t.o.15 | FileCheck --check-prefixes=YAML-CAYMAN %s
+
 # RUN: yaml2obj --docnum=16 %s -o %t.o.16
 # RUN: llvm-readobj -S --file-headers %t.o.16 | FileCheck --check-prefixes=ELF-ALL,ELF-TURKS %s
 # RUN: obj2yaml %t.o.16 | FileCheck --check-prefixes=YAML-TURKS %s
+
 # RUN: yaml2obj --docnum=17 %s -o %t.o.17
 # RUN: llvm-readobj -S --file-headers %t.o.17 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX600 %s
 # RUN: obj2yaml %t.o.17 | FileCheck --check-prefixes=YAML-GFX600 %s
+
 # RUN: yaml2obj --docnum=18 %s -o %t.o.18
 # RUN: llvm-readobj -S --file-headers %t.o.18 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX601 %s
 # RUN: obj2yaml %t.o.18 | FileCheck --check-prefixes=YAML-GFX601 %s
+
 # RUN: yaml2obj --docnum=19 %s -o %t.o.19
 # RUN: llvm-readobj -S --file-headers %t.o.19 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX700 %s
 # RUN: obj2yaml %t.o.19 | FileCheck --check-prefixes=YAML-GFX700 %s
+
 # RUN: yaml2obj --docnum=20 %s -o %t.o.20
 # RUN: llvm-readobj -S --file-headers %t.o.20 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX701 %s
 # RUN: obj2yaml %t.o.20 | FileCheck --check-prefixes=YAML-GFX701 %s
+
 # RUN: yaml2obj --docnum=21 %s -o %t.o.21
 # RUN: llvm-readobj -S --file-headers %t.o.21 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX702 %s
 # RUN: obj2yaml %t.o.21 | FileCheck --check-prefixes=YAML-GFX702 %s
+
 # RUN: yaml2obj --docnum=22 %s -o %t.o.22
 # RUN: llvm-readobj -S --file-headers %t.o.22 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX703 %s
 # RUN: obj2yaml %t.o.22 | FileCheck --check-prefixes=YAML-GFX703 %s
+
 # RUN: yaml2obj --docnum=23 %s -o %t.o.23
 # RUN: llvm-readobj -S --file-headers %t.o.23 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX704 %s
 # RUN: obj2yaml %t.o.23 | FileCheck --check-prefixes=YAML-GFX704 %s
+
 # RUN: yaml2obj --docnum=24 %s -o %t.o.24
 # RUN: llvm-readobj -S --file-headers %t.o.24 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX801 %s
 # RUN: obj2yaml %t.o.24 | FileCheck --check-prefixes=YAML-GFX801 %s
+
 # RUN: yaml2obj --docnum=25 %s -o %t.o.25
 # RUN: llvm-readobj -S --file-headers %t.o.25 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX802 %s
 # RUN: obj2yaml %t.o.25 | FileCheck --check-prefixes=YAML-GFX802 %s
+
 # RUN: yaml2obj --docnum=26 %s -o %t.o.26
 # RUN: llvm-readobj -S --file-headers %t.o.26 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX803 %s
 # RUN: obj2yaml %t.o.26 | FileCheck --check-prefixes=YAML-GFX803 %s
+
 # RUN: yaml2obj --docnum=27 %s -o %t.o.27
 # RUN: llvm-readobj -S --file-headers %t.o.27 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX810 %s
 # RUN: obj2yaml %t.o.27 | FileCheck --check-prefixes=YAML-GFX810 %s
+
 # RUN: yaml2obj --docnum=28 %s -o %t.o.28
 # RUN: llvm-readobj -S --file-headers %t.o.28 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX900 %s
 # RUN: obj2yaml %t.o.28 | FileCheck --check-prefixes=YAML-GFX900 %s
+
 # RUN: yaml2obj --docnum=29 %s -o %t.o.29
 # RUN: llvm-readobj -S --file-headers %t.o.29 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX902 %s
 # RUN: obj2yaml %t.o.29 | FileCheck --check-prefixes=YAML-GFX902 %s
+
 # RUN: yaml2obj --docnum=30 %s -o %t.o.30
 # RUN: llvm-readobj -S --file-headers %t.o.30 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX904 %s
 # RUN: obj2yaml %t.o.30 | FileCheck --check-prefixes=YAML-GFX904 %s
+
 # RUN: yaml2obj --docnum=31 %s -o %t.o.31
 # RUN: llvm-readobj -S --file-headers %t.o.31 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX906 %s
 # RUN: obj2yaml %t.o.31 | FileCheck --check-prefixes=YAML-GFX906 %s
+
 # RUN: yaml2obj --docnum=32 %s -o %t.o.32
 # RUN: llvm-readobj -s -file-headers %t.o.32 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX908 %s
 # RUN: obj2yaml %t.o.32 | FileCheck --check-prefixes=YAML-GFX908 %s
+
 # RUN: yaml2obj --docnum=33 %s -o %t.o.33
 # RUN: llvm-readobj -s -file-headers %t.o.33 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX909 %s
 # RUN: obj2yaml %t.o.33 | FileCheck --check-prefixes=YAML-GFX909 %s
+
 # RUN: yaml2obj --docnum=34 %s -o %t.o.34
 # RUN: llvm-readobj -s -file-headers %t.o.34 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1010 %s
 # RUN: obj2yaml %t.o.34 | FileCheck --check-prefixes=YAML-GFX1010 %s
+
 # RUN: yaml2obj --docnum=35 %s -o %t.o.35
 # RUN: llvm-readobj -S --file-headers %t.o.35 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX602 %s
 # RUN: obj2yaml %t.o.35 | FileCheck --check-prefixes=YAML-GFX602 %s
+
 # RUN: yaml2obj --docnum=36 %s -o %t.o.36
 # RUN: llvm-readobj -S --file-headers %t.o.36 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX705 %s
 # RUN: obj2yaml %t.o.36 | FileCheck --check-prefixes=YAML-GFX705 %s
+
 # RUN: yaml2obj --docnum=37 %s -o %t.o.37
 # RUN: llvm-readobj -S --file-headers %t.o.37 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX805 %s
 # RUN: obj2yaml %t.o.37 | FileCheck --check-prefixes=YAML-GFX805 %s
+
+# RUN: yaml2obj --docnum=38 %s > %t.o.38
+# RUN: llvm-readobj -s -file-headers %t.o.38 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1011 %s
+# RUN: obj2yaml %t.o.38 | FileCheck --check-prefixes=YAML-GFX1011 %s
+
+# RUN: yaml2obj --docnum=39 %s > %t.o.39
+# RUN: llvm-readobj -s -file-headers %t.o.39 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1012 %s
+# RUN: obj2yaml %t.o.39 | FileCheck --check-prefixes=YAML-GFX1012 %s
+
+# RUN: yaml2obj --docnum=40 %s > %t.o.40
+# RUN: llvm-readobj -s -file-headers %t.o.40 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1030 %s
+# RUN: obj2yaml %t.o.40 | FileCheck --check-prefixes=YAML-GFX1030 %s
+
+# RUN: yaml2obj --docnum=41 %s > %t.o.41
+# RUN: llvm-readobj -s -file-headers %t.o.41 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1031 %s
+# RUN: obj2yaml %t.o.41 | FileCheck --check-prefixes=YAML-GFX1031 %s
+
+# RUN: yaml2obj --docnum=42 %s > %t.o.42
+# RUN: llvm-readobj -s -file-headers %t.o.42 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1032 %s
+# RUN: obj2yaml %t.o.42 | FileCheck --check-prefixes=YAML-GFX1032 %s
 
 # ELF-ALL:     Flags [
 # ELF-R600:      EF_AMDGPU_MACH_R600_R600     (0x1)
@@ -129,14 +185,17 @@
 # ELF-TURKS:     EF_AMDGPU_MACH_R600_TURKS    (0x10)
 # ELF-GFX600:    EF_AMDGPU_MACH_AMDGCN_GFX600 (0x20)
 # ELF-GFX601:    EF_AMDGPU_MACH_AMDGCN_GFX601 (0x21)
+# ELF-GFX602:    EF_AMDGPU_MACH_AMDGCN_GFX602 (0x3A)
 # ELF-GFX700:    EF_AMDGPU_MACH_AMDGCN_GFX700 (0x22)
 # ELF-GFX701:    EF_AMDGPU_MACH_AMDGCN_GFX701 (0x23)
 # ELF-GFX702:    EF_AMDGPU_MACH_AMDGCN_GFX702 (0x24)
 # ELF-GFX703:    EF_AMDGPU_MACH_AMDGCN_GFX703 (0x25)
 # ELF-GFX704:    EF_AMDGPU_MACH_AMDGCN_GFX704 (0x26)
+# ELF-GFX705:    EF_AMDGPU_MACH_AMDGCN_GFX705 (0x3B)
 # ELF-GFX801:    EF_AMDGPU_MACH_AMDGCN_GFX801 (0x28)
 # ELF-GFX802:    EF_AMDGPU_MACH_AMDGCN_GFX802 (0x29)
 # ELF-GFX803:    EF_AMDGPU_MACH_AMDGCN_GFX803 (0x2A)
+# ELF-GFX805:    EF_AMDGPU_MACH_AMDGCN_GFX805 (0x3C)
 # ELF-GFX810:    EF_AMDGPU_MACH_AMDGCN_GFX810 (0x2B)
 # ELF-GFX900:    EF_AMDGPU_MACH_AMDGCN_GFX900 (0x2C)
 # ELF-GFX902:    EF_AMDGPU_MACH_AMDGCN_GFX902 (0x2D)
@@ -145,9 +204,11 @@
 # ELF-GFX908:    EF_AMDGPU_MACH_AMDGCN_GFX908 (0x30)
 # ELF-GFX909:    EF_AMDGPU_MACH_AMDGCN_GFX909 (0x31)
 # ELF-GFX1010:   EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
-# ELF-GFX602:    EF_AMDGPU_MACH_AMDGCN_GFX602 (0x3A)
-# ELF-GFX705:    EF_AMDGPU_MACH_AMDGCN_GFX705 (0x3B)
-# ELF-GFX805:    EF_AMDGPU_MACH_AMDGCN_GFX805 (0x3C)
+# ELF-GFX1011:   EF_AMDGPU_MACH_AMDGCN_GFX1011 (0x34)
+# ELF-GFX1012:   EF_AMDGPU_MACH_AMDGCN_GFX1012 (0x35)
+# ELF-GFX1030:   EF_AMDGPU_MACH_AMDGCN_GFX1030 (0x36)
+# ELF-GFX1031:   EF_AMDGPU_MACH_AMDGCN_GFX1031 (0x37)
+# ELF-GFX1032:   EF_AMDGPU_MACH_AMDGCN_GFX1032 (0x38)
 # ELF-ALL:     ]
 
 # YAML-R600:    Flags: [ EF_AMDGPU_MACH_R600_R600 ]
@@ -187,6 +248,11 @@
 # YAML-GFX908:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX908 ]
 # YAML-GFX909:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
 # YAML-GFX1010: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
+# YAML-GFX1011: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1011 ]
+# YAML-GFX1012: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1012 ]
+# YAML-GFX1030: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1030 ]
+# YAML-GFX1031: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1031 ]
+# YAML-GFX1032: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1032 ]
 
 # Doc1
 --- !ELF
@@ -595,3 +661,57 @@ FileHeader:
   Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX805 ]
 ...
 
+# Doc38
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1011 ]
+...
+
+# Doc39
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1012 ]
+...
+
+# Doc40
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1030 ]
+...
+
+# Doc41
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1031 ]
+...
+
+# Doc42
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1032 ]
+...
