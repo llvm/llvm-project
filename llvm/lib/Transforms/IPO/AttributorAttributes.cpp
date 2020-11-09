@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/Support/CommandLine.h"
@@ -5526,8 +5527,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         new StoreInst(F.getArg(ArgNo + u), Ptr, &IP);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
-      Type *PointeePtrTy = PrivArrayType->getElementType()->getPointerTo();
-      uint64_t PointeeTySize = DL.getTypeStoreSize(PointeePtrTy);
+      Type *PointeeTy = PrivArrayType->getElementType();
+      Type *PointeePtrTy = PointeeTy->getPointerTo();
+      uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
         Value *Ptr =
             constructPointer(PointeePtrTy, &Base, u * PointeeTySize, IRB, DL);
@@ -5573,7 +5575,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
         Value *Ptr =
             constructPointer(PointeePtrTy, Base, u * PointeeTySize, IRB, DL);
-        LoadInst *L = new LoadInst(PointeePtrTy, Ptr, "", IP);
+        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
         L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
@@ -5617,10 +5619,14 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
           Instruction *IP = &*EntryBB.getFirstInsertionPt();
-          auto *AI = new AllocaInst(PrivatizableType.getValue(), 0,
-                                    Arg->getName() + ".priv", IP);
+          Instruction *AI = new AllocaInst(PrivatizableType.getValue(), 0,
+                                           Arg->getName() + ".priv", IP);
           createInitialization(PrivatizableType.getValue(), *AI, ReplacementFn,
                                ArgIt->getArgNo(), *IP);
+
+          if (AI->getType() != Arg->getType())
+            AI =
+                BitCastInst::CreateBitOrPointerCast(AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
           for (CallInst *CI : TailCalls)
