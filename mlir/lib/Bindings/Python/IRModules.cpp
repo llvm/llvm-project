@@ -2234,6 +2234,16 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                 .releaseObject();
           },
           "Accesses the module as an operation")
+      .def_property_readonly(
+          "body",
+          [](PyModule &self) {
+            PyOperationRef module_op = PyOperation::forOperation(
+                self.getContext(), mlirModuleGetOperation(self.get()),
+                self.getRef().releaseObject());
+            PyBlock returnBlock(module_op, mlirModuleGetBody(self.get()));
+            return returnBlock;
+          },
+          "Return the block for this module")
       .def(
           "dump",
           [](PyModule &self) {
