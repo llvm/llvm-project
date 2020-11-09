@@ -25,7 +25,14 @@ function generate-cmake() {
           -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
           -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
           -DLIBCXX_CXX_ABI=libcxxabi \
-          ${@}
+          "${@}"
+}
+
+function download-osx-roots() {
+  echo "--- Downloading previous macOS dylibs"
+  PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
+  mkdir -p "${BUILD_DIR}/macos-roots"
+  curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${BUILD_DIR}/macos-roots"
 }
 
 function check-cxx-cxxabi() {
@@ -162,6 +169,28 @@ x86_64-apple-system-noexceptions)
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     check-cxx-cxxabi
+;;
+x86_64-apple-system-backdeployment-*)
+  DEPLOYMENT_TARGET="${BUILDER#x86_64-apple-system-backdeployment-}"
+  PARAMS="target_triple=x86_64-apple-macosx${DEPLOYMENT_TARGET}"
+  PARAMS+=";cxx_runtime_root=${BUILD_DIR}/macos-roots/macOS/libc++/${DEPLOYMENT_TARGET}"
+  PARAMS+=";abi_library_path=${BUILD_DIR}/macos-roots/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+  PARAMS+=";use_system_cxx_lib=True"
+  # Filesystem is supported on Apple platforms starting with macosx10.15.
+  if [[ ${DEPLOYMENT_TARGET} =~ ^10.9|10.10|10.11|10.12|10.13|10.14$ ]]; then
+      PARAMS+=";enable_filesystem=False"
+  fi
+
+  export CC=clang
+  export CXX=clang++
+  generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                 -DLIBCXX_TEST_PARAMS="${PARAMS}" \
+                 -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
+  download-osx-roots
+
+  # TODO: Also run the libc++abi tests
+  echo "+++ Running the libc++ tests"
+  ninja -C "${BUILD_DIR}" check-cxx
 ;;
 benchmarks)
     export CC=clang

@@ -13,13 +13,18 @@
 // unique_lock.
 // UNSUPPORTED: c++03
 
+// PR30202 was fixed starting in macosx10.13.
+// UNSUPPORTED: with_system_cxx_lib=macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+
 // <condition_variable>
 
-// void
-//   notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk);
+// void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk);
 
 // Test that this function works with threads that were not created by
-// std::thread. See: https://bugs.llvm.org/show_bug.cgi?id=30202
+// std::thread. See https://llvm.org/PR30202
 
 
 #include <condition_variable>
