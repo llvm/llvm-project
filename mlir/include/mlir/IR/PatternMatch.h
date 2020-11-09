@@ -241,43 +241,6 @@ template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
 ///
 class PatternRewriter : public OpBuilder, public OpBuilder::Listener {
 public:
-  /// Create operation of specific op type at the current insertion point
-  /// without verifying to see if it is valid.
-  template <typename OpTy, typename... Args>
-  OpTy create(Location location, Args... args) {
-    OperationState state(location, OpTy::getOperationName());
-    if (!state.name.getAbstractOperation())
-      llvm::report_fatal_error("Building op `" + state.name.getStringRef() +
-                               "` but it isn't registered in this MLIRContext");
-    OpTy::build(*this, state, args...);
-    auto *op = createOperation(state);
-    auto result = dyn_cast<OpTy>(op);
-    assert(result && "Builder didn't return the right type");
-    return result;
-  }
-
-  /// Creates an operation of specific op type at the current insertion point.
-  /// If the result is an invalid op (the verifier hook fails), emit an error
-  /// and return null.
-  template <typename OpTy, typename... Args>
-  OpTy createChecked(Location location, Args... args) {
-    OperationState state(location, OpTy::getOperationName());
-    OpTy::build(*this, state, args...);
-    auto *op = createOperation(state);
-
-    // If the Operation we produce is valid, return it.
-    if (!OpTy::verifyInvariants(op)) {
-      auto result = dyn_cast<OpTy>(op);
-      assert(result && "Builder didn't return the right type");
-      return result;
-    }
-
-    // Otherwise, the error message got emitted.  Just remove the operation
-    // we made.
-    op->erase();
-    return OpTy();
-  }
-
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
