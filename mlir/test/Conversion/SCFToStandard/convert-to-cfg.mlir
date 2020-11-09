@@ -424,8 +424,29 @@ func @minimal_while() {
     scf.condition(%0)
   } do {
   // CHECK: ^[[AFTER]]:
+  // CHECK:   "test.some_payload"() : () -> ()
+    "test.some_payload"() : () -> ()
   // CHECK:   br ^[[BEFORE]]
     scf.yield
+  }
+  // CHECK: ^[[CONT]]:
+  // CHECK:   return
+  return
+}
+
+// CHECK-LABEL: @do_while
+func @do_while(%arg0: f32) {
+  // CHECK:   br ^[[BEFORE:.*]]({{.*}}: f32)
+  scf.while (%arg1 = %arg0) : (f32) -> (f32) {
+  // CHECK: ^[[BEFORE]](%[[VAL:.*]]: f32):
+    // CHECK:   %[[COND:.*]] = "test.make_condition"() : () -> i1
+    %0 = "test.make_condition"() : () -> i1
+    // CHECK:   cond_br %[[COND]], ^[[BEFORE]](%[[VAL]] : f32), ^[[CONT:.*]]
+    scf.condition(%0) %arg1 : f32
+  } do {
+  ^bb0(%arg2: f32):
+    // CHECK-NOT: br ^[[BEFORE]]
+    scf.yield %arg2 : f32
   }
   // CHECK: ^[[CONT]]:
   // CHECK:   return

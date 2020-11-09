@@ -266,6 +266,17 @@ struct WhileLowering : public OpRewritePattern<WhileOp> {
   LogicalResult matchAndRewrite(WhileOp whileOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+/// Optimized version of the above for the case of the "after" region merely
+/// forwarding its arguments back to the "before" region (i.e., a "do-while"
+/// loop). This avoid inlining the "after" region completely and branches back
+/// to the "before" entry instead.
+struct DoWhileLowering : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp whileOp,
+                                PatternRewriter &rewriter) const override;
+};
 } // namespace
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -507,10 +518,60 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
   return success();
 }
 
+LogicalResult
+DoWhileLowering::matchAndRewrite(WhileOp whileOp,
+                                 PatternRewriter &rewriter) const {
+  if (!llvm::hasSingleElement(whileOp.after()))
+    return rewriter.notifyMatchFailure(whileOp,
+                                       "do-while simplification applicable to "
+                                       "single-block 'after' region only");
+
+  Block &afterBlock = whileOp.after().front();
+  if (!llvm::hasSingleElement(afterBlock))
+    return rewriter.notifyMatchFailure(whileOp,
+                                       "do-while simplification applicable "
+                                       "only if 'after' region has no payload");
+
+  auto yield = dyn_cast<scf::YieldOp>(&afterBlock.front());
+  if (!yield || yield.results() != afterBlock.getArguments())
+    return rewriter.notifyMatchFailure(whileOp,
+                                       "do-while simplification applicable "
+                                       "only to forwarding 'after' regions");
+
+  // Split the current block before the WhileOp to create the inlining point.
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block *currentBlock = rewriter.getInsertionBlock();
+  Block *continuation =
+      rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+
+  // Only the "before" region should be inlined.
+  Block *before = &whileOp.before().front();
+  Block *beforeLast = &whileOp.before().back();
+  rewriter.inlineRegionBefore(whileOp.before(), continuation);
+
+  // Branch to the "before" region.
+  rewriter.setInsertionPointToEnd(currentBlock);
+  rewriter.create<BranchOp>(whileOp.getLoc(), before, whileOp.inits());
+
+  // Loop around the "before" region based on condition.
+  rewriter.setInsertionPointToEnd(beforeLast);
+  auto condOp = cast<ConditionOp>(beforeLast->getTerminator());
+  rewriter.replaceOpWithNewOp<CondBranchOp>(condOp, condOp.condition(), before,
+                                            condOp.args(), continuation,
+                                            ValueRange());
+
+  // Replace the op with values "yielded" from the "before" region, which are
+  // visible by dominance.
+  rewriter.replaceOp(whileOp, condOp.args());
+
+  return success();
+}
+
 void mlir::populateLoopToStdConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
   patterns.insert<ForLowering, IfLowering, ParallelLowering, WhileLowering>(
       ctx);
+  patterns.insert<DoWhileLowering>(ctx, /*benefit=*/2);
 }
 
 void SCFToStandardPass::runOnOperation() {
