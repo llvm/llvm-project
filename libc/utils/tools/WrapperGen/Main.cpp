@@ -47,6 +47,20 @@ static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
   for (size_t i = 0; i < ArgsList.size(); ++i) {
     llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
     auto TypeName = Indexer.getTypeAsString(ArgType);
+
+    if (TypeName.compare("void") == 0) {
+      if (ArgsList.size() == 1) {
+        break;
+      } else {
+        // the reason this is a fatal error is that a void argument means this
+        // function has no arguments; multiple copies of no arguments is an
+        // error.
+        llvm::PrintFatalError(
+            "The specification for function " + FunctionName +
+            " lists other arguments along with a void argument.");
+      }
+    }
+
     OS << TypeName << " " << ArgPrefix << i;
     CallArgs << ArgPrefix << i;
     if (i < ArgsList.size() - 1) {
