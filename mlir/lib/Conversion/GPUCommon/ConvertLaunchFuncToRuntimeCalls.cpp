@@ -88,6 +88,8 @@ protected:
       "mgpuModuleLoad",
       llvmPointerType /* void *module */,
       {llvmPointerType /* void *cubin */}};
+  FunctionCallBuilder moduleUnloadCallBuilder = {
+      "mgpuModuleUnload", llvmVoidType, {llvmPointerType /* void *module */}};
   FunctionCallBuilder moduleGetFunctionCallBuilder = {
       "mgpuModuleGetFunction",
       llvmPointerType /* void *function */,
@@ -490,6 +492,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
        kernelParams,                /* kernel params */
        nullpointer /* extra */});
   streamSynchronizeCallBuilder.create(loc, rewriter, stream.getResult(0));
+  streamDestroyCallBuilder.create(loc, rewriter, stream.getResult(0));
+  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult(0));
 
   rewriter.eraseOp(op);
   return success();
