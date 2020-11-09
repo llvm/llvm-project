@@ -562,6 +562,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("con", tgtok::XConcat)
     .Case("dag", tgtok::XDag)
     .Case("add", tgtok::XADD)
+    .Case("sub", tgtok::XSUB)
     .Case("mul", tgtok::XMUL)
     .Case("not", tgtok::XNOT)
     .Case("and", tgtok::XAND)

@@ -1075,6 +1075,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
 
   case tgtok::XConcat:
   case tgtok::XADD:
+  case tgtok::XSUB:
   case tgtok::XMUL:
   case tgtok::XAND:
   case tgtok::XOR:
@@ -1101,6 +1102,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XConcat: Code = BinOpInit::CONCAT; break;
     case tgtok::XADD:    Code = BinOpInit::ADD; break;
+    case tgtok::XSUB:    Code = BinOpInit::SUB; break;
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
     case tgtok::XAND:    Code = BinOpInit::AND; break;
     case tgtok::XOR:     Code = BinOpInit::OR; break;
@@ -1137,6 +1139,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XSRL:
     case tgtok::XSHL:
     case tgtok::XADD:
+    case tgtok::XSUB:
     case tgtok::XMUL:
       Type = IntRecTy::get();
       ArgType = IntRecTy::get();
@@ -1249,10 +1252,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
                              ListType->getAsString() + "'");
           return nullptr;
         }
-        if (Code != BinOpInit::ADD && Code != BinOpInit::AND &&
-            Code != BinOpInit::OR && Code != BinOpInit::XOR &&
-            Code != BinOpInit::SRA && Code != BinOpInit::SRL &&
-            Code != BinOpInit::SHL && Code != BinOpInit::MUL)
+        if (Code != BinOpInit::ADD && Code != BinOpInit::SUB &&
+            Code != BinOpInit::AND && Code != BinOpInit::OR &&
+            Code != BinOpInit::XOR && Code != BinOpInit::SRA &&
+            Code != BinOpInit::SRL && Code != BinOpInit::SHL &&
+            Code != BinOpInit::MUL)
           ArgType = Resolved;
       }
 
@@ -1799,6 +1803,7 @@ Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
 ///   SimpleValue ::= '(' IDValue DagArgList ')'
 ///   SimpleValue ::= CONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= ADDTOK '(' Value ',' Value ')'
+///   SimpleValue ::= SUBTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SHLTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SRATOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SRLTOK '(' Value ',' Value ')'
@@ -2094,6 +2099,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XConcat:
   case tgtok::XDag:
   case tgtok::XADD:
+  case tgtok::XSUB:
   case tgtok::XMUL:
   case tgtok::XNOT:
   case tgtok::XAND:
