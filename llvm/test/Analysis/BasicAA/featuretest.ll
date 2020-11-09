@@ -128,7 +128,7 @@ define i32 @gep_distance_test3(i32 * %A) {
 ; USE_ASSUME-LABEL: @gep_distance_test3(
 ; USE_ASSUME-NEXT:    [[C1:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 1
 ; USE_ASSUME-NEXT:    [[C:%.*]] = bitcast i32* [[C1]] to i8*
-; USE_ASSUME-NEXT:    store i8 42, i8* [[C]], align 1
+; USE_ASSUME-NEXT:    store i8 42, i8* [[C]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A]], i64 4), "nonnull"(i32* [[A]]), "align"(i32* [[A]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
