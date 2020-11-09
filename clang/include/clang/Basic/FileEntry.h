@@ -167,11 +167,12 @@ namespace optional_detail {
 /// Customize OptionalStorage<FileEntryRef> to use FileEntryRef and its
 /// optional_none_tag to keep it the size of a single pointer.
 template <> class OptionalStorage<clang::FileEntryRef> {
-  clang::FileEntryRef MaybeRef = clang::FileEntryRef::optional_none_tag{};
+  clang::FileEntryRef MaybeRef;
 
 public:
   ~OptionalStorage() = default;
-  constexpr OptionalStorage() noexcept = default;
+  constexpr OptionalStorage() noexcept
+      : MaybeRef(clang::FileEntryRef::optional_none_tag) {}
   constexpr OptionalStorage(OptionalStorage const &Other) = default;
   constexpr OptionalStorage(OptionalStorage &&Other) = default;
   OptionalStorage &operator=(OptionalStorage const &Other) = default;
