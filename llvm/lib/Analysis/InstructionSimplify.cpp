@@ -3019,13 +3019,17 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
             return ConstantInt::getTrue(RHS->getContext());
         }
       }
-      if (CIVal->isSignMask() && CI2Val->isOneValue()) {
-        if (Pred == ICmpInst::ICMP_UGT)
-          return ConstantInt::getFalse(RHS->getContext());
-        if (Pred == ICmpInst::ICMP_ULE)
-          return ConstantInt::getTrue(RHS->getContext());
-      }
     }
+  }
+
+  // TODO: This is overly constrained. LHS can be any power-of-2.
+  // (1 << X)  >u 0x8000 --> false
+  // (1 << X) <=u 0x8000 --> true
+  if (match(LHS, m_Shl(m_One(), m_Value())) && match(RHS, m_SignMask())) {
+    if (Pred == ICmpInst::ICMP_UGT)
+      return ConstantInt::getFalse(GetCompareTy(RHS));
+    if (Pred == ICmpInst::ICMP_ULE)
+      return ConstantInt::getTrue(GetCompareTy(RHS));
   }
 
   if (MaxRecurse && LBO && RBO && LBO->getOpcode() == RBO->getOpcode() &&
