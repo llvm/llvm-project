@@ -784,6 +784,9 @@ public:
     return isOSBinFormatXCOFF() || isWasm();
   }
 
+  /// Tests if the environment supports dllimport/export annotations.
+  bool hasDLLImportExport() const { return isOSWindows() || isPS4CPU(); }
+
   /// @}
   /// @name Mutators
   /// @{
