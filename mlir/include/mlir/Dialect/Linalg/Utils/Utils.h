@@ -88,27 +88,22 @@ bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
 /// transformation and thus requires the `consumerdIdx`^th operand of `consumer`
 /// to be a `subview` op (generally obtained by applying the tiling
 /// transformation).
-/// When non-null, the optional pointer `folder` is used to call into the
-/// `createAndFold` builder method. If `folder` is null, the regular `create`
-/// method is called.
 Optional<FusionInfo> fuseProducerOfBuffer(OpBuilder &b, LinalgOp consumer,
                                           unsigned consumerIdx,
-                                          const LinalgDependenceGraph &graph,
-                                          OperationFolder *folder = nullptr);
+                                          const LinalgDependenceGraph &graph);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerdIdx`^th operand of `consumer`
 /// to be the result of a `subtensor` op (generally obtained by applying the
 /// tiling transformation).
 Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b, LinalgOp consumer,
-                                          unsigned consumerIdx,
-                                          OperationFolder *folder);
+                                          unsigned consumerIdx);
 
 /// Fuse linalg operation on tensors, with the producer of the operand at
 /// position `consumerIdx` of the consumer.
-Optional<SmallVector<Value, 1>>
-fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
-              unsigned consumerIdx, OperationFolder *folder = nullptr);
+Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
+                                              Operation *consumer,
+                                              unsigned consumerIdx);
 
 /// Returns the linearized list of all shape dimensions in a `linalgOp`.
 /// Applying the inverse, concatenated loopToOperandRangeMaps to this list
@@ -122,17 +117,12 @@ SmallVector<Value, 8> getShape(OpBuilder &builder, ConcreteOpTy linalgOp) {
 /// Returns the loop ranges of the `linalgOp`. Applies the inverse of the
 /// concatenated indexing maps to the result of `getShape`. Returns None if
 /// the bounds computation fails.
-Optional<SmallVector<Value, 4>>
-getLoopRanges(OpBuilder &builder, LinalgOp linalgOp,
-              OperationFolder *folder = nullptr);
+Optional<SmallVector<Value, 4>> getLoopRanges(OpBuilder &builder,
+                                              LinalgOp linalgOp);
 
 /// Returns the values obtained by applying `map` to the list of values.
-/// When non-null, the optional pointer `folder` is used to call into the
-/// `createAndFold` builder method. If `folder` is null, the regular `create`
-/// method is called.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
-                                       AffineMap map, ValueRange values,
-                                       OperationFolder *folder = nullptr);
+                                       AffineMap map, ValueRange values);
 
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
