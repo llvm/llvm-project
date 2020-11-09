@@ -26,6 +26,9 @@ namespace llvm {
 
 template <typename T> struct DenseMapInfo;
 
+class FoldingSetNodeID;
+template <typename T> struct FoldingSetTrait;
+
 } // namespace llvm
 
 namespace clang {
@@ -87,6 +90,7 @@ class SourceLocation {
   friend class ASTReader;
   friend class ASTWriter;
   friend class SourceManager;
+  friend struct llvm::FoldingSetTrait<SourceLocation>;
 
   unsigned ID = 0;
 
@@ -499,6 +503,11 @@ namespace llvm {
     static bool isEqual(clang::SourceLocation LHS, clang::SourceLocation RHS) {
       return LHS == RHS;
     }
+  };
+
+  // Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
+  template <> struct FoldingSetTrait<clang::SourceLocation> {
+    static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
   };
 
   // Teach SmallPtrSet how to handle SourceLocation.
