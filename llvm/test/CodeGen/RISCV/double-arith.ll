@@ -543,8 +543,7 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    fcvt.d.w ft3, zero
 ; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
 ; RV32IFD-NEXT:    fadd.d ft1, ft1, ft3
-; RV32IFD-NEXT:    fneg.d ft2, ft2
-; RV32IFD-NEXT:    fmsub.d ft0, ft0, ft2, ft1
+; RV32IFD-NEXT:    fnmadd.d ft0, ft0, ft2, ft1
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
@@ -559,8 +558,7 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV64IFD-NEXT:    fmv.d.x ft3, zero
 ; RV64IFD-NEXT:    fadd.d ft2, ft2, ft3
 ; RV64IFD-NEXT:    fadd.d ft1, ft1, ft3
-; RV64IFD-NEXT:    fneg.d ft2, ft2
-; RV64IFD-NEXT:    fmsub.d ft0, ft0, ft2, ft1
+; RV64IFD-NEXT:    fnmadd.d ft0, ft0, ft2, ft1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %b_ = fadd double 0.0, %b
@@ -624,8 +622,7 @@ define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    fld ft2, 8(sp)
 ; RV32IFD-NEXT:    fcvt.d.w ft3, zero
 ; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
-; RV32IFD-NEXT:    fneg.d ft2, ft2
-; RV32IFD-NEXT:    fmadd.d ft0, ft1, ft2, ft0
+; RV32IFD-NEXT:    fnmsub.d ft0, ft1, ft2, ft0
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
@@ -639,8 +636,7 @@ define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV64IFD-NEXT:    fmv.d.x ft2, a1
 ; RV64IFD-NEXT:    fmv.d.x ft3, zero
 ; RV64IFD-NEXT:    fadd.d ft2, ft2, ft3
-; RV64IFD-NEXT:    fneg.d ft2, ft2
-; RV64IFD-NEXT:    fmadd.d ft0, ft1, ft2, ft0
+; RV64IFD-NEXT:    fnmsub.d ft0, ft1, ft2, ft0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %b_ = fadd double 0.0, %b
