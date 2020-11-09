@@ -511,6 +511,9 @@ main:
     # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xba,0x01]
     i32x4.dot_i16x8_s
 
+    # CHECK: i64x2.eq # encoding: [0xfd,0xc0,0x01]
+    i64x2.eq
+
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg
 

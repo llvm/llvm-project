@@ -294,6 +294,13 @@ def int_wasm_signselect :
             [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
+// TODO: Remove this intrinsic and the associated builtin if i64x2.eq gets
+// merged to the proposal.
+def int_wasm_eq :
+  Intrinsic<[llvm_v2i64_ty],
+            [llvm_v2i64_ty, llvm_v2i64_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//
