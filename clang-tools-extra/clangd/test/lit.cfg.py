@@ -1,7 +1,7 @@
 import lit.llvm
 
 lit.llvm.initialize(lit_config, config)
-lit.llvm.llvm_config.use_clang()
+lit.llvm.llvm_config.use_clang([], [], required=False)
 lit.llvm.llvm_config.use_default_substitutions()
 
 config.name = 'Clangd'
