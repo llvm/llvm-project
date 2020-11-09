@@ -978,16 +978,15 @@ void Writer::createMiscChunks() {
   }
 
   if (config->cetCompat) {
-    ExtendedDllCharacteristicsChunk *extendedDllChars =
-        make<ExtendedDllCharacteristicsChunk>(
-            IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT);
-    debugRecords.push_back(
-        {COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS, extendedDllChars});
+    debugRecords.push_back({COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
+                            make<ExtendedDllCharacteristicsChunk>(
+                                IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT)});
   }
 
-  if (debugRecords.size() > 0) {
-    for (std::pair<COFF::DebugType, Chunk *> r : debugRecords)
-      debugInfoSec->addChunk(r.second);
+  // Align and add each chunk referenced by the debug data directory.
+  for (std::pair<COFF::DebugType, Chunk *> r : debugRecords) {
+    r.second->setAlignment(4);
+    debugInfoSec->addChunk(r.second);
   }
 
   // Create SEH table. x86-only.
