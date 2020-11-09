@@ -92,7 +92,7 @@ namespace mlir {
 namespace detail {
 struct OpPassManagerImpl {
   OpPassManagerImpl(Identifier identifier, OpPassManager::Nesting nesting)
-      : name(identifier), identifier(identifier), nesting(nesting) {}
+      : name(identifier.str()), identifier(identifier), nesting(nesting) {}
   OpPassManagerImpl(StringRef name, OpPassManager::Nesting nesting)
       : name(name), nesting(nesting) {}
 
@@ -123,7 +123,7 @@ struct OpPassManagerImpl {
   }
 
   /// The name of the operation that passes of this pass manager operate on.
-  StringRef name;
+  std::string name;
 
   /// The cached identifier (internalized in the context) for the name of the
   /// operation that passes of this pass manager operate on.
@@ -164,7 +164,7 @@ void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
   // If this pass runs on a different operation than this pass manager, then
   // implicitly nest a pass manager for this operation if enabled.
   auto passOpName = pass->getOpName();
-  if (passOpName && passOpName != name) {
+  if (passOpName && passOpName->str() != name) {
     if (nesting == OpPassManager::Nesting::Implicit)
       return nest(*passOpName).addPass(std::move(pass));
     llvm::report_fatal_error(llvm::Twine("Can't add pass '") + pass->getName() +
