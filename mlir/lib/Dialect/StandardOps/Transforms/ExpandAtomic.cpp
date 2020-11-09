@@ -57,7 +57,8 @@ public:
     auto loc = op.getLoc();
     auto genericOp =
         rewriter.create<GenericAtomicRMWOp>(loc, op.memref(), op.indices());
-    OpBuilder bodyBuilder = OpBuilder::atBlockEnd(genericOp.getBody());
+    OpBuilder bodyBuilder =
+        OpBuilder::atBlockEnd(genericOp.getBody(), rewriter.getListener());
 
     Value lhs = genericOp.getCurrentValue();
     Value rhs = op.value();
@@ -76,7 +77,7 @@ struct ExpandAtomic : public ExpandAtomicBase<ExpandAtomic> {
     patterns.insert<AtomicRMWOpConverter>(&getContext());
 
     ConversionTarget target(getContext());
-    target.addLegalOp<GenericAtomicRMWOp>();
+    target.addLegalDialect<StandardOpsDialect>();
     target.addDynamicallyLegalOp<AtomicRMWOp>([](AtomicRMWOp op) {
       return op.kind() != AtomicRMWKind::maxf &&
              op.kind() != AtomicRMWKind::minf;
