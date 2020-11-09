@@ -792,8 +792,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!dwarf_ast)
     return nullptr;
 
-  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die,
-                                           m_first_code_address);
+  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
 }
 
 lldb::addr_t SymbolFileDWARF::FixupAddress(lldb::addr_t file_addr) {
