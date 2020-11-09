@@ -1065,6 +1065,11 @@ public:
                                              NamedAttrList &attrs) override {
     return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
   }
+  OptionalParseResult parseOptionalAttribute(StringAttr &result, Type type,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) override {
+    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
+  }
 
   /// Parse a named dictionary into 'result' if it is present.
   ParseResult parseOptionalAttrDict(NamedAttrList &result) override {
