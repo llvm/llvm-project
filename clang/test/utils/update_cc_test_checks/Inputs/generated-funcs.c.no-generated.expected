@@ -41,7 +41,7 @@ void foo(void);
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]]
+// NOOMP-NEXT:    br label [[FOR_COND]], [[LOOP2:!llvm.loop !.*]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    call void @foo()
 // NOOMP-NEXT:    ret i32 0
@@ -86,7 +86,7 @@ int main() {
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]]
+// NOOMP-NEXT:    br label [[FOR_COND]], [[LOOP4:!llvm.loop !.*]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    ret void
 //

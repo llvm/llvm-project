@@ -40,13 +40,13 @@ void loop4(int *List, int Length) {
     List[i] = i * 2;
 }
 
-// CHECK: ![[LOOP1]] = distinct !{![[LOOP1]], ![[VEC_WIDTH_1:.*]], ![[VEC_ENABLE:.*]]}
+// CHECK: ![[LOOP1]] = distinct !{![[LOOP1]], [[MP:![0-9]+]], ![[VEC_WIDTH_1:.*]], ![[VEC_ENABLE:.*]]}
 // CHECK: ![[VEC_WIDTH_1]] = !{!"llvm.loop.vectorize.width", i32 1}
 // CHECK: ![[VEC_ENABLE]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
-// CHECK: ![[LOOP2]] = distinct !{![[LOOP2]], ![[VEC_WIDTH_2:.*]], ![[VEC_ENABLE]]}
+// CHECK: ![[LOOP2]] = distinct !{![[LOOP2]], [[MP]], ![[VEC_WIDTH_2:.*]], ![[VEC_ENABLE]]}
 // CHECK: ![[VEC_WIDTH_2]] = !{!"llvm.loop.vectorize.width", i32 2}
 
-// CHECK: ![[LOOP3]] = distinct !{![[LOOP3]], ![[VEC_WIDTH_1]]}
+// CHECK: ![[LOOP3]] = distinct !{![[LOOP3]], [[MP]], ![[VEC_WIDTH_1]]}
 
-// CHECK: ![[LOOP4]] = distinct !{![[LOOP4]], ![[VEC_WIDTH_2]], ![[VEC_ENABLE]]}
+// CHECK: ![[LOOP4]] = distinct !{![[LOOP4]], [[MP]], ![[VEC_WIDTH_2]], ![[VEC_ENABLE]]}

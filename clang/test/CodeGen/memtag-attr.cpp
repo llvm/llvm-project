@@ -9,11 +9,11 @@
 // RUN:   FileCheck -check-prefix=CHECK-MEMTAG %s
 
 int HasSanitizeMemTag() { return 1; }
-// CHECK-NO: {{Function Attrs: noinline nounwind$}}
+// CHECK-NO: {{Function Attrs: noinline nounwind mustprogress$}}
 // CHECK-MEMTAG: Function Attrs: noinline nounwind sanitize_memtag
 
 __attribute__((no_sanitize("memtag"))) int NoSanitizeQuoteAddress() {
   return 0;
 }
-// CHECK-NO: {{Function Attrs: noinline nounwind$}}
-// CHECK-MEMTAG: {{Function Attrs: noinline nounwind$}}
+// CHECK-NO: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-MEMTAG: {{Function Attrs: noinline nounwind mustprogress$}}

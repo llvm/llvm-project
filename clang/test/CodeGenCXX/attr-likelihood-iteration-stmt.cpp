@@ -9,7 +9,7 @@ void wl(int e){
 
 void wu(int e){
   // CHECK-LABEL: define{{.*}}wu
-  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !10
   while(e) [[unlikely]] ++e;
 }
 
@@ -31,7 +31,7 @@ void fl(unsigned e)
 void fu(int e)
 {
   // CHECK-LABEL: define{{.*}}fu
-  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !10
   for(int i = 0; i != e; ++e) [[unlikely]];
 }
 
@@ -52,9 +52,9 @@ void frl(int (&&e) [4])
 void fru(int (&&e) [4])
 {
   // CHECK-LABEL: define{{.*}}fru
-  // CHECK: br {{.*}} !prof !9
+  // CHECK: br {{.*}} !prof !10
   for(int i : e) [[unlikely]];
 }
 
 // CHECK: !6 = !{!"branch_weights", i32 2000, i32 1}
-// CHECK: !9 = !{!"branch_weights", i32 1, i32 2000}
+// CHECK: !10 = !{!"branch_weights", i32 1, i32 2000}
