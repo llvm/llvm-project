@@ -15,9 +15,12 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/IR/InstrTypes.h"
 #include <cstdint>
 
 namespace llvm {
+
 namespace AArch64GISelUtils {
 
 /// \returns true if \p C is a legal immediate operand for an arithmetic
@@ -35,6 +38,11 @@ Optional<RegOrConstant> getAArch64VectorSplat(const MachineInstr &MI,
 /// Checks for generic opcodes and AArch64-specific generic opcodes.
 Optional<int64_t> getAArch64VectorSplatScalar(const MachineInstr &MI,
                                               const MachineRegisterInfo &MRI);
+
+/// \returns true if \p MaybeSub and \p Pred are part of a CMN tree for an
+/// integer compare.
+bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
+           const MachineRegisterInfo &MRI);
 
 } // namespace AArch64GISelUtils
 } // namespace llvm
