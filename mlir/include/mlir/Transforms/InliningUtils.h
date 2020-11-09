@@ -47,6 +47,14 @@ public:
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
+  /// Returns true if the given operation 'callable', that implements the
+  /// 'CallableOpInterface', can be inlined into the position given call
+  /// operation 'call', that is registered to the current dialect and implements
+  /// the `CallOpInterface`.
+  virtual bool isLegalToInline(Operation *call, Operation *callable) const {
+    return false;
+  }
+
   /// Returns true if the given region 'src' can be inlined into the region
   /// 'dest' that is attached to an operation registered to the current dialect.
   /// 'valueMapping' contains any remapped values from within the 'src' region.
@@ -146,6 +154,7 @@ public:
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
+  virtual bool isLegalToInline(Operation *call, Operation *callable) const;
   virtual bool isLegalToInline(Region *dest, Region *src,
                                BlockAndValueMapping &valueMapping) const;
   virtual bool isLegalToInline(Operation *op, Region *dest,

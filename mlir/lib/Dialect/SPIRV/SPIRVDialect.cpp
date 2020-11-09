@@ -56,6 +56,11 @@ namespace {
 struct SPIRVInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
+  /// All call operations within SPIRV can be inlined.
+  bool isLegalToInline(Operation *call, Operation *callable) const final {
+    return true;
+  }
+
   /// Returns true if the given region 'src' can be inlined into the region
   /// 'dest' that is attached to an operation registered to the current dialect.
   bool isLegalToInline(Region *dest, Region *src,

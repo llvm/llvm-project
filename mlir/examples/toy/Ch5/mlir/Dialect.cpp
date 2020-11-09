@@ -34,6 +34,11 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
+  /// All call operations within toy can be inlined.
+  bool isLegalToInline(Operation *call, Operation *callable) const final {
+    return true;
+  }
+
   /// All operations within toy can be inlined.
   bool isLegalToInline(Operation *, Region *,
                        BlockAndValueMapping &) const final {
