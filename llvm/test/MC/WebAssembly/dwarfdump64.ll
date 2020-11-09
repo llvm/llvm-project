@@ -18,7 +18,7 @@
 ; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("foo")
 ; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x00000037 "int*")
 ; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
-; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple\test.c")
+; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (4)
 ; CHECK-NEXT:                DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x0)
 
@@ -34,7 +34,7 @@
 ; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("ptr2")
 ; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x00000054 "void()*")
 ; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
-; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple\test.c")
+; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (5)
 
 
@@ -54,7 +54,7 @@
 ; CHECK-NEXT:                DW_AT_high_pc [DW_FORM_data4]   (0x00000002)
 ; CHECK-NEXT:                DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_WASM_location 0x3 0x0, DW_OP_stack_value)
 ; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("f2")
-; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple\test.c")
+; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (2)
 ; CHECK-NEXT:                DW_AT_prototyped [DW_FORM_flag_present] (true)
 ; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
