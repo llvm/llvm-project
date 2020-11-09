@@ -82,6 +82,7 @@ public:
   bool getDeserialize() const { return Deserialize; }
 
   void SetTraversalKind(TraversalKind TK) { Traversal = TK; }
+  TraversalKind GetTraversalKind() const { return Traversal; }
 
   void Visit(const Decl *D) {
     getNodeDelegate().AddChild([=] {
@@ -481,8 +482,10 @@ public:
 
     Visit(D->getTemplatedDecl());
 
-    for (const auto *Child : D->specializations())
-      dumpTemplateDeclSpecialization(Child);
+    if (Traversal == TK_AsIs) {
+      for (const auto *Child : D->specializations())
+        dumpTemplateDeclSpecialization(Child);
+    }
   }
 
   void VisitTypeAliasDecl(const TypeAliasDecl *D) {
