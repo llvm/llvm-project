@@ -3468,7 +3468,7 @@ alignment.
                                                        Reserved, must be 0.
                                                      GFX10
                                                        Controls the behavior of the
-                                                       waitcnt's vmcnt and vscnt
+                                                       s_waitcnt's vmcnt and vscnt
                                                        counters.
 
                                                        - If 0 vmcnt reports completion
@@ -4140,24 +4140,22 @@ Wavefront Offset is only requested if it is used (see
 Memory Model
 ~~~~~~~~~~~~
 
-This section describes the mapping of LLVM memory model onto AMDGPU machine code
-(see :ref:`memmodel`).
+This section describes the mapping of the LLVM memory model onto AMDGPU machine
+code (see :ref:`memmodel`).
 
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
 
-The code sequences used to implement the memory model are defined in table
-:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx10-table`.
-
-The sequences specify the order of instructions that a single thread must
-execute. The ``s_waitcnt`` and ``buffer_wbinvl1_vol`` are defined with respect
+The code sequences used to implement the memory model specify the order of
+instructions that a single thread must execute. The ``s_waitcnt`` and cache
+management instructions such as ``buffer_wbinvl1_vol`` are defined with respect
 to other memory instructions executed by the same thread. This allows them to be
 moved earlier or later which can allow them to be combined with other instances
-of the same instruction, or hoisted/sunk out of loops to improve
-performance. Only the instructions related to the memory model are given;
-additional ``s_waitcnt`` instructions are required to ensure registers are
-defined before being used. These may be able to be combined with the memory
-model ``s_waitcnt`` instructions as described above.
+of the same instruction, or hoisted/sunk out of loops to improve performance.
+Only the instructions related to the memory model are given; additional
+``s_waitcnt`` instructions are required to ensure registers are defined before
+being used. These may be able to be combined with the memory model ``s_waitcnt``
+instructions as described above.
 
 The AMDGPU backend supports the following memory models:
 
@@ -4182,6 +4180,79 @@ operations.
 
 ``buffer/global/flat_load/store/atomic`` instructions to global memory are
 termed vector memory operations.
+
+Private address space uses ``buffer_load/store`` using the scratch V#
+(GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX10). Since only a single thread
+is accessing the memory, atomic memory orderings are not meaningful, and all
+accesses are treated as non-atomic.
+
+Constant address space uses ``buffer/global_load`` instructions (or equivalent
+scalar memory instructions). Since the constant address space contents do not
+change during the execution of a kernel dispatch it is not legal to perform
+stores, and atomic memory orderings are not meaningful, and all accesses are
+treated as non-atomic.
+
+A memory synchronization scope wider than work-group is not meaningful for the
+group (LDS) address space and is treated as work-group.
+
+The memory model does not support the region address space which is treated as
+non-atomic.
+
+Acquire memory ordering is not meaningful on store atomic instructions and is
+treated as non-atomic.
+
+Release memory ordering is not meaningful on load atomic instructions and is
+treated a non-atomic.
+
+Acquire-release memory ordering is not meaningful on load or store atomic
+instructions and is treated as acquire and release respectively.
+
+The memory order also adds the single thread optimization constraints defined in
+table
+:ref:`amdgpu-amdhsa-memory-model-single-thread-optimization-constraints-table`.
+
+  .. table:: AMDHSA Memory Model Single Thread Optimization Constraints
+     :name: amdgpu-amdhsa-memory-model-single-thread-optimization-constraints-table
+
+     ============ ==============================================================
+     LLVM Memory  Optimization Constraints
+     Ordering
+     ============ ==============================================================
+     unordered    *none*
+     monotonic    *none*
+     acquire      - If a load atomic/atomicrmw then no following load/load
+                    atomic/store/store atomic/atomicrmw/fence instruction can be
+                    moved before the acquire.
+                  - If a fence then same as load atomic, plus no preceding
+                    associated fence-paired-atomic can be moved after the fence.
+     release      - If a store atomic/atomicrmw then no preceding load/load
+                    atomic/store/store atomic/atomicrmw/fence instruction can be
+                    moved after the release.
+                  - If a fence then same as store atomic, plus no following
+                    associated fence-paired-atomic can be moved before the
+                    fence.
+     acq_rel      Same constraints as both acquire and release.
+     seq_cst      - If a load atomic then same constraints as acquire, plus no
+                    preceding sequentially consistent load atomic/store
+                    atomic/atomicrmw/fence instruction can be moved after the
+                    seq_cst.
+                  - If a store atomic then the same constraints as release, plus
+                    no following sequentially consistent load atomic/store
+                    atomic/atomicrmw/fence instruction can be moved before the
+                    seq_cst.
+                  - If an atomicrmw/fence then same constraints as acq_rel.
+     ============ ==============================================================
+
+The code sequences used to implement the memory model are defined in the
+following sections:
+
+* :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
+* :ref:`amdgpu-amdhsa-memory-model-gfx10`
+
+.. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
+
+Memory Model GFX6-GFX9
+++++++++++++++++++++++
 
 For GFX6-GFX9:
 
@@ -4232,6 +4303,1188 @@ For GFX6-GFX9:
   requirements of acquire and release.
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
+
+Scalar memory operations are only used to access memory that is proven to not
+change during the execution of the kernel dispatch. This includes constant
+address space and global address space for program scope const variables.
+Therefore, the kernel machine code does not have to maintain the scalar cache to
+ensure it is coherent with the vector caches. The scalar and vector caches are
+invalidated between kernel dispatches by CP since constant address space data
+may change between kernel dispatch executions. See
+:ref:`amdgpu-amdhsa-memory-spaces`.
+
+The one exception is if scalar writes are used to spill SGPR registers. In this
+case the AMDGPU backend ensures the memory location used to spill is never
+accessed by vector memory operations at the same time. If scalar writes are used
+then a ``s_dcache_wb`` is inserted before the ``s_endpgm`` and before a function
+return since the locations may be used for vector memory instructions by a
+future wavefront that uses the same scratch area, or a function call that
+creates a frame at the same address, respectively. There is no need for a
+``s_dcache_inv`` as all scalar writes are write-before-read in the same thread.
+
+For kernarg backing memory:
+
+* CP invalidates the L1 cache at the start of each kernel dispatch.
+* On dGPU the kernarg backing memory is allocated in host memory accessed as
+  MTYPE UC (uncached) to avoid needing to invalidate the L2 cache. This also
+  causes it to be treated as non-volatile and so is not invalidated by
+  ``*_vol``.
+* On APU the kernarg backing memory it is accessed as MTYPE CC (cache coherent)
+  and so the L2 cache will be coherent with the CPU and other agents.
+
+Scratch backing memory (which is used for the private address space) is accessed
+with MTYPE NC_NV (non-coherent non-volatile). Since the private address space is
+only accessed by a single thread, and is always write-before-read, there is
+never a need to invalidate these entries from the L1 cache. Hence all cache
+invalidates are done as ``*_vol`` to only invalidate the volatile cache lines.
+
+The code sequences used to implement the memory model for GFX6-GFX9 are defined
+in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX6-GFX9
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table
+
+     ============ ============ ============== ========== ================================
+     LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
+                  Ordering     Sync Scope     Address    GFX6-9
+                                              Space
+     ============ ============ ============== ========== ================================
+     **Non-Atomic**
+     ------------------------------------------------------------------------------------
+     load         *none*       *none*         - global   - !volatile & !nontemporal
+                                              - generic
+                                              - private    1. buffer/global/flat_load
+                                              - constant
+                                                         - volatile & !nontemporal
+
+                                                           1. buffer/global/flat_load
+                                                              glc=1
+
+                                                         - nontemporal
+
+                                                           1. buffer/global/flat_load
+                                                              glc=1 slc=1
+
+     load         *none*       *none*         - local    1. ds_load
+     store        *none*       *none*         - global   - !nontemporal
+                                              - generic
+                                              - private    1. buffer/global/flat_store
+                                              - constant
+                                                         - nontemporal
+
+                                                           1. buffer/global/flat_store
+                                                              glc=1 slc=1
+
+     store        *none*       *none*         - local    1. ds_store
+     **Unordered Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  unordered    *any*          *any*      *Same as non-atomic*.
+     store atomic unordered    *any*          *any*      *Same as non-atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic
+                                                         atomic*.
+     **Monotonic Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  monotonic    - singlethread - global   1. buffer/global/ds/flat_load
+                               - wavefront    - local
+                               - workgroup    - generic
+     load atomic  monotonic    - agent        - global   1. buffer/global/flat_load
+                               - system       - generic     glc=1
+     store atomic monotonic    - singlethread - global   1. buffer/global/flat_store
+                               - wavefront    - generic
+                               - workgroup
+                               - agent
+                               - system
+     store atomic monotonic    - singlethread - local    1. ds_store
+                               - wavefront
+                               - workgroup
+     atomicrmw    monotonic    - singlethread - global   1. buffer/global/flat_atomic
+                               - wavefront    - generic
+                               - workgroup
+                               - agent
+                               - system
+     atomicrmw    monotonic    - singlethread - local    1. ds_atomic
+                               - wavefront
+                               - workgroup
+     **Acquire Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  acquire      - singlethread - global   1. buffer/global/ds/flat_load
+                               - wavefront    - local
+                                              - generic
+     load atomic  acquire      - workgroup    - global   1. buffer/global_load
+     load atomic  acquire      - workgroup    - local    1. ds/flat_load
+                                              - generic  2. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than a local load
+                                                             atomic value being
+                                                             acquired.
+
+     load atomic  acquire      - agent        - global   1. buffer/global_load
+                               - system                     glc=1
+                                                         2. s_waitcnt vmcnt(0)
+
+                                                           - Must happen before
+                                                             following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures the load
+                                                             has completed
+                                                             before invalidating
+                                                             the cache.
+
+                                                         3. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale global data.
+
+     load atomic  acquire      - agent        - generic  1. flat_load glc=1
+                               - system                  2. s_waitcnt vmcnt(0) &
+                                                            lgkmcnt(0)
+
+                                                           - If OpenCL omit
+                                                             lgkmcnt(0).
+                                                           - Must happen before
+                                                             following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures the flat_load
+                                                             has completed
+                                                             before invalidating
+                                                             the cache.
+
+                                                         3. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acquire      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    acquire      - workgroup    - global   1. buffer/global_atomic
+     atomicrmw    acquire      - workgroup    - local    1. ds/flat_atomic
+                                              - generic  2. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than a local
+                                                             atomicrmw value
+                                                             being acquired.
+
+     atomicrmw    acquire      - agent        - global   1. buffer/global_atomic
+                               - system                  2. s_waitcnt vmcnt(0)
+
+                                                           - Must happen before
+                                                             following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             cache.
+
+                                                         3. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acquire      - agent        - generic  1. flat_atomic
+                               - system                  2. s_waitcnt vmcnt(0) &
+                                                            lgkmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Must happen before
+                                                             following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             cache.
+
+                                                         3. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     fence        acquire      - singlethread *none*     *none*
+                               - wavefront
+     fence        acquire      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the
+                                                             value read by the
+                                                             fence-paired-atomic.
+
+     fence        acquire      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures that the
+                                                             fence-paired atomic
+                                                             has completed
+                                                             before invalidating
+                                                             the
+                                                             cache. Therefore
+                                                             any following
+                                                             locations read must
+                                                             be no older than
+                                                             the value read by
+                                                             the
+                                                             fence-paired-atomic.
+
+                                                         2. buffer_wbinvl1_vol
+
+                                                           - Must happen before any
+                                                             following global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     **Release Atomic**
+     ------------------------------------------------------------------------------------
+     store atomic release      - singlethread - global   1. buffer/global/ds/flat_store
+                               - wavefront    - local
+                                              - generic
+     store atomic release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
+                                              - generic
+                                                           - If OpenCL, omit.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. buffer/global/flat_store
+     store atomic release      - workgroup    - local    1. ds_store
+     store atomic release      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to memory have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. buffer/global/flat_store
+     atomicrmw    release      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
+                                              - generic
+                                                           - If OpenCL, omit.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. buffer/global/flat_atomic
+     atomicrmw    release      - workgroup    - local    1. ds_atomic
+     atomicrmw    release      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global and local
+                                                             have completed
+                                                             before performing
+                                                             the atomicrmw that
+                                                             is being released.
+
+                                                         2. buffer/global/flat_atomic
+     fence        release      - singlethread *none*     *none*
+                               - wavefront
+     fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             any following store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             following
+                                                             fence-paired-atomic.
+
+     fence        release      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             any following store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             following
+                                                             fence-paired-atomic.
+
+     **Acquire-Release Atomic**
+     ------------------------------------------------------------------------------------
+     atomicrmw    acq_rel      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    acq_rel      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. buffer/global_atomic
+
+     atomicrmw    acq_rel      - workgroup    - local    1. ds_atomic
+                                                         2. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local load
+                                                             atomic value being
+                                                             acquired.
+
+     atomicrmw    acq_rel      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. flat_atomic
+                                                         3. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than a local load
+                                                             atomic value being
+                                                             acquired.
+
+     atomicrmw    acq_rel      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. buffer/global_atomic
+                                                         3. s_waitcnt vmcnt(0)
+
+                                                           - Must happen before
+                                                             following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             cache.
+
+                                                         4. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acq_rel      - agent        - generic  1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. flat_atomic
+                                                         3. s_waitcnt vmcnt(0) &
+                                                            lgkmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Must happen before
+                                                             following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             cache.
+
+                                                         4. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     fence        acq_rel      - singlethread *none*     *none*
+                               - wavefront
+     fence        acq_rel      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit.
+                                                           - However,
+                                                             since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing any
+                                                             following global
+                                                             memory operations.
+                                                           - Ensures that the
+                                                             preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             acquire-fence-paired-atomic)
+                                                             has completed
+                                                             before following
+                                                             global memory
+                                                             operations. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+                                                           - Ensures that all
+                                                             previous memory
+                                                             operations have
+                                                             completed before a
+                                                             following
+                                                             local/generic store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             release-fence-paired-atomic).
+                                                             This satisfies the
+                                                             requirements of
+                                                             release.
+
+     fence        acq_rel      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and
+                                                             s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_wbinvl1_vol.
+                                                           - Ensures that the
+                                                             preceding
+                                                             global/local/generic
+                                                             load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             acquire-fence-paired-atomic)
+                                                             has completed
+                                                             before invalidating
+                                                             the cache. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+                                                           - Ensures that all
+                                                             previous memory
+                                                             operations have
+                                                             completed before a
+                                                             following
+                                                             global/local/generic
+                                                             store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             release-fence-paired-atomic).
+                                                             This satisfies the
+                                                             requirements of
+                                                             release.
+
+                                                         2. buffer_wbinvl1_vol
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+
+     **Sequential Consistent Atomic**
+     ------------------------------------------------------------------------------------
+     load atomic  seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    load atomic acquire,
+                                              - generic  except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
+     load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
+                                              - generic
+
+                                                           - Must
+                                                             happen after
+                                                             preceding
+                                                             local/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             lgkmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent local
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             s_waitcnt of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The s_waitcnt
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the s_waitcnt be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
+
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
+     load atomic  seq_cst      - workgroup    - local    *Same as corresponding
+                                                         load atomic acquire,
+                                                         except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
+
+     load atomic  seq_cst      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0)
+
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0)
+                                                             and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             lgkmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             s_waitcnt of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The s_waitcnt
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the s_waitcnt be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
+
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
+     store atomic seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    store atomic release,
+                               - workgroup    - generic  except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    atomicrmw acq_rel,
+                               - workgroup    - generic  except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     fence        seq_cst      - singlethread *none*     *Same as corresponding
+                               - wavefront               fence acq_rel,
+                               - workgroup               except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     ============ ============ ============== ========== ================================
+
+.. _amdgpu-amdhsa-memory-model-gfx10:
+
+Memory Model GFX10
+++++++++++++++++++
 
 For GFX10:
 
@@ -4304,39 +5557,13 @@ For GFX10:
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
 
-Private address space uses ``buffer_load/store`` using the scratch V#
-(GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX10). Since only a single thread
-is accessing the memory, atomic memory orderings are not meaningful, and all
-accesses are treated as non-atomic.
-
-Constant address space uses ``buffer/global_load`` instructions (or equivalent
-scalar memory instructions). Since the constant address space contents do not
-change during the execution of a kernel dispatch it is not legal to perform
-stores, and atomic memory orderings are not meaningful, and all access are
-treated as non-atomic.
-
-A memory synchronization scope wider than work-group is not meaningful for the
-group (LDS) address space and is treated as work-group.
-
-The memory model does not support the region address space which is treated as
-non-atomic.
-
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated a non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
-
-AMDGPU backend only uses scalar memory operations to access memory that is
-proven to not change during the execution of the kernel dispatch. This includes
-constant address space and global address space for program scope const
-variables. Therefore, the kernel machine code does not have to maintain the
-scalar L1 cache to ensure it is coherent with the vector L1 cache. The scalar
-and vector L1 caches are invalidated between kernel dispatches by CP since
-constant address space data may change between kernel dispatch executions. See
+Scalar memory operations are only used to access memory that is proven to not
+change during the execution of the kernel dispatch. This includes constant
+address space and global address space for program scope const variables.
+Therefore, the kernel machine code does not have to maintain the scalar cache to
+ensure it is coherent with the vector caches. The scalar and vector caches are
+invalidated between kernel dispatches by CP since constant address space data
+may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
 
 The one exception is if scalar writes are used to spill SGPR registers. In this
@@ -4348,25 +5575,26 @@ future wavefront that uses the same scratch area, or a function call that
 creates a frame at the same address, respectively. There is no need for a
 ``s_dcache_inv`` as all scalar writes are write-before-read in the same thread.
 
-For GFX6-GFX9, scratch backing memory (which is used for the private address
-space) is accessed with MTYPE NC_NV (non-coherent non-volatile). Since the
-private address space is only accessed by a single thread, and is always
-write-before-read, there is never a need to invalidate these entries from the L1
-cache. Hence all cache invalidates are done as ``*_vol`` to only invalidate the
-volatile cache lines.
+For kernarg backing memory:
 
-For GFX10, scratch backing memory (which is used for the private address space)
-is accessed with MTYPE NC (non-coherent). Since the private address space is
-only accessed by a single thread, and is always write-before-read, there is
-never a need to invalidate these entries from the L0 or L1 caches.
+* CP invalidates the L0 and L1 caches at the start of each kernel dispatch.
+* On dGPU the kernarg backing memory is accessed as MTYPE UC (uncached) to avoid
+  needing to invalidate the L2 cache.
+* On APU the kernarg backing memory is accessed as MTYPE CC (cache coherent) and
+  so the L2 cache will be coherent with the CPU and other agents.
 
-For GFX10, wavefronts are executed in native mode with in-order reporting of
-loads and sample instructions. In this mode vmcnt reports completion of load,
-atomic with return and sample instructions in order, and the vscnt reports the
-completion of store and atomic without return in order. See ``MEM_ORDERED``
-field in :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
+Scratch backing memory (which is used for the private address space) is accessed
+with MTYPE NC (non-coherent). Since the private address space is only accessed
+by a single thread, and is always write-before-read, there is never a need to
+invalidate these entries from the L0 or L1 caches.
 
-In GFX10, wavefronts can be executed in WGP or CU wavefront execution mode:
+Wavefronts are executed in native mode with in-order reporting of loads and
+sample instructions. In this mode vmcnt reports completion of load, atomic with
+return and sample instructions in order, and the vscnt reports the completion of
+store and atomic without return in order. See ``MEM_ORDERED`` field in
+:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
+
+Wavefronts can be executed in WGP or CU wavefront execution mode:
 
 * In WGP wavefront execution mode the wavefronts of a work-group are executed
   on the SIMDs of both CUs of the WGP. Therefore, explicit management of the per
@@ -4383,523 +5611,399 @@ See ``WGP_MODE`` field in
 :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table` and
 :ref:`amdgpu-target-features`.
 
-On dGPU the kernarg backing memory is accessed as UC (uncached) to avoid needing
-to invalidate the L2 cache. For GFX6-GFX9, this also causes it to be treated as
-non-volatile and so is not invalidated by ``*_vol``. On APU it is accessed as CC
-(cache coherent) and so the L2 cache will be coherent with the CPU and other
-agents.
+The code sequences used to implement the memory model for GFX10 are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX6-GFX10
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx10-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX10
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx10-table
 
-     ============ ============ ============== ========== ================================ ================================
-     LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code              AMDGPU Machine Code
-                  Ordering     Sync Scope     Address    GFX6-9                           GFX10
+     ============ ============ ============== ========== ================================
+     LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
+                  Ordering     Sync Scope     Address    GFX10
                                               Space
-     ============ ============ ============== ========== ================================ ================================
+     ============ ============ ============== ========== ================================
      **Non-Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     load         *none*       *none*         - global   - !volatile & !nontemporal       - !volatile & !nontemporal
+     ------------------------------------------------------------------------------------
+     load         *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
-                                              - private    1. buffer/global/flat_load       1. buffer/global/flat_load
+                                              - private    1. buffer/global/flat_load
                                               - constant
-                                                         - volatile & !nontemporal        - volatile & !nontemporal
+                                                         - volatile & !nontemporal
 
-                                                           1. buffer/global/flat_load       1. buffer/global/flat_load
-                                                              glc=1                            glc=1 dlc=1
+                                                           1. buffer/global/flat_load
+                                                              glc=1 dlc=1
 
-                                                         - nontemporal                    - nontemporal
+                                                         - nontemporal
 
-                                                           1. buffer/global/flat_load       1. buffer/global/flat_load
-                                                              glc=1 slc=1                      slc=1
+                                                           1. buffer/global/flat_load
+                                                              slc=1
 
-     load         *none*       *none*         - local    1. ds_load                       1. ds_load
-     store        *none*       *none*         - global   - !nontemporal                   - !nontemporal
+     load         *none*       *none*         - local    1. ds_load
+     store        *none*       *none*         - global   - !nontemporal
                                               - generic
-                                              - private    1. buffer/global/flat_store      1. buffer/global/flat_store
+                                              - private    1. buffer/global/flat_store
                                               - constant
-                                                         - nontemporal                    - nontemporal
+                                                         - nontemporal
 
-                                                           1. buffer/global/flat_store       1. buffer/global/flat_store
-                                                              glc=1 slc=1                       slc=1
+                                                            1. buffer/global/flat_store
+                                                               slc=1
 
-     store        *none*       *none*         - local    1. ds_store                      1. ds_store
+     store        *none*       *none*         - local    1. ds_store
      **Unordered Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     load atomic  unordered    *any*          *any*      *Same as non-atomic*.            *Same as non-atomic*.
-     store atomic unordered    *any*          *any*      *Same as non-atomic*.            *Same as non-atomic*.
-     atomicrmw    unordered    *any*          *any*      *Same as monotonic               *Same as monotonic
-                                                         atomic*.                         atomic*.
+     ------------------------------------------------------------------------------------
+     load atomic  unordered    *any*          *any*      *Same as non-atomic*.
+     store atomic unordered    *any*          *any*      *Same as non-atomic*.
+     atomicrmw    unordered    *any*          *any*      *Same as monotonic
+                                                         atomic*.
      **Monotonic Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     load atomic  monotonic    - singlethread - global   1. buffer/global/flat_load       1. buffer/global/flat_load
+     ------------------------------------------------------------------------------------
+     load atomic  monotonic    - singlethread - global   1. buffer/global/flat_load
                                - wavefront    - generic
-     load atomic  monotonic    - workgroup    - global   1. buffer/global/flat_load       1. buffer/global/flat_load
-                                              - generic                                      glc=1
+     load atomic  monotonic    - workgroup    - global   1. buffer/global/flat_load
+                                              - generic     glc=1
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit glc=1.
+                                                           - If CU wavefront execution
+                                                             mode, omit glc=1.
 
-     load atomic  monotonic    - singlethread - local    1. ds_load                       1. ds_load
+     load atomic  monotonic    - singlethread - local    1. ds_load
                                - wavefront
                                - workgroup
-     load atomic  monotonic    - agent        - global   1. buffer/global/flat_load       1. buffer/global/flat_load
-                               - system       - generic     glc=1                            glc=1 dlc=1
-     store atomic monotonic    - singlethread - global   1. buffer/global/flat_store      1. buffer/global/flat_store
+     load atomic  monotonic    - agent        - global   1. buffer/global/flat_load
+                               - system       - generic     glc=1 dlc=1
+     store atomic monotonic    - singlethread - global   1. buffer/global/flat_store
                                - wavefront    - generic
                                - workgroup
                                - agent
                                - system
-     store atomic monotonic    - singlethread - local    1. ds_store                      1. ds_store
+     store atomic monotonic    - singlethread - local    1. ds_store
                                - wavefront
                                - workgroup
-     atomicrmw    monotonic    - singlethread - global   1. buffer/global/flat_atomic     1. buffer/global/flat_atomic
+     atomicrmw    monotonic    - singlethread - global   1. buffer/global/flat_atomic
                                - wavefront    - generic
                                - workgroup
                                - agent
                                - system
-     atomicrmw    monotonic    - singlethread - local    1. ds_atomic                     1. ds_atomic
+     atomicrmw    monotonic    - singlethread - local    1. ds_atomic
                                - wavefront
                                - workgroup
      **Acquire Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     load atomic  acquire      - singlethread - global   1. buffer/global/ds/flat_load    1. buffer/global/ds/flat_load
+     ------------------------------------------------------------------------------------
+     load atomic  acquire      - singlethread - global   1. buffer/global/ds/flat_load
                                - wavefront    - local
                                               - generic
-     load atomic  acquire      - workgroup    - global   1. buffer/global_load            1. buffer/global_load glc=1
+     load atomic  acquire      - workgroup    - global   1. buffer/global_load glc=1
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit glc=1.
+                                                           - If CU wavefront execution
+                                                             mode, omit glc=1.
 
-                                                                                          2. s_waitcnt vmcnt(0)
+                                                         2. s_waitcnt vmcnt(0)
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Must happen before
-                                                                                              the following buffer_gl0_inv
-                                                                                              and before any following
-                                                                                              global/generic
-                                                                                              load/load
-                                                                                              atomic/store/store
-                                                                                              atomic/atomicrmw.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     load atomic  acquire      - workgroup    - local    1. ds_load                       1. ds_load
-                                                         2. s_waitcnt lgkmcnt(0)          2. s_waitcnt lgkmcnt(0)
-
-                                                           - If OpenCL, omit.               - If OpenCL, omit.
-                                                           - Must happen before             - Must happen before
-                                                             any following                    the following buffer_gl0_inv
-                                                             global/generic                   and before any following
-                                                             load/load                        global/generic load/load
-                                                             atomic/store/store               atomic/store/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures any                    - Ensures any
-                                                             following global                 following global
-                                                             data read is no                  data read is no
-                                                             older than the load              older than the load
-                                                             atomic value being               atomic value being
-                                                             acquired.                        acquired.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - If OpenCL, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     load atomic  acquire      - workgroup    - generic  1. flat_load                     1. flat_load glc=1
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit glc=1.
-
-                                                         2. s_waitcnt lgkmcnt(0)          2. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              lgkmcnt(0).
-                                                           - Must happen before             - Must happen before
-                                                             any following                    the following
-                                                             global/generic                   buffer_gl0_inv and any
-                                                             load/load                        following global/generic
-                                                             atomic/store/store               load/load
-                                                             atomic/atomicrmw.                atomic/store/store
-                                                                                              atomic/atomicrmw.
-                                                           - Ensures any                    - Ensures any
-                                                             following global                 following global
-                                                             data read is no                  data read is no
-                                                             older than the load              older than the load
-                                                             atomic value being               atomic value being
-                                                             acquired.                        acquired.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     load atomic  acquire      - agent        - global   1. buffer/global_load            1. buffer/global_load
-                               - system                     glc=1                            glc=1 dlc=1
-                                                         2. s_waitcnt vmcnt(0)            2. s_waitcnt vmcnt(0)
-
-                                                           - Must happen before             - Must happen before
-                                                             following                        following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_inv.
-                                                           - Ensures the load               - Ensures the load
-                                                             has completed                    has completed
-                                                             before invalidating              before invalidating
-                                                             the cache.                       the caches.
-
-                                                         3. buffer_wbinvl1_vol            3. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
-
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following                        following
-                                                             loads will not see               loads will not see
-                                                             stale global data.               stale global data.
-
-     load atomic  acquire      - agent        - generic  1. flat_load glc=1               1. flat_load glc=1 dlc=1
-                               - system                  2. s_waitcnt vmcnt(0) &          2. s_waitcnt vmcnt(0) &
-                                                            lgkmcnt(0)                       lgkmcnt(0)
-
-                                                           - If OpenCL omit                 - If OpenCL omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                           - Must happen before             - Must happen before
-                                                             following                        following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_invl.
-                                                           - Ensures the flat_load          - Ensures the flat_load
-                                                             has completed                    has completed
-                                                             before invalidating              before invalidating
-                                                             the cache.                       the caches.
-
-                                                         3. buffer_wbinvl1_vol            3. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
-
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data.                     global data.
-
-     atomicrmw    acquire      - singlethread - global   1. buffer/global/ds/flat_atomic  1. buffer/global/ds/flat_atomic
-                               - wavefront    - local
-                                              - generic
-     atomicrmw    acquire      - workgroup    - global   1. buffer/global_atomic          1. buffer/global_atomic
-                                                                                          2. s_waitcnt vm/vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                                                            - Must happen before
-                                                                                              the following buffer_gl0_inv
-                                                                                              and before any following
-                                                                                              global/generic
-                                                                                              load/load
-                                                                                              atomic/store/store
-                                                                                              atomic/atomicrmw.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     atomicrmw    acquire      - workgroup    - local    1. ds_atomic                     1. ds_atomic
-                                                         2. waitcnt lgkmcnt(0)            2. waitcnt lgkmcnt(0)
-
-                                                           - If OpenCL, omit.               - If OpenCL, omit.
-                                                           - Must happen before             - Must happen before
-                                                             any following                    the following
-                                                             global/generic                   buffer_gl0_inv.
-                                                             load/load
-                                                             atomic/store/store
-                                                             atomic/atomicrmw.
-                                                           - Ensures any                    - Ensures any
-                                                             following global                 following global
-                                                             data read is no                  data read is no
-                                                             older than the                   older than the
-                                                             atomicrmw value                  atomicrmw value
-                                                             being acquired.                  being acquired.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If OpenCL omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     atomicrmw    acquire      - workgroup    - generic  1. flat_atomic                   1. flat_atomic
-                                                         2. waitcnt lgkmcnt(0)            2. waitcnt lgkmcnt(0) &
-                                                                                             vm/vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vm/vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              waitcnt lgkmcnt(0).
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                           - Must happen before             - Must happen before
-                                                             any following                    the following
-                                                             global/generic                   buffer_gl0_inv.
-                                                             load/load
-                                                             atomic/store/store
-                                                             atomic/atomicrmw.
-                                                           - Ensures any                    - Ensures any
-                                                             following global                 following global
-                                                             data read is no                  data read is no
-                                                             older than the                   older than the
-                                                             atomicrmw value                  atomicrmw value
-                                                             being acquired.                  being acquired.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     atomicrmw    acquire      - agent        - global   1. buffer/global_atomic          1. buffer/global_atomic
-                               - system                  2. s_waitcnt vmcnt(0)            2. s_waitcnt vm/vscnt(0)
-
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                                                              waitcnt lgkmcnt(0).
-                                                           - Must happen before             - Must happen before
-                                                             following                        following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_inv.
-                                                           - Ensures the                    - Ensures the
-                                                             atomicrmw has                    atomicrmw has
-                                                             completed before                 completed before
-                                                             invalidating the                 invalidating the
-                                                             cache.                           caches.
-
-                                                         3. buffer_wbinvl1_vol            3. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
-
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data.                     global data.
-
-     atomicrmw    acquire      - agent        - generic  1. flat_atomic                   1. flat_atomic
-                               - system                  2. s_waitcnt vmcnt(0) &          2. s_waitcnt vm/vscnt(0) &
-                                                            lgkmcnt(0)                       lgkmcnt(0)
-
-                                                           - If OpenCL, omit                - If OpenCL, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                           - Must happen before             - Must happen before
-                                                             following                        following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_inv.
-                                                           - Ensures the                    - Ensures the
-                                                             atomicrmw has                    atomicrmw has
-                                                             completed before                 completed before
-                                                             invalidating the                 invalidating the
-                                                             cache.                           caches.
-
-                                                         3. buffer_wbinvl1_vol            3. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
-
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data.                     global data.
-
-     fence        acquire      - singlethread *none*     *none*                           *none*
-                               - wavefront
-     fence        acquire      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             not generic, omit.               not generic, omit
-                                                                                              lgkmcnt(0).
-                                                                                            - If OpenCL and
-                                                                                              address space is
-                                                                                              local, omit
-                                                                                              vmcnt(0) and vscnt(0).
-                                                           - However, since LLVM            - However, since LLVM
-                                                             currently has no                 currently has no
-                                                             address space on                 address space on
-                                                             the fence need to                the fence need to
-                                                             conservatively                   conservatively
-                                                             always generate. If              always generate. If
-                                                             fence had an                     fence had an
-                                                             address space then               address space then
-                                                             set to address                   set to address
-                                                             space of OpenCL                  space of OpenCL
-                                                             fence flag, or to                fence flag, or to
-                                                             generic if both                  generic if both
-                                                             local and global                 local and global
-                                                             flags are                        flags are
-                                                             specified.                       specified.
-                                                           - Must happen after
-                                                             any preceding
-                                                             local/generic load
-                                                             atomic/atomicrmw
-                                                             with an equal or
-                                                             wider sync scope
-                                                             and memory ordering
-                                                             stronger than
-                                                             unordered (this is
-                                                             termed the
-                                                             fence-paired-atomic).
+                                                           - If CU wavefront execution
+                                                             mode, omit.
                                                            - Must happen before
-                                                             any following
+                                                             the following buffer_gl0_inv
+                                                             and before any following
                                                              global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+
+                                                         3. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     load atomic  acquire      - workgroup    - local    1. ds_load
+                                                         2. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             the following buffer_gl0_inv
+                                                             and before any following
+                                                             global/generic load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         3. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - If OpenCL, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     load atomic  acquire      - workgroup    - generic  1. flat_load glc=1
+
+                                                           - If CU wavefront execution
+                                                             mode, omit glc=1.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0).
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv and any
+                                                             following global/generic
                                                              load/load
                                                              atomic/store/store
                                                              atomic/atomicrmw.
                                                            - Ensures any
                                                              following global
                                                              data read is no
-                                                             older than the
-                                                             value read by the
-                                                             fence-paired-atomic.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value
-                                                                                              with an equal or
-                                                                                              wider sync scope
-                                                                                              and memory ordering
-                                                                                              stronger than
-                                                                                              unordered (this is
-                                                                                              termed the
-                                                                                              fence-paired-atomic).
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              atomicrmw-no-return-value
-                                                                                              with an equal or
-                                                                                              wider sync scope
-                                                                                              and memory ordering
-                                                                                              stronger than
-                                                                                              unordered (this is
-                                                                                              termed the
-                                                                                              fence-paired-atomic).
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic load
-                                                                                              atomic/atomicrmw
-                                                                                              with an equal or
-                                                                                              wider sync scope
-                                                                                              and memory ordering
-                                                                                              stronger than
-                                                                                              unordered (this is
-                                                                                              termed the
-                                                                                              fence-paired-atomic).
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              buffer_gl0_inv.
-                                                                                            - Ensures that the
-                                                                                              fence-paired atomic
-                                                                                              has completed
-                                                                                              before invalidating
-                                                                                              the
-                                                                                              cache. Therefore
-                                                                                              any following
-                                                                                              locations read must
-                                                                                              be no older than
-                                                                                              the value read by
-                                                                                              the
-                                                                                              fence-paired-atomic.
+                                                             older than a local load
+                                                             atomic value being
+                                                             acquired.
 
-                                                                                          3. buffer_gl0_inv
+                                                         3. buffer_gl0_inv
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
 
-     fence        acquire      - agent        *none*     1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lgkmcnt(0) &
-                               - system                     vmcnt(0)                         vmcnt(0) & vscnt(0)
+     load atomic  acquire      - agent        - global   1. buffer/global_load
+                               - system                     glc=1 dlc=1
+                                                         2. s_waitcnt vmcnt(0)
 
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             not generic, omit                not generic, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                                                            - If OpenCL and
-                                                                                              address space is
-                                                                                              local, omit
-                                                                                              vmcnt(0) and vscnt(0).
-                                                           - However, since LLVM            - However, since LLVM
-                                                             currently has no                 currently has no
-                                                             address space on                 address space on
-                                                             the fence need to                the fence need to
-                                                             conservatively                   conservatively
-                                                             always generate                  always generate
-                                                             (see comment for                 (see comment for
-                                                             previous fence).                 previous fence).
+                                                           - Must happen before
+                                                             following
+                                                             buffer_gl*_inv.
+                                                           - Ensures the load
+                                                             has completed
+                                                             before invalidating
+                                                             the caches.
+
+                                                         3. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale global data.
+
+     load atomic  acquire      - agent        - generic  1. flat_load glc=1 dlc=1
+                               - system                  2. s_waitcnt vmcnt(0) &
+                                                            lgkmcnt(0)
+
+                                                           - If OpenCL omit
+                                                             lgkmcnt(0).
+                                                           - Must happen before
+                                                             following
+                                                             buffer_gl*_invl.
+                                                           - Ensures the flat_load
+                                                             has completed
+                                                             before invalidating
+                                                             the caches.
+
+                                                         3. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acquire      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    acquire      - workgroup    - global   1. buffer/global_atomic
+                                                         2. s_waitcnt vm/vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             the following buffer_gl0_inv
+                                                             and before any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+
+                                                         3. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acquire      - workgroup    - local    1. ds_atomic
+                                                         2. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local
+                                                             atomicrmw value
+                                                             being acquired.
+
+                                                         3. buffer_gl0_inv
+
+                                                           - If OpenCL omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acquire      - workgroup    - generic  1. flat_atomic
+                                                         2. s_waitcnt lgkmcnt(0) &
+                                                            vm/vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vm/vscnt(0).
+                                                           - If OpenCL, omit lgkmcnt(0).
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than a local
+                                                             atomicrmw value
+                                                             being acquired.
+
+                                                         3. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acquire      - agent        - global   1. buffer/global_atomic
+                               - system                  2. s_waitcnt vm/vscnt(0)
+
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             following
+                                                             buffer_gl*_inv.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         3. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acquire      - agent        - generic  1. flat_atomic
+                               - system                  2. s_waitcnt vm/vscnt(0) &
+                                                            lgkmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             following
+                                                             buffer_gl*_inv.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         3. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     fence        acquire      - singlethread *none*     *none*
+                               - wavefront
+     fence        acquire      - workgroup    *none*     1. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0) and vscnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
-                                                             vmcnt(0) and
-                                                             s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
                                                              lgkmcnt(0) to allow
                                                              them to be
                                                              independently moved
@@ -4909,7 +6013,20 @@ agents.
                                                              must happen after
                                                              any preceding
                                                              global/generic load
-                                                             atomic/atomicrmw
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             atomicrmw-no-return-value
                                                              with an equal or
                                                              wider sync scope
                                                              and memory ordering
@@ -4931,7 +6048,7 @@ agents.
                                                              fence-paired-atomic).
                                                            - Must happen before
                                                              the following
-                                                             buffer_wbinvl1_vol.
+                                                             buffer_gl0_inv.
                                                            - Ensures that the
                                                              fence-paired atomic
                                                              has completed
@@ -4944,1636 +6061,1465 @@ agents.
                                                              the value read by
                                                              the
                                                              fence-paired-atomic.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value
-                                                                                              with an equal or
-                                                                                              wider sync scope
-                                                                                              and memory ordering
-                                                                                              stronger than
-                                                                                              unordered (this is
-                                                                                              termed the
-                                                                                              fence-paired-atomic).
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              atomicrmw-no-return-value
-                                                                                              with an equal or
-                                                                                              wider sync scope
-                                                                                              and memory ordering
-                                                                                              stronger than
-                                                                                              unordered (this is
-                                                                                              termed the
-                                                                                              fence-paired-atomic).
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic load
-                                                                                              atomic/atomicrmw
-                                                                                              with an equal or
-                                                                                              wider sync scope
-                                                                                              and memory ordering
-                                                                                              stronger than
-                                                                                              unordered (this is
-                                                                                              termed the
-                                                                                              fence-paired-atomic).
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              buffer_gl*_inv.
-                                                                                            - Ensures that the
-                                                                                              fence-paired atomic
-                                                                                              has completed
-                                                                                              before invalidating
-                                                                                              the
-                                                                                              caches. Therefore
-                                                                                              any following
-                                                                                              locations read must
-                                                                                              be no older than
-                                                                                              the value read by
-                                                                                              the
-                                                                                              fence-paired-atomic.
 
-                                                         2. buffer_wbinvl1_vol            2. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
+                                                         3. buffer_gl0_inv
 
-                                                           - Must happen before any         - Must happen before any
-                                                             following global/generic         following global/generic
-                                                             load/load                        load/load
-                                                             atomic/store/store               atomic/store/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data.                     global data.
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     fence        acquire      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0) & vscnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0) and vscnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             atomicrmw-no-return-value
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl*_inv.
+                                                           - Ensures that the
+                                                             fence-paired atomic
+                                                             has completed
+                                                             before invalidating
+                                                             the
+                                                             caches. Therefore
+                                                             any following
+                                                             locations read must
+                                                             be no older than
+                                                             the value read by
+                                                             the
+                                                             fence-paired-atomic.
+
+                                                         2. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before any
+                                                             following global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
 
      **Release Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     store atomic release      - singlethread - global   1. buffer/global/ds/flat_store   1. buffer/global/ds/flat_store
+     ------------------------------------------------------------------------------------
+     store atomic release      - singlethread - global   1. buffer/global/ds/flat_store
                                - wavefront    - local
                                               - generic
-     store atomic release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
+     store atomic release      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
+                                              - generic     vmcnt(0) & vscnt(0)
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              lgkmcnt(0).
-                                                           - Must happen after
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
                                                              any preceding
                                                              local/generic
                                                              load/store/load
                                                              atomic/store
                                                              atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store
-                                                                                              atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             store.                           store.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             store that is being              store that is being
-                                                             released.                        released.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
 
-                                                         2. buffer/global_store           2. buffer/global_store
-     store atomic release      - workgroup    - local                                     1. waitcnt vmcnt(0) & vscnt(0)
+                                                         2. buffer/global/flat_store
+     store atomic release      - workgroup    - local    1. s_waitcnt vmcnt(0) & vscnt(0)
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - If OpenCL, omit.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0) and s_waitcnt
-                                                                                              vscnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              store.
-                                                                                            - Ensures that all
-                                                                                              global memory
-                                                                                              operations have
-                                                                                              completed before
-                                                                                              performing the
-                                                                                              store that is being
-                                                                                              released.
-
-                                                         1. ds_store                      2. ds_store
-     store atomic release      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              lgkmcnt(0).
-                                                           - Must happen after
-                                                             any preceding
-                                                             local/generic
-                                                             load/store/load
-                                                             atomic/store
-                                                             atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store
-                                                                                              atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             store.                           store.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             store that is being              store that is being
-                                                             released.                        released.
-
-                                                         2. flat_store                    2. flat_store
-     store atomic release      - agent        - global   1. s_waitcnt lgkmcnt(0) &          1. s_waitcnt lgkmcnt(0) &
-                               - system       - generic     vmcnt(0)                           vmcnt(0) & vscnt(0)
-
-                                                           - If OpenCL, omit                - If OpenCL, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0) and                     vmcnt(0), s_waitcnt vscnt(0)
-                                                             s_waitcnt                        and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - s_waitcnt vmcnt(0)             - s_waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             global/generic                   global/generic
-                                                             load/store/load                  load/load
-                                                             atomic/store                     atomic/
-                                                             atomic/atomicrmw.                atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                           - s_waitcnt lgkmcnt(0)           - s_waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             store.                           store.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to memory have                   to memory have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             store that is being              store that is being
-                                                             released.                        released.
-
-                                                         2. buffer/global/flat_store      2. buffer/global/flat_store
-     atomicrmw    release      - singlethread - global   1. buffer/global/ds/flat_atomic  1. buffer/global/ds/flat_atomic
-                               - wavefront    - local
-                                              - generic
-     atomicrmw    release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
+                                                           - If CU wavefront execution
+                                                             mode, omit.
                                                            - If OpenCL, omit.
-
-                                                           - Must happen after
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and s_waitcnt
+                                                             vscnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
                                                              any preceding
-                                                             local/generic
-                                                             load/store/load
-                                                             atomic/store
-                                                             atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store
-                                                                                              atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             atomicrmw that is                atomicrmw that is
-                                                             being released.                  being released.
-
-                                                         2. buffer/global_atomic          2. buffer/global_atomic
-     atomicrmw    release      - workgroup    - local                                     1. waitcnt vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - If OpenCL, omit.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0) and s_waitcnt
-                                                                                              vscnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              store.
-                                                                                            - Ensures that all
-                                                                                              global memory
-                                                                                              operations have
-                                                                                              completed before
-                                                                                              performing the
-                                                                                              store that is being
-                                                                                              released.
-
-                                                         1. ds_atomic                     2. ds_atomic
-     atomicrmw    release      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              lgkmcnt(0).
-                                                           - Must happen after
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
                                                              any preceding
-                                                             local/generic
-                                                             load/store/load
-                                                             atomic/store
-                                                             atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store
-                                                                                              atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             atomicrmw that is                atomicrmw that is
-                                                             being released.                  being released.
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             global memory
+                                                             operations have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
 
-                                                         2. flat_atomic                   2. flat_atomic
-     atomicrmw    release      - agent        - global   1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lkkmcnt(0) &
-                               - system       - generic     vmcnt(0)                          vmcnt(0) & vscnt(0)
+                                                         2. ds_store
+     store atomic release      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0) & vscnt(0)
 
-                                                           - If OpenCL, omit                - If OpenCL, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0) and                     vmcnt(0), s_waitcnt
-                                                             s_waitcnt                        vscnt(0) and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - s_waitcnt vmcnt(0)             - s_waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             global/generic                   global/generic
-                                                             load/store/load                  load/load atomic/
-                                                             atomic/store                     atomicrmw-with-return-value.
-                                                             atomic/atomicrmw.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                           - s_waitcnt lgkmcnt(0)           - s_waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to global and local              to global and local
-                                                             have completed                   have completed
-                                                             before performing                before performing
-                                                             the atomicrmw that               the atomicrmw that
-                                                             is being released.               is being released.
-
-                                                         2. buffer/global/flat_atomic     2. buffer/global/flat_atomic
-     fence        release      - singlethread *none*     *none*                           *none*
-                               - wavefront
-     fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             not generic, omit.               not generic, omit
-                                                                                              lgkmcnt(0).
-                                                                                            - If OpenCL and
-                                                                                              address space is
-                                                                                              local, omit
-                                                                                              vmcnt(0) and vscnt(0).
-                                                           - However, since LLVM            - However, since LLVM
-                                                             currently has no                 currently has no
-                                                             address space on                 address space on
-                                                             the fence need to                the fence need to
-                                                             conservatively                   conservatively
-                                                             always generate. If              always generate. If
-                                                             fence had an                     fence had an
-                                                             address space then               address space then
-                                                             set to address                   set to address
-                                                             space of OpenCL                  space of OpenCL
-                                                             fence flag, or to                fence flag, or to
-                                                             generic if both                  generic if both
-                                                             local and global                 local and global
-                                                             flags are                        flags are
-                                                             specified.                       specified.
-                                                           - Must happen after
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt vscnt(0)
+                                                             and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
                                                              any preceding
-                                                             local/generic
+                                                             global/generic
                                                              load/load
-                                                             atomic/store/store
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
                                                              atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store atomic/
-                                                                                              atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             any following store              any following store
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with an equal or                 with an equal or
-                                                             wider sync scope                 wider sync scope
-                                                             and memory ordering              and memory ordering
-                                                             stronger than                    stronger than
-                                                             unordered (this is               unordered (this is
-                                                             termed the                       termed the
-                                                             fence-paired-atomic).            fence-paired-atomic).
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             following                        following
-                                                             fence-paired-atomic.             fence-paired-atomic.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
 
-     fence        release      - agent        *none*     1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lgkmcnt(0) &
-                               - system                     vmcnt(0)                         vmcnt(0) & vscnt(0)
+                                                         2. buffer/global/flat_store
+     atomicrmw    release      - singlethread - global   1. buffer/global/ds/flat_atomic
+                               - wavefront    - local
+                                              - generic
+     atomicrmw    release      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
+                                              - generic     vmcnt(0) & vscnt(0)
 
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             not generic, omit                not generic, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             local, omit                      local, omit
-                                                             vmcnt(0).                        vmcnt(0) and vscnt(0).
-                                                           - However, since LLVM            - However, since LLVM
-                                                             currently has no                 currently has no
-                                                             address space on                 address space on
-                                                             the fence need to                the fence need to
-                                                             conservatively                   conservatively
-                                                             always generate. If              always generate. If
-                                                             fence had an                     fence had an
-                                                             address space then               address space then
-                                                             set to address                   set to address
-                                                             space of OpenCL                  space of OpenCL
-                                                             fence flag, or to                fence flag, or to
-                                                             generic if both                  generic if both
-                                                             local and global                 local and global
-                                                             flags are                        flags are
-                                                             specified.                       specified.
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0) and                     vmcnt(0), s_waitcnt
-                                                             s_waitcnt                        vscnt(0) and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - s_waitcnt vmcnt(0)             - s_waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             global/generic                   global/generic
-                                                             load/store/load                  load/load atomic/
-                                                             atomic/store                     atomicrmw-with-return-value.
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL, omit lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
                                                              atomic/atomicrmw.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                           - s_waitcnt lgkmcnt(0)           - s_waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             any following store              any following store
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with an equal or                 with an equal or
-                                                             wider sync scope                 wider sync scope
-                                                             and memory ordering              and memory ordering
-                                                             stronger than                    stronger than
-                                                             unordered (this is               unordered (this is
-                                                             termed the                       termed the
-                                                             fence-paired-atomic).            fence-paired-atomic).
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             have                             have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             following                        following
-                                                             fence-paired-atomic.             fence-paired-atomic.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. buffer/global/flat_atomic
+     atomicrmw    release      - workgroup    - local    1. s_waitcnt vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - If OpenCL, omit.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and s_waitcnt
+                                                             vscnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             global memory
+                                                             operations have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. ds_atomic
+     atomicrmw    release      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic      vmcnt(0) & vscnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global and local
+                                                             have completed
+                                                             before performing
+                                                             the atomicrmw that
+                                                             is being released.
+
+                                                         2. buffer/global/flat_atomic
+     fence        release      - singlethread *none*     *none*
+                               - wavefront
+     fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0) and vscnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store atomic/
+                                                             atomicrmw.
+                                                           - Must happen before
+                                                             any following store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             following
+                                                             fence-paired-atomic.
+
+     fence        release      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0) & vscnt(0)
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0) and vscnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             any following store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             fence-paired-atomic).
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             following
+                                                             fence-paired-atomic.
 
      **Acquire-Release Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     atomicrmw    acq_rel      - singlethread - global   1. buffer/global/ds/flat_atomic  1. buffer/global/ds/flat_atomic
+     ------------------------------------------------------------------------------------
+     atomicrmw    acq_rel      - singlethread - global   1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
-     atomicrmw    acq_rel      - workgroup    - global   1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
+     atomicrmw    acq_rel      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0) & vscnt(0)
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit
-                                                                                              lgkmcnt(0).
-                                                           - Must happen after              - Must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0), and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store
-                                                                                              atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             atomicrmw that is                atomicrmw that is
-                                                             being released.                  being released.
-
-                                                         2. buffer/global_atomic          2. buffer/global_atomic
-                                                                                          3. s_waitcnt vm/vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              buffer_gl0_inv.
-                                                                                            - Ensures any
-                                                                                              following global
-                                                                                              data read is no
-                                                                                              older than the
-                                                                                              atomicrmw value
-                                                                                              being acquired.
-
-                                                                                          4. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     atomicrmw    acq_rel      - workgroup    - local                                     1. waitcnt vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - If OpenCL, omit.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0) and s_waitcnt
-                                                                                              vscnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              store.
-                                                                                            - Ensures that all
-                                                                                              global memory
-                                                                                              operations have
-                                                                                              completed before
-                                                                                              performing the
-                                                                                              store that is being
-                                                                                              released.
-
-                                                         1. ds_atomic                     2. ds_atomic
-                                                         2. s_waitcnt lgkmcnt(0)          3. s_waitcnt lgkmcnt(0)
-
-                                                           - If OpenCL, omit.               - If OpenCL, omit.
-                                                           - Must happen before             - Must happen before
-                                                             any following                    the following
-                                                             global/generic                   buffer_gl0_inv.
-                                                             load/load
-                                                             atomic/store/store
-                                                             atomic/atomicrmw.
-                                                           - Ensures any                    - Ensures any
-                                                             following global                 following global
-                                                             data read is no                  data read is no
-                                                             older than the load              older than the load
-                                                             atomic value being               atomic value being
-                                                             acquired.                        acquired.
-
-                                                                                          4. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - If OpenCL omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     atomicrmw    acq_rel      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit lgkmcnt(0).
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
                                                              load/store/load
                                                              atomic/store
                                                              atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store
-                                                                                              atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             atomicrmw that is                atomicrmw that is
-                                                             being released.                  being released.
-
-                                                         2. flat_atomic                   2. flat_atomic
-                                                         3. s_waitcnt lgkmcnt(0)          3. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL, omit.               - If OpenCL, omit lgkmcnt(0).
-                                                           - Must happen before             - Must happen before
-                                                             any following                    the following
-                                                             global/generic                   buffer_gl0_inv.
-                                                             load/load
-                                                             atomic/store/store
-                                                             atomic/atomicrmw.
-                                                           - Ensures any                    - Ensures any
-                                                             following global                 following global
-                                                             data read is no                  data read is no
-                                                             older than the load              older than the load
-                                                             atomic value being               atomic value being
-                                                             acquired.                        acquired.
-
-                                                                                          3. buffer_gl0_inv
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
-
-     atomicrmw    acq_rel      - agent        - global   1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lgkmcnt(0) &
-                               - system                     vmcnt(0)                         vmcnt(0) & vscnt(0)
-
-                                                           - If OpenCL, omit                - If OpenCL, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0) and                     vmcnt(0), s_waitcnt
-                                                             s_waitcnt                        vscnt(0) and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - s_waitcnt vmcnt(0)             - s_waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             global/generic                   global/generic
-                                                             load/store/load                  load/load atomic/
-                                                             atomic/store                     atomicrmw-with-return-value.
-                                                             atomic/atomicrmw.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                           - s_waitcnt lgkmcnt(0)           - s_waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to global have                   to global have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             atomicrmw that is                atomicrmw that is
-                                                             being released.                  being released.
-
-                                                         2. buffer/global_atomic          2. buffer/global_atomic
-                                                         3. s_waitcnt vmcnt(0)            3. s_waitcnt vm/vscnt(0)
-
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                                                              waitcnt lgkmcnt(0).
-                                                           - Must happen before             - Must happen before
-                                                             following                        following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_inv.
-                                                           - Ensures the                    - Ensures the
-                                                             atomicrmw has                    atomicrmw has
-                                                             completed before                 completed before
-                                                             invalidating the                 invalidating the
-                                                             cache.                           caches.
-
-                                                         4. buffer_wbinvl1_vol            4. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
-
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data.                     global data.
-
-     atomicrmw    acq_rel      - agent        - generic  1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lgkmcnt(0) &
-                               - system                     vmcnt(0)                         vmcnt(0) & vscnt(0)
-
-                                                           - If OpenCL, omit                - If OpenCL, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0) and                     vmcnt(0), s_waitcnt
-                                                             s_waitcnt                        vscnt(0), and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - s_waitcnt vmcnt(0)             - s_waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             global/generic                   global/generic
-                                                             load/store/load                  load/load atomic
-                                                             atomic/store                     atomicrmw-with-return-value.
-                                                             atomic/atomicrmw.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                           - s_waitcnt lgkmcnt(0)           - s_waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             atomicrmw.                       atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to global have                   have
-                                                             completed before                 completed before
-                                                             performing the                   performing the
-                                                             atomicrmw that is                atomicrmw that is
-                                                             being released.                  being released.
-
-                                                         2. flat_atomic                   2. flat_atomic
-                                                         3. s_waitcnt vmcnt(0) &          3. s_waitcnt vm/vscnt(0) &
-                                                            lgkmcnt(0)                       lgkmcnt(0)
-
-                                                           - If OpenCL, omit                - If OpenCL, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                                                            - Use vmcnt(0) if atomic with
-                                                                                              return and vscnt(0) if
-                                                                                              atomic with no-return.
-                                                           - Must happen before             - Must happen before
-                                                             following                        following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_inv.
-                                                           - Ensures the                    - Ensures the
-                                                             atomicrmw has                    atomicrmw has
-                                                             completed before                 completed before
-                                                             invalidating the                 invalidating the
-                                                             cache.                           caches.
-
-                                                         4. buffer_wbinvl1_vol            4. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
-
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data.                     global data.
-
-     fence        acq_rel      - singlethread *none*     *none*                           *none*
-                               - wavefront
-     fence        acq_rel      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                                                                             vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             not generic, omit.               not generic, omit
-                                                                                              lgkmcnt(0).
-                                                                                            - If OpenCL and
-                                                                                              address space is
-                                                                                              local, omit
-                                                                                              vmcnt(0) and vscnt(0).
-                                                           - However,                       - However,
-                                                             since LLVM                       since LLVM
-                                                             currently has no                 currently has no
-                                                             address space on                 address space on
-                                                             the fence need to                the fence need to
-                                                             conservatively                   conservatively
-                                                             always generate                  always generate
-                                                             (see comment for                 (see comment for
-                                                             previous fence).                 previous fence).
-                                                           - Must happen after
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0), and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
                                                              any preceding
                                                              local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. buffer/global_atomic
+                                                         3. s_waitcnt vm/vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the
+                                                             atomicrmw value
+                                                             being acquired.
+
+                                                         4. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acq_rel      - workgroup    - local    1. s_waitcnt vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - If OpenCL, omit.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and s_waitcnt
+                                                             vscnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             global memory
+                                                             operations have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. ds_atomic
+                                                         3. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the local load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         4. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - If OpenCL omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acq_rel      - workgroup    - generic  1. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL, omit lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. flat_atomic
+                                                         3. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL, omit lgkmcnt(0).
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the load
+                                                             atomic value being
+                                                             acquired.
+
+                                                         3. buffer_gl0_inv
+
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
+
+     atomicrmw    acq_rel      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0) & vscnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to global have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. buffer/global_atomic
+                                                         3. s_waitcnt vm/vscnt(0)
+
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             following
+                                                             buffer_gl*_inv.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         4. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     atomicrmw    acq_rel      - agent        - generic  1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0) & vscnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0), and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load atomic
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. flat_atomic
+                                                         3. s_waitcnt vm/vscnt(0) &
+                                                            lgkmcnt(0)
+
+                                                           - If OpenCL, omit
+                                                             lgkmcnt(0).
+                                                           - Use vmcnt(0) if atomic with
+                                                             return and vscnt(0) if
+                                                             atomic with no-return.
+                                                           - Must happen before
+                                                             following
+                                                             buffer_gl*_inv.
+                                                           - Ensures the
+                                                             atomicrmw has
+                                                             completed before
+                                                             invalidating the
+                                                             caches.
+
+                                                         4. buffer_gl0_inv;
+                                                            buffer_gl1_inv
+
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data.
+
+     fence        acq_rel      - singlethread *none*     *none*
+                               - wavefront
+     fence        acq_rel      - workgroup    *none*     1. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0) & vscnt(0)
+
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0) and vscnt(0).
+                                                           - However,
+                                                             since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store atomic/
+                                                             atomicrmw.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
                                                              load/load
                                                              atomic/store/store
                                                              atomic/atomicrmw.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0) and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - s_waitcnt vmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              load/load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                                                            - s_waitcnt lgkmcnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              local/generic
-                                                                                              load/store/load
-                                                                                              atomic/store atomic/
-                                                                                              atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/store/store               atomic/store/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that all               - Ensures that all
-                                                             memory operations                memory operations
-                                                             to local have                    have
-                                                             completed before                 completed before
-                                                             performing any                   performing any
-                                                             following global                 following global
-                                                             memory operations.               memory operations.
-                                                           - Ensures that the               - Ensures that the
-                                                             preceding                        preceding
-                                                             local/generic load               local/generic load
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with an equal or                 with an equal or
-                                                             wider sync scope                 wider sync scope
-                                                             and memory ordering              and memory ordering
-                                                             stronger than                    stronger than
-                                                             unordered (this is               unordered (this is
-                                                             termed the                       termed the
-                                                             acquire-fence-paired-atomic      acquire-fence-paired-atomic
-                                                             ) has completed                  ) has completed
-                                                             before following                 before following
-                                                             global memory                    global memory
-                                                             operations. This                 operations. This
-                                                             satisfies the                    satisfies the
-                                                             requirements of                  requirements of
-                                                             acquire.                         acquire.
-                                                           - Ensures that all               - Ensures that all
-                                                             previous memory                  previous memory
-                                                             operations have                  operations have
-                                                             completed before a               completed before a
-                                                             following                        following
-                                                             local/generic store              local/generic store
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with an equal or                 with an equal or
-                                                             wider sync scope                 wider sync scope
-                                                             and memory ordering              and memory ordering
-                                                             stronger than                    stronger than
-                                                             unordered (this is               unordered (this is
-                                                             termed the                       termed the
-                                                             release-fence-paired-atomic      release-fence-paired-atomic
-                                                             ). This satisfies the            ). This satisfies the
-                                                             requirements of                  requirements of
-                                                             release.                         release.
-                                                                                            - Must happen before
-                                                                                              the following
-                                                                                              buffer_gl0_inv.
-                                                                                            - Ensures that the
-                                                                                              acquire-fence-paired
-                                                                                              atomic has completed
-                                                                                              before invalidating
-                                                                                              the
-                                                                                              cache. Therefore
-                                                                                              any following
-                                                                                              locations read must
-                                                                                              be no older than
-                                                                                              the value read by
-                                                                                              the
-                                                                                              acquire-fence-paired-atomic.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             have
+                                                             completed before
+                                                             performing any
+                                                             following global
+                                                             memory operations.
+                                                           - Ensures that the
+                                                             preceding
+                                                             local/generic load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             acquire-fence-paired-atomic)
+                                                             has completed
+                                                             before following
+                                                             global memory
+                                                             operations. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+                                                           - Ensures that all
+                                                             previous memory
+                                                             operations have
+                                                             completed before a
+                                                             following
+                                                             local/generic store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             release-fence-paired-atomic).
+                                                             This satisfies the
+                                                             requirements of
+                                                             release.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl0_inv.
+                                                           - Ensures that the
+                                                             acquire-fence-paired
+                                                             atomic has completed
+                                                             before invalidating
+                                                             the
+                                                             cache. Therefore
+                                                             any following
+                                                             locations read must
+                                                             be no older than
+                                                             the value read by
+                                                             the
+                                                             acquire-fence-paired-atomic.
 
-                                                                                          3. buffer_gl0_inv
+                                                         3. buffer_gl0_inv
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Ensures that
-                                                                                              following
-                                                                                              loads will not see
-                                                                                              stale data.
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Ensures that
+                                                             following
+                                                             loads will not see
+                                                             stale data.
 
-     fence        acq_rel      - agent        *none*     1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lgkmcnt(0) &
-                               - system                     vmcnt(0)                         vmcnt(0) & vscnt(0)
+     fence        acq_rel      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0) & vscnt(0)
 
-                                                           - If OpenCL and                  - If OpenCL and
-                                                             address space is                 address space is
-                                                             not generic, omit                not generic, omit
-                                                             lgkmcnt(0).                      lgkmcnt(0).
-                                                                                            - If OpenCL and
-                                                                                              address space is
-                                                                                              local, omit
-                                                                                              vmcnt(0) and vscnt(0).
-                                                           - However, since LLVM            - However, since LLVM
-                                                             currently has no                 currently has no
-                                                             address space on                 address space on
-                                                             the fence need to                the fence need to
-                                                             conservatively                   conservatively
-                                                             always generate                  always generate
-                                                             (see comment for                 (see comment for
-                                                             previous fence).                 previous fence).
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0) and                     vmcnt(0), s_waitcnt
-                                                             s_waitcnt                        vscnt(0) and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - s_waitcnt vmcnt(0)             - s_waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             global/generic                   global/generic
-                                                             load/store/load                  load/load
-                                                             atomic/store                     atomic/
-                                                             atomic/atomicrmw.                atomicrmw-with-return-value.
-                                                                                            - s_waitcnt vscnt(0)
-                                                                                              must happen after
-                                                                                              any preceding
-                                                                                              global/generic
-                                                                                              store/store atomic/
-                                                                                              atomicrmw-no-return-value.
-                                                           - s_waitcnt lgkmcnt(0)           - s_waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             any preceding                    any preceding
-                                                             local/generic                    local/generic
-                                                             load/store/load                  load/store/load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Must happen before             - Must happen before
-                                                             the following                    the following
-                                                             buffer_wbinvl1_vol.              buffer_gl*_inv.
-                                                           - Ensures that the               - Ensures that the
-                                                             preceding                        preceding
-                                                             global/local/generic             global/local/generic
-                                                             load                             load
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with an equal or                 with an equal or
-                                                             wider sync scope                 wider sync scope
-                                                             and memory ordering              and memory ordering
-                                                             stronger than                    stronger than
-                                                             unordered (this is               unordered (this is
-                                                             termed the                       termed the
-                                                             acquire-fence-paired-atomic      acquire-fence-paired-atomic
-                                                             ) has completed                  ) has completed
-                                                             before invalidating              before invalidating
-                                                             the cache. This                  the caches. This
-                                                             satisfies the                    satisfies the
-                                                             requirements of                  requirements of
-                                                             acquire.                         acquire.
-                                                           - Ensures that all               - Ensures that all
-                                                             previous memory                  previous memory
-                                                             operations have                  operations have
-                                                             completed before a               completed before a
-                                                             following                        following
-                                                             global/local/generic             global/local/generic
-                                                             store                            store
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with an equal or                 with an equal or
-                                                             wider sync scope                 wider sync scope
-                                                             and memory ordering              and memory ordering
-                                                             stronger than                    stronger than
-                                                             unordered (this is               unordered (this is
-                                                             termed the                       termed the
-                                                             release-fence-paired-atomic      release-fence-paired-atomic
-                                                             ). This satisfies the            ). This satisfies the
-                                                             requirements of                  requirements of
-                                                             release.                         release.
+                                                           - If OpenCL and
+                                                             address space is
+                                                             not generic, omit
+                                                             lgkmcnt(0).
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0) and vscnt(0).
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             load/load
+                                                             atomic/
+                                                             atomicrmw-with-return-value.
+                                                           - s_waitcnt vscnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             buffer_gl*_inv.
+                                                           - Ensures that the
+                                                             preceding
+                                                             global/local/generic
+                                                             load
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             acquire-fence-paired-atomic)
+                                                             has completed
+                                                             before invalidating
+                                                             the caches. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
+                                                           - Ensures that all
+                                                             previous memory
+                                                             operations have
+                                                             completed before a
+                                                             following
+                                                             global/local/generic
+                                                             store
+                                                             atomic/atomicrmw
+                                                             with an equal or
+                                                             wider sync scope
+                                                             and memory ordering
+                                                             stronger than
+                                                             unordered (this is
+                                                             termed the
+                                                             release-fence-paired-atomic).
+                                                             This satisfies the
+                                                             requirements of
+                                                             release.
 
-                                                         2. buffer_wbinvl1_vol            2. buffer_gl0_inv;
-                                                                                             buffer_gl1_inv
+                                                         2. buffer_gl0_inv;
+                                                            buffer_gl1_inv
 
-                                                           - Must happen before             - Must happen before
-                                                             any following                    any following
-                                                             global/generic                   global/generic
-                                                             load/load                        load/load
-                                                             atomic/store/store               atomic/store/store
-                                                             atomic/atomicrmw.                atomic/atomicrmw.
-                                                           - Ensures that                   - Ensures that
-                                                             following loads                  following loads
-                                                             will not see stale               will not see stale
-                                                             global data. This                global data. This
-                                                             satisfies the                    satisfies the
-                                                             requirements of                  requirements of
-                                                             acquire.                         acquire.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures that
+                                                             following loads
+                                                             will not see stale
+                                                             global data. This
+                                                             satisfies the
+                                                             requirements of
+                                                             acquire.
 
      **Sequential Consistent Atomic**
-     ---------------------------------------------------------------------------------------------------------------------
-     load atomic  seq_cst      - singlethread - global   *Same as corresponding           *Same as corresponding
-                               - wavefront    - local    load atomic acquire,             load atomic acquire,
-                                              - generic  except must generated            except must generated
-                                                         all instructions even            all instructions even
-                                                         for OpenCL.*                     for OpenCL.*
-     load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0)          1. s_waitcnt lgkmcnt(0) &
-                                              - generic                                      vmcnt(0) & vscnt(0)
-
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit vmcnt(0) and
-                                                                                              vscnt(0).
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0), s_waitcnt
-                                                                                              vscnt(0), and s_waitcnt
-                                                                                              lgkmcnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                           - Must                           - waitcnt lgkmcnt(0) must
-                                                             happen after                     happen after
-                                                             preceding                        preceding
-                                                             global/generic load              local load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with memory                      with memory
-                                                             ordering of seq_cst              ordering of seq_cst
-                                                             and with equal or                and with equal or
-                                                             wider sync scope.                wider sync scope.
-                                                             (Note that seq_cst               (Note that seq_cst
-                                                             fences have their                fences have their
-                                                             own s_waitcnt                    own s_waitcnt
-                                                             lgkmcnt(0) and so do             lgkmcnt(0) and so do
-                                                             not need to be                   not need to be
-                                                             considered.)                     considered.)
-                                                                                            - waitcnt vmcnt(0)
-                                                                                              Must happen after
-                                                                                              preceding
-                                                                                              global/generic load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value
-                                                                                              with memory
-                                                                                              ordering of seq_cst
-                                                                                              and with equal or
-                                                                                              wider sync scope.
-                                                                                              (Note that seq_cst
-                                                                                              fences have their
-                                                                                              own s_waitcnt
-                                                                                              vmcnt(0) and so do
-                                                                                              not need to be
-                                                                                              considered.)
-                                                                                            - waitcnt vscnt(0)
-                                                                                              Must happen after
-                                                                                              preceding
-                                                                                              global/generic store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value
-                                                                                              with memory
-                                                                                              ordering of seq_cst
-                                                                                              and with equal or
-                                                                                              wider sync scope.
-                                                                                              (Note that seq_cst
-                                                                                              fences have their
-                                                                                              own s_waitcnt
-                                                                                              vscnt(0) and so do
-                                                                                              not need to be
-                                                                                              considered.)
-                                                           - Ensures any                    - Ensures any
-                                                             preceding                        preceding
-                                                             sequential                       sequential
-                                                             consistent local                 consistent global/local
-                                                             memory instructions              memory instructions
-                                                             have completed                   have completed
-                                                             before executing                 before executing
-                                                             this sequentially                this sequentially
-                                                             consistent                       consistent
-                                                             instruction. This                instruction. This
-                                                             prevents reordering              prevents reordering
-                                                             a seq_cst store                  a seq_cst store
-                                                             followed by a                    followed by a
-                                                             seq_cst load. (Note              seq_cst load. (Note
-                                                             that seq_cst is                  that seq_cst is
-                                                             stronger than                    stronger than
-                                                             acquire/release as               acquire/release as
-                                                             the reordering of                the reordering of
-                                                             load acquire                     load acquire
-                                                             followed by a store              followed by a store
-                                                             release is                       release is
-                                                             prevented by the                 prevented by the
-                                                             waitcnt of                       waitcnt of
-                                                             the release, but                 the release, but
-                                                             there is nothing                 there is nothing
-                                                             preventing a store               preventing a store
-                                                             release followed by              release followed by
-                                                             load acquire from                load acquire from
-                                                             completing out of                completing out of
-                                                             order. The waitcnt               order. The waitcnt
-                                                             could be placed after            could be placed after
-                                                             seq_store or before              seq_store or before
-                                                             the seq_load. We                 the seq_load. We
-                                                             choose the load to               choose the load to
-                                                             make the waitcnt be              make the waitcnt be
-                                                             as late as possible              as late as possible
-                                                             so that the store                so that the store
-                                                             may have already                 may have already
-                                                             completed.)                      completed.)
-
-                                                         2. *Following                    2. *Following
-                                                            instructions same as             instructions same as
-                                                            corresponding load               corresponding load
-                                                            atomic acquire,                  atomic acquire,
-                                                            except must generated            except must generated
-                                                            all instructions even            all instructions even
-                                                            for OpenCL.*                     for OpenCL.*
-     load atomic  seq_cst      - workgroup    - local    *Same as corresponding
-                                                         load atomic acquire,
-                                                         except must generated
+     ------------------------------------------------------------------------------------
+     load atomic  seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    load atomic acquire,
+                                              - generic  except must generated
                                                          all instructions even
                                                          for OpenCL.*
+     load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
+                                              - generic     vmcnt(0) & vscnt(0)
 
-                                                                                          1. s_waitcnt vmcnt(0) & vscnt(0)
+                                                           - If CU wavefront execution
+                                                             mode, omit vmcnt(0) and
+                                                             vscnt(0).
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0), and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt lgkmcnt(0) must
+                                                             happen after
+                                                             preceding
+                                                             local/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             lgkmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - s_waitcnt vscnt(0)
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic store
+                                                             atomic/
+                                                             atomicrmw-no-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vscnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global/local
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             s_waitcnt of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The s_waitcnt
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the s_waitcnt be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
 
-                                                                                            - If CU wavefront execution
-                                                                                              mode, omit.
-                                                                                            - Could be split into
-                                                                                              separate s_waitcnt
-                                                                                              vmcnt(0) and s_waitcnt
-                                                                                              vscnt(0) to allow
-                                                                                              them to be
-                                                                                              independently moved
-                                                                                              according to the
-                                                                                              following rules.
-                                                                                            - waitcnt vmcnt(0)
-                                                                                              Must happen after
-                                                                                              preceding
-                                                                                              global/generic load
-                                                                                              atomic/
-                                                                                              atomicrmw-with-return-value
-                                                                                              with memory
-                                                                                              ordering of seq_cst
-                                                                                              and with equal or
-                                                                                              wider sync scope.
-                                                                                              (Note that seq_cst
-                                                                                              fences have their
-                                                                                              own s_waitcnt
-                                                                                              vmcnt(0) and so do
-                                                                                              not need to be
-                                                                                              considered.)
-                                                                                            - waitcnt vscnt(0)
-                                                                                              Must happen after
-                                                                                              preceding
-                                                                                              global/generic store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value
-                                                                                              with memory
-                                                                                              ordering of seq_cst
-                                                                                              and with equal or
-                                                                                              wider sync scope.
-                                                                                              (Note that seq_cst
-                                                                                              fences have their
-                                                                                              own s_waitcnt
-                                                                                              vscnt(0) and so do
-                                                                                              not need to be
-                                                                                              considered.)
-                                                                                            - Ensures any
-                                                                                              preceding
-                                                                                              sequential
-                                                                                              consistent global
-                                                                                              memory instructions
-                                                                                              have completed
-                                                                                              before executing
-                                                                                              this sequentially
-                                                                                              consistent
-                                                                                              instruction. This
-                                                                                              prevents reordering
-                                                                                              a seq_cst store
-                                                                                              followed by a
-                                                                                              seq_cst load. (Note
-                                                                                              that seq_cst is
-                                                                                              stronger than
-                                                                                              acquire/release as
-                                                                                              the reordering of
-                                                                                              load acquire
-                                                                                              followed by a store
-                                                                                              release is
-                                                                                              prevented by the
-                                                                                              waitcnt of
-                                                                                              the release, but
-                                                                                              there is nothing
-                                                                                              preventing a store
-                                                                                              release followed by
-                                                                                              load acquire from
-                                                                                              completing out of
-                                                                                              order. The waitcnt
-                                                                                              could be placed after
-                                                                                              seq_store or before
-                                                                                              the seq_load. We
-                                                                                              choose the load to
-                                                                                              make the waitcnt be
-                                                                                              as late as possible
-                                                                                              so that the store
-                                                                                              may have already
-                                                                                              completed.)
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
+     load atomic  seq_cst      - workgroup    - local
 
-                                                                                          2. *Following
-                                                                                             instructions same as
-                                                                                             corresponding load
-                                                                                             atomic acquire,
-                                                                                             except must generated
-                                                                                             all instructions even
-                                                                                             for OpenCL.*
+                                                         1. s_waitcnt vmcnt(0) & vscnt(0)
 
-     load atomic  seq_cst      - agent        - global   1. s_waitcnt lgkmcnt(0) &        1. s_waitcnt lgkmcnt(0) &
-                               - system       - generic     vmcnt(0)                         vmcnt(0) & vscnt(0)
+                                                           - If CU wavefront execution
+                                                             mode, omit.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0) and s_waitcnt
+                                                             vscnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt vmcnt(0)
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - s_waitcnt vscnt(0)
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic store
+                                                             atomic/
+                                                             atomicrmw-no-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vscnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             s_waitcnt of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The s_waitcnt
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the s_waitcnt be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
 
-                                                           - Could be split into            - Could be split into
-                                                             separate s_waitcnt               separate s_waitcnt
-                                                             vmcnt(0)                         vmcnt(0), s_waitcnt
-                                                             and s_waitcnt                    vscnt(0) and s_waitcnt
-                                                             lgkmcnt(0) to allow              lgkmcnt(0) to allow
-                                                             them to be                       them to be
-                                                             independently moved              independently moved
-                                                             according to the                 according to the
-                                                             following rules.                 following rules.
-                                                           - waitcnt lgkmcnt(0)             - waitcnt lgkmcnt(0)
-                                                             must happen after                must happen after
-                                                             preceding                        preceding
-                                                             global/generic load              local load
-                                                             atomic/store                     atomic/store
-                                                             atomic/atomicrmw                 atomic/atomicrmw
-                                                             with memory                      with memory
-                                                             ordering of seq_cst              ordering of seq_cst
-                                                             and with equal or                and with equal or
-                                                             wider sync scope.                wider sync scope.
-                                                             (Note that seq_cst               (Note that seq_cst
-                                                             fences have their                fences have their
-                                                             own s_waitcnt                    own s_waitcnt
-                                                             lgkmcnt(0) and so do             lgkmcnt(0) and so do
-                                                             not need to be                   not need to be
-                                                             considered.)                     considered.)
-                                                           - waitcnt vmcnt(0)               - waitcnt vmcnt(0)
-                                                             must happen after                must happen after
-                                                             preceding                        preceding
-                                                             global/generic load              global/generic load
-                                                             atomic/store                     atomic/
-                                                             atomic/atomicrmw                 atomicrmw-with-return-value
-                                                             with memory                      with memory
-                                                             ordering of seq_cst              ordering of seq_cst
-                                                             and with equal or                and with equal or
-                                                             wider sync scope.                wider sync scope.
-                                                             (Note that seq_cst               (Note that seq_cst
-                                                             fences have their                fences have their
-                                                             own s_waitcnt                    own s_waitcnt
-                                                             vmcnt(0) and so do               vmcnt(0) and so do
-                                                             not need to be                   not need to be
-                                                             considered.)                     considered.)
-                                                                                            - waitcnt vscnt(0)
-                                                                                              Must happen after
-                                                                                              preceding
-                                                                                              global/generic store
-                                                                                              atomic/
-                                                                                              atomicrmw-no-return-value
-                                                                                              with memory
-                                                                                              ordering of seq_cst
-                                                                                              and with equal or
-                                                                                              wider sync scope.
-                                                                                              (Note that seq_cst
-                                                                                              fences have their
-                                                                                              own s_waitcnt
-                                                                                              vscnt(0) and so do
-                                                                                              not need to be
-                                                                                              considered.)
-                                                           - Ensures any                    - Ensures any
-                                                             preceding                        preceding
-                                                             sequential                       sequential
-                                                             consistent global                consistent global
-                                                             memory instructions              memory instructions
-                                                             have completed                   have completed
-                                                             before executing                 before executing
-                                                             this sequentially                this sequentially
-                                                             consistent                       consistent
-                                                             instruction. This                instruction. This
-                                                             prevents reordering              prevents reordering
-                                                             a seq_cst store                  a seq_cst store
-                                                             followed by a                    followed by a
-                                                             seq_cst load. (Note              seq_cst load. (Note
-                                                             that seq_cst is                  that seq_cst is
-                                                             stronger than                    stronger than
-                                                             acquire/release as               acquire/release as
-                                                             the reordering of                the reordering of
-                                                             load acquire                     load acquire
-                                                             followed by a store              followed by a store
-                                                             release is                       release is
-                                                             prevented by the                 prevented by the
-                                                             waitcnt of                       waitcnt of
-                                                             the release, but                 the release, but
-                                                             there is nothing                 there is nothing
-                                                             preventing a store               preventing a store
-                                                             release followed by              release followed by
-                                                             load acquire from                load acquire from
-                                                             completing out of                completing out of
-                                                             order. The waitcnt               order. The waitcnt
-                                                             could be placed after            could be placed after
-                                                             seq_store or before              seq_store or before
-                                                             the seq_load. We                 the seq_load. We
-                                                             choose the load to               choose the load to
-                                                             make the waitcnt be              make the waitcnt be
-                                                             as late as possible              as late as possible
-                                                             so that the store                so that the store
-                                                             may have already                 may have already
-                                                             completed.)                      completed.)
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
 
-                                                         2. *Following                    2. *Following
-                                                            instructions same as             instructions same as
-                                                            corresponding load               corresponding load
-                                                            atomic acquire,                  atomic acquire,
-                                                            except must generated            except must generated
-                                                            all instructions even            all instructions even
-                                                            for OpenCL.*                     for OpenCL.*
-     store atomic seq_cst      - singlethread - global   *Same as corresponding           *Same as corresponding
-                               - wavefront    - local    store atomic release,            store atomic release,
-                               - workgroup    - generic  except must generated            except must generated
-                                                         all instructions even            all instructions even
-                                                         for OpenCL.*                     for OpenCL.*
-     store atomic seq_cst      - agent        - global   *Same as corresponding           *Same as corresponding
-                               - system       - generic  store atomic release,            store atomic release,
-                                                         except must generated            except must generated
-                                                         all instructions even            all instructions even
-                                                         for OpenCL.*                     for OpenCL.*
-     atomicrmw    seq_cst      - singlethread - global   *Same as corresponding           *Same as corresponding
-                               - wavefront    - local    atomicrmw acq_rel,               atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated            except must generated
-                                                         all instructions even            all instructions even
-                                                         for OpenCL.*                     for OpenCL.*
-     atomicrmw    seq_cst      - agent        - global   *Same as corresponding           *Same as corresponding
-                               - system       - generic  atomicrmw acq_rel,               atomicrmw acq_rel,
-                                                         except must generated            except must generated
-                                                         all instructions even            all instructions even
-                                                         for OpenCL.*                     for OpenCL.*
-     fence        seq_cst      - singlethread *none*     *Same as corresponding           *Same as corresponding
-                               - wavefront               fence acq_rel,                   fence acq_rel,
-                               - workgroup               except must generated            except must generated
-                               - agent                   all instructions even            all instructions even
-                               - system                  for OpenCL.*                     for OpenCL.*
-     ============ ============ ============== ========== ================================ ================================
+     load atomic  seq_cst      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0) & vscnt(0)
 
-The memory order also adds the single thread optimization constrains defined in
-table
-:ref:`amdgpu-amdhsa-memory-model-single-thread-optimization-constraints-gfx6-gfx10-table`.
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0), s_waitcnt
+                                                             vscnt(0) and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - s_waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             preceding
+                                                             local load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             lgkmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - s_waitcnt vmcnt(0)
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/
+                                                             atomicrmw-with-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - s_waitcnt vscnt(0)
+                                                             Must happen after
+                                                             preceding
+                                                             global/generic store
+                                                             atomic/
+                                                             atomicrmw-no-return-value
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             vscnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent global
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             s_waitcnt of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             completing out of
+                                                             order. The s_waitcnt
+                                                             could be placed after
+                                                             seq_store or before
+                                                             the seq_load. We
+                                                             choose the load to
+                                                             make the s_waitcnt be
+                                                             as late as possible
+                                                             so that the store
+                                                             may have already
+                                                             completed.)
 
-  .. table:: AMDHSA Memory Model Single Thread Optimization Constraints GFX6-GFX10
-     :name: amdgpu-amdhsa-memory-model-single-thread-optimization-constraints-gfx6-gfx10-table
-
-     ============ ==============================================================
-     LLVM Memory  Optimization Constraints
-     Ordering
-     ============ ==============================================================
-     unordered    *none*
-     monotonic    *none*
-     acquire      - If a load atomic/atomicrmw then no following load/load
-                    atomic/store/ store atomic/atomicrmw/fence instruction can
-                    be moved before the acquire.
-                  - If a fence then same as load atomic, plus no preceding
-                    associated fence-paired-atomic can be moved after the fence.
-     release      - If a store atomic/atomicrmw then no preceding load/load
-                    atomic/store/ store atomic/atomicrmw/fence instruction can
-                    be moved after the release.
-                  - If a fence then same as store atomic, plus no following
-                    associated fence-paired-atomic can be moved before the
-                    fence.
-     acq_rel      Same constraints as both acquire and release.
-     seq_cst      - If a load atomic then same constraints as acquire, plus no
-                    preceding sequentially consistent load atomic/store
-                    atomic/atomicrmw/fence instruction can be moved after the
-                    seq_cst.
-                  - If a store atomic then the same constraints as release, plus
-                    no following sequentially consistent load atomic/store
-                    atomic/atomicrmw/fence instruction can be moved before the
-                    seq_cst.
-                  - If an atomicrmw/fence then same constraints as acq_rel.
-     ============ ==============================================================
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
+     store atomic seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    store atomic release,
+                               - workgroup    - generic  except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
+                               - wavefront    - local    atomicrmw acq_rel,
+                               - workgroup    - generic  except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     fence        seq_cst      - singlethread *none*     *Same as corresponding
+                               - wavefront               fence acq_rel,
+                               - workgroup               except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     ============ ============ ============== ========== ================================
 
 Trap Handler ABI
 ~~~~~~~~~~~~~~~~
@@ -6738,7 +7684,7 @@ On entry to a function:
     after the last local allocation.
 
 9.  All other registers are unspecified.
-10. Any necessary ``waitcnt`` has been performed to ensure memory is available
+10. Any necessary ``s_waitcnt`` has been performed to ensure memory is available
     to the function.
 
 On exit from a function:
@@ -6778,7 +7724,7 @@ On exit from a function:
 2.  The PC is set to the RA provided on entry.
 3.  MODE register: *TBD*.
 4.  All other registers are clobbered.
-5.  Any necessary ``waitcnt`` has been performed to ensure memory accessed by
+5.  Any necessary ``s_waitcnt`` has been performed to ensure memory accessed by
     function is available to the caller.
 
 .. TODO::
