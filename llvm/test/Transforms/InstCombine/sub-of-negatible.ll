@@ -195,10 +195,10 @@ define i8 @neg_of_sub_from_constant(i8 %x) {
 
 define i8 @neg_of_sub_from_constant_multi_use(i8 %x) {
 ; CHECK-LABEL: @neg_of_sub_from_constant_multi_use(
-; CHECK-NEXT:    [[S:%.*]] = sub i8 42, [[X:%.*]]
+; CHECK-NEXT:    [[S_NEG:%.*]] = add i8 [[X:%.*]], -42
+; CHECK-NEXT:    [[S:%.*]] = sub i8 42, [[X]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[S]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[S_NEG]]
 ;
   %s = sub i8 42, %x
   call void @use8(i8 %s)

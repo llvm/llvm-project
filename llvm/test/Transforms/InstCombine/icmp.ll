@@ -3831,9 +3831,7 @@ define i1 @pr47997(i32 %arg) {
 ; CHECK-NEXT:    store i32 [[I]], i32* @x, align 4
 ; CHECK-NEXT:    [[I1:%.*]] = sub nsw i32 1, [[ARG]]
 ; CHECK-NEXT:    store i32 [[I1]], i32* @y, align 4
-; CHECK-NEXT:    [[I2:%.*]] = sub nsw i32 0, [[I1]]
-; CHECK-NEXT:    [[I3:%.*]] = icmp eq i32 [[I]], [[I2]]
-; CHECK-NEXT:    ret i1 [[I3]]
+; CHECK-NEXT:    ret i1 true
 ;
 bb:
   %i = add nsw i32 %arg, -1
