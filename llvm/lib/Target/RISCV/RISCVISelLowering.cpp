@@ -368,6 +368,14 @@ bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
+bool RISCVTargetLowering::isCheapToSpeculateCttz() const {
+  return Subtarget.hasStdExtZbb();
+}
+
+bool RISCVTargetLowering::isCheapToSpeculateCtlz() const {
+  return Subtarget.hasStdExtZbb();
+}
+
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
   if (VT == MVT::f32 && !Subtarget.hasStdExtF())
