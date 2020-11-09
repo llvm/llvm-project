@@ -70,26 +70,11 @@ private:
   bool isInitializer{false};
 };
 
-/// Create an expression.
-/// Lowers `expr` to the FIR dialect of MLIR. The expression is lowered to a
-/// value result.
-mlir::Value createSomeExpression(mlir::Location loc,
-                                 AbstractConverter &converter,
-                                 const evaluate::Expr<evaluate::SomeType> &expr,
-                                 SymMap &symMap);
-
 /// Create an extended expression value.
 fir::ExtendedValue
 createSomeExtendedExpression(mlir::Location loc, AbstractConverter &converter,
                              const evaluate::Expr<evaluate::SomeType> &expr,
                              SymMap &symMap, const ExpressionContext &context);
-
-/// Create an address.
-/// Lowers `expr` to the FIR dialect of MLIR. The expression must be an entity
-/// and the address of the entity is returned.
-mlir::Value createSomeAddress(mlir::Location loc, AbstractConverter &converter,
-                              const evaluate::Expr<evaluate::SomeType> &expr,
-                              SymMap &symMap);
 
 /// Create an extended expression address.
 fir::ExtendedValue

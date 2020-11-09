@@ -54,17 +54,8 @@ public:
       : location{loc}, converter{converter},
         builder{converter.getFirOpBuilder()}, symMap{map}, exprCtx{context} {}
 
-  /// Lower the expression `expr` into MLIR standard dialect
-  mlir::Value genAddr(const Fortran::lower::SomeExpr &expr) {
-    return fir::getBase(gen(expr));
-  }
-
   fir::ExtendedValue genExtAddr(const Fortran::lower::SomeExpr &expr) {
     return gen(expr);
-  }
-
-  mlir::Value genValue(const Fortran::lower::SomeExpr &expr) {
-    return fir::getBase(genval(expr));
   }
 
   fir::ExtendedValue genExtValue(const Fortran::lower::SomeExpr &expr) {
@@ -1682,16 +1673,6 @@ private:
 
 } // namespace
 
-mlir::Value Fortran::lower::createSomeExpression(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
-    Fortran::lower::SymMap &symMap) {
-  Fortran::lower::ExpressionContext unused;
-  LLVM_DEBUG(llvm::dbgs() << "expr: "; expr.AsFortran(llvm::dbgs());
-             llvm::dbgs() << '\n');
-  return ExprLowering{loc, converter, symMap, unused}.genValue(expr);
-}
-
 fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
@@ -1700,16 +1681,6 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
   LLVM_DEBUG(llvm::dbgs() << "expr: "; expr.AsFortran(llvm::dbgs());
              llvm::dbgs() << '\n');
   return ExprLowering{loc, converter, symMap, context}.genExtValue(expr);
-}
-
-mlir::Value Fortran::lower::createSomeAddress(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
-    Fortran::lower::SymMap &symMap) {
-  Fortran::lower::ExpressionContext unused;
-  LLVM_DEBUG(llvm::dbgs() << "address: "; expr.AsFortran(llvm::dbgs());
-             llvm::dbgs() << '\n');
-  return ExprLowering{loc, converter, symMap, unused}.genAddr(expr);
 }
 
 fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(

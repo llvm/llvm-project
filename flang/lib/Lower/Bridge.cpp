@@ -350,7 +350,9 @@ private:
 
   mlir::Value createFIRExpr(mlir::Location loc,
                             const Fortran::semantics::SomeExpr *expr) {
-    return createSomeExpression(loc, *this, *expr, localSymbols);
+    Fortran::lower::ExpressionContext unused;
+    return fir::getBase(
+        createSomeExtendedExpression(loc, *this, *expr, localSymbols, unused));
   }
 
   /// Find the symbol in the local map or return null.
