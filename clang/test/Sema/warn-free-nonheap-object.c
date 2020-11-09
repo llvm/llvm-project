@@ -4,6 +4,11 @@ typedef __SIZE_TYPE__ size_t;
 void *malloc(size_t);
 void free(void *);
 
+struct S {
+  int I;
+  char *P;
+};
+
 int GI;
 void test() {
   {
@@ -30,5 +35,10 @@ void test() {
     int A[] = {0, 1, 2, 3};
     free(A);  // expected-warning {{attempt to call free on non-heap object 'A'}}
     free(&A); // expected-warning {{attempt to call free on non-heap object 'A'}}
+  }
+  {
+    struct S s;
+    free(&s.I); // expected-warning {{attempt to call free on non-heap object 'I'}}
+    free(s.P);
   }
 }
