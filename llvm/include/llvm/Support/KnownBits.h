@@ -278,6 +278,10 @@ public:
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for ashr(LHS, RHS).
+  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
+  static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Insert the bits from a smaller known bits starting at bitPosition.
   void insertBits(const KnownBits &SubBits, unsigned BitPosition) {
     Zero.insertBits(SubBits.Zero, BitPosition);
