@@ -141,6 +141,7 @@ public:
   int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         CmpInst::Predicate VecPred,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
 
