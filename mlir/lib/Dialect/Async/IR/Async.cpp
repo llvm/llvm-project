@@ -105,8 +105,8 @@ static LogicalResult verify(YieldOp op) {
     return result.getType().cast<ValueType>().getValueType();
   });
 
-  if (!std::equal(types.begin(), types.end(), op.getOperandTypes().begin()))
-    return op.emitOpError("Operand types do not match the types returned from "
+  if (op.getOperandTypes() != types)
+    return op.emitOpError("operand types do not match the types returned from "
                           "the parent ExecuteOp");
 
   return success();
@@ -238,12 +238,7 @@ static LogicalResult verify(ExecuteOp op) {
   });
 
   // Verify that unwrapped argument types matches the body region arguments.
-  if (llvm::size(unwrappedTypes) != llvm::size(op.body().getArgumentTypes()))
-    return op.emitOpError("the number of async body region arguments does not "
-                          "match the number of execute operation arguments");
-
-  if (!std::equal(unwrappedTypes.begin(), unwrappedTypes.end(),
-                  op.body().getArgumentTypes().begin()))
+  if (op.body().getArgumentTypes() != unwrappedTypes)
     return op.emitOpError("async body region argument types do not match the "
                           "execute operation arguments types");
 
