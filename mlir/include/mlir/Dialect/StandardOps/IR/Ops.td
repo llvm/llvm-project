@@ -2009,7 +2009,7 @@ def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
 // GlobalMemrefOp
 //===----------------------------------------------------------------------===//
 
-def GlobalMemrefOp : Std_Op<"global_memref", [NoSideEffect, Symbol]> {
+def GlobalMemrefOp : Std_Op<"global_memref", [Symbol]> {
   let summary = "declare or define a global memref variable";
   let description = [{
     The `global_memref` operation declares or defines a named global variable.
@@ -2062,7 +2062,7 @@ def GlobalMemrefOp : Std_Op<"global_memref", [NoSideEffect, Symbol]> {
 
   let extraClassDeclaration = [{
      bool isExternal() { return !initial_value(); }
-     bool isUnitialized() {
+     bool isUninitialized() {
        return !isExternal() && initial_value().getValue().isa<UnitAttr>();
      }
   }];
