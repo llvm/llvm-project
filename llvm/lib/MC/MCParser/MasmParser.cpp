@@ -1831,13 +1831,17 @@ bool MasmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
   while (true) {
     AsmToken::TokenKind TokKind = Lexer.getKind();
     if (Lexer.getKind() == AsmToken::Identifier) {
-      StringRef Identifier = Lexer.getTok().getString();
-      if (Identifier.equals_lower("and"))
-        TokKind = AsmToken::Amp;
-      else if (Identifier.equals_lower("not"))
-        TokKind = AsmToken::Exclaim;
-      else if (Identifier.equals_lower("or"))
-        TokKind = AsmToken::Pipe;
+      TokKind = StringSwitch<AsmToken::TokenKind>(Lexer.getTok().getString())
+                    .CaseLower("and", AsmToken::Amp)
+                    .CaseLower("not", AsmToken::Exclaim)
+                    .CaseLower("or", AsmToken::Pipe)
+                    .CaseLower("eq", AsmToken::EqualEqual)
+                    .CaseLower("ne", AsmToken::ExclaimEqual)
+                    .CaseLower("lt", AsmToken::Less)
+                    .CaseLower("le", AsmToken::LessEqual)
+                    .CaseLower("gt", AsmToken::Greater)
+                    .CaseLower("ge", AsmToken::GreaterEqual)
+                    .Default(TokKind);
     }
     MCBinaryExpr::Opcode Kind = MCBinaryExpr::Add;
     unsigned TokPrec = getBinOpPrecedence(TokKind, Kind);
