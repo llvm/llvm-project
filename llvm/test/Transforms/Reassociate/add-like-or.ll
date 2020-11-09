@@ -17,7 +17,7 @@ define i32 @test1(i32 %a, i32 %b) {
 define i32 @test2(i32 %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), [[RNG0:!range !.*]]
-; CHECK-NEXT:    [[RES:%.*]] = or i32 [[X_NUMLZ]], -32
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[X_NUMLZ]], -32
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %x.numlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true), !range !0
@@ -29,9 +29,8 @@ define i32 @test2(i32 %x) {
 define i32 @test3(i32 %x, i32 %bit) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[X_NUMLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), [[RNG0]]
-; CHECK-NEXT:    [[ZERO_MINUS_X_NUMACTIVEBITS:%.*]] = or i32 [[X_NUMLZ]], -32
-; CHECK-NEXT:    [[BIT_PLUS_ONE:%.*]] = add i32 [[BIT:%.*]], 1
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[BIT_PLUS_ONE]], [[ZERO_MINUS_X_NUMACTIVEBITS]]
+; CHECK-NEXT:    [[BIT_PLUS_ONE:%.*]] = add i32 [[BIT:%.*]], -31
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[BIT_PLUS_ONE]], [[X_NUMLZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %x.numlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true), !range !0
