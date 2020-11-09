@@ -85,12 +85,6 @@ New modules
 New checks
 ^^^^^^^^^^
 
-- New :doc:`altera-kernel-name-restriction
-  <clang-tidy/checks/altera-kernel-name-restriction>` check.
-
-  Finds kernel files and include directives whose filename is `kernel.cl`,
-  `Verilog.cl`, or `VHDL.cl`.
-
 - New :doc:`altera-struct-pack-align
   <clang-tidy/checks/altera-struct-pack-align>` check.
 
