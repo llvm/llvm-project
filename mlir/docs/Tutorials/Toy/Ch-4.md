@@ -64,14 +64,15 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// This hook checks to see if the given callable operation is legal to inline
   /// into the given call. For Toy this hook can simply return true, as the Toy
   /// Call operation is always inlinable.
-  bool isLegalToInline(Operation *call, Operation *callable) const final {
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const final {
     return true;
   }
 
   /// This hook checks to see if the given operation is legal to inline into the
   /// given region. For Toy this hook can simply return true, as all Toy
   /// operations are inlinable.
-  bool isLegalToInline(Operation *, Region *,
+  bool isLegalToInline(Operation *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }
