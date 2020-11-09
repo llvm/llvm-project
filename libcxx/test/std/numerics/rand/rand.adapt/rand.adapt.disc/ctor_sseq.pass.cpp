@@ -13,6 +13,9 @@
 
 // template<class Sseq> explicit discard_block_engine(Sseq& q);
 
+// Serializing/deserializing the state of the RNG requires iostreams
+// UNSUPPORTED: libcpp-has-no-localization
+
 #include <random>
 #include <sstream>
 #include <cassert>
