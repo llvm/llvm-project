@@ -80,11 +80,11 @@ attributes #0 = { "use-soft-float"="false" }
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
 
-; CHECK: [[LP1_255]] = !{!"branch_weights", i32 1, i32 255}
-; CHECK: [[LP0_0]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-MASKED: [[LP1_63]] = !{!"branch_weights", i32 1, i32 63}
-; CHECK-MASKED: [[LP0_0]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK: [[LP1_2]] = !{!"branch_weights", i32 1, i32 2}
+; CHECK: [[LP1_255]] = !{!"branch_weights", i64 1, i64 255}
+; CHECK: [[LP0_0]] = !{!"branch_weights", i64 0, i64 0}
+; CHECK-MASKED: [[LP1_63]] = !{!"branch_weights", i64 1, i64 63}
+; CHECK-MASKED: [[LP0_0]] = !{!"branch_weights", i64 0, i64 0}
+; CHECK: [[LP1_2]] = !{!"branch_weights", i64 1, i64 2}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang version 10.0.0 (https://github.com/llvm/llvm-project c292b5b5e059e6ce3e6449e6827ef7e1037c21c4)"}
@@ -92,5 +92,5 @@ attributes #0 = { "use-soft-float"="false" }
 !3 = !{!"int", !4, i64 0}
 !4 = !{!"omnipotent char", !5, i64 0}
 !5 = !{!"Simple C++ TBAA"}
-!6 = !{!"branch_weights", i32 1, i32 1023}
-!7 = !{!"branch_weights", i32 1, i32 1026}
+!6 = !{!"branch_weights", i64 1, i64 1023}
+!7 = !{!"branch_weights", i64 1, i64 1026}
