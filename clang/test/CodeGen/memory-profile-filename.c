@@ -9,4 +9,4 @@ int main(void) {
 
 // NONE-NOT: MemProfProfileFilename
 // DEFAULTNAME: !{i32 1, !"MemProfProfileFilename", !"memprof.profraw"}
-// CUSTOMNAME: !{i32 1, !"MemProfProfileFilename", !"/tmp/memprof.profraw"}
+// CUSTOMNAME: !{i32 1, !"MemProfProfileFilename", !"/tmp{{.*}}memprof.profraw"}
