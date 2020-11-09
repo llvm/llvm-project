@@ -326,7 +326,8 @@ private:
   // Analysis subroutines
   int AnalyzeKindParam(
       const std::optional<parser::KindParam> &, int defaultKind);
-  template <typename PARSED> MaybeExpr ExprOrVariable(const PARSED &);
+  template <typename PARSED>
+  MaybeExpr ExprOrVariable(const PARSED &, parser::CharBlock source);
   template <typename PARSED> MaybeExpr IntLiteralConstant(const PARSED &);
   MaybeExpr AnalyzeString(std::string &&, int kind);
   std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
