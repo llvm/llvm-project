@@ -222,7 +222,7 @@ llvm::Error makeError(ReasonToReject Reason) {
 // Return all rename occurrences in the main file.
 std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
                                                       const NamedDecl &ND) {
-  trace::Span Tracer("FindOccurrenceeWithinFile");
+  trace::Span Tracer("FindOccurrencesWithinFile");
   // If the cursor is at the underlying CXXRecordDecl of the
   // ClassTemplateDecl, ND will be the CXXRecordDecl. In this case, we need to
   // get the primary template manually.
