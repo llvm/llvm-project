@@ -285,12 +285,7 @@ define i8 @fshr_commute_8bit(i32 %x, i32 %y, i32 %shift) {
 
 define i8 @fshr_select(i8 %x, i8 %y, i8 %shamt) {
 ; CHECK-LABEL: @fshr_select(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHAMT:%.*]], 0
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 8, [[SHAMT]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SUB]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SHL]], [[SHR]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp eq i8 %shamt, 0
@@ -306,12 +301,7 @@ define i8 @fshr_select(i8 %x, i8 %y, i8 %shamt) {
 
 define i16 @fshl_select(i16 %x, i16 %y, i16 %shamt) {
 ; CHECK-LABEL: @fshl_select(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[SHAMT:%.*]], 0
-; CHECK-NEXT:    [[SUB:%.*]] = sub i16 16, [[SHAMT]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[Y:%.*]], [[SUB]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[X:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[SHR]], [[SHL]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i16 [[X]], i16 [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %cmp = icmp eq i16 %shamt, 0
@@ -327,12 +317,7 @@ define i16 @fshl_select(i16 %x, i16 %y, i16 %shamt) {
 
 define <2 x i64> @fshl_select_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %shamt) {
 ; CHECK-LABEL: @fshl_select_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[SHAMT:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> <i64 64, i64 64>, [[SHAMT]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i64> [[X:%.*]], [[SUB]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[SHL]], [[SHR]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[Y]], <2 x i64> [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[Y:%.*]], <2 x i64> [[X:%.*]], <2 x i64> [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %cmp = icmp eq <2 x i64> %shamt, zeroinitializer
