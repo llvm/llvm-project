@@ -73,7 +73,7 @@ function(add_mlir_python_extension libname extname)
     # project separation perspective and a discussion on how to better
     # segment MLIR libraries needs to happen.
     LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/python
-    OUTPUT_NAME "_mlirTransforms"
+    OUTPUT_NAME "${extname}"
     PREFIX "${PYTHON_MODULE_PREFIX}"
     SUFFIX "${PYTHON_MODULE_SUFFIX}${PYTHON_MODULE_EXTENSION}"
   )
