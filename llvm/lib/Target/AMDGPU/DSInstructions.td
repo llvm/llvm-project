@@ -330,13 +330,13 @@ class DS_GWS <string opName, dag ins, string asmOps>
 
 class DS_GWS_0D <string opName>
 : DS_GWS<opName,
-  (ins offset:$offset, gds:$gds), "$offset gds"> {
+  (ins offset:$offset), "$offset gds"> {
   let hasSideEffects = 1;
 }
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins VGPR_32:$data0, offset:$offset, gds:$gds), "$data0$offset gds"> {
+  (ins VGPR_32:$data0, offset:$offset), "$data0$offset gds"> {
 
   let has_gws_data0 = 1;
   let hasSideEffects = 1;

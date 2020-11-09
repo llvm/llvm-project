@@ -27,7 +27,7 @@
 
 ; MIR-LABEL: name: gws_barrier_offset0{{$}}
 ; MIR: BUNDLE implicit{{( killed)?( renamable)?}} $vgpr0, implicit $m0, implicit $exec {
-; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, -1, implicit $m0, implicit $exec :: (load 4 from custom "GWSResource")
+; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, implicit $m0, implicit $exec :: (load 4 from custom "GWSResource")
 ; MIR-NEXT: S_WAITCNT 0
 ; MIR-NEXT: }
 define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {

@@ -1392,7 +1392,6 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
   }
 
   MIB.addImm(ImmOffset)
-     .addImm(-1) // $gds
      .cloneMemRefs(MI);
 
   MI.eraseFromParent();
