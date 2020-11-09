@@ -345,8 +345,7 @@ define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
 
 ; This test is similar to the type legalized version of the fshl/fshr tests, but
 ; instead of having the same input to both shifts it has different inputs. Make
-; sure we don't match it has a roriw.
-; FIXME: We're currently missing a check that the inputs are the same.
+; sure we don't match it as a roriw.
 define signext i32 @not_rori_i32(i32 signext %x, i32 signext %y) nounwind {
 ; RV64I-LABEL: not_rori_i32:
 ; RV64I:       # %bb.0:
@@ -358,17 +357,26 @@ define signext i32 @not_rori_i32(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; RV64IB-LABEL: not_rori_i32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    roriw a0, a0, 1
+; RV64IB-NEXT:    slli a0, a0, 31
+; RV64IB-NEXT:    srliw a1, a1, 1
+; RV64IB-NEXT:    or a0, a0, a1
+; RV64IB-NEXT:    sext.w a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: not_rori_i32:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    roriw a0, a0, 1
+; RV64IBB-NEXT:    slli a0, a0, 31
+; RV64IBB-NEXT:    srliw a1, a1, 1
+; RV64IBB-NEXT:    or a0, a0, a1
+; RV64IBB-NEXT:    sext.w a0, a0
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: not_rori_i32:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    roriw a0, a0, 1
+; RV64IBP-NEXT:    slli a0, a0, 31
+; RV64IBP-NEXT:    srliw a1, a1, 1
+; RV64IBP-NEXT:    or a0, a0, a1
+; RV64IBP-NEXT:    sext.w a0, a0
 ; RV64IBP-NEXT:    ret
   %a = shl i32 %x, 31
   %b = lshr i32 %y, 1
