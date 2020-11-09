@@ -848,6 +848,7 @@ multiclass SIMDBitmask<ValueType vec_t, string vec, bits<32> simdop> {
 defm BITMASK : SIMDBitmask<v16i8, "i8x16", 100>;
 defm BITMASK : SIMDBitmask<v8i16, "i16x8", 132>;
 defm BITMASK : SIMDBitmask<v4i32, "i32x4", 164>;
+defm BITMASK : SIMDBitmask<v2i64, "i64x2", 196>;
 
 //===----------------------------------------------------------------------===//
 // Bit shifts
