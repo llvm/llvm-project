@@ -46,6 +46,5 @@ ProgramHeaders:
     Flags: [ PF_X, PF_W, PF_R ]
     VAddr: 0x1000
     Align: 0x4
-    Sections:
-      - Section: .sect1
-      - Section: .overlap1
+    FirstSec: .sect1
+    LastSec:  .overlap1
