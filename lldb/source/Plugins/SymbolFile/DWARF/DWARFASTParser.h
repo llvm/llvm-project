@@ -32,7 +32,8 @@ public:
 
   virtual lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
-                         const DWARFDIE &die) = 0;
+                         const DWARFDIE &die,
+                         lldb::addr_t first_code_address) = 0;
 
   virtual bool
   CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,
