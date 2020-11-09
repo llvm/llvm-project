@@ -29,14 +29,10 @@
 // To enable LeakSanitizer on a new architecture, one needs to implement the
 // internal_clone function as well as (probably) adjust the TLS machinery for
 // the new architecture inside the sanitizer library.
-#if SANITIZER_ANDROID
 // Exclude leak-detection on arm32 for Android because `__aeabi_read_tp`
 // is missing. This caused a link error.
-#if (__ANDROID_API__ < 28 || defined(__arm__))
+#if SANITIZER_ANDROID && (__ANDROID_API__ < 28 || defined(__arm__))
 #define CAN_SANITIZE_LEAKS 0
-#else
-#define CAN_SANITIZE_LEAKS 1
-#endif
 #elif (SANITIZER_LINUX || SANITIZER_MAC) && (SANITIZER_WORDSIZE == 64) &&  \
     (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) || \
      defined(__powerpc64__) || defined(__s390x__))
