@@ -53,6 +53,10 @@ MlirPassManager mlirPassManagerCreate(MlirContext ctx);
 /** Destroy the provided PassManager. */
 void mlirPassManagerDestroy(MlirPassManager passManager);
 
+/** Cast a top-level PassManager to a generic OpPassManager. */
+MlirOpPassManager
+mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
+
 /** Run the provided `passManager` on the given `module`. */
 MlirLogicalResult mlirPassManagerRun(MlirPassManager passManager,
                                      MlirModule module);
@@ -82,6 +86,17 @@ void mlirPassManagerAddOwnedPass(MlirPassManager passManager, MlirPass pass);
  * PassManager. */
 void mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager,
                                    MlirPass pass);
+
+/** Print a textual MLIR pass pipeline by sending chunks of the string
+ * representation and forwarding `userData to `callback`. Note that the callback
+ * may be called several times with consecutive chunks of the string. */
+void mlirPrintPassPipeline(MlirOpPassManager passManager,
+                           MlirStringCallback callback, void *userData);
+
+/** Parse a textual MLIR pass pipeline and add it to the provided OpPassManager.
+ */
+MlirLogicalResult mlirParsePassPipeline(MlirOpPassManager passManager,
+                                        MlirStringRef pipeline);
 
 #ifdef __cplusplus
 }
