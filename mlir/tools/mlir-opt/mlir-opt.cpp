@@ -66,7 +66,6 @@ void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
-void registerTestExpandMemRefReshapePass();
 void registerTestExpandTanhPass();
 void registerTestFinalizingBufferizePass();
 void registerTestGpuParallelLoopMappingPass();
@@ -131,7 +130,6 @@ void registerTestPasses() {
   test::registerTestConvVectorization();
   test::registerTestDominancePass();
   test::registerTestDynamicPipelinePass();
-  test::registerTestExpandMemRefReshapePass();
   test::registerTestExpandTanhPass();
   test::registerTestFinalizingBufferizePass();
   test::registerTestGpuParallelLoopMappingPass();

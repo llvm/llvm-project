@@ -829,6 +829,136 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
   }
 }
 
+TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+
+  unsigned NumBodiesGenerated = 0;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    NumBodiesGenerated += 1;
+
+    Builder.restoreIP(CodeGenIP);
+
+    Value *Cmp = Builder.CreateICmpEQ(LC, TripCount);
+    Instruction *ThenTerm, *ElseTerm;
+    SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
+                                  &ThenTerm, &ElseTerm);
+  };
+
+  CanonicalLoopInfo *Loop =
+      OMPBuilder.CreateCanonicalLoop(Loc, LoopBodyGenCB, TripCount);
+
+  Builder.restoreIP(Loop->getAfterIP());
+  ReturnInst *RetInst = Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  Loop->assertOK();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  EXPECT_EQ(NumBodiesGenerated, 1U);
+
+  // Verify control flow structure (in addition to Loop->assertOK()).
+  EXPECT_EQ(Loop->getPreheader()->getSinglePredecessor(), &F->getEntryBlock());
+  EXPECT_EQ(Loop->getAfter(), Builder.GetInsertBlock());
+
+  Instruction *IndVar = Loop->getIndVar();
+  EXPECT_TRUE(isa<PHINode>(IndVar));
+  EXPECT_EQ(IndVar->getType(), TripCount->getType());
+  EXPECT_EQ(IndVar->getParent(), Loop->getHeader());
+
+  EXPECT_EQ(Loop->getTripCount(), TripCount);
+
+  BasicBlock *Body = Loop->getBody();
+  Instruction *CmpInst = &Body->getInstList().front();
+  EXPECT_TRUE(isa<ICmpInst>(CmpInst));
+  EXPECT_EQ(CmpInst->getOperand(0), IndVar);
+
+  BasicBlock *LatchPred = Loop->getLatch()->getSinglePredecessor();
+  EXPECT_TRUE(llvm::all_of(successors(Body), [=](BasicBlock *SuccBB) {
+    return SuccBB->getSingleSuccessor() == LatchPred;
+  }));
+
+  EXPECT_EQ(&Loop->getAfter()->front(), RetInst);
+}
+
+TEST_F(OpenMPIRBuilderTest, CanonicalLoopBounds) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+
+  // Check the trip count is computed correctly. We generate the canonical loop
+  // but rely on the IRBuilder's constant folder to compute the final result
+  // since all inputs are constant. To verify overflow situations, limit the
+  // trip count / loop counter widths to 16 bits.
+  auto EvalTripCount = [&](int64_t Start, int64_t Stop, int64_t Step,
+                           bool IsSigned, bool InclusiveStop) -> int64_t {
+    OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+    Type *LCTy = Type::getInt16Ty(Ctx);
+    Value *StartVal = ConstantInt::get(LCTy, Start);
+    Value *StopVal = ConstantInt::get(LCTy, Stop);
+    Value *StepVal = ConstantInt::get(LCTy, Step);
+    auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {};
+    CanonicalLoopInfo *Loop =
+        OMPBuilder.CreateCanonicalLoop(Loc, LoopBodyGenCB, StartVal, StopVal,
+                                       StepVal, IsSigned, InclusiveStop);
+    Loop->assertOK();
+    Builder.restoreIP(Loop->getAfterIP());
+    Value *TripCount = Loop->getTripCount();
+    return cast<ConstantInt>(TripCount)->getValue().getZExtValue();
+  };
+
+  ASSERT_EQ(EvalTripCount(0, 0, 1, false, false), 0);
+  ASSERT_EQ(EvalTripCount(0, 1, 2, false, false), 1);
+  ASSERT_EQ(EvalTripCount(0, 42, 1, false, false), 42);
+  ASSERT_EQ(EvalTripCount(0, 42, 2, false, false), 21);
+  ASSERT_EQ(EvalTripCount(21, 42, 1, false, false), 21);
+  ASSERT_EQ(EvalTripCount(0, 5, 5, false, false), 1);
+  ASSERT_EQ(EvalTripCount(0, 9, 5, false, false), 2);
+  ASSERT_EQ(EvalTripCount(0, 11, 5, false, false), 3);
+  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 1, false, false), 0xFFFF);
+  ASSERT_EQ(EvalTripCount(0xFFFF, 0, 1, false, false), 0);
+  ASSERT_EQ(EvalTripCount(0xFFFE, 0xFFFF, 1, false, false), 1);
+  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 0x100, false, false), 0x100);
+  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 0xFFFF, false, false), 1);
+
+  ASSERT_EQ(EvalTripCount(0, 6, 5, false, false), 2);
+  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 0xFFFE, false, false), 2);
+  ASSERT_EQ(EvalTripCount(0, 0, 1, false, true), 1);
+  ASSERT_EQ(EvalTripCount(0, 0, 0xFFFF, false, true), 1);
+  ASSERT_EQ(EvalTripCount(0, 0xFFFE, 1, false, true), 0xFFFF);
+  ASSERT_EQ(EvalTripCount(0, 0xFFFE, 2, false, true), 0x8000);
+
+  ASSERT_EQ(EvalTripCount(0, 0, -1, true, false), 0);
+  ASSERT_EQ(EvalTripCount(0, 1, -1, true, true), 0);
+  ASSERT_EQ(EvalTripCount(20, 5, -5, true, false), 3);
+  ASSERT_EQ(EvalTripCount(20, 5, -5, true, true), 4);
+  ASSERT_EQ(EvalTripCount(-4, -2, 2, true, false), 1);
+  ASSERT_EQ(EvalTripCount(-4, -3, 2, true, false), 1);
+  ASSERT_EQ(EvalTripCount(-4, -2, 2, true, true), 2);
+
+  ASSERT_EQ(EvalTripCount(INT16_MIN, 0, 1, true, false), 0x8000);
+  ASSERT_EQ(EvalTripCount(INT16_MIN, 0, 1, true, true), 0x8001);
+  ASSERT_EQ(EvalTripCount(INT16_MIN, 0x7FFF, 1, true, false), 0xFFFF);
+  ASSERT_EQ(EvalTripCount(INT16_MIN + 1, 0x7FFF, 1, true, true), 0xFFFF);
+  ASSERT_EQ(EvalTripCount(INT16_MIN, 0, 0x7FFF, true, false), 2);
+  ASSERT_EQ(EvalTripCount(0x7FFF, 0, -1, true, false), 0x7FFF);
+  ASSERT_EQ(EvalTripCount(0, INT16_MIN, -1, true, false), 0x8000);
+  ASSERT_EQ(EvalTripCount(0, INT16_MIN, -16, true, false), 0x800);
+  ASSERT_EQ(EvalTripCount(0x7FFF, INT16_MIN, -1, true, false), 0xFFFF);
+  ASSERT_EQ(EvalTripCount(0x7FFF, 1, INT16_MIN, true, false), 1);
+  ASSERT_EQ(EvalTripCount(0x7FFF, -1, INT16_MIN, true, true), 2);
+
+  // Finalize the function and verify it.
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);

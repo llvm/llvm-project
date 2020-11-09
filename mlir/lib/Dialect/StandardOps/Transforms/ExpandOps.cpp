@@ -21,6 +21,94 @@ using namespace mlir;
 
 namespace {
 
+/// Converts `atomic_rmw` that cannot be lowered to a simple atomic op with
+/// AtomicRMWOpLowering pattern, e.g. with "minf" or "maxf" attributes, to
+/// `generic_atomic_rmw` with the expanded code.
+///
+/// %x = atomic_rmw "maxf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+///
+/// will be lowered to
+///
+/// %x = std.generic_atomic_rmw %F[%i] : memref<10xf32> {
+/// ^bb0(%current: f32):
+///   %cmp = cmpf "ogt", %current, %fval : f32
+///   %new_value = select %cmp, %current, %fval : f32
+///   atomic_yield %new_value : f32
+/// }
+struct AtomicRMWOpConverter : public OpRewritePattern<AtomicRMWOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AtomicRMWOp op,
+                                PatternRewriter &rewriter) const final {
+    CmpFPredicate predicate;
+    switch (op.kind()) {
+    case AtomicRMWKind::maxf:
+      predicate = CmpFPredicate::OGT;
+      break;
+    case AtomicRMWKind::minf:
+      predicate = CmpFPredicate::OLT;
+      break;
+    default:
+      return failure();
+    }
+
+    auto loc = op.getLoc();
+    auto genericOp =
+        rewriter.create<GenericAtomicRMWOp>(loc, op.memref(), op.indices());
+    OpBuilder bodyBuilder =
+        OpBuilder::atBlockEnd(genericOp.getBody(), rewriter.getListener());
+
+    Value lhs = genericOp.getCurrentValue();
+    Value rhs = op.value();
+    Value cmp = bodyBuilder.create<CmpFOp>(loc, predicate, lhs, rhs);
+    Value select = bodyBuilder.create<SelectOp>(loc, cmp, lhs, rhs);
+    bodyBuilder.create<AtomicYieldOp>(loc, select);
+
+    rewriter.replaceOp(op, genericOp.getResult());
+    return success();
+  }
+};
+
+/// Converts `memref_reshape` that has a target shape of a statically-known
+/// size to `memref_reinterpret_cast`.
+struct MemRefReshapeOpConverter : public OpRewritePattern<MemRefReshapeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MemRefReshapeOp op,
+                                PatternRewriter &rewriter) const final {
+    auto shapeType = op.shape().getType().cast<MemRefType>();
+    if (!shapeType.hasStaticShape())
+      return failure();
+
+    int64_t rank = shapeType.cast<MemRefType>().getDimSize(0);
+    SmallVector<Value, 4> sizes, strides;
+    sizes.resize(rank);
+    strides.resize(rank);
+
+    Location loc = op.getLoc();
+    Value stride = rewriter.create<ConstantIndexOp>(loc, 1);
+    for (int i = rank - 1; i >= 0; --i) {
+      Value index = rewriter.create<ConstantIndexOp>(loc, i);
+      Value size = rewriter.create<LoadOp>(loc, op.shape(), index);
+      if (!size.getType().isa<IndexType>())
+        size = rewriter.create<IndexCastOp>(loc, size, rewriter.getIndexType());
+      sizes[i] = size;
+      strides[i] = stride;
+      if (i > 0)
+        stride = rewriter.create<MulIOp>(loc, stride, size);
+    }
+    SmallVector<int64_t, 2> staticSizes(rank, ShapedType::kDynamicSize);
+    SmallVector<int64_t, 2> staticStrides(rank,
+                                          ShapedType::kDynamicStrideOrOffset);
+    rewriter.replaceOpWithNewOp<MemRefReinterpretCastOp>(
+        op, op.getType(), op.source(), /*staticOffset = */ 0, staticSizes,
+        staticStrides, /*offset=*/llvm::None, sizes, strides);
+    return success();
+  }
+};
+
 /// Expands SignedCeilDivIOP (n, m) into
 ///   1) x = (m > 0) ? -1 : 1
 ///   2) (n*m>0) ? ((n+x) / m) + 1 : - (-n / m)
@@ -121,35 +209,40 @@ public:
   }
 };
 
-} // namespace
+struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
+  void runOnFunction() override {
+    MLIRContext &ctx = getContext();
 
-namespace {
-struct StdExpandDivs : public StdExpandDivsBase<StdExpandDivs> {
-  void runOnFunction() override;
+    OwningRewritePatternList patterns;
+    populateStdExpandOpsPatterns(&ctx, patterns);
+
+    ConversionTarget target(getContext());
+
+    target.addLegalDialect<StandardOpsDialect>();
+    target.addDynamicallyLegalOp<AtomicRMWOp>([](AtomicRMWOp op) {
+      return op.kind() != AtomicRMWKind::maxf &&
+             op.kind() != AtomicRMWKind::minf;
+    });
+    target.addDynamicallyLegalOp<MemRefReshapeOp>([](MemRefReshapeOp op) {
+      return !op.shape().getType().cast<MemRefType>().hasStaticShape();
+    });
+    target.addIllegalOp<SignedCeilDivIOp>();
+    target.addIllegalOp<SignedFloorDivIOp>();
+    if (failed(
+            applyPartialConversion(getFunction(), target, std::move(patterns))))
+      signalPassFailure();
+  }
 };
+
 } // namespace
 
-void StdExpandDivs::runOnFunction() {
-  MLIRContext &ctx = getContext();
-
-  OwningRewritePatternList patterns;
-  populateStdExpandDivsRewritePatterns(&ctx, patterns);
-
-  ConversionTarget target(getContext());
-  target.addLegalDialect<StandardOpsDialect>();
-  target.addIllegalOp<SignedCeilDivIOp>();
-  target.addIllegalOp<SignedFloorDivIOp>();
-  if (failed(
-          applyPartialConversion(getFunction(), target, std::move(patterns))))
-    signalPassFailure();
-}
-
-void mlir::populateStdExpandDivsRewritePatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns) {
-  patterns.insert<SignedCeilDivIOpConverter, SignedFloorDivIOpConverter>(
+void mlir::populateStdExpandOpsPatterns(MLIRContext *context,
+                                        OwningRewritePatternList &patterns) {
+  patterns.insert<AtomicRMWOpConverter, MemRefReshapeOpConverter,
+                  SignedCeilDivIOpConverter, SignedFloorDivIOpConverter>(
       context);
 }
 
-std::unique_ptr<Pass> mlir::createStdExpandDivsPass() {
-  return std::make_unique<StdExpandDivs>();
+std::unique_ptr<Pass> mlir::createStdExpandOpsPass() {
+  return std::make_unique<StdExpandOpsPass>();
 }

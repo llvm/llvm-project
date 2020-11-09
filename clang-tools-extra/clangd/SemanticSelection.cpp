@@ -160,8 +160,7 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
 // Related issue: https://github.com/clangd/clangd/issues/310
 llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
   syntax::Arena A(AST.getSourceManager(), AST.getLangOpts(), AST.getTokens());
-  const auto *SyntaxTree =
-      syntax::buildSyntaxTree(A, *AST.getASTContext().getTranslationUnitDecl());
+  const auto *SyntaxTree = syntax::buildSyntaxTree(A, AST.getASTContext());
   return collectFoldingRanges(SyntaxTree, AST.getSourceManager());
 }
 
