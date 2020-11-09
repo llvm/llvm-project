@@ -682,7 +682,16 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   assert(default_platform_sp);
   m_platform_list.Append(default_platform_sp, true);
 
-  m_dummy_target_sp = m_target_list.GetDummyTarget(*this);
+  // Create the dummy target.
+  {
+    ArchSpec arch(Target::GetDefaultArchitecture());
+    if (!arch.IsValid())
+      arch = HostInfo::GetArchitecture();
+    assert(arch.IsValid() && "No valid default or host archspec");
+    const bool is_dummy_target = true;
+    m_dummy_target_sp.reset(
+        new Target(*this, arch, default_platform_sp, is_dummy_target));
+  }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
   m_collection_sp->Initialize(g_debugger_properties);
