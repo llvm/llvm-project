@@ -229,7 +229,7 @@ multiclass VOPC_Pseudos <string opName,
 
   foreach _ = BoolToList<P.HasExtSDWA>.ret in
   def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
-    let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
+    let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
     let isCompare = 1;
