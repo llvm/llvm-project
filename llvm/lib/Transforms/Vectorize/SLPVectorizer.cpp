@@ -3549,21 +3549,6 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       int ScalarCost = VecTy->getNumElements() * ScalarEltCost;
       int VecCost = TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
                                             CostKind, VL0);
-      // Check if it is possible and profitable to use min/max for selects in
-      // VL.
-      //
-      auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VL);
-      if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
-        IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, VecTy,
-                                          {VecTy, VecTy});
-        int IntrinsicCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-        // If the selects are the only uses of the compares, they will be dead
-        // and we can adjust the cost by removing their cost.
-        if (IntrinsicAndUse.second)
-          IntrinsicCost -= TTI->getCmpSelInstrCost(Instruction::ICmp, VecTy,
-                                                   MaskTy, CostKind);
-        VecCost = std::min(VecCost, IntrinsicCost);
-      }
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     case Instruction::FNeg:
