@@ -6,17 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/__errno_location.h"
+
 #ifndef LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
 #define LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
 
 // Internal code should use this and not use the errno macro from the
 // public header.
 #define llvmlibc_errno (*__llvm_libc::__errno_location())
-
-namespace __llvm_libc {
-
-int *__errno_location();
-
-} // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
