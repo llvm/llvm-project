@@ -83,6 +83,15 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
 >;
 
+def form_duplane_matchdata :
+  GIDefMatchData<"std::pair<unsigned, int>">;
+def form_duplane : GICombineRule <
+  (defs root:$root, form_duplane_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+          [{ return matchDupLane(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
 def adjust_icmp_imm : GICombineRule <
@@ -108,7 +117,7 @@ def extractvecelt_pairwise_add : GICombineRule<
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
                        [shuffle_vector_pseudos, vashr_vlshr_imm,
-                        icmp_lowering]> {
+                        icmp_lowering, form_duplane]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 

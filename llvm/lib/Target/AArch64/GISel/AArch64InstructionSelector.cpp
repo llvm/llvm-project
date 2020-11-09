@@ -136,8 +136,6 @@ private:
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
-  bool tryOptShuffleDupLane(MachineInstr &I, LLT DstTy, LLT SrcTy,
-                            ArrayRef<int> Mask, MachineRegisterInfo &MRI) const;
   bool selectShuffleVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectExtractElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectConcatVectors(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -4319,67 +4317,6 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   return nullptr;
 }
 
-bool AArch64InstructionSelector::tryOptShuffleDupLane(
-    MachineInstr &I, LLT DstTy, LLT SrcTy, ArrayRef<int> Mask,
-    MachineRegisterInfo &MRI) const {
-  assert(I.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
-
-  // We assume that scalar->vector splats have been been handled in the
-  // post-legalizer combiner to G_DUP. However splats of a source vector's
-  // lane don't fit that pattern, detect it here:
-  //  %res = G_SHUFFLE_VECTOR %src:<n x ty>, undef, <n x i32> splat(lane-idx)
-  //    =>
-  //  %res = DUPv[N][Ty]lane %src, lane-idx
-  // FIXME: this case should be covered by re-implementing the perfect shuffle
-  // codegen mechanism.
-
-  auto LaneIdx = getSplatIndex(I);
-  if (!LaneIdx)
-    return false;
-
-  // The lane idx should be within the first source vector.
-  if (*LaneIdx >= SrcTy.getNumElements())
-    return false;
-
-  if (DstTy != SrcTy)
-    return false;
-
-  LLT ScalarTy = SrcTy.getElementType();
-  unsigned ScalarSize = ScalarTy.getSizeInBits();
-
-  unsigned Opc = 0;
-  switch (SrcTy.getNumElements()) {
-  case 2:
-    if (ScalarSize == 64)
-      Opc = AArch64::DUPv2i64lane;
-    break;
-  case 4:
-    if (ScalarSize == 32)
-      Opc = AArch64::DUPv4i32lane;
-    break;
-  case 8:
-    if (ScalarSize == 16)
-      Opc = AArch64::DUPv8i16lane;
-    break;
-  case 16:
-    if (ScalarSize == 8)
-      Opc = AArch64::DUPv16i8lane;
-    break;
-  default:
-    break;
-  }
-  if (!Opc)
-    return false;
-
-  MachineIRBuilder MIB(I);
-  auto Dup = MIB.buildInstr(Opc, {I.getOperand(0).getReg()},
-                            {I.getOperand(1).getReg()})
-                 .addImm(*LaneIdx);
-  constrainSelectedInstRegOperands(*Dup, TII, TRI, RBI);
-  I.eraseFromParent();
-  return true;
-}
-
 bool AArch64InstructionSelector::selectShuffleVector(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
@@ -4400,9 +4337,6 @@ bool AArch64InstructionSelector::selectShuffleVector(
     LLVM_DEBUG(dbgs() << "Could not select a \"scalar\" G_SHUFFLE_VECTOR\n");
     return false;
   }
-
-  if (tryOptShuffleDupLane(I, DstTy, Src1Ty, Mask, MRI))
-    return true;
 
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
 
