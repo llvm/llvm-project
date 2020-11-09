@@ -165,14 +165,13 @@ define <4 x i32> @test_select_fcmp_oeq_v4i32(float %a, float %b, <4 x i32> %c, <
 ; NOCMOV-NEXT:    fnstsw %ax
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB4_3
 ; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB4_3
 ; NOCMOV-NEXT:  # %bb.2: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB4_3: # %entry
-; NOCMOV-NEXT:    movl (%eax), %ecx
 ; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; NOCMOV-NEXT:    jne .LBB4_6
 ; NOCMOV-NEXT:  # %bb.4: # %entry
@@ -181,7 +180,6 @@ define <4 x i32> @test_select_fcmp_oeq_v4i32(float %a, float %b, <4 x i32> %c, <
 ; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; NOCMOV-NEXT:  .LBB4_6: # %entry
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    movl (%edx), %edx
 ; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %esi
 ; NOCMOV-NEXT:    jne .LBB4_9
 ; NOCMOV-NEXT:  # %bb.7: # %entry
@@ -189,6 +187,8 @@ define <4 x i32> @test_select_fcmp_oeq_v4i32(float %a, float %b, <4 x i32> %c, <
 ; NOCMOV-NEXT:  # %bb.8: # %entry
 ; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %esi
 ; NOCMOV-NEXT:  .LBB4_9: # %entry
+; NOCMOV-NEXT:    movl (%ecx), %ecx
+; NOCMOV-NEXT:    movl (%edx), %edx
 ; NOCMOV-NEXT:    movl (%esi), %esi
 ; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; NOCMOV-NEXT:    jne .LBB4_12
