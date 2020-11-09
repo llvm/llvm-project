@@ -1711,9 +1711,9 @@ const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
   return It->second;
 }
 
-syntax::TranslationUnit *
-syntax::buildSyntaxTree(Arena &A, const TranslationUnitDecl &TU) {
+syntax::TranslationUnit *syntax::buildSyntaxTree(Arena &A,
+                                                 ASTContext &Context) {
   TreeBuilder Builder(A);
-  BuildTreeVisitor(TU.getASTContext(), Builder).TraverseAST(TU.getASTContext());
+  BuildTreeVisitor(Context, Builder).TraverseAST(Context);
   return std::move(Builder).finalize();
 }
