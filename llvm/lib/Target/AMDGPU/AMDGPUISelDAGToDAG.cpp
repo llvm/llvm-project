@@ -2366,11 +2366,12 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
       unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_ADDR64_RTN :
         AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_ADDR64_RTN;
       SDValue CmpVal = Mem->getOperand(2);
+      SDValue GLC = CurDAG->getTargetConstant(1, SL, MVT::i1);
 
       // XXX - Do we care about glue operands?
 
       SDValue Ops[] = {
-        CmpVal, VAddr, SRsrc, SOffset, Offset, SLC, Mem->getChain()
+        CmpVal, VAddr, SRsrc, SOffset, Offset, GLC, SLC, Mem->getChain()
       };
 
       CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
@@ -2384,8 +2385,9 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
         AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_OFFSET_RTN;
 
       SDValue CmpVal = Mem->getOperand(2);
+      SDValue GLC = CurDAG->getTargetConstant(1, SL, MVT::i1);
       SDValue Ops[] = {
-        CmpVal, SRsrc, SOffset, Offset, SLC, Mem->getChain()
+        CmpVal, SRsrc, SOffset, Offset, GLC, SLC, Mem->getChain()
       };
 
       CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);

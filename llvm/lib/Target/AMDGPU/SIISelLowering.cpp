@@ -11181,8 +11181,12 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   int NoRetAtomicOp = AMDGPU::getAtomicNoRetOp(MI.getOpcode());
   if (NoRetAtomicOp != -1) {
     if (!Node->hasAnyUseOfValue(0)) {
-      MI.setDesc(TII->get(NoRetAtomicOp));
+      int Glc1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                               AMDGPU::OpName::glc1);
+      if (Glc1Idx != -1)
+        MI.RemoveOperand(Glc1Idx);
       MI.RemoveOperand(0);
+      MI.setDesc(TII->get(NoRetAtomicOp));
       return;
     }
 
