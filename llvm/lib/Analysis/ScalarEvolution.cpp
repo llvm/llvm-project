@@ -9270,25 +9270,20 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   // where SCEV can prove X >= 0 but not prove X > 0, so it is helpful to be
   // as general as possible.
 
-  switch (Pred) {
-  default:
-    return None; // Conservative answer
+  // Only handle LE/LT/GE/GT predicates.
+  if (!ICmpInst::isRelational(Pred))
+    return None;
 
-  case ICmpInst::ICMP_UGT:
-  case ICmpInst::ICMP_UGE:
-  case ICmpInst::ICMP_ULT:
-  case ICmpInst::ICMP_ULE:
+  // Check that AR does not wrap.
+  if (ICmpInst::isUnsigned(Pred)) {
     if (!LHS->hasNoUnsignedWrap())
       return None;
-
     return Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE
                ? MonotonicallyIncreasing
                : MonotonicallyDecreasing;
-
-  case ICmpInst::ICMP_SGT:
-  case ICmpInst::ICMP_SGE:
-  case ICmpInst::ICMP_SLT:
-  case ICmpInst::ICMP_SLE: {
+  } else {
+    assert(ICmpInst::isSigned(Pred) &&
+           "Relational predicate is either signed or unsigned!");
     if (!LHS->hasNoSignedWrap())
       return None;
 
@@ -9308,10 +9303,6 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 
     return None;
   }
-
-  }
-
-  llvm_unreachable("switch has default clause!");
 }
 
 bool ScalarEvolution::isLoopInvariantPredicate(
