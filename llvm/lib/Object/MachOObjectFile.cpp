@@ -2032,7 +2032,8 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
 
 bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
   return SectionName.startswith("__debug") ||
-         SectionName.startswith("__zdebug") || SectionName == "__gdb_index";
+         SectionName.startswith("__zdebug") ||
+         SectionName.startswith("__apple") || SectionName == "__gdb_index";
 }
 
 unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {
