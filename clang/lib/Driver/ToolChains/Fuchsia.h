@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_FUCHSIA_H
 
 #include "Gnu.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -59,8 +60,9 @@ public:
     return llvm::DebuggerKind::GDB;
   }
 
-  unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
-    return 2; // SSPStrong
+  LangOptions::StackProtectorMode
+  GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
+    return LangOptions::SSPStrong;
   }
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,

@@ -11,6 +11,7 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -59,8 +60,9 @@ public:
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;
 
-  unsigned int GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
-    return 0;
+  LangOptions::StackProtectorMode
+  GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
+    return LangOptions::SSPOff;
   }
 
   void
