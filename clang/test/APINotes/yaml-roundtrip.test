@@ -1,6 +1,10 @@
 RUN: apinotes-test %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes > %t.result
 RUN: not diff --strip-trailing-cr %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes %t.result | FileCheck %s
 
+Avoid Windows as the diff output differs due to line-endings and different diff
+implementations.
+UNSUPPORTED: system-windows
+
 We expect only the nullability to be different as it is canonicalized during the
 roudtrip.
 
