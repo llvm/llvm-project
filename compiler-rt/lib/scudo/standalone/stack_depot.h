@@ -20,7 +20,7 @@ class MurMur2HashBuilder {
   static const u32 R = 24;
   u32 H;
 
- public:
+public:
   explicit MurMur2HashBuilder(u32 Init = 0) { H = Seed ^ Init; }
   void add(u32 K) {
     K *= M;
