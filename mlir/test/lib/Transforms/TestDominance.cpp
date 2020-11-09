@@ -82,9 +82,11 @@ struct TestDominancePass : public PassWrapper<TestDominancePass, FunctionPass> {
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestDominancePass() {
   PassRegistration<TestDominancePass>(
       "test-print-dominance",
       "Print the dominance information for multiple regions.");
 }
+} // namespace test
 } // namespace mlir
