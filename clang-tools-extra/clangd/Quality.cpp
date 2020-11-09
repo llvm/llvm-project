@@ -487,8 +487,9 @@ float evaluateSymbolAndRelevance(float SymbolQuality, float SymbolRelevance) {
   return SymbolQuality * SymbolRelevance;
 }
 
-float evaluateDecisionForest(const SymbolQualitySignals &Quality,
-                             const SymbolRelevanceSignals &Relevance) {
+DecisionForestScores
+evaluateDecisionForest(const SymbolQualitySignals &Quality,
+                       const SymbolRelevanceSignals &Relevance, float Base) {
   Example E;
   E.setIsDeprecated(Quality.Deprecated);
   E.setIsReservedName(Quality.ReservedName);
@@ -512,7 +513,19 @@ float evaluateDecisionForest(const SymbolQualitySignals &Quality,
   E.setHadSymbolType(Relevance.HadSymbolType);
   E.setTypeMatchesPreferred(Relevance.TypeMatchesPreferred);
   E.setFilterLength(Relevance.FilterLength);
-  return Evaluate(E);
+
+  DecisionForestScores Scores;
+  // Exponentiating DecisionForest prediction makes the score of each tree a
+  // multiplciative boost (like NameMatch). This allows us to weigh the
+  // prediciton score and NameMatch appropriately.
+  Scores.ExcludingName = pow(Base, Evaluate(E));
+  // NeedsFixIts is not part of the DecisionForest as generating training
+  // data that needs fixits is not-feasible.
+  if (Relevance.NeedsFixIts)
+    Scores.ExcludingName *= 0.5;
+  // NameMatch should be a multiplier on total score to support rescoring.
+  Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
+  return Scores;
 }
 
 // Produces an integer that sorts in the same order as F.
