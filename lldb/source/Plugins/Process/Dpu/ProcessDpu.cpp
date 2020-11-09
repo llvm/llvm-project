@@ -257,6 +257,11 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
         std::make_unique<ThreadDpu>(*this, pid + thread_id, thread_id));
   }
 
+  dpu_description_t desc = rank->GetDesc();
+  m_iram_size = desc->hw.memories.iram_size * sizeof(dpuinstruction_t);
+  m_mram_size = desc->hw.memories.mram_size;
+  m_wram_size = desc->hw.memories.wram_size * sizeof(dpuword_t);
+
   if (dpu->PrintfEnable()) {
     SetSoftwareBreakpoint(dpu->GetOpenPrintfSequenceAddr() | k_dpu_iram_base,
                           8);
@@ -266,11 +271,6 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
 
   SetCurrentThreadID(pid);
   SetState(StateType::eStateStopped, false);
-
-  dpu_description_t desc = rank->GetDesc();
-  m_iram_size = desc->hw.memories.iram_size * sizeof(dpuinstruction_t);
-  m_mram_size = desc->hw.memories.mram_size;
-  m_wram_size = desc->hw.memories.wram_size * sizeof(dpuword_t);
 
   m_iram_region.GetRange().SetRangeBase(k_dpu_iram_base);
   m_iram_region.GetRange().SetRangeEnd(k_dpu_iram_base + m_iram_size);
