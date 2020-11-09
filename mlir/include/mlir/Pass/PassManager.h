@@ -48,8 +48,9 @@ struct PassExecutionState;
 /// other OpPassManagers or the top-level PassManager.
 class OpPassManager {
 public:
-  OpPassManager(Identifier name);
-  OpPassManager(StringRef name);
+  enum class Nesting { Implicit, Explicit };
+  OpPassManager(Identifier name, Nesting nesting);
+  OpPassManager(StringRef name, Nesting nesting);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -149,7 +150,7 @@ enum class PassDisplayMode {
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
 public:
-  PassManager(MLIRContext *ctx);
+  PassManager(MLIRContext *ctx, Nesting nesting = Nesting::Explicit);
   ~PassManager();
 
   /// Run the passes within this manager on the provided module.

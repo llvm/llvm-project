@@ -91,9 +91,10 @@ void VerifierPass::runOnOperation() {
 namespace mlir {
 namespace detail {
 struct OpPassManagerImpl {
-  OpPassManagerImpl(Identifier identifier)
-      : name(identifier), identifier(identifier) {}
-  OpPassManagerImpl(StringRef name) : name(name) {}
+  OpPassManagerImpl(Identifier identifier, OpPassManager::Nesting nesting)
+      : name(identifier), identifier(identifier), nesting(nesting) {}
+  OpPassManagerImpl(StringRef name, OpPassManager::Nesting nesting)
+      : name(name), nesting(nesting) {}
 
   /// Merge the passes of this pass manager into the one provided.
   void mergeInto(OpPassManagerImpl &rhs);
@@ -130,6 +131,10 @@ struct OpPassManagerImpl {
 
   /// The set of passes to run as part of this pass manager.
   std::vector<std::unique_ptr<Pass>> passes;
+
+  /// Control the implicit nesting of passes that mismatch the name set for this
+  /// OpPassManager.
+  OpPassManager::Nesting nesting;
 };
 } // end namespace detail
 } // end namespace mlir
@@ -142,14 +147,14 @@ void OpPassManagerImpl::mergeInto(OpPassManagerImpl &rhs) {
 }
 
 OpPassManager &OpPassManagerImpl::nest(Identifier nestedName) {
-  OpPassManager nested(nestedName);
+  OpPassManager nested(nestedName, nesting);
   auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
   addPass(std::unique_ptr<Pass>(adaptor));
   return adaptor->getPassManagers().front();
 }
 
 OpPassManager &OpPassManagerImpl::nest(StringRef nestedName) {
-  OpPassManager nested(nestedName);
+  OpPassManager nested(nestedName, nesting);
   auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
   addPass(std::unique_ptr<Pass>(adaptor));
   return adaptor->getPassManagers().front();
@@ -157,10 +162,16 @@ OpPassManager &OpPassManagerImpl::nest(StringRef nestedName) {
 
 void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
   // If this pass runs on a different operation than this pass manager, then
-  // implicitly nest a pass manager for this operation.
+  // implicitly nest a pass manager for this operation if enabled.
   auto passOpName = pass->getOpName();
-  if (passOpName && passOpName != name)
-    return nest(*passOpName).addPass(std::move(pass));
+  if (passOpName && passOpName != name) {
+    if (nesting == OpPassManager::Nesting::Implicit)
+      return nest(*passOpName).addPass(std::move(pass));
+    llvm::report_fatal_error(llvm::Twine("Can't add pass '") + pass->getName() +
+                             "' restricted to '" + *passOpName +
+                             "' on a PassManager intended to run on '" + name +
+                             "', did you intend to nest?");
+  }
 
   passes.emplace_back(std::move(pass));
 }
@@ -240,14 +251,14 @@ void OpPassManagerImpl::splitAdaptorPasses() {
 // OpPassManager
 //===----------------------------------------------------------------------===//
 
-OpPassManager::OpPassManager(Identifier name)
-    : impl(new OpPassManagerImpl(name)) {}
-OpPassManager::OpPassManager(StringRef name)
-    : impl(new OpPassManagerImpl(name)) {}
+OpPassManager::OpPassManager(Identifier name, Nesting nesting)
+    : impl(new OpPassManagerImpl(name, nesting)) {}
+OpPassManager::OpPassManager(StringRef name, Nesting nesting)
+    : impl(new OpPassManagerImpl(name, nesting)) {}
 OpPassManager::OpPassManager(OpPassManager &&rhs) : impl(std::move(rhs.impl)) {}
 OpPassManager::OpPassManager(const OpPassManager &rhs) { *this = rhs; }
 OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
-  impl.reset(new OpPassManagerImpl(rhs.impl->name));
+  impl.reset(new OpPassManagerImpl(rhs.impl->name, rhs.impl->nesting));
   for (auto &pass : rhs.impl->passes)
     impl->passes.emplace_back(pass->clone());
   return *this;
@@ -783,8 +794,9 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
 // PassManager
 //===----------------------------------------------------------------------===//
 
-PassManager::PassManager(MLIRContext *ctx)
-    : OpPassManager(Identifier::get(ModuleOp::getOperationName(), ctx)),
+PassManager::PassManager(MLIRContext *ctx, Nesting nesting)
+    : OpPassManager(Identifier::get(ModuleOp::getOperationName(), ctx),
+                    nesting),
       context(ctx), passTiming(false), localReproducer(false),
       verifyPasses(true) {}
 

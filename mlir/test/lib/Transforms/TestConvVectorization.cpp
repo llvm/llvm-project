@@ -100,7 +100,7 @@ void TestConvVectorization::runOnOperation() {
 
   // Programmatic controlled lowering of linalg.copy and linalg.fill.
   PassManager pm(context);
-  pm.addPass(createConvertLinalgToLoopsPass());
+  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
   if (failed(pm.run(module)))
     llvm_unreachable("Unexpected failure in linalg to loops pass.");
 
