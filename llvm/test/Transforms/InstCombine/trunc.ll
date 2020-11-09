@@ -744,9 +744,9 @@ define void @trunc_shl_31_i32_i64_multi_use(i64 %val, i32 addrspace(1)* %ptr0, i
 
 define i32 @trunc_shl_lshr_infloop(i64 %arg) {
 ; CHECK-LABEL: @trunc_shl_lshr_infloop(
-; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[A]], 2
-; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[ARG_TR:%.*]] = trunc i64 [[ARG:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[ARG_TR]], 1
+; CHECK-NEXT:    [[C:%.*]] = and i32 [[TMP1]], -4
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = lshr i64 %arg, 1
@@ -801,9 +801,9 @@ define <2 x i32> @trunc_shl_v2i32_v2i64_outofrange(<2 x i64> %val) {
 
 define i32 @trunc_shl_ashr_infloop(i64 %arg) {
 ; CHECK-LABEL: @trunc_shl_ashr_infloop(
-; CHECK-NEXT:    [[A:%.*]] = ashr i64 [[ARG:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = shl nsw i64 [[A]], 2
-; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[C:%.*]] = and i32 [[TMP2]], -4
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = ashr i64 %arg, 3

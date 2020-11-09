@@ -36,8 +36,8 @@ define i8 @positive_sameconst(i8 %x) {
 
 define i8 @positive_biggerashr(i8 %x) {
 ; CHECK-LABEL: @positive_biggerashr(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 6
@@ -47,8 +47,8 @@ define i8 @positive_biggerashr(i8 %x) {
 
 define i8 @positive_biggershl(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[TMP1]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 3
@@ -83,8 +83,8 @@ define i8 @positive_sameconst_shlnuw(i8 %x) {
 
 define i8 @positive_biggerashr_shlnuw(i8 %x) {
 ; CHECK-LABEL: @positive_biggerashr_shlnuw(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 6
@@ -94,8 +94,8 @@ define i8 @positive_biggerashr_shlnuw(i8 %x) {
 
 define i8 @positive_biggershl_shlnuw(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnuw(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 3
@@ -130,8 +130,8 @@ define i8 @positive_sameconst_shlnsw(i8 %x) {
 
 define i8 @positive_biggerashr_shlnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggerashr_shlnsw(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 6
@@ -141,8 +141,8 @@ define i8 @positive_biggerashr_shlnsw(i8 %x) {
 
 define i8 @positive_biggershl_shlnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnsw(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 3
@@ -177,8 +177,8 @@ define i8 @positive_sameconst_shlnuwnsw(i8 %x) {
 
 define i8 @positive_biggerashr_shlnuwnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggerashr_shlnuwnsw(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 6
@@ -188,8 +188,8 @@ define i8 @positive_biggerashr_shlnuwnsw(i8 %x) {
 
 define i8 @positive_biggershl_shlnuwnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnuwnsw(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 3
@@ -428,8 +428,8 @@ define <3 x i8> @positive_sameconst_vec_undef2(<3 x i8> %x) {
 
 define <2 x i8> @positive_biggerashr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_biggerashr_vec(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[RET:%.*]] = shl nsw <2 x i8> [[TMP0]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], <i8 -8, i8 -8>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 6, i8 6>
@@ -472,8 +472,8 @@ define <3 x i8> @positive_biggerashr_vec_undef2(<3 x i8> %x) {
 
 define <2 x i8> @positive_biggershl_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_biggershl_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[RET:%.*]] = shl <2 x i8> [[TMP1]], <i8 6, i8 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 3, i8 3>
@@ -518,15 +518,14 @@ define <3 x i8> @positive_biggershl_vec_undef2(<3 x i8> %x) {
 ; Positive multi-use tests with constant
 ; ============================================================================ ;
 
-; FIXME: drop 'exact' once it is no longer needed.
-
 define i8 @positive_sameconst_multiuse(i8 %x) {
 ; CHECK-LABEL: @positive_sameconst_multiuse(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @use32(i8 [[TMP0]])
-; CHECK-NEXT:    ret i8 [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X]], -8
+; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = ashr exact i8 %x, 3
+  %tmp0 = ashr i8 %x, 3
   call void @use32(i8 %tmp0)
   %ret = shl i8 %tmp0, 3
   ret i8 %ret
@@ -534,12 +533,12 @@ define i8 @positive_sameconst_multiuse(i8 %x) {
 
 define i8 @positive_biggerashr_multiuse(i8 %x) {
 ; CHECK-LABEL: @positive_biggerashr_multiuse(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 6
 ; CHECK-NEXT:    call void @use32(i8 [[TMP0]])
-; CHECK-NEXT:    [[RET:%.*]] = ashr exact i8 [[X]], 3
+; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[TMP0]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = ashr exact i8 %x, 6
+  %tmp0 = ashr i8 %x, 6
   call void @use32(i8 %tmp0)
   %ret = shl i8 %tmp0, 3
   ret i8 %ret
@@ -547,12 +546,12 @@ define i8 @positive_biggerashr_multiuse(i8 %x) {
 
 define i8 @positive_biggershl_multiuse(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_multiuse(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @use32(i8 [[TMP0]])
-; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[X]], 3
+; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[TMP0]], 6
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = ashr exact i8 %x, 3
+  %tmp0 = ashr i8 %x, 3
   call void @use32(i8 %tmp0)
   %ret = shl i8 %tmp0, 6
   ret i8 %ret
