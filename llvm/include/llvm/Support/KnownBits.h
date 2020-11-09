@@ -261,6 +261,9 @@ public:
   /// Compute known bits for udiv(LHS, RHS).
   static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for urem(LHS, RHS).
+  static KnownBits urem(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Compute known bits for umax(LHS, RHS).
   static KnownBits umax(const KnownBits &LHS, const KnownBits &RHS);
 
