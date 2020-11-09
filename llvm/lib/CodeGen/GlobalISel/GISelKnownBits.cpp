@@ -287,7 +287,20 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForMul(Known, Known2);
+    // If low bits are zero in either operand, output low known-0 bits.
+    // Also compute a conservative estimate for high known-0 bits.
+    // More trickiness is possible, but this is sufficient for the
+    // interesting case of alignment computation.
+    unsigned TrailZ =
+        Known.countMinTrailingZeros() + Known2.countMinTrailingZeros();
+    unsigned LeadZ =
+        std::max(Known.countMinLeadingZeros() + Known2.countMinLeadingZeros(),
+                 BitWidth) -
+        BitWidth;
+
+    Known.resetAll();
+    Known.Zero.setLowBits(std::min(TrailZ, BitWidth));
+    Known.Zero.setHighBits(std::min(LeadZ, BitWidth));
     break;
   }
   case TargetOpcode::G_SELECT: {
