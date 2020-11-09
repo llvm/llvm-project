@@ -200,6 +200,9 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     return 0;
   }
 
+  ProcessInstanceInfoMatch match_info_noname{match_info};
+  match_info_noname.SetNameMatchType(NameMatch::Ignore);
+
   for (int i = 0; i < nproc; i++) {
     if (proc_kinfo[i].p_pid < 1)
       continue; /* not valid */
@@ -237,7 +240,7 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     process_info.SetEffectiveUserID(proc_kinfo[i].p_uid);
     process_info.SetEffectiveGroupID(proc_kinfo[i].p_gid);
     // Make sure our info matches before we go fetch the name and cpu type
-    if (match_info.Matches(process_info) &&
+    if (match_info_noname.Matches(process_info) &&
         GetNetBSDProcessArgs(&match_info, process_info)) {
       GetNetBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))
