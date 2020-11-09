@@ -1,16 +1,16 @@
-/*===-- mlir-c/Support.h - Helpers for C API to Core MLIR ---------*- C -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-|*===----------------------------------------------------------------------===*|
-|*                                                                            *|
-|* This header declares the auxiliary data structures used in C APIs to core  *|
-|* MLIR functionality.                                                        *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===-- mlir-c/Support.h - Helpers for C API to Core MLIR ---------*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This header declares the auxiliary data structures used in C APIs to core
+// MLIR functionality.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_C_SUPPORT_H
 #define MLIR_C_SUPPORT_H
@@ -22,9 +22,9 @@
 extern "C" {
 #endif
 
-/*============================================================================*/
-/* MlirStringRef.                                                             */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// MlirStringRef.
+//===----------------------------------------------------------------------===//
 
 /** A pointer to a sized fragment of a string, not necessarily null-terminated.
  * Does not own the underlying string. This is equivalent to llvm::StringRef.
@@ -50,9 +50,9 @@ inline MlirStringRef mlirStringRefCreate(const char *str, size_t length) {
  */
 MlirStringRef mlirStringRefCreateFromCString(const char *str);
 
-/*============================================================================*/
-/* MlirLogicalResult.                                                         */
-/*============================================================================*/
+//===----------------------------------------------------------------------===//
+// MlirLogicalResult.
+//===----------------------------------------------------------------------===//
 
 /** A logical result value, essentially a boolean with named states. LLVM
  * convention for using boolean values to designate success or failure of an
@@ -64,23 +64,23 @@ struct MlirLogicalResult {
 };
 typedef struct MlirLogicalResult MlirLogicalResult;
 
-/** Checks if the given logical result represents a success. */
+/// Checks if the given logical result represents a success.
 inline static int mlirLogicalResultIsSuccess(MlirLogicalResult res) {
   return res.value != 0;
 }
 
-/** Checks if the given logical result represents a failure. */
+/// Checks if the given logical result represents a failure.
 inline static int mlirLogicalResultIsFailure(MlirLogicalResult res) {
   return res.value == 0;
 }
 
-/** Creates a logical result representing a success. */
+/// Creates a logical result representing a success.
 inline static MlirLogicalResult mlirLogicalResultSuccess() {
   MlirLogicalResult res = {1};
   return res;
 }
 
-/** Creates a logical result representing a failure. */
+/// Creates a logical result representing a failure.
 inline static MlirLogicalResult mlirLogicalResultFailure() {
   MlirLogicalResult res = {0};
   return res;

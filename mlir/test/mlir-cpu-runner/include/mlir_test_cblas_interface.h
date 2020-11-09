@@ -13,10 +13,10 @@
 #ifdef _WIN32
 #ifndef MLIR_TEST_CBLAS_INTERFACE_EXPORT
 #ifdef mlir_test_cblas_interface_EXPORTS
-/* We are building this library */
+// We are building this library
 #define MLIR_TEST_CBLAS_INTERFACE_EXPORT __declspec(dllexport)
 #else
-/* We are using this library */
+// We are using this library
 #define MLIR_TEST_CBLAS_INTERFACE_EXPORT __declspec(dllimport)
 #endif // mlir_test_cblas_interface_EXPORTS
 #endif // MLIR_TEST_CBLAS_INTERFACE_EXPORT

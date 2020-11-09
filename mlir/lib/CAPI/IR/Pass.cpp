@@ -16,9 +16,9 @@
 
 using namespace mlir;
 
-/* ========================================================================== */
-/* PassManager/OpPassManager APIs. */
-/* ========================================================================== */
+//===----------------------------------------------------------------------===//
+// PassManager/OpPassManager APIs.
+//===----------------------------------------------------------------------===//
 
 MlirPassManager mlirPassManagerCreate(MlirContext ctx) {
   return wrap(new PassManager(unwrap(ctx)));
