@@ -209,16 +209,6 @@ static cl::opt<bool> EnableDebugify(
     cl::desc(
         "Start the pipeline with debugify and end it with check-debugify"));
 
-static cl::opt<bool> DebugifyEach(
-    "debugify-each",
-    cl::desc(
-        "Start each pass with debugify and end it with check-debugify"));
-
-static cl::opt<std::string>
-    DebugifyExport("debugify-export",
-                   cl::desc("Export per-pass debugify statistics to this file"),
-                   cl::value_desc("filename"), cl::init(""));
-
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
