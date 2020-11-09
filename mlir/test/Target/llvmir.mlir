@@ -1265,7 +1265,7 @@ llvm.func @cond_br_weights(%cond : !llvm.i1, %arg0 : !llvm.i32,  %arg1 : !llvm.i
   llvm.return %arg1 : !llvm.i32
 }
 
-// CHECK: ![[NODE]] = !{!"branch_weights", i64 5, i64 10}
+// CHECK: ![[NODE]] = !{!"branch_weights", i32 5, i32 10}
 
 // -----
 
