@@ -637,6 +637,103 @@ define amdgpu_kernel void @unaligned_read2_f32(float addrspace(1)* %out, float a
   ret void
 }
 
+define amdgpu_kernel void @unaligned_offset_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
+; CI-LABEL: unaligned_offset_read2_f32:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; CI-NEXT:    s_load_dword s0, s[0:1], 0xb
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    s_mov_b32 s7, 0xf000
+; CI-NEXT:    s_mov_b32 s6, 0
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_add_i32_e32 v1, vcc, s0, v0
+; CI-NEXT:    ds_read_u8 v2, v1 offset:12
+; CI-NEXT:    ds_read_u8 v3, v1 offset:11
+; CI-NEXT:    ds_read_u8 v4, v1 offset:10
+; CI-NEXT:    ds_read_u8 v5, v1 offset:9
+; CI-NEXT:    ds_read_u8 v6, v1 offset:8
+; CI-NEXT:    ds_read_u8 v7, v1 offset:7
+; CI-NEXT:    ds_read_u8 v8, v1 offset:6
+; CI-NEXT:    ds_read_u8 v1, v1 offset:5
+; CI-NEXT:    s_waitcnt lgkmcnt(7)
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; CI-NEXT:    s_waitcnt lgkmcnt(3)
+; CI-NEXT:    v_lshlrev_b32_e32 v6, 8, v6
+; CI-NEXT:    s_waitcnt lgkmcnt(2)
+; CI-NEXT:    v_or_b32_e32 v6, v6, v7
+; CI-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; CI-NEXT:    v_or_b32_e32 v2, v2, v3
+; CI-NEXT:    s_waitcnt lgkmcnt(1)
+; CI-NEXT:    v_lshlrev_b32_e32 v8, 8, v8
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_or_b32_e32 v1, v8, v1
+; CI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; CI-NEXT:    v_or_b32_e32 v4, v4, v5
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_or_b32_e32 v1, v6, v1
+; CI-NEXT:    v_or_b32_e32 v2, v2, v4
+; CI-NEXT:    v_add_f32_e32 v2, v1, v2
+; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
+; CI-NEXT:    s_endpgm
+;
+; GFX9-ALIGNED-LABEL: unaligned_offset_read2_f32:
+; GFX9-ALIGNED:       ; %bb.0:
+; GFX9-ALIGNED-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9-ALIGNED-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-ALIGNED-NEXT:    v_add_u32_e32 v1, s0, v0
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v2, v1 offset:5
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v3, v1 offset:6
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v4, v1 offset:7
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v5, v1 offset:8
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v6, v1 offset:9
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v7, v1 offset:10
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v8, v1 offset:11
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v1, v1 offset:12
+; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(6)
+; GFX9-ALIGNED-NEXT:    v_lshl_or_b32 v2, v3, 8, v2
+; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-ALIGNED-NEXT:    v_lshl_or_b32 v3, v5, 8, v4
+; GFX9-ALIGNED-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX9-ALIGNED-NEXT:    v_lshl_or_b32 v3, v7, 8, v6
+; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-ALIGNED-NEXT:    v_lshl_or_b32 v1, v1, 8, v8
+; GFX9-ALIGNED-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
+; GFX9-ALIGNED-NEXT:    v_add_f32_e32 v1, v2, v1
+; GFX9-ALIGNED-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-ALIGNED-NEXT:    s_endpgm
+;
+; GFX9-UNALIGNED-LABEL: unaligned_offset_read2_f32:
+; GFX9-UNALIGNED:       ; %bb.0:
+; GFX9-UNALIGNED-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9-UNALIGNED-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; GFX9-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX9-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v0, s0, v2
+; GFX9-UNALIGNED-NEXT:    ds_read2_b32 v[0:1], v0 offset0:1 offset1:2
+; GFX9-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-UNALIGNED-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-UNALIGNED-NEXT:    global_store_dword v2, v0, s[2:3]
+; GFX9-UNALIGNED-NEXT:    s_endpgm
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %base = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
+  %base.i8 = bitcast float addrspace(3)* %base to i8 addrspace(3)*
+  %addr0.i8 = getelementptr inbounds i8, i8 addrspace(3)* %base.i8, i32 5
+  %addr0 = bitcast i8 addrspace(3)* %addr0.i8 to float addrspace(3)*
+  %val0 = load float, float addrspace(3)* %addr0, align 1
+  %addr1.i8 = getelementptr inbounds i8, i8 addrspace(3)* %base.i8, i32 9
+  %addr1 = bitcast i8 addrspace(3)* %addr1.i8 to float addrspace(3)*
+  %val1 = load float, float addrspace(3)* %addr1, align 1
+  %sum = fadd float %val0, %val1
+  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
+  store float %sum, float addrspace(1)* %out.gep, align 4
+  ret void
+}
+
 define amdgpu_kernel void @misaligned_2_simple_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
 ; CI-LABEL: misaligned_2_simple_read2_f32:
 ; CI:       ; %bb.0:
