@@ -25,7 +25,6 @@ void mlirAffineExprPrint(MlirAffineExpr affineExpr, MlirStringCallback callback,
                          void *userData) {
   mlir::detail::CallbackOstream stream(callback, userData);
   unwrap(affineExpr).print(stream);
-  stream.flush();
 }
 
 void mlirAffineExprDump(MlirAffineExpr affineExpr) {

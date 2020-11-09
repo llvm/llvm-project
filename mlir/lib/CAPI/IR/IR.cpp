@@ -126,7 +126,6 @@ void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
                        void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(location).print(stream);
-  stream.flush();
 }
 
 /* ========================================================================== */
@@ -325,14 +324,12 @@ void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream);
-  stream.flush();
 }
 
 void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
                                  MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream, *unwrap(flags));
-  stream.flush();
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
@@ -476,7 +473,6 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(block)->print(stream);
-  stream.flush();
 }
 
 /* ========================================================================== */
@@ -523,7 +519,6 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(value).print(stream);
-  stream.flush();
 }
 
 /* ========================================================================== */
@@ -543,7 +538,6 @@ int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }
 void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(type).print(stream);
-  stream.flush();
 }
 
 void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
@@ -572,7 +566,6 @@ void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(attr).print(stream);
-  stream.flush();
 }
 
 void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
