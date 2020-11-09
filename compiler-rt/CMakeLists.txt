@@ -124,9 +124,6 @@ if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*android.*")
 endif()
 pythonize_bool(ANDROID)
 
-set(ANDROID_NDK_VERSION 18
-    CACHE STRING "Set this to the Android NDK version that you are using")
-
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
