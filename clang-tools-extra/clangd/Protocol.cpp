@@ -599,7 +599,10 @@ llvm::json::Value toJSON(const PublishDiagnosticsParams &PDP) {
 bool fromJSON(const llvm::json::Value &Params, CodeActionContext &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("diagnostics", R.diagnostics);
+  if (!O || !O.map("diagnostics", R.diagnostics))
+    return false;
+  O.map("only", R.only);
+  return true;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diagnostic &D) {
