@@ -112,7 +112,7 @@ class LLDBTestResult(unittest2.TextTestResult):
     def _getFileBasedCategories(self, test):
         """
         Returns the list of categories to which this test case belongs by
-        collecting values of ".categories" files. We start at the folder the test is in
+        collecting values of "categories" files. We start at the folder the test is in
         and traverse the hierarchy upwards until the test-suite root directory.
         """
         start_path = self._getTestPath(test)
@@ -126,7 +126,7 @@ class LLDBTestResult(unittest2.TextTestResult):
 
         categories = set()
         while not os.path.samefile(folder, test_root):
-            categories_file_name = os.path.join(folder, ".categories")
+            categories_file_name = os.path.join(folder, "categories")
             if os.path.exists(categories_file_name):
                 categories_file = open(categories_file_name, 'r')
                 categories_str = categories_file.readline().strip()
