@@ -34,6 +34,5 @@ add_mlir_dialect_library(MLIRSPIRV
   MLIRTransforms
   )
 
-add_subdirectory(Linking)
 add_subdirectory(Serialization)
 add_subdirectory(Transforms)
