@@ -312,8 +312,6 @@ define amdgpu_kernel void @simple_read2_f32_volatile_1(float addrspace(1)* %out)
 }
 
 ; Can't fold since not correctly aligned.
-; XXX: This isn't really testing anything useful now. I think CI
-; allows unaligned LDS accesses, which would be a problem here.
 ; GCN-LABEL: @unaligned_read2_f32
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
