@@ -1574,6 +1574,10 @@ private:
   /// Rewrites function signitures and updates the call graph.
   ChangeStatus cleanupIR();
 
+  /// Identify internal functions that are effectively dead, thus not reachable
+  /// from a live entry point. The functions are added to ToBeDeletedFunctions.
+  void identifyDeadInternalFunctions();
+
   /// Run `::update` on \p AA and track the dependences queried while doing so.
   /// Also adjust the state if we know further updates are not necessary.
   ChangeStatus updateAA(AbstractAttribute &AA);

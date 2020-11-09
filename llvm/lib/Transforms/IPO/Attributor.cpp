@@ -1165,6 +1165,48 @@ ChangeStatus Attributor::manifestAttributes() {
   return ManifestChange;
 }
 
+void Attributor::identifyDeadInternalFunctions() {
+  // Identify dead internal functions and delete them. This happens outside
+  // the other fixpoint analysis as we might treat potentially dead functions
+  // as live to lower the number of iterations. If they happen to be dead, the
+  // below fixpoint loop will identify and eliminate them.
+  SmallVector<Function *, 8> InternalFns;
+  for (Function *F : Functions)
+    if (F->hasLocalLinkage())
+      InternalFns.push_back(F);
+
+  SmallPtrSet<Function *, 8> LiveInternalFns;
+  bool FoundLiveInternal = true;
+  while (FoundLiveInternal) {
+    FoundLiveInternal = false;
+    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
+      Function *F = InternalFns[u];
+      if (!F)
+        continue;
+
+      bool AllCallSitesKnown;
+      if (checkForAllCallSites(
+              [&](AbstractCallSite ACS) {
+                Function *Callee = ACS.getInstruction()->getFunction();
+                return ToBeDeletedFunctions.count(Callee) ||
+                       (Functions.count(Callee) && Callee->hasLocalLinkage() &&
+                        !LiveInternalFns.count(Callee));
+              },
+              *F, true, nullptr, AllCallSitesKnown)) {
+        continue;
+      }
+
+      LiveInternalFns.insert(F);
+      InternalFns[u] = nullptr;
+      FoundLiveInternal = true;
+    }
+  }
+
+  for (unsigned u = 0, e = InternalFns.size(); u < e; ++u)
+    if (Function *F = InternalFns[u])
+      ToBeDeletedFunctions.insert(F);
+}
+
 ChangeStatus Attributor::cleanupIR() {
   TimeTraceScope TimeScope("Attributor::cleanupIR");
   // Delete stuff at the end to avoid invalid references and a nice order.
@@ -1277,43 +1319,14 @@ ChangeStatus Attributor::cleanupIR() {
     DetatchDeadBlocks(ToBeDeletedBBs, nullptr);
   }
 
-  // Identify dead internal functions and delete them. This happens outside
-  // the other fixpoint analysis as we might treat potentially dead functions
-  // as live to lower the number of iterations. If they happen to be dead, the
-  // below fixpoint loop will identify and eliminate them.
-  SmallVector<Function *, 8> InternalFns;
-  for (Function *F : Functions)
-    if (F->hasLocalLinkage())
-      InternalFns.push_back(F);
-
-  bool FoundDeadFn = true;
-  while (FoundDeadFn) {
-    FoundDeadFn = false;
-    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
-      Function *F = InternalFns[u];
-      if (!F)
-        continue;
-
-      bool AllCallSitesKnown;
-      if (!checkForAllCallSites(
-              [this](AbstractCallSite ACS) {
-                return ToBeDeletedFunctions.count(
-                    ACS.getInstruction()->getFunction());
-              },
-              *F, true, nullptr, AllCallSitesKnown))
-        continue;
-
-      ToBeDeletedFunctions.insert(F);
-      InternalFns[u] = nullptr;
-      FoundDeadFn = true;
-    }
-  }
+  identifyDeadInternalFunctions();
 
   // Rewrite the functions as requested during manifest.
   ChangeStatus ManifestChange = rewriteFunctionSignatures(CGModifiedFunctions);
 
   for (Function *Fn : CGModifiedFunctions)
-    CGUpdater.reanalyzeFunction(*Fn);
+    if (!ToBeDeletedFunctions.count(Fn))
+      CGUpdater.reanalyzeFunction(*Fn);
 
   for (Function *Fn : ToBeDeletedFunctions) {
     if (!Functions.count(Fn))
