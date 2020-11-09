@@ -66,10 +66,22 @@ inline ArrayRef<uint8_t> arrayRefFromStringRef(StringRef Input) {
 ///
 /// If \p C is not a valid hex digit, -1U is returned.
 inline unsigned hexDigitValue(char C) {
-  if (C >= '0' && C <= '9') return C-'0';
-  if (C >= 'a' && C <= 'f') return C-'a'+10U;
-  if (C >= 'A' && C <= 'F') return C-'A'+10U;
-  return -1U;
+  struct HexTable {
+    unsigned LUT[255] = {};
+    constexpr HexTable() {
+      // Default initialize everything to invalid.
+      for (int i = 0; i < 255; ++i)
+        LUT[i] = -1U;
+      // Initialize `0`-`9`.
+      for (int i = 0; i < 10; ++i)
+        LUT['0' + i] = i;
+      // Initialize `A`-`F` and `a`-`f`.
+      for (int i = 0; i < 6; ++i)
+        LUT['A' + i] = LUT['a' + i] = 10 + i;
+    }
+  };
+  constexpr HexTable Table;
+  return Table.LUT[static_cast<unsigned char>(C)];
 }
 
 /// Checks if character \p C is one of the 10 decimal digits.
