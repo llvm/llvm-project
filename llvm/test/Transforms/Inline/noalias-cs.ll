@@ -50,22 +50,22 @@ define void @caller(float* nocapture %a, float* nocapture %b, float* nocapture r
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[A]], align 4, !alias.scope !16
 ; CHECK-NEXT:    [[ARRAYIDX_I9:%.*]] = getelementptr inbounds float, float* [[B]], i64 7
 ; CHECK-NEXT:    store float [[TMP3]], float* [[ARRAYIDX_I9]], align 4, !alias.scope !16
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[C]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[C]], align 4, !noalias !16
 ; CHECK-NEXT:    [[ARRAYIDX_I_I4:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
-; CHECK-NEXT:    store float [[TMP4]], float* [[ARRAYIDX_I_I4]], align 4
+; CHECK-NEXT:    store float [[TMP4]], float* [[ARRAYIDX_I_I4]], align 4, !noalias !16
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I5:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
-; CHECK-NEXT:    store float [[TMP4]], float* [[ARRAYIDX1_I_I5]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[C]], align 4
+; CHECK-NEXT:    store float [[TMP4]], float* [[ARRAYIDX1_I_I5]], align 4, !noalias !16
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[C]], align 4, !noalias !16
 ; CHECK-NEXT:    [[ARRAYIDX_I6:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; CHECK-NEXT:    store float [[TMP5]], float* [[ARRAYIDX_I6]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* [[A]], align 4
+; CHECK-NEXT:    store float [[TMP5]], float* [[ARRAYIDX_I6]], align 4, !noalias !16
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* [[A]], align 4, !alias.scope !16
 ; CHECK-NEXT:    [[ARRAYIDX_I_I1:%.*]] = getelementptr inbounds float, float* [[B]], i64 5
-; CHECK-NEXT:    store float [[TMP6]], float* [[ARRAYIDX_I_I1]], align 4
+; CHECK-NEXT:    store float [[TMP6]], float* [[ARRAYIDX_I_I1]], align 4, !alias.scope !16
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I2:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
-; CHECK-NEXT:    store float [[TMP6]], float* [[ARRAYIDX1_I_I2]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[A]], align 4
+; CHECK-NEXT:    store float [[TMP6]], float* [[ARRAYIDX1_I_I2]], align 4, !alias.scope !16
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[A]], align 4, !alias.scope !16
 ; CHECK-NEXT:    [[ARRAYIDX_I3:%.*]] = getelementptr inbounds float, float* [[B]], i64 7
-; CHECK-NEXT:    store float [[TMP7]], float* [[ARRAYIDX_I3]], align 4
+; CHECK-NEXT:    store float [[TMP7]], float* [[ARRAYIDX_I3]], align 4, !alias.scope !16
 ; CHECK-NEXT:    ret void
 ;
 entry:
