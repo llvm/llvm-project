@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wignored-pragmas -verify %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -fsyntax-only -Wignored-pragmas -verify %s
 
 #pragma STDC FENV_ROUND ON   // expected-warning {{invalid or unsupported rounding mode}}
 

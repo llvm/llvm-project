@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -S -emit-llvm -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s
 
 // nextUp(1.F) == 0x1.000002p0F
 
