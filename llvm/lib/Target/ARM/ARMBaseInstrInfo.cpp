@@ -5663,6 +5663,37 @@ ARMBaseInstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
   return 0u;
 }
 
+// Compute liveness of LR at the point after the interval [I, E), which
+// denotes a *backward* iteration through instructions. Used only for return
+// basic blocks, which do not end with a tail call.
+static bool isLRAvailable(const TargetRegisterInfo &TRI,
+                          MachineBasicBlock::reverse_iterator I,
+                          MachineBasicBlock::reverse_iterator E) {
+  // At the end of the function LR dead.
+  bool Live = false;
+  for (; I != E; ++I) {
+    const MachineInstr &MI = *I;
+
+    // Check defs of LR.
+    if (MI.modifiesRegister(ARM::LR, &TRI))
+      Live = false;
+
+    // Check uses of LR.
+    unsigned Opcode = MI.getOpcode();
+    if (Opcode == ARM::BX_RET || Opcode == ARM::MOVPCLR ||
+        Opcode == ARM::SUBS_PC_LR || Opcode == ARM::tBX_RET ||
+        Opcode == ARM::tBXNS_RET) {
+      // These instructions use LR, but it's not an (explicit or implicit)
+      // operand.
+      Live = true;
+      continue;
+    }
+    if (MI.readsRegister(ARM::LR, &TRI))
+      Live = true;
+  }
+  return !Live;
+}
+
 outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
@@ -5755,8 +5786,15 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
 
     for (outliner::Candidate &C : RepeatedSequenceLocs) {
       C.initLRU(TRI);
-      // Is LR available? If so, we don't need a save.
-      if (C.LRU.available(ARM::LR)) {
+      // LR liveness is overestimated in return blocks, unless they end with a
+      // tail call.
+      const auto Last = C.getMBB()->rbegin();
+      const bool LRIsAvailable =
+          C.getMBB()->isReturnBlock() && !Last->isCall()
+              ? isLRAvailable(TRI, Last,
+                              (MachineBasicBlock::reverse_iterator)C.front())
+              : C.LRU.available(ARM::LR);
+      if (LRIsAvailable) {
         FrameID = MachineOutlinerNoLRSave;
         NumBytesNoStackCalls += Costs.CallNoLRSave;
         C.setCallInfo(MachineOutlinerNoLRSave, Costs.CallNoLRSave);
@@ -5867,7 +5905,13 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   if (any_of(MBB, [](MachineInstr &MI) { return MI.isCall(); }))
     Flags |= MachineOutlinerMBBFlags::HasCalls;
 
-  if (!LRU.available(ARM::LR))
+  // LR liveness is overestimated in return blocks.
+
+  bool LRIsAvailable =
+      MBB.isReturnBlock() && !MBB.back().isCall()
+          ? isLRAvailable(getRegisterInfo(), MBB.rbegin(), MBB.rend())
+          : LRU.available(ARM::LR);
+  if (!LRIsAvailable)
     Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
 
   return true;
