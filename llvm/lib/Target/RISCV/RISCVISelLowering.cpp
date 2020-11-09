@@ -1071,9 +1071,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue RHS = N->getOperand(1);
     APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
     APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 5);
-    if ((SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI)) ||
-        (SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)))
-      return SDValue();
+    if (SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI) ||
+        SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)) {
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
+      return SDValue(N, 0);
+    }
     break;
   }
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
