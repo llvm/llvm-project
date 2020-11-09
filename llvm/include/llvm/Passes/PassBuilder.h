@@ -594,14 +594,19 @@ public:
   /// Register a callback for a default optimizer pipeline extension point
   ///
   /// This extension point allows adding optimizations at the very end of the
-  /// function optimization pipeline. A key difference between this and the
-  /// legacy PassManager's OptimizerLast callback is that this extension point
-  /// is not triggered at O0. Extensions to the O0 pipeline should append their
-  /// passes to the end of the overall pipeline.
+  /// function optimization pipeline.
   void registerOptimizerLastEPCallback(
       const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
     OptimizerLastEPCallbacks.push_back(C);
   }
+
+  /// Run all registered extension point callbacks
+  ///
+  /// This runs the registered callbacks in the order they would be run in a
+  /// typical build*Pipeline(). This allows for reusing register*EPCallback()
+  /// between O0 and O[123] pipelines.
+  void runRegisteredEPCallbacks(ModulePassManager &MPM, OptimizationLevel Level,
+                                bool DebugLogging);
 
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
