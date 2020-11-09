@@ -16,7 +16,6 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -4079,7 +4078,6 @@ void mlir::populateStdToLLVMConversionPatterns(
   populateStdToLLVMFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
   populateStdToLLVMMemoryConversionPatterns(converter, patterns);
-  populateExpandMemRefReshapePattern(patterns, &converter.getContext());
 }
 
 /// Convert a non-empty list of types to be returned from a function into a
