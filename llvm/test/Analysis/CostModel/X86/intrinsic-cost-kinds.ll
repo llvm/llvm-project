@@ -236,11 +236,11 @@ define void @reduce_fmul(<16 x float> %va) {
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fmul'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v = call float @llvm.vector.reduce.fmul.v16f32(float 4.200000e+01, <16 x float> %va)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call float @llvm.vector.reduce.fmul.v16f32(float 4.200000e+01, <16 x float> %va)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'reduce_fmul'
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v = call float @llvm.vector.reduce.fmul.v16f32(float 4.200000e+01, <16 x float> %va)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call float @llvm.vector.reduce.fmul.v16f32(float 4.200000e+01, <16 x float> %va)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v = call float @llvm.vector.reduce.fmul.v16f32(float 42.0, <16 x float> %va)
@@ -257,11 +257,11 @@ define void @reduce_fadd_fast(<16 x float> %va) {
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fadd_fast'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> %va)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> %va)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'reduce_fadd_fast'
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> %va)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> %va)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.0, <16 x float> %va)
