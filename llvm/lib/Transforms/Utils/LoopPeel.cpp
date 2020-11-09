@@ -227,11 +227,9 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // consider AddRecs of the loop we are trying to peel.
     if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
       continue;
-    bool Increasing;
     if (!(ICmpInst::isEquality(Pred) && LeftAR->hasNoSelfWrap()) &&
-        !SE.isMonotonicPredicate(LeftAR, Pred, Increasing))
+        !SE.getMonotonicPredicateType(LeftAR, Pred))
       continue;
-    (void)Increasing;
 
     // Check if extending the current DesiredPeelCount lets us evaluate Pred
     // or !Pred in the loop body statically.
