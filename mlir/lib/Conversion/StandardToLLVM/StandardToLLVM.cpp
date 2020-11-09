@@ -249,7 +249,7 @@ SmallVector<Type, 2> LLVMTypeConverter::convertUnrankedMemRefSignature() {
 LLVM::LLVMType LLVMTypeConverter::convertFunctionSignature(
     FunctionType funcTy, bool isVariadic,
     LLVMTypeConverter::SignatureConversion &result) {
-  // Select the argument converter depending on the calling convetion.
+  // Select the argument converter depending on the calling convention.
   auto funcArgConverter = options.useBarePtrCallConv
                               ? barePtrFuncArgTypeConverter
                               : structFuncArgTypeConverter;

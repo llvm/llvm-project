@@ -487,7 +487,7 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
         return success();
       })
       .Case([&](omp::FlushOp) {
-        // No support in Openmp runtime funciton (__kmpc_flush) to accept
+        // No support in Openmp runtime function (__kmpc_flush) to accept
         // the argument list.
         // OpenMP standard states the following:
         //  "An implementation may implement a flush with a list by ignoring

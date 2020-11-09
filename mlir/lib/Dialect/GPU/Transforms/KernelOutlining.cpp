@@ -84,7 +84,7 @@ extractBeneficiaryOps(Operation *op,
     return false;
 
   for (Value operand : op->getOperands()) {
-    // It is already visisble in the kernel, keep going.
+    // It is already visible in the kernel, keep going.
     if (availableValues.count(operand))
       continue;
     // Else check whether it can be made available via sinking or already is a

@@ -878,7 +878,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   }
 
   int64_t position = linearize(extractedPos, strides);
-  // Then extract the strides assoociated to the shapeCast op vector source and
+  // Then extract the strides associated to the shapeCast op vector source and
   // delinearize the position using those strides.
   SmallVector<int64_t, 4> newStrides;
   int64_t numDimension =

@@ -292,8 +292,8 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// Identifers are uniqued by string value and use the internal string set for
-  /// storage.
+  /// Identifiers are uniqued by string value and use the internal string set
+  /// for storage.
   llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
   /// A thread local cache of identifiers to reduce lock contention.
   ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<llvm::NoneType> *>>

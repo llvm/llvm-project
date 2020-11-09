@@ -913,7 +913,7 @@ class SignlessIntegerAttrBase<I attrValType, string descr> :
   let returnType = [{ ::llvm::APInt }];
 }
 // Base class for signless integer attributes of fixed width that have a
-// correpsonding C++ type.
+// corresponding C++ type.
 class TypedSignlessIntegerAttrBase<I attrValType, string retType, string descr>
     : SignlessIntegerAttrBase<attrValType, descr> {
   let returnType = retType;
@@ -942,7 +942,7 @@ class SignedIntegerAttrBase<SI attrValType, string descr> :
   let returnType = [{ ::llvm::APInt }];
 }
 // Base class for signed integer attributes of fixed width that have a
-// correpsonding C++ type.
+// corresponding C++ type.
 class TypedSignedIntegerAttrBase<SI attrValType, string retType, string descr>
     : SignedIntegerAttrBase<attrValType, descr> {
   let returnType = retType;
@@ -971,7 +971,7 @@ class UnsignedIntegerAttrBase<UI attrValType, string descr> :
   let returnType = [{ ::llvm::APInt }];
 }
 // Base class for unsigned integer attributes of fixed width that have a
-// correpsonding C++ type.
+// corresponding C++ type.
 class TypedUnsignedIntegerAttrBase<UI attrValType, string retType, string descr>
     : UnsignedIntegerAttrBase<attrValType, descr> {
   let returnType = retType;

@@ -810,7 +810,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
       std::tuple<StringRef, ArrayRef<Type>, ArrayRef<StructType::OffsetInfo>,
                  ArrayRef<StructType::MemberDecorationInfo>>;
 
-  /// For idetified structs, return true if the given key contains the same
+  /// For identified structs, return true if the given key contains the same
   /// identifier.
   ///
   /// For literal structs, return true if the given key contains a matching list
