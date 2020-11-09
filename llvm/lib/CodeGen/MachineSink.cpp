@@ -34,6 +34,8 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -94,6 +96,7 @@ namespace {
     MachineBlockFrequencyInfo *MBFI;
     const MachineBranchProbabilityInfo *MBPI;
     AliasAnalysis *AA;
+    RegisterClassInfo RegClassInfo;
 
     // Remember which edges have been considered for breaking.
     SmallSet<std::pair<MachineBasicBlock*, MachineBasicBlock*>, 8>
@@ -132,6 +135,9 @@ namespace {
     std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
              std::vector<MachineInstr *>>
         StoreInstrCache;
+
+    /// Cached BB's register pressure.
+    std::map<MachineBasicBlock *, std::vector<unsigned>> CachedRegisterPressure;
 
   public:
     static char ID; // Pass identification
@@ -209,6 +215,8 @@ namespace {
     SmallVector<MachineBasicBlock *, 4> &
     GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
                            AllSuccsCache &AllSuccessors) const;
+
+    std::vector<unsigned> &getBBRegisterPressure(MachineBasicBlock &MBB);
   };
 
 } // end anonymous namespace
@@ -335,6 +343,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  RegClassInfo.runOnMachineFunction(MF);
 
   bool EverMadeChange = false;
 
@@ -428,6 +437,8 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
 
   SeenDbgUsers.clear();
   SeenDbgVars.clear();
+  // recalculate the bb register pressure after sinking one BB.
+  CachedRegisterPressure.clear();
 
   return MadeChange;
 }
@@ -570,6 +581,42 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
   return true;
 }
 
+std::vector<unsigned> &
+MachineSinking::getBBRegisterPressure(MachineBasicBlock &MBB) {
+  // Currently to save compiling time, MBB's register pressure will not change
+  // in one ProcessBlock iteration because of CachedRegisterPressure. but MBB's
+  // register pressure is changed after sinking any instructions into it.
+  // FIXME: need a accurate and cheap register pressure estiminate model here.
+  auto RP = CachedRegisterPressure.find(&MBB);
+  if (RP != CachedRegisterPressure.end())
+    return RP->second;
+
+  RegionPressure Pressure;
+  RegPressureTracker RPTracker(Pressure);
+
+  // Initialize the register pressure tracker.
+  RPTracker.init(MBB.getParent(), &RegClassInfo, nullptr, &MBB, MBB.end(),
+                 /*TrackLaneMasks*/ false, /*TrackUntiedDefs=*/true);
+
+  for (MachineBasicBlock::iterator MII = MBB.instr_end(),
+                                   MIE = MBB.instr_begin();
+       MII != MIE; --MII) {
+    MachineInstr &MI = *std::prev(MII);
+    if (MI.isDebugValue() || MI.isDebugLabel())
+      continue;
+    RegisterOperands RegOpers;
+    RegOpers.collect(MI, *TRI, *MRI, false, false);
+    RPTracker.recedeSkipDebugValues();
+    assert(&*RPTracker.getPos() == &MI && "RPTracker sync error!");
+    RPTracker.recede(RegOpers);
+  }
+
+  RPTracker.closeRegion();
+  auto It = CachedRegisterPressure.insert(
+      std::make_pair(&MBB, RPTracker.getPressure().MaxSetPressure));
+  return It.first->second;
+}
+
 /// isProfitableToSinkTo - Return true if it is profitable to sink MI.
 bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
                                           MachineBasicBlock *MBB,
@@ -614,6 +661,21 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
   if (!ML)
     return false;
 
+  auto isRegisterPressureSetExceedLimit = [&](const TargetRegisterClass *RC) {
+    unsigned Weight = TRI->getRegClassWeight(RC).RegWeight;
+    const int *PS = TRI->getRegClassPressureSets(RC);
+    // Get register pressure for block SuccToSinkTo.
+    std::vector<unsigned> BBRegisterPressure =
+        getBBRegisterPressure(*SuccToSinkTo);
+    for (; *PS != -1; PS++)
+      // check if any register pressure set exceeds limit in block SuccToSinkTo
+      // after sinking.
+      if (Weight + BBRegisterPressure[*PS] >=
+          TRI->getRegPressureSetLimit(*MBB->getParent(), *PS))
+        return true;
+    return false;
+  };
+
   // If this instruction is inside a loop and sinking this instruction can make
   // more registers live range shorten, it is still prifitable.
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
@@ -645,16 +707,19 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       if (LI->getLoopFor(DefMI->getParent()) != ML ||
           (DefMI->isPHI() && LI->isLoopHeader(DefMI->getParent())))
         continue;
-      // DefMI is inside the loop. Mark it as not profitable as sinking MI will
-      // enlarge DefMI live range.
-      // FIXME: check the register pressure in block SuccToSinkTo, if it is
-      // smaller than the limit after sinking, it is still profitable to sink.
-      return false;
+      // The DefMI is defined inside the loop.
+      // If sinking this operand makes some register pressure set exceed limit,
+      // it is not profitable.
+      if (isRegisterPressureSetExceedLimit(MRI->getRegClass(Reg))) {
+        LLVM_DEBUG(dbgs() << "register pressure exceed limit, not profitable.");
+        return false;
+      }
     }
   }
 
-  // If MI is in loop and all its operands are alive across the whole loop, it
-  // is profitable to sink MI.
+  // If MI is in loop and all its operands are alive across the whole loop or if
+  // no operand sinking make register pressure set exceed limit, it is
+  // profitable to sink MI.
   return true;
 }
 
