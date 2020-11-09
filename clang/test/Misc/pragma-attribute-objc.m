@@ -8,7 +8,6 @@
 // CHECK-LABEL: ObjCInterfaceDecl{{.*}}testInterface1
 // CHECK-NEXT: ObjCImplementation
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: ObjCSubclassingRestrictedAttr{{.*}}
 
 // CHECK-NOT: AnnotateAttr
@@ -18,29 +17,24 @@
   int testIvar1;
   // CHECK-LABEL: ObjCIvarDecl{{.*}} testIvar1
   // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-  // CHECK-NEXT: StringLiteral
   // CHECK-NOT: ObjCSubclassingRestrictedAttr
 }
 
 @property int testProp1;
 // CHECK-LABEL: ObjCPropertyDecl{{.*}} testProp1
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 
 - (void)testIm:(int) x;
 // CHECK-LABEL: ObjCMethodDecl{{.*}}testIm
 // CHECK-NEXT: ParmVarDecl{{.*}} x
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 
 + (void)testCm;
 // CHECK-LABEL: ObjCMethodDecl{{.*}}testCm
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 
 // Implicit getters/setters shouldn't receive the attributes.
@@ -62,7 +56,6 @@
   int testIvar2;
   // CHECK-LABEL: ObjCIvarDecl{{.*}} testIvar2
   // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-  // CHECK-NEXT: StringLiteral
   // CHECK-NOT: ObjCSubclassingRestrictedAttr
 }
 
@@ -73,10 +66,8 @@
 // CHECK-NEXT: ImplicitParamDecl
 // CHECK-NEXT: ParmVarDecl{{.*}} x
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 }
 
@@ -98,10 +89,8 @@
 // CHECK-LABEL: ObjCInterfaceDecl{{.*}}testImplWithoutInterface
 // CHECK-NEXT: ObjCImplementation
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: ObjCSubclassingRestrictedAttr
 // CHECK-NEXT: AnnotateAttr{{.*}} "applied at container start"
-// CHECK-NEXT: StringLiteral
 
 // CHECK-LABEL: ObjCImplementationDecl{{.*}}testImplWithoutInterface
 // CHECK-NOT: AnnotateAttr
@@ -114,14 +103,12 @@
 @protocol testProtocol
 // CHECK-LABEL: ObjCProtocolDecl{{.*}}testProtocol
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 // CHECK-NOT: AnnotateAttr
 
 - (void)testProtIm;
 // CHECK-LABEL: ObjCMethodDecl{{.*}}testProtIm
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 
 @end
@@ -129,7 +116,6 @@
 @protocol testForwardProtocol;
 // CHECK-LABEL: ObjCProtocolDecl{{.*}}testForwardProtocol
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 
 
@@ -166,7 +152,6 @@
 @interface testInterface3
 // CHECK-LABEL: ObjCInterfaceDecl{{.*}}testInterface3
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
-// CHECK-NEXT: StringLiteral
 // CHECK-NOT: ObjCSubclassingRestrictedAttr
 @end
 

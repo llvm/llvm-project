@@ -225,10 +225,8 @@ class NVVM_MMA_OPS<int _ = 0> {
                                              ldst_bit_ab_ops,
                                              ldst_subint_cd_ops);
   // Separate A/B/C fragments (loads) from D (stores).
-  list<WMMA_REGS> all_ld_ops = !foldl([]<WMMA_REGS>, all_ldst_ops, a, b,
-                                      !listconcat(a, !if(!eq(b.frag,"d"), [],[b])));
-  list<WMMA_REGS> all_st_ops = !foldl([]<WMMA_REGS>, all_ldst_ops, a, b,
-                                      !listconcat(a, !if(!eq(b.frag,"d"), [b],[])));
+  list<WMMA_REGS> all_ld_ops = !filter(op, all_ldst_ops, !ne(op.frag, "d"));
+  list<WMMA_REGS> all_st_ops = !filter(op, all_ldst_ops, !eq(op.frag, "d"));
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;

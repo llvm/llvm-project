@@ -1530,22 +1530,25 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         // TODO: We could be producing more VPT blocks than necessary and could
         // fold the newly created one into a proceeding one.
         MachineInstr *Divergent = VPTState::getDivergent(Block);
-        for (auto I = ++MachineBasicBlock::iterator(Insts.front()),
-             E = ++MachineBasicBlock::iterator(Divergent); I != E; ++I)
+        MachineInstr *VPST = Insts.front();
+        auto DivergentNext = ++MachineBasicBlock::iterator(Divergent);
+        bool DivergentNextIsPredicated =
+            getVPTInstrPredicate(*DivergentNext) != ARMVCC::None;
+
+        for (auto I = ++MachineBasicBlock::iterator(VPST), E = DivergentNext;
+             I != E; ++I)
           RemovePredicate(&*I);
 
         // Check if the instruction defining vpr is a vcmp so it can be combined
         // with the VPST This should be the divergent instruction
-        MachineInstr *VCMP = VCMPOpcodeToVPT(Divergent->getOpcode()) != 0
-          ? Divergent
-          : nullptr;
+        MachineInstr *VCMP =
+            VCMPOpcodeToVPT(Divergent->getOpcode()) != 0 ? Divergent : nullptr;
 
-        MachineInstrBuilder MIB;
-        if (VCMP) {
-          // Combine the VPST and VCMP into a VPT
-          MIB = BuildMI(*Divergent->getParent(), Divergent,
-                        Divergent->getDebugLoc(),
-                        TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
+        auto ReplaceVCMPWithVPT = [&]() {
+          // Replace the VCMP with a VPT
+          MachineInstrBuilder MIB = BuildMI(
+              *Divergent->getParent(), Divergent, Divergent->getDebugLoc(),
+              TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
           MIB.addImm(ARMVCC::Then);
           // Register one
           MIB.add(VCMP->getOperand(1));
@@ -1555,18 +1558,31 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           MIB.add(VCMP->getOperand(3));
           LLVM_DEBUG(dbgs()
                      << "ARM Loops: Combining with VCMP to VPT: " << *MIB);
+          LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
           LoLoop.ToRemove.insert(VCMP);
-        } else {
-          // Create a VPST (with a null mask for now, we'll recompute it later)
-          // or a VPT in case there was a VCMP right before it
-          MIB = BuildMI(*Divergent->getParent(), Divergent,
+        };
+
+        if (DivergentNextIsPredicated) {
+          // Insert a VPST at the divergent only if the next instruction
+          // would actually use it. A VCMP following a VPST can be
+          // merged into a VPT so do that instead if the VCMP exists.
+          if (!VCMP) {
+            // Create a VPST (with a null mask for now, we'll recompute it
+            // later)
+            MachineInstrBuilder MIB =
+                BuildMI(*Divergent->getParent(), Divergent,
                         Divergent->getDebugLoc(), TII->get(ARM::MVE_VPST));
-          MIB.addImm(0);
-          LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
+            MIB.addImm(0);
+            LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
+            LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
+          } else {
+            // No RDA checks are necessary here since the VPST would have been
+            // directly before the VCMP
+            ReplaceVCMPWithVPT();
+          }
         }
-        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Insts.front());
-        LoLoop.ToRemove.insert(Insts.front());
-        LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
+        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
+        LoLoop.ToRemove.insert(VPST);
       }
     } else if (Block.containsVCTP()) {
       // The vctp will be removed, so the block mask of the vp(s)t will need
