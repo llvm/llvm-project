@@ -270,6 +270,10 @@ public:
   /// Compute known bits for smin(LHS, RHS).
   static KnownBits smin(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for shl(LHS, RHS).
+  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
+  static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Insert the bits from a smaller known bits starting at bitPosition.
   void insertBits(const KnownBits &SubBits, unsigned BitPosition) {
     Zero.insertBits(SubBits.Zero, BitPosition);
