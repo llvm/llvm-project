@@ -8,7 +8,6 @@
 
         .set noat
         abs.ps          $f22,$f8
-        add.ps          $f25,$f27,$f13
         addqh.w         $s7,$s7,$k1
         addqh_r.w       $8,$v1,$zero
         alnv.ps         $f12,$f18,$f30,$12
@@ -59,7 +58,6 @@
         msub.ps         $f12,$f14,$f29,$f17
         mtc0            $9,c0_datahi1
         mtgc0           $s4,$21,7
-        mul.ps          $f14,$f0,$f16
         neg.ps          $f19,$f13
         nmadd.ps        $f27,$f4,$f9,$f25
         nmsub.ps        $f6,$f12,$f14,$f17
@@ -70,7 +68,6 @@
         sbe             $s7,33($s1)
         sce             $sp,189($10)
         she             $24,105($v0)
-        sub.ps          $f5,$f14,$f26
         swe             $24,94($k0)
         swle            $v1,-209($gp)
         swre            $k0,-202($s2)

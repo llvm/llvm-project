@@ -6,7 +6,6 @@
 
 	.set noat
         abs.ps          $f22,$f8            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        add.ps          $f25,$f27,$f13      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         alnv.ps         $f12,$f18,$f30,$12  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         bc1any2f        $fcc2,4             # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         bc1any2t        $fcc2,4             # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
@@ -35,8 +34,6 @@
         movt.ps         $f20,$f25,$fcc2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         movz.ps         $f18,$f17,$ra       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         msub.ps         $f12,$f14,$f29,$f17 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        mul.ps          $f14,$f0,$f16       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         neg.ps          $f19,$f13           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         nmadd.ps        $f27,$f4,$f9,$f25   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         nmsub.ps        $f6,$f12,$f14,$f17  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        sub.ps          $f5,$f14,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
