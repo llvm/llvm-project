@@ -14,6 +14,12 @@
 
 // UNSUPPORTED: no-exceptions
 
+// FIXME: GCC doesn't allow turning off the warning for exceptions being caught
+//        by earlier handlers, which this test is exercising. We have to disable
+//        warnings altogether to remove the error.
+//        See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97675.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-error
+
 #include <exception>
 #include <stdlib.h>
 #include <assert.h>
