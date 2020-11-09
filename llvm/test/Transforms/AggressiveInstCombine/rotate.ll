@@ -451,7 +451,7 @@ define i32 @could_be_rotr(i32 %a, i32 %b, i32* %p) {
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
-; CHECK-NEXT:    store i32 [[OR]], i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 [[OR]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[A]], [[ENTRY:%.*]] ], [ [[OR]], [[ROTBB]] ]
