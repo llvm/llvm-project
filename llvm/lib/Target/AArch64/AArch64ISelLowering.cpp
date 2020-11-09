@@ -5806,6 +5806,22 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
   llvm_unreachable("Unexpected platform trying to use TLS");
 }
 
+// Looks through \param Val to determine the bit that can be used to
+// check the sign of the value. It returns the unextended value and
+// the sign bit position.
+std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
+  if (Val.getOpcode() == ISD::SIGN_EXTEND_INREG)
+    return {Val.getOperand(0),
+            cast<VTSDNode>(Val.getOperand(1))->getVT().getFixedSizeInBits() -
+                1};
+
+  if (Val.getOpcode() == ISD::SIGN_EXTEND)
+    return {Val.getOperand(0),
+            Val.getOperand(0)->getValueType(0).getFixedSizeInBits() - 1};
+
+  return {Val, Val.getValueSizeInBits() - 1};
+}
+
 SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
@@ -5900,9 +5916,10 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
         // Don't combine AND since emitComparison converts the AND to an ANDS
         // (a.k.a. TST) and the test in the test bit and branch instruction
         // becomes redundant.  This would also increase register pressure.
-        uint64_t Mask = LHS.getValueSizeInBits() - 1;
+        uint64_t SignBitPos;
+        std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
         return DAG.getNode(AArch64ISD::TBNZ, dl, MVT::Other, Chain, LHS,
-                           DAG.getConstant(Mask, dl, MVT::i64), Dest);
+                           DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
       }
     }
     if (RHSC && RHSC->getSExtValue() == -1 && CC == ISD::SETGT &&
@@ -5910,9 +5927,10 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       // Don't combine AND since emitComparison converts the AND to an ANDS
       // (a.k.a. TST) and the test in the test bit and branch instruction
       // becomes redundant.  This would also increase register pressure.
-      uint64_t Mask = LHS.getValueSizeInBits() - 1;
+      uint64_t SignBitPos;
+      std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
       return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Chain, LHS,
-                         DAG.getConstant(Mask, dl, MVT::i64), Dest);
+                         DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
     }
 
     SDValue CCVal;
