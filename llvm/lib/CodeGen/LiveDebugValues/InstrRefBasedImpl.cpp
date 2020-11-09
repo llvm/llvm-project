@@ -343,9 +343,12 @@ public:
   bool operator!=(const ValueIDNum &Other) const { return !(*this == Other); }
 
   std::string asString(const std::string &mlocname) const {
-    return Twine("bb ")
-        .concat(Twine(BlockNo).concat(Twine(" inst ").concat(
-            Twine(InstNo).concat(Twine(" loc ").concat(Twine(mlocname))))))
+    return Twine("Value{bb: ")
+        .concat(Twine(BlockNo).concat(
+            Twine(", inst: ")
+                .concat((InstNo ? Twine(InstNo) : Twine("live-in"))
+                            .concat(Twine(", loc: ").concat(Twine(mlocname)))
+                            .concat(Twine("}")))))
         .str();
   }
 
