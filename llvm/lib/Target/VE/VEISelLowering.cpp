@@ -964,7 +964,7 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 
 /// Custom Lower {
 
-// The mappings for emitLeading/TrailingFence for VE is designed by folling
+// The mappings for emitLeading/TrailingFence for VE is designed by following
 // http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
 Instruction *VETargetLowering::emitLeadingFence(IRBuilder<> &Builder,
                                                 Instruction *Inst,
