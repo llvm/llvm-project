@@ -44,12 +44,6 @@ namespace mlir {
 /// except for the ranked-tensor types which is converted to memref types.
 class BufferizeTypeConverter : public TypeConverter {
 public:
-  /// This enum is for showing how buffer placement operation converters should
-  /// conduct with certain result type after type conversion. This value can be
-  /// set/get for each specific type using setResultConversionKind or
-  /// getResultConversionKind.
-  enum ResultConversionKind { AppendToArgumentsList, KeepAsFunctionResult };
-
   BufferizeTypeConverter();
 
   /// This method tries to decompose a value of a certain type using provided
@@ -82,35 +76,12 @@ public:
     addConversion(std::forward<FnT>(callback));
   }
 
-  /// This method returns ResultConversionKind for the mapping from `origin`
-  /// type to `input` type.
-  ResultConversionKind getResultConversionKind(Type origin, Type input);
-
-  /// This method registers ResultConversionKind for the mapping from type 'T'
-  /// to type 'U'.
-  template <typename T, typename U>
-  void setResultConversionKind(ResultConversionKind kind) {
-    assert((kind != AppendToArgumentsList ||
-            llvm::is_one_of<U, MemRefType, UnrankedMemRefType>::value) &&
-           "Only the memref typed values can be set to be appended to the "
-           "function argument list at the moment");
-    resultTypeConversions.emplace_back(
-        [=](Type origin, Type input) -> Optional<ResultConversionKind> {
-          if (origin.template isa<T>() && input.template isa<U>())
-            return kind;
-          return llvm::None;
-        });
-  }
-
 private:
   using DecomposeValueConversionCallFn = std::function<Optional<LogicalResult>(
       OpBuilder &, Location, Type, Value, SmallVectorImpl<Value> &)>;
 
   using DecomposeTypeConversionCallFn =
       std::function<Optional<LogicalResult>(Type, SmallVectorImpl<Type> &)>;
-
-  using ResultConversionKindFn =
-      std::function<Optional<ResultConversionKind>(Type, Type)>;
 
   /// Generate a wrapper for the given decompose value conversion callback.
   template <typename T, typename FnT>
@@ -139,7 +110,6 @@ private:
     };
   }
 
-  SmallVector<ResultConversionKindFn, 2> resultTypeConversions;
   SmallVector<DecomposeValueConversionCallFn, 2> decomposeValueConversions;
   SmallVector<DecomposeTypeConversionCallFn, 2> decomposeTypeConversions;
 };
@@ -221,48 +191,10 @@ public:
   LogicalResult
   matchAndRewrite(ReturnOpSourceTy returnOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    Location loc = returnOp.getLoc();
-
-    // Split the operands depending on whether they need a copy operation or
-    // they remain as operands of the return operation. If an operand is
-    // decomposable and a decompose callback function has been provided by the
-    // user, it will be unpacked.
-    SmallVector<Value, 2> newOperands, needCopyOperands;
-    OpBuilder builder(returnOp);
-    for (auto operand : llvm::enumerate(operands)) {
-      SmallVector<Value, 2> values;
-      this->converter.tryDecomposeValue(builder, loc, operand.value().getType(),
-                                        operand.value(), values);
-      Type type = returnOp.getOperand(operand.index()).getType();
-      SmallVector<Type, 2> originTypes;
-      this->converter.tryDecomposeType(type, originTypes);
-      for (auto value : llvm::enumerate(values)) {
-        Type origin = originTypes[value.index()];
-        Type converted = value.value().getType();
-        auto kind = this->converter.getResultConversionKind(origin, converted);
-        if (kind == BufferizeTypeConverter::KeepAsFunctionResult)
-          newOperands.push_back(value.value());
-        else
-          // kind = BufferizeTypeConverter::AppendToArgumentsList
-          needCopyOperands.push_back(value.value());
-      }
-    }
-
-    // Insert Copy operations instead for the operands that have been removed
-    // from operand list and appended to the function arguments list.
-    Block &entryBlock = returnOp.getParentRegion()->front();
-    unsigned numFuncArgs = entryBlock.getNumArguments();
-    if (needCopyOperands.size() > numFuncArgs)
-      return returnOp.emitError(
-          "The number of operands that need Copy operations is more "
-          "than the number of target function arguments.");
-    unsigned destArgNum = numFuncArgs - needCopyOperands.size();
-    rewriter.setInsertionPoint(returnOp);
-    for (Value operand : needCopyOperands) {
-      rewriter.create<CopyOpTy>(loc, operand,
-                                entryBlock.getArgument(destArgNum));
-      ++destArgNum;
-    }
+    SmallVector<Value, 2> newOperands;
+    for (auto operand : operands)
+      this->converter.tryDecomposeValue(
+          rewriter, returnOp.getLoc(), operand.getType(), operand, newOperands);
     rewriter.replaceOpWithNewOp<ReturnOpTargetTy>(returnOp, newOperands);
     return success();
   }

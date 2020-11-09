@@ -146,7 +146,6 @@ void registerTestPasses() {
   test::registerTestMemRefDependenceCheck();
   test::registerTestMemRefStrideCalculation();
   test::registerTestOpaqueLoc();
-  test::registerTestPreparationPassWithAllowedMemrefResults();
   test::registerTestRecursiveTypesPass();
   test::registerTestSCFUtilsPass();
   test::registerTestVectorConversions();
