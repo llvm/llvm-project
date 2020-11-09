@@ -839,12 +839,8 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     return Cost;
   }
 
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
-
   // On NEON a vector select gets lowered to vbsl.
-  if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
+  if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT && CondTy) {
     // Lowering of some vector selects is currently far from perfect.
     static const TypeConversionCostTblEntry NEONVectorSelectTbl[] = {
       { ISD::SELECT, MVT::v4i1, MVT::v4i64, 4*4 + 1*2 + 1 },
@@ -865,9 +861,13 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     return LT.first;
   }
 
-  int BaseCost = ST->hasMVEIntegerOps() && ValTy->isVectorTy()
-                     ? ST->getMVEVectorCostFactor()
-                     : 1;
+  // Default to cheap (throughput/size of 1 instruction) but adjust throughput
+  // for "multiple beats" potentially needed by MVE instructions.
+  int BaseCost = 1;
+  if (CostKind != TTI::TCK_CodeSize && ST->hasMVEIntegerOps() &&
+      ValTy->isVectorTy())
+    BaseCost = ST->getMVEVectorCostFactor();
+
   return BaseCost *
          BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
