@@ -77,18 +77,7 @@ void SBTrace::StopTrace(SBError &error, lldb::tid_t thread_id) {
 }
 
 void SBTrace::GetTraceConfig(SBTraceOptions &options, SBError &error) {
-  LLDB_RECORD_METHOD(void, SBTrace, GetTraceConfig,
-                     (lldb::SBTraceOptions &, lldb::SBError &), options, error);
-
-  ProcessSP process_sp(GetSP());
-  error.Clear();
-
-  if (!process_sp) {
-    error.SetErrorString("invalid process");
-  } else {
-    error.SetError(process_sp->GetTraceConfig(GetTraceUID(),
-                                              *(options.m_traceoptions_sp)));
-  }
+  error.SetErrorString("deprecated");
 }
 
 lldb::user_id_t SBTrace::GetTraceUID() {

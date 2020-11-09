@@ -156,3 +156,47 @@ bool CommandObjectIterateOverThreads::BucketThread(
   }
   return true;
 }
+
+bool CommandObjectMultipleThreads::DoExecute(Args &command,
+                                             CommandReturnObject &result) {
+  Process &process = m_exe_ctx.GetProcessRef();
+
+  std::vector<lldb::tid_t> tids;
+  const size_t num_args = command.GetArgumentCount();
+
+  std::lock_guard<std::recursive_mutex> guard(
+      process.GetThreadList().GetMutex());
+
+  if (num_args > 0 && ::strcmp(command.GetArgumentAtIndex(0), "all") == 0) {
+    for (ThreadSP thread_sp : process.Threads())
+      tids.push_back(thread_sp->GetID());
+  } else {
+    if (num_args == 0) {
+      Thread &thread = m_exe_ctx.GetThreadRef();
+      tids.push_back(thread.GetID());
+    }
+
+    for (size_t i = 0; i < num_args; i++) {
+      uint32_t thread_idx;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(i), thread_idx)) {
+        result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
+                                     command.GetArgumentAtIndex(i));
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+
+      ThreadSP thread = process.GetThreadList().FindThreadByIndexID(thread_idx);
+
+      if (!thread) {
+        result.AppendErrorWithFormat("no thread with index: \"%s\"\n",
+                                     command.GetArgumentAtIndex(i));
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+
+      tids.push_back(thread->GetID());
+    }
+  }
+
+  return DoExecuteOnThreads(command, result, tids);
+}
