@@ -12,23 +12,20 @@ define void @test_memcpy(i32* nocapture %x, i32* nocapture readonly %y, i32 %n, 
 ; CHECK-NEXT:    blt .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r8, r3
-; CHECK-NEXT:    mov lr, r2
+; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    mov r9, r1
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsls r7, r3, #2
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    lsls r4, r3, #2
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r0, r6, r4
-; CHECK-NEXT:    add.w r1, r9, r4
+; CHECK-NEXT:    adds r0, r7, r6
+; CHECK-NEXT:    add.w r1, r9, r6
 ; CHECK-NEXT:    mov r2, r8
-; CHECK-NEXT:    mov r5, lr
 ; CHECK-NEXT:    bl __aeabi_memcpy4
-; CHECK-NEXT:    mov lr, r5
-; CHECK-NEXT:    add r4, r7
-; CHECK-NEXT:    subs.w lr, lr, #1
+; CHECK-NEXT:    add r6, r4
+; CHECK-NEXT:    subs r5, #1
 ; CHECK-NEXT:    bne .LBB0_2
-; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
@@ -64,20 +61,17 @@ define void @test_memset(i32* nocapture %x, i32 %n, i32 %m) {
 ; CHECK-NEXT:    blt .LBB1_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov lr, r1
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    lsls r6, r2, #2
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    lsls r7, r2, #2
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    mov r7, lr
 ; CHECK-NEXT:    bl __aeabi_memclr4
-; CHECK-NEXT:    mov lr, r7
-; CHECK-NEXT:    add r5, r6
-; CHECK-NEXT:    subs.w lr, lr, #1
+; CHECK-NEXT:    add r6, r7
+; CHECK-NEXT:    subs r5, #1
 ; CHECK-NEXT:    bne .LBB1_2
-; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
@@ -110,23 +104,20 @@ define void @test_memmove(i32* nocapture %x, i32* nocapture readonly %y, i32 %n,
 ; CHECK-NEXT:    blt .LBB2_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r8, r3
-; CHECK-NEXT:    mov lr, r2
+; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    mov r9, r1
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsls r7, r3, #2
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    lsls r4, r3, #2
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:  .LBB2_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r0, r6, r4
-; CHECK-NEXT:    add.w r1, r9, r4
+; CHECK-NEXT:    adds r0, r7, r6
+; CHECK-NEXT:    add.w r1, r9, r6
 ; CHECK-NEXT:    mov r2, r8
-; CHECK-NEXT:    mov r5, lr
 ; CHECK-NEXT:    bl __aeabi_memmove4
-; CHECK-NEXT:    mov lr, r5
-; CHECK-NEXT:    add r4, r7
-; CHECK-NEXT:    subs.w lr, lr, #1
+; CHECK-NEXT:    add r6, r4
+; CHECK-NEXT:    subs r5, #1
 ; CHECK-NEXT:    bne .LBB2_2
-; CHECK-NEXT:    b .LBB2_3
 ; CHECK-NEXT:  .LBB2_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
