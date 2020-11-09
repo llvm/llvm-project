@@ -107,7 +107,9 @@ public:
     /// VFSs that use external names. In that case, the \c FileEntryRef
     /// returned by the \c FileManager will have the external name, and not the
     /// name that was used to lookup the file.
-    llvm::PointerUnion<FileEntry *, const MapEntry *> V;
+    // The second type is really a `const MapEntry *`, but that confuses gcc5.3.
+    // Once that's no longer supported, change this back.
+    llvm::PointerUnion<FileEntry *, const void *> V;
 
     MapValue() = delete;
     MapValue(FileEntry &FE) : V(&FE) {}
