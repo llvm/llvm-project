@@ -659,7 +659,8 @@ public:
 /// VPRecipeBases that also inherit from VPValue must make sure to inherit from
 /// VPRecipeBase before VPValue.
 class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
-                     public VPDef {
+                     public VPDef,
+                     public VPUser {
   friend VPBasicBlock;
   friend class VPBlockUtils;
 
@@ -668,7 +669,12 @@ class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
   VPBasicBlock *Parent = nullptr;
 
 public:
-  VPRecipeBase(const unsigned char SC) : VPDef(SC) {}
+  VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands)
+      : VPDef(SC), VPUser(Operands) {}
+
+  template <typename IterT>
+  VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands)
+      : VPDef(SC), VPUser(Operands) {}
   virtual ~VPRecipeBase() = default;
 
   /// \return the VPBasicBlock which this VPRecipe belongs to.
@@ -705,10 +711,6 @@ public:
   /// \returns an iterator pointing to the element after the erased one
   iplist<VPRecipeBase>::iterator eraseFromParent();
 
-  /// Returns a pointer to a VPUser, if the recipe inherits from VPUser or
-  /// nullptr otherwise.
-  VPUser *toVPUser();
-
   /// Returns the underlying instruction, if the recipe is a VPValue or nullptr
   /// otherwise.
   Instruction *getUnderlyingInstr() {
@@ -743,7 +745,7 @@ inline bool VPUser::classof(const VPDef *Def) {
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
-class VPInstruction : public VPRecipeBase, public VPUser, public VPValue {
+class VPInstruction : public VPRecipeBase, public VPValue {
   friend class VPlanSlp;
 
 public:
@@ -769,11 +771,11 @@ protected:
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
-      : VPRecipeBase(VPRecipeBase::VPInstructionSC), VPUser(Operands),
+      : VPRecipeBase(VPRecipeBase::VPInstructionSC, Operands),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPInstruction *> Operands)
-      : VPRecipeBase(VPRecipeBase::VPInstructionSC), VPUser({}),
+      : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
     for (auto *I : Operands)
       addOperand(I->getVPValue());
@@ -843,12 +845,12 @@ public:
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase, public VPValue, public VPUser {
+class VPWidenRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPRecipeBase::VPWidenSC),
-        VPValue(VPValue::VPVWidenSC, &I, this), VPUser(Operands) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenSC, Operands),
+        VPValue(VPValue::VPVWidenSC, &I, this) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -869,12 +871,12 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPRecipeBase, public VPUser, public VPValue {
+class VPWidenCallRecipe : public VPRecipeBase, public VPValue {
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
-      : VPRecipeBase(VPRecipeBase::VPWidenCallSC), VPUser(CallArguments),
+      : VPRecipeBase(VPRecipeBase::VPWidenCallSC, CallArguments),
         VPValue(VPValue::VPVWidenCallSC, &I, this) {}
 
   ~VPWidenCallRecipe() override = default;
@@ -893,7 +895,7 @@ public:
 };
 
 /// A recipe for widening select instructions.
-class VPWidenSelectRecipe : public VPRecipeBase, public VPUser, public VPValue {
+class VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
 
   /// Is the condition of the select loop invariant?
   bool InvariantCond;
@@ -902,7 +904,7 @@ public:
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
                       bool InvariantCond)
-      : VPRecipeBase(VPRecipeBase::VPWidenSelectSC), VPUser(Operands),
+      : VPRecipeBase(VPRecipeBase::VPWidenSelectSC, Operands),
         VPValue(VPValue::VPVWidenSelectSC, &I, this),
         InvariantCond(InvariantCond) {}
 
@@ -922,23 +924,21 @@ public:
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeBase,
-                         public VPUser,
-                         public VPValue {
+class VPWidenGEPRecipe : public VPRecipeBase, public VPValue {
   bool IsPtrLoopInvariant;
   SmallBitVector IsIndexLoopInvariant;
 
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC), VPUser(Operands),
+      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC, Operands),
         VPValue(VPWidenGEPSC, GEP, this),
         IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
 
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands,
                    Loop *OrigLoop)
-      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC), VPUser(Operands),
+      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC, Operands),
         VPValue(VPValue::VPVWidenGEPSC, GEP, this),
         IsIndexLoopInvariant(GEP->getNumIndices(), false) {
     IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
@@ -963,13 +963,13 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector and scalar values.
-class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPUser {
+class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
   PHINode *IV;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, Instruction *Cast,
                                 TruncInst *Trunc = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC), VPUser({Start}), IV(IV) {
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV) {
     if (Trunc)
       new VPValue(Trunc, this);
     else
@@ -1016,7 +1016,7 @@ public:
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
 /// descriptor and the start value is the first operand of the recipe.
-class VPWidenPHIRecipe : public VPRecipeBase, public VPUser {
+class VPWidenPHIRecipe : public VPRecipeBase {
   PHINode *Phi;
 
   /// Descriptor for a reduction PHI.
@@ -1032,9 +1032,10 @@ public:
   }
 
   /// Create a VPWidenPHIRecipe for \p Phi
-  VPWidenPHIRecipe(PHINode *Phi) : VPRecipeBase(VPWidenPHISC), Phi(Phi) {
+  VPWidenPHIRecipe(PHINode *Phi) : VPRecipeBase(VPWidenPHISC, {}), Phi(Phi) {
     new VPValue(Phi, this);
   }
+
   ~VPWidenPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -1057,7 +1058,7 @@ public:
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
-class VPBlendRecipe : public VPRecipeBase, public VPUser {
+class VPBlendRecipe : public VPRecipeBase {
   PHINode *Phi;
 
 public:
@@ -1065,7 +1066,7 @@ public:
   /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
   /// might be incoming with a full mask for which there is no VPValue.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
-      : VPRecipeBase(VPBlendSC), VPUser(Operands), Phi(Phi) {
+      : VPRecipeBase(VPBlendSC, Operands), Phi(Phi) {
     new VPValue(Phi, this);
     assert(Operands.size() > 0 &&
            ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
@@ -1100,7 +1101,7 @@ public:
 /// or stores into one wide load/store and shuffles. The first operand of a
 /// VPInterleave recipe is the address, followed by the stored values, followed
 /// by an optional mask.
-class VPInterleaveRecipe : public VPRecipeBase, public VPUser {
+class VPInterleaveRecipe : public VPRecipeBase {
   const InterleaveGroup<Instruction> *IG;
 
   bool HasMask = false;
@@ -1108,7 +1109,7 @@ class VPInterleaveRecipe : public VPRecipeBase, public VPUser {
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask)
-      : VPRecipeBase(VPInterleaveSC), VPUser(Addr), IG(IG) {
+      : VPRecipeBase(VPInterleaveSC, {Addr}), IG(IG) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())
@@ -1164,7 +1165,7 @@ public:
 /// A recipe to represent inloop reduction operations, performing a reduction on
 /// a vector operand into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, [Condition]}.
-class VPReductionRecipe : public VPRecipeBase, public VPUser, public VPValue {
+class VPReductionRecipe : public VPRecipeBase, public VPValue {
   /// The recurrence decriptor for the reduction in question.
   RecurrenceDescriptor *RdxDesc;
   /// Pointer to the TTI, needed to create the target reduction
@@ -1174,9 +1175,8 @@ public:
   VPReductionRecipe(RecurrenceDescriptor *R, Instruction *I, VPValue *ChainOp,
                     VPValue *VecOp, VPValue *CondOp,
                     const TargetTransformInfo *TTI)
-      : VPRecipeBase(VPRecipeBase::VPReductionSC), VPUser({ChainOp, VecOp}),
-        VPValue(VPValue::VPVReductionSC, I, this), RdxDesc(R),
-        TTI(TTI) {
+      : VPRecipeBase(VPRecipeBase::VPReductionSC, {ChainOp, VecOp}),
+        VPValue(VPValue::VPVReductionSC, I, this), RdxDesc(R), TTI(TTI) {
     if (CondOp)
       addOperand(CondOp);
   }
@@ -1213,7 +1213,7 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeBase, public VPUser, public VPValue {
+class VPReplicateRecipe : public VPRecipeBase, public VPValue {
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -1227,9 +1227,8 @@ public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
                     bool IsUniform, bool IsPredicated = false)
-      : VPRecipeBase(VPReplicateSC), VPUser(Operands),
-        VPValue(VPVReplicateSC, I, this), IsUniform(IsUniform),
-        IsPredicated(IsPredicated) {
+      : VPRecipeBase(VPReplicateSC, Operands), VPValue(VPVReplicateSC, I, this),
+        IsUniform(IsUniform), IsPredicated(IsPredicated) {
     // Retain the previous behavior of predicateInstructions(), where an
     // insert-element of a predicated instruction got hoisted into the
     // predicated basic block iff it was its only user. This is achieved by
@@ -1264,9 +1263,10 @@ public:
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
-class VPBranchOnMaskRecipe : public VPRecipeBase, public VPUser {
+class VPBranchOnMaskRecipe : public VPRecipeBase {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask) : VPRecipeBase(VPBranchOnMaskSC) {
+  VPBranchOnMaskRecipe(VPValue *BlockInMask)
+      : VPRecipeBase(VPBranchOnMaskSC, {}) {
     if (BlockInMask) // nullptr means all-one mask.
       addOperand(BlockInMask);
   }
@@ -1305,13 +1305,12 @@ public:
 /// order to merge values that are set under such a branch and feed their uses.
 /// The phi nodes can be scalar or vector depending on the users of the value.
 /// This recipe works in concert with VPBranchOnMaskRecipe.
-class VPPredInstPHIRecipe : public VPRecipeBase, public VPUser {
+class VPPredInstPHIRecipe : public VPRecipeBase {
 
 public:
   /// Construct a VPPredInstPHIRecipe given \p PredInst whose value needs a phi
   /// nodes after merging back from a Branch-on-Mask.
-  VPPredInstPHIRecipe(VPValue *PredV)
-      : VPRecipeBase(VPPredInstPHISC), VPUser(PredV) {
+  VPPredInstPHIRecipe(VPValue *PredV) : VPRecipeBase(VPPredInstPHISC, PredV) {
     new VPValue(PredV->getUnderlyingValue(), this);
   }
   ~VPPredInstPHIRecipe() override = default;
@@ -1335,8 +1334,7 @@ public:
 /// - For store: Address, stored value, optional mask
 /// TODO: We currently execute only per-part unless a specific instance is
 /// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase,
-                                       public VPUser {
+class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
   Instruction &Ingredient;
 
   void setMask(VPValue *Mask) {
@@ -1351,15 +1349,14 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase,
 
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC), VPUser({Addr}),
-        Ingredient(Load) {
+      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}), Ingredient(Load) {
     new VPValue(VPValue::VPVMemoryInstructionSC, &Load, this);
     setMask(Mask);
   }
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC), VPUser({Addr, StoredValue}),
+      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr, StoredValue}),
         Ingredient(Store) {
     setMask(Mask);
   }
@@ -1401,7 +1398,7 @@ public:
 /// A Recipe for widening the canonical induction variable of the vector loop.
 class VPWidenCanonicalIVRecipe : public VPRecipeBase {
 public:
-  VPWidenCanonicalIVRecipe() : VPRecipeBase(VPWidenCanonicalIVSC) {
+  VPWidenCanonicalIVRecipe() : VPRecipeBase(VPWidenCanonicalIVSC, {}) {
     new VPValue(nullptr, this);
   }
 
