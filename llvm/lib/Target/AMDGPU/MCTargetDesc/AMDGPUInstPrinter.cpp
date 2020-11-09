@@ -1031,7 +1031,7 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   else if (Tgt >= 32 && !AMDGPU::isGFX11Plus(STI))
     O << " param" << Tgt - 32;
   else {
-    // Reserved values 10, 11
+    // Reserved values.
     O << " invalid_target_" << Tgt;
   }
 }
