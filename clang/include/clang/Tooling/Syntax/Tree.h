@@ -28,8 +28,10 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include <cstdint>
+#include <iterator>
 
 namespace clang {
 namespace syntax {
@@ -162,6 +164,34 @@ private:
 
 /// A node that has children and represents a syntactic language construct.
 class Tree : public Node {
+  /// Iterator over children (common base for const/non-const).
+  /// Not invalidated by tree mutations (holds a stable node pointer).
+  template <typename DerivedT, typename NodeT>
+  class ChildIteratorBase
+      : public llvm::iterator_facade_base<DerivedT, std::forward_iterator_tag,
+                                          NodeT> {
+  protected:
+    NodeT *N = nullptr;
+    using Base = ChildIteratorBase;
+
+  public:
+    ChildIteratorBase() = default;
+    explicit ChildIteratorBase(NodeT *N) : N(N) {}
+
+    bool operator==(const DerivedT &O) const { return O.N == N; }
+    NodeT &operator*() const { return *N; }
+    DerivedT &operator++() {
+      N = N->getNextSibling();
+      return *static_cast<DerivedT *>(this);
+    }
+
+    /// Truthy if valid (not past-the-end).
+    /// This allows: if (auto It = find_if(N.children(), ...) )
+    explicit operator bool() const { return N != nullptr; }
+    /// The element, or nullptr if past-the-end.
+    NodeT *asPointer() const { return N; }
+  };
+
 public:
   static bool classof(const Node *N);
 
@@ -176,6 +206,23 @@ public:
   const Leaf *findLastLeaf() const;
   Leaf *findLastLeaf() {
     return const_cast<Leaf *>(const_cast<const Tree *>(this)->findLastLeaf());
+  }
+
+  /// child_iterator is not invalidated by mutations.
+  struct ChildIterator : ChildIteratorBase<ChildIterator, Node> {
+    using Base::ChildIteratorBase;
+  };
+  struct ConstChildIterator
+      : ChildIteratorBase<ConstChildIterator, const Node> {
+    using Base::ChildIteratorBase;
+    ConstChildIterator(const ChildIterator &I) : Base(I.asPointer()) {}
+  };
+
+  llvm::iterator_range<ChildIterator> getChildren() {
+    return {ChildIterator(getFirstChild()), ChildIterator()};
+  }
+  llvm::iterator_range<ConstChildIterator> getChildren() const {
+    return {ConstChildIterator(getFirstChild()), ConstChildIterator()};
   }
 
   /// Find the first node with a corresponding role.
@@ -208,6 +255,14 @@ private:
 
   Node *FirstChild = nullptr;
 };
+
+// Provide missing non_const == const overload.
+// iterator_facade_base requires == to be a member, but implicit conversions
+// don't work on the LHS of a member operator.
+inline bool operator==(const Tree::ConstChildIterator &A,
+                       const Tree::ConstChildIterator &B) {
+  return A.operator==(B);
+}
 
 /// A list of Elements separated or terminated by a fixed token.
 ///
