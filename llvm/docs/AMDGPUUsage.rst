@@ -4264,9 +4264,9 @@ For GFX10:
 * The vector memory operations access a vector L0 cache. There is a single L0
   cache per CU. Each SIMD of a CU accesses the same L0 cache. Therefore, no
   special action is required for coherence between the lanes of a single
-  wavefront. However, a ``BUFFER_GL0_INV`` is required for coherence between
+  wavefront. However, a ``buffer_gl0_inv`` is required for coherence between
   wavefronts executing in the same work-group as they may be executing on SIMDs
-  of different CUs that access different L0s. A ``BUFFER_GL0_INV`` is also
+  of different CUs that access different L0s. A ``buffer_gl0_inv`` is also
   required for coherence between wavefronts executing in different work-groups
   as they may be executing on different WGPs.
 * The scalar memory operations access a scalar L0 cache shared by all wavefronts
@@ -4275,7 +4275,7 @@ For GFX10:
   :ref:`amdgpu-amdhsa-memory-spaces`.
 * The vector and scalar memory L0 caches use an L1 cache shared by all WGPs on
   the same SA. Therefore, no special action is required for coherence between
-  the wavefronts of a single work-group. However, a ``BUFFER_GL1_INV`` is
+  the wavefronts of a single work-group. However, a ``buffer_gl1_inv`` is
   required for coherence between wavefronts executing in different work-groups
   as they may be executing on different SAs that access different L1s.
 * The L1 caches have independent quadrants to service disjoint ranges of virtual
@@ -4437,7 +4437,8 @@ agents.
      load atomic  monotonic    - workgroup    - global   1. buffer/global/flat_load      1. buffer/global/flat_load
                                               - generic                                     glc=1
 
-                                                                                           - If CU wavefront execution mode, omit glc=1.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit glc=1.
 
      load atomic  monotonic    - singlethread - local    1. ds_load                      1. ds_load
                                - wavefront
@@ -4465,13 +4466,15 @@ agents.
      load atomic  acquire      - singlethread - global   1. buffer/global/ds/flat_load   1. buffer/global/ds/flat_load
                                - wavefront    - local
                                               - generic
-     load atomic  acquire      - workgroup    - global   1. buffer/global/flat_load      1. buffer/global_load glc=1
+     load atomic  acquire      - workgroup    - global   1. buffer/global_load           1. buffer/global_load glc=1
 
-                                                                                           - If CU wavefront execution mode, omit glc=1.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit glc=1.
 
                                                                                          2. s_waitcnt vmcnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Must happen before
                                                                                              the following buffer_gl0_inv
                                                                                              and before any following
@@ -4482,7 +4485,8 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
@@ -4507,7 +4511,8 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - If OpenCL, omit.
                                                                                            - Ensures that
                                                                                              following
@@ -4516,12 +4521,14 @@ agents.
 
      load atomic  acquire      - workgroup    - generic  1. flat_load                    1. flat_load glc=1
 
-                                                                                           - If CU wavefront execution mode, omit glc=1.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit glc=1.
 
                                                          2. s_waitcnt lgkmcnt(0)         2. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              lgkmcnt(0).
                                                            - Must happen before            - Must happen before
@@ -4540,13 +4547,14 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
                                                                                              stale data.
 
-     load atomic  acquire      - agent        - global   1. buffer/global/flat_load      1. buffer/global_load
+     load atomic  acquire      - agent        - global   1. buffer/global_load           1. buffer/global_load
                                - system                     glc=1                           glc=1 dlc=1
                                                          2. s_waitcnt vmcnt(0)           2. s_waitcnt vmcnt(0)
 
@@ -4601,13 +4609,14 @@ agents.
      atomicrmw    acquire      - singlethread - global   1. buffer/global/ds/flat_atomic 1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
-     atomicrmw    acquire      - workgroup    - global   1. buffer/global/flat_atomic    1. buffer/global_atomic
+     atomicrmw    acquire      - workgroup    - global   1. buffer/global_atomic         1. buffer/global_atomic
                                                                                          2. s_waitcnt vm/vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit.
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                                                            - Must happen before
                                                                                              the following buffer_gl0_inv
                                                                                              and before any following
@@ -4618,7 +4627,8 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
@@ -4653,13 +4663,13 @@ agents.
                                                          2. waitcnt lgkmcnt(0)           2. waitcnt lgkmcnt(0) &
                                                                                             vm/vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vm/vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vm/vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
-                                                                                             waitcnt lgkmcnt(0)..
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
                                                                                              waitcnt lgkmcnt(0).
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                            - Must happen before            - Must happen before
                                                              any following                   the following
                                                              global/generic                  buffer_gl0_inv.
@@ -4675,18 +4685,19 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
                                                                                              stale data.
 
-     atomicrmw    acquire      - agent        - global   1. buffer/global/flat_atomic    1. buffer/global_atomic
+     atomicrmw    acquire      - agent        - global   1. buffer/global_atomic         1. buffer/global_atomic
                                - system                  2. s_waitcnt vmcnt(0)           2. s_waitcnt vm/vscnt(0)
 
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                                                              waitcnt lgkmcnt(0).
                                                            - Must happen before            - Must happen before
                                                              following                       following
@@ -4716,9 +4727,9 @@ agents.
 
                                                            - If OpenCL, omit               - If OpenCL, omit
                                                              lgkmcnt(0).                     lgkmcnt(0).
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                            - Must happen before            - Must happen before
                                                              following                       following
                                                              buffer_wbinvl1_vol.             buffer_gl*_inv.
@@ -4746,8 +4757,9 @@ agents.
      fence        acquire      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL and                 - If OpenCL and
                                                              address space is                address space is
                                                              not generic, omit.              not generic, omit
@@ -4858,7 +4870,8 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
@@ -5014,8 +5027,9 @@ agents.
      store atomic release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              lgkmcnt(0).
                                                            - Must happen after
@@ -5064,10 +5078,11 @@ agents.
                                                              store that is being             store that is being
                                                              released.                       released.
 
-                                                         2. buffer/global/flat_store     2. buffer/global_store
+                                                         2. buffer/global_store          2. buffer/global_store
      store atomic release      - workgroup    - local                                    1. waitcnt vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - If OpenCL, omit.
                                                                                            - Could be split into
                                                                                              separate s_waitcnt
@@ -5104,8 +5119,9 @@ agents.
      store atomic release      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              lgkmcnt(0).
                                                            - Must happen after
@@ -5139,8 +5155,10 @@ agents.
                                                                                            - s_waitcnt lgkmcnt(0)
                                                                                              must happen after
                                                                                              any preceding
-                                                                                             local/generic load/store/load
-                                                                                             atomic/store atomic/atomicrmw.
+                                                                                             local/generic
+                                                                                             load/store/load
+                                                                                             atomic/store
+                                                                                             atomic/atomicrmw.
                                                            - Must happen before            - Must happen before
                                                              the following                   the following
                                                              store.                          store.
@@ -5198,15 +5216,16 @@ agents.
                                                              store that is being             store that is being
                                                              released.                       released.
 
-                                                         2. buffer/global/ds/flat_store  2. buffer/global/ds/flat_store
+                                                         2. buffer/global/flat_store     2. buffer/global/flat_store
      atomicrmw    release      - singlethread - global   1. buffer/global/ds/flat_atomic 1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
      atomicrmw    release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL, omit.
 
                                                            - Must happen after
@@ -5255,10 +5274,11 @@ agents.
                                                              atomicrmw that is               atomicrmw that is
                                                              being released.                 being released.
 
-                                                         2. buffer/global/flat_atomic    2. buffer/global_atomic
+                                                         2. buffer/global_atomic         2. buffer/global_atomic
      atomicrmw    release      - workgroup    - local                                    1. waitcnt vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - If OpenCL, omit.
                                                                                            - Could be split into
                                                                                              separate s_waitcnt
@@ -5295,8 +5315,9 @@ agents.
      atomicrmw    release      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              waitcnt lgkmcnt(0).
                                                            - Must happen after
@@ -5330,8 +5351,10 @@ agents.
                                                                                            - s_waitcnt lgkmcnt(0)
                                                                                              must happen after
                                                                                              any preceding
-                                                                                             local/generic load/store/load
-                                                                                             atomic/store atomic/atomicrmw.
+                                                                                             local/generic
+                                                                                             load/store/load
+                                                                                             atomic/store
+                                                                                             atomic/atomicrmw.
                                                            - Must happen before            - Must happen before
                                                              the following                   the following
                                                              atomicrmw.                      atomicrmw.
@@ -5389,14 +5412,15 @@ agents.
                                                              the atomicrmw that              the atomicrmw that
                                                              is being released.              is being released.
 
-                                                         2. buffer/global/ds/flat_atomic 2. buffer/global/ds/flat_atomic
+                                                         2. buffer/global/flat_atomic    2. buffer/global/flat_atomic
      fence        release      - singlethread *none*     *none*                          *none*
                                - wavefront
      fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL and                 - If OpenCL and
                                                              address space is                address space is
                                                              not generic, omit.              not generic, omit
@@ -5554,8 +5578,9 @@ agents.
      atomicrmw    acq_rel      - workgroup    - global   1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              s_waitcnt lgkmcnt(0).
                                                            - Must happen after             - Must happen after
@@ -5589,8 +5614,10 @@ agents.
                                                                                            - s_waitcnt lgkmcnt(0)
                                                                                              must happen after
                                                                                              any preceding
-                                                                                             local/generic load/store/load
-                                                                                             atomic/store atomic/atomicrmw.
+                                                                                             local/generic
+                                                                                             load/store/load
+                                                                                             atomic/store
+                                                                                             atomic/atomicrmw.
                                                            - Must happen before            - Must happen before
                                                              the following                   the following
                                                              atomicrmw.                      atomicrmw.
@@ -5602,13 +5629,14 @@ agents.
                                                              atomicrmw that is               atomicrmw that is
                                                              being released.                 being released.
 
-                                                         2. buffer/global/flat_atomic    2. buffer/global_atomic
+                                                         2. buffer/global_atomic         2. buffer/global_atomic
                                                                                          3. s_waitcnt vm/vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vm/vscnt.
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vm/vscnt(0).
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                                                              waitcnt lgkmcnt(0).
                                                                                            - Must happen before
                                                                                              the following
@@ -5622,7 +5650,8 @@ agents.
 
                                                                                          4. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
@@ -5630,7 +5659,8 @@ agents.
 
      atomicrmw    acq_rel      - workgroup    - local                                    1. waitcnt vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - If OpenCL, omit.
                                                                                            - Could be split into
                                                                                              separate s_waitcnt
@@ -5682,7 +5712,8 @@ agents.
 
                                                                                          4. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - If OpenCL omit.
                                                                                            - Ensures that
                                                                                              following
@@ -5692,8 +5723,9 @@ agents.
      atomicrmw    acq_rel      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              waitcnt lgkmcnt(0).
                                                            - Must happen after
@@ -5727,8 +5759,10 @@ agents.
                                                                                            - s_waitcnt lgkmcnt(0)
                                                                                              must happen after
                                                                                              any preceding
-                                                                                             local/generic load/store/load
-                                                                                             atomic/store atomic/atomicrmw.
+                                                                                             local/generic
+                                                                                             load/store/load
+                                                                                             atomic/store
+                                                                                             atomic/atomicrmw.
                                                            - Must happen before            - Must happen before
                                                              the following                   the following
                                                              atomicrmw.                      atomicrmw.
@@ -5744,7 +5778,8 @@ agents.
                                                          3. s_waitcnt lgkmcnt(0)         3. s_waitcnt lgkmcnt(0) &
                                                                                             vm/vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vm/vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vm/vscnt(0).
                                                            - If OpenCL, omit.              - If OpenCL, omit
                                                                                              waitcnt lgkmcnt(0).
                                                            - Must happen before            - Must happen before
@@ -5762,7 +5797,8 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
@@ -5813,12 +5849,12 @@ agents.
                                                              atomicrmw that is               atomicrmw that is
                                                              being released.                 being released.
 
-                                                         2. buffer/global/flat_atomic    2. buffer/global_atomic
+                                                         2. buffer/global_atomic         2. buffer/global_atomic
                                                          3. s_waitcnt vmcnt(0)           3. s_waitcnt vm/vscnt(0)
 
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                                                              waitcnt lgkmcnt(0).
                                                            - Must happen before            - Must happen before
                                                              following                       following
@@ -5893,9 +5929,9 @@ agents.
 
                                                            - If OpenCL, omit               - If OpenCL, omit
                                                              lgkmcnt(0).                     lgkmcnt(0).
-                                                                                           - Use vmcnt if atomic with
-                                                                                             return and vscnt if atomic
-                                                                                             with no-return.
+                                                                                           - Use vmcnt(0) if atomic with
+                                                                                             return and vscnt(0) if
+                                                                                             atomic with no-return.
                                                            - Must happen before            - Must happen before
                                                              following                       following
                                                              buffer_wbinvl1_vol.             buffer_gl*_inv.
@@ -5923,8 +5959,9 @@ agents.
      fence        acq_rel      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                                                                             vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                            - If OpenCL and                 - If OpenCL and
                                                              address space is                address space is
                                                              not generic, omit.              not generic, omit
@@ -6043,7 +6080,8 @@ agents.
 
                                                                                          3. buffer_gl0_inv
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Ensures that
                                                                                              following
                                                                                              loads will not see
@@ -6164,8 +6202,9 @@ agents.
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0)         1. s_waitcnt lgkmcnt(0) &
                                               - generic                                     vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit vmcnt and
-                                                                                             vscnt.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit vmcnt(0) and
+                                                                                             vscnt(0).
                                                                                            - Could be split into
                                                                                              separate s_waitcnt
                                                                                              vmcnt(0), s_waitcnt
@@ -6251,8 +6290,17 @@ agents.
                                                              preventing a store              preventing a store
                                                              release followed by             release followed by
                                                              load acquire from               load acquire from
-                                                             competing out of                competing out of
-                                                             order.)                         order.)
+                                                             completing out of               completing out of
+                                                             order. The waitcnt              order. The waitcnt
+                                                             could be placed after           could be placed after
+                                                             seq_store or before             seq_store or before
+                                                             the seq_load. We                the seq_load. We
+                                                             choose the load to              choose the load to
+                                                             make the waitcnt be             make the waitcnt be
+                                                             as late as possible             as late as possible
+                                                             so that the store               so that the store
+                                                             may have already                may have already
+                                                             completed.)                     completed.)
 
                                                          2. *Following                   2. *Following
                                                             instructions same as            instructions same as
@@ -6269,7 +6317,8 @@ agents.
 
                                                                                          1. s_waitcnt vmcnt(0) & vscnt(0)
 
-                                                                                           - If CU wavefront execution mode, omit.
+                                                                                           - If CU wavefront execution
+                                                                                             mode, omit.
                                                                                            - Could be split into
                                                                                              separate s_waitcnt
                                                                                              vmcnt(0) and s_waitcnt
@@ -6338,8 +6387,17 @@ agents.
                                                                                              preventing a store
                                                                                              release followed by
                                                                                              load acquire from
-                                                                                             competing out of
-                                                                                             order.)
+                                                                                             completing out of
+                                                                                             order. The waitcnt
+                                                                                             could be placed after
+                                                                                             seq_store or before
+                                                                                             the seq_load. We
+                                                                                             choose the load to
+                                                                                             make the waitcnt be
+                                                                                             as late as possible
+                                                                                             so that the store
+                                                                                             may have already
+                                                                                             completed.)
 
                                                                                          2. *Following
                                                                                             instructions same as
@@ -6437,8 +6495,17 @@ agents.
                                                              preventing a store              preventing a store
                                                              release followed by             release followed by
                                                              load acquire from               load acquire from
-                                                             competing out of                competing out of
-                                                             order.)                         order.)
+                                                             completing out of               completing out of
+                                                             order. The waitcnt              order. The waitcnt
+                                                             could be placed after           could be placed after
+                                                             seq_store or before             seq_store or before
+                                                             the seq_load. We                the seq_load. We
+                                                             choose the load to              choose the load to
+                                                             make the waitcnt be             make the waitcnt be
+                                                             as late as possible             as late as possible
+                                                             so that the store               so that the store
+                                                             may have already                may have already
+                                                             completed.)                     completed.)
 
                                                          2. *Following                   2. *Following
                                                             instructions same as            instructions same as
