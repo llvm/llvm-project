@@ -153,3 +153,25 @@ define void @PR46178(i16* %0) {
   store <4 x i16> zeroinitializer, <4 x i16>* %16, align 2
   ret void
 }
+
+define <8 x i32> @PR46393(<8 x i16> %a0, i8 %a1) {
+; X86-LABEL: PR46393:
+; X86:       # %bb.0:
+; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    vpslld $16, %ymm0, %ymm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR46393:
+; X64:       # %bb.0:
+; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpslld $16, %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+  %zext = sext <8 x i16> %a0 to <8 x i32>
+  %mask = bitcast i8 %a1 to <8 x i1>
+  %shl = shl nuw <8 x i32> %zext, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %sel = select <8 x i1> %mask, <8 x i32> %shl, <8 x i32> zeroinitializer
+  ret <8 x i32> %sel
+}
