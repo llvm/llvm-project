@@ -411,7 +411,7 @@ public:
   const TargetLowering &TLI;
 
   /// IndexedMap type, mapping from LocIdx to ValueIDNum.
-  typedef IndexedMap<ValueIDNum, LocIdxToIndexFunctor> LocToValueType;
+  using LocToValueType = IndexedMap<ValueIDNum, LocIdxToIndexFunctor>;
 
   /// Map of LocIdxes to the ValueIDNums that they store. This is tightly
   /// packed, entries only exist for locations that are being tracked.
@@ -1302,23 +1302,22 @@ private:
       DenseMap<const DILocalVariable *, SmallSet<FragmentInfo, 4>>;
 
   /// Machine location/value transfer function, a mapping of which locations
-  // are assigned which new values.
-  typedef std::map<LocIdx, ValueIDNum> MLocTransferMap;
+  /// are assigned which new values.
+  using MLocTransferMap = std::map<LocIdx, ValueIDNum>;
 
   /// Live in/out structure for the variable values: a per-block map of
   /// variables to their values. XXX, better name?
-  typedef DenseMap<const MachineBasicBlock *,
-                   DenseMap<DebugVariable, DbgValue> *>
-      LiveIdxT;
+  using LiveIdxT =
+      DenseMap<const MachineBasicBlock *, DenseMap<DebugVariable, DbgValue> *>;
 
-  typedef std::pair<DebugVariable, DbgValue> VarAndLoc;
+  using VarAndLoc = std::pair<DebugVariable, DbgValue>;
 
   /// Type for a live-in value: the predecessor block, and its value.
-  typedef std::pair<MachineBasicBlock *, DbgValue *> InValueT;
+  using InValueT = std::pair<MachineBasicBlock *, DbgValue *>;
 
   /// Vector (per block) of a collection (inner smallvector) of live-ins.
   /// Used as the result type for the variable value dataflow problem.
-  typedef SmallVector<SmallVector<VarAndLoc, 8>, 8> LiveInsT;
+  using LiveInsT = SmallVector<SmallVector<VarAndLoc, 8>, 8>;
 
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
@@ -1357,7 +1356,7 @@ private:
   DenseMap<unsigned, unsigned> BBNumToRPO;
 
   /// Pair of MachineInstr, and its 1-based offset into the containing block.
-  typedef std::pair<const MachineInstr *, unsigned> InstAndNum;
+  using InstAndNum = std::pair<const MachineInstr *, unsigned>;
   /// Map from debug instruction number to the MachineInstr labelled with that
   /// number, and its location within the function. Used to transform
   /// instruction numbers in DBG_INSTR_REFs into machine value numbers.
@@ -2177,8 +2176,7 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
 
       // Create a map from the instruction number (if present) to the
       // MachineInstr and its position.
-      if (MI.peekDebugInstrNum()) {
-        uint64_t InstrNo = MI.peekDebugInstrNum();
+      if (uint64_t InstrNo = MI.peekDebugInstrNum()) {
         auto InstrAndPos = std::make_pair(&MI, CurInst);
         auto InsertResult =
             DebugInstrNumToInstr.insert(std::make_pair(InstrNo, InstrAndPos));
@@ -2356,7 +2354,7 @@ InstrRefBasedLDV::mlocJoin(MachineBasicBlock &MBB,
     }
   }
 
-  // Uhhhhhh, reimplement NumInserted and NumRemoved pls.
+  // TODO: Reimplement NumInserted and NumRemoved.
   return std::tuple<bool, bool>(Changed, DowngradeOccurred);
 }
 
@@ -2572,7 +2570,7 @@ std::tuple<Optional<ValueIDNum>, bool> InstrRefBasedLDV::pickVPHILoc(
     return std::tuple<Optional<ValueIDNum>, bool>(None, false);
 
   // Lambda for seeking a common location within a range of location-sets.
-  typedef SmallVector<SmallVector<LocIdx, 4>, 8>::iterator LocsIt;
+  using LocsIt = SmallVector<SmallVector<LocIdx, 4>, 8>::iterator;
   auto SeekLocation =
       [&Locs](llvm::iterator_range<LocsIt> SearchRange) -> Optional<LocIdx> {
     // Starting with the first set of locations, take the intersection with
