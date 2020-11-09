@@ -260,7 +260,7 @@ llvm-tblgen Options
 
 .. option:: -gen-searchable-tables
 
-  Generate generic searchable tables. See :doc:`TableGen BackEnds <./BackEnds>`
+  Generate generic searchable tables. See :doc:`TableGen BackEnds <../TableGen/BackEnds>`
   for a detailed description.
 
 .. option:: -gen-subtarget
