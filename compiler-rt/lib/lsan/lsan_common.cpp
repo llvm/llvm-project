@@ -71,17 +71,17 @@ static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = { kSuppressionLeak };
 static const char kStdSuppressions[] =
 #if SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
-  // For more details refer to the SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
-  // definition.
-  "leak:*pthread_exit*\n"
+    // For more details refer to the SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+    // definition.
+    "leak:*pthread_exit*\n"
 #endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
 #if SANITIZER_MAC
-  // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
-  "leak:*_os_trace*\n"
+    // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
+    "leak:*_os_trace*\n"
 #endif
-  // TLS leak in some glibc versions, described in
-  // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
-  "leak:*tls_get_addr*\n";
+    // TLS leak in some glibc versions, described in
+    // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
+    "leak:*tls_get_addr*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -576,7 +576,7 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
 
 static bool CheckForLeaks() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off())
-      return false;
+    return false;
   EnsureMainThreadIDIsCorrect();
   CheckForLeaksParam param;
   LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
