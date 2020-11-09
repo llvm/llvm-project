@@ -52,7 +52,7 @@ TEST_CASE(create_symlink_basic)
     const path file = env.create_file("file", 42);
     const path file_sym = env.create_symlink(file, "file_sym");
     const path dir = env.create_dir("dir");
-    const path dir_sym = env.create_symlink(dir, "dir_sym");
+    const path dir_sym = env.create_directory_symlink(dir, "dir_sym");
     {
         const path dest = env.make_env_path("dest1");
         std::error_code ec;
@@ -64,7 +64,7 @@ TEST_CASE(create_symlink_basic)
     {
         const path dest = env.make_env_path("dest2");
         std::error_code ec;
-        fs::create_symlink(dir_sym, dest, ec);
+        fs::create_directory_symlink(dir_sym, dest, ec);
         TEST_REQUIRE(!ec);
         TEST_CHECK(is_symlink(dest));
         TEST_CHECK(equivalent(dest, dir));

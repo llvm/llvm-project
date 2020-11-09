@@ -85,7 +85,7 @@ TEST_CASE(basic_symlink_test)
     } testCases[] = {
         {env.create_symlink(dne, "dne_link"), dne},
         {env.create_symlink(file, "file_link"), file},
-        {env.create_symlink(dir, "dir_link"), dir},
+        {env.create_directory_symlink(dir, "dir_link"), dir},
         {nested_link, link}
     };
     for (auto& TC : testCases) {

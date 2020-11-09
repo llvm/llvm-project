@@ -265,7 +265,7 @@ TEST_CASE(test_copy_symlinks_to_symlink_dir)
     const path file2 = env.create_file("file2", 101);
     const path file2_sym = env.create_symlink(file2, "file2_sym");
     const path dir = env.create_dir("dir");
-    const path dir_sym = env.create_symlink(dir, "dir_sym");
+    const path dir_sym = env.create_directory_symlink(dir, "dir_sym");
     {
         std::error_code ec = GetTestEC();
         fs::copy(file1, dir_sym, copy_options::copy_symlinks, ec);
