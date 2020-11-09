@@ -34,8 +34,7 @@ TEST_CASE(signature_test)
 TEST_CASE(test_status_not_found)
 {
     static_test_env static_env;
-    const std::error_code expect_ec =
-        std::make_error_code(std::errc::no_such_file_or_directory);
+    const std::errc expect_errc = std::errc::no_such_file_or_directory;
     const path cases[] {
         static_env.DNE,
         static_env.BadSymlink
@@ -44,7 +43,7 @@ TEST_CASE(test_status_not_found)
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
         // test non-throwing overload.
         file_status st = status(p, ec);
-        TEST_CHECK(ec == expect_ec);
+        TEST_CHECK(ErrorIs(ec, expect_errc));
         TEST_CHECK(st.type() == file_type::not_found);
         TEST_CHECK(st.permissions() == perms::unknown);
         // test throwing overload. It should not throw even though it reports
@@ -63,27 +62,24 @@ TEST_CASE(test_status_cannot_resolve)
     const path sym = env.create_symlink("dir/file", "sym");
     permissions(dir, perms::none);
 
-    const std::error_code set_ec =
-        std::make_error_code(std::errc::address_in_use);
-    const std::error_code perm_ec =
-        std::make_error_code(std::errc::permission_denied);
-    const std::error_code name_too_long_ec =
-        std::make_error_code(std::errc::filename_too_long);
+    const std::errc set_errc = std::errc::address_in_use;
+    const std::errc perm_errc = std::errc::permission_denied;
+    const std::errc name_too_long_errc = std::errc::filename_too_long;
 
     struct TestCase {
       path p;
-      std::error_code expect_ec;
+      std::errc expect_errc;
     } const TestCases[] = {
-      {file, perm_ec},
-      {sym, perm_ec},
-      {path(std::string(2500, 'a')), name_too_long_ec}
+      {file, perm_errc},
+      {sym, perm_errc},
+      {path(std::string(2500, 'a')), name_too_long_errc}
     };
     for (auto& TC : TestCases)
     {
         { // test non-throwing case
-            std::error_code ec = set_ec;
+            std::error_code ec = std::make_error_code(set_errc);
             file_status st = status(TC.p, ec);
-            TEST_CHECK(ec == TC.expect_ec);
+            TEST_CHECK(ErrorIs(ec, TC.expect_errc));
             TEST_CHECK(st.type() == file_type::none);
             TEST_CHECK(st.permissions() == perms::unknown);
         }
@@ -94,7 +90,7 @@ TEST_CASE(test_status_cannot_resolve)
             } catch (filesystem_error const& err) {
                 TEST_CHECK(err.path1() == TC.p);
                 TEST_CHECK(err.path2() == "");
-                TEST_CHECK(err.code() == TC.expect_ec);
+                TEST_CHECK(ErrorIs(err.code(), TC.expect_errc));
             }
         }
 #endif
