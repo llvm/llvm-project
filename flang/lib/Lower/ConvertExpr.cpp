@@ -1403,6 +1403,7 @@ private:
     // optional/alternate return arguments. Statement functions cannot be
     // recursive (directly or indirectly) so it is safe to add dummy symbols to
     // the local map here.
+    symMap.pushScope();
     for (auto [arg, bind] :
          llvm::zip(details.dummyArgs(), procRef.arguments())) {
       assert(arg && "alternate return in statement function");
@@ -1418,9 +1419,7 @@ private:
     }
     auto result = genval(details.stmtFunction().value());
     LLVM_DEBUG(llvm::dbgs() << "stmt-function: " << result << '\n');
-    // Remove dummy local arguments from the map.
-    for (const auto *dummySymbol : details.dummyArgs())
-      symMap.erase(*dummySymbol);
+    symMap.popScope();
     return result;
   }
 

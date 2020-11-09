@@ -238,10 +238,6 @@ public:
   /// Find `symbol` and return its value if it appears in the current mappings.
   SymbolBox lookupSymbol(semantics::SymbolRef sym);
 
-  /// Remove `sym` from the map.
-  /// FIXME: Get rid of this as it's likely not what is expected.
-  void erase(semantics::SymbolRef sym) { symbolMapStack.back().erase(&*sym); }
-
   /// Remove all symbols from the map.
   void clear() {
     symbolMapStack.clear();
@@ -260,7 +256,7 @@ private:
   void makeSym(semantics::SymbolRef sym, const SymbolBox &box,
                bool force = false) {
     if (force)
-      erase(sym);
+      symbolMapStack.back().erase(&*sym);
     assert(box && "cannot add an undefined symbol box");
     symbolMapStack.back().try_emplace(&*sym, box);
   }
