@@ -16,9 +16,7 @@ using namespace lldb_private;
 #include "swift/Basic/Version.h"
 #endif // LLDB_ENABLE_SWIFT
 
-#ifdef HAVE_VCS_VERSION_INC
 #include "VCSVersion.inc"
-#endif
 
 static const char *GetLLDBRevision() {
 #ifdef LLDB_REVISION
