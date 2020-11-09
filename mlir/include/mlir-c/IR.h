@@ -61,6 +61,8 @@ DEFINE_C_API_STRUCT(MlirModule, const void);
 DEFINE_C_API_STRUCT(MlirType, const void);
 DEFINE_C_API_STRUCT(MlirValue, const void);
 
+#undef DEFINE_C_API_STRUCT
+
 /** Named MLIR attribute.
  *
  * A named attribute is essentially a (name, attribute) pair where the name is
