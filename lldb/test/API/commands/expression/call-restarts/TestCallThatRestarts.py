@@ -22,7 +22,6 @@ class ExprCommandThatRestartsTestCase(TestBase):
         self.main_source = "lotta-signals.c"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @skipIfFreeBSD  # llvm.org/pr19246: intermittent failure
     @skipIfDarwin  # llvm.org/pr19246: intermittent failure
     @skipIfWindows  # Test relies on signals, unsupported on Windows
     @expectedFlakeyAndroid(bugnumber="llvm.org/pr19246")

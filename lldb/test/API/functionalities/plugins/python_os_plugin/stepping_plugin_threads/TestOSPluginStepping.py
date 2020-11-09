@@ -19,6 +19,7 @@ class TestOSPluginStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows
+    @skipIfFreeBSD  # hangs
     def test_python_os_plugin(self):
         """Test that stepping works when the OS Plugin doesn't report all
            threads at every stop"""
@@ -27,6 +28,7 @@ class TestOSPluginStepping(TestBase):
         self.run_python_os_step_missing_thread(False)
 
     @skipIfWindows
+    @skipIfFreeBSD  # hangs
     def test_python_os_plugin_prune(self):
         """Test that pruning the unreported PlanStacks works"""
         self.build()
