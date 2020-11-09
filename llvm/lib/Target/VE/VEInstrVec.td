@@ -601,6 +601,49 @@ multiclass RVFIXm<string opcStr, bits<8> opc, RegisterClass RC,
   let cy = 0, sy = 0, vy = ?, vz = ? in
   defm v : RVmm<opcStr#"$vz", ", $vy", opc, RC, RCM, (ins RDOp:$vz, RC:$vy)>;
 }
+// Multiclass for generic iterative vector calculation
+let vx = ?, hasSideEffects = 0, Uses = [VL] in
+multiclass RVIbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                dag dag_in, string disEnc = ""> {
+  let DisableEncoding = disEnc in
+  def "" : RV<opc, (outs RC:$vx), dag_in,
+              !strconcat(opcStr, " $vx", argStr)>;
+  let isCodeGenOnly = 1, Constraints = "$vx = $base", DisableEncoding = disEnc#"$base" in
+  def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
+              !strconcat(opcStr, " $vx", argStr)>;
+}
+multiclass RVIlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                 dag dag_in> {
+  defm "" : RVIbm<opcStr, argStr, opc, RC, dag_in>;
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    defm l : RVIbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
+                   "$vl,">;
+    defm L : RVIbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
+                   "$vl,">;
+  }
+}
+// Generic RV multiclass for iterative operation with 2 argument.
+//   e.g. VFIA, VFIS, and VFIM
+let VE_VLIndex = 3 in
+multiclass RVI2m<string opcStr, bits<8>opc, RegisterClass VRC,
+                 RegisterClass RC> {
+  let vy = ? in
+  defm vr : RVIlm<opcStr, ", $vy, $sy", opc, VRC, (ins VRC:$vy, RC:$sy)>;
+  let cy = 0, vy = ? in
+  defm vi : RVIlm<opcStr, ", $vy, $sy", opc, VRC, (ins VRC:$vy, simm7fp:$sy)>;
+}
+// Generic RV multiclass for iterative operation with 3 argument.
+//   e.g. VFIAM, VFISM, VFIMA, and etc.
+let VE_VLIndex = 4 in
+multiclass RVI3m<string opcStr, bits<8>opc, RegisterClass VRC,
+                 RegisterClass RC> {
+  let vy = ?, vz = ? in
+  defm vvr : RVIlm<opcStr, ", $vy, $vz, $sy", opc, VRC,
+                   (ins VRC:$vy, VRC:$vz, RC:$sy)>;
+  let cy = 0, vy = ?, vz = ? in
+  defm vvi : RVIlm<opcStr, ", $vy, $vz, $sy", opc, VRC,
+                   (ins VRC:$vy, VRC:$vz, simm7fp:$sy)>;
+}
 
 // Section 8.10.1 - VADD (Vector Add)
 let cx = 0, cx2 = 0 in
@@ -1186,3 +1229,35 @@ defm VROR : RVF1m<"vror", 0x98, V64, VM>;
 
 // Section 8.14.9 - VRXOR (Vector Reduction Exclusive Or)
 defm VRXOR : RVF1m<"vrxor", 0x89, V64, VM>;
+
+//-----------------------------------------------------------------------------
+// Section 8.15 - Vector Iterative Operation Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.15.1 - VFIA (Vector Floating Iteration Add)
+let cx = 0 in defm VFIAD : RVI2m<"vfia.d", 0xce, V64, I64>;
+let cx = 1 in defm VFIAS : RVI2m<"vfia.s", 0xce, V64, F32>;
+
+// Section 8.15.2 - VFIS (Vector Floating Iteration Subtract)
+let cx = 0 in defm VFISD : RVI2m<"vfis.d", 0xde, V64, I64>;
+let cx = 1 in defm VFISS : RVI2m<"vfis.s", 0xde, V64, F32>;
+
+// Section 8.15.3 - VFIM (Vector Floating Iteration Multiply)
+let cx = 0 in defm VFIMD : RVI2m<"vfim.d", 0xcf, V64, I64>;
+let cx = 1 in defm VFIMS : RVI2m<"vfim.s", 0xcf, V64, F32>;
+
+// Section 8.15.4 - VFIAM (Vector Floating Iteration Add and Multiply)
+let cx = 0 in defm VFIAMD : RVI3m<"vfiam.d", 0xee, V64, I64>;
+let cx = 1 in defm VFIAMS : RVI3m<"vfiam.s", 0xee, V64, F32>;
+
+// Section 8.15.5 - VFISM (Vector Floating Iteration Subtract and Multiply)
+let cx = 0 in defm VFISMD : RVI3m<"vfism.d", 0xfe, V64, I64>;
+let cx = 1 in defm VFISMS : RVI3m<"vfism.s", 0xfe, V64, F32>;
+
+// Section 8.15.6 - VFIMA (Vector Floating Iteration Multiply and Add)
+let cx = 0 in defm VFIMAD : RVI3m<"vfima.d", 0xef, V64, I64>;
+let cx = 1 in defm VFIMAS : RVI3m<"vfima.s", 0xef, V64, F32>;
+
+// Section 8.15.7 - VFIMS (Vector Floating Iteration Multiply and Subtract)
+let cx = 0 in defm VFIMSD : RVI3m<"vfims.d", 0xff, V64, I64>;
+let cx = 1 in defm VFIMSS : RVI3m<"vfims.s", 0xff, V64, F32>;
