@@ -19,7 +19,8 @@ public:
                   std::unique_ptr<MCObjectWriter> OW,
                   std::unique_ptr<MCCodeEmitter> Emitter);
 
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute,
+                           SMLoc Loc = SMLoc()) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,

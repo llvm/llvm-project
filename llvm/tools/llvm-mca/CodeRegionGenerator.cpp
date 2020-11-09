@@ -52,7 +52,7 @@ public:
     Regions.addInstruction(Inst);
   }
 
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+  bool emitSymbolAttribute(MCSymbol *, MCSymbolAttr, SMLoc) override {
     return true;
   }
 
