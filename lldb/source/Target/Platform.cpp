@@ -1021,7 +1021,6 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
       launch_info.GetFlags().Set(eLaunchFlagLaunchInTTY);
 
     if (launch_info.GetFlags().Test(eLaunchFlagLaunchInShell)) {
-      const bool is_localhost = true;
       const bool will_debug = launch_info.GetFlags().Test(eLaunchFlagDebug);
       const bool first_arg_is_full_shell_command = false;
       uint32_t num_resumes = GetResumeCountForLaunchInfo(launch_info);
@@ -1035,8 +1034,7 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
       }
 
       if (!launch_info.ConvertArgumentsForLaunchingInShell(
-              error, is_localhost, will_debug, first_arg_is_full_shell_command,
-              num_resumes))
+              error, will_debug, first_arg_is_full_shell_command, num_resumes))
         return error;
     } else if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
       error = ShellExpandArguments(launch_info);
