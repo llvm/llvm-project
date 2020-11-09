@@ -36,12 +36,10 @@ Sections:
     AddressAlign:    0x1000
     Size:            4096
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text
-      - Section: .text2
-      - Section: .text3
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text3
 ## TODO (grimar): without the following line (i.e. without an empty symbol table),
 ## llvm-objcopy adds an empty .strtab section. It doesn't look correct.
 Symbols: []

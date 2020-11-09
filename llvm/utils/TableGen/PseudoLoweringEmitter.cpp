@@ -226,15 +226,15 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
 
   if (!Expansions.empty()) {
     o << "  switch (MI->getOpcode()) {\n"
-      << "    default: return false;\n";
+      << "  default: return false;\n";
     for (auto &Expansion : Expansions) {
       CodeGenInstruction &Source = Expansion.Source;
       CodeGenInstruction &Dest = Expansion.Dest;
-      o << "    case " << Source.Namespace << "::"
+      o << "  case " << Source.Namespace << "::"
         << Source.TheDef->getName() << ": {\n"
-        << "      MCInst TmpInst;\n"
-        << "      MCOperand MCOp;\n"
-        << "      TmpInst.setOpcode(" << Dest.Namespace << "::"
+        << "    MCInst TmpInst;\n"
+        << "    MCOperand MCOp;\n"
+        << "    TmpInst.setOpcode(" << Dest.Namespace << "::"
         << Dest.TheDef->getName() << ");\n";
 
       // Copy the operands from the source instruction.
@@ -243,23 +243,23 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
       //        expansion DAG.
       unsigned MIOpNo = 0;
       for (const auto &DestOperand : Dest.Operands) {
-        o << "      // Operand: " << DestOperand.Name << "\n";
+        o << "    // Operand: " << DestOperand.Name << "\n";
         for (unsigned i = 0, e = DestOperand.MINumOperands; i != e; ++i) {
           switch (Expansion.OperandMap[MIOpNo + i].Kind) {
             case OpData::Operand:
-            o << "      lowerOperand(MI->getOperand("
+            o << "    lowerOperand(MI->getOperand("
               << Source.Operands[Expansion.OperandMap[MIOpNo].Data
               .Operand].MIOperandNo + i
               << "), MCOp);\n"
-              << "      TmpInst.addOperand(MCOp);\n";
+              << "    TmpInst.addOperand(MCOp);\n";
             break;
             case OpData::Imm:
-            o << "      TmpInst.addOperand(MCOperand::createImm("
+            o << "    TmpInst.addOperand(MCOperand::createImm("
               << Expansion.OperandMap[MIOpNo + i].Data.Imm << "));\n";
             break;
             case OpData::Reg: {
               Record *Reg = Expansion.OperandMap[MIOpNo + i].Data.Reg;
-              o << "      TmpInst.addOperand(MCOperand::createReg(";
+              o << "    TmpInst.addOperand(MCOperand::createReg(";
               // "zero_reg" is special.
               if (Reg->getName() == "zero_reg")
                 o << "0";
@@ -275,15 +275,15 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
       }
       if (Dest.Operands.isVariadic) {
         MIOpNo = Source.Operands.size() + 1;
-        o << "      // variable_ops\n";
-        o << "      for (unsigned i = " << MIOpNo
+        o << "    // variable_ops\n";
+        o << "    for (unsigned i = " << MIOpNo
           << ", e = MI->getNumOperands(); i != e; ++i)\n"
-          << "        if (lowerOperand(MI->getOperand(i), MCOp))\n"
-          << "          TmpInst.addOperand(MCOp);\n";
+          << "      if (lowerOperand(MI->getOperand(i), MCOp))\n"
+          << "        TmpInst.addOperand(MCOp);\n";
       }
-      o << "      EmitToStreamer(OutStreamer, TmpInst);\n"
-        << "      break;\n"
-        << "    }\n";
+      o << "    EmitToStreamer(OutStreamer, TmpInst);\n"
+        << "    break;\n"
+        << "  }\n";
     }
     o << "  }\n  return true;";
   } else

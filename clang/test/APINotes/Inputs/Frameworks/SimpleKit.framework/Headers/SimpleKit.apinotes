@@ -1,0 +1,48 @@
+Name:            SimpleKit
+Classes:
+  - Name:            MethodTest
+    Methods:
+      - Selector:        getOwnedToUnowned
+        MethodKind:      Instance
+        RetainCountConvention: NSReturnsNotRetained
+      - Selector:        getUnownedToOwned
+        MethodKind:      Instance
+        RetainCountConvention: NSReturnsRetained
+Functions:
+  - Name:            getCFOwnedToUnowned
+    RetainCountConvention: CFReturnsNotRetained
+  - Name:            getCFUnownedToOwned
+    RetainCountConvention: CFReturnsRetained
+  - Name:            getCFOwnedToNone
+    RetainCountConvention: none
+  - Name:            getObjCOwnedToUnowned
+    RetainCountConvention: NSReturnsNotRetained
+  - Name:            getObjCUnownedToOwned
+    RetainCountConvention: NSReturnsRetained
+  - Name:            indirectGetCFOwnedToUnowned
+    Parameters:
+      - Position:        0
+        RetainCountConvention: CFReturnsNotRetained
+  - Name:            indirectGetCFUnownedToOwned
+    Parameters:
+      - Position:        0
+        RetainCountConvention: CFReturnsRetained
+  - Name:            indirectGetCFOwnedToNone
+    Parameters:
+      - Position:        0
+        RetainCountConvention: none
+  - Name:            indirectGetCFNoneToOwned
+    Parameters:
+      - Position:        0
+        RetainCountConvention: CFReturnsNotRetained
+  - Name:            getCFAuditedToUnowned_DUMP
+    RetainCountConvention: CFReturnsNotRetained
+  - Name:            getCFAuditedToOwned_DUMP
+    RetainCountConvention: CFReturnsRetained
+  - Name:            getCFAuditedToNone_DUMP
+    RetainCountConvention: none
+Tags:
+  - Name:            RenamedAgainInAPINotesA
+    SwiftName:       SuccessfullyRenamedA
+  - Name:            RenamedAgainInAPINotesB
+    SwiftName:       SuccessfullyRenamedB

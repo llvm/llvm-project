@@ -535,6 +535,7 @@ include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 include "AArch64SchedThunderX3T110.td"
+include "AArch64SchedTSV110.td"
 
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors", [
@@ -902,6 +903,26 @@ def ProcNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily",
                                       FeatureSSBS,
                                       ]>;
 
+def ProcNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily",
+                                      "NeoverseV1",
+                                      "Neoverse V1 ARM processors", [
+                                      HasV8_4aOps,
+                                      FeatureBF16,
+                                      FeatureCacheDeepPersist,
+                                      FeatureCrypto,
+                                      FeatureFPARMv8,
+                                      FeatureFP16FML,
+                                      FeatureFullFP16,
+                                      FeatureFuseAES,
+                                      FeatureMatMulInt8,
+                                      FeatureNEON,
+                                      FeaturePerfMon,
+                                      FeaturePostRAScheduler,
+                                      FeatureRandGen,
+                                      FeatureSPE,
+                                      FeatureSSBS,
+                                      FeatureSVE]>;
+
 def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
                                    FeatureCrypto,
@@ -1043,6 +1064,7 @@ def : ProcessorModel<"cortex-r82", CortexA55Model, [ProcR82]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, [ProcX1]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
+def : ProcessorModel<"neoverse-v1", CortexA57Model, [ProcNeoverseV1]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
 def : ProcessorModel<"exynos-m5", ExynosM5Model, [ProcExynosM4]>;
@@ -1058,8 +1080,7 @@ def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
 // Marvell ThunderX3T110 Processors.
 def : ProcessorModel<"thunderx3t110", ThunderX3T110Model, [ProcThunderX3T110]>;
-// FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
-def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
+def : ProcessorModel<"tsv110", TSV110Model, [ProcTSV110]>;
 
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, [ProcAppleA7]>;

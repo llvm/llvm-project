@@ -83,7 +83,7 @@ unsigned DIEDwarfExpression::getTemporaryBufferSize() {
 void DIEDwarfExpression::commitTemporaryBuffer() { OutDIE.takeValues(TmpDIE); }
 
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
-                                         unsigned MachineReg) {
+                                         llvm::Register MachineReg) {
   return MachineReg == TRI.getFrameRegister(*AP.MF);
 }
 

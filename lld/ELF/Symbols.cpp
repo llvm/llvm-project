@@ -377,9 +377,18 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
 void elf::reportBackrefs() {
   for (auto &it : backwardReferences) {
     const Symbol &sym = *it.first;
-    warn("backward reference detected: " + sym.getName() + " in " +
-         toString(it.second.first) + " refers to " +
-         toString(it.second.second));
+    std::string to = toString(it.second.second);
+    // Some libraries have known problems and can cause noise. Filter them out
+    // with --warn-backrefs-exclude=. to may look like *.o or *.a(*.o).
+    bool exclude = false;
+    for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
+      if (pat.match(to)) {
+        exclude = true;
+        break;
+      }
+    if (!exclude)
+      warn("backward reference detected: " + sym.getName() + " in " +
+           toString(it.second.first) + " refers to " + to);
   }
 }
 
@@ -515,17 +524,6 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // group assignment rule simulates the traditional linker's semantics.
     bool backref = config->warnBackrefs && other.file &&
                    file->groupId < other.file->groupId;
-    if (backref) {
-      // Some libraries have known problems and can cause noise. Filter them out
-      // with --warn-backrefs-exclude=.
-      StringRef name =
-          !file->archiveName.empty() ? file->archiveName : file->getName();
-      for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
-        if (pat.match(name)) {
-          backref = false;
-          break;
-        }
-    }
     fetch();
 
     // We don't report backward references to weak symbols as they can be

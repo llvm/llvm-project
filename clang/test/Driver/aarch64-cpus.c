@@ -177,6 +177,8 @@
 // CORTEXX1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x1"
 // RUN: %clang -target aarch64 -mcpu=cortex-a78  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXA78 %s
 // CORTEXA78: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a78"
+// RUN: %clang -target aarch64 -mcpu=neoverse-v1  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V1 %s
+// NEOVERSE-V1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v1"
 
 // RUN: %clang -target aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"
@@ -294,6 +296,20 @@
 // RUN: %clang -target arm64 -mlittle-endian -mtune=thunderx3t110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-THUNDERX3T110-TUNE %s
 // ARM64-THUNDERX3T110: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "thunderx3t110" "-target-feature" "+v8.3a"
 // ARM64-THUNDERX3T110-TUNE: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target aarch64 -mcpu=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=TSV110 %s
+// RUN: %clang -target aarch64 -mlittle-endian -mcpu=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=TSV110 %s
+// RUN: %clang -target aarch64 -mtune=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=TSV110-TUNE %s
+// RUN: %clang -target aarch64 -mlittle-endian -mtune=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=TSV110-TUNE %s
+// TSV110: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "tsv110"
+// TSV110-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target arm64 -mcpu=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-TSV110 %s
+// RUN: %clang -target arm64 -mlittle-endian -mcpu=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-TSV110 %s
+// RUN: %clang -target arm64 -mtune=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-TSV110-TUNE %s
+// RUN: %clang -target arm64 -mlittle-endian -mtune=tsv110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-TSV110-TUNE %s
+// ARM64-TSV110: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "tsv110"
+// ARM64-TSV110-TUNE: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "generic"
 
 // RUN: %clang -target aarch64 -mcpu=a64fx -### -c %s 2>&1 | FileCheck -check-prefix=A64FX %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=a64fx -### -c %s 2>&1 | FileCheck -check-prefix=A64FX %s

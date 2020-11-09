@@ -89,7 +89,7 @@ extern llvm::raw_ostream *stderrOS;
 llvm::raw_ostream &outs();
 llvm::raw_ostream &errs();
 
-enum class ErrorTag { LibNotFound };
+enum class ErrorTag { LibNotFound, SymbolNotFound };
 
 class ErrorHandler {
 public:

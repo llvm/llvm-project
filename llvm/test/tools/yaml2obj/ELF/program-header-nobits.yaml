@@ -86,16 +86,14 @@ ProgramHeaders:
 ## We have 2 segments, the first is predefined and the second can be customized.
 ## We want to have more than one segment to show we check all of them when
 ## trying to find a non-nobits section after a nobits one.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .data.before
-      - Section: .nobits.1
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: [[SEC1]]
-      - Section: [[SEC2]]
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .data.before
+    LastSec:  .nobits.1
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: [[SEC1]]
+    LastSec:  [[SEC2]]
 
 ## Case D. We have a segment with SHT_NOBITS sections on its borders and one
 ##         non-nobits in the middle. Check we allocate the file space only for
@@ -132,9 +130,7 @@ Sections:
     Flags: [ SHF_ALLOC ]
     Size:  0x100
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .nobits.1
-      - Section: .data
-      - Section: .nobits.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .nobits.1
+    LastSec:  .nobits.2

@@ -13,7 +13,10 @@
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
 
+#include "include/math.h"
 #include "utils/CPP/TypeTraits.h"
+
+#include <limits.h>
 
 namespace __llvm_libc {
 namespace fputil {
@@ -63,6 +66,35 @@ static inline T copysign(T x, T y) {
   FPBits<T> xbits(x);
   xbits.sign = FPBits<T>(y).sign;
   return xbits;
+}
+
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline int ilogb(T x) {
+  // TODO: Raise appropriate floating point exceptions and set errno to the
+  // an appropriate error value wherever relevant.
+  FPBits<T> bits(x);
+  if (bits.isZero()) {
+    return FP_ILOGB0;
+  } else if (bits.isNaN()) {
+    return FP_ILOGBNAN;
+  } else if (bits.isInf()) {
+    return INT_MAX;
+  }
+
+  NormalFloat<T> normal(bits);
+  // The C standard does not specify the return value when an exponent is
+  // out of int range. However, XSI conformance required that INT_MAX or
+  // INT_MIN are returned.
+  // NOTE: It is highly unlikely that exponent will be out of int range as
+  // the exponent is only 15 bits wide even for the 128-bit floating point
+  // format.
+  if (normal.exponent > INT_MAX)
+    return INT_MAX;
+  else if (normal.exponent < INT_MIN)
+    return INT_MIN;
+  else
+    return normal.exponent;
 }
 
 template <typename T,

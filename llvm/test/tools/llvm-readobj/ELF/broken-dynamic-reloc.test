@@ -44,10 +44,9 @@ Sections:
 DynamicSymbols:
   - StName: 0x1234
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
 
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELASZ entry.
 # RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0xFF -DTAG2=DT_RELAENT %s -o %t2
@@ -77,10 +76,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .relx.dyn
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .relx.dyn
+    LastSec:  .dynamic
 
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELAENT entry.
 # RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG2=DT_RELAENT -DTAG2VAL=0xFF %s -o %t3
@@ -158,10 +156,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.plt
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.plt
+    LastSec:  .dynamic
 
 ## Show we print a warning when dumping dynamic relocations if there is no dynamic symbol table.
 # RUN: yaml2obj --docnum=4 %s -o %t11
@@ -207,10 +204,9 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
 
 ## Show we print a warning when the symbol index of a dynamic relocation is too
 ## large (goes past the end of the dynamic symbol table).
@@ -254,10 +250,9 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
 
 ## Show that when we have both REL and RELA relocations, we dump both sets.
 # RUN: yaml2obj --docnum=6 %s -o %t13
@@ -314,11 +309,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .rel.dyn
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
 
 ## Check that llvm-readobj/llvm-readelf reports a warning when dumping a relocation
 ## which refers to a symbol past the end of the file.
@@ -402,14 +395,12 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:   PT_LOAD
-    Offset: 0x0
-    Sections:
-      - Section: .dynamic
-      - Section: .rela.dyn
-      - Section: .dynsym
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Offset:   0x0
+    FirstSec: .dynamic
+    LastSec:  .dynsym
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 SectionHeaderTable:
   NoHeaders: true

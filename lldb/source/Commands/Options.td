@@ -1012,16 +1012,14 @@ let Command = "thread plan list" in {
 let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_count : Option<"count", "c">, Group<1>,
     Arg<"Count">,
-    Desc<"The number of instructions to display starting at the current "
-    "position in reverse order chronologically.">;
-  def thread_trace_dump_instructions_start_position:
-    Option<"start-position", "s">,
+    Desc<"The number of instructions to display ending at the current position.">;
+  def thread_trace_dump_instructions_position : Option<"position", "p">,
     Group<1>,
     Arg<"Index">,
-    Desc<"The position of the first instruction to print. Defaults to the "
-    "current position, i.e. where the thread is stopped. The instructions are "
-    "indexed in reverse order, which means that a start position of 0 refers "
-    "to the last instruction chronologically.">;
+    Desc<"The position to use instead of the current position of the trace.">;
+  def thread_trace_dump_instructions_raw : Option<"raw", "r">,
+    Group<1>,
+    Desc<"Dump only instruction address without disassembly nor symbol information.">;
 }
 
 let Command = "type summary add" in {

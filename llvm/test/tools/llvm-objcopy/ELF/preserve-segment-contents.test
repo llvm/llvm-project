@@ -311,188 +311,153 @@ Sections:
     Address: 0x5038
 ProgramHeaders:
   # First segment has unlabelled space at start and end.
-  - Type:  0x6ABCDEF0 # Non-specific segment type.
-    VAddr: 0x2000
-    Align: 0x2000
-    Sections:
-      - Section: blob1
-      - Section: section1
-      - Section: blob2
-      - Section: section2 # nobits
-      - Section: blob3
-      - Section: section3
-      - Section: blob4
+  - Type:     0x6ABCDEF0 # Non-specific segment type.
+    VAddr:    0x2000
+    Align:    0x2000
+    FirstSec: blob1
+    LastSec:  blob4
   # Second segment has sections at start and end.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x2100
-    Align: 0x100
-    Sections:
-      - Section: section4
-      - Section: blob5
-      - Section: section5
+  - Type:     0x6ABCDEF0
+    VAddr:    0x2100
+    Align:    0x100
+    FirstSec: section4
+    LastSec:  section5
   # Third segment is all covered by a section.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x2200
-    Align: 0x100
-    Sections:
-      - Section: section6
+  - Type:     0x6ABCDEF0
+    VAddr:    0x2200
+    Align:    0x100
+    FirstSec: section6
+    LastSec:  section6
   # Fourth segment has no sections (after removing blob headers).
-  - Type:  0x6ABCDEF0
-    VAddr: 0x2300
-    Align: 0x100
-    Sections:
-      - Section: blob6
+  - Type:     0x6ABCDEF0
+    VAddr:    0x2300
+    Align:    0x100
+    FirstSec: blob6
+    LastSec:  blob6
   # Fifth segment is empty.
   - Type:   0x6ABCDEF0
     VAddr:  0x2308
     Offset: 0x2308
-
   # The next few segments test behaviour of fully nested segments.
   # Sixth segment is the "parent" segment.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x3000
-    Align: 0x1000
-    Sections:
-      - Section: sectionA
-      - Section: sectionB
-      - Section: blobA
-      - Section: sectionC
-      - Section: blobB
-      - Section: sectionD
-      - Section: blobC
-      - Section: sectionE
-      - Section: blobD
-      - Section: sectionF
-      - Section: blobE
-      - Section: blobF
-      - Section: sectionG
-      - Section: blobG
-      - Section: sectionH
-      - Section: blobH
-      - Section: sectionI
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3000
+    Align:    0x1000
+    FirstSec: sectionA
+    LastSec:  sectionI
   # Seventh segment is empty and nested.
   - Type:   0x6ABCDEF0
     VAddr:  0x3002
     Offset: 0x3002
   # Eighth segment contains only a section and is nested.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x3004
-    Sections:
-      - Section: sectionB
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3004
+    FirstSec: sectionB
+    LastSec:  sectionB
   # Ninth segment contains only unlabelled space and is nested.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x3008
-    Sections:
-      - Section: blobA
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3008
+    FirstSec: blobA
+    LastSec:  blobA
   # Tenth segment contains two sections with space between and is nested.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x300C
-    Sections:
-      - Section: sectionC
-      - Section: blobB
-      - Section: sectionD
+  - Type:     0x6ABCDEF0
+    VAddr:    0x300C
+    FirstSec: sectionC
+    LastSec:  sectionD
   # Eleventh segment contains two sections with space between and at ends and is nested.
-  - Type:  0x6ABCDEF0
-    VAddr: 0x3018
-    Sections:
-      - Section: blobC
-      - Section: sectionE
-      - Section: blobD
-      - Section: sectionF
-      - Section: blobE
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3018
+    FirstSec: blobC
+    LastSec:  blobE
   # Twelfth segment contains one section with space at ends adjacent to space in parent segment.
   - Type:     0x6ABCDEF0
     VAddr:    0x302E
     Offset:   0x302E
     FileSize: 8
-    Sections:
-      - Section: sectionG
+    FirstSec: sectionG
+    LastSec:  sectionG
   # Thirteenth segment contains overlaps sections at either end in parent segment.
   - Type:     0x6ABCDEF0
     VAddr:    0x303A
     Offset:   0x303A
     FileSize: 0x8
-    Sections:
-      - Section: blobH
+    FirstSec: blobH
+    LastSec:  blobH
 
   # The next batch of segments are segments that only partially overlap other segments.
 
   # Segment14: |-unlabelled-|-Sec-|
   # Segment15:           |--|-Sec-|-unlabelled-|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x4000
-    Sections:
-      - Section: blobz
-      - Section: sectionz
-  - Type:   0x6ABCDEF0
-    VAddr:  0x4002
-    Offset: 0x4002
-    Sections:
-      - Section: sectionz
-      - Section: bloby
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4000
+    FirstSec: blobz
+    LastSec:  sectionz
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4002
+    Offset:   0x4002
+    FirstSec: sectionz
+    LastSec:  bloby
 
   # Segment16: |-Sec-|--|
   # Segment17:    |--|----unlabelled---|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x400C
+  - Type:     0x6ABCDEF0
+    VAddr:    0x400C
     FileSize: 6
-    Sections:
-      - Section: sectiony
-  - Type:   0x6ABCDEF0
-    VAddr:  0x400E
-    Offset: 0x400E
-    Sections:
-      - Section: blobx
+    FirstSec: sectiony
+    LastSec:  sectiony
+  - Type:     0x6ABCDEF0
+    VAddr:    0x400E
+    Offset:   0x400E
+    FirstSec: blobx
+    LastSec:  blobx
 
   # Segment18: |-unlabelled-|-Sec-|
   # Segment19:              |-Sec-|-unlabelled-|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x4014
-    Sections:
-      - Section: blobw
-      - Section: sectionx
-  - Type:  0x6ABCDEF0
-    VAddr: 0x4018
-    Sections:
-      - Section: sectionx
-      - Section: blobv
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4014
+    FirstSec: blobw
+    LastSec:  sectionx
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4018
+    FirstSec: sectionx
+    LastSec:  blobv
 
   # Segment20: |-Sec-|
   # Segment21:    |--|-unlabelled-|-Sec-|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x4020
-    Sections:
-      - Section: sectionw
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4020
+    FirstSec: sectionw
+    LastSec:  sectionw
+
   - Type:   0x6ABCDEF0
     VAddr:  0x4022
     Offset: 0x4022
-    Sections:
-      - Section: blobu
-      - Section: sectionv
+    FirstSec: blobu
+    LastSec:  sectionv
 
   # Segment22: |-Sec-|
   # Segment23:    |--|-Sec-|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x402C
-    Sections:
-      - Section: sectionu
-  - Type:   0x6ABCDEF0
-    VAddr:  0x402E
-    Offset: 0x402E
-    Sections:
-      - Section: sectiont
+  - Type:     0x6ABCDEF0
+    VAddr:    0x402C
+    FirstSec: sectionu
+    LastSec:  sectionu
+  - Type:     0x6ABCDEF0
+    VAddr:    0x402E
+    Offset:   0x402E
+    FirstSec: sectiont
+    LastSec:  sectiont
 
   # Segment24: |-unlabelled-|--|
   # Segment25:              |--Sec--|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x4034
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4034
     FileSize: 6
-    Sections:
-      - Section: blobt
-  - Type:  0x6ABCDEF0
-    VAddr: 0x4038
-    Sections:
-      - Section: sections
+    FirstSec: blobt
+    LastSec:  blobt
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4038
+    FirstSec: sections
+    LastSec:  sections
 
   # The next batch of segments represent groups of three nested/overlapping segments,
   # with one parent segment containing two overlapping segments.
@@ -500,100 +465,85 @@ ProgramHeaders:
   # Segment26: |-unlabelled-|-Sec-|-unlabelled-|
   # Segment27: |------------|--|
   # Segment28:              |-Sec-|------------|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5000
-    Align: 0x1000
-    Sections:
-      - Section: bloba
-      - Section: sectiona
-      - Section: blobb
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5000
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5000
+    Align:    0x1000
+    FirstSec: bloba
+    LastSec:  blobb
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5000
     FileSize: 6
-    Sections:
-      - Section: bloba
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5004
-    Sections:
-      - Section: sectiona
-      - Section: blobb
+    FirstSec: bloba
+    LastSec:  bloba
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5004
+    FirstSec: sectiona
+    LastSec:  blobb
 
   # Segment29: |-Sec-|-unlabelled-|-Sec-|
   # Segment30: |-Sec-|--------|
   # Segment31:          |---------|-Sec-|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x500C
-    Sections:
-      - Section: sectionb
-      - Section: blobc
-      - Section: sectionc
-  - Type:  0x6ABCDEF0
-    VAddr: 0x500C
+  - Type:     0x6ABCDEF0
+    VAddr:    0x500C
+    FirstSec: sectionb
+    LastSec:  sectionc
+  - Type:     0x6ABCDEF0
+    VAddr:    0x500C
     FileSize: 7
-    Sections:
-      - Section: sectionb
-  - Type:   0x6ABCDEF0
-    VAddr:  0x5011
-    Offset: 0x5011
-    Sections:
-      - Section: sectionc
+    FirstSec: sectionb
+    LastSec:  sectionb
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5011
+    Offset:   0x5011
+    FirstSec: sectionc
+    LastSec:  sectionc
 
   # Segment32: |-Sec-|-unlabelled-|-Sec-|
   # Segment33: |-Sec-|------------|
   # Segment34:       |------------|-Sec-|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5018
-    Sections:
-      - Section: sectiond
-      - Section: blobd
-      - Section: sectione
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5018
-    Sections:
-      - Section: sectiond
-      - Section: blobd
-  - Type:  0x6ABCDEF0
-    VAddr: 0x501C
-    Sections:
-      - Section: blobd
-      - Section: sectione
+  - Type:    0x6ABCDEF0
+    VAddr:   0x5018
+    FirstSec: sectiond
+    LastSec:  sectione
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5018
+    FirstSec: sectiond
+    LastSec:  blobd
+  - Type:     0x6ABCDEF0
+    VAddr:    0x501C
+    FirstSec: blobd
+    LastSec:  sectione
 
   # Segment35: |-unlabelled-|-Sec-|-unlabelled-|
   # Segment36: |------------|-Sec-|
   # Segment37:              |-Sec-|------------|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5024
-    Sections:
-      - Section: blobe
-      - Section: sectionf
-      - Section: blobf
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5024
-    Sections:
-      - Section: blobe
-      - Section: sectionf
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5028
-    Sections:
-      - Section: sectionf
-      - Section: blobf
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5024
+    FirstSec: blobe
+    LastSec:  blobf
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5024
+    FirstSec: blobe
+    LastSec:  sectionf
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5028
+    FirstSec: sectionf
+    LastSec:  blobf
 
   # Segment38: |-unlabelled-|-Sec-|-unlabelled-|
   # Segment39: |------------|---|
   # Segment40:                |---|------------|
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5030
-    Sections:
-      - Section: blobg
-      - Section: sectiong
-      - Section: blobh
-  - Type:  0x6ABCDEF0
-    VAddr: 0x5030
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5030
+    FirstSec: blobg
+    LastSec:  blobh
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5030
     FileSize: 7
-    Sections:
-      - Section: blobg
-  - Type:   0x6ABCDEF0
-    VAddr:  0x5035
-    Offset: 0x5035
-    Sections:
-      - Section: blobh
+    FirstSec: blobg
+    LastSec:  blobg
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5035
+    Offset:   0x5035
+    FirstSec: blobh
+    LastSec:  blobh

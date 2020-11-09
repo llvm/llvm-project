@@ -23,14 +23,14 @@ Sections:
     AddressAlign:    0x10
     Size:            16
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text2
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text2
+    LastSec:  .text2
 
 #CHECK:     ProgramHeaders [
 #CHECK-NEXT:  ProgramHeader {

@@ -320,30 +320,6 @@ private:
     return PrimaryBase + (ClassId << RegionSizeLog);
   }
 
-  bool populateBatches(CacheT *C, RegionInfo *Region, uptr ClassId,
-                       TransferBatch **CurrentBatch, u32 MaxCount,
-                       void **PointersArray, u32 Count) {
-    // No need to shuffle the batches size class.
-    if (ClassId != SizeClassMap::BatchClassId)
-      shuffle(PointersArray, Count, &Region->RandState);
-    TransferBatch *B = *CurrentBatch;
-    for (uptr I = 0; I < Count; I++) {
-      if (B && B->getCount() == MaxCount) {
-        Region->FreeList.push_back(B);
-        B = nullptr;
-      }
-      if (!B) {
-        B = C->createBatch(ClassId, PointersArray[I]);
-        if (UNLIKELY(!B))
-          return false;
-        B->clear();
-      }
-      B->add(PointersArray[I]);
-    }
-    *CurrentBatch = B;
-    return true;
-  }
-
   NOINLINE TransferBatch *populateFreeList(CacheT *C, uptr ClassId,
                                            RegionInfo *Region) {
     const uptr Size = getSizeByClassId(ClassId);
@@ -353,30 +329,30 @@ private:
     const uptr MappedUser = Region->MappedUser;
     const uptr TotalUserBytes = Region->AllocatedUser + MaxCount * Size;
     // Map more space for blocks, if necessary.
-    if (TotalUserBytes > MappedUser) {
+    if (UNLIKELY(TotalUserBytes > MappedUser)) {
       // Do the mmap for the user memory.
       const uptr UserMapSize =
           roundUpTo(TotalUserBytes - MappedUser, MapSizeIncrement);
       const uptr RegionBase = RegionBeg - getRegionBaseByClassId(ClassId);
-      if (UNLIKELY(RegionBase + MappedUser + UserMapSize > RegionSize)) {
+      if (RegionBase + MappedUser + UserMapSize > RegionSize) {
         if (!Region->Exhausted) {
           Region->Exhausted = true;
           ScopedString Str(1024);
           getStats(&Str);
           Str.append(
-              "Scudo OOM: The process has Exhausted %zuM for size class %zu.\n",
+              "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",
               RegionSize >> 20, Size);
           Str.output();
         }
         return nullptr;
       }
-      if (UNLIKELY(MappedUser == 0))
+      if (MappedUser == 0)
         Region->Data = Data;
-      if (UNLIKELY(!map(reinterpret_cast<void *>(RegionBeg + MappedUser),
-                        UserMapSize, "scudo:primary",
-                        MAP_ALLOWNOMEM | MAP_RESIZABLE |
-                            (useMemoryTagging(Options.load()) ? MAP_MEMTAG : 0),
-                        &Region->Data)))
+      if (!map(reinterpret_cast<void *>(RegionBeg + MappedUser), UserMapSize,
+               "scudo:primary",
+               MAP_ALLOWNOMEM | MAP_RESIZABLE |
+                   (useMemoryTagging(Options.load()) ? MAP_MEMTAG : 0),
+               &Region->Data))
         return nullptr;
       Region->MappedUser += UserMapSize;
       C->getStats().add(StatMapped, UserMapSize);
@@ -387,38 +363,34 @@ private:
         static_cast<u32>((Region->MappedUser - Region->AllocatedUser) / Size));
     DCHECK_GT(NumberOfBlocks, 0);
 
-    TransferBatch *B = nullptr;
     constexpr u32 ShuffleArraySize =
         MaxNumBatches * TransferBatch::MaxNumCached;
     void *ShuffleArray[ShuffleArraySize];
-    u32 Count = 0;
-    const uptr P = RegionBeg + Region->AllocatedUser;
-    const uptr AllocatedUser = Size * NumberOfBlocks;
-    for (uptr I = P; I < P + AllocatedUser; I += Size) {
-      ShuffleArray[Count++] = reinterpret_cast<void *>(I);
-      if (Count == ShuffleArraySize) {
-        if (UNLIKELY(!populateBatches(C, Region, ClassId, &B, MaxCount,
-                                      ShuffleArray, Count)))
-          return nullptr;
-        Count = 0;
-      }
-    }
-    if (Count) {
-      if (UNLIKELY(!populateBatches(C, Region, ClassId, &B, MaxCount,
-                                    ShuffleArray, Count)))
+    DCHECK_LE(NumberOfBlocks, ShuffleArraySize);
+
+    uptr P = RegionBeg + Region->AllocatedUser;
+    for (u32 I = 0; I < NumberOfBlocks; I++, P += Size)
+      ShuffleArray[I] = reinterpret_cast<void *>(P);
+    // No need to shuffle the batches size class.
+    if (ClassId != SizeClassMap::BatchClassId)
+      shuffle(ShuffleArray, NumberOfBlocks, &Region->RandState);
+    for (u32 I = 0; I < NumberOfBlocks;) {
+      TransferBatch *B = C->createBatch(ClassId, ShuffleArray[I]);
+      if (UNLIKELY(!B))
         return nullptr;
-    }
-    DCHECK(B);
-    if (!Region->FreeList.empty()) {
+      const u32 N = Min(MaxCount, NumberOfBlocks - I);
+      B->setFromArray(&ShuffleArray[I], N);
       Region->FreeList.push_back(B);
-      B = Region->FreeList.front();
-      Region->FreeList.pop_front();
+      I += N;
     }
+    TransferBatch *B = Region->FreeList.front();
+    Region->FreeList.pop_front();
+    DCHECK(B);
     DCHECK_GT(B->getCount(), 0);
 
+    const uptr AllocatedUser = Size * NumberOfBlocks;
     C->getStats().add(StatFree, AllocatedUser);
     Region->AllocatedUser += AllocatedUser;
-    Region->Exhausted = false;
 
     return B;
   }

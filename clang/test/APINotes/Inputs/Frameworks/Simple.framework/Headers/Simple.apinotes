@@ -1,0 +1,28 @@
+Name:            SimpleKit
+Classes:
+  - Name:            I
+    Properties:
+      - Name:            nonnullProperty
+        PropertyKind:    Class
+        Nullability:     N
+      - Name:            nonnullNewProperty
+        PropertyKind:    Class
+        Nullability:     Nonnull
+      - Name:            optionalProperty
+        PropertyKind:    Class
+        Nullability:     O
+      - Name:            optionalNewProperty
+        PropertyKind:    Class
+        Nullability:     Optional
+      - Name:            unspecifiedProperty
+        PropertyKind:    Instance
+        Nullability:     U
+      - Name:            unspecifiedNewProperty
+        PropertyKind:    Instance
+        Nullability:     Unspecified
+      - Name:            scalarProperty
+        PropertyKind:    Instance
+        Nullability:     S
+      - Name:            scalarNewProperty
+        PropertyKind:    Instance
+        Nullability:     Scalar

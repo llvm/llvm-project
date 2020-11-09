@@ -29,6 +29,35 @@ T foo(T targ, U uarg) {
 
 #pragma omp target update from(b, ([a][targ])p) if(l<5) device(l-1) nowait depend(inout:l)
 
+  U marr[10][10][10];
+#pragma omp target update to(marr[2][0:2][0:2])
+
+#pragma omp target update from(marr[2][0:2][0:2])
+
+#pragma omp target update from(marr[:2][0:2][0:2:1])
+
+#pragma omp target update to(marr[:l][:l][l:])
+
+#pragma omp target update to(marr[:2][:1][:])
+
+#pragma omp target update from(marr[:2][:1][:])
+
+#pragma omp target update to(marr[:2][:][:1])
+
+#pragma omp target update from(marr[:2][:][:1])
+
+#pragma omp target update to(marr[:2][:] [1:])
+
+#pragma omp target update from(marr[:2][:][1:])
+
+#pragma omp target update to(marr[:1][3:2][:2])
+
+#pragma omp target update from(marr[:1][3:2][:2])
+
+#pragma omp target update to(marr[:1][:2][0])
+
+#pragma omp target update from(marr[:1][:2][0])
+
   int arr[100][100];
 #pragma omp target update to(arr[2][0:1:2])
 
@@ -57,6 +86,21 @@ T foo(T targ, U uarg) {
 // CHECK-NEXT: int l;
 // CHECK-NEXT: #pragma omp target update to(([a][targ])p,a) if(l > 5) device(l) nowait depend(inout : l)
 // CHECK-NEXT: #pragma omp target update from(b,([a][targ])p) if(l < 5) device(l - 1) nowait depend(inout : l)
+// CHECK: marr[10][10][10];
+// CHECK-NEXT: #pragma omp target update to(marr[2][0:2][0:2])
+// CHECK-NEXT: #pragma omp target update from(marr[2][0:2][0:2])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][0:2][0:2:1])
+// CHECK-NEXT: #pragma omp target update to(marr[:l][:l][l:])
+// CHECK-NEXT: #pragma omp target update to(marr[:2][:1][:])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][:1][:])
+// CHECK-NEXT: #pragma omp target update to(marr[:2][:][:1])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][:][:1])
+// CHECK-NEXT: #pragma omp target update to(marr[:2][:][1:])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][:][1:])
+// CHECK-NEXT: #pragma omp target update to(marr[:1][3:2][:2])
+// CHECK-NEXT: #pragma omp target update from(marr[:1][3:2][:2])
+// CHECK-NEXT: #pragma omp target update to(marr[:1][:2][0])
+// CHECK-NEXT: #pragma omp target update from(marr[:1][:2][0])
 // CHECK:      int arr[100][100];
 // CHECK-NEXT: #pragma omp target update to(arr[2][0:1:2])
 // CHECK-NEXT: #pragma omp target update from(arr[2][0:1:2])
@@ -86,6 +130,40 @@ int main(int argc, char **argv) {
 // OMP5-NEXT: #pragma omp target update from(present: arr[2][0:1:2], a)
 #endif
 
+float marr[10][10][10];
+// CHECK: marr[10][10][10];
+#pragma omp target update to(marr[2][0:2][0:2])
+// CHECK-NEXT: #pragma omp target update to(marr[2][0:2][0:2])
+#pragma omp target update from(marr[2][0:2][0:2])
+// CHECK-NEXT: #pragma omp target update from(marr[2][0:2][0:2])
+#pragma omp target update to(marr[:n][:n][n:])
+// CHECK: #pragma omp target update to(marr[:n][:n][n:])
+#pragma omp target update from(marr[:2][:1][:])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][:1][:])
+#pragma omp target update to(marr[:2][:][:1])
+// CHECK-NEXT: #pragma omp target update to(marr[:2][:][:1])
+#pragma omp target update from(marr[:2][:][:1])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][:][:1])
+#pragma omp target update to(marr[:2][:][1:])
+// CHECK-NEXT: #pragma omp target update to(marr[:2][:][1:])
+#pragma omp target update from(marr[:2][:][1:])
+// CHECK-NEXT: #pragma omp target update from(marr[:2][:][1:])
+#pragma omp target update to(marr[:1][3:2][:2])
+// CHECK-NEXT: #pragma omp target update to(marr[:1][3:2][:2])
+#pragma omp target update from(marr[:1][3:2][:2])
+// CHECK-NEXT: #pragma omp target update from(marr[:1][3:2][:2])
+#pragma omp target update to(marr[:1][:2][0])
+// CHECK-NEXT: #pragma omp target update to(marr[:1][:2][0])
+#pragma omp target update from(marr[:1][:2][0])
+// CHECK-NEXT: #pragma omp target update from(marr[:1][:2][0])
+#pragma omp target update to(marr[:2:][0:2][0:2:1])
+// CHECK-NEXT: #pragma omp target update to(marr[:2:][0:2][0:2:1])
+#pragma omp target update from(marr[:2:][0:2][0:2:1])
+// CHECK-NEXT: #pragma omp target update from(marr[:2:][0:2][0:2:1])
+#pragma omp target update to(marr[:2:][:2:][0:2:1])
+// CHECK-NEXT: #pragma omp target update to(marr[:2:][:2:][0:2:1])
+#pragma omp target update from(marr[:2:][:2:][0:2:1])
+// CHECK-NEXT: #pragma omp target update from(marr[:2:][:2:][0:2:1])
 
   return foo(argc, f) + foo(argv[0][0], f) + a;
 }

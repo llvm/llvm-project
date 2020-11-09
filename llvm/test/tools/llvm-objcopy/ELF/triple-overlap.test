@@ -40,32 +40,22 @@ Sections:
     AddressAlign:    0x1000
     Size:            4096
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text4
-      - Section: .text5
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text3
-      - Section: .text4
-      - Section: .text5
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text
-      - Section: .text2
-      - Section: .text3
-      - Section: .text4
-      - Section: .text5
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .text2
-      - Section: .text3
-      - Section: .text4
-      - Section: .text5
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text4
+    LastSec:  .text5
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text3
+    LastSec:  .text5
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text5
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text2
+    LastSec:  .text5
 
 #CHECK:     ProgramHeaders [
 #CHECK-NEXT:  ProgramHeader {

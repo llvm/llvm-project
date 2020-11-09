@@ -101,6 +101,14 @@ public:
 
       // Decls within functions are visited by the body.
       if (!isa<FunctionDecl>(*D) && !isa<ObjCMethodDecl>(*D)) {
+        if (Traversal != TK_AsIs) {
+          if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+            auto SK = CTSD->getSpecializationKind();
+            if (SK == TSK_ExplicitInstantiationDeclaration ||
+                SK == TSK_ExplicitInstantiationDefinition)
+              return;
+          }
+        }
         if (const auto *DC = dyn_cast<DeclContext>(D))
           dumpDeclContext(DC);
       }

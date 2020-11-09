@@ -412,8 +412,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto range = this->getOperation()->getOperands();
-        return {range.begin() + getNumInputsAndOutputBuffers(),
-                range.begin() + getNumInputsAndOutputs()};
+        auto base = range.begin() + getNumInputsAndOutputBuffers();
+        return {base, base + $_op.getNumInitTensors()};
       }]
     >,
     InterfaceMethod<
@@ -739,7 +739,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     /// allow transformations like tiling to just use the values when cloning
     /// `linalgOp`.
     SmallVector<Value, 4> getAssumedNonShapedOperands() {
-      unsigned numShapedOperands = getNumInputsAndOutputs();
+      unsigned numShapedOperands = getNumShapedOperands();
       unsigned nExtraOperands =
         getOperation()->getNumOperands() - numShapedOperands;
       SmallVector<Value, 4> res;

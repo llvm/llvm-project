@@ -1,0 +1,1 @@
+const int SOMEDIRVERILOGINT = 2;

@@ -422,7 +422,7 @@ void MapTableEmitter::emitBinSearch(raw_ostream &OS, unsigned TableSize) {
   OS << "  unsigned start = 0;\n";
   OS << "  unsigned end = " << TableSize << ";\n";
   OS << "  while (start < end) {\n";
-  OS << "    mid = start + (end - start)/2;\n";
+  OS << "    mid = start + (end - start) / 2;\n";
   OS << "    if (Opcode == " << InstrMapDesc.getName() << "Table[mid][0]) {\n";
   OS << "      break;\n";
   OS << "    }\n";

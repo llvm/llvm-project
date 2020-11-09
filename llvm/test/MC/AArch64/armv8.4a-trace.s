@@ -8,7 +8,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK-ERROR
 
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a,-tracev8.4 -o - %s 2>&1 | \
-// RUN: FileCheck %s --check-prefixes NOFEATURE,CHECK-ERROR
+// RUN: FileCheck %s --check-prefixes CHECK-ERROR
 
 //------------------------------------------------------------------------------
 // ARMV8.4-A Debug, Trace and PMU Extensions
