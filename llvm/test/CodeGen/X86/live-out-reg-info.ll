@@ -9,16 +9,16 @@ declare void @qux()
 define void @foo(i32 %a) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    shrl $23, %edi
 ; CHECK-NEXT:    testl $256, %edi # imm = 0x100
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %true
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq qux
-; CHECK-NEXT:  .LBB0_2: # %false
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .LBB0_2: # %false
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %a, 23
   br label %next
