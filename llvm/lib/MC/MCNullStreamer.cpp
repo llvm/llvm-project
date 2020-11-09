@@ -25,7 +25,8 @@ namespace {
     bool hasRawTextSupport() const override { return true; }
     void emitRawTextImpl(StringRef String) override {}
 
-    bool emitSymbolAttribute(MCSymbol *, MCSymbolAttr, SMLoc) override {
+    bool emitSymbolAttribute(MCSymbol *Symbol,
+                             MCSymbolAttr Attribute) override {
       return true;
     }
 

@@ -107,8 +107,8 @@ void MCWinCOFFStreamer::emitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("not implemented");
 }
 
-bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute,
-                                            SMLoc) {
+bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
+                                            MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   getAssembler().registerSymbol(*Symbol);
 

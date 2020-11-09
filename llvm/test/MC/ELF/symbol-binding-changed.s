@@ -1,17 +1,17 @@
 # RUN: not llvm-mc -filetype=obj -triple=x86_64 %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
-# CHECK: {{.*}}.s:[[#@LINE+3]]:8: error: local changed binding to STB_GLOBAL
+# CHECK: {{.*}}.s:[[#@LINE+3]]:1: error: local changed binding to STB_GLOBAL
 local:
 .local local
 .globl local
 
 ## `.globl x; .weak x` matches the GNU as behavior. We issue a warning for now.
-# CHECK: {{.*}}.s:[[#@LINE+3]]:7: warning: global changed binding to STB_WEAK
+# CHECK: {{.*}}.s:[[#@LINE+3]]:1: warning: global changed binding to STB_WEAK
 global:
 .global global
 .weak global
 
-# CHECK: {{.*}}.s:[[#@LINE+3]]:8: error: weak changed binding to STB_LOCAL
+# CHECK: {{.*}}.s:[[#@LINE+3]]:1: error: weak changed binding to STB_LOCAL
 weak:
 .weak weak
 .local weak
