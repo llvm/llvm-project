@@ -63,7 +63,8 @@ struct CompiledFragmentImpl {
   std::vector<llvm::unique_function<bool(const Params &) const>> Conditions;
   // Mutations that this fragment will apply to the configuration.
   // These are invoked only if the conditions are satisfied.
-  std::vector<llvm::unique_function<void(Config &) const>> Apply;
+  std::vector<llvm::unique_function<void(const Params &, Config &) const>>
+      Apply;
 
   bool operator()(const Params &P, Config &C) const {
     for (const auto &C : Conditions) {
@@ -74,7 +75,7 @@ struct CompiledFragmentImpl {
     }
     dlog("Config fragment {0}: applying {1} rules", this, Apply.size());
     for (const auto &A : Apply)
-      A(C);
+      A(P, C);
     return true;
   }
 };
@@ -211,7 +212,7 @@ struct FragmentCompiler {
       for (auto &A : F.Remove)
         Remove->strip(*A);
       Out.Apply.push_back([Remove(std::shared_ptr<const ArgStripper>(
-                              std::move(Remove)))](Config &C) {
+                              std::move(Remove)))](const Params &, Config &C) {
         C.CompileFlags.Edits.push_back(
             [Remove](std::vector<std::string> &Args) {
               Remove->process(Args);
@@ -223,7 +224,7 @@ struct FragmentCompiler {
       std::vector<std::string> Add;
       for (auto &A : F.Add)
         Add.push_back(std::move(*A));
-      Out.Apply.push_back([Add(std::move(Add))](Config &C) {
+      Out.Apply.push_back([Add(std::move(Add))](const Params &, Config &C) {
         C.CompileFlags.Edits.push_back([Add](std::vector<std::string> &Args) {
           Args.insert(Args.end(), Add.begin(), Add.end());
         });
@@ -238,7 +239,8 @@ struct FragmentCompiler {
                          .map("Build", Config::BackgroundPolicy::Build)
                          .map("Skip", Config::BackgroundPolicy::Skip)
                          .value())
-        Out.Apply.push_back([Val](Config &C) { C.Index.Background = *Val; });
+        Out.Apply.push_back(
+            [Val](const Params &, Config &C) { C.Index.Background = *Val; });
     }
   }
 
@@ -253,7 +255,8 @@ struct FragmentCompiler {
         FullyQualifiedNamespaces.push_back(Namespace.str());
       }
       Out.Apply.push_back([FullyQualifiedNamespaces(
-                              std::move(FullyQualifiedNamespaces))](Config &C) {
+                              std::move(FullyQualifiedNamespaces))](
+                              const Params &, Config &C) {
         C.Style.FullyQualifiedNamespaces.insert(
             C.Style.FullyQualifiedNamespaces.begin(),
             FullyQualifiedNamespaces.begin(), FullyQualifiedNamespaces.end());
