@@ -9,14 +9,14 @@
 
 ; For the optimized case, we expect the inlining of foo into bar to happen.
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t-opt.o -x ir %t1.bc -c -fthinlto-index=%t.o.thinlto.bc -mllvm -lto-embed-bitcode=optimized
-; RUN: llvm-readelf -S %t-opt.o | FileCheck %s --check-prefixes=CHECK-ELF,CHECK-NO-CMD
+; RUN: llvm-readelf -S %t-opt.o | FileCheck %s --check-prefixes=CHECK-ELF,CHECK-ELF-NO-CMD
 ; RUN: llvm-objcopy --dump-section=.llvmbc=%t-embedded.bc %t-opt.o /dev/null
 ; RUN: llvm-dis %t-embedded.bc -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
 
 ; For the post-merge case, perform the embedded bitcode extraction, then
 ; round-trip through compilation and ensure the objects are the same.
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t.o -x ir %t1.bc -c -fthinlto-index=%t.o.thinlto.bc -mllvm -lto-embed-bitcode=post-merge-pre-opt
-; RUN: llvm-readelf -S %t.o | FileCheck %s --check-prefixes=CHECK-ELF,CHECK-CMD
+; RUN: llvm-readelf -S %t.o | FileCheck %s --check-prefixes=CHECK-ELF,CHECK-ELF-CMD
 ; RUN: llvm-objcopy --dump-section=.llvmbc=%t-embedded.bc %t.o /dev/null
 ; RUN: llvm-dis %t-embedded.bc -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
 ; We should only need the index and the post-thinlto merged module to generate 
