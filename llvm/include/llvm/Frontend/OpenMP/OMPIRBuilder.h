@@ -18,8 +18,10 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Allocator.h"
+#include <forward_list>
 
 namespace llvm {
+class CanonicalLoopInfo;
 
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
@@ -95,6 +97,17 @@ public:
   using BodyGenCallbackTy =
       function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                         BasicBlock &ContinuationBB)>;
+
+  /// Callback type for loop body code generation.
+  ///
+  /// \param CodeGenIP is the insertion point where the loop's body code must be
+  ///                  placed. This will be a dedicated BasicBlock with a
+  ///                  conditional branch from the loop condition check and
+  ///                  terminated with an unconditional branch to the loop
+  ///                  latch.
+  /// \param IndVar    is the induction variable usable at the insertion point.
+  using LoopBodyGenCallbackTy =
+      function_ref<void(InsertPointTy CodeGenIP, Value *IndVar)>;
 
   /// Callback type for variable privatization (think copy & default
   /// constructor).
@@ -172,6 +185,75 @@ public:
                  FinalizeCallbackTy FiniCB, Value *IfCondition,
                  Value *NumThreads, omp::ProcBindKind ProcBind,
                  bool IsCancellable);
+
+  /// Generator for the control flow structure of an OpenMP canonical loop.
+  ///
+  /// This generator operates on the logical iteration space of the loop, i.e.
+  /// the caller only has to provide a loop trip count of the loop as defined by
+  /// base language semantics. The trip count is interpreted as an unsigned
+  /// integer. The induction variable passed to \p BodyGenCB will be of the same
+  /// type and run from 0 to \p TripCount - 1. It is up to the callback to
+  /// convert the logical iteration variable to the loop counter variable in the
+  /// loop body.
+  ///
+  /// \param Loc       The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the loop body code.
+  /// \param TripCount Number of iterations the loop body is executed.
+  ///
+  /// \returns An object representing the created control flow structure which
+  ///          can be used for loop-associated directives.
+  CanonicalLoopInfo *CreateCanonicalLoop(const LocationDescription &Loc,
+                                         LoopBodyGenCallbackTy BodyGenCB,
+                                         Value *TripCount);
+
+  /// Generator for the control flow structure of an OpenMP canonical loop.
+  ///
+  /// Instead of a logical iteration space, this allows specifying user-defined
+  /// loop counter values using increment, upper- and lower bounds. To
+  /// disambiguate the terminology when counting downwards, instead of lower
+  /// bounds we use \p Start for the loop counter value in the first body
+  /// iteration.
+  ///
+  /// Consider the following limitations:
+  ///
+  ///  * A loop counter space over all integer values of its bit-width cannot be
+  ///    represented. E.g using uint8_t, its loop trip count of 256 cannot be
+  ///    stored into an 8 bit integer):
+  ///
+  ///      DO I = 0, 255, 1
+  ///
+  ///  * Unsigned wrapping is only supported when wrapping only "once"; E.g.
+  ///    effectively counting downwards:
+  ///
+  ///      for (uint8_t i = 100u; i > 0; i += 127u)
+  ///
+  ///
+  /// TODO: May need to add addtional parameters to represent:
+  ///
+  ///  * Allow representing downcounting with unsigned integers.
+  ///
+  ///  * Sign of the step and the comparison operator might disagree:
+  ///
+  ///      for (int i = 0; i < 42; --i)
+  ///
+  //
+  /// \param Loc       The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the loop body code.
+  /// \param Start     Value of the loop counter for the first iterations.
+  /// \param Stop      Loop counter values past this will stop the the
+  ///                  iterations.
+  /// \param Step      Loop counter increment after each iteration; negative
+  ///                  means counting down. \param IsSigned  Whether Start, Stop
+  ///                  and Stop are signed integers.
+  /// \param InclusiveStop Whether  \p Stop itself is a valid value for the loop
+  ///                      counter.
+  ///
+  /// \returns An object representing the created control flow structure which
+  ///          can be used for loop-associated directives.
+  CanonicalLoopInfo *CreateCanonicalLoop(const LocationDescription &Loc,
+                                         LoopBodyGenCallbackTy BodyGenCB,
+                                         Value *Start, Value *Stop, Value *Step,
+                                         bool IsSigned, bool InclusiveStop);
 
   /// Generator for '#omp flush'
   ///
@@ -309,6 +391,10 @@ public:
 
   /// Collection of regions that need to be outlined during finalization.
   SmallVector<OutlineInfo, 16> OutlineInfos;
+
+  /// Collection of owned canonical loop objects that eventually need to be
+  /// free'd.
+  std::forward_list<CanonicalLoopInfo> LoopInfos;
 
   /// Add a new region that will be outlined later.
   void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
@@ -527,6 +613,113 @@ private:
   /// \param CriticalName Name of the critical region.
   ///
   Value *getOMPCriticalRegionLock(StringRef CriticalName);
+};
+
+/// Class to represented the control flow structure of an OpenMP canonical loop.
+///
+/// The control-flow structure is standardized for easy consumption by
+/// directives associated with loops. For instance, the worksharing-loop
+/// construct may change this control flow such that each loop iteration is
+/// executed on only one thread.
+///
+/// The control flow can be described as follows:
+///
+///     Preheader
+///        |
+///  /-> Header
+///  |     |
+///  |    Cond---\
+///  |     |     |
+///  |    Body   |
+///  |     |     |
+///   \--Latch   |
+///              |
+///             Exit
+///              |
+///            After
+///
+/// Code in the header, condition block, latch and exit block must not have any
+/// side-effect.
+///
+/// Defined outside OpenMPIRBuilder because one cannot forward-declare nested
+/// classes.
+class CanonicalLoopInfo {
+  friend class OpenMPIRBuilder;
+
+private:
+  /// Whether this object currently represents a loop.
+  bool IsValid = false;
+
+  BasicBlock *Preheader;
+  BasicBlock *Header;
+  BasicBlock *Cond;
+  BasicBlock *Body;
+  BasicBlock *Latch;
+  BasicBlock *Exit;
+  BasicBlock *After;
+
+  /// Delete this loop if unused.
+  void eraseFromParent();
+
+public:
+  /// The preheader ensures that there is only a single edge entering the loop.
+  /// Code that must be execute before any loop iteration can be emitted here,
+  /// such as computing the loop trip count and begin lifetime markers. Code in
+  /// the preheader is not considered part of the canonical loop.
+  BasicBlock *getPreheader() const { return Preheader; }
+
+  /// The header is the entry for each iteration. In the canonical control flow,
+  /// it only contains the PHINode for the induction variable.
+  BasicBlock *getHeader() const { return Header; }
+
+  /// The condition block computes whether there is another loop iteration. If
+  /// yes, branches to the body; otherwise to the exit block.
+  BasicBlock *getCond() const { return Cond; }
+
+  /// The body block is the single entry for a loop iteration and not controlled
+  /// by CanonicalLoopInfo. It can contain arbitrary control flow but must
+  /// eventually branch to the \p Latch block.
+  BasicBlock *getBody() const { return Body; }
+
+  /// Reaching the latch indicates the end of the loop body code. In the
+  /// canonical control flow, it only contains the increment of the induction
+  /// variable.
+  BasicBlock *getLatch() const { return Latch; }
+
+  /// Reaching the exit indicates no more iterations are being executed.
+  BasicBlock *getExit() const { return Exit; }
+
+  /// The after block is intended for clean-up code such as lifetime end
+  /// markers. It is separate from the exit block to ensure, analogous to the
+  /// preheader, it having just a single entry edge and being free from PHI
+  /// nodes should there be multiple loop exits (such as from break
+  /// statements/cancellations).
+  BasicBlock *getAfter() const { return After; }
+
+  /// Returns the llvm::Value containing the number of loop iterations. I must
+  /// be valid in the preheader and always interpreted as an unsigned integer of
+  /// any bit-width.
+  Value *getTripCount() const {
+    Instruction *CmpI = &Cond->front();
+    assert(isa<CmpInst>(CmpI) && "First inst must compare IV with TripCount");
+    return CmpI->getOperand(1);
+  }
+
+  /// Returns the instruction representing the current logical induction
+  /// variable. Always unsigned, always starting at 0 with an increment of one.
+  Instruction *getIndVar() const {
+    Instruction *IndVarPHI = &Header->front();
+    assert(isa<PHINode>(IndVarPHI) && "First inst must be the IV PHI");
+    return IndVarPHI;
+  }
+
+  /// Return the insertion point for user code after the loop.
+  OpenMPIRBuilder::InsertPointTy getAfterIP() const {
+    return {After, After->begin()};
+  };
+
+  /// Consistency self-check.
+  void assertOK() const;
 };
 
 } // end namespace llvm
