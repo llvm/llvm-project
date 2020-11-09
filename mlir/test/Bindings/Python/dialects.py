@@ -73,30 +73,21 @@ def testCustomOpView():
   f32 = mlir.ir.F32Type.get(ctx)
   loc = ctx.get_unknown_location()
   m = ctx.create_module(loc)
-  m_block = m.body
-  # TODO: Remove integer insertion in favor of InsertionPoint and/or op-based.
-  ip = [0]
+
   def createInput():
     op = ctx.create_operation("pytest_dummy.intinput", loc, results=[f32])
-    m_block.operations.insert(ip[0], op)
-    ip[0] += 1
     # TODO: Auto result cast from operation
     return op.results[0]
 
-  # Create via dialects context collection.
-  input1 = createInput()
-  input2 = createInput()
-  op1 = ctx.dialects.std.AddFOp(loc, input1, input2)
-  # TODO: Auto operation cast from OpView
-  # TODO: Context manager insertion point
-  m_block.operations.insert(ip[0], op1.operation)
-  ip[0] += 1
+  with mlir.ir.InsertionPoint.at_block_terminator(m.body):
+    # Create via dialects context collection.
+    input1 = createInput()
+    input2 = createInput()
+    op1 = ctx.dialects.std.AddFOp(loc, input1, input2)
 
-  # Create via an import
-  from mlir.dialects.std import AddFOp
-  op2 = AddFOp(loc, input1, op1.result)
-  m_block.operations.insert(ip[0], op2.operation)
-  ip[0] += 1
+    # Create via an import
+    from mlir.dialects.std import AddFOp
+    AddFOp(loc, input1, op1.result)
 
   # CHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
   # CHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"

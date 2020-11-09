@@ -285,6 +285,14 @@ static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
  * not perform deep comparison. */
 int mlirOperationEqual(MlirOperation op, MlirOperation other);
 
+/** Gets the block that owns this operation, returning null if the operation is
+ * not owned. */
+MlirBlock mlirOperationGetBlock(MlirOperation op);
+
+/** Gets the operation that owns this operation, returning null if the operation
+ * is not owned. */
+MlirOperation mlirOperationGetParentOperation(MlirOperation op);
+
 /** Returns the number of regions attached to the given operation. */
 intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
@@ -407,6 +415,9 @@ MlirBlock mlirBlockGetNextInRegion(MlirBlock block);
 
 /** Returns the first operation in the block. */
 MlirOperation mlirBlockGetFirstOperation(MlirBlock block);
+
+/** Returns the terminator operation in the block or null if no terminator. */
+MlirOperation mlirBlockGetTerminator(MlirBlock block);
 
 /** Takes an operation owned by the caller and appends it to the block. */
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);
