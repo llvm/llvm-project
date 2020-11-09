@@ -13,17 +13,13 @@
 
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_C1XX)
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#endif
-
 template <std::size_t N>
 void test_default_ctor()
 {
     {
         TEST_CONSTEXPR std::bitset<N> v1;
         assert(v1.size() == N);
-        for (std::size_t i = 0; i < N; ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == false);
     }
 #if TEST_STD_VER >= 11

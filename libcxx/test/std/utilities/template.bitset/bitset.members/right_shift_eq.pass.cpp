@@ -25,7 +25,7 @@ void test_right_shift() {
             std::bitset<N> v2 = v1;
             v1 >>= s;
             for (std::size_t i = 0; i < v1.size(); ++i)
-                if (i + s < N)
+                if (i + s < v1.size())
                     assert(v1[i] == v2[i + s]);
                 else
                     assert(v1[i] == 0);

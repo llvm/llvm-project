@@ -36,12 +36,12 @@ void test_char_pointer_ctor()
     }
 
     {
-    const char str[] ="1010101010";
+    const char str[] = "1010101010";
     std::bitset<N> v(str);
-    std::size_t M = std::min<std::size_t>(N, 10);
+    std::size_t M = std::min<std::size_t>(v.size(), 10);
     for (std::size_t i = 0; i < M; ++i)
         assert(v[i] == (str[M - 1 - i] == '1'));
-    for (std::size_t i = 10; i < N; ++i)
+    for (std::size_t i = 10; i < v.size(); ++i)
         assert(v[i] == false);
     }
 }
