@@ -50,6 +50,10 @@ GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
   TSchedModel.init(&ST);
 }
 
+void GCNHazardRecognizer::Reset() {
+  EmittedInstrs.clear();
+}
+
 void GCNHazardRecognizer::EmitInstruction(SUnit *SU) {
   EmitInstruction(SU->getInstr());
 }
