@@ -210,9 +210,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
-    set_target_compile_flags(SanitizerTest
-      ${SANITIZER_COMMON_CFLAGS}
-      ${SANITIZER_TEST_CFLAGS_COMMON})
+    set_target_compile_flags(SanitizerTest ${SANITIZER_TEST_CFLAGS_COMMON})
     # Setup correct output directory and link flags.
     set_target_properties(SanitizerTest PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
