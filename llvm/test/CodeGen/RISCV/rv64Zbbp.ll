@@ -318,26 +318,17 @@ define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: rori_i32_fshr:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    slli a1, a0, 1
-; RV64IB-NEXT:    srliw a0, a0, 31
-; RV64IB-NEXT:    or a0, a0, a1
-; RV64IB-NEXT:    sext.w a0, a0
+; RV64IB-NEXT:    roriw a0, a0, 31
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: rori_i32_fshr:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    slli a1, a0, 1
-; RV64IBB-NEXT:    srliw a0, a0, 31
-; RV64IBB-NEXT:    or a0, a0, a1
-; RV64IBB-NEXT:    sext.w a0, a0
+; RV64IBB-NEXT:    roriw a0, a0, 31
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: rori_i32_fshr:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    slli a1, a0, 1
-; RV64IBP-NEXT:    srliw a0, a0, 31
-; RV64IBP-NEXT:    or a0, a0, a1
-; RV64IBP-NEXT:    sext.w a0, a0
+; RV64IBP-NEXT:    roriw a0, a0, 31
 ; RV64IBP-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
   ret i32 %1
