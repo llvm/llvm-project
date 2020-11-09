@@ -1269,11 +1269,11 @@ def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
 def HasMadMacF32Insts : Predicate<"Subtarget->hasMadMacF32Insts()">,
   AssemblerPredicate<(all_of FeatureMadMacF32Insts)>;
 
+def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
+
 def HasAtomicFaddInsts : Predicate<"Subtarget->hasAtomicFaddInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicFaddInsts)>;
-
-def HasNoMadMacF32Insts : Predicate<"!Subtarget->hasMadMacF32Insts()">,
-  AssemblerPredicate<(all_of (not FeatureMadMacF32Insts))>;
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
