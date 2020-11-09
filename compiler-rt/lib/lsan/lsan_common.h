@@ -39,7 +39,7 @@
 #define CAN_SANITIZE_LEAKS 1
 #elif defined(__i386__) && (SANITIZER_LINUX || SANITIZER_MAC)
 #define CAN_SANITIZE_LEAKS 1
-#elif defined(__arm__) && SANITIZER_LINUX &&
+#elif defined(__arm__) && SANITIZER_LINUX
 #define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
 #define CAN_SANITIZE_LEAKS 1
