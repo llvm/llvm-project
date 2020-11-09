@@ -202,6 +202,9 @@ int mkdir(const wchar_t *path, int permissions) {
 
 int symlink_file_dir(const wchar_t *oldname, const wchar_t *newname,
                      bool is_dir) {
+  path dest(oldname);
+  dest.make_preferred();
+  oldname = dest.c_str();
   DWORD flags = is_dir ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
   if (CreateSymbolicLinkW(newname, oldname,
                           flags | SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
