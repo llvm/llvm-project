@@ -2824,6 +2824,63 @@ def SignedDivIOp : IntArithmeticOp<"divi_signed"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SignedFloorDivIOp
+//===----------------------------------------------------------------------===//
+
+def SignedFloorDivIOp : IntArithmeticOp<"floordivi_signed"> {
+  let summary = "signed floor integer division operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `floordivi_signed` ssa-use `,` ssa-use `:` type
+    ```
+
+    Signed integer division. Rounds towards negative infinity, i.e. `5 / -2 = -3`.
+
+    Note: the semantics of division by zero or signed division overflow (minimum
+    value divided by -1) is TBD; do NOT assume any specific behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer division.
+    %a = floordivi_signed %b, %c : i64
+
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SignedCeilDivIOp
+//===----------------------------------------------------------------------===//
+
+def SignedCeilDivIOp : IntArithmeticOp<"ceildivi_signed"> {
+  let summary = "signed ceil integer division operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `ceildivi_signed` ssa-use `,` ssa-use `:` type
+    ```
+
+    Signed integer division. Rounds towards positive infinity, i.e. `7 / -2 = -3`.
+
+    Note: the semantics of division by zero or signed division overflow (minimum
+    value divided by -1) is TBD; do NOT assume any specific behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer division.
+    %a = ceildivi_signed %b, %c : i64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SignedRemIOp
 //===----------------------------------------------------------------------===//
 
