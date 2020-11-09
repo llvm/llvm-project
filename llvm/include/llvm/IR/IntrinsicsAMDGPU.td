@@ -1226,7 +1226,7 @@ def int_amdgcn_exp : Intrinsic <[], [
    IntrWillReturn]
 >;
 
-// exp with compr bit set. Not supported on GFX11+.
+// exp with compr bit set.
 def int_amdgcn_exp_compr : Intrinsic <[], [
   llvm_i32_ty,       // tgt,
   llvm_i32_ty,       // en

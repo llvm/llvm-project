@@ -1,6 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; TODO-GFX11: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
@@ -547,8 +546,8 @@ end:
 ; GCN-DAG: v_mov_b32_e32 [[W1:v[0-9]+]], 1.0
 ; GCN-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
 ; GCN-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
-; GCN-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
-; GCN-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
+; GCN-DAG: v_add_f32_e32 [[Z0:v[0-9]+]]
+; GCN-DAG: v_sub_f32_e32 [[Z1:v[0-9]+]]
 ; GCN: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
 ; GCN-NEXT: exp param1 [[X]], [[Y]], [[Z1]], [[W1]] done{{$}}
 define amdgpu_kernel void @test_export_clustering(float %x, float %y) #0 {
