@@ -319,3 +319,97 @@ ProgramHeaders:
       - Section: .rela.dyn
       - Section: .rel.dyn
       - Section: .dynamic
+
+## Check that llvm-readobj/llvm-readelf reports a warning when dumping a relocation
+## which refers to a symbol past the end of the file.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --dyn-relocations %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=PAST-EOF-LLVM
+# RUN: llvm-readelf --dyn-relocations %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=PAST-EOF-GNU
+
+# PAST-EOF-LLVM:      Dynamic Relocations {
+# PAST-EOF-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1) is past the end of the string table of size 0x0
+# PAST-EOF-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# PAST-EOF-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: symbol at 0x330 goes past the end of the file (0x330)
+# PAST-EOF-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# PAST-EOF-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 4294967295: symbol at 0x18000002e8 goes past the end of the file (0x330)
+# PAST-EOF-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# PAST-EOF-LLVM-NEXT: }
+
+# PAST-EOF-GNU:      'RELA' relocation section at offset 0x200 contains 72 bytes:
+# PAST-EOF-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# PAST-EOF-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1) is past the end of the string table of size 0x0
+# PAST-EOF-GNU-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 <corrupt> + 0
+# PAST-EOF-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: symbol at 0x330 goes past the end of the file (0x330)
+# PAST-EOF-GNU-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE                           <corrupt> + 0
+# PAST-EOF-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 4294967295: symbol at 0x18000002e8 goes past the end of the file (0x330)
+# PAST-EOF-GNU-NEXT: 0000000000000000  ffffffff00000000 R_X86_64_NONE                           <corrupt> + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x100
+    Offset:  0x100
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x200
+      - Tag:   DT_SYMTAB
+        Value: 0x300
+      - Tag:   DT_RELASZ
+        Value: 0x48
+      - Tag:   DT_RELAENT
+        Value: 0x18
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x200
+    Offset:  0x200
+    Relocations:
+## This symbol is located right before the EOF, so we can dump it.
+      - Symbol: 0x1
+        Type:   R_X86_64_NONE
+## The next symbol, which goes past the EOF.
+      - Symbol: 0x2
+        Type:   R_X86_64_NONE
+## One more symbol that goes past the EOF
+## with the maximal possible index.
+      - Symbol: 0xFFFFFFFF
+        Type:   R_X86_64_NONE
+## Place all implicit sections here to make the .dynsym section to be the
+## last in the file. This makes the task of validating offsets a bit easier.
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Name: .strtab
+    Type: SHT_STRTAB
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x300
+    Offset:  0x300
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:   PT_LOAD
+    Offset: 0x0
+    Sections:
+      - Section: .dynamic
+      - Section: .rela.dyn
+      - Section: .dynsym
+  - Type: PT_DYNAMIC
+    Sections:
+      - Section: .dynamic
+SectionHeaderTable:
+  NoHeaders: true
