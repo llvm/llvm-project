@@ -1132,18 +1132,14 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
 
-  if (ExtKind == SignExtended) {
-    for (Use &U : NarrowUse->uses()) {
-      SExtInst *User = dyn_cast<SExtInst>(U.getUser());
-      if (!User || User->getType() != WideType)
-        return false;
-    }
-  } else { // ExtKind == ZeroExtended
-    for (Use &U : NarrowUse->uses()) {
-      ZExtInst *User = dyn_cast<ZExtInst>(U.getUser());
-      if (!User || User->getType() != WideType)
-        return false;
-    }
+  for (Use &U : NarrowUse->uses()) {
+    Instruction *User = nullptr;
+    if (ExtKind == SignExtended)
+      User = dyn_cast<SExtInst>(U.getUser());
+    else
+      User = dyn_cast<ZExtInst>(U.getUser());
+    if (!User || User->getType() != WideType)
+      return false;
   }
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
