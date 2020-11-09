@@ -1,9 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -enable-ppc-pcrel-tls < %s | \
-; RUN:   FileCheck %s --check-prefix=CHECK-S
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefix=CHECK-S
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names --filetype=obj \
-; RUN:   -enable-ppc-pcrel-tls -o %t.o < %s
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names --filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump --mcpu=pwr10 -dr %t.o | FileCheck %s --check-prefix=CHECK-O
 ; RUN: llvm-readelf -s %t.o | FileCheck %s --check-prefix=CHECK-SYM
 
