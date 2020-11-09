@@ -35,721 +35,721 @@ __device__ void test_wmma_buitins(int *src, int *dst,
 #if (PTX >= 60) && (SM >= 70)
 
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.a.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_a' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_a' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_a(dst, src, ldm, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.a.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_a' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_a' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_a(dst, src, ldm, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.b.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_b' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_b' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_b(dst, src, ldm, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.b.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_b' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_b' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_b(dst, src, ldm, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.c.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_c_f16(dst, src, ldm, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.c.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_c_f16(dst, src, ldm, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.c.col.stride.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_c_f32(fdst, fsrc, ldm, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.c.row.stride.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_ld_c_f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_ld_c_f32(fdst, fsrc, ldm, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.store.d.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_st_c_f16(dst, src, ldm, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.store.d.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_st_c_f16(dst, src, ldm, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.store.d.col.stride.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_st_c_f32(fdst, fsrc, ldm, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.store.d.row.stride.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_st_c_f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_st_c_f32(fdst, fsrc, ldm, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f16.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 3, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 3, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f16.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 2, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 2, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f16.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 1, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 1, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f16.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 0, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f16(dst, src, src, src, 0, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f32.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 3, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 3, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f32.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 2, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 2, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f32.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 1, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 1, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f32.f16
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 0, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f16(fdst, src, src, src, 0, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f16.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 3, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 3, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f16.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 2, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 2, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f16.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 1, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 1, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f16.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 0, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f16f32(dst, src, src, fsrc, 0, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f32.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 3, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 3, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f32.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 2, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 2, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f32.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 1, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 1, 1);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f32.f32
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 0, 0);
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature sm_70{{.*}},ptx60{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 0, 1);
 #endif // (PTX >= 60) && (SM >= 70) 
 
 #if (PTX >= 61) && (SM >= 70)
 
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.a.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_a' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_a' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_a(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.a.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_a' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_a' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_a(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.b.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_b' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_b' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_b(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.b.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_b' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_b' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_b(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.c.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_c_f16(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.c.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_c_f16(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.c.col.stride.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_c_f32(fdst, fsrc, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.c.row.stride.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_ld_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_ld_c_f32(fdst, fsrc, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.store.d.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_st_c_f16(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.store.d.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_st_c_f16(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.store.d.col.stride.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_st_c_f32(fdst, fsrc, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.store.d.row.stride.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_st_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_st_c_f32(fdst, fsrc, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.a.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_a' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_a' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_a(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.a.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_a' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_a' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_a(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.b.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_b' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_b' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_b(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.b.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_b' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_b' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_b(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.c.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_c_f16(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.c.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_c_f16(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.c.col.stride.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_c_f32(fdst, fsrc, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.c.row.stride.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_ld_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_ld_c_f32(fdst, fsrc, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.store.d.col.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_st_c_f16(dst, src, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.store.d.row.stride.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_st_c_f16(dst, src, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.store.d.col.stride.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_st_c_f32(fdst, fsrc, ldm, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.store.d.row.stride.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_st_c_f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_st_c_f32(fdst, fsrc, ldm, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f16.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f16.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f16.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f16.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f16(dst, src, src, src, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f32.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f32.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f32.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f32.f16
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f16(fdst, src, src, src, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f16.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f16.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f16.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f16.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f16f32(dst, src, src, fsrc, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f32.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f32.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f32.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f32.f32
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m32n8k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m32n8k16_mma_f32f32(fdst, src, src, fsrc, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f16.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f16.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f16.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f16.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f16.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f16(dst, src, src, src, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f32.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f32.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f32.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f32.f16
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f32.f16.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f16' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f16(fdst, src, src, src, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f16.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f16.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f16.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f16.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f16.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f16f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f16f32(dst, src, src, fsrc, 0, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f32.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 3, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 3, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f32.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 2, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 2, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f32.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 1, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 1, 1);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f32.f32
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 0, 0);
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f32.f32.satfinite
-  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature sm_70{{.*}},ptx61{{.*}}}}
+  // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 0, 1);
 #endif // (PTX >= 61) && (SM >= 70) 
 
 #if (PTX >= 63) && (SM >= 72)
 
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.a.col.stride.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_a_s8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.a.row.stride.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_a_s8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.a.col.stride.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_a_u8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.a.row.stride.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_a_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_a_u8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.b.col.stride.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_b_s8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.b.row.stride.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_b_s8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.b.col.stride.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_b_u8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.b.row.stride.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_b_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_b_u8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.c.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_c' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_c' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_c(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.load.c.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m16n16k16_ld_c' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_ld_c' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_ld_c(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.store.d.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m16n16k16_st_c_i32' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_st_c_i32' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_st_c_i32(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.store.d.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m16n16k16_st_c_i32' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_st_c_i32' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_st_c_i32(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.a.col.stride.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_a_s8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.a.row.stride.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_a_s8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.a.col.stride.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_a_u8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.a.row.stride.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_a_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_a_u8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.b.col.stride.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_b_s8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.b.row.stride.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_b_s8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.b.col.stride.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_b_u8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.b.row.stride.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_b_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_b_u8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.c.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_c' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_c' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_c(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.load.c.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m32n8k16_ld_c' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_ld_c' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_ld_c(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.store.d.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m32n8k16_st_c_i32' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_st_c_i32' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_st_c_i32(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.store.d.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m32n8k16_st_c_i32' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_st_c_i32' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_st_c_i32(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.a.col.stride.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_a_s8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.a.row.stride.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_a_s8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.a.col.stride.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_a_u8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.a.row.stride.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_a_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_a_u8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.b.col.stride.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_b_s8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.b.row.stride.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_b_s8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.b.col.stride.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_b_u8(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.b.row.stride.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_b_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_b_u8(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.c.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_c' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_c' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_c(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.load.c.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n32k16_ld_c' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_ld_c' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_ld_c(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.store.d.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n32k16_st_c_i32' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_st_c_i32' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_st_c_i32(dst, src, ldm, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.store.d.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n32k16_st_c_i32' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_st_c_i32' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_st_c_i32(dst, src, ldm, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 3, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 3, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 2, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 2, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.s8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 0, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_s8(dst, src, src, src, 0, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 3, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.col.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 3, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 2, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.col.row.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 2, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.col.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.u8
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 0, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m16n16k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m16n16k16_mma_u8(dst, src, src, src, 0, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 3, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 3, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 2, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 2, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.s8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 0, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_s8(dst, src, src, src, 0, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 3, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.col.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 3, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 2, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.col.row.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 2, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.col.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.u8
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 0, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m32n8k16.mma.row.row.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m32n8k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m32n8k16_mma_u8(dst, src, src, src, 0, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 3, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 3, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 2, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 2, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.s8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 0, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.s8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_s8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_s8(dst, src, src, src, 0, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 3, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.col.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 3, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 2, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.col.row.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 2, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.col.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.u8
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 0, 0);
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.u8.satfinite
-  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature sm_72{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 0, 1);
 #endif // (PTX >= 63) && (SM >= 72) 
 
 #if (PTX >= 63) && (SM >= 75)
 
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.load.a.row.stride.b1
-  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_a_b1' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_a_b1' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_ld_a_b1(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.load.b.col.stride.b1
-  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_b_b1' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_b_b1' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_ld_b_b1(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.load.c.col.stride.s32
-  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_c' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_c' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_ld_c(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.load.c.row.stride.s32
-  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_c' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_ld_c' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_ld_c(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.store.d.col.stride.s32
-  // expected-error-re@+1 {{'__bmma_m8n8k128_st_c_i32' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_st_c_i32' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_st_c_i32(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.store.d.row.stride.s32
-  // expected-error-re@+1 {{'__bmma_m8n8k128_st_c_i32' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_st_c_i32' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_st_c_i32(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.load.a.row.stride.s4
-  // expected-error-re@+1 {{'__imma_m8n8k32_ld_a_s4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_ld_a_s4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_ld_a_s4(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.load.a.row.stride.u4
-  // expected-error-re@+1 {{'__imma_m8n8k32_ld_a_u4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_ld_a_u4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_ld_a_u4(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.load.b.col.stride.s4
-  // expected-error-re@+1 {{'__imma_m8n8k32_ld_b_s4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_ld_b_s4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_ld_b_s4(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.load.b.col.stride.u4
-  // expected-error-re@+1 {{'__imma_m8n8k32_ld_b_u4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_ld_b_u4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_ld_b_u4(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.load.c.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n8k32_ld_c' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_ld_c' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_ld_c(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.load.c.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n8k32_ld_c' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_ld_c' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_ld_c(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.store.d.col.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n8k32_st_c_i32' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_st_c_i32' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_st_c_i32(dst, src, ldm, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.store.d.row.stride.s32
-  // expected-error-re@+1 {{'__imma_m8n8k32_st_c_i32' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_st_c_i32' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_st_c_i32(dst, src, ldm, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.mma.row.col.b1
-  // expected-error-re@+1 {{'__bmma_m8n8k128_mma_xor_popc_b1' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__bmma_m8n8k128_mma_xor_popc_b1' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __bmma_m8n8k128_mma_xor_popc_b1(dst, src, src, src, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.mma.row.col.s4
-  // expected-error-re@+1 {{'__imma_m8n8k32_mma_s4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_mma_s4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_mma_s4(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.mma.row.col.s4.satfinite
-  // expected-error-re@+1 {{'__imma_m8n8k32_mma_s4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_mma_s4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_mma_s4(dst, src, src, src, 1, 1);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.mma.row.col.u4
-  // expected-error-re@+1 {{'__imma_m8n8k32_mma_u4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_mma_u4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_mma_u4(dst, src, src, src, 1, 0);
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.mma.row.col.u4.satfinite
-  // expected-error-re@+1 {{'__imma_m8n8k32_mma_u4' needs target feature sm_75{{.*}},ptx63{{.*}}}}
+  // expected-error-re@+1 {{'__imma_m8n8k32_mma_u4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_mma_u4(dst, src, src, src, 1, 1);
 #endif // (PTX >= 63) && (SM >= 75) 
 }
