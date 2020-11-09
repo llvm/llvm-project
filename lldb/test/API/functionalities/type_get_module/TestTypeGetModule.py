@@ -58,6 +58,7 @@ class TestTypeGetModule(TestBase):
 
         return result
 
+    @expectedFailureAll(debug_info=["dwo"])
     def test(self):
         self.build()
         target  = lldbutil.run_to_breakpoint_make_target(self)
