@@ -745,6 +745,24 @@ TEST_F(FormatTestComments, DontSplitLineCommentsWithEscapedNewlines) {
                    getLLVMStyleWithColumns(49)));
 }
 
+TEST_F(FormatTestComments, DontIntroduceMultilineComments) {
+  // Avoid introducing a multiline comment by breaking after `\`.
+  for (int ColumnLimit = 15; ColumnLimit <= 17; ++ColumnLimit) {
+    EXPECT_EQ(
+        "// aaaaaaaaaa\n"
+        "// \\ bb",
+        format("// aaaaaaaaaa \\ bb", getLLVMStyleWithColumns(ColumnLimit)));
+    EXPECT_EQ(
+        "// aaaaaaaaa\n"
+        "// \\  bb",
+        format("// aaaaaaaaa \\  bb", getLLVMStyleWithColumns(ColumnLimit)));
+    EXPECT_EQ(
+        "// aaaaaaaaa\n"
+        "// \\  \\ bb",
+        format("// aaaaaaaaa \\  \\ bb", getLLVMStyleWithColumns(ColumnLimit)));
+  }
+}
+
 TEST_F(FormatTestComments, DontSplitLineCommentsWithPragmas) {
   FormatStyle Pragmas = getLLVMStyleWithColumns(30);
   Pragmas.CommentPragmas = "^ IWYU pragma:";
