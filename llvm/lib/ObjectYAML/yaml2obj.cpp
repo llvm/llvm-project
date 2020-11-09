@@ -32,6 +32,8 @@ bool convertYAML(yaml::Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
       return false;
     }
 
+    if (Doc.Arch)
+      return yaml2archive(*Doc.Arch, Out, ErrHandler);
     if (Doc.Elf)
       return yaml2elf(*Doc.Elf, Out, ErrHandler, MaxSize);
     if (Doc.Coff)
