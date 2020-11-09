@@ -25,10 +25,10 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
-  bool
-  LoadScriptingModule(const char *filename, bool init_session,
-                      lldb_private::Status &error,
-                      StructuredData::ObjectSP *module_sp = nullptr) override;
+  bool LoadScriptingModule(const char *filename, bool init_session,
+                           lldb_private::Status &error,
+                           StructuredData::ObjectSP *module_sp = nullptr,
+                           FileSpec extra_search_dir = {}) override;
 
   // Static Functions
   static void Initialize();
