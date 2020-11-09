@@ -868,6 +868,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                     D.CCCIsCXX();
 
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
+                                options::OPT_fmemory_profile_EQ,
                                 options::OPT_fno_memory_profile, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.

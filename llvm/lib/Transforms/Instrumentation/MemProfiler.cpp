@@ -60,6 +60,8 @@ constexpr char MemProfVersionCheckNamePrefix[] =
 constexpr char MemProfShadowMemoryDynamicAddress[] =
     "__memprof_shadow_memory_dynamic_address";
 
+constexpr char MemProfFilenameVar[] = "__memprof_profile_filename";
+
 // Command-line flags.
 
 static cl::opt<bool> ClInsertVersionCheck(
@@ -486,6 +488,26 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
   IRB.CreateStore(ShadowValue, ShadowAddr);
 }
 
+// Create the variable for the profile file name.
+void createProfileFileNameVar(Module &M) {
+  const MDString *MemProfFilename =
+      dyn_cast_or_null<MDString>(M.getModuleFlag("MemProfProfileFilename"));
+  if (!MemProfFilename)
+    return;
+  assert(!MemProfFilename->getString().empty() &&
+         "Unexpected MemProfProfileFilename metadata with empty string");
+  Constant *ProfileNameConst = ConstantDataArray::getString(
+      M.getContext(), MemProfFilename->getString(), true);
+  GlobalVariable *ProfileNameVar = new GlobalVariable(
+      M, ProfileNameConst->getType(), /*isConstant=*/true,
+      GlobalValue::WeakAnyLinkage, ProfileNameConst, MemProfFilenameVar);
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
+    ProfileNameVar->setComdat(M.getOrInsertComdat(MemProfFilenameVar));
+  }
+}
+
 bool ModuleMemProfiler::instrumentModule(Module &M) {
   // Create a module constructor.
   std::string MemProfVersion = std::to_string(LLVM_MEM_PROFILER_VERSION);
@@ -499,6 +521,8 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   const uint64_t Priority = getCtorAndDtorPriority(TargetTriple);
   appendToGlobalCtors(M, MemProfCtorFunction, Priority);
+
+  createProfileFileNameVar(M);
 
   return true;
 }
