@@ -8,10 +8,10 @@ ldur	x0, [sp, #8]
 ldrb	w0, [sp], #1
 ldrsh	w0, [sp, #2]!
 ldr	x0, [sp, #8]
-ldrb	w0, [sp, x31]
-ldrsh	w0, [sp, x31, lsl #1]
-ldr	w0, [sp, w31, sxtw]
-ldr	x0, [sp, w31, uxtw #3]
+ldrb	w0, [sp, xzr]
+ldrsh	w0, [sp, xzr, lsl #1]
+ldr	w0, [sp, wzr, sxtw]
+ldr	x0, [sp, wzr, uxtw #3]
 ldnp	w0, w1, [sp, #8]
 ldp	x0, x1, [sp], #16
 ldpsw	x0, x1, [sp, #8]!
