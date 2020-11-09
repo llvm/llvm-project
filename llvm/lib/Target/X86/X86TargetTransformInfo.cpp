@@ -2288,6 +2288,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
   // CTLZ: llvm\test\CodeGen\X86\vector-lzcnt-*.ll
   // CTPOP: llvm\test\CodeGen\X86\vector-popcnt-*.ll
   // CTTZ: llvm\test\CodeGen\X86\vector-tzcnt-*.ll
+
+  // TODO: Overflow intrinsics (*ADDO, *SUBO, *MULO) with vector types are not
+  //       specialized in these tables yet.
   static const CostTblEntry AVX512CDCostTbl[] = {
     { ISD::CTLZ,       MVT::v8i64,   1 },
     { ISD::CTLZ,       MVT::v16i32,  1 },
@@ -2669,6 +2672,7 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::CTPOP,      MVT::i64,    10 },
     { ISD::SADDO,      MVT::i64,     1 },
     { ISD::UADDO,      MVT::i64,     1 },
+    { ISD::UMULO,      MVT::i64,     2 }, // mulq + seto
   };
   static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::BITREVERSE, MVT::i32,    14 },
@@ -2689,6 +2693,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::UADDO,      MVT::i32,     1 },
     { ISD::UADDO,      MVT::i16,     1 },
     { ISD::UADDO,      MVT::i8,      1 },
+    { ISD::UMULO,      MVT::i32,     2 }, // mul + seto
+    { ISD::UMULO,      MVT::i16,     2 },
+    { ISD::UMULO,      MVT::i8,      2 },
   };
 
   Type *RetTy = ICA.getReturnType();
@@ -2758,6 +2765,12 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
   case Intrinsic::usub_with_overflow:
     // USUBO has same costs so don't duplicate.
     ISD = ISD::UADDO;
+    OpTy = RetTy->getContainedType(0);
+    break;
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
+    // SMULO has same costs so don't duplicate.
+    ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
   }
