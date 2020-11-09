@@ -10,6 +10,7 @@ target triple = "aarch64--linux-android"
 
 define i8 @test_load(i8* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load(
+; OFFSET: %[[SHADOW:[^ ]*]] = call i8* asm "", "=r,0"(i8* inttoptr (i64 12345678 to i8*))
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
 ; CHECK: %[[B:[^ ]*]] = lshr i64 %[[A]], 56
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
@@ -18,7 +19,7 @@ define i8 @test_load(i8* %a) sanitize_hwaddress {
 
 ; NOOFFSET: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 
-; OFFSET: %[[E:[^ ]*]] = getelementptr i8, i8* inttoptr (i64 12345678 to i8*), i64 %[[D]]
+; OFFSET: %[[E:[^ ]*]] = getelementptr i8, i8* %[[SHADOW]], i64 %[[D]]
 
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
