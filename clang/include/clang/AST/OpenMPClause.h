@@ -28,6 +28,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -4738,8 +4739,9 @@ public:
   /// subscript it may not have any associated declaration. In that case the
   /// associated declaration is set to nullptr.
   class MappableComponent {
-    /// Expression associated with the component.
-    Expr *AssociatedExpression = nullptr;
+    /// Pair of Expression and Non-contiguous pair  associated with the
+    /// component.
+    llvm::PointerIntPair<Expr *, 1, bool> AssociatedExpressionNonContiguousPr;
 
     /// Declaration associated with the declaration. If the component does
     /// not have a declaration (e.g. array subscripts or section), this is set
@@ -4749,14 +4751,22 @@ public:
   public:
     explicit MappableComponent() = default;
     explicit MappableComponent(Expr *AssociatedExpression,
-                               ValueDecl *AssociatedDeclaration)
-        : AssociatedExpression(AssociatedExpression),
+                               ValueDecl *AssociatedDeclaration,
+                               bool IsNonContiguous)
+        : AssociatedExpressionNonContiguousPr(AssociatedExpression,
+                                              IsNonContiguous),
           AssociatedDeclaration(
               AssociatedDeclaration
                   ? cast<ValueDecl>(AssociatedDeclaration->getCanonicalDecl())
                   : nullptr) {}
 
-    Expr *getAssociatedExpression() const { return AssociatedExpression; }
+    Expr *getAssociatedExpression() const {
+      return AssociatedExpressionNonContiguousPr.getPointer();
+    }
+
+    bool isNonContiguous() const {
+      return AssociatedExpressionNonContiguousPr.getInt();
+    }
 
     ValueDecl *getAssociatedDeclaration() const {
       return AssociatedDeclaration;

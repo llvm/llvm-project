@@ -20407,8 +20407,8 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     // of a signed i64.  Let Thresh be the FP equivalent of
     // 0x8000000000000000ULL.
     //
-    //  Adjust = (Value < Thresh) ? 0 : 0x80000000;
-    //  FltOfs = (Value < Thresh) ? 0 : 0x80000000;
+    //  Adjust = (Value >= Thresh) ? 0x80000000 : 0;
+    //  FltOfs = (Value >= Thresh) ? 0x80000000 : 0;
     //  FistSrc = (Value - FltOfs);
     //  Fist-to-mem64 FistSrc
     //  Add 0 or 0x800...0ULL to the 64-bit result, which is equivalent
@@ -20438,20 +20438,30 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                    *DAG.getContext(), TheVT);
     SDValue Cmp;
     if (IsStrict) {
-      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT,
-                         Chain, /*IsSignaling*/ true);
+      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETGE, Chain,
+                         /*IsSignaling*/ true);
       Chain = Cmp.getValue(1);
     } else {
-      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT);
+      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETGE);
     }
 
-    Adjust = DAG.getSelect(DL, MVT::i64, Cmp,
-                           DAG.getConstant(0, DL, MVT::i64),
-                           DAG.getConstant(APInt::getSignMask(64),
-                                           DL, MVT::i64));
-    SDValue FltOfs = DAG.getSelect(DL, TheVT, Cmp,
-                                   DAG.getConstantFP(0.0, DL, TheVT),
-                                   ThreshVal);
+    // Our preferred lowering of
+    //
+    // (Value >= Thresh) ? 0x8000000000000000ULL : 0
+    //
+    // is
+    //
+    // (Value >= Thresh) << 63
+    //
+    // but since we can get here after LegalOperations, DAGCombine might do the
+    // wrong thing if we create a select. So, directly create the preferred
+    // version.
+    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Cmp);
+    SDValue Const63 = DAG.getConstant(63, DL, MVT::i8);
+    Adjust = DAG.getNode(ISD::SHL, DL, MVT::i64, Zext, Const63);
+
+    SDValue FltOfs = DAG.getSelect(DL, TheVT, Cmp, ThreshVal,
+                                   DAG.getConstantFP(0.0, DL, TheVT));
 
     if (IsStrict) {
       Value = DAG.getNode(ISD::STRICT_FSUB, DL, { TheVT, MVT::Other},

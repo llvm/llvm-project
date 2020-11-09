@@ -48,6 +48,7 @@ void registerTestReducer();
 void registerTestSpirvEntryPointABIPass();
 void registerTestSpirvModuleCombinerPass();
 void registerTestTraitsPass();
+void registerTosaTestQuantUtilAPIPass();
 void registerVectorizerTestPass();
 
 namespace test {
@@ -111,6 +112,7 @@ void registerTestPasses() {
   registerTestSpirvModuleCombinerPass();
   registerTestTraitsPass();
   registerVectorizerTestPass();
+  registerTosaTestQuantUtilAPIPass();
 
   test::registerConvertCallOpPass();
   test::registerInliner();

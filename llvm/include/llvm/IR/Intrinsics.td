@@ -17,7 +17,7 @@ include "llvm/CodeGen/SDNodeProperties.td"
 //  Properties we keep track of for intrinsics.
 //===----------------------------------------------------------------------===//
 
-class IntrinsicProperty<bit is_default = 0> {
+class IntrinsicProperty<bit is_default = false> {
   bit IsDefault = is_default;
 }
 
@@ -161,7 +161,7 @@ def IntrHasSideEffects : IntrinsicProperty;
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
-  int isAny = 0;
+  int isAny = false;
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
@@ -177,7 +177,7 @@ class LLVMAnyPointerType<LLVMType elty>
   : LLVMType<iPTRAny>{
   LLVMType ElTy = elty;
 
-  let isAny = 1;
+  let isAny = true;
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -226,7 +226,7 @@ class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
 class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-let isAny = 1 in {
+let isAny = true in {
   def llvm_any_ty        : LLVMType<Any>;
   def llvm_anyint_ty     : LLVMType<iAny>;
   def llvm_anyfloat_ty   : LLVMType<fAny>;
@@ -342,7 +342,7 @@ class Intrinsic<list<LLVMType> ret_types,
                 list<IntrinsicProperty> intr_properties = [],
                 string name = "",
                 list<SDNodeProperty> sd_properties = [],
-                bit disable_default_attributes = 1> : SDPatternOperator {
+                bit disable_default_attributes = true> : SDPatternOperator {
   string LLVMName = name;
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
   list<LLVMType> RetTypes = ret_types;
@@ -354,10 +354,10 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
-  bit isTarget = 0;
+  bit isTarget = false;
 }
 
-// Intrinisc with default attributes (disable_default_attributes = 0).
+// Intrinisc with default attributes (disable_default_attributes = false).
 class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
                 list<IntrinsicProperty> intr_properties = [],

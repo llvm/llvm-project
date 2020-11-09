@@ -1187,6 +1187,48 @@ ClassTemplateDecl 'TemplStruct'
   }
   {
     auto BN = ast_matchers::match(
+        classTemplateSpecializationDecl(
+            hasTemplateArgument(
+                0, templateArgument(refersToType(asString("_Bool")))))
+            .bind("templSpec"),
+        AST->getASTContext());
+    EXPECT_EQ(BN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("templSpec")),
+              R"cpp(
+ClassTemplateSpecializationDecl 'TemplStruct'
+|-TemplateArgument type _Bool
+| `-BuiltinType
+|-CXXRecordDecl 'TemplStruct'
+|-CXXConstructorDecl 'TemplStruct'
+| `-CompoundStmt
+|-CXXDestructorDecl '~TemplStruct'
+| `-CompoundStmt
+|-CXXMethodDecl 'foo'
+| `-CompoundStmt
+|-AccessSpecDecl
+`-FieldDecl 'm_t'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            BN[0].getNodeAs<Decl>("templSpec")),
+              R"cpp(
+ClassTemplateSpecializationDecl 'TemplStruct'
+|-TemplateArgument type _Bool
+| `-BuiltinType
+|-CXXRecordDecl 'TemplStruct'
+|-CXXConstructorDecl 'TemplStruct'
+| `-CompoundStmt
+|-CXXDestructorDecl '~TemplStruct'
+| `-CompoundStmt
+|-CXXMethodDecl 'foo'
+| `-CompoundStmt
+|-AccessSpecDecl
+`-FieldDecl 'm_t'
+)cpp");
+  }
+  {
+    auto BN = ast_matchers::match(
         functionTemplateDecl(hasName("timesTwo")).bind("fn"),
         AST->getASTContext());
     EXPECT_EQ(BN.size(), 1u);

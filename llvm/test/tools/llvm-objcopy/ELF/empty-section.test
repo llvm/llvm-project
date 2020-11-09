@@ -79,14 +79,13 @@ Sections:
     Address:      0x1000
     Size:         0x100
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0
-    Align: 0x100
-    Sections:
-      - Section: .foo
-  - Type:  PT_LOAD
-    VAddr: 0x1000
-    Align: 0x1000
-    Sections:
-      - Section: .empty
-      - Section: .baz
+  - Type:     PT_LOAD
+    VAddr:    0
+    Align:    0x100
+    FirstSec: .foo
+    LastSec:  .foo
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    Align:    0x1000
+    FirstSec: .empty
+    LastSec:  .baz

@@ -372,7 +372,7 @@ void CodeGenModule::checkAliases() {
   for (const GlobalDecl &GD : Aliases) {
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-    auto *Alias = dyn_cast<llvm::GlobalIndirectSymbol>(Entry);
+    auto *Alias = cast<llvm::GlobalIndirectSymbol>(Entry);
     Alias->replaceAllUsesWith(llvm::UndefValue::get(Alias->getType()));
     Alias->eraseFromParent();
   }

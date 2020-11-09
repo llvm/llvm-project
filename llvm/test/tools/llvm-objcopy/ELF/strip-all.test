@@ -70,9 +70,9 @@ Sections:
     Type:            SHT_PROGBITS
 ProgramHeaders:
   # Use an arbitrary segment type to show that the segment type is unimportant.
-  - Type: 0x61234567
-    Sections:
-      - Section: non_alloc_in_segment
+  - Type:     0x61234567
+    FirstSec: non_alloc_in_segment
+    LastSec:  non_alloc_in_segment
 
 # CHECK: SectionHeaderCount: 6
 

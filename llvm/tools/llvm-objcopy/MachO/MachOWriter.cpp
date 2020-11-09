@@ -121,8 +121,10 @@ size_t MachOWriter::totalSize() const {
   // Otherwise, use the last section / reloction.
   for (const LoadCommand &LC : O.LoadCommands)
     for (const std::unique_ptr<Section> &S : LC.Sections) {
-      if (S->isVirtualSection()) {
-        assert((S->Offset == 0) && "Zero-fill section's offset must be zero");
+      if (!S->hasValidOffset()) {
+        assert((S->Offset == 0) && "Skipped section's offset must be zero");
+        assert((S->isVirtualSection() || S->Size == 0) &&
+               "Non-zero-fill sections with zero offset must have zero size");
         continue;
       }
       assert((S->Offset != 0) &&
@@ -246,8 +248,12 @@ void MachOWriter::writeSectionInLoadCommand(const Section &Sec, uint8_t *&Out) {
 void MachOWriter::writeSections() {
   for (const LoadCommand &LC : O.LoadCommands)
     for (const std::unique_ptr<Section> &Sec : LC.Sections) {
-      if (Sec->isVirtualSection())
+      if (!Sec->hasValidOffset()) {
+        assert((Sec->Offset == 0) && "Skipped section's offset must be zero");
+        assert((Sec->isVirtualSection() || Sec->Size == 0) &&
+               "Non-zero-fill sections with zero offset must have zero size");
         continue;
+      }
 
       assert(Sec->Offset && "Section offset can not be zero");
       assert((Sec->Size == Sec->Content.size()) && "Incorrect section size");

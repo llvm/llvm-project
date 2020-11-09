@@ -40,6 +40,6 @@ Sections:
         Value: 0
 Symbols: []
 ProgramHeaders:
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

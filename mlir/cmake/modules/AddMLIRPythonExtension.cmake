@@ -13,9 +13,6 @@ function(add_mlir_python_extension libname extname)
   if ("${ARG_SOURCES}" STREQUAL "")
     message(FATAL_ERROR " Missing SOURCES argument to add_mlir_python_extension(${libname}, ...")
   endif()
-  if(NOT LLVM_BUILD_LLVM_DYLIB)
-    message(FATAL_ERROR "Building MLIR Python extension require -DLLVM_BUILD_LLVM_DYLIB=ON")
-  endif()
 
   # Normally on unix-like platforms, extensions are built as "MODULE" libraries
   # and do not explicitly link to the python shared object. This allows for
@@ -44,7 +41,7 @@ function(add_mlir_python_extension libname extname)
 
   target_include_directories(${libname} PRIVATE
     "${PYTHON_INCLUDE_DIRS}"
-    "${pybind11_INCLUDE_DIRS}"
+    "${pybind11_INCLUDE_DIR}"
   )
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
@@ -85,11 +82,21 @@ function(add_mlir_python_extension libname extname)
   # to take place.
   set_target_properties(${libname} PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
+  # Python extensions depends *only* on the public API and LLVMSupport unless
+  # if further dependencies are added explicitly.
   target_link_libraries(${libname}
     PRIVATE
-    MLIR # Always link to libMLIR.so
+    MLIRPublicAPI
+    LLVMSupport
     ${ARG_LINK_LIBS}
     ${PYEXT_LIBADD}
+  )
+
+  target_link_options(${libname}
+    PRIVATE
+      # On Linux, disable re-export of any static linked libraries that
+      # came through.
+      $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>
   )
 
   llvm_setup_rpath(${libname})
@@ -97,7 +104,7 @@ function(add_mlir_python_extension libname extname)
   ################################################################################
   # Install
   ################################################################################
-  if (INSTALL_DIR)
+  if (ARG_INSTALL_DIR)
     install(TARGETS ${libname}
       COMPONENT ${libname}
       LIBRARY DESTINATION ${ARG_INSTALL_DIR}

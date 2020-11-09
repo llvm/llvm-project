@@ -17,6 +17,7 @@ add_extra_unittest(ClangTidyTests
   LLVMModuleTest.cpp
   NamespaceAliaserTest.cpp
   ObjCModuleTest.cpp
+  OptionsProviderTest.cpp
   OverlappingReplacementsTest.cpp
   UsingInserterTest.cpp
   ReadabilityModuleTest.cpp

@@ -35,14 +35,14 @@ Sections:
     Content: "01234567"
 Symbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Test handling of a .dynamic section with an invalid entsize (i.e. not 2 * sizeof(Elf_Dyn)).
 # RUN: yaml2obj %s --docnum=2 -o %t.bad-entsize
@@ -77,14 +77,14 @@ Sections:
         Value: 0
 Symbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Test handling of string references pointing past the end of the dynamic string table.
 # RUN: yaml2obj %s --docnum=3 -o %t.bad-string
@@ -171,15 +171,14 @@ Sections:
         Value: 0
 Symbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Test handling of DT_STRTAB pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=4 -o %t.bad-strtab
@@ -226,14 +225,14 @@ Sections:
         Value: 0x0
 Symbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Test handling of other d_ptr tags pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=5 -o %t.bad-rela
@@ -268,14 +267,14 @@ Sections:
         Value: 0x0
 Symbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Check how we handle cases when the dynamic string table is not null-terminated.
 
@@ -365,15 +364,14 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1100
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1100
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Check that we emit an appropriate warning when the dynamic string table ends past the end of the file.
 

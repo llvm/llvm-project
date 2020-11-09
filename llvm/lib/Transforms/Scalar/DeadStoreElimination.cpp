@@ -2569,7 +2569,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         }
         continue;
       }
-      MemoryDef *NextDef = dyn_cast<MemoryDef>(EarlierAccess);
+      auto *NextDef = cast<MemoryDef>(EarlierAccess);
       Instruction *NI = NextDef->getMemoryInst();
       LLVM_DEBUG(dbgs() << " (" << *NI << ")\n");
       ToCheck.insert(NextDef->getDefiningAccess());

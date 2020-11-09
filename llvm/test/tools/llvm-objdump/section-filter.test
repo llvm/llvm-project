@@ -40,22 +40,21 @@ Sections:
     AddressAlign: 0x10
     Size:         1
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0x400
-    PAddr: 0x1000
-    Sections:
-      - Section: .text
-      - Section: .text2
-  - Type:  PT_LOAD
-    VAddr: 0x410
-    PAddr: 0x2000
-    Sections:
-      - Section: .data
-  - Type:  PT_LOAD
-    VAddr: 0x420
-    PAddr: 0x3000
-    Sections:
-      - Section: .bss
+  - Type:     PT_LOAD
+    VAddr:    0x400
+    PAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text2
+  - Type:     PT_LOAD
+    VAddr:    0x410
+    PAddr:    0x2000
+    FirstSec: .data
+    LastSec:  .data
+  - Type:     PT_LOAD
+    VAddr:    0x420
+    PAddr:    0x3000
+    FirstSec: .bss
+    LastSec:  .bss
 
 ## Test that --section works with --fault-map-section.
 # RUN: yaml2obj %s --docnum=2 -o %t.o

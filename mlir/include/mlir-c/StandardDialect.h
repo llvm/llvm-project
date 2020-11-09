@@ -26,14 +26,15 @@ extern "C" {
 
 /** Registers the Standard dialect with the given context. This allows the
  * dialect to be loaded dynamically if needed when parsing. */
-void mlirContextRegisterStandardDialect(MlirContext context);
+MLIR_CAPI_EXPORTED void mlirContextRegisterStandardDialect(MlirContext context);
 
 /** Loads the Standard dialect into the given context. The dialect does _not_
  * have to be registered in advance. */
-MlirDialect mlirContextLoadStandardDialect(MlirContext context);
+MLIR_CAPI_EXPORTED MlirDialect
+mlirContextLoadStandardDialect(MlirContext context);
 
 /// Returns the namespace of the Standard dialect, suitable for loading it.
-MlirStringRef mlirStandardDialectGetNamespace();
+MLIR_CAPI_EXPORTED MlirStringRef mlirStandardDialectGetNamespace();
 
 #ifdef __cplusplus
 }

@@ -1332,6 +1332,8 @@ bool MasmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 ///  primaryexpr ::= number
 ///  primaryexpr ::= '.'
 ///  primaryexpr ::= ~,+,-,'not' primaryexpr
+///  primaryexpr ::= string
+///          (a string is interpreted as a 64-bit number in big-endian base-256)
 bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
                                   AsmTypeInfo *TypeInfo) {
   SMLoc FirstTokenLoc = getLexer().getLoc();
@@ -1350,7 +1352,6 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     return false;
   case AsmToken::Dollar:
   case AsmToken::At:
-  case AsmToken::String:
   case AsmToken::Identifier: {
     StringRef Identifier;
     if (parseIdentifier(Identifier)) {
@@ -1515,6 +1516,20 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         Lex(); // Eat identifier.
       }
     }
+    return false;
+  }
+  case AsmToken::String: {
+    // MASM strings (used as constants) are interpreted as big-endian base-256.
+    SMLoc ValueLoc = getTok().getLoc();
+    std::string Value;
+    if (parseEscapedString(Value))
+      return true;
+    if (Value.size() > 8)
+      return Error(ValueLoc, "literal value out of range");
+    uint64_t IntValue = 0;
+    for (const unsigned char CharVal : Value)
+      IntValue = (IntValue << 8) | CharVal;
+    Res = MCConstantExpr::create(IntValue, getContext());
     return false;
   }
   case AsmToken::Real: {
@@ -3168,28 +3183,17 @@ bool MasmParser::emitIntValue(const MCExpr *Value, unsigned Size) {
 bool MasmParser::parseScalarInitializer(unsigned Size,
                                         SmallVectorImpl<const MCExpr *> &Values,
                                         unsigned StringPadLength) {
-  if (getTok().is(AsmToken::String)) {
+  if (Size == 1 && getTok().is(AsmToken::String)) {
     std::string Value;
     if (parseEscapedString(Value))
       return true;
-    if (Size == 1) {
-      // Treat each character as an initializer.
-      for (const char CharVal : Value)
-        Values.push_back(MCConstantExpr::create(CharVal, getContext()));
+    // Treat each character as an initializer.
+    for (const unsigned char CharVal : Value)
+      Values.push_back(MCConstantExpr::create(CharVal, getContext()));
 
-      // Pad the string with spaces to the specified length.
-      for (size_t i = Value.size(); i < StringPadLength; ++i)
-        Values.push_back(MCConstantExpr::create(' ', getContext()));
-    } else {
-      // Treat the string as an initial value in big-endian representation.
-      if (Value.size() > Size)
-        return Error(getTok().getLoc(), "out of range literal value");
-
-      uint64_t IntValue = 0;
-      for (const unsigned char CharVal : Value)
-        IntValue = (IntValue << 8) | CharVal;
-      Values.push_back(MCConstantExpr::create(IntValue, getContext()));
-    }
+    // Pad the string with spaces to the specified length.
+    for (size_t i = Value.size(); i < StringPadLength; ++i)
+      Values.push_back(MCConstantExpr::create(' ', getContext()));
   } else {
     const MCExpr *Value;
     if (parseExpression(Value))
