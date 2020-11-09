@@ -101,10 +101,12 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
               WebAssemblyFrameLowering::getOpcConst(MF) &&
             MRI.hasOneNonDBGUse(Def->getOperand(0).getReg())) {
           MachineOperand &ImmMO = Def->getOperand(1);
-          ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
-          MI.getOperand(FIOperandNum)
-              .ChangeToRegister(FrameRegister, /*isDef=*/false);
-          return;
+          if (ImmMO.isImm()) {
+            ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
+            MI.getOperand(FIOperandNum)
+                .ChangeToRegister(FrameRegister, /*isDef=*/false);
+            return;
+          }
         }
       }
     }
