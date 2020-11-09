@@ -282,4 +282,53 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
   EXPECT_FALSE(verifyFunction(*Func));
   EXPECT_FALSE(CE.verifyAssumptionCache(*Func, *Outlined, &AC));
 }
+
+TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+    target triple = "x86_64-unknown-linux-gnu"
+
+    declare void @use(i32*)
+    declare void @llvm.lifetime.start.p0i8(i64, i8*)
+    declare void @llvm.lifetime.end.p0i8(i64, i8*)
+
+    define void @foo() {
+    entry:
+      %0 = alloca i32
+      br label %extract
+
+    extract:
+      %1 = bitcast i32* %0 to i8*
+      call void @llvm.lifetime.start.p0i8(i64 4, i8* %1)
+      call void @use(i32* %0)
+      br label %exit
+
+    exit:
+      call void @use(i32* %0)
+      call void @llvm.lifetime.end.p0i8(i64 4, i8* %1)
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  CodeExtractor CE(Blocks);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
+  CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+  CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+  EXPECT_EQ(Outputs.size(), 0U);
+
+  Function *Outlined = CE.extractCodeRegion(CEAC);
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
 } // end anonymous namespace
