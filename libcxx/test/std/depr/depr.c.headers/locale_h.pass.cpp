@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-localization
+
 // <locale.h>
 
 #include <locale.h>
@@ -47,5 +49,5 @@ int main(int, char**)
     static_assert((std::is_same<decltype(setlocale(0, "")), char*>::value), "");
     static_assert((std::is_same<decltype(localeconv()), lconv*>::value), "");
 
-  return 0;
+    return 0;
 }
