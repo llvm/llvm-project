@@ -597,7 +597,18 @@ else()
     set(COMPILER_RT_HAS_LLD TRUE)
   endif()
 endif()
+
+if(ANDROID)
+  set(COMPILER_RT_HAS_LLD TRUE)
+  set(COMPILER_RT_TEST_USE_LLD TRUE)
+  append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
+  if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
+    set(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT FALSE)
+  endif()
+endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
+pythonize_bool(COMPILER_RT_TEST_USE_LLD)
 
 add_subdirectory(lib)
 
