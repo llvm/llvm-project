@@ -125,9 +125,6 @@ if (LIBUNWIND_ENABLE_SHARED)
   else()
     target_compile_options(unwind_shared PRIVATE -fno-rtti)
   endif()
-  if(COMMAND llvm_setup_rpath)
-    llvm_setup_rpath(unwind_shared)
-  endif()
   target_link_libraries(unwind_shared PRIVATE ${LIBUNWIND_LIBRARIES})
   set_target_properties(unwind_shared PROPERTIES
     CXX_EXTENSIONS OFF
