@@ -848,7 +848,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
       case PPC::RLWINM8_rec: {
-        Simplified = TII->simplifyRotateAndMaskInstr(MI, ToErase);
+        Simplified = TII->combineRLWINM(MI, &ToErase);
         if (Simplified)
           ++NumRotatesCollapsed;
         break;

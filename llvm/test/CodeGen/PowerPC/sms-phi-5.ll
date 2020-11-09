@@ -14,8 +14,9 @@ define void @phi5() unnamed_addr {
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    lhz 3, 0(3)
 ; CHECK-NEXT:    slwi 3, 3, 15
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    ori 3, 4, 0
+; CHECK-NEXT:    clrlwi 3, 3, 31
+; CHECK-NEXT:    rlwinm 4, 3, 31, 17, 31
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    rlwimi 3, 3, 15, 0, 16
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    blr
