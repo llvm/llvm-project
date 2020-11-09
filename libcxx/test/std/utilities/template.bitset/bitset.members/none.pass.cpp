@@ -9,22 +9,19 @@
 // test bool none() const;
 
 #include <bitset>
-#include <type_traits>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_none()
-{
+void test_none() {
     std::bitset<N> v;
     v.reset();
     assert(v.none() == true);
     v.set();
     assert(v.none() == (N == 0));
-    const bool greater_than_1 = std::integral_constant<bool, (N > 1)>::value; // avoid compiler warnings
-    if (greater_than_1)
-    {
+    if (v.size() > 1) {
         v[N/2] = false;
         assert(v.none() == false);
         v.reset();
@@ -33,8 +30,7 @@ void test_none()
     }
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test_none<0>();
     test_none<1>();
     test_none<31>();
@@ -45,5 +41,5 @@ int main(int, char**)
     test_none<65>();
     test_none<1000>();
 
-  return 0;
+    return 0;
 }

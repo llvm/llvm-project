@@ -17,7 +17,6 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
-#include <cstdlib>    // for rand()
 #include <type_traits>
 
 #include "test_macros.h"
@@ -93,9 +92,9 @@ constexpr bool do_test(int = 0)
     return accumulate;
 }
 
-int main(int, char**)
+int main(int argc, char**)
 {
-    auto non_cce = std::rand(); // a value that can't possibly be constexpr
+    int non_cce = argc; // a value that can't possibly be constexpr
 
     static_assert(do_test<signed char>(), "");
     static_assert(do_test<short>(), "");
