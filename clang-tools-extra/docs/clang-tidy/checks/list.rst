@@ -77,6 +77,7 @@ Clang-Tidy Checks
    `bugprone-posix-return <bugprone-posix-return.html>`_, "Yes"
    `bugprone-redundant-branch-condition <bugprone-redundant-branch-condition.html>`_, "Yes"
    `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
+   `bugprone-signal-handler <bugprone-signal-handler.html>`_,
    `bugprone-signed-char-misuse <bugprone-signed-char-misuse.html>`_,
    `bugprone-sizeof-container <bugprone-sizeof-container.html>`_,
    `bugprone-sizeof-expression <bugprone-sizeof-expression.html>`_,
@@ -115,6 +116,7 @@ Clang-Tidy Checks
    `cert-msc51-cpp <cert-msc51-cpp.html>`_,
    `cert-oop57-cpp <cert-oop57-cpp.html>`_,
    `cert-oop58-cpp <cert-oop58-cpp.html>`_,
+   `cert-sig30-c <cert-sig30-c.html>`_,
    `clang-analyzer-core.DynamicTypePropagation <clang-analyzer-core.DynamicTypePropagation.html>`_,
    `clang-analyzer-core.uninitialized.CapturedBlockVariable <clang-analyzer-core.uninitialized.CapturedBlockVariable.html>`_,
    `clang-analyzer-cplusplus.InnerPointer <clang-analyzer-cplusplus.InnerPointer.html>`_,
