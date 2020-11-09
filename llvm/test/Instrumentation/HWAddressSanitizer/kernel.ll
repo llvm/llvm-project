@@ -4,6 +4,7 @@
 ; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,MATCH-ALL
 ; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s  --check-prefixes=CHECK,OFFSET,MATCH-ALL
 ; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-match-all-tag=-1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,NO-MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-inline-all-checks=0 -hwasan-mapping-offset=12345678 -S | FileCheck %s  --check-prefixes=OUTLINE
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -36,6 +37,8 @@ define i8 @test_load(i8* %a) sanitize_hwaddress {
 ; CHECK: %[[G:[^ ]*]] = load i8, i8* %a, align 4
 ; CHECK: ret i8 %[[G]]
 
+; OUTLINE: %[[SHADOW:[^ ]*]] = call i8* asm "", "=r,0"(i8* inttoptr (i64 12345678 to i8*))
+; OUTLINE: call void @llvm.hwasan.check.memaccess(i8* %[[SHADOW]], i8* %a, i32 67043360)
 entry:
   %b = load i8, i8* %a, align 4
   ret i8 %b
