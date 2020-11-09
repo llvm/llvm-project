@@ -694,4 +694,16 @@ main:
     # CHECK: i64x2.extmul_high_i32x4_u # encoding: [0xfd,0xd7,0x01]
     i64x2.extmul_high_i32x4_u
 
+    # CHECK: i8x16.signselect # encoding: [0xfd,0x7d]
+    i8x16.signselect
+
+    # CHECK: i16x8.signselect # encoding: [0xfd,0x7e]
+    i16x8.signselect
+
+    # CHECK: i32x4.signselect # encoding: [0xfd,0x7f]
+    i32x4.signselect
+
+    # CHECK: i64x2.signselect # encoding: [0xfd,0x94,0x01]
+    i64x2.signselect
+
     end_function
