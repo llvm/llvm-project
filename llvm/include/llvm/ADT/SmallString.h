@@ -306,9 +306,9 @@ public:
   }
 
   // Extra operators.
-  const SmallString &operator=(StringRef RHS) {
-    this->clear();
-    return *this += RHS;
+  SmallString &operator=(StringRef RHS) {
+    this->assign(RHS);
+    return *this;
   }
 
   SmallString &operator+=(StringRef RHS) {
