@@ -1513,9 +1513,14 @@ func @really_large_bound() {
 // -----
 
 func @duplicate_dictionary_attr_key() {
-  // expected-error @+1 {{duplicate key in dictionary attribute}}
+  // expected-error @+1 {{duplicate key 'a' in dictionary attribute}}
   "foo.op"() {a, a} : () -> ()
 }
+
+// -----
+
+// expected-error @+1 {{attribute 'attr' occurs more than once in the attribute list}}
+test.format_symbol_name_attr_op @name { attr = "xx" }
 
 // -----
 

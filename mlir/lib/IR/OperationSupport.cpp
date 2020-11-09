@@ -32,6 +32,16 @@ NamedAttrList::NamedAttrList(const_iterator in_start, const_iterator in_end) {
 
 ArrayRef<NamedAttribute> NamedAttrList::getAttrs() const { return attrs; }
 
+Optional<NamedAttribute> NamedAttrList::findDuplicate() const {
+  Optional<NamedAttribute> duplicate =
+      DictionaryAttr::findDuplicate(attrs, isSorted());
+  // DictionaryAttr::findDuplicate will sort the list, so reset the sorted
+  // state.
+  if (!isSorted())
+    dictionarySorted.setPointerAndInt(nullptr, true);
+  return duplicate;
+}
+
 DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   if (!isSorted()) {
     DictionaryAttr::sortInPlace(attrs);
