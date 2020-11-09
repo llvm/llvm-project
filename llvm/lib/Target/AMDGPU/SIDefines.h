@@ -89,8 +89,8 @@ enum : uint64_t {
   // Is a D16 buffer instruction.
   D16Buf = UINT64_C(1) << 50,
 
-  // FLAT instruction accesses FLAT_GLBL or FLAT_SCRATCH segment.
-  IsNonFlatSeg = UINT64_C(1) << 51,
+  // FLAT instruction accesses FLAT_GLBL segment.
+  IsFlatGlobal = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
   FPDPRounding = UINT64_C(1) << 52,
@@ -102,7 +102,10 @@ enum : uint64_t {
   IsMAI = UINT64_C(1) << 54,
 
   // Is a DOT instruction.
-  IsDOT = UINT64_C(1) << 55
+  IsDOT = UINT64_C(1) << 55,
+
+  // FLAT instruction accesses FLAT_SCRATCH segment.
+  IsFlatScratch = UINT64_C(1) << 56
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

@@ -149,7 +149,8 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     O << " offset:";
 
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    bool IsFlatSeg = !(Desc.TSFlags & SIInstrFlags::IsNonFlatSeg);
+    bool IsFlatSeg = !(Desc.TSFlags &
+        (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch));
 
     if (IsFlatSeg) { // Unsigned offset
       printU16ImmDecOperand(MI, OpNo, O);
