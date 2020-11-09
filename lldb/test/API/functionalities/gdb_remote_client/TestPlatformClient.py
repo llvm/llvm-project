@@ -49,8 +49,7 @@ class TestPlatformClient(GDBRemoteTestBase):
 
         try:
             self.runCmd("platform select remote-linux")
-            self.runCmd("platform connect connect://localhost:%d" %
-                        self.server.port)
+            self.runCmd("platform connect connect://" + self.server.get_connect_address())
             self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
             self.expect("platform process list -x",
                         substrs=["2 matching processes were found", "test_process", "another_test_process"])
