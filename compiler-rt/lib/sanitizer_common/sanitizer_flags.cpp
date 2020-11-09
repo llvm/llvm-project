@@ -126,8 +126,10 @@ void InitializeCommonFlags(CommonFlags *cf) {
   cf->coverage |= cf->html_cov_report;
   SetVerbosity(cf->verbosity);
 
-  if (SANITIZER_ANDROID && !HAS_ANDROID_THREAD_PROPERTIES_API)
+#if SANITIZER_ANDROID
+  if (!HAS_ANDROID_THREAD_PROPERTIES_API)
     cf->detect_leaks = false;
+#endif
 }
 
 }  // namespace __sanitizer
