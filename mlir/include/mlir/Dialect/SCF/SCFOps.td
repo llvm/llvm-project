@@ -197,6 +197,8 @@ def ForOp : SCF_Op<"for",
     /// value for `index`.
     OperandRange getSuccessorEntryOperands(unsigned index);
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def IfOp : SCF_Op<"if",
