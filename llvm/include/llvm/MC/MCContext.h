@@ -564,8 +564,8 @@ namespace llvm {
 
     MCSectionXCOFF *getXCOFFSection(StringRef Section,
                                     XCOFF::StorageMappingClass MappingClass,
-                                    XCOFF::SymbolType CSectType,
-                                    SectionKind K,
+                                    XCOFF::SymbolType CSectType, SectionKind K,
+                                    bool MultiSymbolsAllowed = false,
                                     const char *BeginSymName = nullptr);
 
     // Create and save a copy of STI and return a reference to the copy.

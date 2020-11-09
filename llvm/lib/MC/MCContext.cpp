@@ -659,17 +659,21 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   return Result;
 }
 
-MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
-                                           XCOFF::StorageMappingClass SMC,
-                                           XCOFF::SymbolType Type,
-                                           SectionKind Kind,
-                                           const char *BeginSymName) {
+MCSectionXCOFF *
+MCContext::getXCOFFSection(StringRef Section, XCOFF::StorageMappingClass SMC,
+                           XCOFF::SymbolType Type, SectionKind Kind,
+                           bool MultiSymbolsAllowed, const char *BeginSymName) {
   // Do the lookup. If we have a hit, return it.
   auto IterBool = XCOFFUniquingMap.insert(
       std::make_pair(XCOFFSectionKey{Section.str(), SMC}, nullptr));
   auto &Entry = *IterBool.first;
-  if (!IterBool.second)
-    return Entry.second;
+  if (!IterBool.second) {
+    MCSectionXCOFF *ExistedEntry = Entry.second;
+    if (ExistedEntry->isMultiSymbolsAllowed() != MultiSymbolsAllowed)
+      report_fatal_error("section's multiply symbols policy does not match");
+
+    return ExistedEntry;
+  }
 
   // Otherwise, return a new section.
   StringRef CachedName = Entry.first.SectionName;
@@ -684,7 +688,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
   MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate())
       MCSectionXCOFF(QualName->getUnqualifiedName(), SMC, Type, Kind, QualName,
-                     Begin, CachedName);
+                     Begin, CachedName, MultiSymbolsAllowed);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();
