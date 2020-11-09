@@ -407,7 +407,7 @@ public:
     PyOperationRef returnOperation =
         PyOperation::forOperation(parentOperation->getContext(), next);
     next = mlirOperationGetNextInBlock(next);
-    return returnOperation.releaseObject();
+    return returnOperation->createOpView();
   }
 
   static void bind(py::module &m) {
@@ -457,7 +457,7 @@ public:
     while (!mlirOperationIsNull(childOp)) {
       if (index == 0) {
         return PyOperation::forOperation(parentOperation->getContext(), childOp)
-            .releaseObject();
+            ->createOpView();
       }
       childOp = mlirOperationGetNextInBlock(childOp);
       index -= 1;
@@ -868,11 +868,12 @@ void PyOperation::checkValid() {
   }
 }
 
-void PyOperation::print(py::object fileObject, bool binary,
-                        llvm::Optional<int64_t> largeElementsLimit,
-                        bool enableDebugInfo, bool prettyDebugInfo,
-                        bool printGenericOpForm, bool useLocalScope) {
-  checkValid();
+void PyOperationBase::print(py::object fileObject, bool binary,
+                            llvm::Optional<int64_t> largeElementsLimit,
+                            bool enableDebugInfo, bool prettyDebugInfo,
+                            bool printGenericOpForm, bool useLocalScope) {
+  PyOperation &operation = getOperation();
+  operation.checkValid();
   if (fileObject.is_none())
     fileObject = py::module::import("sys").attr("stdout");
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
@@ -885,15 +886,16 @@ void PyOperation::print(py::object fileObject, bool binary,
 
   PyFileAccumulator accum(fileObject, binary);
   py::gil_scoped_release();
-  mlirOperationPrintWithFlags(get(), flags, accum.getCallback(),
+  mlirOperationPrintWithFlags(operation.get(), flags, accum.getCallback(),
                               accum.getUserData());
   mlirOpPrintingFlagsDestroy(flags);
 }
 
-py::object PyOperation::getAsm(bool binary,
-                               llvm::Optional<int64_t> largeElementsLimit,
-                               bool enableDebugInfo, bool prettyDebugInfo,
-                               bool printGenericOpForm, bool useLocalScope) {
+py::object PyOperationBase::getAsm(bool binary,
+                                   llvm::Optional<int64_t> largeElementsLimit,
+                                   bool enableDebugInfo, bool prettyDebugInfo,
+                                   bool printGenericOpForm,
+                                   bool useLocalScope) {
   py::object fileObject;
   if (binary) {
     fileObject = py::module::import("io").attr("BytesIO")();
@@ -1034,12 +1036,24 @@ py::object PyOperation::create(
       ip->insert(*created.get());
   }
 
-  return created.releaseObject();
+  return created->createOpView();
 }
 
-PyOpView::PyOpView(py::object operation)
-    : operationObject(std::move(operation)),
-      operation(py::cast<PyOperation *>(this->operationObject)) {}
+py::object PyOperation::createOpView() {
+  MlirIdentifier ident = mlirOperationGetName(get());
+  MlirStringRef identStr = mlirIdentifierStr(ident);
+  auto opViewClass = PyGlobals::get().lookupRawOpViewClass(
+      llvm::StringRef(identStr.data, identStr.length));
+  if (opViewClass)
+    return (*opViewClass)(getRef().getObject());
+  return py::cast(PyOpView(getRef().getObject()));
+}
+
+PyOpView::PyOpView(py::object operationObject)
+    // Casting through the PyOperationBase base-class and then back to the
+    // Operation lets us accept any PyOperationBase subclass.
+    : operation(py::cast<PyOperationBase &>(operationObject).getOperation()),
+      operationObject(operation.getRef().getObject()) {}
 
 py::object PyOpView::createRawSubclass(py::object userClass) {
   // This is... a little gross. The typical pattern is to have a pure python
@@ -1082,11 +1096,12 @@ py::object PyOpView::createRawSubclass(py::object userClass) {
 
 PyInsertionPoint::PyInsertionPoint(PyBlock &block) : block(block) {}
 
-PyInsertionPoint::PyInsertionPoint(PyOperation &beforeOperation)
-    : block(beforeOperation.getBlock()),
-      refOperation(beforeOperation.getRef()) {}
+PyInsertionPoint::PyInsertionPoint(PyOperationBase &beforeOperationBase)
+    : refOperation(beforeOperationBase.getOperation().getRef()),
+      block((*refOperation)->getBlock()) {}
 
-void PyInsertionPoint::insert(PyOperation &operation) {
+void PyInsertionPoint::insert(PyOperationBase &operationBase) {
+  PyOperation &operation = operationBase.getOperation();
   if (operation.isAttached())
     throw SetPyError(PyExc_ValueError,
                      "Attempt to insert operation that is already attached");
@@ -2501,7 +2516,62 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of Operation.
   //----------------------------------------------------------------------------
-  py::class_<PyOperation>(m, "Operation")
+  py::class_<PyOperationBase>(m, "_OperationBase")
+      .def("__eq__",
+           [](PyOperationBase &self, PyOperationBase &other) {
+             return &self.getOperation() == &other.getOperation();
+           })
+      .def("__eq__",
+           [](PyOperationBase &self, py::object other) { return false; })
+      .def_property_readonly("operands",
+                             [](PyOperationBase &self) {
+                               return PyOpOperandList(
+                                   self.getOperation().getRef());
+                             })
+      .def_property_readonly("regions",
+                             [](PyOperationBase &self) {
+                               return PyRegionList(
+                                   self.getOperation().getRef());
+                             })
+      .def_property_readonly(
+          "results",
+          [](PyOperationBase &self) {
+            return PyOpResultList(self.getOperation().getRef());
+          },
+          "Returns the list of Operation results.")
+      .def("__iter__",
+           [](PyOperationBase &self) {
+             return PyRegionIterator(self.getOperation().getRef());
+           })
+      .def(
+          "__str__",
+          [](PyOperationBase &self) {
+            return self.getAsm(/*binary=*/false,
+                               /*largeElementsLimit=*/llvm::None,
+                               /*enableDebugInfo=*/false,
+                               /*prettyDebugInfo=*/false,
+                               /*printGenericOpForm=*/false,
+                               /*useLocalScope=*/false);
+          },
+          "Returns the assembly form of the operation.")
+      .def("print", &PyOperationBase::print,
+           // Careful: Lots of arguments must match up with print method.
+           py::arg("file") = py::none(), py::arg("binary") = false,
+           py::arg("large_elements_limit") = py::none(),
+           py::arg("enable_debug_info") = false,
+           py::arg("pretty_debug_info") = false,
+           py::arg("print_generic_op_form") = false,
+           py::arg("use_local_scope") = false, kOperationPrintDocstring)
+      .def("get_asm", &PyOperationBase::getAsm,
+           // Careful: Lots of arguments must match up with get_asm method.
+           py::arg("binary") = false,
+           py::arg("large_elements_limit") = py::none(),
+           py::arg("enable_debug_info") = false,
+           py::arg("pretty_debug_info") = false,
+           py::arg("print_generic_op_form") = false,
+           py::arg("use_local_scope") = false, kOperationGetAsmDocstring);
+
+  py::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static("create", &PyOperation::create, py::arg("name"),
                   py::arg("operands") = py::none(),
                   py::arg("results") = py::none(),
@@ -2513,49 +2583,17 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           "context",
           [](PyOperation &self) { return self.getContext().getObject(); },
           "Context that owns the Operation")
-      .def_property_readonly(
-          "operands",
-          [](PyOperation &self) { return PyOpOperandList(self.getRef()); })
-      .def_property_readonly(
-          "regions",
-          [](PyOperation &self) { return PyRegionList(self.getRef()); })
-      .def_property_readonly(
-          "results",
-          [](PyOperation &self) { return PyOpResultList(self.getRef()); },
-          "Returns the list of Operation results.")
-      .def("__iter__",
-           [](PyOperation &self) { return PyRegionIterator(self.getRef()); })
-      .def(
-          "__str__",
-          [](PyOperation &self) {
-            return self.getAsm(/*binary=*/false,
-                               /*largeElementsLimit=*/llvm::None,
-                               /*enableDebugInfo=*/false,
-                               /*prettyDebugInfo=*/false,
-                               /*printGenericOpForm=*/false,
-                               /*useLocalScope=*/false);
-          },
-          "Returns the assembly form of the operation.")
-      .def("print", &PyOperation::print,
-           // Careful: Lots of arguments must match up with print method.
-           py::arg("file") = py::none(), py::arg("binary") = false,
-           py::arg("large_elements_limit") = py::none(),
-           py::arg("enable_debug_info") = false,
-           py::arg("pretty_debug_info") = false,
-           py::arg("print_generic_op_form") = false,
-           py::arg("use_local_scope") = false, kOperationPrintDocstring)
-      .def("get_asm", &PyOperation::getAsm,
-           // Careful: Lots of arguments must match up with get_asm method.
-           py::arg("binary") = false,
-           py::arg("large_elements_limit") = py::none(),
-           py::arg("enable_debug_info") = false,
-           py::arg("pretty_debug_info") = false,
-           py::arg("print_generic_op_form") = false,
-           py::arg("use_local_scope") = false, kOperationGetAsmDocstring);
+      .def_property_readonly("opview", &PyOperation::createOpView);
 
-  py::class_<PyOpView>(m, "OpView")
+  py::class_<PyOpView, PyOperationBase>(m, "OpView")
       .def(py::init<py::object>())
       .def_property_readonly("operation", &PyOpView::getOperationObject)
+      .def_property_readonly(
+          "context",
+          [](PyOpView &self) {
+            return self.getOperation().getContext().getObject();
+          },
+          "Context that owns the Operation")
       .def("__str__",
            [](PyOpView &self) { return py::str(self.getOperationObject()); });
 
@@ -2577,14 +2615,11 @@ void mlir::python::populateIRSubmodule(py::module &m) {
             return PyBlockIterator(self.getParentOperation(), firstBlock);
           },
           "Iterates over blocks in the region.")
-      .def("__eq__", [](PyRegion &self, py::object &other) {
-        try {
-          PyRegion *otherRegion = other.cast<PyRegion *>();
-          return self.get().ptr == otherRegion->get().ptr;
-        } catch (std::exception &e) {
-          return false;
-        }
-      });
+      .def("__eq__",
+           [](PyRegion &self, PyRegion &other) {
+             return self.get().ptr == other.get().ptr;
+           })
+      .def("__eq__", [](PyRegion &self, py::object &other) { return false; });
 
   //----------------------------------------------------------------------------
   // Mapping of PyBlock.
@@ -2613,14 +2648,10 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           },
           "Iterates over operations in the block.")
       .def("__eq__",
-           [](PyBlock &self, py::object &other) {
-             try {
-               PyBlock *otherBlock = other.cast<PyBlock *>();
-               return self.get().ptr == otherBlock->get().ptr;
-             } catch (std::exception &e) {
-               return false;
-             }
+           [](PyBlock &self, PyBlock &other) {
+             return self.get().ptr == other.get().ptr;
            })
+      .def("__eq__", [](PyBlock &self, py::object &other) { return false; })
       .def(
           "__str__",
           [](PyBlock &self) {
@@ -2651,7 +2682,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           },
           "Gets the InsertionPoint bound to the current thread or raises "
           "ValueError if none has been set")
-      .def(py::init<PyOperation &>(), py::arg("beforeOperation"),
+      .def(py::init<PyOperationBase &>(), py::arg("beforeOperation"),
            "Inserts before a referenced operation.")
       .def_static("at_block_begin", &PyInsertionPoint::atBlockBegin,
                   py::arg("block"), "Inserts at the beginning of the block.")
@@ -2696,14 +2727,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           },
           py::keep_alive<0, 1>(), "Binds a name to the attribute")
       .def("__eq__",
-           [](PyAttribute &self, py::object &other) {
-             try {
-               PyAttribute otherAttribute = other.cast<PyAttribute>();
-               return self == otherAttribute;
-             } catch (std::exception &e) {
-               return false;
-             }
-           })
+           [](PyAttribute &self, PyAttribute &other) { return self == other; })
+      .def("__eq__", [](PyAttribute &self, py::object &other) { return false; })
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self.attr); },
           kDumpDocstring)
@@ -2793,15 +2818,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(
           "context", [](PyType &self) { return self.getContext().getObject(); },
           "Context that owns the Type")
-      .def("__eq__",
-           [](PyType &self, py::object &other) {
-             try {
-               PyType otherType = other.cast<PyType>();
-               return self == otherType;
-             } catch (std::exception &e) {
-               return false;
-             }
-           })
+      .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
+      .def("__eq__", [](PyType &self, py::object &other) { return false; })
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self.type); }, kDumpDocstring)
       .def(
