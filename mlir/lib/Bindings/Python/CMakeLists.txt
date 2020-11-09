@@ -3,7 +3,7 @@ if(NOT LLVM_BUILD_LLVM_DYLIB)
 endif()
 
 include(AddMLIRPythonExtension)
-
+add_custom_target(MLIRBindingsPythonExtension)
 ################################################################################
 # Copy python source tree.
 ################################################################################
@@ -18,6 +18,7 @@ set(PY_SRC_FILES
 add_custom_target(MLIRBindingsPythonSources ALL
   DEPENDS ${PY_SRC_FILES}
 )
+add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonSources)
 
 foreach(PY_SRC_FILE ${PY_SRC_FILES})
   set(PY_DEST_FILE "${PROJECT_BINARY_DIR}/python/${PY_SRC_FILE}")
@@ -33,7 +34,7 @@ endforeach()
 ################################################################################
 # Build core python extension
 ################################################################################
-add_mlir_python_extension(MLIRBindingsPythonExtension _mlir
+add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
   INSTALL_DIR
     python
   SOURCES
@@ -41,7 +42,7 @@ add_mlir_python_extension(MLIRBindingsPythonExtension _mlir
     IRModules.cpp
     PybindUtils.cpp
 )
-add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonSources)
+add_dependencies(MLIRBindingsPythonExtension MLIRCoreBindingsPythonExtension)
 
 # Note that we copy from the source tree just like for headers because
 # it will not be polluted with py_cache runtime artifacts (from testing and
