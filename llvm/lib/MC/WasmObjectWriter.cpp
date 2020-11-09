@@ -1378,6 +1378,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       MCSymbol *Begin = Sec.getBeginSymbol();
       if (Begin) {
         WasmIndices[cast<MCSymbolWasm>(Begin)] = CustomSections.size();
+        if (SectionName != Begin->getName())
+          report_fatal_error("section name and begin symbol should match: " +
+                             Twine(SectionName));
       }
 
       // Separate out the producers and target features sections

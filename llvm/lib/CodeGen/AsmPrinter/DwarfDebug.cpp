@@ -394,9 +394,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
 
   // Don't generate type units for unsupported object file formats.
-  GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
-                       A->TM.getTargetTriple().isOSBinFormatWasm()) &&
-                      GenerateDwarfTypeUnits;
+  GenerateTypeUnits =
+      A->TM.getTargetTriple().isOSBinFormatELF() && GenerateDwarfTypeUnits;
 
   TheAccelTableKind = computeAccelTableKind(
       DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());

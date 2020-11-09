@@ -214,9 +214,6 @@
 // RUN: %clang -### -fdebug-types-section -fno-debug-types-section -target x86_64-unknown-linux %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOFDTS %s
 //
-// RUN: %clang -### -fdebug-types-section -target wasm32-unknown-unknown %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=FDTS %s
-//
 // RUN: %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTSE %s
 //
