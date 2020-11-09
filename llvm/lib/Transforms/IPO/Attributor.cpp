@@ -1357,7 +1357,7 @@ ChangeStatus Attributor::cleanupIR() {
 
   NumFnDeleted += ToBeDeletedFunctions.size();
 
-  LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << NumFnDeleted
+  LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << ToBeDeletedFunctions.size()
                     << " functions after manifest.\n");
 
 #ifdef EXPENSIVE_CHECKS
