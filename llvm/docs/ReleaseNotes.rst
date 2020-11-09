@@ -90,15 +90,6 @@ Changes to the ARM Backend
 
 During this release ...
 
-Changes to the AArch64 Backend
-------------------------------
-
-During this release ...
-
-* The assembler no longer accepts ``w31`` and ``x31`` as aliases for ``wzr``
-  and ``xzr``, because the architecture manual explicitly states that no
-  registers with those names exist.
-
 Changes to the MIPS Target
 --------------------------
 
