@@ -285,8 +285,6 @@ bool ValueObjectVariable::UpdateValue() {
 #endif // LLDB_ENABLE_SWIFT
 
       switch (value_type) {
-      case Value::eValueTypeVector:
-      // fall through
       case Value::eValueTypeScalar:
         // The variable value is in the Scalar value inside the m_value. We can
         // point our m_data right to it.
@@ -384,7 +382,6 @@ void ValueObjectVariable::DoUpdateChildrenAddressType(ValueObject &valobj) {
     break;
   case Value::eValueTypeLoadAddress:
   case Value::eValueTypeScalar:
-  case Value::eValueTypeVector:
     valobj.SetAddressTypeOfChildren(eAddressTypeLoad);
     break;
   }
