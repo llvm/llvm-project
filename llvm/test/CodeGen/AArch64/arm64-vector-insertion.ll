@@ -31,8 +31,6 @@ entry:
   ret void
 }
 
-; TODO: This should jsut be a dup + clearing lane 4.
-
 define <16 x i8> @test_insert_v16i8_insert_1(i8 %a) {
 ; CHECK-LABEL: test_insert_v16i8_insert_1:
 ; CHECK:       // %bb.0:
@@ -58,20 +56,9 @@ define <16 x i8> @test_insert_v16i8_insert_2(i8 %a) {
 define <16 x i8> @test_insert_v16i8_insert_2_undef_base(i8 %a) {
 ; CHECK-LABEL: test_insert_v16i8_insert_2_undef_base:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    mov.b v0[0], w0
-; CHECK-NEXT:    mov.b v0[1], w0
-; CHECK-NEXT:    mov.b v0[2], w0
-; CHECK-NEXT:    mov.b v0[3], w0
-; CHECK-NEXT:    mov.b v0[4], w0
-; CHECK-NEXT:    mov.b v0[6], w0
-; CHECK-NEXT:    mov.b v0[7], w0
-; CHECK-NEXT:    mov.b v0[10], w0
-; CHECK-NEXT:    mov.b v0[11], w0
-; CHECK-NEXT:    mov.b v0[12], w0
-; CHECK-NEXT:    mov.b v0[13], w0
-; CHECK-NEXT:    mov.b v0[14], w0
-; CHECK-NEXT:    mov.b v0[15], w0
+; CHECK-NEXT:    dup.16b v0, w0
+; CHECK-NEXT:    mov.b v0[5], wzr
+; CHECK-NEXT:    mov.b v0[9], wzr
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>  , i8 %a, i32 0
   %v.1 = insertelement <16 x i8> %v.0, i8 %a, i32 1
@@ -93,19 +80,12 @@ define <16 x i8> @test_insert_v16i8_insert_2_undef_base(i8 %a) {
 define <16 x i8> @test_insert_v16i8_insert_2_undef_base_different_valeus(i8 %a, i8 %b) {
 ; CHECK-LABEL: test_insert_v16i8_insert_2_undef_base_different_valeus:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    mov.b v0[0], w0
-; CHECK-NEXT:    mov.b v0[1], w0
+; CHECK-NEXT:    dup.16b v0, w0
 ; CHECK-NEXT:    mov.b v0[2], w1
-; CHECK-NEXT:    mov.b v0[3], w0
-; CHECK-NEXT:    mov.b v0[4], w0
-; CHECK-NEXT:    mov.b v0[6], w0
+; CHECK-NEXT:    mov.b v0[5], wzr
 ; CHECK-NEXT:    mov.b v0[7], w1
-; CHECK-NEXT:    mov.b v0[10], w0
-; CHECK-NEXT:    mov.b v0[11], w0
+; CHECK-NEXT:    mov.b v0[9], wzr
 ; CHECK-NEXT:    mov.b v0[12], w1
-; CHECK-NEXT:    mov.b v0[13], w0
-; CHECK-NEXT:    mov.b v0[14], w0
 ; CHECK-NEXT:    mov.b v0[15], w1
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>  , i8 %a, i32 0
@@ -128,16 +108,11 @@ define <16 x i8> @test_insert_v16i8_insert_2_undef_base_different_valeus(i8 %a, 
 define <8 x half> @test_insert_v8f16_insert_1(half %a) {
 ; CHECK-LABEL: test_insert_v8f16_insert_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-NEXT:    mov.h v1[0], v0[0]
-; CHECK-NEXT:    mov.h v1[1], v0[0]
-; CHECK-NEXT:    mov.h v1[2], v0[0]
-; CHECK-NEXT:    mov.h v1[3], v0[0]
-; CHECK-NEXT:    mov.h v1[4], v0[0]
-; CHECK-NEXT:    mov.h v1[5], v0[0]
-; CHECK-NEXT:    mov.h v1[6], v0[0]
-; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    dup.8h v0, v0[0]
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI6_0
+; CHECK-NEXT:    ld1.h { v0 }[7], [x8]
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <8 x half> <half undef, half undef, half undef, half undef, half undef, half undef, half undef, half 0.0>, half %a, i32 0
   %v.1 = insertelement <8 x half> %v.0, half %a, i32 1
@@ -167,13 +142,9 @@ define <8 x half> @test_insert_v8f16_insert_2(half %a) {
 define <8 x i16> @test_insert_v8i16_insert_2(i16 %a) {
 ; CHECK-LABEL: test_insert_v8i16_insert_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    mov.h v0[0], w0
-; CHECK-NEXT:    mov.h v0[1], w0
-; CHECK-NEXT:    mov.h v0[2], w0
-; CHECK-NEXT:    mov.h v0[4], w0
-; CHECK-NEXT:    mov.h v0[5], w0
-; CHECK-NEXT:    mov.h v0[6], w0
+; CHECK-NEXT:    dup.8h v0, w0
+; CHECK-NEXT:    mov.h v0[3], wzr
+; CHECK-NEXT:    mov.h v0[7], wzr
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <8 x i16> <i16 undef, i16 undef, i16 undef, i16 0, i16 undef, i16 undef, i16 undef, i16 0>, i16 %a, i32 0
   %v.1 = insertelement <8 x i16> %v.0, i16 %a, i32 1
@@ -187,12 +158,10 @@ define <8 x i16> @test_insert_v8i16_insert_2(i16 %a) {
 define <8 x i16> @test_insert_v8i16_insert_3(i16 %a) {
 ; CHECK-LABEL: test_insert_v8i16_insert_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    mov.h v0[0], w0
-; CHECK-NEXT:    mov.h v0[2], w0
-; CHECK-NEXT:    mov.h v0[4], w0
-; CHECK-NEXT:    mov.h v0[5], w0
-; CHECK-NEXT:    mov.h v0[6], w0
+; CHECK-NEXT:    dup.8h v0, w0
+; CHECK-NEXT:    mov.h v0[1], wzr
+; CHECK-NEXT:    mov.h v0[3], wzr
+; CHECK-NEXT:    mov.h v0[7], wzr
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <8 x i16> <i16 undef, i16 0, i16 undef, i16 0, i16 undef, i16 undef, i16 undef, i16 0>, i16 %a, i32 0
   %v.2 = insertelement <8 x i16> %v.0, i16 %a, i32 2
@@ -247,12 +216,10 @@ define <2 x float> @test_insert_v2f32_undef_zero_vector(float %a) {
 define <4 x float> @test_insert_3_f32_undef_zero_vector(float %a) {
 ; CHECK-LABEL: test_insert_3_f32_undef_zero_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    mov.s v1[0], v0[0]
-; CHECK-NEXT:    mov.s v1[1], v0[0]
-; CHECK-NEXT:    mov.s v1[2], v0[0]
-; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    dup.4s v0, v0[0]
+; CHECK-NEXT:    mov.s v0[3], v1[0]
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <4 x float> <float undef, float undef, float undef, float 0.000000e+00>, float %a, i32 0
   %v.1 = insertelement <4 x float> %v.0, float %a, i32 1
