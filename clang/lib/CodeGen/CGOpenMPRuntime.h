@@ -1647,9 +1647,6 @@ public:
     llvm::Value *MapTypesArrayEnd = nullptr;
     /// The array of user-defined mappers passed to the runtime library.
     llvm::Value *MappersArray = nullptr;
-    /// The array of original declaration names of mapped pointers sent to the
-    /// runtime library for debugging
-    llvm::Value *MapNamesArray = nullptr;
     /// Indicate whether any user-defined mapper exists.
     bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
@@ -1670,7 +1667,6 @@ public:
       SizesArray = nullptr;
       MapTypesArray = nullptr;
       MapTypesArrayEnd = nullptr;
-      MapNamesArray = nullptr;
       MappersArray = nullptr;
       HasMapper = false;
       NumberOfPtrs = 0u;
