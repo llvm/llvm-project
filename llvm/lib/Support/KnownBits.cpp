@@ -306,6 +306,24 @@ KnownBits KnownBits::computeForMul(const KnownBits &LHS, const KnownBits &RHS) {
   return Res;
 }
 
+KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+  KnownBits Known(BitWidth);
+
+  // For the purposes of computing leading zeros we can conservatively
+  // treat a udiv as a logical right shift by the power of 2 known to
+  // be less than the denominator.
+  unsigned LeadZ = LHS.countMinLeadingZeros();
+  unsigned RHSMaxLeadingZeros = RHS.countMaxLeadingZeros();
+
+  if (RHSMaxLeadingZeros != BitWidth)
+    LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
+
+  Known.Zero.setHighBits(LeadZ);
+  return Known;
+}
+
 KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
   // Result bit is 0 if either operand bit is 0.
   Zero |= RHS.Zero;

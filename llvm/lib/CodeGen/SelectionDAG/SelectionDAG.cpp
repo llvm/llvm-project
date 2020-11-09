@@ -2884,18 +2884,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::UDIV: {
-    // For the purposes of computing leading zeros we can conservatively
-    // treat a udiv as a logical right shift by the power of 2 known to
-    // be less than the denominator.
-    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    unsigned LeadZ = Known2.countMinLeadingZeros();
-
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    unsigned RHSMaxLeadingZeros = Known2.countMaxLeadingZeros();
-    if (RHSMaxLeadingZeros != BitWidth)
-      LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
-
-    Known.Zero.setHighBits(LeadZ);
+    Known = KnownBits::udiv(Known, Known2);
     break;
   }
   case ISD::SELECT:
