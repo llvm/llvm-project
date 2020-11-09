@@ -40,15 +40,6 @@ extern int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
 
 extern int CheckDeviceAndCtors(int64_t device_id);
 
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
-extern kmp_target_offload_kind_t TargetOffloadPolicy;
-
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {
   void *Base;
