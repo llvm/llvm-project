@@ -271,8 +271,8 @@ static ParseResult parseAwaitResultType(OpAsmParser &parser, Type &operandType,
   return success();
 }
 
-static void printAwaitResultType(OpAsmPrinter &p, Type operandType,
-                                 Type resultType) {
+static void printAwaitResultType(OpAsmPrinter &p, Operation *op,
+                                 Type operandType, Type resultType) {
   p << operandType;
 }
 

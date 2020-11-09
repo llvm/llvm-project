@@ -385,19 +385,24 @@ static ParseResult parseCustomDirectiveAttributes(OpAsmParser &parser,
   return success();
 }
 
+static ParseResult parseCustomDirectiveAttrDict(OpAsmParser &parser,
+                                                NamedAttrList &attrs) {
+  return parser.parseOptionalAttrDict(attrs);
+}
+
 //===----------------------------------------------------------------------===//
 // Printing
 
-static void printCustomDirectiveOperands(OpAsmPrinter &printer, Value operand,
-                                         Value optOperand,
+static void printCustomDirectiveOperands(OpAsmPrinter &printer, Operation *,
+                                         Value operand, Value optOperand,
                                          OperandRange varOperands) {
   printer << operand;
   if (optOperand)
     printer << ", " << optOperand;
   printer << " -> (" << varOperands << ")";
 }
-static void printCustomDirectiveResults(OpAsmPrinter &printer, Type operandType,
-                                        Type optOperandType,
+static void printCustomDirectiveResults(OpAsmPrinter &printer, Operation *,
+                                        Type operandType, Type optOperandType,
                                         TypeRange varOperandTypes) {
   printer << " : " << operandType;
   if (optOperandType)
@@ -405,23 +410,23 @@ static void printCustomDirectiveResults(OpAsmPrinter &printer, Type operandType,
   printer << " -> (" << varOperandTypes << ")";
 }
 static void printCustomDirectiveWithTypeRefs(OpAsmPrinter &printer,
-                                             Type operandType,
+                                             Operation *op, Type operandType,
                                              Type optOperandType,
                                              TypeRange varOperandTypes) {
   printer << " type_refs_capture ";
-  printCustomDirectiveResults(printer, operandType, optOperandType,
+  printCustomDirectiveResults(printer, op, operandType, optOperandType,
                               varOperandTypes);
 }
-static void
-printCustomDirectiveOperandsAndTypes(OpAsmPrinter &printer, Value operand,
-                                     Value optOperand, OperandRange varOperands,
-                                     Type operandType, Type optOperandType,
-                                     TypeRange varOperandTypes) {
-  printCustomDirectiveOperands(printer, operand, optOperand, varOperands);
-  printCustomDirectiveResults(printer, operandType, optOperandType,
+static void printCustomDirectiveOperandsAndTypes(
+    OpAsmPrinter &printer, Operation *op, Value operand, Value optOperand,
+    OperandRange varOperands, Type operandType, Type optOperandType,
+    TypeRange varOperandTypes) {
+  printCustomDirectiveOperands(printer, op, operand, optOperand, varOperands);
+  printCustomDirectiveResults(printer, op, operandType, optOperandType,
                               varOperandTypes);
 }
-static void printCustomDirectiveRegions(OpAsmPrinter &printer, Region &region,
+static void printCustomDirectiveRegions(OpAsmPrinter &printer, Operation *,
+                                        Region &region,
                                         MutableArrayRef<Region> varRegions) {
   printer.printRegion(region);
   if (!varRegions.empty()) {
@@ -430,14 +435,14 @@ static void printCustomDirectiveRegions(OpAsmPrinter &printer, Region &region,
       printer.printRegion(region);
   }
 }
-static void printCustomDirectiveSuccessors(OpAsmPrinter &printer,
+static void printCustomDirectiveSuccessors(OpAsmPrinter &printer, Operation *,
                                            Block *successor,
                                            SuccessorRange varSuccessors) {
   printer << successor;
   if (!varSuccessors.empty())
     printer << ", " << varSuccessors.front();
 }
-static void printCustomDirectiveAttributes(OpAsmPrinter &printer,
+static void printCustomDirectiveAttributes(OpAsmPrinter &printer, Operation *,
                                            Attribute attribute,
                                            Attribute optAttribute) {
   printer << attribute;
@@ -445,6 +450,10 @@ static void printCustomDirectiveAttributes(OpAsmPrinter &printer,
     printer << ", " << optAttribute;
 }
 
+static void printCustomDirectiveAttrDict(OpAsmPrinter &printer, Operation *op,
+                                         MutableDictionaryAttr attrs) {
+  printer.printOptionalAttrDict(attrs.getAttrs());
+}
 //===----------------------------------------------------------------------===//
 // Test IsolatedRegionOp - parse passthrough region arguments.
 //===----------------------------------------------------------------------===//

@@ -493,7 +493,7 @@ parseLaunchFuncOperands(OpAsmParser &parser,
                                          argTypes, argAttrs, isVariadic);
 }
 
-static void printLaunchFuncOperands(OpAsmPrinter &printer,
+static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
                                     OperandRange operands, TypeRange types) {
   if (operands.empty())
     return;
@@ -846,7 +846,8 @@ static ParseResult parseAsyncDependencies(
                                  OpAsmParser::Delimiter::OptionalSquare);
 }
 
-static void printAsyncDependencies(OpAsmPrinter &printer, Type asyncTokenType,
+static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
+                                   Type asyncTokenType,
                                    OperandRange asyncDependencies) {
   if (asyncTokenType)
     printer << "async ";
