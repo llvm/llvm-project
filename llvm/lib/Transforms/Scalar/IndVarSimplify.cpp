@@ -2406,15 +2406,20 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   }
 #endif
 
+  auto ReplaceExitCond = [&](BranchInst *BI, Value *NewCond) {
+    auto *OldCond = BI->getCondition();
+    BI->setCondition(NewCond);
+    if (OldCond->use_empty())
+      DeadInsts.emplace_back(OldCond);
+  };
+
   auto FoldExit = [&](BasicBlock *ExitingBB, bool IsTaken) {
     BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
     bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
     auto *OldCond = BI->getCondition();
     auto *NewCond = ConstantInt::get(OldCond->getType(),
                                      IsTaken ? ExitIfTrue : !ExitIfTrue);
-    BI->setCondition(NewCond);
-    if (OldCond->use_empty())
-      DeadInsts.emplace_back(OldCond);
+    ReplaceExitCond(BI, NewCond);
   };
 
   bool Changed = false;
