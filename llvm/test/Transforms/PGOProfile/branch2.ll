@@ -25,7 +25,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 ; USE: br i1 %cmp, label %if.then, label %if.else
 ; USE-SAME: !prof ![[BW_ENTRY:[0-9]+]]
-; USE: ![[BW_ENTRY]] = !{!"branch_weights", i64 1, i64 1}
+; USE: ![[BW_ENTRY]] = !{!"branch_weights", i32 1, i32 1}
 
 if.then:
 ; GEN: if.then:

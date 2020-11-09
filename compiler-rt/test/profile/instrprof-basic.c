@@ -73,9 +73,9 @@ int main(int argc, const char *argv[]) {
   return 1;
 }
 
-// ORIG: ![[PD1]] = !{!"branch_weights", i64 1, i64 2}
-// ORIG: ![[PD2]] = !{!"branch_weights", i64 2, i64 1}
-// MERGE: ![[PD1]] = !{!"branch_weights", i64 1, i64 3}
-// MERGE: ![[PD2]] = !{!"branch_weights", i64 3, i64 1}
-// PGOMERGE: ![[PD1]] = !{!"branch_weights", i64 0, i64 4}
-// PGOMERGE: ![[PD2]] = !{!"branch_weights", i64 4, i64 0}
+// ORIG: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
+// ORIG: ![[PD2]] = !{!"branch_weights", i32 2, i32 1}
+// MERGE: ![[PD1]] = !{!"branch_weights", i32 1, i32 3}
+// MERGE: ![[PD2]] = !{!"branch_weights", i32 3, i32 1}
+// PGOMERGE: ![[PD1]] = !{!"branch_weights", i32 0, i32 4}
+// PGOMERGE: ![[PD2]] = !{!"branch_weights", i32 4, i32 0}

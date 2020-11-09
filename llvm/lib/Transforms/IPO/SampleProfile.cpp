@@ -1584,7 +1584,8 @@ void SampleProfileLoader::propagateWeights(Function &F) {
                             SortedCallTargets.size());
         } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
-                        MDB.createBranchWeights({BlockWeights[BB]}));
+                        MDB.createBranchWeights(
+                            {static_cast<uint32_t>(BlockWeights[BB])}));
         }
       }
     }
@@ -1599,17 +1600,24 @@ void SampleProfileLoader::propagateWeights(Function &F) {
                       << ((BranchLoc) ? Twine(BranchLoc.getLine())
                                       : Twine("<UNKNOWN LOCATION>"))
                       << ".\n");
-    SmallVector<uint64_t, 4> Weights;
-    uint64_t MaxWeight = 0;
+    SmallVector<uint32_t, 4> Weights;
+    uint32_t MaxWeight = 0;
     Instruction *MaxDestInst;
     for (unsigned I = 0; I < TI->getNumSuccessors(); ++I) {
       BasicBlock *Succ = TI->getSuccessor(I);
       Edge E = std::make_pair(BB, Succ);
       uint64_t Weight = EdgeWeights[E];
       LLVM_DEBUG(dbgs() << "\t"; printEdgeWeight(dbgs(), E));
+      // Use uint32_t saturated arithmetic to adjust the incoming weights,
+      // if needed. Sample counts in profiles are 64-bit unsigned values,
+      // but internally branch weights are expressed as 32-bit values.
+      if (Weight > std::numeric_limits<uint32_t>::max()) {
+        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)");
+        Weight = std::numeric_limits<uint32_t>::max();
+      }
       // Weight is added by one to avoid propagation errors introduced by
       // 0 weights.
-      Weights.push_back(Weight + 1);
+      Weights.push_back(static_cast<uint32_t>(Weight + 1));
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;

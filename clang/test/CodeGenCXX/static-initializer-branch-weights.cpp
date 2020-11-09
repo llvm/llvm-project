@@ -122,5 +122,5 @@ void use_b() {
 // CHECK: icmp eq i8 {{.*}}, 0
 // CHECK: br i1 {{.*}}, !prof ![[WEIGHTS_THREAD_LOCAL]]
 
-// CHECK-DAG: ![[WEIGHTS_THREAD_LOCAL]] = !{!"branch_weights", i64 1, i64 1023}
-// CHECK-DAG: ![[WEIGHTS_LOCAL]] = !{!"branch_weights", i64 1, i64 1048575}
+// CHECK-DAG: ![[WEIGHTS_THREAD_LOCAL]] = !{!"branch_weights", i32 1, i32 1023}
+// CHECK-DAG: ![[WEIGHTS_LOCAL]] = !{!"branch_weights", i32 1, i32 1048575}

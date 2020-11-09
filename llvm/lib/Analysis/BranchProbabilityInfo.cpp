@@ -458,8 +458,10 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
     return false;
 
   // Build up the final weights that will be used in a temporary buffer.
+  // Compute the sum of all weights to later decide whether they need to
+  // be scaled to fit in 32 bits.
   uint64_t WeightSum = 0;
-  SmallVector<uint64_t, 2> Weights;
+  SmallVector<uint32_t, 2> Weights;
   SmallVector<unsigned, 2> UnreachableIdxs;
   SmallVector<unsigned, 2> ReachableIdxs;
   Weights.reserve(TI->getNumSuccessors());
@@ -468,6 +470,8 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
         mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(I));
     if (!Weight)
       return false;
+    assert(Weight->getValue().getActiveBits() <= 32 &&
+           "Too many bits for uint32_t");
     Weights.push_back(Weight->getZExtValue());
     WeightSum += Weights.back();
     if (PostDominatedByUnreachable.count(TI->getSuccessor(I - 1)))
@@ -501,8 +505,7 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   // Set the probability.
   SmallVector<BranchProbability, 2> BP;
   for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
-    BP.push_back(
-        BranchProbability::getBranchProbability(Weights[I], WeightSum));
+    BP.push_back({ Weights[I], static_cast<uint32_t>(WeightSum) });
 
   // Examine the metadata against unreachable heuristic.
   // If the unreachable heuristic is more strong then we use it for this edge.

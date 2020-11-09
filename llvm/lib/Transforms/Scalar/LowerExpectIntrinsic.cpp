@@ -47,14 +47,14 @@ STATISTIC(ExpectIntrinsicsHandled,
 // 'select' instructions. It may be worthwhile to hoist these values to some
 // shared space, so they can be used directly by other passes.
 
-cl::opt<uint64_t> llvm::LikelyBranchWeight(
+cl::opt<uint32_t> llvm::LikelyBranchWeight(
     "likely-branch-weight", cl::Hidden, cl::init(2000),
     cl::desc("Weight of the branch likely to be taken (default = 2000)"));
-cl::opt<uint64_t> llvm::UnlikelyBranchWeight(
+cl::opt<uint32_t> llvm::UnlikelyBranchWeight(
     "unlikely-branch-weight", cl::Hidden, cl::init(1),
     cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
 
-static std::tuple<uint64_t, uint64_t>
+static std::tuple<uint32_t, uint32_t>
 getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
   if (IntrinsicID == Intrinsic::expect) {
     // __builtin_expect
@@ -69,8 +69,8 @@ getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
     assert((TrueProb >= 0.0 && TrueProb <= 1.0) &&
            "probability value must be in the range [0.0, 1.0]");
     double FalseProb = (1.0 - TrueProb) / (BranchCount - 1);
-    uint64_t LikelyBW = ceil((TrueProb * (double)(INT32_MAX - 1)) + 1.0);
-    uint64_t UnlikelyBW = ceil((FalseProb * (double)(INT32_MAX - 1)) + 1.0);
+    uint32_t LikelyBW = ceil((TrueProb * (double)(INT32_MAX - 1)) + 1.0);
+    uint32_t UnlikelyBW = ceil((FalseProb * (double)(INT32_MAX - 1)) + 1.0);
     return std::make_tuple(LikelyBW, UnlikelyBW);
   }
 }
@@ -92,11 +92,11 @@ static bool handleSwitchExpect(SwitchInst &SI) {
 
   SwitchInst::CaseHandle Case = *SI.findCaseValue(ExpectedValue);
   unsigned n = SI.getNumCases(); // +1 for default case.
-  uint64_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
+  uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
   std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) =
       getBranchWeight(Fn->getIntrinsicID(), CI, n + 1);
 
-  SmallVector<uint64_t, 16> Weights(n + 1, UnlikelyBranchWeightVal);
+  SmallVector<uint32_t, 16> Weights(n + 1, UnlikelyBranchWeightVal);
 
   uint64_t Index = (Case == *SI.case_default()) ? 0 : Case.getCaseIndex() + 1;
   Weights[Index] = LikelyBranchWeightVal;
@@ -248,7 +248,7 @@ static void handlePhiDef(CallInst *Expect) {
         return true;
       return false;
     };
-    uint64_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
+    uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
     std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) = getBranchWeight(
         Expect->getCalledFunction()->getIntrinsicID(), Expect, 2);
 
@@ -318,7 +318,7 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   MDNode *Node;
   MDNode *ExpNode;
 
-  uint64_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
+  uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
   std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) =
       getBranchWeight(Fn->getIntrinsicID(), CI, 2);
 

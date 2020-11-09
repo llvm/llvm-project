@@ -339,7 +339,7 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
   // Manually attach branch weights metadata to the call instruction.
-  SmallVector<uint64_t, 1> Weights;
+  SmallVector<uint32_t, 1> Weights;
   Weights.push_back(1000);
   MDBuilder MDB(M->getContext());
   CI2->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));

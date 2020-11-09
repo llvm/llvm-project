@@ -67,7 +67,6 @@
 #include <iterator>
 #include <map>
 #include <set>
-#include <stdint.h>
 #include <utility>
 #include <vector>
 
@@ -1364,7 +1363,7 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
 
   // Update the branch weights for the exit block.
   Instruction *TI = CodeReplacer->getTerminator();
-  SmallVector<uint64_t, 8> BranchWeights(TI->getNumSuccessors(), 0);
+  SmallVector<unsigned, 8> BranchWeights(TI->getNumSuccessors(), 0);
 
   // Block Frequency distribution with dummy node.
   Distribution BranchDist;
