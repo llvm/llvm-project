@@ -595,19 +595,19 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value = (uint64_t)m_gpr.r_cs;
     break;
   case lldb_fs_x86_64:
-    reg_value = (uint64_t)m_gpr.r_fs;
+    reg_value = (uint16_t)m_gpr.r_fs;
     break;
   case lldb_gs_x86_64:
-    reg_value = (uint64_t)m_gpr.r_gs;
+    reg_value = (uint16_t)m_gpr.r_gs;
     break;
   case lldb_ss_x86_64:
     reg_value = (uint64_t)m_gpr.r_ss;
     break;
   case lldb_ds_x86_64:
-    reg_value = (uint64_t)m_gpr.r_ds;
+    reg_value = (uint16_t)m_gpr.r_ds;
     break;
   case lldb_es_x86_64:
-    reg_value = (uint64_t)m_gpr.r_es;
+    reg_value = (uint16_t)m_gpr.r_es;
     break;
 #else
   case lldb_rax_x86_64:
@@ -644,19 +644,19 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value = (uint32_t)m_gpr.r_cs;
     break;
   case lldb_fs_x86_64:
-    reg_value = (uint32_t)m_gpr.r_fs;
+    reg_value = (uint16_t)m_gpr.r_fs;
     break;
   case lldb_gs_x86_64:
-    reg_value = (uint32_t)m_gpr.r_gs;
+    reg_value = (uint16_t)m_gpr.r_gs;
     break;
   case lldb_ss_x86_64:
     reg_value = (uint32_t)m_gpr.r_ss;
     break;
   case lldb_ds_x86_64:
-    reg_value = (uint32_t)m_gpr.r_ds;
+    reg_value = (uint16_t)m_gpr.r_ds;
     break;
   case lldb_es_x86_64:
-    reg_value = (uint32_t)m_gpr.r_es;
+    reg_value = (uint16_t)m_gpr.r_es;
     break;
 #endif
 #if defined(__x86_64__)
@@ -905,19 +905,19 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     m_gpr.r_cs = reg_value.GetAsUInt64();
     break;
   case lldb_fs_x86_64:
-    m_gpr.r_fs = reg_value.GetAsUInt64();
+    m_gpr.r_fs = reg_value.GetAsUInt16();
     break;
   case lldb_gs_x86_64:
-    m_gpr.r_gs = reg_value.GetAsUInt64();
+    m_gpr.r_gs = reg_value.GetAsUInt16();
     break;
   case lldb_ss_x86_64:
     m_gpr.r_ss = reg_value.GetAsUInt64();
     break;
   case lldb_ds_x86_64:
-    m_gpr.r_ds = reg_value.GetAsUInt64();
+    m_gpr.r_ds = reg_value.GetAsUInt16();
     break;
   case lldb_es_x86_64:
-    m_gpr.r_es = reg_value.GetAsUInt64();
+    m_gpr.r_es = reg_value.GetAsUInt16();
     break;
 #else
   case lldb_rax_x86_64:
@@ -954,19 +954,19 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     m_gpr.r_cs = reg_value.GetAsUInt32();
     break;
   case lldb_fs_x86_64:
-    m_gpr.r_fs = reg_value.GetAsUInt32();
+    m_gpr.r_fs = reg_value.GetAsUInt16();
     break;
   case lldb_gs_x86_64:
-    m_gpr.r_gs = reg_value.GetAsUInt32();
+    m_gpr.r_gs = reg_value.GetAsUInt16();
     break;
   case lldb_ss_x86_64:
     m_gpr.r_ss = reg_value.GetAsUInt32();
     break;
   case lldb_ds_x86_64:
-    m_gpr.r_ds = reg_value.GetAsUInt32();
+    m_gpr.r_ds = reg_value.GetAsUInt16();
     break;
   case lldb_es_x86_64:
-    m_gpr.r_es = reg_value.GetAsUInt32();
+    m_gpr.r_es = reg_value.GetAsUInt16();
     break;
 #endif
   case lldb_fctrl_x86_64:
