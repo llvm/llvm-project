@@ -367,23 +367,19 @@ private:
   /// is not updated. Instead the value `false` is returned.
   bool addSymbol(const Fortran::semantics::SymbolRef sym, mlir::Value val,
                  bool forced = false) {
-    if (forced)
-      localSymbols.erase(sym);
-    else if (lookupSymbol(sym))
+    if (!forced && lookupSymbol(sym))
       return false;
-    localSymbols.addSymbol(sym, val);
+    localSymbols.addSymbol(sym, val, forced);
     return true;
   }
 
   bool addCharSymbol(const Fortran::semantics::SymbolRef sym, mlir::Value val,
                      mlir::Value len, bool forced = false) {
-    if (forced)
-      localSymbols.erase(sym);
-    else if (lookupSymbol(sym))
+     if (!forced && lookupSymbol(sym))
       return false;
     // TODO: ensure val type is fir.array<len x fir.char<kind>> like. Insert
     // cast if needed.
-    localSymbols.addCharSymbol(sym, val, len);
+     localSymbols.addCharSymbol(sym, val, len, forced);
     return true;
   }
 
