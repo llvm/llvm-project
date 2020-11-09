@@ -3900,6 +3900,7 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
       auto &FunctionChunk = D.getFunctionTypeInfo();
       FunctionChunk.HasTrailingReturnType = TrailingReturnType.isUsable();
       FunctionChunk.TrailingReturnType = TrailingReturnType.get();
+      FunctionChunk.TrailingReturnTypeLoc = Range.getBegin().getRawEncoding();
     } else
       SkipUntil({tok::equal, tok::l_brace, tok::arrow, tok::kw_try, tok::comma},
                 StopAtSemi | StopBeforeMatch);
