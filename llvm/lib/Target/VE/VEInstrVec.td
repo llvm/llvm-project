@@ -644,6 +644,16 @@ multiclass RVI3m<string opcStr, bits<8>opc, RegisterClass VRC,
   defm vvi : RVIlm<opcStr, ", $vy, $vz, $sy", opc, VRC,
                    (ins VRC:$vy, VRC:$vz, simm7fp:$sy)>;
 }
+// special RV multiclass with 3 arguments for VSHF.
+//   e.g. VSHF
+let vy = ?, vz = ?, VE_VLIndex = 4 in
+multiclass RVSHFm<string opcStr, bits<8>opc, RegisterClass RC,
+                  Operand SIMM = uimm4> {
+  defm vvr : RVlm<opcStr, ", $vy, $vz, $sy", opc, RC,
+                  (ins RC:$vy, RC:$vz, I64:$sy)>;
+  let cy = 0 in defm vvi : RVlm<opcStr, ", $vy, $vz, $sy", opc, RC,
+                                (ins RC:$vy, RC:$vz, SIMM:$sy)>;
+}
 
 // Section 8.10.1 - VADD (Vector Add)
 let cx = 0, cx2 = 0 in
@@ -1261,3 +1271,22 @@ let cx = 1 in defm VFIMAS : RVI3m<"vfima.s", 0xef, V64, F32>;
 // Section 8.15.7 - VFIMS (Vector Floating Iteration Multiply and Subtract)
 let cx = 0 in defm VFIMSD : RVI3m<"vfims.d", 0xff, V64, I64>;
 let cx = 1 in defm VFIMSS : RVI3m<"vfims.s", 0xff, V64, F32>;
+
+//-----------------------------------------------------------------------------
+// Section 8.16 - Vector Merger Operation Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.16.1 - VMRG (Vector Merge)
+let cx = 0 in defm VMRG : RVm<"vmrg", 0xd6, V64, I64, VM>;
+// FIXME: vmrg.w should be called as pvmrg, but following assembly manual.
+let cx = 1 in defm VMRGW : RVm<"vmrg.w", 0xd6, V64, I64, VM512>;
+def : MnemonicAlias<"vmrg.l", "vmrg">;
+
+// Section 8.16.2 - VSHF (Vector Shuffle)
+defm VSHF : RVSHFm<"vshf", 0xbc, V64>;
+
+// Section 8.16.3 - VCP (Vector Compress)
+defm VCP : RV1m<"vcp", 0x8d, V64, VM>;
+
+// Section 8.16.4 - VEX (Vector Expand)
+defm VEX : RV1m<"vex", 0x9d, V64, VM>;

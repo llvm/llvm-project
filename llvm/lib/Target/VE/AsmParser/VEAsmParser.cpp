@@ -280,6 +280,17 @@ public:
     }
     return false;
   }
+  bool isUImm4() {
+    if (!isImm())
+      return false;
+
+    // Constant case
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return isUInt<4>(Value);
+    }
+    return false;
+  }
   bool isUImm6() {
     if (!isImm())
       return false;
@@ -476,6 +487,10 @@ public:
   }
 
   void addUImm3Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
+  void addUImm4Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 
