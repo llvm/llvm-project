@@ -2,6 +2,7 @@
 ; RUN: opt < %s -cost-model -analyze -cost-kind=size-latency -mtriple=x86_64-- -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE2
 ; RUN: opt < %s -cost-model -analyze -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX2
 
+; CHECK: {{^}}
 define i32 @f32(i32 %arg) {
 ; CHECK-LABEL: 'f32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.minnum.f32(float undef, float undef)
