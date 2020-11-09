@@ -38,7 +38,7 @@ spirv::TargetEnv::TargetEnv(spirv::TargetEnvAttr targetAttr)
   }
 }
 
-spirv::Version spirv::TargetEnv::getVersion() {
+spirv::Version spirv::TargetEnv::getVersion() const {
   return targetAttr.getVersion();
 }
 
@@ -48,7 +48,7 @@ bool spirv::TargetEnv::allows(spirv::Capability capability) const {
 
 Optional<spirv::Capability>
 spirv::TargetEnv::allows(ArrayRef<spirv::Capability> caps) const {
-  auto chosen = llvm::find_if(caps, [this](spirv::Capability cap) {
+  const auto *chosen = llvm::find_if(caps, [this](spirv::Capability cap) {
     return givenCapabilities.count(cap);
   });
   if (chosen != caps.end())
@@ -62,12 +62,28 @@ bool spirv::TargetEnv::allows(spirv::Extension extension) const {
 
 Optional<spirv::Extension>
 spirv::TargetEnv::allows(ArrayRef<spirv::Extension> exts) const {
-  auto chosen = llvm::find_if(exts, [this](spirv::Extension ext) {
+  const auto *chosen = llvm::find_if(exts, [this](spirv::Extension ext) {
     return givenExtensions.count(ext);
   });
   if (chosen != exts.end())
     return *chosen;
   return llvm::None;
+}
+
+spirv::Vendor spirv::TargetEnv::getVendorID() const {
+  return targetAttr.getVendorID();
+}
+
+spirv::DeviceType spirv::TargetEnv::getDeviceType() const {
+  return targetAttr.getDeviceType();
+}
+
+uint32_t spirv::TargetEnv::getDeviceID() const {
+  return targetAttr.getDeviceID();
+}
+
+spirv::ResourceLimitsAttr spirv::TargetEnv::getResourceLimits() const {
+  return targetAttr.getResourceLimits();
 }
 
 MLIRContext *spirv::TargetEnv::getContext() const {
