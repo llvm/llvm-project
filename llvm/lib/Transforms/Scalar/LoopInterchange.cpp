@@ -1039,6 +1039,10 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
         bool FoundInnerInduction = false;
         bool FoundOuterInduction = false;
         for (unsigned i = 0; i < NumOp; ++i) {
+          // Skip operands that are not SCEV-able.
+          if (!SE->isSCEVable(GEP->getOperand(i)->getType()))
+            continue;
+
           const SCEV *OperandVal = SE->getSCEV(GEP->getOperand(i));
           const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(OperandVal);
           if (!AR)
