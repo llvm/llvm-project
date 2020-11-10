@@ -2424,6 +2424,15 @@ TEST_F(FormatTestJS, NullishCoalescingOperator) {
       getGoogleJSStyleWithColumns(40));
 }
 
+TEST_F(FormatTestJS, AssignmentOperators) {
+  verifyFormat("a &&= b;\n");
+  verifyFormat("a ||= b;\n");
+  // NB: need to split ? ?= to avoid it being interpreted by C++ as a trigraph
+  // for #.
+  verifyFormat("a ?"
+               "?= b;\n");
+}
+
 TEST_F(FormatTestJS, Conditional) {
   verifyFormat("y = x ? 1 : 2;");
   verifyFormat("x ? 1 : 2;");
