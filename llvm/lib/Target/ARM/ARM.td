@@ -601,6 +601,9 @@ def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
 def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                    "Cortex-X1 ARM processors", []>;
 
+def ProcV1      : SubtargetFeature<"neoverse-v1", "ARMProcFamily",
+                                   "NeoverseV1", "Neoverse-V1 ARM processors", []>;
+
 def ProcKrait   : SubtargetFeature<"krait", "ARMProcFamily", "Krait",
                                    "Qualcomm Krait processors", []>;
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
@@ -1278,6 +1281,15 @@ def : ProcNoItin<"cortex-x1",                           [ARMv82a, ProcX1,
                                                          FeatureCRC,
                                                          FeatureFullFP16,
                                                          FeatureDotProd]>;
+
+def : ProcNoItin<"neoverse-v1",                         [ARMv84a,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureBF16,
+                                                         FeatureMatMulInt8]>;
 
 def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureHWDivThumb,
