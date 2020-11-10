@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -test-opaque-loc -mlir-print-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-opaque-loc -mlir-print-debuginfo -mlir-print-local-scope | FileCheck %s
 // This test verifies that debug opaque locations can be printed.
 
 #set0 = affine_set<(d0) : (1 == 0)>

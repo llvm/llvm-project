@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect -snapshot-op-locations='filename=%/t' -mlir-print-debuginfo %s | FileCheck %s -DFILE=%/t
-// RUN: mlir-opt -allow-unregistered-dialect -snapshot-op-locations='filename=%/t tag='tagged'' -mlir-print-debuginfo %s | FileCheck %s --check-prefix=TAG -DFILE=%/t
+// RUN: mlir-opt -allow-unregistered-dialect -snapshot-op-locations='filename=%/t' -mlir-print-local-scope -mlir-print-debuginfo %s | FileCheck %s -DFILE=%/t
+// RUN: mlir-opt -allow-unregistered-dialect -snapshot-op-locations='filename=%/t tag='tagged'' -mlir-print-local-scope -mlir-print-debuginfo %s | FileCheck %s --check-prefix=TAG -DFILE=%/t
 
 // CHECK: func @function(
 // CHECK-NEXT: loc("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})
