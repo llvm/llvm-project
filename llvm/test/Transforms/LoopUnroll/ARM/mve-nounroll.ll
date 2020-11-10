@@ -70,15 +70,11 @@ for.body:                                         ; preds = %for.body.preheader1
 
 ; CHECK-LABEL: @remainder
 ; CHECK: vector.body:
-; CHECK:   br i1 %13, label %middle.block, label %vector.body, !llvm.loop !0
+; CHECK:   br i1 %7, label %middle.block, label %vector.body, !llvm.loop !0
 ; CHECK: middle.block:
 ; CHECK:   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader13
 ; CHECK: for.body:
-; CHECK:   br i1 %exitcond.3, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body, !llvm.loop !0
-; CHECK: for.body.prol.1:
-; CHECK:   br i1 %prol.iter.cmp.1, label %for.body.prol.2, label %for.body.prol.loopexit.unr-lcssa
-; CHECK: for.body.prol.2:
-; CHECK:   br label %for.body.prol.loopexit.unr-lcssa
+; CHECK:   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !0
 
 define void @remainder(float* %s1, float* %s2, float* %d, i32 %n) {
 entry:

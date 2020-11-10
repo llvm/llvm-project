@@ -4,11 +4,11 @@
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Test import with default progressive instruction factor
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM-DEFAULT
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -S | FileCheck %s --check-prefix=INSTLIM-DEFAULT
 ; INSTLIM-DEFAULT: call void @staticfunc2.llvm.
 
 ; Test import with a reduced progressive instruction factor
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-instr-evolution-factor=0.5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM-PROGRESSIVE
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-instr-evolution-factor=0.5 -S | FileCheck %s --check-prefix=INSTLIM-PROGRESSIVE
 ; INSTLIM-PROGRESSIVE-NOT: call void @staticfunc
 
 

@@ -635,6 +635,10 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
     memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>
   return
 }
+
+// CHECK-DAG: #[[$reshapeD01:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-DAG: #[[$reshapeD2:.*]] = affine_map<(d0, d1, d2) -> (d2)>
+
 // CHECK-LABEL: func @reshape
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>

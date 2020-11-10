@@ -50,6 +50,9 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
+  llvm::Error
+  CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) override;
+
 private:
   // Private member types.
   enum { GPRegSet, FPRegSet, XSaveRegSet, DBRegSet };

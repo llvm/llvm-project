@@ -29,6 +29,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -141,6 +142,8 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
 void elf::writeMapFile() {
   if (config->mapFile.empty())
     return;
+
+  llvm::TimeTraceScope timeScope("Write map file");
 
   // Open a map file for writing.
   std::error_code ec;

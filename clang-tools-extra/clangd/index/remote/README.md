@@ -22,19 +22,20 @@ tools you will need to set this CMake flag &mdash; `-DCLANGD_ENABLE_REMOTE=On`.
 On Debian-like systems gRPC and Protobuf can be installed from apt:
 
 ```bash
-apt install libgrpc++-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc
+apt install libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc
 ```
 
 ### Building from sources
 
 Another way of installing gRPC and Protobuf is building from sources using
-CMake. The easiest way of doing that would be to choose a directory where you
-want to install so that the installation files are not copied to system root and
-you can uninstall gRPC or use different versions of the library.
+CMake (we need CMake config files to find necessary libraries in LLVM). The
+easiest way of doing that would be to choose a directory where you want to
+install so that the installation files are not copied to system root and you
+can easily uninstall gRPC or use different versions.
 
 ```bash
 # Get source code.
-$ git clone -b v1.28.1 https://github.com/grpc/grpc
+$ git clone -b v1.33.2 https://github.com/grpc/grpc
 $ cd grpc
 $ git submodule update --init
 # Choose directory where you want gRPC installation to live.
@@ -55,5 +56,5 @@ flag will inform build system that you chose this option &mdash;
 
 ## Running
 
-The remote index isn't usable with Clangd yet, but you can try the
-proof-of-concept tools in `client/` and `server/` subdirectories.
+You can run `clangd-index-server` and connect `clangd` instance to it using
+`--remote-index-address` and `--project-root` flags.

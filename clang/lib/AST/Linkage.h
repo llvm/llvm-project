@@ -140,6 +140,8 @@ class LinkageComputer {
   LinkageInfo getLVForTemplateParameterList(const TemplateParameterList *Params,
                                             LVComputationKind computation);
 
+  LinkageInfo getLVForValue(const APValue &V, LVComputationKind computation);
+
 public:
   LinkageInfo computeLVForDecl(const NamedDecl *D,
                                LVComputationKind computation,

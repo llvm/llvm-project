@@ -16,7 +16,7 @@
     %scevgep = getelementptr i32, i32* %a, i32 -1
     %scevgep4 = getelementptr i32, i32* %c, i32 -1
     %scevgep8 = getelementptr i32, i32* %b, i32 -1
-    call void @llvm.set.loop.iterations.i32(i32 %N)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -26,7 +26,7 @@
     %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
     %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
     %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-    %0 = phi i32 [ %N, %for.body.preheader ], [ %3, %for.body ]
+    %0 = phi i32 [ %start, %for.body.preheader ], [ %3, %for.body ]
     %size = call i32 @llvm.arm.space(i32 4096, i32 undef)
     %scevgep3 = getelementptr i32, i32* %lsr.iv9, i32 1
     %1 = load i32, i32* %scevgep3, align 4
@@ -47,7 +47,7 @@
   declare i32 @llvm.arm.space(i32 immarg, i32) #0
 
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #1
+  declare i32 @llvm.start.loop.iterations.i32(i32) #1
 
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
@@ -157,7 +157,7 @@ body:             |
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
     renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14, $noreg
     $lr = tMOVr $r3, 14, $noreg
-    t2DoLoopStart killed $r3
+    $lr = t2DoLoopStart killed $r3
 
   bb.2.for.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

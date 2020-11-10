@@ -16,7 +16,6 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -1970,11 +1969,15 @@ protected:
     return rewriter.create<LLVM::BitcastOp>(loc, ptrType, allocatedPtr);
   }
 
+  /// Returns if buffer allocation needs buffer size to be computed. This size
+  /// feeds into the `bufferSize` argument of `allocateBuffer`.
+  virtual bool needsBufferSize() const { return true; }
+
   /// Allocates the underlying buffer. Returns the allocated pointer and the
   /// aligned pointer.
   virtual std::tuple<Value, Value>
   allocateBuffer(ConversionPatternRewriter &rewriter, Location loc,
-                 Value cumulativeSize, Operation *op) const = 0;
+                 Value bufferSize, Operation *op) const = 0;
 
 private:
   static MemRefType getMemRefResultType(Operation *op) {
@@ -2027,14 +2030,16 @@ private:
     SmallVector<Value, 4> sizes;
     this->getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, sizes);
 
-    Value cumulativeSize = this->getCumulativeSizeInBytes(
-        loc, memRefType.getElementType(), sizes, rewriter);
+    Value bufferSize;
+    if (needsBufferSize())
+      bufferSize = this->getCumulativeSizeInBytes(
+          loc, memRefType.getElementType(), sizes, rewriter);
 
     // Allocate the underlying buffer.
     Value allocatedPtr;
     Value alignedPtr;
     std::tie(allocatedPtr, alignedPtr) =
-        this->allocateBuffer(rewriter, loc, cumulativeSize, op);
+        this->allocateBuffer(rewriter, loc, bufferSize, op);
 
     int64_t offset;
     SmallVector<int64_t, 4> strides;
@@ -2065,7 +2070,7 @@ struct AllocOpLowering : public AllocLikeOpLowering {
       : AllocLikeOpLowering(AllocOp::getOperationName(), converter) {}
 
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value cumulativeSize,
+                                          Location loc, Value bufferSize,
                                           Operation *op) const override {
     // Heap allocations.
     AllocOp allocOp = cast<AllocOp>(op);
@@ -2084,15 +2089,14 @@ struct AllocOpLowering : public AllocLikeOpLowering {
 
     if (alignment) {
       // Adjust the allocation size to consider alignment.
-      cumulativeSize =
-          rewriter.create<LLVM::AddOp>(loc, cumulativeSize, alignment);
+      bufferSize = rewriter.create<LLVM::AddOp>(loc, bufferSize, alignment);
     }
 
     // Allocate the underlying buffer and store a pointer to it in the MemRef
     // descriptor.
     Type elementPtrType = this->getElementPtrType(memRefType);
     Value allocatedPtr =
-        createAllocCall(loc, "malloc", elementPtrType, {cumulativeSize},
+        createAllocCall(loc, "malloc", elementPtrType, {bufferSize},
                         allocOp.getParentOfType<ModuleOp>(), rewriter);
 
     Value alignedPtr = allocatedPtr;
@@ -2159,7 +2163,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
   }
 
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value cumulativeSize,
+                                          Location loc, Value bufferSize,
                                           Operation *op) const override {
     // Heap allocations.
     AllocOp allocOp = cast<AllocOp>(op);
@@ -2170,12 +2174,11 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
     // aligned_alloc requires size to be a multiple of alignment; we will pad
     // the size to the next multiple if necessary.
     if (!isMemRefSizeMultipleOf(memRefType, alignment))
-      cumulativeSize =
-          createAligned(rewriter, loc, cumulativeSize, allocAlignment);
+      bufferSize = createAligned(rewriter, loc, bufferSize, allocAlignment);
 
     Type elementPtrType = this->getElementPtrType(memRefType);
     Value allocatedPtr = createAllocCall(
-        loc, "aligned_alloc", elementPtrType, {allocAlignment, cumulativeSize},
+        loc, "aligned_alloc", elementPtrType, {allocAlignment, bufferSize},
         allocOp.getParentOfType<ModuleOp>(), rewriter);
 
     return std::make_tuple(allocatedPtr, allocatedPtr);
@@ -2196,7 +2199,7 @@ struct AllocaOpLowering : public AllocLikeOpLowering {
   /// is set to null for stack allocations. `accessAlignment` is set if
   /// alignment is needed post allocation (for eg. in conjunction with malloc).
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value cumulativeSize,
+                                          Location loc, Value bufferSize,
                                           Operation *op) const override {
 
     // With alloca, one gets a pointer to the element type right away.
@@ -2205,7 +2208,7 @@ struct AllocaOpLowering : public AllocLikeOpLowering {
     auto elementPtrType = this->getElementPtrType(allocaOp.getType());
 
     auto allocatedElementPtr = rewriter.create<LLVM::AllocaOp>(
-        loc, elementPtrType, cumulativeSize,
+        loc, elementPtrType, bufferSize,
         allocaOp.alignment() ? *allocaOp.alignment() : 0);
 
     return std::make_tuple(allocatedElementPtr, allocatedElementPtr);
@@ -2417,6 +2420,109 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
         op, TypeRange(), rewriter.getSymbolRefAttr(freeFunc), casted);
     return success();
+  }
+};
+
+/// Returns the LLVM type of the global variable given the memref type `type`.
+static LLVM::LLVMType
+convertGlobalMemrefTypeToLLVM(MemRefType type,
+                              LLVMTypeConverter &typeConverter) {
+  // LLVM type for a global memref will be a multi-dimension array. For
+  // declarations or uninitialized global memrefs, we can potentially flatten
+  // this to a 1D array. However, for global_memref's with an initial value,
+  // we do not intend to flatten the ElementsAttribute when going from std ->
+  // LLVM dialect, so the LLVM type needs to me a multi-dimension array.
+  LLVM::LLVMType elementType =
+      unwrap(typeConverter.convertType(type.getElementType()));
+  LLVM::LLVMType arrayTy = elementType;
+  // Shape has the outermost dim at index 0, so need to walk it backwards
+  for (int64_t dim : llvm::reverse(type.getShape()))
+    arrayTy = LLVM::LLVMType::getArrayTy(arrayTy, dim);
+  return arrayTy;
+}
+
+/// GlobalMemrefOp is lowered to a LLVM Global Variable.
+struct GlobalMemrefOpLowering : public ConvertOpToLLVMPattern<GlobalMemrefOp> {
+  using ConvertOpToLLVMPattern<GlobalMemrefOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto global = cast<GlobalMemrefOp>(op);
+    MemRefType type = global.type().cast<MemRefType>();
+    if (!isSupportedMemRefType(type))
+      return failure();
+
+    LLVM::LLVMType arrayTy = convertGlobalMemrefTypeToLLVM(type, typeConverter);
+
+    LLVM::Linkage linkage =
+        global.isPublic() ? LLVM::Linkage::External : LLVM::Linkage::Private;
+
+    Attribute initialValue = nullptr;
+    if (!global.isExternal() && !global.isUninitialized()) {
+      auto elementsAttr = global.initial_value()->cast<ElementsAttr>();
+      initialValue = elementsAttr;
+
+      // For scalar memrefs, the global variable created is of the element type,
+      // so unpack the elements attribute to extract the value.
+      if (type.getRank() == 0)
+        initialValue = elementsAttr.getValue({});
+    }
+
+    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+        op, arrayTy, global.constant(), linkage, global.sym_name(),
+        initialValue, type.getMemorySpace());
+    return success();
+  }
+};
+
+/// GetGlobalMemrefOp is lowered into a Memref descriptor with the pointer to
+/// the first element stashed into the descriptor. This reuses
+/// `AllocLikeOpLowering` to reuse the Memref descriptor construction.
+struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
+  GetGlobalMemrefOpLowering(LLVMTypeConverter &converter)
+      : AllocLikeOpLowering(GetGlobalMemrefOp::getOperationName(), converter) {}
+
+  /// Allocation for GetGlobalMemrefOp just returns the GV pointer, so no need
+  /// to compute buffer size.
+  bool needsBufferSize() const override { return false; }
+
+  /// Buffer "allocation" for get_global_memref op is getting the address of
+  /// the global variable referenced.
+  std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
+                                          Location loc, Value bufferSize,
+                                          Operation *op) const override {
+    auto getGlobalOp = cast<GetGlobalMemrefOp>(op);
+    MemRefType type = getGlobalOp.result().getType().cast<MemRefType>();
+    unsigned memSpace = type.getMemorySpace();
+
+    LLVM::LLVMType arrayTy = convertGlobalMemrefTypeToLLVM(type, typeConverter);
+    auto addressOf = rewriter.create<LLVM::AddressOfOp>(
+        loc, arrayTy.getPointerTo(memSpace), getGlobalOp.name());
+
+    // Get the address of the first element in the array by creating a GEP with
+    // the address of the GV as the base, and (rank + 1) number of 0 indices.
+    LLVM::LLVMType elementType =
+        unwrap(typeConverter.convertType(type.getElementType()));
+    LLVM::LLVMType elementPtrType = elementType.getPointerTo(memSpace);
+
+    SmallVector<Value, 4> operands = {addressOf};
+    operands.insert(operands.end(), type.getRank() + 1,
+                    createIndexConstant(rewriter, loc, 0));
+    auto gep = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, operands);
+
+    // We do not expect the memref obtained using `get_global_memref` to be
+    // ever deallocated. Set the allocated pointer to be known bad value to
+    // help debug if that ever happens.
+    auto intPtrType = getIntPtrType(memSpace);
+    Value deadBeefConst =
+        createIndexAttrConstant(rewriter, op->getLoc(), intPtrType, 0xdeadbeef);
+    auto deadBeefPtr =
+        rewriter.create<LLVM::IntToPtrOp>(loc, elementPtrType, deadBeefConst);
+
+    // Both allocated and aligned pointers are same. We could potentially stash
+    // a nullptr for the allocated pointer since we do not expect any dealloc.
+    return std::make_tuple(deadBeefPtr, gep);
   }
 };
 
@@ -3941,6 +4047,8 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       AssumeAlignmentOpLowering,
       DeallocOpLowering,
       DimOpLowering,
+      GlobalMemrefOpLowering,
+      GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
       MemRefReinterpretCastOpLowering,
@@ -3970,7 +4078,6 @@ void mlir::populateStdToLLVMConversionPatterns(
   populateStdToLLVMFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
   populateStdToLLVMMemoryConversionPatterns(converter, patterns);
-  populateExpandMemRefReshapePattern(patterns, &converter.getContext());
 }
 
 /// Convert a non-empty list of types to be returned from a function into a

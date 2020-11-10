@@ -302,6 +302,18 @@ public:
 };
 
 } // end namespace OpTrait
+
+//===----------------------------------------------------------------------===//
+// Visibility parsing implementation.
+//===----------------------------------------------------------------------===//
+
+namespace impl {
+/// Parse an optional visibility attribute keyword (i.e., public, private, or
+/// nested) without quotes in a string attribute named 'attrName'.
+ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
+                                           NamedAttrList &attrs);
+} // end namespace impl
+
 } // end namespace mlir
 
 /// Include the generated symbol interfaces.

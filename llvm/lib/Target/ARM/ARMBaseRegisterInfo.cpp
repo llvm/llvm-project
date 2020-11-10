@@ -330,9 +330,13 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
   case ARMRI::RegPairOdd:
     Odd = 1;
     break;
-  default:
+  case ARMRI::RegLR:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+    if (MRI.getRegClass(VirtReg)->contains(ARM::LR))
+      Hints.push_back(ARM::LR);
     return false;
+  default:
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
   }
 
   // This register should preferably be even (Odd == 0) or odd (Odd == 1).

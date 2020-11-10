@@ -21,7 +21,6 @@ class ObjCPropertyTestCase(TestBase):
         # Find the line number to break for main.c.
         self.source_name = 'main.m'
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_objc_properties(self):
         """Test that expr uses the correct property getters and setters"""

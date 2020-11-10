@@ -10,7 +10,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
 class FoundationTestCaseNSError(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

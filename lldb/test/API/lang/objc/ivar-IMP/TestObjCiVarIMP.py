@@ -15,7 +15,6 @@ class ObjCiVarIMPTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
     @skipIf(archs=['i386'])  # objc file does not build for i386
     @no_debug_info_test
     def test_imp_ivar_type(self):

@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=-x87 | FileCheck %s -check-prefixes=NOX8732,NOX87
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse | FileCheck %s -check-prefixes=NOX8732,NOX87
 ; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse | FileCheck %s -check-prefixes=NOX8732,NOX87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefixes=X8732_SSE,NOX87
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefixes=NOX87
 
 define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind readnone {
 ; X87-LABEL: test:

@@ -978,7 +978,8 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
 /// Compute known bits from a shift operator, including those with a
 /// non-constant shift amount. Known is the output of this function. Known2 is a
-/// pre-allocated temporary with the same bit width as Known. KZF and KOF are
+/// pre-allocated temporary with the same bit width as Known and on return
+/// contains the known bit of the shift value source. KZF and KOF are
 /// operator-specific functions that, given the known-zero or known-one bits
 /// respectively, and a shift amount, compute the implied known-zero or
 /// known-one bits of the shift operator's result respectively for that shift
@@ -990,14 +991,14 @@ static void computeKnownBitsFromShiftOperator(
     function_ref<APInt(const APInt &, unsigned)> KZF,
     function_ref<APInt(const APInt &, unsigned)> KOF) {
   unsigned BitWidth = Known.getBitWidth();
-
+  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
   computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+
   if (Known.isConstant()) {
     unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
+    Known.Zero = KZF(Known2.Zero, ShiftAmt);
+    Known.One = KOF(Known2.One, ShiftAmt);
 
-    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
-    Known.Zero = KZF(Known.Zero, ShiftAmt);
-    Known.One  = KOF(Known.One, ShiftAmt);
     // If the known bits conflict, this must be an overflowing left shift, so
     // the shift result is poison. We can return anything we want. Choose 0 for
     // the best folding opportunity.
@@ -1039,8 +1040,6 @@ static void computeKnownBitsFromShiftOperator(
     if (!*ShifterOperandIsNonZero)
       return;
   }
-
-  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
   Known.Zero.setAllBits();
   Known.One.setAllBits();

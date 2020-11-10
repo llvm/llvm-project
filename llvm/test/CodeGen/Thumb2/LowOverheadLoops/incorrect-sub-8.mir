@@ -13,14 +13,14 @@
     br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv17 = phi i8* [ %scevgep18, %vector.body ], [ %A, %vector.ph ]
     %lsr.iv14 = phi i8* [ %scevgep15, %vector.body ], [ %C, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %11, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %11, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i8* %lsr.iv to <16 x i8>*
     %lsr.iv1416 = bitcast i8* %lsr.iv14 to <16 x i8>*
@@ -41,7 +41,7 @@
   for.cond.cleanup:                                 ; preds = %vector.body, %entry
     ret void
   }
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare <16 x i1> @llvm.arm.mve.vctp8(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>)
@@ -150,7 +150,7 @@ body:             |
     renamable $r12 = t2BICri killed renamable $r12, 3, 14, $noreg, $noreg
     renamable $r12 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

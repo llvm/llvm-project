@@ -72,12 +72,8 @@ namespace utils {
     using ::ftruncate;
     inline int symlink(const char* oldname, const char* newname, bool is_dir) { (void)is_dir; return ::symlink(oldname, newname); }
     using ::link;
-    inline int setenv(const char *var, const char *val, int overwrite) {
-        return ::setenv(var, val, overwrite);
-    }
-    inline int unsetenv(const char *var) {
-        return ::unsetenv(var);
-    }
+    using ::setenv;
+    using ::unsetenv;
     inline bool space(std::string path, std::uintmax_t &capacity,
                       std::uintmax_t &free, std::uintmax_t &avail) {
         struct statvfs expect;
@@ -226,10 +222,10 @@ struct scoped_test_env
         return filename;
     }
 
-    std::string create_symlink(fs::path source_path,
-                               fs::path to_path,
-                               bool sanitize_source = true,
-                               bool is_dir = false) {
+    std::string create_file_dir_symlink(fs::path source_path,
+                                        fs::path to_path,
+                                        bool sanitize_source = true,
+                                        bool is_dir = false) {
         std::string source = source_path.string();
         std::string to = to_path.string();
         if (sanitize_source)
@@ -238,6 +234,20 @@ struct scoped_test_env
         int ret = utils::symlink(source.c_str(), to.c_str(), is_dir);
         assert(ret == 0);
         return to;
+    }
+
+    std::string create_symlink(fs::path source_path,
+                               fs::path to_path,
+                               bool sanitize_source = true) {
+        return create_file_dir_symlink(source_path, to_path, sanitize_source,
+                                       false);
+    }
+
+    std::string create_directory_symlink(fs::path source_path,
+                                         fs::path to_path,
+                                         bool sanitize_source = true) {
+        return create_file_dir_symlink(source_path, to_path, sanitize_source,
+                                       true);
     }
 
     std::string create_hardlink(fs::path source_path, fs::path to_path) {
@@ -325,12 +335,12 @@ public:
         env_.create_dir("dir1/dir2/dir3");
         env_.create_file("dir1/dir2/dir3/file5");
         env_.create_file("dir1/dir2/file4");
-        env_.create_symlink("dir3", "dir1/dir2/symlink_to_dir3", false, true);
+        env_.create_directory_symlink("dir3", "dir1/dir2/symlink_to_dir3", false);
         env_.create_file("dir1/file1");
         env_.create_file("dir1/file2", 42);
         env_.create_file("empty_file");
         env_.create_file("non_empty_file", 42);
-        env_.create_symlink("dir1", "symlink_to_dir", false, true);
+        env_.create_directory_symlink("dir1", "symlink_to_dir", false);
         env_.create_symlink("empty_file", "symlink_to_empty_file", false);
     }
 

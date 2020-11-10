@@ -50,7 +50,7 @@ TEST_CASE(create_directory_symlink_basic)
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
-    const path dir_sym = env.create_symlink(dir, "dir_sym");
+    const path dir_sym = env.create_directory_symlink(dir, "dir_sym");
 
     const path dest = env.make_env_path("dest1");
     std::error_code ec;

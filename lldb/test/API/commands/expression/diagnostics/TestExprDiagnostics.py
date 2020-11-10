@@ -88,7 +88,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertFalse(value.GetError().Success())
         self.assertIn("error: <user expression 9>:1:8: redefinition of 'Redef'\nstruct Redef { float y; };\n       ^\n<user expression 8>:1:8: previous definition is here\nstruct Redef { double x; };\n       ^", value.GetError().GetCString())
 
-    @skipUnlessDarwin
+    @add_test_categories(["objc"])
     def test_source_locations_from_objc_modules(self):
         self.build()
 

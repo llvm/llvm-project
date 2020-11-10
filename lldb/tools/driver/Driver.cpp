@@ -112,7 +112,10 @@ Driver::Driver()
   g_driver = this;
 }
 
-Driver::~Driver() { g_driver = nullptr; }
+Driver::~Driver() {
+  SBDebugger::Destroy(m_debugger);
+  g_driver = nullptr;
+}
 
 void Driver::OptionData::AddInitialCommand(std::string command,
                                            CommandPlacement placement,
@@ -590,7 +593,7 @@ int Driver::MainLoop() {
 
     if (commands_file == nullptr) {
       // We should have already printed an error in PrepareCommandsForSourcing.
-      exit(1);
+      return 1;
     }
 
     m_debugger.SetInputFileHandle(commands_file, true);
@@ -618,7 +621,7 @@ int Driver::MainLoop() {
     // non-zero exit status.
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultCommandError)
-      exit(1);
+      return 1;
 
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
@@ -643,7 +646,7 @@ int Driver::MainLoop() {
         if (m_option_data.m_batch &&
             local_results.GetResult() ==
                 lldb::eCommandInterpreterResultCommandError)
-          exit(1);
+          return 1;
       }
     }
     m_debugger.SetAsync(old_async);
@@ -676,9 +679,7 @@ int Driver::MainLoop() {
   reset_stdin_termios();
   fclose(stdin);
 
-  int exit_code = sb_interpreter.GetQuitStatus();
-  SBDebugger::Destroy(m_debugger);
-  return exit_code;
+  return sb_interpreter.GetQuitStatus();
 }
 
 void Driver::ResizeWindow(unsigned short col) {

@@ -7,7 +7,7 @@
 
   define void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
   entry:
-    call void @llvm.set.loop.iterations.i32(i32 %N)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
     %scevgep = getelementptr i32, i32* %a, i32 -1
     %scevgep4 = getelementptr i32, i32* %c, i32 -1
     %scevgep8 = getelementptr i32, i32* %b, i32 -1
@@ -35,7 +35,7 @@
     %lsr.iv9 = phi i32* [ %scevgep8, %entry ], [ %scevgep10, %for.body ]
     %lsr.iv5 = phi i32* [ %scevgep4, %entry ], [ %scevgep6, %for.body ]
     %lsr.iv1 = phi i32* [ %scevgep, %entry ], [ %scevgep2, %for.body ]
-    %count = phi i32 [ %N, %entry ], [ %count.next, %for.body ]
+    %count = phi i32 [ %start, %entry ], [ %count.next, %for.body ]
     br label %for.body
   }
 
@@ -43,7 +43,7 @@
   declare i32 @llvm.arm.space(i32 immarg, i32) #0
 
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #1
+  declare i32 @llvm.start.loop.iterations.i32(i32) #1
 
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
@@ -184,7 +184,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r7, -8
     $sp = frame-setup tSUBspi $sp, 8, 14, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 40
-    t2DoLoopStart renamable $r3
+    $lr = t2DoLoopStart renamable $r3
     renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14, $noreg
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
     renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14, $noreg

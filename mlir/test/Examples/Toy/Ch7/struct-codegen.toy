@@ -21,9 +21,8 @@ def main() {
   print(c);
 }
 
-# CHECK-LABEL:   func @multiply_transpose(
+# CHECK-LABEL:   func private @multiply_transpose(
 # CHECK-SAME:                             [[VAL_0:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-# CHECK-SAME:        attributes {sym_visibility = "private"}
 # CHECK-NEXT:      [[VAL_1:%.*]] = toy.struct_access [[VAL_0]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
 # CHECK-NEXT:      [[VAL_2:%.*]] = toy.transpose([[VAL_1]] : tensor<*xf64>) to tensor<*xf64>
 # CHECK-NEXT:      [[VAL_3:%.*]] = toy.struct_access [[VAL_0]][1] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>

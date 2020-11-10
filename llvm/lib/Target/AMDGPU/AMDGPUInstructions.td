@@ -83,9 +83,8 @@ def FalsePredicate : Predicate<"false">;
 // Add a predicate to the list if does not already exist to deduplicate it.
 class PredConcat<list<Predicate> lst, Predicate pred> {
   list<Predicate> ret =
-    !foldl([pred], lst, acc, cur,
-           !listconcat(acc, !if(!eq(!cast<string>(cur),!cast<string>(pred)),
-                                [], [cur])));
+      !listconcat([pred], !filter(item, lst,
+                                  !ne(!cast<string>(item), !cast<string>(pred))));
 }
 
 class PredicateControl {

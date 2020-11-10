@@ -1212,7 +1212,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
   if (!MPD)
     return EmitNullMemberPointer(MPT);
 
-  CharUnits ThisAdjustment = getMemberPointerPathAdjustment(MP);
+  CharUnits ThisAdjustment = getContext().getMemberPointerPathAdjustment(MP);
 
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MPD))
     return BuildMemberPointer(MD, ThisAdjustment);

@@ -829,31 +829,6 @@ int GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   }
 }
 
-static bool isArgPassedInSGPR(const Argument *A) {
-  const Function *F = A->getParent();
-
-  // Arguments to compute shaders are never a source of divergence.
-  CallingConv::ID CC = F->getCallingConv();
-  switch (CC) {
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    return true;
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_LS:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_ES:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS:
-    // For non-compute shaders, SGPR inputs are marked with either inreg.
-    // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg);
-  default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
-  }
-}
-
 /// Analyze if the results of inline asm are divergent. If \p Indices is empty,
 /// this is analyzing the collective result of all output registers. Otherwise,
 /// this is only querying a specific result index if this returns multiple
@@ -910,7 +885,7 @@ bool GCNTTIImpl::useGPUDivergenceAnalysis() const {
 /// different across workitems in a wavefront.
 bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const Argument *A = dyn_cast<Argument>(V))
-    return !isArgPassedInSGPR(A);
+    return !AMDGPU::isArgPassedInSGPR(A);
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get

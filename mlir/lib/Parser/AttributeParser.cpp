@@ -121,8 +121,14 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse a location attribute.
   case Token::kw_loc: {
-    LocationAttr attr;
-    return failed(parseLocation(attr)) ? Attribute() : attr;
+    consumeToken(Token::kw_loc);
+
+    LocationAttr locAttr;
+    if (parseToken(Token::l_paren, "expected '(' in inline location") ||
+        parseLocationInstance(locAttr) ||
+        parseToken(Token::r_paren, "expected ')' in inline location"))
+      return Attribute();
+    return locAttr;
   }
 
   // Parse an opaque elements attribute.

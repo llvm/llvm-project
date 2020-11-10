@@ -99,6 +99,10 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
       os << "set";
       return success();
     }
+    if (attr.isa<LocationAttr>()) {
+      os << "loc";
+      return success();
+    }
     return failure();
   }
 };

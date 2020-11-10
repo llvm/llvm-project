@@ -835,6 +835,13 @@ def checkWatchpointSupport():
     print("watchpoint tests will not be run because: " + reason)
     configuration.skip_categories.append("watchpoint")
 
+def checkObjcSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    if not lldbplatformutil.platformIsDarwin():
+        print("objc tests will be skipped because of unsupported platform")
+        configuration.skip_categories.append("objc")
+
 def checkDebugInfoSupport():
     import lldb
 
@@ -945,6 +952,7 @@ def run_suite():
     checkLibstdcxxSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
+    checkObjcSupport()
 
     # Perform LLGS tests only on platforms using it.
     configuration.llgs_platform = (

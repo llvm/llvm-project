@@ -708,10 +708,6 @@ Look for the first occurrence of "icc" in the specified directories:
 
     my $icc = which( "icc", -dirs => [ ".", "/usr/local/bin", "/usr/bin", "/bin" ] );
 
-Look for the C<omp_lib.f> file:
-
-    my @omp_lib = which( "omp_lib.f", -all => 1, -exec => 0, -dirs => [ @include ] );
-
 =cut
 
 sub which($@) {

@@ -126,6 +126,15 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;
 
+  /// Inline Assembly {
+
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+
+  /// } Inline Assembly
+
   /// Target Optimization {
 
   // SX-Aurora VE's s/udiv is 5-9 times slower than multiply.

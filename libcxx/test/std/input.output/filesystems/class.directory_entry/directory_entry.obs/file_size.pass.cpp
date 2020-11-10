@@ -84,7 +84,7 @@ TEST_CASE(not_regular_file) {
   } TestCases[] = {
       {env.create_dir("dir"), std::errc::is_a_directory},
       {env.create_fifo("fifo"), std::errc::not_supported},
-      {env.create_symlink("dir", "sym"), std::errc::is_a_directory}};
+      {env.create_directory_symlink("dir", "sym"), std::errc::is_a_directory}};
 
   for (auto const& TC : TestCases) {
     const path& p = TC.p;

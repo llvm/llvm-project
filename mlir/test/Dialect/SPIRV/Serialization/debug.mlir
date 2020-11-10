@@ -1,4 +1,4 @@
-// RUN: mlir-translate -test-spirv-roundtrip-debug -mlir-print-debuginfo %s | FileCheck %s
+// RUN: mlir-translate -test-spirv-roundtrip-debug -mlir-print-debuginfo -mlir-print-local-scope %s | FileCheck %s
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK: loc({{".*debug.mlir"}}:5:3)
