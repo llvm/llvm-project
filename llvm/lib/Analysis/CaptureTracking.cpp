@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -28,6 +29,13 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "capture-tracking"
+
+STATISTIC(NumCaptured,          "Number of pointers maybe captured");
+STATISTIC(NumNotCaptured,       "Number of pointers not captured");
+STATISTIC(NumCapturedBefore,    "Number of pointers maybe captured before");
+STATISTIC(NumNotCapturedBefore, "Number of pointers not captured before");
 
 /// The default value for MaxUsesToExplore argument. It's relatively small to
 /// keep the cost of analysis reasonable for clients like BasicAliasAnalysis,
@@ -194,6 +202,10 @@ bool llvm::PointerMayBeCaptured(const Value *V,
 
   SimpleCaptureTracker SCT(ReturnCaptures);
   PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
+  if (SCT.Captured)
+    ++NumCaptured;
+  else
+    ++NumNotCaptured;
   return SCT.Captured;
 }
 
@@ -222,6 +234,10 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
 
   CapturesBefore CB(ReturnCaptures, I, DT, IncludeI);
   PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
+  if (CB.Captured)
+    ++NumCapturedBefore;
+  else
+    ++NumNotCapturedBefore;
   return CB.Captured;
 }
 
