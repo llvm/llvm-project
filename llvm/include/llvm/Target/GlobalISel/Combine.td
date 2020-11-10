@@ -381,12 +381,12 @@ def shl_ashr_to_sext_inreg : GICombineRule<
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
-// Fold (x & mask) -> x when (x & mask) is known to equal x.
-def and_trivial_mask_matchinfo : GIDefMatchData<"Register">;
-def and_trivial_mask: GICombineRule <
-  (defs root:$root, and_trivial_mask_matchinfo:$matchinfo),
+// Fold (x & y) -> x or (x & y) -> y when (x & y) is known to equal x or equal y.
+def redundant_and_matchinfo : GIDefMatchData<"Register">;
+def redundant_and: GICombineRule <
+  (defs root:$root, redundant_and_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
-         [{ return Helper.matchAndWithTrivialMask(*${root}, ${matchinfo}); }]),
+         [{ return Helper.matchRedundantAnd(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
@@ -551,7 +551,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  and_trivial_mask, redundant_sext_inreg]>;
+  redundant_and, redundant_sext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
