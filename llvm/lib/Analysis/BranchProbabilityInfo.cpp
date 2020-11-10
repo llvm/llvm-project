@@ -1114,19 +1114,15 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const BasicBlock *Dst) const {
+  if (!Probs.count(std::make_pair(Src, 0)))
+    return BranchProbability(llvm::count(successors(Src), Dst), succ_size(Src));
+
   auto Prob = BranchProbability::getZero();
-  bool FoundProb = false;
-  uint32_t EdgeCount = 0;
   for (const_succ_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
-    if (*I == Dst) {
-      ++EdgeCount;
-      auto MapI = Probs.find(std::make_pair(Src, I.getSuccessorIndex()));
-      if (MapI != Probs.end()) {
-        FoundProb = true;
-        Prob += MapI->second;
-      }
-    }
-  return FoundProb ? Prob : BranchProbability(EdgeCount, succ_size(Src));
+    if (*I == Dst)
+      Prob += Probs.find(std::make_pair(Src, I.getSuccessorIndex()))->second;
+
+  return Prob;
 }
 
 /// Set the edge probability for all edges at once.
