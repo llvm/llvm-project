@@ -188,7 +188,8 @@ private:
   ///    {{AArch64::ADDXri, AArch64::ADDWri},
   ///     {AArch64::ADDXrs, AArch64::ADDWrs},
   ///     {AArch64::ADDXrr, AArch64::ADDWrr},
-  ///     {AArch64::SUBXri, AArch64::SUBWri}}};
+  ///     {AArch64::SUBXri, AArch64::SUBWri},
+  ///     {AArch64::ADDXrx, AArch64::ADDWrx}}};
   /// \endcode
   ///
   /// Each row in the table corresponds to a different addressing mode. Each
@@ -199,6 +200,7 @@ private:
   ///   - Row 1: The rs opcode variants
   ///   - Row 2: The rr opcode variants
   ///   - Row 3: The ri opcode variants for negative immediates
+  ///   - Row 4: The rx opcode variants
   ///
   /// \attention Columns must be structured as follows:
   ///   - Column 0: The 64-bit opcode variants
@@ -208,7 +210,7 @@ private:
   /// \p LHS is the left-hand operand of the binop to emit.
   /// \p RHS is the right-hand operand of the binop to emit.
   MachineInstr *emitAddSub(
-      const std::array<std::array<unsigned, 2>, 4> &AddrModeAndSizeToOpcode,
+      const std::array<std::array<unsigned, 2>, 5> &AddrModeAndSizeToOpcode,
       Register Dst, MachineOperand &LHS, MachineOperand &RHS,
       MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitADD(Register DefReg, MachineOperand &LHS,
@@ -3821,7 +3823,7 @@ MachineInstr *AArch64InstructionSelector::emitInstr(
 }
 
 MachineInstr *AArch64InstructionSelector::emitAddSub(
-    const std::array<std::array<unsigned, 2>, 4> &AddrModeAndSizeToOpcode,
+    const std::array<std::array<unsigned, 2>, 5> &AddrModeAndSizeToOpcode,
     Register Dst, MachineOperand &LHS, MachineOperand &RHS,
     MachineIRBuilder &MIRBuilder) const {
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
@@ -3842,6 +3844,11 @@ MachineInstr *AArch64InstructionSelector::emitAddSub(
     return emitInstr(AddrModeAndSizeToOpcode[3][Is32Bit], {Dst}, {LHS},
                      MIRBuilder, Fns);
 
+  // INSTRrx form.
+  if (auto Fns = selectArithExtendedRegister(RHS))
+    return emitInstr(AddrModeAndSizeToOpcode[4][Is32Bit], {Dst}, {LHS},
+                     MIRBuilder, Fns);
+
   // INSTRrs form.
   if (auto Fns = selectShiftedRegister(RHS))
     return emitInstr(AddrModeAndSizeToOpcode[1][Is32Bit], {Dst}, {LHS},
@@ -3854,11 +3861,12 @@ MachineInstr *
 AArch64InstructionSelector::emitADD(Register DefReg, MachineOperand &LHS,
                                     MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
-  const std::array<std::array<unsigned, 2>, 4> OpcTable{
+  const std::array<std::array<unsigned, 2>, 5> OpcTable{
       {{AArch64::ADDXri, AArch64::ADDWri},
        {AArch64::ADDXrs, AArch64::ADDWrs},
        {AArch64::ADDXrr, AArch64::ADDWrr},
-       {AArch64::SUBXri, AArch64::SUBWri}}};
+       {AArch64::SUBXri, AArch64::SUBWri},
+       {AArch64::ADDXrx, AArch64::ADDWrx}}};
   return emitAddSub(OpcTable, DefReg, LHS, RHS, MIRBuilder);
 }
 
@@ -3866,11 +3874,12 @@ MachineInstr *
 AArch64InstructionSelector::emitADDS(Register Dst, MachineOperand &LHS,
                                      MachineOperand &RHS,
                                      MachineIRBuilder &MIRBuilder) const {
-  const std::array<std::array<unsigned, 2>, 4> OpcTable{
+  const std::array<std::array<unsigned, 2>, 5> OpcTable{
       {{AArch64::ADDSXri, AArch64::ADDSWri},
        {AArch64::ADDSXrs, AArch64::ADDSWrs},
        {AArch64::ADDSXrr, AArch64::ADDSWrr},
-       {AArch64::SUBSXri, AArch64::SUBSWri}}};
+       {AArch64::SUBSXri, AArch64::SUBSWri},
+       {AArch64::ADDSXrx, AArch64::ADDSWrx}}};
   return emitAddSub(OpcTable, Dst, LHS, RHS, MIRBuilder);
 }
 
@@ -3878,11 +3887,12 @@ MachineInstr *
 AArch64InstructionSelector::emitSUBS(Register Dst, MachineOperand &LHS,
                                      MachineOperand &RHS,
                                      MachineIRBuilder &MIRBuilder) const {
-  const std::array<std::array<unsigned, 2>, 4> OpcTable{
+  const std::array<std::array<unsigned, 2>, 5> OpcTable{
       {{AArch64::SUBSXri, AArch64::SUBSWri},
        {AArch64::SUBSXrs, AArch64::SUBSWrs},
        {AArch64::SUBSXrr, AArch64::SUBSWrr},
-       {AArch64::ADDSXri, AArch64::ADDSWri}}};
+       {AArch64::ADDSXri, AArch64::ADDSWri},
+       {AArch64::SUBSXrx, AArch64::SUBSWrx}}};
   return emitAddSub(OpcTable, Dst, LHS, RHS, MIRBuilder);
 }
 
