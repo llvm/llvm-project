@@ -1438,27 +1438,27 @@ multiclass EXP_m<bit done> {
   let mayLoad = done, DisableWQM = 1 in {
     let isPseudo = 1, isCodeGenOnly = 1 in {
       def "" : EXP_Helper<done>,
-               SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.NONE>;
+               SIMCInstr <NAME, SIEncodingFamily.NONE>;
     }
 
     let done = done in {
       def _si : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
+                SIMCInstr <NAME, SIEncodingFamily.SI>,
                 EXPe {
         let AssemblerPredicate = isGFX6GFX7;
         let DecoderNamespace = "GFX6GFX7";
       }
 
       def _vi : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
+                SIMCInstr <NAME, SIEncodingFamily.VI>,
                 EXPe_vi {
         let AssemblerPredicate = isGFX8GFX9;
         let DecoderNamespace = "GFX8";
       }
 
       def _gfx10 : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX10>,
-                EXPe {
+                   SIMCInstr <NAME, SIEncodingFamily.GFX10>,
+                   EXPe {
         let AssemblerPredicate = isGFX10Plus;
         let DecoderNamespace = "GFX10";
       }
