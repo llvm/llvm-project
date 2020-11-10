@@ -252,7 +252,7 @@ define signext i32 @remi32li(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    divs.w.sx %s0, 3, %s1
 ; CHECK-NEXT:    muls.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, 3, %s0
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = srem i32 3, %b
   ret i32 %r
