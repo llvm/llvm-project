@@ -100,10 +100,6 @@ struct SectionHeaderTable {
   Optional<bool> NoHeaders;
 };
 
-struct SectionName {
-  StringRef Section;
-};
-
 struct Symbol {
   StringRef Name;
   ELF_STT Type;
@@ -627,9 +623,10 @@ struct ProgramHeader {
   Optional<llvm::yaml::Hex64> FileSize;
   Optional<llvm::yaml::Hex64> MemSize;
   Optional<llvm::yaml::Hex64> Offset;
+  Optional<StringRef> FirstSec;
+  Optional<StringRef> LastSec;
 
-  std::vector<SectionName> Sections;
-  // This vector is parallel to Sections and contains corresponding chunks.
+  // This vector contains all chunks from [FirstSec, LastSec].
   std::vector<Chunk *> Chunks;
 };
 
@@ -680,7 +677,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VernauxEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VerneedEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionOrType)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionName)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ARMIndexTableEntry)
 
 namespace llvm {
@@ -816,6 +812,7 @@ template <> struct MappingTraits<ELFYAML::SectionHeader> {
 
 template <> struct MappingTraits<ELFYAML::ProgramHeader> {
   static void mapping(IO &IO, ELFYAML::ProgramHeader &FileHdr);
+  static std::string validate(IO &IO, ELFYAML::ProgramHeader &FileHdr);
 };
 
 template <>
@@ -888,10 +885,6 @@ struct MappingTraits<ELFYAML::Object> {
 
 template <> struct MappingTraits<ELFYAML::SectionOrType> {
   static void mapping(IO &IO, ELFYAML::SectionOrType &sectionOrType);
-};
-
-template <> struct MappingTraits<ELFYAML::SectionName> {
-  static void mapping(IO &IO, ELFYAML::SectionName &sectionName);
 };
 
 } // end namespace yaml

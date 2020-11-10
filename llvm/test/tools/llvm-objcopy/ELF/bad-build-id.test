@@ -15,7 +15,7 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Content:         040000000100000003000000474E55004F000000
 ProgramHeaders:
-  - Type: PT_NOTE
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .note.gnu.build-id
+  - Type:     PT_NOTE
+    Flags:    [ PF_R ]
+    FirstSec: .note.gnu.build-id
+    LastSec:  .note.gnu.build-id

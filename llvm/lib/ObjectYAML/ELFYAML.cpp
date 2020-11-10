@@ -904,13 +904,23 @@ void MappingTraits<ELFYAML::ProgramHeader>::mapping(
     IO &IO, ELFYAML::ProgramHeader &Phdr) {
   IO.mapRequired("Type", Phdr.Type);
   IO.mapOptional("Flags", Phdr.Flags, ELFYAML::ELF_PF(0));
-  IO.mapOptional("Sections", Phdr.Sections);
+  IO.mapOptional("FirstSec", Phdr.FirstSec);
+  IO.mapOptional("LastSec", Phdr.LastSec);
   IO.mapOptional("VAddr", Phdr.VAddr, Hex64(0));
   IO.mapOptional("PAddr", Phdr.PAddr, Phdr.VAddr);
   IO.mapOptional("Align", Phdr.Align);
   IO.mapOptional("FileSize", Phdr.FileSize);
   IO.mapOptional("MemSize", Phdr.MemSize);
   IO.mapOptional("Offset", Phdr.Offset);
+}
+
+std::string MappingTraits<ELFYAML::ProgramHeader>::validate(
+    IO &IO, ELFYAML::ProgramHeader &FileHdr) {
+  if (!FileHdr.FirstSec && FileHdr.LastSec)
+    return "the \"LastSec\" key can't be used without the \"FirstSec\" key";
+  if (FileHdr.FirstSec && !FileHdr.LastSec)
+    return "the \"FirstSec\" key can't be used without the \"LastSec\" key";
+  return "";
 }
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, StOtherPiece)
@@ -1258,11 +1268,6 @@ static void sectionMapping(IO &IO, ELFYAML::CallGraphProfileSection &Section) {
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
     IO &IO, ELFYAML::SectionOrType &sectionOrType) {
   IO.mapRequired("SectionOrType", sectionOrType.sectionNameOrType);
-}
-
-void MappingTraits<ELFYAML::SectionName>::mapping(
-    IO &IO, ELFYAML::SectionName &sectionName) {
-  IO.mapRequired("Section", sectionName.Section);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::ARMIndexTableSection &Section) {

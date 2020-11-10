@@ -63,11 +63,9 @@ DynamicSymbols:
   - Name: c
   - Name: d
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Show that we report a warning for a hash table which contains an entry of
 ## the bucket array pointing to a cycle.
@@ -106,10 +104,9 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
 ## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
@@ -142,9 +139,8 @@ DynamicSymbols: []
 ProgramHeaders:
   - Type:     PT_LOAD
     FileSize: 0x23a
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a warning when the hash table goes past the end of the file.
 
@@ -201,10 +197,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we dump a histogram for the .gnu.hash table even when the .hash table is skipped.
 
@@ -258,11 +253,9 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a proper warning when the GNU hash table goes past the end of the file.
 
@@ -308,10 +301,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Linkers might produce an empty no-op SHT_GNU_HASH section when
 ## there are no dynamic symbols or when all dynamic symbols are undefined.
@@ -369,10 +361,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check we report warnings when the dynamic symbol table is absent or empty.
 
@@ -416,6 +407,6 @@ Sections:
     Type: [[TYPE]]
     Size: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .gnu.hash
+  - Type:     PT_LOAD
+    FirstSec: .gnu.hash
+    LastSec:  .gnu.hash

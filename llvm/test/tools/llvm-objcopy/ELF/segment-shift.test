@@ -28,16 +28,16 @@ Sections:
     AddressAlign:    0x1000
     Size:            0x1000
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x3000
-    Sections:
-      - Section: .text3
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x3000
+    FirstSec: .text3
+    LastSec:  .text3
 
 # CHECK:     ProgramHeaders [
 # CHECK-NEXT:  ProgramHeader {

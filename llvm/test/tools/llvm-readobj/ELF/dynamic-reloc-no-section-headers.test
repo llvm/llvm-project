@@ -53,14 +53,11 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
-        Section: .dynsym
-        Section: .dynstr
-  - Type:  PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynstr
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 SectionHeaderTable:
   NoHeaders: true

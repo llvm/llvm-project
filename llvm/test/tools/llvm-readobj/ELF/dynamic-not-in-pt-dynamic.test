@@ -50,15 +50,14 @@ Sections:
     AddressAlign: 0x100
     Content: "00"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
 
 ## Case 2: The dynamic table found using the dynamic program header is different from the
 ##         table found using the section header table.
@@ -104,15 +103,14 @@ Sections:
     AddressAlign: 0x100
     Content: "00000000000000000000000000000000"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:      PT_LOAD
+    VAddr:     0x1000
+    FirstSec:  .dynamic
+    LastSec:   .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
 
 ## Case 3: Both dynamic tables found using SHT_DYNAMIC/PT_DYNAMIC are corrupted.
 
@@ -145,12 +143,11 @@ Sections:
     AddressAlign: 0x100
     Content: "00"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
