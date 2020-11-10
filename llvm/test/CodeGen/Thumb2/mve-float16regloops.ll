@@ -723,9 +723,9 @@ define dso_local void @test_nested(half* noalias nocapture %pInT1, half* noalias
 ; CHECK:       @ %bb.0: @ %for.body.us.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    ldrd r3, r12, [sp, #16]
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    ldrd lr, r12, [sp, #16]
 ; CHECK-NEXT:    lsl.w r3, r12, #1
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB14_1: @ %for.body.us
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB14_2 Depth 2

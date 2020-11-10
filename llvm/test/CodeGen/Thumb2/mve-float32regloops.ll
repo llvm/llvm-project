@@ -701,9 +701,9 @@ define dso_local void @test_nested(float* noalias nocapture %pInT1, float* noali
 ; CHECK:       @ %bb.0: @ %for.body.us.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    ldrd r3, r12, [sp, #16]
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    ldrd lr, r12, [sp, #16]
 ; CHECK-NEXT:    lsl.w r3, r12, #2
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB14_1: @ %for.body.us
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB14_2 Depth 2
@@ -1410,10 +1410,11 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    .pad #24
 ; CHECK-NEXT:    sub sp, #24
-; CHECK-NEXT:    ldrb.w r8, [r0]
+; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    ldrb.w r12, [r0]
+; CHECK-NEXT:    ldrd r3, r0, [r0, #4]
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    ldrd r12, r0, [r0, #4]
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    strd r4, r4, [sp, #16]
 ; CHECK-NEXT:    beq .LBB17_5
 ; CHECK-NEXT:  @ %bb.1:
@@ -1423,14 +1424,14 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:  .LBB17_2: @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB17_3 Depth 2
 ; CHECK-NEXT:    ldrd r5, r7, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r12]
+; CHECK-NEXT:    vldrw.u32 q1, [r3]
 ; CHECK-NEXT:    vldr s8, [r0, #8]
 ; CHECK-NEXT:    ldr r6, [r0, #12]
 ; CHECK-NEXT:    vstrw.32 q1, [r4]
 ; CHECK-NEXT:    vdup.32 q1, r7
 ; CHECK-NEXT:    vldr s12, [r0, #16]
 ; CHECK-NEXT:    vmov.f32 s6, s8
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dls lr, r8
 ; CHECK-NEXT:    vmov.f32 s7, s8
 ; CHECK-NEXT:    vdup.32 q2, r6
 ; CHECK-NEXT:    vmov.f32 s10, s12
@@ -1450,17 +1451,17 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:    vstrw.32 q3, [r4]
 ; CHECK-NEXT:    le lr, .LBB17_3
 ; CHECK-NEXT:  @ %bb.4: @ in Loop: Header=BB17_2 Depth=1
-; CHECK-NEXT:    subs.w r8, r8, #1
+; CHECK-NEXT:    subs.w r12, r12, #1
 ; CHECK-NEXT:    add.w r0, r0, #20
-; CHECK-NEXT:    vstrb.8 q3, [r12], #16
+; CHECK-NEXT:    vstrb.8 q3, [r3], #16
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    bne .LBB17_2
 ; CHECK-NEXT:    b .LBB17_7
 ; CHECK-NEXT:  .LBB17_5: @ %.preheader
-; CHECK-NEXT:    dls lr, r8
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:  .LBB17_6: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r12], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r3], #16
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    le lr, .LBB17_6
 ; CHECK-NEXT:  .LBB17_7:

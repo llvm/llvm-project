@@ -15,9 +15,9 @@ define dso_local i32 @vpsel_mul_reduce_add(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    bic r12, r12, #3
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    and r4, r12, #15
@@ -107,9 +107,9 @@ define dso_local i32 @vpsel_mul_reduce_add_2(i32* noalias nocapture readonly %a,
 ; CHECK-NEXT:    bic r4, r4, #3
 ; CHECK-NEXT:    sub.w lr, r4, #4
 ; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    add.w r4, r4, lr, lsr #2
-; CHECK-NEXT:    dls lr, r4
+; CHECK-NEXT:    add.w lr, r4, lr, lsr #2
 ; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    and r5, r4, #15
@@ -210,9 +210,9 @@ define dso_local i32 @and_mul_reduce_add(i32* noalias nocapture readonly %a, i32
 ; CHECK-NEXT:    bic r4, r4, #3
 ; CHECK-NEXT:    sub.w lr, r4, #4
 ; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    add.w r4, r4, lr, lsr #2
-; CHECK-NEXT:    dls lr, r4
+; CHECK-NEXT:    add.w lr, r4, lr, lsr #2
 ; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r12
@@ -309,9 +309,9 @@ define dso_local i32 @or_mul_reduce_add(i32* noalias nocapture readonly %a, i32*
 ; CHECK-NEXT:    bic r4, r4, #3
 ; CHECK-NEXT:    sub.w lr, r4, #4
 ; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    add.w r4, r4, lr, lsr #2
-; CHECK-NEXT:    dls lr, r4
+; CHECK-NEXT:    add.w lr, r4, lr, lsr #2
 ; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r12
@@ -402,8 +402,8 @@ define dso_local void @continue_on_zero(i32* noalias nocapture %arg, i32* noalia
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB4_1: @ %bb3
-; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB4_2: @ %bb9
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r3, #4
@@ -464,8 +464,8 @@ define dso_local arm_aapcs_vfpcc void @range_test(i32* noalias nocapture %arg, i
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB5_1: @ %bb4
-; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB5_2: @ %bb12
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]

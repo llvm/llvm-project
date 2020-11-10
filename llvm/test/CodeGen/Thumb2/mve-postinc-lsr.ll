@@ -22,9 +22,9 @@ define void @fma(float* noalias nocapture readonly %A, float* noalias nocapture 
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    sub.w r6, r12, #4
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    add.w r6, r5, r6, lsr #2
+; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
 ; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    dls lr, r6
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -39,11 +39,11 @@ define void @fma(float* noalias nocapture readonly %A, float* noalias nocapture 
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r4, r5, r6, pc}
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader12
-; CHECK-NEXT:    sub.w r3, r3, r12
+; CHECK-NEXT:    sub.w lr, r3, r12
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr s0, [r0]
@@ -129,14 +129,14 @@ define void @fma_tailpred(float* noalias nocapture readonly %A, float* noalias n
 ; CHECK-NEXT:    blt .LBB1_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    add.w r12, r3, #3
-; CHECK-NEXT:    adr r4, .LCPI1_0
-; CHECK-NEXT:    bic r12, r12, #3
 ; CHECK-NEXT:    mov.w lr, #1
+; CHECK-NEXT:    bic r12, r12, #3
+; CHECK-NEXT:    adr r4, .LCPI1_0
 ; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    sub.w r12, r3, #1
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q1, r12
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body

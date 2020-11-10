@@ -51,8 +51,8 @@ define i32 @vcmp_new_vpst_combination(i32 %len, i32* nocapture readonly %arr) {
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q1, #0x1
-; CHECK-NEXT:    dlstp.32 lr, r0
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    dlstp.32 lr, r0
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16

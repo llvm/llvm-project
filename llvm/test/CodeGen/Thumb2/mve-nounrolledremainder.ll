@@ -161,9 +161,9 @@ define void @notailpred(half* nocapture readonly %pSrcA, half* nocapture readonl
 ; CHECK-NEXT:    sub.w r7, r6, #8
 ; CHECK-NEXT:    add.w r4, r1, r6, lsl #1
 ; CHECK-NEXT:    add.w r12, r0, r6, lsl #1
-; CHECK-NEXT:    add.w r5, r5, r7, lsr #3
+; CHECK-NEXT:    add.w lr, r5, r7, lsr #3
 ; CHECK-NEXT:    add.w r7, r2, r6, lsl #1
-; CHECK-NEXT:    dls lr, r5
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    and r5, r3, #7
 ; CHECK-NEXT:  .LBB1_8: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

@@ -186,8 +186,8 @@ define void @vqdmulh_loop_i8(i8* nocapture readonly %x, i8* nocapture readonly %
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    movs r3, #64
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    mov.w lr, #64
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r0], #16
@@ -231,8 +231,8 @@ define void @vqdmulh_loop_i16(i16* nocapture readonly %x, i16* nocapture readonl
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    movs r3, #128
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    mov.w lr, #128
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
@@ -276,8 +276,8 @@ define void @vqdmulh_loop_i32(i32* nocapture readonly %x, i32* nocapture readonl
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    mov.w r3, #256
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    mov.w lr, #256
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
