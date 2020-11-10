@@ -6,8 +6,6 @@
 
 // CHECK-DAG: [[$LB:#map[0-9]+]] = affine_map<(d0) -> (d0)>
 // CHECK-DAG: [[$UB:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32)>
-// CHECK-DAG: [[$ID:#map[0-9]+]] = affine_map<() -> (0)>
-// CHECK-DAG: [[$ID_PLUS_21:#map[0-9]+]] = affine_map<() -> (64)>
 
 // CHECK-LABEL: func @legal_loop()
 func @legal_loop() {
@@ -19,7 +17,7 @@ func @legal_loop() {
     affine.store %2, %0[%i] : memref<64xf32>
   }
 
-  return 
+  return
 }
 
 // CHECK:   affine.for %{{.*}} = 0 to 64 step 32 {
@@ -27,7 +25,7 @@ func @legal_loop() {
 
 // -----
 
-// There are dependences along the diagonal of the 2d iteration space, 
+// There are dependences along the diagonal of the 2d iteration space,
 // specifically, they are of direction (+, -).
 // The default tiling method (hyper-rect) will violate tiling legality.
 // We expect a remark that points that issue out to be emitted.
@@ -46,5 +44,5 @@ func @illegal_loop_with_diag_dependence() {
     }
   }
 
-  return 
+  return
 }

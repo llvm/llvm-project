@@ -232,7 +232,6 @@ func @tile_with_loop_upper_bounds_in_two_symbols(%t11 : index, %arg0: memref<?xf
 // CHECK-DAG: [[LBI0:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 * s0)>
 // CHECK-DAG: [[UBI1:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d1 * s1 + s1, d0 + s0 + 4)>
 // CHECK-DAG: [[UBI0:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d1 * s1 + s1, d0 + s0 + 2)>
-// CHECK-DAG: [[LBO0:#map[0-9]+]] = affine_map<() -> (0)>
 // CHECK-DAG: [[UBO1:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 4) ceildiv s1)>
 // CHECK-DAG: [[UBO0:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 2) ceildiv s1)>
 
@@ -255,7 +254,6 @@ func @tile_with_upper_bounds_in_dimensions_and_symbols(%t12 : index, %t13 :index
 // CHECK-DAG: [[LBI0:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 * s0)>
 // CHECK-DAG: [[UBI1:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d1 * s1 + s1 * 4, d0 + s0 + 4)>
 // CHECK-DAG: [[UBI0:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d1 * s1 + s1 * 2, d0 + s0 + 2)>
-// CHECK-DAG: [[LBO0:#map[0-9]+]] = affine_map<() -> (0)>
 // CHECK-DAG: [[UBO1:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 4) ceildiv s1)>
 // CHECK-DAG: [[UBO0:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> ((d0 + s0 + 2) ceildiv s1)>
 

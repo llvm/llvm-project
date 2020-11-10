@@ -87,7 +87,7 @@ func @invariant_code_inside_affine_if() {
   // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %cst = constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
-  // CHECK-NEXT: %1 = affine.apply #map0(%arg0)
+  // CHECK-NEXT: %1 = affine.apply #map(%arg0)
   // CHECK-NEXT: affine.if #set(%arg0, %1) {
   // CHECK-NEXT: %2 = addf %cst, %cst : f32
   // CHECK-NEXT: affine.store %2, %0[%arg0] : memref<10xf32>

@@ -38,7 +38,7 @@ func @vector_add_read_write(%id : index, %A: memref<32xf32>, %B: memref<32xf32>,
 
 // -----
 
-// CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-DAG: #[[MAP0:map[0-9]*]] = affine_map<()[s0] -> (s0 * 2)>
 
 //       CHECK: func @vector_add_cycle
 //  CHECK-SAME: (%[[ID:.*]]: index
