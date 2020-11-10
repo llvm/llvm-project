@@ -96,10 +96,7 @@ define i64 @sbclr_i64_no_mask(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IBS-LABEL: sbclr_i64_no_mask:
 ; RV64IBS:       # %bb.0:
-; RV64IBS-NEXT:    addi a2, zero, 1
-; RV64IBS-NEXT:    sll a1, a2, a1
-; RV64IBS-NEXT:    not a1, a1
-; RV64IBS-NEXT:    and a0, a1, a0
+; RV64IBS-NEXT:    sbclr a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %shl = shl i64 1, %b
   %neg = xor i64 %shl, -1
@@ -185,16 +182,12 @@ define i64 @sbset_i64_no_mask(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: sbset_i64_no_mask:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a2, zero, 1
-; RV64IB-NEXT:    sll a1, a2, a1
-; RV64IB-NEXT:    or a0, a1, a0
+; RV64IB-NEXT:    sbset a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBS-LABEL: sbset_i64_no_mask:
 ; RV64IBS:       # %bb.0:
-; RV64IBS-NEXT:    addi a2, zero, 1
-; RV64IBS-NEXT:    sll a1, a2, a1
-; RV64IBS-NEXT:    or a0, a1, a0
+; RV64IBS-NEXT:    sbset a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %shl = shl i64 1, %b
   %or = or i64 %shl, %a
@@ -279,16 +272,12 @@ define i64 @sbinv_i64_no_mask(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: sbinv_i64_no_mask:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a2, zero, 1
-; RV64IB-NEXT:    sll a1, a2, a1
-; RV64IB-NEXT:    xor a0, a1, a0
+; RV64IB-NEXT:    sbinv a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBS-LABEL: sbinv_i64_no_mask:
 ; RV64IBS:       # %bb.0:
-; RV64IBS-NEXT:    addi a2, zero, 1
-; RV64IBS-NEXT:    sll a1, a2, a1
-; RV64IBS-NEXT:    xor a0, a1, a0
+; RV64IBS-NEXT:    sbinv a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %shl = shl nuw i64 1, %b
   %xor = xor i64 %shl, %a
@@ -369,14 +358,12 @@ define i64 @sbext_i64_no_mask(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: sbext_i64_no_mask:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    srl a0, a0, a1
-; RV64IB-NEXT:    andi a0, a0, 1
+; RV64IB-NEXT:    sbext a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBS-LABEL: sbext_i64_no_mask:
 ; RV64IBS:       # %bb.0:
-; RV64IBS-NEXT:    srl a0, a0, a1
-; RV64IBS-NEXT:    andi a0, a0, 1
+; RV64IBS-NEXT:    sbext a0, a0, a1
 ; RV64IBS-NEXT:    ret
   %shr = lshr i64 %a, %b
   %and1 = and i64 %shr, 1
