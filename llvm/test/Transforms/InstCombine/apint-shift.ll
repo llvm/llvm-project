@@ -209,8 +209,6 @@ define <2 x i7> @shl_lshr_splat_vec(<2 x i7> %X) {
   ret <2 x i7> %sh2
 }
 
-; Don't hide the shl from scalar evolution. DAGCombine will get it.
-
 define i23 @test11(i23 %x) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i23 [[X:%.*]], 6
@@ -244,8 +242,6 @@ define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
   %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>
   ret <2 x i47> %sh2
 }
-
-; Don't hide the shl from scalar evolution. DAGCombine will get it.
 
 define i18 @test13(i18 %x) {
 ; CHECK-LABEL: @test13(
