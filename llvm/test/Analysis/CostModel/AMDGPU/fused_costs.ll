@@ -1,11 +1,11 @@
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=FUSED,NOCONTRACT,ALL %s
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=on < %s | FileCheck -check-prefixes=SLOW,NOCONTRACT,ALL %s
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=fast < %s | FileCheck -check-prefixes=FUSED,CONTRACT,ALL %s
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=GFX1030,NOCONTRACT,ALL %s
-; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=FUSED32,FUSED16,NOCONTRACT,ALL %s
-; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=on < %s | FileCheck -check-prefixes=SLOW,NOCONTRACT,ALL %s
-; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=fast < %s | FileCheck -check-prefixes=FUSED32,FUSED16,CONTRACT,ALL %s
-; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=GFX1030,NOCONTRACT,ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=FUSED,NOCONTRACT,THRPTALL,ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=on < %s | FileCheck -check-prefixes=SLOW,NOCONTRACT,THRPTALL,ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=fast < %s | FileCheck -check-prefixes=FUSED,CONTRACT,THRPTALL,ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=GFX1030,NOCONTRACT,THRPTALL,ALL %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=FUSED,SZNOCONTRACT,SIZEALL,ALL %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=on < %s | FileCheck -check-prefixes=SLOW,SZNOCONTRACT,SIZEALL,ALL %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -denormal-fp-math-f32=ieee -denormal-fp-math=ieee -fp-contract=fast < %s | FileCheck -check-prefixes=FUSED,CONTRACT,SIZEALL,ALL %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=GFX1030,SZNOCONTRACT,SIZEALL,ALL %s
 
 target triple = "amdgcn--"
 
@@ -113,8 +113,10 @@ define <2 x half> @fmul_fsub_v2f16(<2 x half> %r0, <2 x half> %r1, <2 x half> %r
 
 ; ALL-LABEL: 'fmul_fadd_f64':
 ; CONTRACT: estimated cost of 0 for instruction:   %mul = fmul double
-; NOCONTRACT: estimated cost of 3 for instruction:   %mul = fmul double
-; ALL: estimated cost of 3 for instruction:   %add = fadd double
+; NOCONTRACT: estimated cost of 4 for instruction:   %mul = fmul double
+; SZNOCONTRACT: estimated cost of 2 for instruction:   %mul = fmul double
+; THRPTALL: estimated cost of 4 for instruction:   %add = fadd double
+; SIZEALL: estimated cost of 2 for instruction:   %add = fadd double
 define double @fmul_fadd_f64(double %r0, double %r1, double %r2) #0 {
   %mul = fmul double %r0, %r1
   %add = fadd double %mul, %r2
@@ -123,7 +125,8 @@ define double @fmul_fadd_f64(double %r0, double %r1, double %r2) #0 {
 
 ; ALL-LABEL: 'fmul_fadd_contract_f64':
 ; ALL: estimated cost of 0 for instruction:   %mul = fmul contract double
-; ALL: estimated cost of 3 for instruction:   %add = fadd contract double
+; THRPTALL: estimated cost of 4 for instruction:   %add = fadd contract double
+; SIZEALL: estimated cost of 2 for instruction:   %add = fadd contract double
 define double @fmul_fadd_contract_f64(double %r0, double %r1, double %r2) #0 {
   %mul = fmul contract double %r0, %r1
   %add = fadd contract double %mul, %r2
@@ -132,8 +135,10 @@ define double @fmul_fadd_contract_f64(double %r0, double %r1, double %r2) #0 {
 
 ; ALL-LABEL: 'fmul_fadd_v2f64':
 ; CONTRACT: estimated cost of 0 for instruction:   %mul = fmul <2 x double>
-; NOCONTRACT: estimated cost of 6 for instruction:   %mul = fmul <2 x double>
-; ALL: estimated cost of 6 for instruction:   %add = fadd <2 x double>
+; NOCONTRACT: estimated cost of 8 for instruction:   %mul = fmul <2 x double>
+; SZNOCONTRACT: estimated cost of 4 for instruction:   %mul = fmul <2 x double>
+; THRPTALL: estimated cost of 8 for instruction:   %add = fadd <2 x double>
+; SIZEALL: estimated cost of 4 for instruction:   %add = fadd <2 x double>
 define <2 x double> @fmul_fadd_v2f64(<2 x double> %r0, <2 x double> %r1, <2 x double> %r2) #0 {
   %mul = fmul <2 x double> %r0, %r1
   %add = fadd <2 x double> %mul, %r2
@@ -142,8 +147,10 @@ define <2 x double> @fmul_fadd_v2f64(<2 x double> %r0, <2 x double> %r1, <2 x do
 
 ; ALL-LABEL: 'fmul_fsub_f64':
 ; CONTRACT: estimated cost of 0 for instruction:   %mul = fmul double
-; NOCONTRACT: estimated cost of 3 for instruction:   %mul = fmul double
-; ALL: estimated cost of 3 for instruction:   %sub = fsub double
+; NOCONTRACT: estimated cost of 4 for instruction:   %mul = fmul double
+; SZNOCONTRACT: estimated cost of 2 for instruction:   %mul = fmul double
+; THRPTALL: estimated cost of 4 for instruction:   %sub = fsub double
+; SIZEALL: estimated cost of 2 for instruction:   %sub = fsub double
 define double @fmul_fsub_f64(double %r0, double %r1, double %r2) #0 {
   %mul = fmul double %r0, %r1
   %sub = fsub double %mul, %r2
@@ -152,8 +159,10 @@ define double @fmul_fsub_f64(double %r0, double %r1, double %r2) #0 {
 
 ; ALL-LABEL: 'fmul_fsub_v2f64':
 ; CONTRACT: estimated cost of 0 for instruction:   %mul = fmul <2 x double>
-; NOCONTRACT: estimated cost of 6 for instruction:   %mul = fmul <2 x double>
-; ALL: estimated cost of 6 for instruction:   %sub = fsub <2 x double>
+; NOCONTRACT: estimated cost of 8 for instruction:   %mul = fmul <2 x double>
+; SZNOCONTRACT: estimated cost of 4 for instruction:   %mul = fmul <2 x double>
+; THRPTALL: estimated cost of 8 for instruction:   %sub = fsub <2 x double>
+; SIZEALL: estimated cost of 4 for instruction:   %sub = fsub <2 x double>
 define <2 x double> @fmul_fsub_v2f64(<2 x double> %r0, <2 x double> %r1, <2 x double> %r2) #0 {
   %mul = fmul <2 x double> %r0, %r1
   %sub = fsub <2 x double> %mul, %r2
