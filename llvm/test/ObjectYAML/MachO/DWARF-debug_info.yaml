@@ -699,6 +699,12 @@ DWARF:
 # MULTI-TABLES-NEXT:           Attributes:
 # MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
 # MULTI-TABLES-NEXT:               Form:      DW_FORM_data4
+# MULTI-TABLES-NEXT:         - Code:     0x0000000000000002
+# MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
+# MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
+# MULTI-TABLES-NEXT:           Attributes:
+# MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
+# MULTI-TABLES-NEXT:               Form:      DW_FORM_data4
 # MULTI-TABLES-NEXT:     - ID: 2
 # MULTI-TABLES-NEXT:       Table:
 # MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
@@ -707,6 +713,7 @@ DWARF:
 # MULTI-TABLES-NEXT:           Attributes:
 # MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
 # MULTI-TABLES-NEXT:               Form:      DW_FORM_udata
+# MULTI-TABLES-NEXT:     - ID: 3
 # MULTI-TABLES-NEXT:   debug_info:
 # MULTI-TABLES-NEXT:     - Length:        0x000000000000000C
 # MULTI-TABLES-NEXT:       Version:       4
@@ -738,7 +745,7 @@ DWARF:
 # MULTI-TABLES-NEXT:     - Length:        0x000000000000000B
 # MULTI-TABLES-NEXT:       Version:       4
 # MULTI-TABLES-NEXT:       AbbrevTableID: 2
-# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000010
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000017
 # MULTI-TABLES-NEXT:       AddrSize:      8
 # MULTI-TABLES-NEXT:       Entries:
 # MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
@@ -772,7 +779,7 @@ LoadCommands:
       - sectname:  __debug_abbrev
         segname:   __DWARF
         addr:      0x00
-        size:      24
+        size:      32
         offset:    528
         align:     0
         reloff:    0x00000000
@@ -810,6 +817,12 @@ DWARF:
           Attributes:
             - Attribute: DW_AT_low_pc
               Form:      DW_FORM_data4
+        - Code:     2
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data4
     - ID: 1
       Table:
         - Code:     1
@@ -818,31 +831,28 @@ DWARF:
           Attributes:
             - Attribute: DW_AT_low_pc
               Form:      DW_FORM_udata
+    - ID: 3
   debug_info:
     - Version:       4
       AbbrevTableID: 2
-      AbbrOffset:    8
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x1234
     - Version:       4
       AbbrevTableID: 2
-      AbbrOffset:    8
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x4321
     - Version:       4
       AbbrevTableID: 0
-      AbbrOffset:    0
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x5678
     - Version:       4
       AbbrevTableID: 1
-      AbbrOffset:    16
       Entries:
         - AbbrCode: 1
           Values:
