@@ -825,15 +825,10 @@ def : Pat<(cttz GPR:$rs1), (CTZ GPR:$rs1)>;
 def : Pat<(ctpop GPR:$rs1), (PCNT GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb]
 
-let Predicates = [HasStdExtZbb, IsRV32] in
-def : Pat<(sra (shl GPR:$rs1, (i32 24)), (i32 24)), (SEXTB GPR:$rs1)>;
-let Predicates = [HasStdExtZbb, IsRV64] in
-def : Pat<(sra (shl GPR:$rs1, (i64 56)), (i64 56)), (SEXTB GPR:$rs1)>;
-
-let Predicates = [HasStdExtZbb, IsRV32] in
-def : Pat<(sra (shl GPR:$rs1, (i32 16)), (i32 16)), (SEXTH GPR:$rs1)>;
-let Predicates = [HasStdExtZbb, IsRV64] in
-def : Pat<(sra (shl GPR:$rs1, (i64 48)), (i64 48)), (SEXTH GPR:$rs1)>;
+let Predicates = [HasStdExtZbb] in {
+def : Pat<(sext_inreg GPR:$rs1, i8), (SEXTB GPR:$rs1)>;
+def : Pat<(sext_inreg GPR:$rs1, i16), (SEXTH GPR:$rs1)>;
+}
 
 let Predicates = [HasStdExtZbb] in {
 def : Pat<(smin GPR:$rs1, GPR:$rs2), (MIN  GPR:$rs1, GPR:$rs2)>;
