@@ -246,14 +246,10 @@ public:
     return SectionRef(toDRI(Sec), this);
   }
 
-  bool IsContentValid() const { return ContentValid; }
-
 private:
   ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
                 const Elf_Shdr *DotDynSymSec, const Elf_Shdr *DotSymtabSec,
                 const Elf_Shdr *DotSymtabShndxSec);
-
-  bool ContentValid = false;
 
 protected:
   ELFFile<ELFT> EF;
@@ -261,8 +257,6 @@ protected:
   const Elf_Shdr *DotDynSymSec = nullptr; // Dynamic symbol table section.
   const Elf_Shdr *DotSymtabSec = nullptr; // Symbol table section.
   const Elf_Shdr *DotSymtabShndxSec = nullptr; // SHT_SYMTAB_SHNDX section.
-
-  Error initContent() override;
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
@@ -406,8 +400,7 @@ protected:
 
 public:
   ELFObjectFile(ELFObjectFile<ELFT> &&Other);
-  static Expected<ELFObjectFile<ELFT>> create(MemoryBufferRef Object,
-                                              bool InitContent = true);
+  static Expected<ELFObjectFile<ELFT>> create(MemoryBufferRef Object);
 
   const Elf_Rel *getRel(DataRefImpl Rel) const;
   const Elf_Rela *getRela(DataRefImpl Rela) const;
@@ -462,35 +455,6 @@ using ELF64BEObjectFile = ELFObjectFile<ELF64BE>;
 template <class ELFT>
 void ELFObjectFile<ELFT>::moveSymbolNext(DataRefImpl &Sym) const {
   ++Sym.d.b;
-}
-
-template <class ELFT> Error ELFObjectFile<ELFT>::initContent() {
-  auto SectionsOrErr = EF.sections();
-  if (!SectionsOrErr)
-    return SectionsOrErr.takeError();
-
-  for (const Elf_Shdr &Sec : *SectionsOrErr) {
-    switch (Sec.sh_type) {
-    case ELF::SHT_DYNSYM: {
-      if (!DotDynSymSec)
-        DotDynSymSec = &Sec;
-      break;
-    }
-    case ELF::SHT_SYMTAB: {
-      if (!DotSymtabSec)
-        DotSymtabSec = &Sec;
-      break;
-    }
-    case ELF::SHT_SYMTAB_SHNDX: {
-      if (!DotSymtabShndxSec)
-        DotSymtabShndxSec = &Sec;
-      break;
-    }
-    }
-  }
-
-  ContentValid = true;
-  return Error::success();
 }
 
 template <class ELFT>
@@ -1028,17 +992,40 @@ ELFObjectFile<ELFT>::getRela(DataRefImpl Rela) const {
 
 template <class ELFT>
 Expected<ELFObjectFile<ELFT>>
-ELFObjectFile<ELFT>::create(MemoryBufferRef Object, bool InitContent) {
+ELFObjectFile<ELFT>::create(MemoryBufferRef Object) {
   auto EFOrErr = ELFFile<ELFT>::create(Object.getBuffer());
   if (Error E = EFOrErr.takeError())
     return std::move(E);
+  auto EF = std::move(*EFOrErr);
 
-  ELFObjectFile<ELFT> Obj = {Object, std::move(*EFOrErr), nullptr, nullptr,
-                             nullptr};
-  if (InitContent)
-    if (Error E = Obj.initContent())
-      return std::move(E);
-  return Obj;
+  auto SectionsOrErr = EF.sections();
+  if (!SectionsOrErr)
+    return SectionsOrErr.takeError();
+
+  const Elf_Shdr *DotDynSymSec = nullptr;
+  const Elf_Shdr *DotSymtabSec = nullptr;
+  const Elf_Shdr *DotSymtabShndxSec = nullptr;
+  for (const Elf_Shdr &Sec : *SectionsOrErr) {
+    switch (Sec.sh_type) {
+    case ELF::SHT_DYNSYM: {
+      if (!DotDynSymSec)
+        DotDynSymSec = &Sec;
+      break;
+    }
+    case ELF::SHT_SYMTAB: {
+      if (!DotSymtabSec)
+        DotSymtabSec = &Sec;
+      break;
+    }
+    case ELF::SHT_SYMTAB_SHNDX: {
+      if (!DotSymtabShndxSec)
+        DotSymtabShndxSec = &Sec;
+      break;
+    }
+    }
+  }
+  return ELFObjectFile<ELFT>(Object, EF, DotDynSymSec, DotSymtabSec,
+                             DotSymtabShndxSec);
 }
 
 template <class ELFT>

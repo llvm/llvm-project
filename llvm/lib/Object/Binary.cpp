@@ -44,8 +44,7 @@ StringRef Binary::getFileName() const { return Data.getBufferIdentifier(); }
 MemoryBufferRef Binary::getMemoryBufferRef() const { return Data; }
 
 Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
-                                                       LLVMContext *Context,
-                                                       bool InitContent) {
+                                                      LLVMContext *Context) {
   file_magic Type = identify_magic(Buffer.getBuffer());
 
   switch (Type) {
@@ -74,7 +73,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::xcoff_object_32:
   case file_magic::xcoff_object_64:
   case file_magic::wasm_object:
-    return ObjectFile::createSymbolicFile(Buffer, Type, Context, InitContent);
+    return ObjectFile::createSymbolicFile(Buffer, Type, Context);
   case file_magic::macho_universal_binary:
     return MachOUniversalBinary::create(Buffer);
   case file_magic::windows_resource:
@@ -94,8 +93,8 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   llvm_unreachable("Unexpected Binary File Type");
 }
 
-Expected<OwningBinary<Binary>>
-object::createBinary(StringRef Path, LLVMContext *Context, bool InitContent) {
+Expected<OwningBinary<Binary>> object::createBinary(StringRef Path,
+                                                    LLVMContext *Context) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
                                    /*RequiresNullTerminator=*/false);
@@ -104,7 +103,7 @@ object::createBinary(StringRef Path, LLVMContext *Context, bool InitContent) {
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
-      createBinary(Buffer->getMemBufferRef(), Context, InitContent);
+      createBinary(Buffer->getMemBufferRef(), Context);
   if (!BinOrErr)
     return BinOrErr.takeError();
   std::unique_ptr<Binary> &Bin = BinOrErr.get();

@@ -350,8 +350,7 @@ public:
   createObjectFile(StringRef ObjectPath);
 
   static Expected<std::unique_ptr<ObjectFile>>
-  createObjectFile(MemoryBufferRef Object, llvm::file_magic Type,
-                   bool InitContent = true);
+  createObjectFile(MemoryBufferRef Object, llvm::file_magic Type);
   static Expected<std::unique_ptr<ObjectFile>>
   createObjectFile(MemoryBufferRef Object) {
     return createObjectFile(Object, llvm::file_magic::unknown);
@@ -368,7 +367,7 @@ public:
   createXCOFFObjectFile(MemoryBufferRef Object, unsigned FileType);
 
   static Expected<std::unique_ptr<ObjectFile>>
-  createELFObjectFile(MemoryBufferRef Object, bool InitContent = true);
+  createELFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<MachOObjectFile>>
   createMachOObjectFile(MemoryBufferRef Object,
