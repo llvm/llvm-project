@@ -1617,6 +1617,122 @@ bool CombinerHelper::applyShiftImmedChain(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchShiftOfShiftedLogic(MachineInstr &MI,
+                                              ShiftOfShiftedLogic &MatchInfo) {
+  // We're trying to match the following pattern with any of
+  // G_SHL/G_ASHR/G_LSHR/G_USHLSAT/G_SSHLSAT shift instructions in combination
+  // with any of G_AND/G_OR/G_XOR logic instructions.
+  //   %t1 = SHIFT %X, G_CONSTANT C0
+  //   %t2 = LOGIC %t1, %Y
+  //   %root = SHIFT %t2, G_CONSTANT C1
+  // -->
+  //   %t3 = SHIFT %X, G_CONSTANT (C0+C1)
+  //   %t4 = SHIFT %Y, G_CONSTANT C1
+  //   %root = LOGIC %t3, %t4
+  unsigned ShiftOpcode = MI.getOpcode();
+  assert((ShiftOpcode == TargetOpcode::G_SHL ||
+          ShiftOpcode == TargetOpcode::G_ASHR ||
+          ShiftOpcode == TargetOpcode::G_LSHR ||
+          ShiftOpcode == TargetOpcode::G_USHLSAT ||
+          ShiftOpcode == TargetOpcode::G_SSHLSAT) &&
+         "Expected G_SHL, G_ASHR, G_LSHR, G_USHLSAT and G_SSHLSAT");
+
+  // Match a one-use bitwise logic op.
+  Register LogicDest = MI.getOperand(1).getReg();
+  if (!MRI.hasOneNonDBGUse(LogicDest))
+    return false;
+
+  MachineInstr *LogicMI = MRI.getUniqueVRegDef(LogicDest);
+  unsigned LogicOpcode = LogicMI->getOpcode();
+  if (LogicOpcode != TargetOpcode::G_AND && LogicOpcode != TargetOpcode::G_OR &&
+      LogicOpcode != TargetOpcode::G_XOR)
+    return false;
+
+  // Find a matching one-use shift by constant.
+  const Register C1 = MI.getOperand(2).getReg();
+  auto MaybeImmVal = getConstantVRegValWithLookThrough(C1, MRI);
+  if (!MaybeImmVal)
+    return false;
+
+  const uint64_t C1Val = MaybeImmVal->Value;
+
+  auto matchFirstShift = [&](const MachineInstr *MI, uint64_t &ShiftVal) {
+    // Shift should match previous one and should be a one-use.
+    if (MI->getOpcode() != ShiftOpcode ||
+        !MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+      return false;
+
+    // Must be a constant.
+    auto MaybeImmVal =
+        getConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
+    if (!MaybeImmVal)
+      return false;
+
+    ShiftVal = MaybeImmVal->Value;
+    return true;
+  };
+
+  // Logic ops are commutative, so check each operand for a match.
+  Register LogicMIReg1 = LogicMI->getOperand(1).getReg();
+  MachineInstr *LogicMIOp1 = MRI.getUniqueVRegDef(LogicMIReg1);
+  Register LogicMIReg2 = LogicMI->getOperand(2).getReg();
+  MachineInstr *LogicMIOp2 = MRI.getUniqueVRegDef(LogicMIReg2);
+  uint64_t C0Val;
+
+  if (matchFirstShift(LogicMIOp1, C0Val)) {
+    MatchInfo.LogicNonShiftReg = LogicMIReg2;
+    MatchInfo.Shift2 = LogicMIOp1;
+  } else if (matchFirstShift(LogicMIOp2, C0Val)) {
+    MatchInfo.LogicNonShiftReg = LogicMIReg1;
+    MatchInfo.Shift2 = LogicMIOp2;
+  } else
+    return false;
+
+  MatchInfo.ValSum = C0Val + C1Val;
+
+  // The fold is not valid if the sum of the shift values exceeds bitwidth.
+  if (MatchInfo.ValSum >= MRI.getType(LogicDest).getScalarSizeInBits())
+    return false;
+
+  MatchInfo.Logic = LogicMI;
+  return true;
+}
+
+bool CombinerHelper::applyShiftOfShiftedLogic(MachineInstr &MI,
+                                              ShiftOfShiftedLogic &MatchInfo) {
+  unsigned Opcode = MI.getOpcode();
+  assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_ASHR ||
+          Opcode == TargetOpcode::G_LSHR || Opcode == TargetOpcode::G_USHLSAT ||
+          Opcode == TargetOpcode::G_SSHLSAT) &&
+         "Expected G_SHL, G_ASHR, G_LSHR, G_USHLSAT and G_SSHLSAT");
+
+  LLT ShlType = MRI.getType(MI.getOperand(2).getReg());
+  LLT DestType = MRI.getType(MI.getOperand(0).getReg());
+  Builder.setInstrAndDebugLoc(MI);
+
+  Register Const = Builder.buildConstant(ShlType, MatchInfo.ValSum).getReg(0);
+
+  Register Shift1Base = MatchInfo.Shift2->getOperand(1).getReg();
+  Register Shift1 =
+      Builder.buildInstr(Opcode, {DestType}, {Shift1Base, Const}).getReg(0);
+
+  Register Shift2Const = MI.getOperand(2).getReg();
+  Register Shift2 = Builder
+                        .buildInstr(Opcode, {DestType},
+                                    {MatchInfo.LogicNonShiftReg, Shift2Const})
+                        .getReg(0);
+
+  Register Dest = MI.getOperand(0).getReg();
+  Builder.buildInstr(MatchInfo.Logic->getOpcode(), {Dest}, {Shift1, Shift2});
+
+  // These were one use so it's safe to remove them.
+  MatchInfo.Shift2->eraseFromParent();
+  MatchInfo.Logic->eraseFromParent();
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) {
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
