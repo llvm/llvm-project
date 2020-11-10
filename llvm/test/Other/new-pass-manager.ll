@@ -360,6 +360,9 @@
 ; RUN:     -passes='default<O0>' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O0
 ; CHECK-O0: Starting llvm::Module pass manager run
+; CHECK-O0-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-O0-NEXT: Starting llvm::Function pass manager run
+; CHECK-O0-NEXT: Finished llvm::Function pass manager run
 ; CHECK-O0-NEXT: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
