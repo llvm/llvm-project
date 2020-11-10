@@ -120,10 +120,6 @@ fi
 LIBCXX_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++/${DEPLOYMENT_TARGET}"
 LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
 
-# TODO: On Apple platforms, we never produce libc++abi.1.dylib, always libc++abi.dylib.
-#       Fix that in the build so that the tests stop searching for @rpath/libc++abi.1.dylib.
-cp "${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}/libc++abi.dylib" "${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}/libc++abi.1.dylib"
-
 # Filesystem is supported on Apple platforms starting with macosx10.15.
 if [[ ${DEPLOYMENT_TARGET} =~ ^10.9|10.10|10.11|10.12|10.13|10.14$ ]]; then
     ENABLE_FILESYSTEM="--param enable_filesystem=false"
@@ -131,8 +127,9 @@ else
     ENABLE_FILESYSTEM="--param enable_filesystem=true"
 fi
 
-echo "@@@ Running tests for libc++ and libc++abi @@@"
-"${LLVM_BUILD_DIR}/bin/llvm-lit" -sv "${MONOREPO_ROOT}/libcxx/test" "${MONOREPO_ROOT}/libcxxabi/test" \
+# TODO: We need to also run the tests for libc++abi.
+echo "@@@ Running tests for libc++ @@@"
+"${LLVM_BUILD_DIR}/bin/llvm-lit" -sv "${MONOREPO_ROOT}/libcxx/test" \
                                  --param=enable_experimental=false \
                                  --param=enable_debug_tests=false \
                                  ${ENABLE_FILESYSTEM} \
@@ -141,8 +138,7 @@ echo "@@@ Running tests for libc++ and libc++abi @@@"
                                  --param=target_triple="x86_64-apple-macosx${DEPLOYMENT_TARGET}" \
                                  --param=cxx_library_root="${LLVM_INSTALL_DIR}/lib" \
                                  --param=cxx_runtime_root="${LIBCXX_ROOT_ON_DEPLOYMENT_TARGET}" \
-                                 --param=abi_library_root="${LLVM_INSTALL_DIR}/lib" \
-                                 --param=abi_runtime_root="${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}" \
+                                 --param=abi_library_path="${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}" \
                                  --param=use_system_cxx_lib="True" \
                                  ${ADDITIONAL_LIT_ARGS}
 echo "@@@@@@"
