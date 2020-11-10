@@ -50,6 +50,8 @@ enum tgt_map_type {
   OMP_TGT_MAPTYPE_CLOSE           = 0x400,
   // runtime error if not already allocated
   OMP_TGT_MAPTYPE_PRESENT         = 0x1000,
+  // descriptor for non-contiguous target-update
+  OMP_TGT_MAPTYPE_NON_CONTIG      = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
   OMP_TGT_MAPTYPE_MEMBER_OF       = 0xffff000000000000
 };
@@ -119,6 +121,13 @@ struct __tgt_async_info {
   // We assume to use this structure to do synchronization. In CUDA backend, it
   // is CUstream.
   void *Queue = nullptr;
+};
+
+/// This struct is a record of non-contiguous information
+struct __tgt_target_non_contig {
+  uint64_t offset;
+  uint64_t count;
+  uint64_t stride;
 };
 
 #ifdef __cplusplus
