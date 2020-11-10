@@ -302,6 +302,9 @@ public:
   /// Otherwise return null.
   BlockT *getUniqueExitBlock() const;
 
+  /// Return true if this loop does not have any exit blocks.
+  bool hasNoExitBlocks() const;
+
   /// Edge type.
   typedef std::pair<BlockT *, BlockT *> Edge;
 
