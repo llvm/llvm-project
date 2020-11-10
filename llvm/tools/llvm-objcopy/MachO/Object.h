@@ -44,6 +44,8 @@ struct Section {
   std::string CanonicalName;
   uint64_t Addr = 0;
   uint64_t Size = 0;
+  // Offset in the input file.
+  Optional<uint32_t> OriginalOffset;
   uint32_t Offset = 0;
   uint32_t Align = 0;
   uint32_t RelOff = 0;
@@ -72,6 +74,10 @@ struct Section {
     return (getType() == MachO::S_ZEROFILL ||
             getType() == MachO::S_GB_ZEROFILL ||
             getType() == MachO::S_THREAD_LOCAL_ZEROFILL);
+  }
+
+  bool hasValidOffset() const {
+    return !(isVirtualSection() || (OriginalOffset && *OriginalOffset == 0));
   }
 };
 
