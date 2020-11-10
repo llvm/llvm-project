@@ -286,7 +286,7 @@ bool DynTypedMatcher::matches(const DynTypedNode &DynNode,
 
   if (Finder->getASTContext().getParentMapContext().getTraversalKind() ==
           TK_IgnoreUnlessSpelledInSource &&
-      Finder->isMatchingInImplicitTemplateInstantiation())
+      Finder->IsMatchingInTemplateInstantiationNotSpelledInSource())
     return false;
 
   auto N =
@@ -311,7 +311,7 @@ bool DynTypedMatcher::matchesNoKindCheck(const DynTypedNode &DynNode,
 
   if (Finder->getASTContext().getParentMapContext().getTraversalKind() ==
           TK_IgnoreUnlessSpelledInSource &&
-      Finder->isMatchingInImplicitTemplateInstantiation())
+      Finder->IsMatchingInTemplateInstantiationNotSpelledInSource())
     return false;
 
   auto N =
