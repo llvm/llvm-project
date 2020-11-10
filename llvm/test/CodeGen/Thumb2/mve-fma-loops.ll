@@ -332,8 +332,8 @@ define arm_aapcs_vfpcc void @fmss2(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    vdup.32 q0, r4
 ; CHECK-NEXT:    vneg.f32 q0, q0
-; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
@@ -400,9 +400,9 @@ define arm_aapcs_vfpcc void @fmss3(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    mov.w lr, #1
 ; CHECK-NEXT:    bic r12, r12, #3
 ; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    vmov r12, s0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:  .LBB6_2: @ %vector.body
@@ -475,9 +475,9 @@ define arm_aapcs_vfpcc void @fmss4(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    mov.w lr, #1
 ; CHECK-NEXT:    bic r12, r12, #3
 ; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    vmov r12, s0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:  .LBB7_2: @ %vector.body
@@ -615,9 +615,9 @@ define arm_aapcs_vfpcc void @fms2(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    mov.w lr, #1
 ; CHECK-NEXT:    bic r12, r12, #3
 ; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w r12, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    vmov r12, s0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:  .LBB9_2: @ %vector.body

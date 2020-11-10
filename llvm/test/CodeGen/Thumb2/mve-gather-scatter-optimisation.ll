@@ -710,11 +710,11 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
 ; CHECK-NEXT:    ldr r0, [sp, #112]
 ; CHECK-NEXT:    add.w r5, r8, r7
+; CHECK-NEXT:    sub.w lr, r9, r7
 ; CHECK-NEXT:    mla r3, r0, r7, r1
 ; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    sub.w r7, r9, r7
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    add.w r5, r0, r5, lsl #1
-; CHECK-NEXT:    dls lr, r7
 ; CHECK-NEXT:    add.w r3, r6, r3, lsl #1
 ; CHECK-NEXT:  .LBB10_14: @ %for.body8.us.us
 ; CHECK-NEXT:    @ Parent Loop BB10_5 Depth=1

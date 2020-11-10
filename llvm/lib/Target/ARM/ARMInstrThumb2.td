@@ -5422,6 +5422,7 @@ def t2LE : t2LOL<(outs ), (ins lelabel_u11:$label), "le", "$label"> {
 
 let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB] in {
 
+let usesCustomInserter = 1 in
 def t2DoLoopStart :
   t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts), 4, IIC_Br,
   [(set GPRlr:$X, (int_start_loop_iterations rGPR:$elts))]>;

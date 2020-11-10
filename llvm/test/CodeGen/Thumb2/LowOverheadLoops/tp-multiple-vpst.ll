@@ -7,9 +7,9 @@ define dso_local arm_aapcs_vfpcc i32 @minmaxval4(i32* nocapture readonly %x, i32
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    movs r2, #3
+; CHECK-NEXT:    mov.w lr, #3
 ; CHECK-NEXT:    adr r3, .LCPI0_0
-; CHECK-NEXT:    dls lr, r2
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q2, [r3]
 ; CHECK-NEXT:    vmov.i32 q0, #0x80000000
 ; CHECK-NEXT:    vmvn.i32 q1, #0x80000000
