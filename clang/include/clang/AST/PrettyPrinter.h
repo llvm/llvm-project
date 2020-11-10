@@ -56,8 +56,8 @@ struct PrintingPolicy {
         AnonymousTagLocations(true), SuppressStrongLifetime(false),
         SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false), Bool(LO.Bool),
-        Restrict(LO.C99), Alignof(LO.CPlusPlus11), UnderscoreAlignof(LO.C11),
-        UseVoidForZeroParams(!LO.CPlusPlus),
+        Nullptr(LO.CPlusPlus11), Restrict(LO.C99), Alignof(LO.CPlusPlus11),
+        UnderscoreAlignof(LO.C11), UseVoidForZeroParams(!LO.CPlusPlus),
         SplitTemplateClosers(!LO.CPlusPlus11), TerseOutput(false),
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
@@ -170,6 +170,10 @@ struct PrintingPolicy {
   /// Whether we can use 'bool' rather than '_Bool' (even if the language
   /// doesn't actually have 'bool', because, e.g., it is defined as a macro).
   unsigned Bool : 1;
+
+  /// Whether we should use 'nullptr' rather than '0' as a null pointer
+  /// constant.
+  unsigned Nullptr : 1;
 
   /// Whether we can use 'restrict' rather than '__restrict'.
   unsigned Restrict : 1;

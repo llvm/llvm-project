@@ -395,6 +395,9 @@ public:
   void dump(raw_ostream &OS, const ASTContext &Context) const;
 
   void printPretty(raw_ostream &OS, const ASTContext &Ctx, QualType Ty) const;
+  void printPretty(raw_ostream &OS, const PrintingPolicy &Policy, QualType Ty,
+                   const ASTContext *Ctx = nullptr) const;
+
   std::string getAsString(const ASTContext &Ctx, QualType Ty) const;
 
   APSInt &getInt() {
