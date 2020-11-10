@@ -1,7 +1,6 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestAffineLoopParametricTiling.cpp
-  TestExpandMemRefReshape.cpp
   TestExpandTanh.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
