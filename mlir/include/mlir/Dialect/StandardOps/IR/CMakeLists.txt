@@ -7,3 +7,7 @@ mlir_tablegen(OpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRStandardOpsIncGen)
 
 add_mlir_doc(Ops -gen-op-doc StandardOps Dialects/)
+
+if (MLIR_BINDINGS_PYTHON_ENABLED)
+  add_mlir_dialect_python_bindings(Ops.td std StandardOps)
+endif()
