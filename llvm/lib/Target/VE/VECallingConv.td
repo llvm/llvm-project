@@ -102,4 +102,6 @@ def CSR : CalleeSavedRegs<(add (sequence "SX%u", 18, 33))>;
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
 // PreserveAll (clobbers s62,s63) - used for ve_grow_stack
-def CSR_preserve_all : CalleeSavedRegs<(add (sequence "SX%u", 0, 61))>;
+def CSR_preserve_all : CalleeSavedRegs<(add (sequence "SX%u", 0, 61),
+                                            (sequence "V%u", 0, 63),
+                                            (sequence "VM%u", 1, 15))>;
