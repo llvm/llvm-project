@@ -147,7 +147,6 @@ target_link_libraries(clangDaemon
   ${ALL_CLANG_TIDY_CHECKS}
 
   clangdSupport
-  clangdRemoteIndex
   )
 
 add_subdirectory(refactor/tweaks)
