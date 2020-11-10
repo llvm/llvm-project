@@ -920,6 +920,18 @@ public:
     return getSignedPredicate(getPredicate());
   }
 
+  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
+  /// @returns the unsigned version of the signed predicate pred.
+  static Predicate getUnsignedPredicate(Predicate pred);
+
+  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
+  /// @returns the unsigned version of the predicate for this instruction (which
+  /// has to be an signed predicate).
+  /// return the unsigned version of a predicate
+  Predicate getUnsignedPredicate() {
+    return getUnsignedPredicate(getPredicate());
+  }
+
   /// This is just a convenience.
   /// Determine if this is true when both operands are the same.
   bool isTrueWhenEqual() const {

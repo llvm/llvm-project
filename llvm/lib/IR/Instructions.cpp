@@ -3847,7 +3847,7 @@ CmpInst::Predicate CmpInst::getNonStrictPredicate(Predicate pred) {
 }
 
 CmpInst::Predicate CmpInst::getSignedPredicate(Predicate pred) {
-  assert(CmpInst::isUnsigned(pred) && "Call only with signed predicates!");
+  assert(CmpInst::isUnsigned(pred) && "Call only with unsigned predicates!");
 
   switch (pred) {
   default:
@@ -3860,6 +3860,23 @@ CmpInst::Predicate CmpInst::getSignedPredicate(Predicate pred) {
     return CmpInst::ICMP_SGT;
   case CmpInst::ICMP_UGE:
     return CmpInst::ICMP_SGE;
+  }
+}
+
+CmpInst::Predicate CmpInst::getUnsignedPredicate(Predicate pred) {
+  assert(CmpInst::isSigned(pred) && "Call only with signed predicates!");
+
+  switch (pred) {
+  default:
+    llvm_unreachable("Unknown predicate!");
+  case CmpInst::ICMP_SLT:
+    return CmpInst::ICMP_ULT;
+  case CmpInst::ICMP_SLE:
+    return CmpInst::ICMP_ULE;
+  case CmpInst::ICMP_SGT:
+    return CmpInst::ICMP_UGT;
+  case CmpInst::ICMP_SGE:
+    return CmpInst::ICMP_UGE;
   }
 }
 
