@@ -295,7 +295,7 @@ body:             |
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
   ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
   ; CHECK:   $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r1 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
@@ -320,7 +320,7 @@ body:             |
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r7, $r6, $r5, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
   ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
   ; CHECK:   $r0 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
@@ -335,7 +335,7 @@ body:             |
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
   ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
   ; CHECK:   $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
@@ -348,7 +348,7 @@ body:             |
   ; CHECK:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8, $lr
   ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -8
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
   ; CHECK:   $r0 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r1 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
