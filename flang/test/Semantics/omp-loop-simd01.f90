@@ -1,5 +1,4 @@
 ! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-! XFAIL: *
 
 ! OpenMP Version 4.5
 ! 2.8.3 Loop simd Construct
