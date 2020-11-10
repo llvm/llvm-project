@@ -50,7 +50,7 @@ struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
     bool StartsWithEscape = MangledName.startswith("\01");
     if (StartsWithEscape)
       MangledName = MangledName.drop_front(1);
-    if (MangledName.size() <= 4096) {
+    if (MangledName.size() < 4096) {
       OS << str();
       return;
     }
