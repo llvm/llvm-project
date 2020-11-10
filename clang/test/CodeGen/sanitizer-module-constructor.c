@@ -11,7 +11,7 @@ struct a {
 int d;
 b e;
 static void f(b g) {
-  for (d = g->c;;)
+  for (d = g->c; 1 ;)
     ;
 }
 void h() { f(e); }
