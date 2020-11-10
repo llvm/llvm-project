@@ -593,7 +593,7 @@ int Driver::MainLoop() {
 
     if (commands_file == nullptr) {
       // We should have already printed an error in PrepareCommandsForSourcing.
-      exit(1);
+      return 1;
     }
 
     m_debugger.SetInputFileHandle(commands_file, true);
@@ -621,7 +621,7 @@ int Driver::MainLoop() {
     // non-zero exit status.
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultCommandError)
-      exit(1);
+      return 1;
 
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
@@ -646,7 +646,7 @@ int Driver::MainLoop() {
         if (m_option_data.m_batch &&
             local_results.GetResult() ==
                 lldb::eCommandInterpreterResultCommandError)
-          exit(1);
+          return 1;
       }
     }
     m_debugger.SetAsync(old_async);
