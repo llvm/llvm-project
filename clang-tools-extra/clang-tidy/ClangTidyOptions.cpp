@@ -325,7 +325,9 @@ llvm::Optional<OptionsSource>
 FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   assert(!Directory.empty());
 
-  if (!llvm::sys::fs::is_directory(Directory)) {
+  llvm::ErrorOr<llvm::vfs::Status> DirectoryStatus = FS->status(Directory);
+
+  if (!DirectoryStatus || !DirectoryStatus->isDirectory()) {
     llvm::errs() << "Error reading configuration from " << Directory
                  << ": directory doesn't exist.\n";
     return llvm::None;
@@ -336,15 +338,13 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
     llvm::sys::path::append(ConfigFile, ConfigHandler.first);
     LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
-    bool IsFile = false;
-    // Ignore errors from is_regular_file: we only need to know if we can read
-    // the file or not.
-    llvm::sys::fs::is_regular_file(Twine(ConfigFile), IsFile);
-    if (!IsFile)
+    llvm::ErrorOr<llvm::vfs::Status> FileStatus = FS->status(ConfigFile);
+
+    if (!FileStatus || !FileStatus->isRegularFile())
       continue;
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        llvm::MemoryBuffer::getFile(ConfigFile.c_str());
+        FS->getBufferForFile(ConfigFile);
     if (std::error_code EC = Text.getError()) {
       llvm::errs() << "Can't read " << ConfigFile << ": " << EC.message()
                    << "\n";
@@ -363,7 +363,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
                      << ParsedOptions.getError().message() << "\n";
       continue;
     }
-    return OptionsSource(*ParsedOptions, ConfigFile.c_str());
+    return OptionsSource(*ParsedOptions, ConfigFile.str());
   }
   return llvm::None;
 }
