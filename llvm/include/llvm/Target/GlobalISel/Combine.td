@@ -166,6 +166,15 @@ def shift_immed_chain : GICombineRule<
          [{ return Helper.matchShiftImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyShiftImmedChain(*${d}, ${matchinfo}); }])>;
 
+// Transform shift (logic (shift X, C0), Y), C1
+//        -> logic (shift X, (C0+C1)), (shift Y, C1), if shifts are same
+def shift_of_shifted_logic_matchdata : GIDefMatchData<"ShiftOfShiftedLogic">;
+def shift_of_shifted_logic_chain : GICombineRule<
+  (defs root:$d, shift_of_shifted_logic_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR, G_USHLSAT, G_SSHLSAT):$d,
+         [{ return Helper.matchShiftOfShiftedLogic(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.applyShiftOfShiftedLogic(*${d}, ${matchinfo}); }])>;
+
 def mul_to_shl_matchdata : GIDefMatchData<"unsigned">;
 def mul_to_shl : GICombineRule<
   (defs root:$d, mul_to_shl_matchdata:$matchinfo),
@@ -562,4 +571,4 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
-    shift_immed_chain]>;
+    shift_immed_chain, shift_of_shifted_logic_chain]>;
