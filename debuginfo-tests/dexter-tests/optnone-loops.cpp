@@ -3,6 +3,7 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
+// UNSUPPORTED: system-darwin
 
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --builder 'clang' --debugger 'lldb' \
