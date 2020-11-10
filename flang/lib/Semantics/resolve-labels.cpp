@@ -190,44 +190,57 @@ const parser::CharBlock *GetStmtName(const parser::Statement<A> &stmt) {
   return nullptr;
 }
 
-using ExecutableConstructEndStmts = std::tuple<parser::EndIfStmt,
-    parser::EndDoStmt, parser::EndSelectStmt, parser::EndChangeTeamStmt,
-    parser::EndBlockStmt, parser::EndCriticalStmt, parser::EndAssociateStmt>;
-
-template <typename A>
-static constexpr bool IsExecutableConstructEndStmt{
-    common::HasMember<A, ExecutableConstructEndStmts>};
-
 class ParseTreeAnalyzer {
 public:
   ParseTreeAnalyzer(ParseTreeAnalyzer &&that) = default;
   ParseTreeAnalyzer(SemanticsContext &context) : context_{context} {}
 
-  template <typename A> constexpr bool Pre(const A &) { return true; }
+  template <typename A> constexpr bool Pre(const A &x) {
+    using LabeledProgramUnitStmts =
+        std::tuple<parser::MainProgram, parser::FunctionSubprogram,
+            parser::SubroutineSubprogram, parser::SeparateModuleSubprogram>;
+    if constexpr (common::HasMember<A, LabeledProgramUnitStmts>) {
+      const auto &endStmt{std::get<std::tuple_size_v<decltype(x.t)> - 1>(x.t)};
+      if (endStmt.label) {
+        // The END statement for a subprogram appears after any internal
+        // subprograms.  Visit that statement in advance so that results
+        // are placed in the correct programUnits_ slot.
+        auto targetFlags{ConstructBranchTargetFlags(endStmt)};
+        AddTargetLabelDefinition(
+            endStmt.label.value(), targetFlags, currentScope_);
+      }
+    }
+    return true;
+  }
   template <typename A> constexpr void Post(const A &) {}
 
   template <typename A> bool Pre(const parser::Statement<A> &statement) {
     currentPosition_ = statement.source;
-    if (statement.label) {
-      auto label{statement.label.value()};
-      auto targetFlags{ConstructBranchTargetFlags(statement)};
-      if constexpr (std::is_same_v<A, parser::AssociateStmt> ||
-          std::is_same_v<A, parser::BlockStmt> ||
-          std::is_same_v<A, parser::ChangeTeamStmt> ||
-          std::is_same_v<A, parser::CriticalStmt> ||
-          std::is_same_v<A, parser::NonLabelDoStmt> ||
-          std::is_same_v<A, parser::IfThenStmt> ||
-          std::is_same_v<A, parser::SelectCaseStmt> ||
-          std::is_same_v<A, parser::SelectRankStmt> ||
-          std::is_same_v<A, parser::SelectTypeStmt>) {
-        constexpr bool useParent{true};
-        AddTargetLabelDefinition(
-            useParent, label, targetFlags, IsExecutableConstructEndStmt<A>);
-      } else {
-        constexpr bool useParent{false};
-        AddTargetLabelDefinition(
-            useParent, label, targetFlags, IsExecutableConstructEndStmt<A>);
-      }
+    const auto &label = statement.label;
+    if (!label) {
+      return true;
+    }
+    using LabeledConstructStmts = std::tuple<parser::AssociateStmt,
+        parser::BlockStmt, parser::ChangeTeamStmt, parser::CriticalStmt,
+        parser::IfThenStmt, parser::NonLabelDoStmt, parser::SelectCaseStmt,
+        parser::SelectRankStmt, parser::SelectTypeStmt>;
+    using LabeledConstructEndStmts =
+        std::tuple<parser::EndAssociateStmt, parser::EndBlockStmt,
+            parser::EndChangeTeamStmt, parser::EndCriticalStmt,
+            parser::EndDoStmt, parser::EndIfStmt, parser::EndSelectStmt>;
+    using LabeledProgramUnitEndStmts =
+        std::tuple<parser::EndFunctionStmt, parser::EndMpSubprogramStmt,
+            parser::EndProgramStmt, parser::EndSubroutineStmt>;
+    auto targetFlags{ConstructBranchTargetFlags(statement)};
+    if constexpr (common::HasMember<A, LabeledConstructStmts>) {
+      AddTargetLabelDefinition(label.value(), targetFlags, ParentScope());
+    } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
+      constexpr bool isExecutableConstructEndStmt{true};
+      AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
+          isExecutableConstructEndStmt);
+    } else if constexpr (!common::HasMember<A, LabeledProgramUnitEndStmts>) {
+      // Program unit END statements have already been processed.
+      AddTargetLabelDefinition(label.value(), targetFlags, currentScope_);
     }
     return true;
   }
@@ -740,13 +753,12 @@ private:
   }
 
   // 6.2.5., paragraph 2
-  void AddTargetLabelDefinition(bool useParent, parser::Label label,
+  void AddTargetLabelDefinition(parser::Label label,
       LabeledStmtClassificationSet labeledStmtClassificationSet,
-      bool isExecutableConstructEndStmt) {
+      ProxyForScope scope, bool isExecutableConstructEndStmt = false) {
     CheckLabelInRange(label);
     const auto pair{programUnits_.back().targetStmts.emplace(label,
-        LabeledStatementInfoTuplePOD{
-            (useParent ? ParentScope() : currentScope_), currentPosition_,
+        LabeledStatementInfoTuplePOD{scope, currentPosition_,
             labeledStmtClassificationSet, isExecutableConstructEndStmt})};
     if (!pair.second) {
       context_.Say(currentPosition_,
