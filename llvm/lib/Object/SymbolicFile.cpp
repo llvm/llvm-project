@@ -36,7 +36,7 @@ SymbolicFile::~SymbolicFile() = default;
 
 Expected<std::unique_ptr<SymbolicFile>>
 SymbolicFile::createSymbolicFile(MemoryBufferRef Object, file_magic Type,
-                                 LLVMContext *Context, bool InitContent) {
+                                 LLVMContext *Context) {
   StringRef Data = Object.getBuffer();
   if (Type == file_magic::unknown)
     Type = identify_magic(Data);
@@ -67,14 +67,14 @@ SymbolicFile::createSymbolicFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::xcoff_object_32:
   case file_magic::xcoff_object_64:
   case file_magic::wasm_object:
-    return ObjectFile::createObjectFile(Object, Type, InitContent);
+    return ObjectFile::createObjectFile(Object, Type);
   case file_magic::coff_import_library:
     return std::unique_ptr<SymbolicFile>(new COFFImportFile(Object));
   case file_magic::elf_relocatable:
   case file_magic::macho_object:
   case file_magic::coff_object: {
     Expected<std::unique_ptr<ObjectFile>> Obj =
-        ObjectFile::createObjectFile(Object, Type, InitContent);
+        ObjectFile::createObjectFile(Object, Type);
     if (!Obj || !Context)
       return std::move(Obj);
 

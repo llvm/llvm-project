@@ -35,8 +35,6 @@ public:
   ObjDumper(ScopedPrinter &Writer);
   virtual ~ObjDumper();
 
-  virtual bool canDumpContent() { return true; }
-
   virtual void printFileHeaders() = 0;
   virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
