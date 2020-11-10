@@ -1,10 +1,6 @@
-add_mlir_library(MLIRCAPITransforms
-
+add_mlir_public_c_api_library(MLIRCAPITransforms
   Passes.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir-c
 
   LINK_LIBS PUBLIC
   MLIRTransforms
-  )
+)
