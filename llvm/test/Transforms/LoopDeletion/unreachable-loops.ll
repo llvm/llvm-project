@@ -216,7 +216,7 @@ exit:
 ; Show recursive deletion of loops. Since we start with subloops and progress outward 
 ; to parent loop, we first delete the loop L2. Now loop L1 becomes a non-loop since it's backedge
 ; from L2's preheader to L1's exit block is never taken. So, L1 gets deleted as well.
-define void @test8(i64 %n) {
+define void @test8(i64 %n) #0 {
 ; CHECK-LABEL: test8
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: br label %exit
@@ -318,7 +318,7 @@ exit:
 ; deleted.
 ; In the next iteration, since L2 is never executed and has no subloops, we delete
 ; L2 as well. Finally, the outermost loop L1 is deleted.
-define void @test11(i64 %n) {
+define void @test11(i64 %n) #0 {
 ; CHECK-LABEL: test11
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: br label %exit
@@ -355,7 +355,7 @@ exit:
 
 
 ; 2 edges from a single exiting block to the exit block.
-define i64 @test12(i64 %n){
+define i64 @test12(i64 %n) #0 {
 ;CHECK-LABEL: @test12
 ; CHECK-NOT: L1:
 ; CHECK-NOT: L1Latch:
@@ -392,7 +392,7 @@ exit:                                             ; preds = %L1Latch, %L1Latch
 }
 
 ; multiple edges to exit block from the same exiting blocks
-define i64 @test13(i64 %n) {
+define i64 @test13(i64 %n) #0 {
 ; CHECK-LABEL: @test13
 ; CHECK-NOT: L1:
 ; CHECK-NOT: L1Latch:
@@ -433,3 +433,5 @@ exit:                                             ; preds = %L1Block, %L1, %L1La
   %y.phi = phi i64 [ 10, %L1Block ], [ 10, %L1Block ], [ %y.next, %L1 ], [ 30, %L1Latch ], [ 30, %L1Latch ]
   ret i64 %y.phi
 }
+
+attributes #0 = { willreturn }

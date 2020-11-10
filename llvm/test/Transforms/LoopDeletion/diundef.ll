@@ -5,7 +5,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 @a = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
-define i32 @b() local_unnamed_addr !dbg !12 {
+define i32 @b() local_unnamed_addr willreturn !dbg !12 {
 entry:
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !DIExpression()), !dbg !17
   br label %for.cond, !dbg !18
