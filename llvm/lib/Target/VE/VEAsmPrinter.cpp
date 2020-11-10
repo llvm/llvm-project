@@ -377,6 +377,7 @@ bool VEAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
     case 'r':
+    case 'v':
       break;
     }
   }
