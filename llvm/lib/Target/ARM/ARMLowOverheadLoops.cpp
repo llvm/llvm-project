@@ -666,7 +666,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
         ElemDef->removeFromParent();
         StartInsertBB->insert(StartInsertPt, ElemDef);
         LLVM_DEBUG(dbgs() << "ARM Loops: Moved element count def: "
-                   << *ElemDef);
+                          << *ElemDef);
       } else if (RDA.isSafeToMoveBackwards(&*StartInsertPt, ElemDef)) {
         StartInsertPt->removeFromParent();
         StartInsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef),
@@ -707,7 +707,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     for (; I != E; ++I) {
       if (shouldInspect(*I)) {
         LLVM_DEBUG(dbgs() << "ARM Loops: Instruction blocks [W|D]LSTP"
-                   << " insertion: " << *I);
+                          << " insertion: " << *I);
         return true;
       }
     }
@@ -1025,8 +1025,8 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   // can only jump back.
   auto ValidateRanges = [](MachineInstr *Start, MachineInstr *End,
                            ARMBasicBlockUtils *BBUtils, MachineLoop &ML) {
-    if (!End->getOperand(1).isMBB())
-      report_fatal_error("Expected LoopEnd to target basic block");
+    assert(End->getOperand(1).isMBB() &&
+           "Expected LoopEnd to target basic block!");
 
     // TODO Maybe there's cases where the target doesn't have to be the header,
     // but for now be safe and revert.
@@ -1055,8 +1055,7 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
 
   // Find a suitable position to insert the loop start instruction. It needs to
   // be able to safely define LR.
-  auto FindStartInsertionPoint = [](MachineInstr *Start,
-                                    MachineInstr *Dec,
+  auto FindStartInsertionPoint = [](MachineInstr *Start, MachineInstr *Dec,
                                     MachineBasicBlock::iterator &InsertPt,
                                     MachineBasicBlock *&InsertBB,
                                     ReachingDefAnalysis &RDA,
@@ -1090,7 +1089,7 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
                dbgs() << "ARM Loops: Will insert LoopStart at end of block\n";
              else
                dbgs() << "ARM Loops: Will insert LoopStart at "
-               << *StartInsertPt
+                      << *StartInsertPt
             );
 
   Revert = !ValidateRanges(Start, End, BBUtils, ML);
