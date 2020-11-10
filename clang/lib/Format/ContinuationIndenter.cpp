@@ -334,7 +334,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
     return (LambdaBodyLength > getColumnLimit(State));
   }
-  if (Current.MustBreakBefore || Current.is(TT_InlineASMColon))
+  if (Current.MustBreakBefore || (Current.is(TT_InlineASMColon) && Style.BreakBeforeInlineASMColon))
     return true;
   if (State.Stack.back().BreakBeforeClosingBrace &&
       Current.closesBlockOrBlockTypeList(Style))

@@ -1160,6 +1160,19 @@ struct FormatStyle {
   /// \endcode
   BraceWrappingFlags BraceWrapping;
 
+  /// If ``true``, colons in ASM parameters will be placed after line breaks.
+  /// \code
+  ///    true:
+  ///    asm volatile("loooooooooooooooooooooooooooooooooooooooooooooong",
+  ///                 :
+  ///                 : val);
+  ///
+  ///    false:
+  ///    asm volatile("loooooooooooooooooooooooooooooooooooooooooooooong",
+  ///                 : : val);
+  /// \endcode
+  bool BreakBeforeInlineASMColon;
+
   /// If ``true``, struct left brace will be placed after line breaks.
   /// \code
   ///    true:
@@ -2448,6 +2461,7 @@ struct FormatStyle {
            BinPackParameters == R.BinPackParameters &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeStructInitialization == R.BreakBeforeStructInitialization &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
