@@ -630,6 +630,52 @@ TEST(RenameTest, Renameable) {
          class Foo {};
        )cpp",
        "no symbol", !HeaderFile, nullptr},
+
+      {R"cpp(
+        namespace {
+        int Conflict;
+        int Va^r;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        int Conflict;
+        int Va^r;
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        class Foo {
+          int Conflict;
+          int Va^r;
+        };
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        enum E {
+          Conflict,
+          Fo^o,
+        };
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        int Conflict;
+        enum E { // transparent context.
+          F^oo,
+        };
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(// FIXME: detecting local variables is not supported yet.
+        void func() {
+          int Conflict;
+          int [[V^ar]];
+        }
+      )cpp",
+       nullptr, !HeaderFile, nullptr, "Conflict"},
   };
 
   for (const auto& Case : Cases) {
