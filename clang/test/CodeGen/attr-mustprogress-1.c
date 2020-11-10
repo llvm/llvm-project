@@ -8,6 +8,17 @@ int a = 0;
 int b = 0;
 
 // CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: @f0(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    br label [[FOR_COND:%.*]]
+// CHECK:       for.cond:
+// CHECK-NOT:    br label [[FOR_COND]], !llvm.loop !{{.*}}
+//
+void f0() {
+  for (; ;) ;
+}
+
+// CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: @f1(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label [[FOR_COND:%.*]]
