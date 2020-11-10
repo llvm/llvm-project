@@ -96,7 +96,8 @@
 ; CHECK-NEXT:      Machine code sinking
 ; CHECK-NEXT:      Peephole Optimizations
 ; CHECK-NEXT:      Remove dead machine instructions
-; CHECK-NEXT:      MVE VPT Optimisation Pass
+; CHECK-NEXT:      MachineDominator Tree Construction
+; CHECK-NEXT:      MVE TailPred and VPT Optimisation Pass
 ; CHECK-NEXT:      ARM MLA / MLS expansion pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM pre- register allocation load / store optimization pass

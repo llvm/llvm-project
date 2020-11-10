@@ -142,6 +142,10 @@ public:
   /// file.
   unsigned ModuleMapFileHomeIsCwd : 1;
 
+  /// Also search for prebuilt implicit modules in the prebuilt module cache
+  /// path.
+  unsigned EnablePrebuiltImplicitModules : 1;
+
   /// The interval (in seconds) between pruning operations.
   ///
   /// This operation is expensive, because it requires Clang to walk through
@@ -217,8 +221,9 @@ public:
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
-        UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
-        UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
+        EnablePrebuiltImplicitModules(false), UseBuiltinIncludes(true),
+        UseStandardSystemIncludes(true), UseStandardCXXIncludes(true),
+        UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ValidateASTInputFilesContent(false), UseDebugInfo(false),

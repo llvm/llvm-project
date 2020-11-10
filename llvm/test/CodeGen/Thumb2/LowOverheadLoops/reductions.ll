@@ -550,9 +550,9 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(i8* nocaptur
 ; CHECK-NEXT:    cbz r2, .LBB7_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    bic r3, r3, #7
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    bic r3, r3, #7
+; CHECK-NEXT:    movs r4, #1
 ; CHECK-NEXT:    subs r3, #8
 ; CHECK-NEXT:    vmov q3, q0
 ; CHECK-NEXT:    add.w lr, r4, r3, lsr #3

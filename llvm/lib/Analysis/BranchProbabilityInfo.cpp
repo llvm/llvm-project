@@ -1068,8 +1068,7 @@ BranchProbabilityInfo::getHotSucc(const BasicBlock *BB) const {
   auto MaxProb = BranchProbability::getZero();
   const BasicBlock *MaxSucc = nullptr;
 
-  for (const_succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-    const BasicBlock *Succ = *I;
+  for (const auto *Succ : successors(BB)) {
     auto Prob = getEdgeProbability(BB, Succ);
     if (Prob > MaxProb) {
       MaxProb = Prob;
