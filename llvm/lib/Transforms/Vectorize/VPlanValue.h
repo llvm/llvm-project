@@ -157,6 +157,10 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 class VPUser {
   SmallVector<VPValue *, 2> Operands;
 
+protected:
+  /// Print the operands to \p O.
+  void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+
 public:
   VPUser() {}
   VPUser(ArrayRef<VPValue *> Operands) {
