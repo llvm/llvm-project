@@ -8,10 +8,10 @@
 @g = common local_unnamed_addr global i32* null, align 4
 
 ; CHECK-LABEL: do_copy
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %n)
+; CHECK: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 %n)
 ; CHECK: br label %while.body
 
-; CHECK: [[REM:%[^ ]+]] = phi i32 [ %n, %entry ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
+; CHECK: [[REM:%[^ ]+]] = phi i32 [ [[START]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %while.end
@@ -99,10 +99,10 @@ while.end:
 ; CHECK: [[COUNT:%[^ ]+]] = add nuw i32 [[HALVE]], 1
 
 ; CHECK: while.body.lr.ph:
-; CHECK:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
+; CHECK:   [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK:   br label %while.body
 ; CHECK: while.body:
-; CHECK:   [[REM:%[^ ]+]] = phi i32 [ [[COUNT]], %while.body.lr.ph ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
+; CHECK:   [[REM:%[^ ]+]] = phi i32 [ [[START]], %while.body.lr.ph ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
 ; CHECK:   [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK:   [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK:   br i1 [[CMP]], label %while.body, label %while.end.loopexit
@@ -152,10 +152,10 @@ while.end:
 ; CHECK: [[COUNT:%[^ ]+]] = add nuw i32 [[HALVE]], 1
 
 ; CHECK: while.body.lr.ph:
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
+; CHECK: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK: br label %while.body
 
-; CHECK: [[REM:%[^ ]+]] = phi i32 [ [[COUNT]], %while.body.lr.ph ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
+; CHECK: [[REM:%[^ ]+]] = phi i32 [ [[START]], %while.body.lr.ph ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %while.end.loopexit

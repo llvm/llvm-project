@@ -78,6 +78,7 @@ body:             |
   ; CHECK:   successors: %bb.5(0x80000000)
   ; CHECK:   liveins: $q0, $r0, $r1, $r2, $r4
   ; CHECK:   renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14 /* CC::al */, $noreg
+  ; CHECK:   dead $lr = tMOVr $r4, 14 /* CC::al */, $noreg
   ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s4 = nnan ninf nsz VADDS renamable $s2, killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14 /* CC::al */, $noreg, implicit killed $q0
@@ -151,7 +152,7 @@ body:             |
     renamable $r4 = nuw nsw t2ADDrs killed renamable $r4, killed renamable $r3, 19, 14, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
     $r3 = tMOVr $r0, 14, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.3:
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
@@ -178,7 +179,7 @@ body:             |
     renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14, $noreg, implicit $q0
     $s2 = VMOVSR $r1, 14, $noreg
     renamable $s2 = VUITOS killed renamable $s2, 14, $noreg
-    t2DoLoopStart killed $r4
+    $lr = t2DoLoopStart killed $r4
     renamable $s4 = nnan ninf nsz VDIVS killed renamable $s0, killed renamable $s2, 14, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
 

@@ -30,7 +30,7 @@
     %gap.057 = sdiv i32 %gap.057.in, 2
     %cmp252 = icmp slt i32 %gap.057, %n
     %tmp = sub i32 %n, %gap.057
-    call void @llvm.set.loop.iterations.i32(i32 %tmp)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp)
     br i1 %cmp252, label %for.cond4.preheader.preheader, label %for.cond.loopexit
   
   for.cond4.preheader.preheader:                    ; preds = %for.cond1.preheader
@@ -44,7 +44,7 @@
     %lsr.iv2 = phi i32* [ %scevgep3, %for.inc16 ], [ %scevgep1, %for.cond4.preheader.preheader ]
     %lsr.iv = phi i32* [ %v, %for.cond4.preheader.preheader ], [ %scevgep, %for.inc16 ]
     %i.053 = phi i32 [ %inc, %for.inc16 ], [ %gap.057, %for.cond4.preheader.preheader ]
-    %tmp8 = phi i32 [ %tmp, %for.cond4.preheader.preheader ], [ %tmp16, %for.inc16 ]
+    %tmp8 = phi i32 [ %start, %for.cond4.preheader.preheader ], [ %tmp16, %for.inc16 ]
     %j.048 = sub nsw i32 %i.053, %gap.057
     %cmp549 = icmp sgt i32 %j.048, -1
     br i1 %cmp549, label %land.rhs.preheader, label %for.inc16
@@ -93,7 +93,7 @@
   }
   
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #0
+  declare i32 @llvm.start.loop.iterations.i32(i32) #0
   
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
@@ -208,7 +208,7 @@ body:             |
     renamable $lr = t2SUBrs renamable $r1, renamable $r2, 9, 14, $noreg, $noreg
     renamable $r9 = t2ASRri renamable $r2, 1, 14, $noreg, $noreg
     t2CMPrs renamable $r1, killed renamable $r2, 9, 14, $noreg, implicit-def $cpsr
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
     tBcc %bb.2, 13, killed $cpsr
   
   bb.4.for.cond4.preheader.preheader:

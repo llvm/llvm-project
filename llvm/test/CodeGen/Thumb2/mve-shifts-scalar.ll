@@ -9,8 +9,8 @@ define dso_local arm_aapcs_vfpcc void @sink_shl_i32(i32* nocapture readonly %in,
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
@@ -53,8 +53,8 @@ define dso_local arm_aapcs_vfpcc void @sink_shl_i16(i16* nocapture readonly %in,
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #8
@@ -97,8 +97,8 @@ define dso_local arm_aapcs_vfpcc void @sink_shl_i8(i8* nocapture readonly %in, i
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #4
@@ -142,8 +142,8 @@ define dso_local arm_aapcs_vfpcc void @sink_lshr_i32(i32* nocapture readonly %in
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
@@ -187,8 +187,8 @@ define dso_local arm_aapcs_vfpcc void @sink_lshr_i16(i16* nocapture readonly %in
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #8
@@ -232,8 +232,8 @@ define dso_local arm_aapcs_vfpcc void @sink_lshr_i8(i8* nocapture readonly %in, 
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #4
@@ -277,8 +277,8 @@ define dso_local arm_aapcs_vfpcc void @sink_ashr_i32(i32* nocapture readonly %in
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
@@ -322,8 +322,8 @@ define dso_local arm_aapcs_vfpcc void @sink_ashr_i16(i16* nocapture readonly %in
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #8
@@ -367,8 +367,8 @@ define dso_local arm_aapcs_vfpcc void @sink_ashr_i8(i8* nocapture readonly %in, 
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #4

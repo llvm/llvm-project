@@ -36,17 +36,17 @@
     br i1 %26, label %49, label %31
 
   31:                                               ; preds = %23
-    call void @llvm.set.loop.iterations.i32(i32 %30)
+    %start1 = call i32 @llvm.start.loop.iterations.i32(i32 %30)
     br label %65
 
   32:                                               ; preds = %11
-    call void @llvm.set.loop.iterations.i32(i32 %22)
+    %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %22)
     br label %33
 
   33:                                               ; preds = %33, %32
     %34 = phi i32* [ %46, %33 ], [ %0, %32 ]
     %35 = phi i32* [ %45, %33 ], [ %1, %32 ]
-    %36 = phi i32 [ %22, %32 ], [ %47, %33 ]
+    %36 = phi i32 [ %start2, %32 ], [ %47, %33 ]
     %37 = phi i32 [ %9, %32 ], [ %41, %33 ]
     %38 = bitcast i32* %34 to <4 x i32>*
     %39 = bitcast i32* %35 to <4 x i32>*
@@ -89,7 +89,7 @@
   65:                                               ; preds = %65, %31
     %66 = phi i32 [ %108, %65 ], [ 0, %31 ]
     %67 = phi i32 [ 0, %31 ], [ %107, %65 ]
-    %68 = phi i32 [ %30, %31 ], [ %109, %65 ]
+    %68 = phi i32 [ %start1, %31 ], [ %109, %65 ]
     %69 = bitcast i32* %0 to i8*
     %70 = bitcast i32* %1 to i8*
     %71 = getelementptr i8, i8* %70, i32 %66
@@ -141,7 +141,7 @@
 
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #1
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
-  declare void @llvm.set.loop.iterations.i32(i32) #3
+  declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #4
 
@@ -353,7 +353,7 @@ body:             |
     renamable $r2, dead $cpsr = tMOVi8 1, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $r12, 19, 14, $noreg, $noreg
     $r2 = tMOVr $r0, 14, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.3 (%ir-block.33):
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
@@ -402,7 +402,7 @@ body:             |
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r2, 19, 14, $noreg, $noreg
     renamable $r2, dead $cpsr = tMOVi8 0, 14, $noreg
     renamable $r3, dead $cpsr = tMOVi8 0, 14, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.8 (%ir-block.65):
     successors: %bb.8(0x7c000000), %bb.9(0x04000000)
