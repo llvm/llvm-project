@@ -2,8 +2,6 @@
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
-
 // Test with loop IVs.
 func @test0(%arg0 : index, %arg1 : index) {
   %0 = alloc() : memref<100x100xf32>
@@ -24,8 +22,6 @@ func @test0(%arg0 : index, %arg1 : index) {
 }
 
 // -----
-
-// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
 
 // Test with loop IVs and optional stride arguments.
 func @test1(%arg0 : index, %arg1 : index) {
@@ -50,9 +46,6 @@ func @test1(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0, d1 + d2 + 5)>
-// CHECK: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 + d1, d2)>
-
 // Test with loop IVs and symbols (without symbol keyword).
 func @test2(%arg0 : index, %arg1 : index) {
   %0 = alloc() : memref<100x100xf32>
@@ -74,10 +67,6 @@ func @test2(%arg0 : index, %arg1 : index) {
 }
 
 // -----
-
-// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0, d1 + s0 + 7)>
-// CHECK: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
-// CHECK: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1 + 11)>
 
 // Test with loop IVs and symbols (with symbol keyword).
 func @test3(%arg0 : index, %arg1 : index) {
@@ -101,10 +90,6 @@ func @test3(%arg0 : index, %arg1 : index) {
 }
 
 // -----
-
-// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0, (d1 + s0) mod 9 + 7)>
-// CHECK: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1)[s0] -> ((d0 + s0) floordiv 3, d1)>
-// CHECK: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1 + 11)>
 
 // Test with loop IVs, symbols and constants in nested affine expressions.
 func @test4(%arg0 : index, %arg1 : index) {
