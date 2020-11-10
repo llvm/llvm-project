@@ -18,12 +18,12 @@
 
   vector.ph:                                        ; preds = %entry
     %sub = sub nsw i32 0, %x
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32* [ %scevgep, %vector.body ], [ %A, %vector.ph ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %18, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %18, %vector.body ]
     %7 = phi i32 [ %n, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv12 = bitcast i32* %lsr.iv1 to <4 x i32>*
     %8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %7)
@@ -84,12 +84,12 @@
 
   vector.ph:                                        ; preds = %entry
     %sub = sub nsw i32 0, %T
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32* [ %scevgep, %vector.body ], [ %data, %vector.ph ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %18, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %18, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv12 = bitcast i32* %lsr.iv1 to <4 x i32>*
     %8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %7)
@@ -151,7 +151,7 @@
 
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
 ...
@@ -251,7 +251,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -382,7 +382,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -512,7 +512,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -632,7 +632,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -748,7 +748,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -862,7 +862,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -983,7 +983,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

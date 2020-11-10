@@ -14,14 +14,14 @@
     br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi i8* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i8* %lsr.iv to <4 x i8>*
     %lsr.iv1416 = bitcast i8* %lsr.iv14 to <4 x i8>*
@@ -61,14 +61,14 @@
     br i1 %cmp10.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv15 = phi i8* [ %scevgep16, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv14 = bitcast i8* %lsr.iv to <4 x i8>*
     %lsr.iv1517 = bitcast i8* %lsr.iv15 to <4 x i8>*
@@ -108,14 +108,14 @@
     br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi i16* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i16* %lsr.iv to <4 x i16>*
     %lsr.iv1416 = bitcast i16* %lsr.iv14 to <4 x i16>*
@@ -155,14 +155,14 @@
     br i1 %cmp10.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv15 = phi i16* [ %scevgep16, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv14 = bitcast i16* %lsr.iv to <4 x i16>*
     %lsr.iv1517 = bitcast i16* %lsr.iv15 to <4 x i16>*
@@ -203,14 +203,14 @@
     br i1 %cmp8.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv13 = phi i32* [ %scevgep14, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %12, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %13, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %13, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv12 = bitcast i32* %lsr.iv to <4 x i32>*
     %lsr.iv1315 = bitcast i32* %lsr.iv13 to <4 x i32>*
@@ -249,14 +249,14 @@
     br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %12, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %13, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %13, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
     %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
@@ -286,7 +286,7 @@
   declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
 
@@ -372,7 +372,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -478,7 +478,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -585,7 +585,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -691,7 +691,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -797,7 +797,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -903,7 +903,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

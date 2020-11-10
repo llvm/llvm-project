@@ -5420,9 +5420,11 @@ def t2LE : t2LOL<(outs ), (ins lelabel_u11:$label), "le", "$label"> {
   let isTerminator = 1;
 }
 
+let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB] in {
+
 def t2DoLoopStart :
-  t2PseudoInst<(outs), (ins rGPR:$elts), 4, IIC_Br,
-  [(int_set_loop_iterations rGPR:$elts)]>, Sched<[WriteBr]>;
+  t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts), 4, IIC_Br,
+  [(set GPRlr:$X, (int_start_loop_iterations rGPR:$elts))]>;
 
 let hasSideEffects = 0 in
 def t2LoopDec :
@@ -5443,6 +5445,8 @@ def t2LoopEnd :
   8, IIC_Br, []>, Sched<[WriteBr]>;
 
 } // end isBranch, isTerminator, hasSideEffects
+
+}
 
 } // end isNotDuplicable
 

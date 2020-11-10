@@ -18,13 +18,13 @@
     br i1 %cmp9, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %13, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %13, %vector.body ]
     %7 = phi i32 [ %div, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv1 = bitcast i32* %lsr.iv to <4 x i32>*
     %8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %7)
@@ -50,7 +50,7 @@
   }
   declare <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>*, i32 immarg, <4 x i1>, <4 x i8>) #1
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
-  declare void @llvm.set.loop.iterations.i32(i32) #3
+  declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #4
 
@@ -169,7 +169,7 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
     $r12 = t2MOVr killed $r3, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
     renamable $r3, dead $cpsr = tMOVi8 0, 14, $noreg
     renamable $r12 = t2LSRri killed renamable $r12, 1, 14, $noreg, $noreg
 

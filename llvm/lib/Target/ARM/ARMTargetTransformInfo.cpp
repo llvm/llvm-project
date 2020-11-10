@@ -1679,7 +1679,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       switch (Call->getIntrinsicID()) {
       default:
         break;
-      case Intrinsic::set_loop_iterations:
+      case Intrinsic::start_loop_iterations:
       case Intrinsic::test_set_loop_iterations:
       case Intrinsic::loop_decrement:
       case Intrinsic::loop_decrement_reg:

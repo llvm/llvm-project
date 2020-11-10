@@ -1576,6 +1576,11 @@ def int_matrix_column_major_store
 def int_set_loop_iterations :
   DefaultAttrsIntrinsic<[], [llvm_anyint_ty], [IntrNoDuplicate]>;
 
+// Same as the above, but produces a value (the same as the input operand) to
+// be fed into the loop.
+def int_start_loop_iterations :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrNoDuplicate]>;
+
 // Specify that the value given is the number of iterations that the next loop
 // will execute. Also test that the given count is not zero, allowing it to
 // control entry to a 'while' loop.

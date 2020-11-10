@@ -15,10 +15,10 @@ define dso_local i32 @mul_reduce_add(i32* noalias nocapture readonly %a, i32* no
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB0_2: @ %vector.body
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
 ; CHECK-NEXT:    vmov q1, q0
@@ -92,10 +92,10 @@ define dso_local i32 @mul_reduce_add_const(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    bic r1, r1, #3
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    subs r1, #4
-; CHECK-NEXT:    add.w lr, r3, r1, lsr #2
+; CHECK-NEXT:    add.w r1, r3, r1, lsr #2
+; CHECK-NEXT:    dls lr, r1
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB1_2: @ %vector.body
+; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
 ; CHECK-NEXT:    vmov q1, q0
@@ -163,10 +163,10 @@ define dso_local i32 @add_reduce_add_const(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    bic r1, r1, #3
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    subs r1, #4
-; CHECK-NEXT:    add.w lr, r3, r1, lsr #2
+; CHECK-NEXT:    add.w r1, r3, r1, lsr #2
+; CHECK-NEXT:    dls lr, r1
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB2_2: @ %vector.body
+; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
 ; CHECK-NEXT:    vmov q1, q0
@@ -228,9 +228,9 @@ define dso_local void @vector_mul_const(i32* noalias nocapture %a, i32* noalias 
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB3_1: @ %vector.ph
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK:  .LBB3_2: @ %vector.body
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
@@ -285,9 +285,9 @@ define dso_local void @vector_add_const(i32* noalias nocapture %a, i32* noalias 
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB4_1: @ %vector.ph
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK:  .LBB4_2: @ %vector.body
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
@@ -342,9 +342,9 @@ define dso_local arm_aapcs_vfpcc void @vector_mul_vector_i8(i8* noalias nocaptur
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB5_1: @ %vector.ph
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.8 lr, r3
-; CHECK:  .LBB5_2: @ %vector.body
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #16
 ; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
@@ -402,9 +402,9 @@ define dso_local arm_aapcs_vfpcc void @vector_mul_vector_i16(i16* noalias nocapt
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB6_1: @ %vector.ph
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.16 lr, r3
-; CHECK:  .LBB6_2: @ %vector.body
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:  .LBB6_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #8
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
