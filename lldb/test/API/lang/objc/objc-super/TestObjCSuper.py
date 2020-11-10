@@ -20,7 +20,6 @@ class TestObjCSuperMethod(TestBase):
         self.break_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test calling methods on super."""

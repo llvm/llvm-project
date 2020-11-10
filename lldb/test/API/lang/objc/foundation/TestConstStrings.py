@@ -23,7 +23,6 @@ class ConstStringTestCase(TestBase):
         self.main_source = "const-strings.m"
         self.line = line_number(self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     def test_break(self):
         """Test constant string generation amd comparison by the expression parser."""
         self.build(dictionary=self.d)

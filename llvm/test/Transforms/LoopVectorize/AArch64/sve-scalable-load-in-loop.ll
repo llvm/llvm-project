@@ -1,4 +1,4 @@
-; RUN: opt -S -O2 -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: opt -S -loop-vectorize -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
 ; This test is checking that a scalable load inside a loop does not trigger a

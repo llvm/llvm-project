@@ -1075,7 +1075,7 @@ public:
   /// This method checks every power of two up to MaxVF. If UserVF is not ZERO
   /// then this vectorization factor will be selected if vectorization is
   /// possible.
-  VectorizationFactor selectVectorizationFactor(unsigned MaxVF);
+  VectorizationFactor selectVectorizationFactor(ElementCount MaxVF);
 
   /// Setup cost-based decisions for user vectorization factor.
   void selectUserVectorizationFactor(ElementCount UserVF) {
@@ -5400,21 +5400,23 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount) {
 }
 
 VectorizationFactor
-LoopVectorizationCostModel::selectVectorizationFactor(unsigned MaxVF) {
+LoopVectorizationCostModel::selectVectorizationFactor(ElementCount MaxVF) {
+  assert(!MaxVF.isScalable() && "scalable vectors not yet supported");
+
   float Cost = expectedCost(ElementCount::getFixed(1)).first;
   const float ScalarCost = Cost;
   unsigned Width = 1;
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << (int)ScalarCost << ".\n");
 
   bool ForceVectorization = Hints->getForce() == LoopVectorizeHints::FK_Enabled;
-  if (ForceVectorization && MaxVF > 1) {
+  if (ForceVectorization && MaxVF.isVector()) {
     // Ignore scalar width, because the user explicitly wants vectorization.
     // Initialize cost to max so that VF = 2 is, at least, chosen during cost
     // evaluation.
     Cost = std::numeric_limits<float>::max();
   }
 
-  for (unsigned i = 2; i <= MaxVF; i *= 2) {
+  for (unsigned i = 2; i <= MaxVF.getFixedValue(); i *= 2) {
     // Notice that the vector loop needs to be executed less times, so
     // we need to divide the cost of the vector loops by the width of
     // the vector elements.
@@ -6963,7 +6965,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
            "VF needs to be a power of two");
     LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
                       << "VF " << VF << " to build VPlans.\n");
-    buildVPlans(VF.getKnownMinValue(), VF.getKnownMinValue());
+    buildVPlans(VF, VF);
 
     // For VPlan build stress testing, we bail out after VPlan construction.
     if (VPlanBuildStressTest)
@@ -7009,30 +7011,30 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     // profitable to scalarize.
     CM.selectUserVectorizationFactor(UserVF);
     CM.collectInLoopReductions();
-    buildVPlansWithVPRecipes(UserVF.getKnownMinValue(),
-                             UserVF.getKnownMinValue());
+    buildVPlansWithVPRecipes(UserVF, UserVF);
     LLVM_DEBUG(printPlans(dbgs()));
     return {{UserVF, 0}};
   }
 
-  unsigned MaxVF = MaybeMaxVF.getValue();
-  assert(MaxVF != 0 && "MaxVF is zero.");
+  ElementCount MaxVF = ElementCount::getFixed(MaybeMaxVF.getValue());
+  assert(MaxVF.isNonZero() && "MaxVF is zero.");
 
-  for (unsigned VF = 1; VF <= MaxVF; VF *= 2) {
+  for (ElementCount VF = ElementCount::getFixed(1);
+       ElementCount::isKnownLE(VF, MaxVF); VF *= 2) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
-    CM.collectUniformsAndScalars(ElementCount::getFixed(VF));
+    CM.collectUniformsAndScalars(VF);
 
     // Collect the instructions (and their associated costs) that will be more
     // profitable to scalarize.
-    if (VF > 1)
-      CM.collectInstsToScalarize(ElementCount::getFixed(VF));
+    if (VF.isVector())
+      CM.collectInstsToScalarize(VF);
   }
 
   CM.collectInLoopReductions();
 
-  buildVPlansWithVPRecipes(1, MaxVF);
+  buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxVF);
   LLVM_DEBUG(printPlans(dbgs()));
-  if (MaxVF == 1)
+  if (MaxVF.isScalar())
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
@@ -7202,10 +7204,10 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
 /// of VF's starting at a given VF and extending it as much as possible. Each
 /// vectorization decision can potentially shorten this sub-range during
 /// buildVPlan().
-void LoopVectorizationPlanner::buildVPlans(unsigned MinVF, unsigned MaxVF) {
-  auto MaxVFPlusOne = ElementCount::getFixed(MaxVF).getWithIncrement(1);
-  for (ElementCount VF = ElementCount::getFixed(MinVF);
-       ElementCount::isKnownLT(VF, MaxVFPlusOne);) {
+void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
+                                           ElementCount MaxVF) {
+  auto MaxVFPlusOne = MaxVF.getWithIncrement(1);
+  for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFPlusOne);) {
     VFRange SubRange = {VF, MaxVFPlusOne};
     VPlans.push_back(buildVPlan(SubRange));
     VF = SubRange.End;
@@ -7612,8 +7614,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   return tryToWiden(Instr, *Plan);
 }
 
-void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
-                                                        unsigned MaxVF) {
+void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
+                                                        ElementCount MaxVF) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
 
   // Collect conditions feeding internal conditional branches; they need to be
@@ -7663,9 +7665,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
   for (Instruction *I : DeadInstructions)
     SinkAfter.erase(I);
 
-  auto MaxVFPlusOne = ElementCount::getFixed(MaxVF).getWithIncrement(1);
-  for (ElementCount VF = ElementCount::getFixed(MinVF);
-       ElementCount::isKnownLT(VF, MaxVFPlusOne);) {
+  auto MaxVFPlusOne = MaxVF.getWithIncrement(1);
+  for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFPlusOne);) {
     VFRange SubRange = {VF, MaxVFPlusOne};
     VPlans.push_back(buildVPlanWithVPRecipes(SubRange, NeedDef,
                                              DeadInstructions, SinkAfter));

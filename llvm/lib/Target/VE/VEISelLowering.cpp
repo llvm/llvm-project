@@ -1551,6 +1551,19 @@ SDValue VETargetLowering::PerformDAGCombine(SDNode *N,
 //                         VE Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
+VETargetLowering::ConstraintType
+VETargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'v': // vector registers
+      return C_RegisterClass;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 VETargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                StringRef Constraint,
@@ -1562,6 +1575,9 @@ VETargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     case 'r':
       RC = &VE::I64RegClass;
+      break;
+    case 'v':
+      RC = &VE::V64RegClass;
       break;
     }
     return std::make_pair(0U, RC);

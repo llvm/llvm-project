@@ -20,7 +20,6 @@ class TestObjCIvarStripped(TestBase):
         self.stop_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @skipIf(
         debug_info=no_match("dsym"),
         bugnumber="This test requires a stripped binary and a dSYM")
