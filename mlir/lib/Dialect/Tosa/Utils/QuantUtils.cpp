@@ -19,9 +19,8 @@ using namespace mlir::tosa;
 /// From a scale value, generates multiplier and shift values where
 /// mantissa is in [-1.0,-0.5] or [0.5, 1.0] such that
 /// multiplier = mantissa*2^shift for 16-bit scaling.
-static void computeMultiplierAndShiftTosaScale16(double scale,
-                                                 int32_t &multiplier,
-                                                 int32_t &shift) {
+void computeMultiplierAndShiftTosaScale16(double scale, int32_t &multiplier,
+                                          int32_t &shift) {
 
   const double mantissa = std::frexp(scale, &shift);
   auto shiftedM = std::round(mantissa * (int64_t(1) << 15));
@@ -48,9 +47,8 @@ static void computeMultiplierAndShiftTosaScale16(double scale,
 /// From a scale value, generates multiplier and shift values where
 /// mantissa is in [-1.0,-0.5] or [0.5, 1.0] such that
 /// multiplier = mantissa*2^shift for 32-bit scaling.
-static void computeMultiplierAndShiftTosaScale32(double scale,
-                                                 int32_t &multiplier,
-                                                 int32_t &shift) {
+void computeMultiplierAndShiftTosaScale32(double scale, int32_t &multiplier,
+                                          int32_t &shift) {
 
   const double mantissa = std::frexp(scale, &shift);
   auto shiftedM = std::round(mantissa * (int64_t(1) << 31));
@@ -74,8 +72,8 @@ static void computeMultiplierAndShiftTosaScale32(double scale,
 }
 
 /// Generates a quantized multiplier/shift from double.
-void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
-                                           int32_t &shift, int32_t scaleWidth) {
+void computeMultiplierAndShift(double scale, int32_t &multiplier,
+                               int32_t &shift, int32_t scaleWidth) {
 
   switch (scaleWidth) {
   case 16:
@@ -98,9 +96,8 @@ void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
 /// ConvOpQuantInfoBuilder/TransConvOpQuantInfoBuilder:
 /// input_zp: input zeropoint
 /// weight_zp: weight zeropoint.
-ConvOpQuantizationAttr
-mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
-                                        Value weight) {
+ConvOpQuantizationAttr buildConvOpQuantizationAttr(OpBuilder &builder,
+                                                   Value input, Value weight) {
 
   auto inputType = input.getType().dyn_cast<RankedTensorType>();
   auto weightType = weight.getType().dyn_cast<RankedTensorType>();
@@ -147,9 +144,8 @@ mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
 /// MatMulOpQuantInfoBuilder:
 /// aZp: input a zeropoint
 /// bZp: input b zeropoint.
-MatMulOpQuantizationAttr
-mlir::tosa::buildMatMulOpQuantizationAttr(OpBuilder &builder, Value a,
-                                          Value b) {
+MatMulOpQuantizationAttr buildMatMulOpQuantizationAttr(OpBuilder &builder,
+                                                       Value a, Value b) {
 
   auto aType = a.getType().dyn_cast<RankedTensorType>();
   auto bType = b.getType().dyn_cast<RankedTensorType>();
@@ -183,9 +179,9 @@ mlir::tosa::buildMatMulOpQuantizationAttr(OpBuilder &builder, Value a,
 /// UnaryOpQuantInfoBuilder:
 /// inputZp: input zeropoint
 /// outputZp: output zeropoint.
-UnaryOpQuantizationAttr
-mlir::tosa::buildUnaryOpQuantizationAttr(OpBuilder &builder, Value input,
-                                         Type outputRawType) {
+UnaryOpQuantizationAttr buildUnaryOpQuantizationAttr(OpBuilder &builder,
+                                                     Value input,
+                                                     Type outputRawType) {
 
   auto inputType = input.getType().dyn_cast<RankedTensorType>();
   auto outputType = outputRawType.dyn_cast<RankedTensorType>();
@@ -217,8 +213,8 @@ mlir::tosa::buildUnaryOpQuantizationAttr(OpBuilder &builder, Value input,
 
 /// Builds PadOpQuantizationAttr, called from PadOpQuantInfoBuilder:
 /// inputZp: input zeropoint.
-PadOpQuantizationAttr mlir::tosa::buildPadOpQuantizationAttr(OpBuilder &builder,
-                                                             Value input) {
+PadOpQuantizationAttr buildPadOpQuantizationAttr(OpBuilder &builder,
+                                                 Value input) {
 
   auto inputType = input.getType().dyn_cast<RankedTensorType>();
 
@@ -242,8 +238,8 @@ PadOpQuantizationAttr mlir::tosa::buildPadOpQuantizationAttr(OpBuilder &builder,
 
 /// Builds output type for a quantized ConvOp with the right bitwidth.
 /// This is called by the builder when dealing with quantized content.
-Type mlir::tosa::buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType,
-                                           Value input, Value weight) {
+Type buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType, Value input,
+                               Value weight) {
 
   auto inputType = input.getType().dyn_cast<RankedTensorType>();
   auto weightType = weight.getType().dyn_cast<RankedTensorType>();
@@ -276,10 +272,10 @@ Type mlir::tosa::buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType,
 }
 
 /// Builds Tosa quantization attributes from min/max values.
-Type mlir::tosa::buildQTypeFromMinMax(OpBuilder builder, Type inputDType,
-                                      Attribute minAttr, Attribute maxAttr,
-                                      IntegerAttr quantBits, int filterQuantDim,
-                                      bool isSigned, BoolAttr narrowRange) {
+Type buildQTypeFromMinMax(OpBuilder builder, Type inputDType, Attribute minAttr,
+                          Attribute maxAttr, IntegerAttr quantBits,
+                          int filterQuantDim, bool isSigned,
+                          BoolAttr narrowRange) {
 
   quant::QuantizedType retType;
 
@@ -343,11 +339,10 @@ Type mlir::tosa::buildQTypeFromMinMax(OpBuilder builder, Type inputDType,
 }
 
 /// Builds Tosa quantization attributes from min/max values.
-TypeAttr
-mlir::tosa::buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDtype,
-                                     Attribute minAttr, Attribute maxAttr,
-                                     IntegerAttr quantBits, int filterQuantDim,
-                                     bool isSigned, BoolAttr narrowRange) {
+TypeAttr buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDtype,
+                                  Attribute minAttr, Attribute maxAttr,
+                                  IntegerAttr quantBits, int filterQuantDim,
+                                  bool isSigned, BoolAttr narrowRange) {
 
   return TypeAttr::get(buildQTypeFromMinMax(builder, inputDtype, minAttr,
                                             maxAttr, quantBits, filterQuantDim,
