@@ -9578,8 +9578,7 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
   }
 
   auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
-  // TODO: Lift affinity limitation in the future.
-  if (!AR || AR->getLoop() != L || !AR->isAffine())
+  if (!AR || AR->getLoop() != L)
     return false;
 
   // The predicate must be relational (i.e. <, <=, >=, >).
@@ -9587,7 +9586,7 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
     return false;
 
   // TODO: Support steps other than +/- 1.
-  const SCEV *Step = AR->getOperand(1);
+  const SCEV *Step = AR->getStepRecurrence(*this);
   auto *One = getOne(Step->getType());
   auto *MinusOne = getNegativeSCEV(One);
   if (Step != One && Step != MinusOne)
