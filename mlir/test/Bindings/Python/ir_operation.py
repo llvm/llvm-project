@@ -277,6 +277,53 @@ def testOperationResultList():
 run(testOperationResultList)
 
 
+# CHECK-LABEL: TEST: testOperationAttributes
+def testOperationAttributes():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(r"""
+    "some.op"() { some.attribute = 1 : i8,
+                  other.attribute = 3.0,
+                  dependent = "text" } : () -> ()
+  """, ctx)
+  op = module.body.operations[0]
+  assert len(op.attributes) == 3
+  iattr = IntegerAttr(op.attributes["some.attribute"])
+  fattr = FloatAttr(op.attributes["other.attribute"])
+  sattr = StringAttr(op.attributes["dependent"])
+  # CHECK: Attribute type i8, value 1
+  print(f"Attribute type {iattr.type}, value {iattr.value}")
+  # CHECK: Attribute type f64, value 3.0
+  print(f"Attribute type {fattr.type}, value {fattr.value}")
+  # CHECK: Attribute value text
+  print(f"Attribute value {sattr.value}")
+
+  # We don't know in which order the attributes are stored.
+  # CHECK-DAG: NamedAttribute(dependent="text")
+  # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
+  # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
+  for attr in op.attributes:
+    print(str(attr))
+
+  # Check that exceptions are raised as expected.
+  try:
+    op.attributes["does_not_exist"]
+  except KeyError:
+    pass
+  else:
+    assert False, "expected KeyError on accessing a non-existent attribute"
+
+  try:
+    op.attributes[42]
+  except IndexError:
+    pass
+  else:
+    assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+
+run(testOperationAttributes)
+
+
 # CHECK-LABEL: TEST: testOperationPrint
 def testOperationPrint():
   ctx = Context()

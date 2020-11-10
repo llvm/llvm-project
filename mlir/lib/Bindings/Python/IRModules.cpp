@@ -1282,6 +1282,47 @@ private:
   PyOperationRef operation;
 };
 
+/// A list of operation attributes. Can be indexed by name, producing
+/// attributes, or by index, producing named attributes.
+class PyOpAttributeMap {
+public:
+  PyOpAttributeMap(PyOperationRef operation) : operation(operation) {}
+
+  PyAttribute dunderGetItemNamed(const std::string &name) {
+    MlirAttribute attr =
+        mlirOperationGetAttributeByName(operation->get(), name.c_str());
+    if (mlirAttributeIsNull(attr)) {
+      throw SetPyError(PyExc_KeyError,
+                       "attempt to access a non-existent attribute");
+    }
+    return PyAttribute(operation->getContext(), attr);
+  }
+
+  PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
+    if (index < 0 || index >= dunderLen()) {
+      throw SetPyError(PyExc_IndexError,
+                       "attempt to access out of bounds attribute");
+    }
+    MlirNamedAttribute namedAttr =
+        mlirOperationGetAttribute(operation->get(), index);
+    return PyNamedAttribute(namedAttr.attribute, std::string(namedAttr.name));
+  }
+
+  intptr_t dunderLen() {
+    return mlirOperationGetNumAttributes(operation->get());
+  }
+
+  static void bind(py::module &m) {
+    py::class_<PyOpAttributeMap>(m, "OpAttributeMap")
+        .def("__len__", &PyOpAttributeMap::dunderLen)
+        .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
+        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed);
+  }
+
+private:
+  PyOperationRef operation;
+};
+
 } // end namespace
 
 //------------------------------------------------------------------------------
@@ -2436,6 +2477,11 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            })
       .def("__eq__",
            [](PyOperationBase &self, py::object other) { return false; })
+      .def_property_readonly("attributes",
+                             [](PyOperationBase &self) {
+                               return PyOpAttributeMap(
+                                   self.getOperation().getRef());
+                             })
       .def_property_readonly("operands",
                              [](PyOperationBase &self) {
                                return PyOpOperandList(
@@ -2810,6 +2856,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyBlockList::bind(m);
   PyOperationIterator::bind(m);
   PyOperationList::bind(m);
+  PyOpAttributeMap::bind(m);
   PyOpOperandList::bind(m);
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
