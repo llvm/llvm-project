@@ -456,7 +456,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     Info = analyzeResourceUsage(MF);
   }
 
-  if (STM.isAmdPalOS())
+  if (STM.isAmdPalOS() && MFI->isEntryFunction())
     EmitPALMetadata(MF, CurrentProgramInfo);
   else if (!STM.isAmdHsaOS()) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);

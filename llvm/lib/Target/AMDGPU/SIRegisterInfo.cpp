@@ -126,6 +126,7 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
+  case CallingConv::AMDGPU_Gfx:
     return CSR_AMDGPU_HighRegs_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
@@ -146,6 +147,7 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
+  case CallingConv::AMDGPU_Gfx:
     return CSR_AMDGPU_HighRegs_RegMask;
   default:
     return nullptr;
