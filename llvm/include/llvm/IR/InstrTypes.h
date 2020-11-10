@@ -899,6 +899,12 @@ public:
   /// Determine if this is an equals/not equals predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// Return true if the predicate is relational (not EQ or NE).
+  static bool isRelational(Predicate P) { return !isEquality(P); }
+
+  /// Return true if the predicate is relational (not EQ or NE).
+  bool isRelational() const { return !isEquality(); }
+
   /// @returns true if the comparison is signed, false otherwise.
   /// Determine if this instruction is using a signed comparison.
   bool isSigned() const {
