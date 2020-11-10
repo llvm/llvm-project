@@ -2523,7 +2523,7 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
 
     // Both allocated and aligned pointers are same. We could potentially stash
     // a nullptr for the allocated pointer since we do not expect any dealloc.
-    return {deadBeefPtr, gep};
+    return std::make_tuple(deadBeefPtr, gep);
   }
 };
 
