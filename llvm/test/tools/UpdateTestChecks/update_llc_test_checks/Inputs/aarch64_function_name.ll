@@ -1,5 +1,6 @@
 ; Check that we accept functions with '$' in the name.
 ;
+; RUN: llc -mtriple=arm64-unknown-linux < %s | FileCheck --prefi=LINUX %s
 ; RUN: llc -mtriple=aarch64-unknown-linux < %s | FileCheck --check-prefix=LINUX %s
 ; RUN: llc -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=DARWIN %s
 ;
