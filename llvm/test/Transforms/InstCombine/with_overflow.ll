@@ -597,3 +597,162 @@ define { i8, i1 } @smul_always_overflow(i8 %x) nounwind {
   %a = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %y, i8 2)
   ret { i8, i1 } %a
 }
+
+declare { <4 x i8>, <4 x i1> } @llvm.sadd.with.overflow.v4i8(<4 x i8>, <4 x i8>)
+declare { <4 x i8>, <4 x i1> } @llvm.uadd.with.overflow.v4i8(<4 x i8>, <4 x i8>)
+declare { <4 x i8>, <4 x i1> } @llvm.ssub.with.overflow.v4i8(<4 x i8>, <4 x i8>)
+declare { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8>, <4 x i8>)
+declare { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8>, <4 x i8>)
+declare { <4 x i8>, <4 x i1> } @llvm.umul.with.overflow.v4i8(<4 x i8>, <4 x i8>)
+
+; Always overflow
+
+define { <4 x i8>, <4 x i1> } @always_sadd_const_vector() nounwind {
+; CHECK-LABEL: @always_sadd_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>, <4 x i1> <i1 true, i1 true, i1 true, i1 true> }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.sadd.with.overflow.v4i8(<4 x i8> <i8 127, i8 127, i8 127, i8 127>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @always_uadd_const_vector() nounwind {
+; CHECK-LABEL: @always_uadd_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true> }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.uadd.with.overflow.v4i8(<4 x i8> <i8 255, i8 255, i8 255, i8 255>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @always_ssub_const_vector() nounwind {
+; CHECK-LABEL: @always_ssub_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 127, i8 127, i8 127, i8 127>, <4 x i1> <i1 true, i1 true, i1 true, i1 true> }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.ssub.with.overflow.v4i8(<4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @always_usub_const_vector() nounwind {
+; CHECK-LABEL: @always_usub_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>, <4 x i1> <i1 true, i1 true, i1 true, i1 true> }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 0, i8 0, i8 0, i8 0>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+; NOTE: LLVM doesn't (yet) detect the multiplication always results in a overflow
+define { <4 x i8>, <4 x i1> } @always_smul_const_vector() nounwind {
+; CHECK-LABEL: @always_smul_const_vector(
+; CHECK-NEXT:    [[X:%.*]] = call { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8> <i8 127, i8 127, i8 127, i8 127>, <4 x i8> <i8 3, i8 3, i8 3, i8 3>)
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } [[X]]
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8> <i8 127, i8 127, i8 127, i8 127>, <4 x i8> <i8 3, i8 3, i8 3, i8 3>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @always_umul_const_vector() nounwind {
+; CHECK-LABEL: @always_umul_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 -3, i8 -3, i8 -3, i8 -3>, <4 x i1> <i1 true, i1 true, i1 true, i1 true> }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.umul.with.overflow.v4i8(<4 x i8> <i8 255, i8 255, i8 255, i8 255>, <4 x i8> <i8 3, i8 3, i8 3, i8 3>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+; Never overflow
+
+define { <4 x i8>, <4 x i1> } @never_sadd_const_vector() nounwind {
+; CHECK-LABEL: @never_sadd_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 -50, i8 -10, i8 0, i8 60>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.sadd.with.overflow.v4i8(<4 x i8> <i8 -10, i8 -20, i8 30, i8 40>, <4 x i8> <i8 -40, i8 10, i8 -30, i8 20>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @never_uadd_const_vector() nounwind {
+; CHECK-LABEL: @never_uadd_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 32, i8 64, i8 96, i8 48>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.uadd.with.overflow.v4i8(<4 x i8> <i8 0, i8 32, i8 64, i8 16>, <4 x i8> <i8 32, i8 32, i8 32, i8 32>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @never_ssub_const_vector() nounwind {
+; CHECK-LABEL: @never_ssub_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 0, i8 10, i8 20, i8 30>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.ssub.with.overflow.v4i8(<4 x i8> <i8 -10, i8 -10, i8 -10, i8 -10>, <4 x i8> <i8 -10, i8 -20, i8 -30, i8 -40>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @never_usub_const_vector() nounwind {
+; CHECK-LABEL: @never_usub_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 127, i8 -1, i8 0, i8 -2>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 255, i8 255, i8 255, i8 255>, <4 x i8> <i8 128, i8 0, i8 255, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @never_smul_const_vector() nounwind {
+; CHECK-LABEL: @never_smul_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 -54, i8 -18, i8 -60, i8 -90>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8> <i8 -6, i8 -6, i8 -6, i8 -6>, <4 x i8> <i8 9, i8 3, i8 10, i8 15>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @never_umul_const_vector() nounwind {
+; CHECK-LABEL: @never_umul_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 -31, i8 120, i8 60, i8 30>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.umul.with.overflow.v4i8(<4 x i8> <i8 15, i8 15, i8 15, i8 15>, <4 x i8> <i8 15, i8 8, i8 4, i8 2>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+; Neutral value
+
+define { <4 x i8>, <4 x i1> } @neutral_sadd_const_vector() nounwind {
+; CHECK-LABEL: @neutral_sadd_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.sadd.with.overflow.v4i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> <i8 0, i8 0, i8 0, i8 0>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @neutral_uadd_const_vector() nounwind {
+; CHECK-LABEL: @neutral_uadd_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.uadd.with.overflow.v4i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> <i8 0, i8 0, i8 0, i8 0>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @neutral_ssub_const_vector() nounwind {
+; CHECK-LABEL: @neutral_ssub_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.ssub.with.overflow.v4i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> <i8 0, i8 0, i8 0, i8 0>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @neutral_usub_const_vector() nounwind {
+; CHECK-LABEL: @neutral_usub_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> <i8 0, i8 0, i8 0, i8 0>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @neutral_smul_const_vector() nounwind {
+; CHECK-LABEL: @neutral_smul_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @neutral_umul_const_vector() nounwind {
+; CHECK-LABEL: @neutral_umul_const_vector(
+; CHECK-NEXT:    ret { <4 x i8>, <4 x i1> } { <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i1> zeroinitializer }
+;
+  %x = call { <4 x i8>, <4 x i1> } @llvm.umul.with.overflow.v4i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
