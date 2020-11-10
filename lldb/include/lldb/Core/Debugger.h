@@ -334,8 +334,8 @@ public:
   // This is for use in the command interpreter, when you either want the
   // selected target, or if no target is present you want to prime the dummy
   // target with entities that will be copied over to new targets.
-  Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target *GetDummyTarget() { return m_dummy_target_sp.get(); }
+  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
+  Target &GetDummyTarget() { return *m_dummy_target_sp; }
 
   lldb::BroadcasterManagerSP GetBroadcasterManager() {
     return m_broadcaster_manager_sp;
