@@ -1061,12 +1061,12 @@ def : Pat<(ctpop (and GPR:$rs1, (i64 0xFFFFFFFF))), (PCNTW GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
-def : Pat<(sext_inreg (or (shl (assertsexti32 GPR:$rs2), (i64 16)),
-                          (and (assertsexti32 GPR:$rs1), 0x000000000000FFFF)),
+def : Pat<(sext_inreg (or (shl GPR:$rs2, (i64 16)),
+                          (and GPR:$rs1, 0x000000000000FFFF)),
                       i32),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (and (assertsexti32 GPR:$rs2), 0xFFFFFFFFFFFF0000),
-              (srl (and (assertsexti32 GPR:$rs1), 0x00000000FFFF0000),
+              (srl (and GPR:$rs1, 0x00000000FFFF0000),
                    (i64 16))),
           (PACKUW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
