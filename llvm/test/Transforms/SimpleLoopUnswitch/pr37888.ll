@@ -7,7 +7,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @pr37888() {
+define void @pr37888() willreturn {
 ; CHECK-LABEL: define void @pr37888()
 entry:
   %tobool = icmp ne i16 undef, 0

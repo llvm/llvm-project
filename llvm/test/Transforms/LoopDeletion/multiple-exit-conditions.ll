@@ -11,7 +11,7 @@
 ; CHECK:      return:
 ; CHECK-NEXT:   ret void
 
-define void @foo(i64 %n, i64 %m) nounwind {
+define void @foo(i64 %n, i64 %m) nounwind willreturn {
 entry:
   br label %bb
 

@@ -6,7 +6,7 @@
 ; RUN: opt < %s -licm -loop-deletion -simplifycfg -S | \
 ; RUN:   not grep "br "
 
-define i32 @main(i32 %argc) {
+define i32 @main(i32 %argc) willreturn {
 ; <label>:0
 	br label %bb5
 bb5:		; preds = %bb5, %0
