@@ -1294,7 +1294,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FABS(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandFloatRes_FMINNUM(SDNode *N, SDValue &Lo,
                                               SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
+  ExpandFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                        RTLIB::FMIN_F32, RTLIB::FMIN_F64,
                                        RTLIB::FMIN_F80, RTLIB::FMIN_F128,
                                        RTLIB::FMIN_PPCF128), Lo, Hi);
