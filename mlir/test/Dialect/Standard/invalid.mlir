@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file %s -verify-diagnostics
 
 func @test_index_cast_shape_error(%arg0 : tensor<index>) -> tensor<2xi64> {
-  // expected-error @+1 {{requires the same shape for all operands and results}}
+  // expected-error @+1 {{all non-scalar operands/results must have the same shape and base type: found 'tensor<2xi64>' and 'tensor<index>'}}
   %0 = index_cast %arg0 : tensor<index> to tensor<2xi64>
   return %0 : tensor<2xi64>
 }
@@ -9,7 +9,7 @@ func @test_index_cast_shape_error(%arg0 : tensor<index>) -> tensor<2xi64> {
 // -----
 
 func @test_index_cast_tensor_error(%arg0 : tensor<index>) -> i64 {
-  // expected-error @+1 {{requires the same shape for all operands and results}}
+  // expected-error @+1 {{if an operand is non-scalar, then there must be at least one non-scalar result}}
   %0 = index_cast %arg0 : tensor<index> to i64
   return %0 : i64
 }

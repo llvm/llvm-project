@@ -3368,7 +3368,7 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     case ARM::t2SUBspImm:
     case ARM::t2ADDri:
     case ARM::t2SUBri:
-      MRI->setRegClass(UseMI.getOperand(0).getReg(), TRC);
+      MRI->constrainRegClass(UseMI.getOperand(0).getReg(), TRC);
   }
   return true;
 }

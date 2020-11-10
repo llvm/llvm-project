@@ -67,6 +67,11 @@ class CastOp<string mnemonic, list<OpTrait> traits = []> :
   let hasFolder = 1;
 }
 
+// Base class for arithmetic cast operations.
+class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
+    CastOp<mnemonic, !listconcat(traits, [ElementwiseMappable])> {
+}
+
 // Base class for unary ops. Requires single operand and result. Individual
 // classes will have `operand` accessor.
 class UnaryOp<string mnemonic, list<OpTrait> traits = []> :
@@ -88,7 +93,8 @@ class UnaryOpSameOperandAndResultType<string mnemonic,
 class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
     UnaryOpSameOperandAndResultType<mnemonic,
       !listconcat(traits,
-                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
+                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+                   ElementwiseMappable])>,
     Arguments<(ins FloatLike:$operand)>;
 
 // Base class for standard arithmetic operations.  Requires operands and
@@ -96,7 +102,9 @@ class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
 // types.  Individual classes will have `lhs` and `rhs` accessor to operands.
 class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     Op<StandardOps_Dialect, mnemonic,
-       !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])> {
+       !listconcat(traits, [NoSideEffect,
+                            SameOperandsAndResultType,
+                            ElementwiseMappable])> {
 
   let results = (outs AnyType);
 
@@ -1152,10 +1160,10 @@ def CmpFPredicateAttr : I64EnumAttr<
 }
 
 def CmpFOp : Std_Op<"cmpf",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
-     TypesMatchWith<
+    [NoSideEffect, SameTypeOperands,
+     SameOperandsAndResultShape, TypesMatchWith<
        "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">]> {
+       "lhs", "result", "getI1SameShape($_self)">, ElementwiseMappable]> {
   let summary = "floating-point comparison operation";
   let description = [{
     The `cmpf` operation compares its two operands according to the float
@@ -1236,10 +1244,10 @@ def CmpIPredicateAttr : I64EnumAttr<
 }
 
 def CmpIOp : Std_Op<"cmpi",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
-     TypesMatchWith<
+    [NoSideEffect, SameTypeOperands,
+     SameOperandsAndResultShape, TypesMatchWith<
        "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">]> {
+       "lhs", "result", "getI1SameShape($_self)">, ElementwiseMappable]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -1926,7 +1934,7 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
 // FPExtOp
 //===----------------------------------------------------------------------===//
 
-def FPExtOp : CastOp<"fpext">, Arguments<(ins AnyType:$in)> {
+def FPExtOp : ArithmeticCastOp<"fpext">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point to wider floating-point";
   let description = [{
     Cast a floating-point value to a larger floating-point-typed value.
@@ -1947,7 +1955,7 @@ def FPExtOp : CastOp<"fpext">, Arguments<(ins AnyType:$in)> {
 // FPToSIOp
 //===----------------------------------------------------------------------===//
 
-def FPToSIOp : CastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
+def FPToSIOp : ArithmeticCastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point type to integer type";
   let description = [{
     Cast from a value interpreted as floating-point to the nearest (rounding
@@ -1967,7 +1975,7 @@ def FPToSIOp : CastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
 // FPToUIOp
 //===----------------------------------------------------------------------===//
 
-def FPToUIOp : CastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
+def FPToUIOp : ArithmeticCastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point type to integer type";
   let description = [{
     Cast from a value interpreted as floating-point to the nearest (rounding
@@ -1987,7 +1995,7 @@ def FPToUIOp : CastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
 // FPTruncOp
 //===----------------------------------------------------------------------===//
 
-def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
+def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
     Truncate a floating-point value to a smaller floating-point-typed value.
@@ -2131,7 +2139,7 @@ def ImOp : Std_Op<"im",
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
+def IndexCastOp : ArithmeticCastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between integer scalars and 'index' scalars. Index is an integer of
@@ -2714,7 +2722,8 @@ def RsqrtOp : FloatUnaryOp<"rsqrt"> {
 //===----------------------------------------------------------------------===//
 
 def SelectOp : Std_Op<"select", [NoSideEffect,
-     AllTypesMatch<["true_value", "false_value", "result"]>]> {
+     AllTypesMatch<["true_value", "false_value", "result"]>,
+     ElementwiseMappable]> {
   let summary = "select operation";
   let description = [{
     The `select` operation chooses one value based on a binary condition
@@ -2945,7 +2954,7 @@ def SignedShiftRightOp : IntArithmeticOp<"shift_right_signed"> {
 //===----------------------------------------------------------------------===//
 
 def SignExtendIOp : Std_Op<"sexti",
-    [NoSideEffect, SameOperandsAndResultShape]> {
+    [NoSideEffect, SameOperandsAndResultShape, ElementwiseMappable]> {
   let summary = "integer sign extension operation";
   let description = [{
     The integer sign extension operation takes an integer input of
@@ -2987,7 +2996,7 @@ def SignExtendIOp : Std_Op<"sexti",
 // SIToFPOp
 //===----------------------------------------------------------------------===//
 
-def SIToFPOp : CastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
+def SIToFPOp : ArithmeticCastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from integer type to floating-point";
   let description = [{
     Cast from a value interpreted as signed or vector of signed integers to the
@@ -3786,7 +3795,9 @@ def TransposeOp : Std_Op<"transpose", [NoSideEffect]>,
 // TruncateIOp
 //===----------------------------------------------------------------------===//
 
-def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
+def TruncateIOp : Std_Op<"trunci", [NoSideEffect,
+                                    SameOperandsAndResultShape,
+                                    ElementwiseMappable]> {
   let summary = "integer truncation operation";
   let description = [{
     The integer truncation operation takes an integer input of
@@ -3826,7 +3837,7 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
 // UIToFPOp
 //===----------------------------------------------------------------------===//
 
-def UIToFPOp : CastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
+def UIToFPOp : ArithmeticCastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
     Cast from a value interpreted as unsigned integer or vector of unsigned
@@ -4053,7 +4064,9 @@ def XOrOp : IntArithmeticOp<"xor", [Commutative]> {
 // ZeroExtendIOp
 //===----------------------------------------------------------------------===//
 
-def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, SameOperandsAndResultShape]> {
+def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect,
+                                     SameOperandsAndResultShape,
+                                     ElementwiseMappable]> {
   let summary = "integer zero extension operation";
   let description = [{
     The integer zero extension operation takes an integer input of
