@@ -17,7 +17,7 @@ Sections:
     Flags:   [ SHF_ALLOC ]
     Content: 0123456789
 ProgramHeaders:
-  - Type: PT_NOTE
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .note.invalid
+  - Type:     PT_NOTE
+    Flags:    [ PF_R ]
+    FirstSec: .note.invalid
+    LastSec:  .note.invalid

@@ -62,12 +62,11 @@ DynamicSymbols:
   - Name:    force_dynsym
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .rela.dyn
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .rela.dyn
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic

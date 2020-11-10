@@ -151,9 +151,8 @@ ProgramHeaders:
     Flags:    [ PF_X, PF_R ]
     VAddr:    0x1000
     FileSize: 0x500
-    Sections:
-      - Section: .text
-      - Section: .text2
+    FirstSec: .text
+    LastSec:  .text2
 
 --- !ELF
 FileHeader:
@@ -172,8 +171,8 @@ ProgramHeaders:
     Flags:    [ PF_X, PF_R ]
     VAddr:    0x1000
     FileSize: 0x4
-    Sections:
-      - Section: .text
+    FirstSec: .text
+    LastSec:  .text
 
 --- !ELF
 FileHeader:

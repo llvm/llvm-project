@@ -104,12 +104,10 @@ DynamicSymbols:
     Value:   0x0000000000001001
     Type:    [[TYPE=STT_NOTYPE]]
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:      PT_LOAD
+    Flags:     [ PF_R, PF_X ]
+    FirstSec:  .hash
+    LastSec:   .dynamic
 
 ## Check what we print for unnamed section symbols.
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DTYPE=STT_SECTION -DNAME="''" %s -o %t1-sec-syms.so
@@ -188,11 +186,10 @@ DynamicSymbols:
     Binding: STB_WEAK
     Value:   0x0000000000001001
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check the output when only .gnu.hash section is present.
 
@@ -252,11 +249,10 @@ DynamicSymbols:
     Binding: STB_WEAK
     Value:   0x0000000000001001
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Show that if there are no hash sections, we do not print anything.
 # RUN: yaml2obj --docnum=4 %s -o %t4.so
@@ -317,19 +313,16 @@ DynamicSymbols:
   - Name:    _Z3fooi
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    VAddr: 0x0
-    Sections:
-      - Section: .dynstr
-      - Section: .dynsym
-      - Section: .dynamic
-      - Section: .text.foo
-  - Type:  PT_DYNAMIC
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x0
+    FirstSec: .dynstr
+    LastSec:  .text.foo
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Show that we report a warning for a hash table which contains an entry of
 ## the bucket array pointing to a cycle.
@@ -365,10 +358,9 @@ DynamicSymbols:
   - Name:    aaa
   - Name:    bbb
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
 ## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
@@ -401,9 +393,8 @@ DynamicSymbols: []
 ProgramHeaders:
   - Type:     PT_LOAD
     FileSize: 0x23a
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a warning when the hash table goes past the end of the file.
 
@@ -465,10 +456,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a proper warning when a GNU hash table goes past the end of the file.
 
@@ -524,11 +514,10 @@ DynamicSymbols:
   - Name:    ddd
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check the behavior when the dynamic symbol table is empty or not found.
 
@@ -576,12 +565,10 @@ Sections:
     Flags: [ SHF_ALLOC ]
     Size:  0
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
-      - Section: .dynstr
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .hash
+    LastSec:  .dynstr
 
 ## Case A.2: similar to A.1, but now check that we report a warning when the dynamic symbol table was not found.
 ##           To do that, set the type of the .dynsym to SHT_PROGBITS to hide it.
@@ -649,12 +636,10 @@ Sections:
     Flags: [ SHF_ALLOC ]
     Size:  0
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
-      - Section: .dynstr
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynstr
 
 ## In this case we have a broken value in the hash buckets array. Normally it contains an
 ## index into the dynamic symbol table and also is used to get a hash value from the hash values array.
@@ -699,11 +684,10 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## In this case we are unable to read a hash value for a symbol with
 ## an index that is less than the index of the first hashed symbol.

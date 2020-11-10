@@ -32,18 +32,18 @@ Sections:
     AddressAlign:    0x0000000000000004
     Content:         "3232"
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x1000
-    PAddr: [[PADDR]]
-    Sections:
-      - Section: .text
-  - Type: PT_LOAD
-    Flags: [ PF_R, PF_W ]
-    VAddr: 0x1004
-    PAddr: [[PADDR]]
-    Sections:
-      - Section: .data
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1000
+    PAddr:    [[PADDR]]
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x1004
+    PAddr:    [[PADDR]]
+    FirstSec: .data
+    LastSec:  .data
 
 # CHECK: 0000000 3232 c3c3
 # SIZE:  4

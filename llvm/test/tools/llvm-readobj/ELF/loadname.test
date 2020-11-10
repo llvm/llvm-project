@@ -47,9 +47,8 @@ ProgramHeaders:
     Flags:    [ PF_R ]
     VAddr:    0x0000
     FileSize: [[PHDRFILESIZE]]
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+    FirstSec: .dynstr
+    LastSec:  .dynamic
 
 ## Check we do not crash when an object contains a DT_STRTAB entry whose address
 ## is past the end of the object.

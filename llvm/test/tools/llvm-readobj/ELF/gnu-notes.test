@@ -104,10 +104,10 @@ Sections:
     AddressAlign: 0x0000000000000004
     Content:      040000000900000004000000474E5500676F6C6420312E3131000000
 ProgramHeaders:
-  - Type: PT_NOTE
+  - Type:     PT_NOTE
     FileSize: 0x20
-    Sections:
-      - Section: .note.gnu.build-id
+    FirstSec: .note.gnu.build-id
+    LastSec:  .note.gnu.build-id
 
 ## Test tools report an error if a note section has an invalid offset
 ## that goes past the end of file.
@@ -186,10 +186,10 @@ Sections:
     Type:  SHT_NOTE
     Notes: []
 ProgramHeaders:
-  - Type: PT_NOTE
+  - Type:     PT_NOTE
     FileSize: 0xffff0000
-    Sections:
-      - Section: .note
+    FirstSec: .note
+    LastSec:  .note
 
 ## Check we report a warning when we are unable to locate the PT_NOTE
 ## segment because of broken program headers.

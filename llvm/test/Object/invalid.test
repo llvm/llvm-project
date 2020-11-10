@@ -454,10 +454,10 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Check that llvm-readobj reports a warning when a dynamic relocation section
 ## has sh_entsize field with size != sizeof(Elf_Rela).
@@ -529,8 +529,8 @@ Sections:
 ProgramHeaders:
   - Type:     PT_DYNAMIC
     FileSize: 0xffff0000
-    Sections:
-      - Section: .dynamic
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # RUN: yaml2obj --docnum=24 %s -o %t24
 # RUN: not obj2yaml 2>&1 %t24 | FileCheck %s -DFILE=%t24 --check-prefix=INVALID-SHSTRNDX

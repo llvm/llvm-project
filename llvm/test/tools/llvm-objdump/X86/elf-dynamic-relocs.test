@@ -94,17 +94,13 @@ ProgramHeaders:
   - Type:     PT_LOAD
     VAddr:    0x100000
     Align:    0x100
-    Sections:
-      - Section: .foo
-      - Section: .rela.dyn
-      - Section: .rela.plt
-      - Section: .rel.dyn
-      - Section: .dynamic
+    FirstSec: .foo
+    LastSec:  .dynamic
   - Type:     PT_DYNAMIC
     VAddr:    0x100500
     Align:    0x100
-    Sections:
-      - Section: .dynamic
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 DynamicSymbols:
   - Name:    foo
     Section: .foo
