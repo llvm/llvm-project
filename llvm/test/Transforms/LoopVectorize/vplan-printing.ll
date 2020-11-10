@@ -11,7 +11,7 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK-NEXT: "for.body:\n" +
 ; CHECK-NEXT:       "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
 ; CHECK-NEXT:       "CLONE %arrayidx = getelementptr %y, %iv\l" +
-; CHECK-NEXT:       "WIDEN load ir<%arrayidx>\l" +
+; CHECK-NEXT:       "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
 ; CHECK-NEXT:       "WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)\l" +
 ; CHECK-NEXT:       "CLONE %arrayidx2 = getelementptr %x, %iv\l" +
 ; CHECK-NEXT:       "WIDEN store ir<%arrayidx2>, ir<%call>\l"
