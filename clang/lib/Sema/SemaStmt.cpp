@@ -3074,11 +3074,12 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
   // variable will no longer be used.
   if (VD->hasAttr<BlocksAttr>()) return false;
 
+  // ...non-volatile...
+  if (VD->getType().isVolatileQualified())
+    return false;
+
   if (CESK & CES_AllowDifferentTypes)
     return true;
-
-  // ...non-volatile...
-  if (VD->getType().isVolatileQualified()) return false;
 
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
