@@ -1,13 +1,13 @@
 ; REQUIRES: x86
-; RUN: llvm-as %s -o %s.obj
+; RUN: llvm-as %s -o %t.obj
 
-; RUN: lld-link %s.obj -entry:main -opt:ltonewpassmanager -opt:ltodebugpassmanager 2>&1 | FileCheck %s --check-prefix=ENABLED
+; RUN: lld-link %t.obj -entry:main -opt:ltonewpassmanager -opt:ltodebugpassmanager 2>&1 | FileCheck %s --check-prefix=ENABLED
 ; ENABLED: Starting llvm::Module pass manager run.
 ; ENABLED: Finished llvm::Module pass manager run.
 
 ; Passing -time just to avoid empty FileCheck input
-; RUN: lld-link %s.obj -entry:main -time -opt:ltonewpassmanager -opt:ltodebugpassmanager -opt:noltonewpassmanager 2>&1 | FileCheck %s --check-prefix=DISABLED
-; RUN: lld-link %s.obj -entry:main -time -opt:ltonewpassmanager -opt:ltodebugpassmanager -opt:noltodebugpassmanager 2>&1 | FileCheck %s --check-prefix=DISABLED
+; RUN: lld-link %t.obj -entry:main -time -opt:ltonewpassmanager -opt:ltodebugpassmanager -opt:noltonewpassmanager 2>&1 | FileCheck %s --check-prefix=DISABLED
+; RUN: lld-link %t.obj -entry:main -time -opt:ltonewpassmanager -opt:ltodebugpassmanager -opt:noltodebugpassmanager 2>&1 | FileCheck %s --check-prefix=DISABLED
 ; DISABLED-NOT: Starting llvm::Module pass manager run.
 ; DISABLED-NOT: Finished llvm::Module pass manager run.
 
