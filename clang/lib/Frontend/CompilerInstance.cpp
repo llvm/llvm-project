@@ -430,12 +430,8 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
 
-  if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
-    std::string ModuleHash = getInvocation().getModuleHash(getDiagnostics());
-    PP->getHeaderSearchInfo().setModuleHash(ModuleHash);
-    PP->getHeaderSearchInfo().setModuleCachePath(
-        getSpecificModuleCachePath(ModuleHash));
-  }
+  if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules)
+    PP->getHeaderSearchInfo().setModuleCachePath(getSpecificModuleCachePath());
 
   // Handle generating dependencies, if requested.
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
@@ -483,11 +479,13 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   }
 }
 
-std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
-  // Set up the module path, including the hash for the module-creation options.
+std::string CompilerInstance::getSpecificModuleCachePath() {
+  // Set up the module path, including the hash for the
+  // module-creation options.
   SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
   if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
-    llvm::sys::path::append(SpecificModuleCache, ModuleHash);
+    llvm::sys::path::append(SpecificModuleCache,
+                            getInvocation().getModuleHash(getDiagnostics()));
   return std::string(SpecificModuleCache.str());
 }
 
@@ -1710,8 +1708,6 @@ static ModuleSource selectModuleSource(
   if (!HSOpts.PrebuiltModuleFiles.empty() ||
       !HSOpts.PrebuiltModulePaths.empty()) {
     ModuleFilename = HS.getPrebuiltModuleFileName(ModuleName);
-    if (HSOpts.EnablePrebuiltImplicitModules && ModuleFilename.empty())
-      ModuleFilename = HS.getPrebuiltImplicitModuleFileName(M);
     if (!ModuleFilename.empty())
       return MS_PrebuiltModulePath;
   }
