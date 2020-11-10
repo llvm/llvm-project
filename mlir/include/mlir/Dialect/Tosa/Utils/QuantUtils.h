@@ -19,8 +19,8 @@
 #include "mlir/Dialect/Quant/FakeQuantSupport.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
+namespace mlir {
+namespace tosa {
 
 //===----------------------------------------------------------------------===//
 // Utililty functions to support quantization handling in Tosa.
@@ -64,5 +64,8 @@ TypeAttr buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDType,
                                   Attribute minAttr, Attribute maxAttr,
                                   IntegerAttr quantBits, int filterQuantDim,
                                   bool isSigned, BoolAttr narrowRange);
+
+} // namespace tosa
+} // namespace mlir
 
 #endif // DIALECT_TOSA_UTILS_QUANT_UTILS_H
