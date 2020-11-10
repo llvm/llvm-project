@@ -121,6 +121,10 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                                                                tok::period};
     static const tok::TokenKind JSNullishOperator[] = {tok::question,
                                                        tok::question};
+    static const tok::TokenKind JSNullishEqual[] = {tok::question,
+                                                    tok::question, tok::equal};
+    static const tok::TokenKind JSPipePipeEqual[] = {tok::pipepipe, tok::equal};
+    static const tok::TokenKind JSAndAndEqual[] = {tok::ampamp, tok::equal};
 
     // FIXME: Investigate what token type gives the correct operator priority.
     if (tryMergeTokens(JSIdentity, TT_BinaryOperator))
@@ -146,6 +150,13 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                        TT_JsNullPropagatingOperator)) {
       // Treat like a regular "." access.
       Tokens.back()->Tok.setKind(tok::period);
+      return;
+    }
+    if (tryMergeTokens(JSAndAndEqual, TT_JsAndAndEqual) ||
+        tryMergeTokens(JSPipePipeEqual, TT_JsPipePipeEqual) ||
+        tryMergeTokens(JSNullishEqual, TT_JsNullishCoalescingEqual)) {
+      // Treat like the "=" assignment operator.
+      Tokens.back()->Tok.setKind(tok::equal);
       return;
     }
     if (tryMergeJSPrivateIdentifier())

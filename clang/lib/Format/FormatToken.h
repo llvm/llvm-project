@@ -68,6 +68,9 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(JsAndAndEqual)                                                          \
+  TYPE(JsPipePipeEqual)                                                        \
+  TYPE(JsNullishCoalescingEqual)                                               \
   TYPE(LambdaArrow)                                                            \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
