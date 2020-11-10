@@ -1658,49 +1658,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   return MPM;
 }
 
-void PassBuilder::runRegisteredEPCallbacks(ModulePassManager &MPM,
-                                           OptimizationLevel Level,
-                                           bool DebugLogging) {
-  assert(Level == OptimizationLevel::O0 &&
-         "runRegisteredEPCallbacks should only be used with O0");
-  for (auto &C : PipelineStartEPCallbacks)
-    C(MPM, Level);
-  if (!LateLoopOptimizationsEPCallbacks.empty()) {
-    LoopPassManager LPM(DebugLogging);
-    for (auto &C : LateLoopOptimizationsEPCallbacks)
-      C(LPM, Level);
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        createFunctionToLoopPassAdaptor(std::move(LPM))));
-  }
-  if (!LoopOptimizerEndEPCallbacks.empty()) {
-    LoopPassManager LPM(DebugLogging);
-    for (auto &C : LoopOptimizerEndEPCallbacks)
-      C(LPM, Level);
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        createFunctionToLoopPassAdaptor(std::move(LPM))));
-  }
-  if (!ScalarOptimizerLateEPCallbacks.empty()) {
-    FunctionPassManager FPM(DebugLogging);
-    for (auto &C : ScalarOptimizerLateEPCallbacks)
-      C(FPM, Level);
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  }
-  if (!CGSCCOptimizerLateEPCallbacks.empty()) {
-    CGSCCPassManager CGPM(DebugLogging);
-    for (auto &C : CGSCCOptimizerLateEPCallbacks)
-      C(CGPM, Level);
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-  }
-  if (!VectorizerStartEPCallbacks.empty()) {
-    FunctionPassManager FPM(DebugLogging);
-    for (auto &C : VectorizerStartEPCallbacks)
-      C(FPM, Level);
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  }
-  for (auto &C : OptimizerLastEPCallbacks)
-    C(MPM, Level);
-}
-
 AAManager PassBuilder::buildDefaultAAPipeline() {
   AAManager AA;
 
@@ -2282,8 +2239,6 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
 
         MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
       }
-
-      runRegisteredEPCallbacks(MPM, L, DebugLogging);
 
       // Do nothing else at all!
       return Error::success();
