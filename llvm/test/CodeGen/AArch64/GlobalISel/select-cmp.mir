@@ -115,3 +115,70 @@ body:             |
     %5:gpr(s32) = G_ICMP intpred(eq), %0(s32), %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_neg_imm_32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $w0
+    ; CHECK-LABEL: name: cmp_neg_imm_32
+    ; CHECK: liveins: $w0
+    ; CHECK: %reg0:gpr32sp = COPY $w0
+    ; CHECK: [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri %reg0, 10, 0, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cst:gpr(s32) = G_CONSTANT i32 -10
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg0(s32), %cst
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_neg_imm_64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: cmp_neg_imm_64
+    ; CHECK: liveins: $x0
+    ; CHECK: %reg0:gpr64sp = COPY $x0
+    ; CHECK: [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri %reg0, 10, 0, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s64) = COPY $x0
+    %cst:gpr(s64) = G_CONSTANT i64 -10
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg0(s64), %cst
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_neg_imm_invalid
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $w0
+    ; CHECK-LABEL: name: cmp_neg_imm_invalid
+    ; CHECK: liveins: $w0
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %cst:gpr32 = MOVi32imm -5000
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr %reg0, %cst, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cst:gpr(s32) = G_CONSTANT i32 -5000
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg0(s32), %cst
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
