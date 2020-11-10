@@ -290,7 +290,7 @@ Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateBarrier(const LocationDescription &Loc, Directive DK,
+OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive DK,
                                bool ForceSimpleCall, bool CheckCancelFlag) {
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -345,7 +345,7 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateCancel(const LocationDescription &Loc,
+OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
                               Value *IfCondition,
                               omp::Directive CanceledDirective) {
   if (!updateToLocation(Loc))
@@ -422,7 +422,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(
   Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
 }
 
-IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
+IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
     BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
     FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
@@ -748,7 +748,7 @@ void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
   Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush), Args);
 }
 
-void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
   emitFlush(Loc);
@@ -766,7 +766,7 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
                      Args);
 }
 
-void OpenMPIRBuilder::CreateTaskwait(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
   emitTaskwaitImpl(Loc);
@@ -783,14 +783,14 @@ void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
                      Args);
 }
 
-void OpenMPIRBuilder::CreateTaskyield(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
   emitTaskyieldImpl(Loc);
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
+OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB) {
 
@@ -814,7 +814,7 @@ OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
 }
 
 CanonicalLoopInfo *
-OpenMPIRBuilder::CreateCanonicalLoop(const LocationDescription &Loc,
+OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
                                      LoopBodyGenCallbackTy BodyGenCB,
                                      Value *TripCount) {
   BasicBlock *BB = Loc.IP.getBlock();
@@ -888,7 +888,7 @@ OpenMPIRBuilder::CreateCanonicalLoop(const LocationDescription &Loc,
   return CL;
 }
 
-CanonicalLoopInfo *OpenMPIRBuilder::CreateCanonicalLoop(
+CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
     const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
     Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop) {
   // Consider the following difficulties (assuming 8-bit signed integers):
@@ -951,7 +951,7 @@ CanonicalLoopInfo *OpenMPIRBuilder::CreateCanonicalLoop(
     Value *IndVar = Builder.CreateAdd(Span, Start);
     BodyGenCB(Builder.saveIP(), IndVar);
   };
-  return CreateCanonicalLoop(Builder.saveIP(), BodyGen, TripCount);
+  return createCanonicalLoop(Builder.saveIP(), BodyGen, TripCount);
 }
 
 void CanonicalLoopInfo::eraseFromParent() {
@@ -969,7 +969,7 @@ void CanonicalLoopInfo::eraseFromParent() {
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateCopyPrivate(const LocationDescription &Loc,
+OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
                                    llvm::Value *BufSize, llvm::Value *CpyBuf,
                                    llvm::Value *CpyFn, llvm::Value *DidIt) {
   if (!updateToLocation(Loc))
@@ -990,7 +990,7 @@ OpenMPIRBuilder::CreateCopyPrivate(const LocationDescription &Loc,
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateSingle(const LocationDescription &Loc,
+OpenMPIRBuilder::createSingle(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB, llvm::Value *DidIt) {
 
@@ -1024,7 +1024,7 @@ OpenMPIRBuilder::CreateSingle(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCritical(
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
 
@@ -1188,7 +1188,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
                                   ExitCall->getIterator());
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCopyinClauseBlocks(
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCopyinClauseBlocks(
     InsertPointTy IP, Value *MasterAddr, Value *PrivateAddr,
     llvm::IntegerType *IntPtrTy, bool BranchtoEnd) {
   if (!IP.isSet())
@@ -1238,7 +1238,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCopyinClauseBlocks(
   return Builder.saveIP();
 }
 
-CallInst *OpenMPIRBuilder::CreateOMPAlloc(const LocationDescription &Loc,
+CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
                                           Value *Size, Value *Allocator,
                                           std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
@@ -1254,7 +1254,7 @@ CallInst *OpenMPIRBuilder::CreateOMPAlloc(const LocationDescription &Loc,
   return Builder.CreateCall(Fn, Args, Name);
 }
 
-CallInst *OpenMPIRBuilder::CreateOMPFree(const LocationDescription &Loc,
+CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
                                          Value *Addr, Value *Allocator,
                                          std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
@@ -1268,7 +1268,7 @@ CallInst *OpenMPIRBuilder::CreateOMPFree(const LocationDescription &Loc,
   return Builder.CreateCall(Fn, Args, Name);
 }
 
-CallInst *OpenMPIRBuilder::CreateCachedThreadPrivate(
+CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
     const LocationDescription &Loc, llvm::Value *Pointer,
     llvm::ConstantInt *Size, const llvm::Twine &Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
