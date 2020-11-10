@@ -112,7 +112,10 @@ Driver::Driver()
   g_driver = this;
 }
 
-Driver::~Driver() { g_driver = nullptr; }
+Driver::~Driver() {
+  SBDebugger::Destroy(m_debugger);
+  g_driver = nullptr;
+}
 
 void Driver::OptionData::AddInitialCommand(std::string command,
                                            CommandPlacement placement,
@@ -676,9 +679,7 @@ int Driver::MainLoop() {
   reset_stdin_termios();
   fclose(stdin);
 
-  int exit_code = sb_interpreter.GetQuitStatus();
-  SBDebugger::Destroy(m_debugger);
-  return exit_code;
+  return sb_interpreter.GetQuitStatus();
 }
 
 void Driver::ResizeWindow(unsigned short col) {
