@@ -97,7 +97,7 @@ function(add_mlir_python_extension libname extname)
   ################################################################################
   # Install
   ################################################################################
-  if (INSTALL_DIR)
+  if (ARG_INSTALL_DIR)
     install(TARGETS ${libname}
       COMPONENT ${libname}
       LIBRARY DESTINATION ${ARG_INSTALL_DIR}
