@@ -1980,7 +1980,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   }
   CvtOS << "  unsigned OpIdx;\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
-  CvtOS << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n";
+  CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   if (HasOptionalOperands) {
     CvtOS << "    OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
@@ -1990,14 +1990,14 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   CvtOS << "    default: llvm_unreachable(\"invalid conversion entry!\");\n";
   CvtOS << "    case CVT_Reg:\n";
   CvtOS << "      static_cast<" << TargetOperandClass
-        << "&>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
+        << " &>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
   CvtOS << "      break;\n";
   CvtOS << "    case CVT_Tied: {\n";
   CvtOS << "      assert(OpIdx < (size_t)(std::end(TiedAsmOperandTable) -\n";
-  CvtOS << "                          std::begin(TiedAsmOperandTable)) &&\n";
+  CvtOS << "                              std::begin(TiedAsmOperandTable)) &&\n";
   CvtOS << "             \"Tied operand not found\");\n";
   CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[OpIdx][0];\n";
-  CvtOS << "      if (TiedResOpnd != (uint8_t) -1)\n";
+  CvtOS << "      if (TiedResOpnd != (uint8_t)-1)\n";
   CvtOS << "        Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
   CvtOS << "      break;\n";
   CvtOS << "    }\n";
@@ -2012,7 +2012,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
        << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n"
        << "  unsigned NumMCOperands = 0;\n"
        << "  const uint8_t *Converter = ConversionTable[Kind];\n"
-       << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n"
+       << "  for (const uint8_t *p = Converter; *p; p += 2) {\n"
        << "    switch (*p) {\n"
        << "    default: llvm_unreachable(\"invalid conversion entry!\");\n"
        << "    case CVT_Reg:\n"
@@ -2129,12 +2129,12 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                 << OpInfo.MINumOperands << ");\n"
                 << "      } else {\n"
                 << "        static_cast<" << TargetOperandClass
-                << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod
                 << "(Inst, " << OpInfo.MINumOperands << ");\n"
                 << "      }\n";
         } else {
           CvtOS << "      static_cast<" << TargetOperandClass
-                << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod
                 << "(Inst, " << OpInfo.MINumOperands << ");\n";
         }
         CvtOS << "      break;\n";
@@ -2448,7 +2448,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info,
   OS << "static unsigned validateOperandClass(MCParsedAsmOperand &GOp, "
      << "MatchClassKind Kind) {\n";
   OS << "  " << Info.Target.getName() << "Operand &Operand = ("
-     << Info.Target.getName() << "Operand&)GOp;\n";
+     << Info.Target.getName() << "Operand &)GOp;\n";
 
   // The InvalidMatchClass is not to match any operand.
   OS << "  if (Kind == InvalidMatchClass)\n";
@@ -2811,7 +2811,7 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
     Record *AsmVariant = Target.getAsmParserVariant(VC);
     int AsmParserVariantNo = AsmVariant->getValueAsInt("Variant");
     StringRef AsmParserVariantName = AsmVariant->getValueAsString("Name");
-    OS << "    case " << AsmParserVariantNo << ":\n";
+    OS << "  case " << AsmParserVariantNo << ":\n";
     emitMnemonicAliasVariant(OS, Info, Aliases, /*Indent=*/2,
                              AsmParserVariantName);
     OS << "    break;\n";
@@ -2978,7 +2978,7 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
         "FeatureBitsets[it->RequiredFeaturesIdx];\n";
   OS << "    if (!ParseForAllFeatures && (AvailableFeatures & "
         "RequiredFeatures) != RequiredFeatures)\n";
-  OS << "        continue;\n\n";
+  OS << "      continue;\n\n";
 
   // Emit check to ensure the operand number matches.
   OS << "    // check if the operand in question has a custom parser.\n";
@@ -3011,10 +3011,10 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "                               uint64_t &ErrorInfo) {\n";
   OS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   OS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
-  OS << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n";
+  OS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   OS << "    switch (*p) {\n";
   OS << "    case CVT_Tied: {\n";
-  OS << "      unsigned OpIdx = *(p+1);\n";
+  OS << "      unsigned OpIdx = *(p + 1);\n";
   OS << "      assert(OpIdx < (size_t)(std::end(TiedAsmOperandTable) -\n";
   OS << "                              std::begin(TiedAsmOperandTable)) &&\n";
   OS << "             \"Tied operand not found\");\n";
@@ -3086,7 +3086,7 @@ static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
     OS << "\n";
     OS << "  std::string Res = \", did you mean: \";\n";
     OS << "  unsigned i = 0;\n";
-    OS << "  for( ; i < Candidates.size() - 1; i++)\n";
+    OS << "  for (; i < Candidates.size() - 1; i++)\n";
     OS << "    Res += Candidates[i].str() + \", \";\n";
     OS << "  return Res + Candidates[i].str() + \"?\";\n";
   }
@@ -3255,7 +3255,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "#undef GET_ASSEMBLER_HEADER\n";
   OS << "  // This should be included into the middle of the declaration of\n";
   OS << "  // your subclasses implementation of MCTargetAsmParser.\n";
-  OS << "  FeatureBitset ComputeAvailableFeatures(const FeatureBitset& FB) const;\n";
+  OS << "  FeatureBitset ComputeAvailableFeatures(const FeatureBitset &FB) const;\n";
   if (HasOptionalOperands) {
     OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
        << "unsigned Opcode,\n"
@@ -3559,12 +3559,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  // Get the instruction mnemonic, which is the first token.\n";
   if (HasMnemonicFirst) {
     OS << "  StringRef Mnemonic = ((" << Target.getName()
-       << "Operand&)*Operands[0]).getToken();\n\n";
+       << "Operand &)*Operands[0]).getToken();\n\n";
   } else {
     OS << "  StringRef Mnemonic;\n";
     OS << "  if (Operands[0]->isToken())\n";
     OS << "    Mnemonic = ((" << Target.getName()
-       << "Operand&)*Operands[0]).getToken();\n\n";
+       << "Operand &)*Operands[0]).getToken();\n\n";
   }
 
   if (HasMnemonicAliases) {
@@ -3614,7 +3614,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   OS << "  DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"AsmMatcher: found \" <<\n"
-     << "  std::distance(MnemonicRange.first, MnemonicRange.second) << \n"
+     << "  std::distance(MnemonicRange.first, MnemonicRange.second) <<\n"
      << "  \" encodings with mnemonic '\" << Mnemonic << \"'\\n\");\n\n";
 
   OS << "  // Return a more specific error code if no mnemonics match.\n";
@@ -3789,10 +3789,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
         "~AvailableFeatures;\n";
   OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target features:\";\n";
-  OS << "                       for (unsigned I = 0, E = NewMissingFeatures.size(); I != E; ++I)\n";
-  OS << "                         if (NewMissingFeatures[I])\n";
-  OS << "                           dbgs() << ' ' << I;\n";
-  OS << "                       dbgs() << \"\\n\");\n";
+  OS << "                      for (unsigned I = 0, E = NewMissingFeatures.size(); I != E; ++I)\n";
+  OS << "                        if (NewMissingFeatures[I])\n";
+  OS << "                          dbgs() << ' ' << I;\n";
+  OS << "                      dbgs() << \"\\n\");\n";
   if (ReportMultipleNearMisses) {
     OS << "      FeaturesNearMiss = NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
   } else {
@@ -3927,7 +3927,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "        getTargetOptions().MCNoDeprecatedWarn &&\n";
     OS << "        MII.getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
     OS << "      SMLoc Loc = ((" << Target.getName()
-       << "Operand&)*Operands[0]).getStartLoc();\n";
+       << "Operand &)*Operands[0]).getStartLoc();\n";
     OS << "      getParser().Warning(Loc, Info, None);\n";
     OS << "    }\n";
   }

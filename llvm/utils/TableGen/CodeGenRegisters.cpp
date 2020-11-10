@@ -2011,7 +2011,7 @@ void CodeGenRegBank::computeRegUnitSets() {
     if (RCRegUnits.empty())
       continue;
 
-    LLVM_DEBUG(dbgs() << "RC " << RC.getName() << " Units: \n";
+    LLVM_DEBUG(dbgs() << "RC " << RC.getName() << " Units:\n";
                for (auto U
                     : RCRegUnits) printRegUnitName(U);
                dbgs() << "\n  UnitSetIDs:");
