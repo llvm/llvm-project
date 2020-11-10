@@ -28,7 +28,6 @@ ProgramHeaders:
     Flags: [ PF_X, PF_R ]
     VAddr: 0x400000
     Align: 0x200000
-    Sections:
-      - Section: .pad
-      - Section: .text
+    FirstSec: .pad
+    LastSec:  .text
 ...
