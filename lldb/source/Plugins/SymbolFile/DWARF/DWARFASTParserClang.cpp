@@ -2228,10 +2228,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   return enumerators_added;
 }
 
-Function *
-DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
-                                            const DWARFDIE &die,
-                                            lldb::addr_t first_code_address) {
+Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
+                                                      const DWARFDIE &die) {
   DWARFRangeList func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
@@ -2266,9 +2264,7 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         func_range.SetByteSize(highest_func_addr - lowest_func_addr);
     }
 
-    if (lowest_func_addr >= first_code_address &&
-        lowest_func_addr != LLDB_INVALID_ADDRESS &&
-        lowest_func_addr <= highest_func_addr) {
+    if (func_range.GetBaseAddress().IsValid()) {
       Mangled func_name;
       if (mangled)
         func_name.SetValue(ConstString(mangled), true);
