@@ -27,6 +27,10 @@ The following tags are supported:
   is specified as the second argument, e.g. ``error-handling-script missing-lib
   mylib``
 
+- ``undefined-symbol``: indicates that given symbol is marked as undefined. The
+  unmangled symbol name is specified as the second argument, e.g.
+  ``error-handling-script undefined-symbol mysymbol``
+
 Return Value
 ============
 
