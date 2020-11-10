@@ -798,26 +798,8 @@ AliasResult BasicAAResult::alias(const MemoryLocation &LocA,
                                  AAQueryInfo &AAQI) {
   assert(notDifferentParent(LocA.Ptr, LocB.Ptr) &&
          "BasicAliasAnalysis doesn't support interprocedural queries.");
-
-  // If we have a directly cached entry for these locations, we have recursed
-  // through this once, so just return the cached results. Notably, when this
-  // happens, we don't clear the cache.
-  AAQueryInfo::LocPair Locs(LocA, LocB);
-  if (Locs.first.Ptr > Locs.second.Ptr)
-    std::swap(Locs.first, Locs.second);
-  auto CacheIt = AAQI.AliasCache.find(Locs);
-  if (CacheIt != AAQI.AliasCache.end()) {
-    // This code exists to skip a second BasicAA call while recursing into
-    // BestAA. Don't make use of assumptions here.
-    const auto &Entry = CacheIt->second;
-    return Entry.isDefinitive() ? Entry.Result : MayAlias;
-  }
-
-  AliasResult Alias = aliasCheck(LocA.Ptr, LocA.Size, LocA.AATags, LocB.Ptr,
-                                 LocB.Size, LocB.AATags, AAQI);
-
-  assert(VisitedPhiBBs.empty());
-  return Alias;
+  return aliasCheck(LocA.Ptr, LocA.Size, LocA.AATags, LocB.Ptr, LocB.Size,
+                    LocB.AATags, AAQI);
 }
 
 /// Checks to see if the specified callsite can clobber the specified memory
@@ -1130,16 +1112,17 @@ AliasResult BasicAAResult::aliasGEP(
     if (isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
       return NoAlias;
     // Do the base pointers alias?
-    AliasResult BaseAlias = aliasCheck(
-        UnderlyingV1, LocationSize::beforeOrAfterPointer(), AAMDNodes(),
-        UnderlyingV2, LocationSize::beforeOrAfterPointer(), AAMDNodes(), AAQI);
+    AliasResult BaseAlias = getBestAAResults().alias(
+        MemoryLocation::getBeforeOrAfter(UnderlyingV1),
+        MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
 
     // For GEPs with identical offsets, we can preserve the size and AAInfo
     // when performing the alias check on the underlying objects.
     if (BaseAlias == MayAlias && DecompGEP1.Offset == DecompGEP2.Offset &&
         DecompGEP1.VarIndices == DecompGEP2.VarIndices) {
-      AliasResult PreciseBaseAlias = aliasCheck(
-          UnderlyingV1, V1Size, V1AAInfo, UnderlyingV2, V2Size, V2AAInfo, AAQI);
+      AliasResult PreciseBaseAlias = getBestAAResults().alias(
+          MemoryLocation(UnderlyingV1, V1Size, V1AAInfo),
+          MemoryLocation(UnderlyingV2, V2Size, V2AAInfo), AAQI);
       if (PreciseBaseAlias == NoAlias)
         return NoAlias;
     }
@@ -1165,9 +1148,9 @@ AliasResult BasicAAResult::aliasGEP(
     if (!V1Size.hasValue() && !V2Size.hasValue())
       return MayAlias;
 
-    AliasResult R = aliasCheck(
-        UnderlyingV1, LocationSize::beforeOrAfterPointer(), AAMDNodes(),
-        V2, V2Size, V2AAInfo, AAQI, nullptr, UnderlyingV2);
+    AliasResult R = getBestAAResults().alias(
+        MemoryLocation::getBeforeOrAfter(UnderlyingV1),
+        MemoryLocation(V2, V2Size, V2AAInfo), AAQI);
     if (R != MustAlias) {
       // If V2 may alias GEP base pointer, conservatively returns MayAlias.
       // If V2 is known not to alias GEP base pointer, then the two values
@@ -1340,31 +1323,33 @@ AliasResult
 BasicAAResult::aliasSelect(const SelectInst *SI, LocationSize SISize,
                            const AAMDNodes &SIAAInfo, const Value *V2,
                            LocationSize V2Size, const AAMDNodes &V2AAInfo,
-                           const Value *UnderV2, AAQueryInfo &AAQI) {
+                           AAQueryInfo &AAQI) {
   // If the values are Selects with the same condition, we can do a more precise
   // check: just check for aliases between the values on corresponding arms.
   if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2))
     if (SI->getCondition() == SI2->getCondition()) {
-      AliasResult Alias =
-          aliasCheck(SI->getTrueValue(), SISize, SIAAInfo, SI2->getTrueValue(),
-                     V2Size, V2AAInfo, AAQI);
+      AliasResult Alias = getBestAAResults().alias(
+          MemoryLocation(SI->getTrueValue(), SISize, SIAAInfo),
+          MemoryLocation(SI2->getTrueValue(), V2Size, V2AAInfo), AAQI);
       if (Alias == MayAlias)
         return MayAlias;
-      AliasResult ThisAlias =
-          aliasCheck(SI->getFalseValue(), SISize, SIAAInfo,
-                     SI2->getFalseValue(), V2Size, V2AAInfo, AAQI);
+      AliasResult ThisAlias = getBestAAResults().alias(
+          MemoryLocation(SI->getFalseValue(), SISize, SIAAInfo),
+          MemoryLocation(SI2->getFalseValue(), V2Size, V2AAInfo), AAQI);
       return MergeAliasResults(ThisAlias, Alias);
     }
 
   // If both arms of the Select node NoAlias or MustAlias V2, then returns
   // NoAlias / MustAlias. Otherwise, returns MayAlias.
-  AliasResult Alias = aliasCheck(V2, V2Size, V2AAInfo, SI->getTrueValue(),
-                                 SISize, SIAAInfo, AAQI, UnderV2);
+  AliasResult Alias = getBestAAResults().alias(
+      MemoryLocation(V2, V2Size, V2AAInfo),
+      MemoryLocation(SI->getTrueValue(), SISize, SIAAInfo), AAQI);
   if (Alias == MayAlias)
     return MayAlias;
 
-  AliasResult ThisAlias = aliasCheck(V2, V2Size, V2AAInfo, SI->getFalseValue(),
-                                     SISize, SIAAInfo, AAQI, UnderV2);
+  AliasResult ThisAlias = getBestAAResults().alias(
+      MemoryLocation(V2, V2Size, V2AAInfo),
+      MemoryLocation(SI->getFalseValue(), SISize, SIAAInfo), AAQI);
   return MergeAliasResults(ThisAlias, Alias);
 }
 
@@ -1374,7 +1359,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
                                     const AAMDNodes &PNAAInfo, const Value *V2,
                                     LocationSize V2Size,
                                     const AAMDNodes &V2AAInfo,
-                                    const Value *UnderV2, AAQueryInfo &AAQI) {
+                                    AAQueryInfo &AAQI) {
   // If the values are PHIs in the same block, we can do a more precise
   // as well as efficient check: just check for aliases between the values
   // on corresponding edges.
@@ -1382,10 +1367,12 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     if (PN2->getParent() == PN->getParent()) {
       Optional<AliasResult> Alias;
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-        AliasResult ThisAlias =
-            aliasCheck(PN->getIncomingValue(i), PNSize, PNAAInfo,
-                       PN2->getIncomingValueForBlock(PN->getIncomingBlock(i)),
-                       V2Size, V2AAInfo, AAQI);
+        AliasResult ThisAlias = getBestAAResults().alias(
+            MemoryLocation(PN->getIncomingValue(i), PNSize, PNAAInfo),
+            MemoryLocation(
+                PN2->getIncomingValueForBlock(PN->getIncomingBlock(i)), V2Size,
+                V2AAInfo),
+            AAQI);
         if (Alias)
           *Alias = MergeAliasResults(*Alias, ThisAlias);
         else
@@ -1473,8 +1460,9 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   AAQueryInfo NewAAQI;
   AAQueryInfo *UseAAQI = BlockInserted ? &NewAAQI : &AAQI;
 
-  AliasResult Alias = aliasCheck(V2, V2Size, V2AAInfo, V1Srcs[0], PNSize,
-                                 PNAAInfo, *UseAAQI, UnderV2);
+  AliasResult Alias = getBestAAResults().alias(
+      MemoryLocation(V2, V2Size, V2AAInfo),
+      MemoryLocation(V1Srcs[0], PNSize, PNAAInfo), *UseAAQI);
 
   // Early exit if the check of the first PHI source against V2 is MayAlias.
   // Other results are not possible.
@@ -1490,8 +1478,9 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   for (unsigned i = 1, e = V1Srcs.size(); i != e; ++i) {
     Value *V = V1Srcs[i];
 
-    AliasResult ThisAlias = aliasCheck(V2, V2Size, V2AAInfo, V, PNSize,
-                                       PNAAInfo, *UseAAQI, UnderV2);
+    AliasResult ThisAlias = getBestAAResults().alias(
+        MemoryLocation(V2, V2Size, V2AAInfo),
+        MemoryLocation(V, PNSize, PNAAInfo), *UseAAQI);
     Alias = MergeAliasResults(ThisAlias, Alias);
     if (Alias == MayAlias)
       break;
@@ -1506,8 +1495,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                       const AAMDNodes &V1AAInfo,
                                       const Value *V2, LocationSize V2Size,
                                       const AAMDNodes &V2AAInfo,
-                                      AAQueryInfo &AAQI, const Value *O1,
-                                      const Value *O2) {
+                                      AAQueryInfo &AAQI) {
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are.
   if (V1Size.isZero() || V2Size.isZero())
@@ -1535,11 +1523,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     return NoAlias; // Scalars cannot alias each other
 
   // Figure out what objects these things are pointing to if we can.
-  if (O1 == nullptr)
-    O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
-
-  if (O2 == nullptr)
-    O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
+  const Value *O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
+  const Value *O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
 
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.
@@ -1675,24 +1660,24 @@ AliasResult BasicAAResult::aliasCheckRecursive(
 
   if (const PHINode *PN = dyn_cast<PHINode>(V1)) {
     AliasResult Result =
-        aliasPHI(PN, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O2, AAQI);
+        aliasPHI(PN, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, AAQI);
     if (Result != MayAlias)
       return Result;
   } else if (const PHINode *PN = dyn_cast<PHINode>(V2)) {
     AliasResult Result =
-        aliasPHI(PN, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, O1, AAQI);
+        aliasPHI(PN, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, AAQI);
     if (Result != MayAlias)
       return Result;
   }
 
   if (const SelectInst *S1 = dyn_cast<SelectInst>(V1)) {
     AliasResult Result =
-        aliasSelect(S1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O2, AAQI);
+        aliasSelect(S1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, AAQI);
     if (Result != MayAlias)
       return Result;
   } else if (const SelectInst *S2 = dyn_cast<SelectInst>(V2)) {
     AliasResult Result =
-        aliasSelect(S2, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, O1, AAQI);
+        aliasSelect(S2, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, AAQI);
     if (Result != MayAlias)
       return Result;
   }
@@ -1707,11 +1692,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return PartialAlias;
   }
 
-  // Recurse back into the best AA results we have, potentially with refined
-  // memory locations. We have already ensured that BasicAA has a MayAlias
-  // cache result for these, so any recursion back into BasicAA won't loop.
-  return getBestAAResults().alias(MemoryLocation(V1, V1Size, V1AAInfo),
-                                  MemoryLocation(V2, V2Size, V2AAInfo), AAQI);
+  return MayAlias;
 }
 
 /// Check whether two Values can be considered equivalent.
