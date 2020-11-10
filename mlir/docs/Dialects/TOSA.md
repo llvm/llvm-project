@@ -1,4 +1,4 @@
-# TOSA Dialect
+# Tensor Operator Set Architecture (TOSA) Dialect
 
 [TOC]
 
@@ -144,3 +144,7 @@ Maintaining the ability to overlap these different representations of
 quantization parameters (i.e. tensor-carried vs op-carried) is an important
 capability when considering progressive lowering between uses that expect one
 scheme vs the other.
+
+## Operation definitions
+
+[include "Dialects/TosaOps.md"]
