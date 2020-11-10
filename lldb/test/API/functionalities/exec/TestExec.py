@@ -20,7 +20,6 @@ class ExecTestCase(TestBase):
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan # rdar://problem/43756823
-    @skipIfFreeBSD  # hangs
     @skipIfWindows
     def test_hitting_exec (self):
         self.do_test(False)
@@ -29,7 +28,6 @@ class ExecTestCase(TestBase):
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan # rdar://problem/43756823
-    @skipIfFreeBSD  # hangs
     @skipIfWindows
     def test_skipping_exec (self):
         self.do_test(True)

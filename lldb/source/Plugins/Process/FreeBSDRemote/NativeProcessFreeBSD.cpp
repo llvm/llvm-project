@@ -211,6 +211,22 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     return;
   }
 
+  if (info.pl_flags & PL_FLAG_EXEC) {
+    Status error = ReinitializeThreads();
+    if (error.Fail()) {
+      SetState(StateType::eStateInvalid);
+      return;
+    }
+
+    // Let our delegate know we have just exec'd.
+    NotifyDidExec();
+
+    for (const auto &thread : m_threads)
+      static_cast<NativeThreadFreeBSD &>(*thread).SetStoppedByExec();
+    SetState(StateType::eStateStopped, true);
+    return;
+  }
+
   if (info.pl_lwpid > 0) {
     for (const auto &t : m_threads) {
       if (t->GetID() == static_cast<lldb::tid_t>(info.pl_lwpid))
