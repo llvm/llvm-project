@@ -1539,6 +1539,84 @@ bool CombinerHelper::applyPtrAddImmedChain(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
+                                          RegisterImmPair &MatchInfo) {
+  // We're trying to match the following pattern with any of
+  // G_SHL/G_ASHR/G_LSHR/G_SSHLSAT/G_USHLSAT shift instructions:
+  //   %t1 = SHIFT %base, G_CONSTANT imm1
+  //   %root = SHIFT %t1, G_CONSTANT imm2
+  // -->
+  //   %root = SHIFT %base, G_CONSTANT (imm1 + imm2)
+
+  unsigned Opcode = MI.getOpcode();
+  assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_ASHR ||
+          Opcode == TargetOpcode::G_LSHR || Opcode == TargetOpcode::G_SSHLSAT ||
+          Opcode == TargetOpcode::G_USHLSAT) &&
+         "Expected G_SHL, G_ASHR, G_LSHR, G_SSHLSAT or G_USHLSAT");
+
+  Register Shl2 = MI.getOperand(1).getReg();
+  Register Imm1 = MI.getOperand(2).getReg();
+  auto MaybeImmVal = getConstantVRegValWithLookThrough(Imm1, MRI);
+  if (!MaybeImmVal)
+    return false;
+
+  MachineInstr *Shl2Def = MRI.getUniqueVRegDef(Shl2);
+  if (Shl2Def->getOpcode() != Opcode)
+    return false;
+
+  Register Base = Shl2Def->getOperand(1).getReg();
+  Register Imm2 = Shl2Def->getOperand(2).getReg();
+  auto MaybeImm2Val = getConstantVRegValWithLookThrough(Imm2, MRI);
+  if (!MaybeImm2Val)
+    return false;
+
+  // Pass the combined immediate to the apply function.
+  MatchInfo.Imm = MaybeImmVal->Value + MaybeImm2Val->Value;
+  MatchInfo.Reg = Base;
+
+  // There is no simple replacement for a saturating unsigned left shift that
+  // exceeds the scalar size.
+  if (Opcode == TargetOpcode::G_USHLSAT &&
+      MatchInfo.Imm >= MRI.getType(Shl2).getScalarSizeInBits())
+    return false;
+
+  return true;
+}
+
+bool CombinerHelper::applyShiftImmedChain(MachineInstr &MI,
+                                          RegisterImmPair &MatchInfo) {
+  unsigned Opcode = MI.getOpcode();
+  assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_ASHR ||
+          Opcode == TargetOpcode::G_LSHR || Opcode == TargetOpcode::G_SSHLSAT ||
+          Opcode == TargetOpcode::G_USHLSAT) &&
+         "Expected G_SHL, G_ASHR, G_LSHR, G_SSHLSAT or G_USHLSAT");
+
+  Builder.setInstrAndDebugLoc(MI);
+  LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+  unsigned const ScalarSizeInBits = Ty.getScalarSizeInBits();
+  auto Imm = MatchInfo.Imm;
+
+  if (Imm >= ScalarSizeInBits) {
+    // Any logical shift that exceeds scalar size will produce zero.
+    if (Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR) {
+      Builder.buildConstant(MI.getOperand(0), 0);
+      MI.eraseFromParent();
+      return true;
+    }
+    // Arithmetic shift and saturating signed left shift have no effect beyond
+    // scalar size.
+    Imm = ScalarSizeInBits - 1;
+  }
+
+  LLT ImmTy = MRI.getType(MI.getOperand(2).getReg());
+  Register NewImm = Builder.buildConstant(ImmTy, Imm).getReg(0);
+  Observer.changingInstr(MI);
+  MI.getOperand(1).setReg(MatchInfo.Reg);
+  MI.getOperand(2).setReg(NewImm);
+  Observer.changedInstr(MI);
+  return true;
+}
+
 bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) {
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");

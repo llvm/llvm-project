@@ -158,6 +158,14 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+// Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
+def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;
+def shift_immed_chain : GICombineRule<
+  (defs root:$d, shift_immed_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR, G_SSHLSAT, G_USHLSAT):$d,
+         [{ return Helper.matchShiftImmedChain(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.applyShiftImmedChain(*${d}, ${matchinfo}); }])>;
+
 def mul_to_shl_matchdata : GIDefMatchData<"unsigned">;
 def mul_to_shl : GICombineRule<
   (defs root:$d, mul_to_shl_matchdata:$matchinfo),
@@ -553,4 +561,5 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
-    const_combines, xor_of_and_with_same_reg, ptr_add_with_zero]>;
+    const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
+    shift_immed_chain]>;
