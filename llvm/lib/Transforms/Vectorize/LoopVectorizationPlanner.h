@@ -281,7 +281,7 @@ protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop.
-  void buildVPlans(unsigned MinVF, unsigned MaxVF);
+  void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
 
 private:
   /// Build a VPlan according to the information gathered by Legal. \return a
@@ -299,7 +299,7 @@ private:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
-  void buildVPlansWithVPRecipes(unsigned MinVF, unsigned MaxVF);
+  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
   /// Adjust the recipes for any inloop reductions. The chain of instructions
   /// leading from the loop exit instr to the phi need to be converted to
