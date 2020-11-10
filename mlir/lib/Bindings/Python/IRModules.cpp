@@ -1228,13 +1228,12 @@ public:
   }
 
   /// Returns `index`-th element in the result list.
-  PyOpResult dunderGetItem(intptr_t index) {
+  PyValue dunderGetItem(intptr_t index) {
     if (index < 0 || index >= dunderLen()) {
       throw SetPyError(PyExc_IndexError,
                        "attempt to access out of bounds region");
     }
-    PyValue value(operation, mlirOperationGetOperand(operation->get(), index));
-    return PyOpResult(value);
+    return PyValue(operation, mlirOperationGetOperand(operation->get(), index));
   }
 
   /// Defines a Python class in the bindings.

@@ -132,6 +132,29 @@ def testBlockArgumentList():
 run(testBlockArgumentList)
 
 
+# CHECK-LABEL: TEST: testOperationOperands
+def testOperationOperands():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      func @f1(%arg0: i32) {
+        %0 = "test.producer"() : () -> i64
+        "test.consumer"(%arg0, %0) : (i32, i64) -> ()
+        return
+      }""")
+    func = module.body.operations[0]
+    entry_block = func.regions[0].blocks[0]
+    consumer = entry_block.operations[1]
+    assert len(consumer.operands) == 2
+    # CHECK: Operand 0, type i32
+    # CHECK: Operand 1, type i64
+    for i, operand in enumerate(consumer.operands):
+      print(f"Operand {i}, type {operand.type}")
+
+
+run(testOperationOperands)
+
+
 # CHECK-LABEL: TEST: testDetachedOperation
 def testDetachedOperation():
   ctx = Context()
