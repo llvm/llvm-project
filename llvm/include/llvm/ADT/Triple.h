@@ -714,7 +714,17 @@ public:
 
   /// Tests whether the target is AArch64 (little and big endian).
   bool isAArch64() const {
-    return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be;
+    return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be ||
+           getArch() == Triple::aarch64_32;
+  }
+
+  /// Tests whether the target is AArch64 and pointers are the size specified by
+  /// \p PointerWidth.
+  bool isAArch64(int PointerWidth) const {
+    assert(PointerWidth == 64 || PointerWidth == 32);
+    if (!isAArch64())
+      return false;
+    return isArch64Bit() ? PointerWidth == 64 : PointerWidth == 32;
   }
 
   /// Tests whether the target is MIPS 32-bit (little and big endian).
