@@ -38,7 +38,8 @@ typedef struct MlirStringRef MlirStringRef;
 /** Constructs a string reference from the pointer and length. The pointer need
  * not reference to a null-terminated string.
  */
-inline MlirStringRef mlirStringRefCreate(const char *str, size_t length) {
+inline static MlirStringRef mlirStringRefCreate(const char *str,
+                                                size_t length) {
   MlirStringRef result;
   result.data = str;
   result.length = length;
