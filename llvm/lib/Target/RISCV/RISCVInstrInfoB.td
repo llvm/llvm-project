@@ -862,6 +862,13 @@ def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFF00),
               (and GPR:$rs1, 0x00FF)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 
+let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
+def : Pat<(and GPR:$rs, 0x0000FFFF), (PACK GPR:$rs, X0)>;
+let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+def : Pat<(and GPR:$rs, 0x000000000000FFFF), (PACKW GPR:$rs, X0)>;
+def : Pat<(and GPR:$rs, 0x00000000FFFFFFFF), (PACK GPR:$rs, X0)>;
+}
+
 let Predicates = [HasStdExtZbp, IsRV32] in {
 def : Pat<(or (or (and (shl GPR:$rs1, (i32 8)), (i32 0x00FF0000)),
                   (and GPR:$rs1, (i32 0xFF0000FF))),
