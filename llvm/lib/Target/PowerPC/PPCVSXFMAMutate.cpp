@@ -315,9 +315,9 @@ protected:
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This
         // is necessary only if it is a physical register.
-        if (!Register::isVirtualRegister(AddendSrcReg))
-          for (MCRegUnitIterator Units(AddendSrcReg, TRI); Units.isValid();
-               ++Units) {
+        if (!AddendSrcReg.isVirtual())
+          for (MCRegUnitIterator Units(AddendSrcReg.asMCReg(), TRI);
+               Units.isValid(); ++Units) {
             unsigned Unit = *Units;
 
             LiveRange &AddendSrcRange = LIS->getRegUnit(Unit);

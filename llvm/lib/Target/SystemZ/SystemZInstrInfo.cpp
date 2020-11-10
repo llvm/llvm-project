@@ -999,7 +999,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   unsigned Opcode = MI.getOpcode();
 
   // Check CC liveness if new instruction introduces a dead def of CC.
-  MCRegUnitIterator CCUnit(SystemZ::CC, TRI);
+  MCRegUnitIterator CCUnit(MCRegister::from(SystemZ::CC), TRI);
   SlotIndex MISlot = SlotIndex();
   LiveRange *CCLiveRange = nullptr;
   bool CCLiveAtMI = true;
