@@ -4587,9 +4587,13 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
   // compare.
   Builder.SetInsertPoint(&OrigI);
 
+  Type *OverflowTy = Type::getInt1Ty(LHS->getContext());
+  if (auto *LHSTy = dyn_cast<VectorType>(LHS->getType()))
+    OverflowTy = VectorType::get(OverflowTy, LHSTy->getElementCount());
+
   if (isNeutralValue(BinaryOp, RHS)) {
     Result = LHS;
-    Overflow = Builder.getFalse();
+    Overflow = ConstantInt::getFalse(OverflowTy);
     return true;
   }
 
@@ -4600,12 +4604,12 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
     case OverflowResult::AlwaysOverflowsHigh:
       Result = Builder.CreateBinOp(BinaryOp, LHS, RHS);
       Result->takeName(&OrigI);
-      Overflow = Builder.getTrue();
+      Overflow = ConstantInt::getTrue(OverflowTy);
       return true;
     case OverflowResult::NeverOverflows:
       Result = Builder.CreateBinOp(BinaryOp, LHS, RHS);
       Result->takeName(&OrigI);
-      Overflow = Builder.getFalse();
+      Overflow = ConstantInt::getFalse(OverflowTy);
       if (auto *Inst = dyn_cast<Instruction>(Result)) {
         if (IsSigned)
           Inst->setHasNoSignedWrap();
