@@ -180,11 +180,12 @@ def getMIMGInfo : SearchIndex {
   let Key = ["Opcode"];
 }
 
-// This is a separate class so that TableGen memoizes the computations.
+// This class used to use !foldl to memoize the AddrAsmNames list.
+// It turned out that that was much slower than using !filter.
 class MIMGNSAHelper<int num_addrs> {
   list<string> AddrAsmNames =
-    !foldl([]<string>, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], lhs, i,
-           !if(!lt(i, num_addrs), !listconcat(lhs, ["vaddr"#!size(lhs)]), lhs));
+    !foreach(i, !filter(i, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        !lt(i, num_addrs)), "vaddr" # i);
   dag AddrIns = !dag(ins, !foreach(arg, AddrAsmNames, VGPR_32), AddrAsmNames);
   string AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
 
