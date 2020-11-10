@@ -353,24 +353,26 @@ private:
   /// of work needs to be performed when processing the current item. The flags
   /// and info fields are optional based on the type.
   struct WorklistItem {
-    WorklistItemType Type;
     DWARFDie Die;
+    WorklistItemType Type;
     CompileUnit &CU;
     unsigned Flags;
-    unsigned AncestorIdx = 0;
-    CompileUnit::DIEInfo *OtherInfo = nullptr;
+    union {
+      const unsigned AncestorIdx;
+      CompileUnit::DIEInfo *OtherInfo;
+    };
 
     WorklistItem(DWARFDie Die, CompileUnit &CU, unsigned Flags,
                  WorklistItemType T = WorklistItemType::LookForDIEsToKeep)
-        : Type(T), Die(Die), CU(CU), Flags(Flags) {}
+        : Die(Die), Type(T), CU(CU), Flags(Flags), AncestorIdx(0) {}
 
     WorklistItem(DWARFDie Die, CompileUnit &CU, WorklistItemType T,
                  CompileUnit::DIEInfo *OtherInfo = nullptr)
-        : Type(T), Die(Die), CU(CU), OtherInfo(OtherInfo) {}
+        : Die(Die), Type(T), CU(CU), Flags(0), OtherInfo(OtherInfo) {}
 
     WorklistItem(unsigned AncestorIdx, CompileUnit &CU, unsigned Flags)
-        : Type(WorklistItemType::LookForParentDIEsToKeep), CU(CU), Flags(Flags),
-          AncestorIdx(AncestorIdx) {}
+        : Die(), Type(WorklistItemType::LookForParentDIEsToKeep), CU(CU),
+          Flags(Flags), AncestorIdx(AncestorIdx) {}
   };
 
   /// returns true if we need to translate strings.
