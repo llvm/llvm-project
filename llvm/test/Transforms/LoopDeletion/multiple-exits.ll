@@ -10,7 +10,7 @@
 ; RUN: opt < %s -passes=loop-deletion -S | FileCheck %s --check-prefixes=CHECK,AFTER
 
 
-define void @foo(i64 %n, i64 %m) #0 {
+define void @foo(i64 %n, i64 %m) nounwind {
 ; CHECK-LABEL: @foo(
 
 entry:
@@ -43,7 +43,7 @@ return:
 ; CHECK-NEXT:    ret void
 }
 
-define i64 @bar(i64 %n, i64 %m, i64 %maybe_zero) #0 {
+define i64 @bar(i64 %n, i64 %m, i64 %maybe_zero) nounwind {
 ; CHECK-LABEL: @bar(
 
 entry:
@@ -95,7 +95,7 @@ return:
 
 ; This function has a loop which looks like @bar's but that cannot be deleted
 ; because which path we exit through determines which value is selected.
-define i64 @baz(i64 %n, i64 %m, i64 %maybe_zero) #0 {
+define i64 @baz(i64 %n, i64 %m, i64 %maybe_zero) nounwind {
 ; CHECK-LABEL:  @baz(
 
 entry:
@@ -136,5 +136,3 @@ return:
 ; CHECK-NEXT:  %[[X:.*]] = phi i64 [ 12, %bb ], [ 10, %bb2 ], [ 10, %bb3 ]
 ; CHECK-NEXT:  ret i64 %[[X]]
 }
-
-attributes #0 = { nounwind willreturn }

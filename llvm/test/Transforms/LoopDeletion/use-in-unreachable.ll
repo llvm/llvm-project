@@ -3,7 +3,7 @@
 ; Checking that possible users of instruction from the loop in
 ; unreachable blocks are handled.
 
-define i64 @foo() willreturn {
+define i64 @foo() {
 entry:
   br label %invloop
 ; CHECK-LABEL-NOT: invloop
