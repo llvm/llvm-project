@@ -6,6 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Catching an exception thrown as nullptr was not properly handled before
+// 2f984cab4fa7, which landed in macOS 10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+
 // UNSUPPORTED: no-exceptions
 
 #include <cassert>

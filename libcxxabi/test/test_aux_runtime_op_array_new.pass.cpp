@@ -8,6 +8,15 @@
 
 // UNSUPPORTED: no-exceptions
 
+// ___cxa_throw_bad_array_new_length is re-exported from libc++ only starting
+// in macosx 10.15
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+
 #include <cxxabi.h>
 #include <new>
 
