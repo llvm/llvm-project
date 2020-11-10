@@ -5854,10 +5854,8 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 7) {
-      Error(getLoc(), "invalid exp target");
+    if (Val > 7)
       return MatchOperand_ParseFail;
-    }
 
     return MatchOperand_Success;
   }
@@ -5867,10 +5865,8 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 4 || (Val == 4 && !isGFX10())) {
-      Error(getLoc(), "invalid exp target");
+    if (Val > 4 || (Val == 4 && !isGFX10()))
       return MatchOperand_ParseFail;
-    }
 
     Val += 12;
     return MatchOperand_Success;
@@ -5886,38 +5882,30 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val >= 32) {
-      Error(getLoc(), "invalid exp target");
+    if (Val >= 32)
       return MatchOperand_ParseFail;
-    }
 
     Val += 32;
     return MatchOperand_Success;
   }
 
-  if (Str.startswith("invalid_target_")) {
-    Str = Str.drop_front(15);
-    if (Str.getAsInteger(10, Val))
-      return MatchOperand_ParseFail;
-
-    Error(getLoc(), "invalid exp target");
-    return MatchOperand_ParseFail;
-  }
-
-  return MatchOperand_NoMatch;
+  return MatchOperand_ParseFail;
 }
 
 OperandMatchResultTy AMDGPUAsmParser::parseExpTgt(OperandVector &Operands) {
+  if (!isToken(AsmToken::Identifier))
+    return MatchOperand_NoMatch;
+
+  SMLoc S = getLoc();
+
   uint8_t Val;
-  StringRef Str = Parser.getTok().getString();
-
-  auto Res = parseExpTgtImpl(Str, Val);
-  if (Res != MatchOperand_Success)
+  auto Res = parseExpTgtImpl(getTokenStr(), Val);
+  if (Res != MatchOperand_Success) {
+    Error(S, "invalid exp target");
     return Res;
+  }
 
-  SMLoc S = Parser.getTok().getLoc();
   Parser.Lex();
-
   Operands.push_back(AMDGPUOperand::CreateImm(this, Val, S,
                                               AMDGPUOperand::ImmTyExpTgt));
   return MatchOperand_Success;
