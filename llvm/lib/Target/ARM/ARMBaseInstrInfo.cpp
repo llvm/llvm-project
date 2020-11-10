@@ -6071,7 +6071,7 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 }
 
 void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator &It) const {
+                                     MachineBasicBlock::iterator It) const {
   unsigned Opc = Subtarget.isThumb() ? ARM::t2STR_PRE : ARM::STR_PRE_IMM;
   int Align = -Subtarget.getStackAlignment().value();
   BuildMI(MBB, It, DebugLoc(), get(Opc), ARM::SP)
@@ -6081,8 +6081,45 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
     .add(predOps(ARMCC::AL));
 }
 
+void ARMBaseInstrInfo::emitCFIForLRSaveOnStack(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+  int Align = Subtarget.getStackAlignment().value();
+  // Add a CFI saying the stack was moved down.
+  int64_t StackPosEntry =
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Align));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(StackPosEntry)
+      .setMIFlags(MachineInstr::FrameSetup);
+
+  // Add a CFI saying that the LR that we want to find is now higher than
+  // before.
+  int64_t LRPosEntry =
+      MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, DwarfLR, -Align));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameSetup);
+}
+
+void ARMBaseInstrInfo::emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator It,
+                                             Register Reg) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+  unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
+
+  int64_t LRPosEntry = MF.addFrameInst(
+      MCCFIInstruction::createRegister(nullptr, DwarfLR, DwarfReg));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameSetup);
+}
+
 void ARMBaseInstrInfo::restoreLRFromStack(
-  MachineBasicBlock &MBB, MachineBasicBlock::iterator &It) const {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
   unsigned Opc = Subtarget.isThumb() ? ARM::t2LDR_POST : ARM::LDR_POST_IMM;
   MachineInstrBuilder MIB = BuildMI(MBB, It, DebugLoc(), get(Opc), ARM::LR)
     .addReg(ARM::SP, RegState::Define)
@@ -6090,6 +6127,39 @@ void ARMBaseInstrInfo::restoreLRFromStack(
   if (!Subtarget.isThumb())
     MIB.addReg(0);
   MIB.addImm(Subtarget.getStackAlignment().value()).add(predOps(ARMCC::AL));
+}
+
+void ARMBaseInstrInfo::emitCFIForLRRestoreFromStack(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
+  // Now stack has moved back up...
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+  int64_t StackPosEntry =
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(StackPosEntry)
+      .setMIFlags(MachineInstr::FrameDestroy);
+
+  // ... and we have restored LR.
+  int64_t LRPosEntry =
+      MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, DwarfLR));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameDestroy);
+}
+
+void ARMBaseInstrInfo::emitCFIForLRRestoreFromReg(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+
+  int64_t LRPosEntry =
+      MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, DwarfLR));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameDestroy);
 }
 
 void ARMBaseInstrInfo::buildOutlinedFrame(
@@ -6133,28 +6203,11 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
 
     // Insert a save before the outlined region
     saveLROnStack(MBB, It);
-
-    unsigned StackAlignment = Subtarget.getStackAlignment().value();
-    const TargetSubtargetInfo &STI = MF.getSubtarget();
-    const MCRegisterInfo *MRI = STI.getRegisterInfo();
-    unsigned DwarfReg = MRI->getDwarfRegNum(ARM::LR, true);
-    // Add a CFI saying the stack was moved down.
-    int64_t StackPosEntry = MF.addFrameInst(
-        MCCFIInstruction::cfiDefCfaOffset(nullptr, StackAlignment));
-    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-        .addCFIIndex(StackPosEntry)
-        .setMIFlags(MachineInstr::FrameSetup);
-
-    // Add a CFI saying that the LR that we want to find is now higher than
-    // before.
-    int64_t LRPosEntry = MF.addFrameInst(
-        MCCFIInstruction::createOffset(nullptr, DwarfReg, StackAlignment));
-    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-        .addCFIIndex(LRPosEntry)
-        .setMIFlags(MachineInstr::FrameSetup);
+    emitCFIForLRSaveOnStack(MBB, It);
 
     // Insert a restore before the terminator for the function.  Restore LR.
     restoreLRFromStack(MBB, Et);
+    emitCFIForLRRestoreFromStack(MBB, Et);
   }
 
   // If this is a tail call outlined function, then there's already a return.
@@ -6204,6 +6257,7 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
     return It;
   }
 
+  const ARMFunctionInfo &AFI = *C.getMF()->getInfo<ARMFunctionInfo>();
   // Can we save to a register?
   if (C.CallConstructionID == MachineOutlinerRegSave) {
     unsigned Reg = findRegisterToSaveLRTo(C);
@@ -6211,15 +6265,23 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
 
     // Save and restore LR from that register.
     copyPhysReg(MBB, It, DebugLoc(), Reg, ARM::LR, true);
+    if (!AFI.isLRSpilled())
+      emitCFIForLRSaveToReg(MBB, It, Reg);
     CallPt = MBB.insert(It, CallMIB);
     copyPhysReg(MBB, It, DebugLoc(), ARM::LR, Reg, true);
+    if (!AFI.isLRSpilled())
+      emitCFIForLRRestoreFromReg(MBB, It);
     It--;
     return CallPt;
   }
   // We have the default case. Save and restore from SP.
   saveLROnStack(MBB, It);
+  if (!AFI.isLRSpilled())
+    emitCFIForLRSaveOnStack(MBB, It);
   CallPt = MBB.insert(It, CallMIB);
   restoreLRFromStack(MBB, It);
+  if (!AFI.isLRSpilled())
+    emitCFIForLRRestoreFromStack(MBB, It);
   It--;
   return CallPt;
 }
