@@ -1213,34 +1213,33 @@ private:
   MlirBlock block;
 };
 
-/// A list of operation results. Internally, these are stored as consecutive
+/// A list of operation operands. Internally, these are stored as consecutive
 /// elements, random access is cheap. The result list is associated with the
 /// operation whose results these are, and extends the lifetime of this
 /// operation.
-class PyOpOperandList {
+class PyOpOperandList : public Sliceable<PyOpOperandList, PyValue> {
 public:
-  PyOpOperandList(PyOperationRef operation) : operation(operation) {}
+  static constexpr const char *pyClassName = "OpOperandList";
 
-  /// Returns the length of the result list.
-  intptr_t dunderLen() {
+  PyOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
+                  intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumOperands(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+  intptr_t getNumElements() {
     operation->checkValid();
     return mlirOperationGetNumOperands(operation->get());
   }
 
-  /// Returns `index`-th element in the result list.
-  PyValue dunderGetItem(intptr_t index) {
-    if (index < 0 || index >= dunderLen()) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to access out of bounds region");
-    }
-    return PyValue(operation, mlirOperationGetOperand(operation->get(), index));
+  PyValue getElement(intptr_t pos) {
+    return PyValue(operation, mlirOperationGetOperand(operation->get(), pos));
   }
 
-  /// Defines a Python class in the bindings.
-  static void bind(py::module &m) {
-    py::class_<PyOpOperandList>(m, "OpOperandList")
-        .def("__len__", &PyOpOperandList::dunderLen)
-        .def("__getitem__", &PyOpOperandList::dunderGetItem);
+  PyOpOperandList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpOperandList(operation, startIndex, length, step);
   }
 
 private:
@@ -1251,31 +1250,30 @@ private:
 /// elements, random access is cheap. The result list is associated with the
 /// operation whose results these are, and extends the lifetime of this
 /// operation.
-class PyOpResultList {
+class PyOpResultList : public Sliceable<PyOpResultList, PyOpResult> {
 public:
-  PyOpResultList(PyOperationRef operation) : operation(operation) {}
+  static constexpr const char *pyClassName = "OpResultList";
 
-  /// Returns the length of the result list.
-  intptr_t dunderLen() {
+  PyOpResultList(PyOperationRef operation, intptr_t startIndex = 0,
+                 intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumResults(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+  intptr_t getNumElements() {
     operation->checkValid();
     return mlirOperationGetNumResults(operation->get());
   }
 
-  /// Returns `index`-th element in the result list.
-  PyOpResult dunderGetItem(intptr_t index) {
-    if (index < 0 || index >= dunderLen()) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to access out of bounds region");
-    }
+  PyOpResult getElement(intptr_t index) {
     PyValue value(operation, mlirOperationGetResult(operation->get(), index));
     return PyOpResult(value);
   }
 
-  /// Defines a Python class in the bindings.
-  static void bind(py::module &m) {
-    py::class_<PyOpResultList>(m, "OpResultList")
-        .def("__len__", &PyOpResultList::dunderLen)
-        .def("__getitem__", &PyOpResultList::dunderGetItem);
+  PyOpResultList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpResultList(operation, startIndex, length, step);
   }
 
 private:
@@ -2932,6 +2930,11 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def(
           "dump", [](PyValue &self) { mlirValueDump(self.get()); },
           kDumpDocstring)
+      .def("__eq__",
+           [](PyValue &self, PyValue &other) {
+             return self.get().ptr == other.get().ptr;
+           })
+      .def("__eq__", [](PyValue &self, py::object other) { return false; })
       .def(
           "__str__",
           [](PyValue &self) {
