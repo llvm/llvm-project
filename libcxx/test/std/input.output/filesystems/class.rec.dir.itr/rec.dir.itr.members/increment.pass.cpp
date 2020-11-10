@@ -329,7 +329,7 @@ TEST_CASE(test_PR35078_with_symlink)
         env.create_file("dir1/file1"),
         env.create_dir("sym_dir"),
         env.create_dir("sym_dir/nested_sym_dir"),
-        env.create_symlink("sym_dir/nested_sym_dir", "dir1/dir2"),
+        env.create_directory_symlink("sym_dir/nested_sym_dir", "dir1/dir2"),
         env.create_dir("sym_dir/dir1"),
         env.create_dir("sym_dir/dir1/dir2"),
 
