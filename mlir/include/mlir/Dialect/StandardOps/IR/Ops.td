@@ -106,7 +106,7 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
                             SameOperandsAndResultType,
                             ElementwiseMappable])> {
 
-  let results = (outs AnyType);
+  let results = (outs AnyType:$result);
 
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
