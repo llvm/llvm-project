@@ -1087,19 +1087,19 @@ int NativeRegisterContextNetBSD_x86_64::GetDR(int num) const {
   }
 }
 
-Status NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
+llvm::Error NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextNetBSD &source) {
   auto &r_source = static_cast<NativeRegisterContextNetBSD_x86_64&>(source);
   Status res = r_source.ReadRegisterSet(DBRegSet);
   if (!res.Fail()) {
     // copy dbregs only if any watchpoints were set
     if ((r_source.m_dbr.dr[7] & 0xFF) == 0)
-      return res;
+      return llvm::Error::success();
 
     m_dbr = r_source.m_dbr;
     res = WriteRegisterSet(DBRegSet);
   }
-  return res;
+  return res.ToError();
 }
 
 #endif // defined(__x86_64__)

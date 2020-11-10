@@ -48,7 +48,7 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  Status
+  llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) override;
 
 private:
