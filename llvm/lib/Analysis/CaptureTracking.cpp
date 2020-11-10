@@ -240,16 +240,20 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     for (const Use &U : V->uses()) {
       // If there are lots of uses, conservatively say that the value
       // is captured to avoid taking too much compile time.
-      if (Count++ >= MaxUsesToExplore)
-        return Tracker->tooManyUses();
+      if (Count++ >= MaxUsesToExplore) {
+        Tracker->tooManyUses();
+        return false;
+      }
       if (!Visited.insert(&U).second)
         continue;
       if (!Tracker->shouldExplore(&U))
         continue;
       Worklist.push_back(&U);
     }
+    return true;
   };
-  AddUses(V);
+  if (!AddUses(V))
+    return;
 
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
@@ -273,7 +277,8 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // in BasicAA also need to know about this property.
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call,
                                                                       true)) {
-        AddUses(Call);
+        if (!AddUses(Call))
+          return;
         break;
       }
 
@@ -346,7 +351,8 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     case Instruction::Select:
     case Instruction::AddrSpaceCast:
       // The original value is not captured via this if the new value isn't.
-      AddUses(I);
+      if (!AddUses(I))
+        return;
       break;
     case Instruction::ICmp: {
       unsigned Idx = U->getOperandNo();
