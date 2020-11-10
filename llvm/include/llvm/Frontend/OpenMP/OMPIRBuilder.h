@@ -58,7 +58,7 @@ public:
 
   struct FinalizationInfo {
     /// The finalization callback provided by the last in-flight invocation of
-    /// CreateXXXX for the directive of kind DK.
+    /// createXXXX for the directive of kind DK.
     FinalizeCallbackTy FiniCB;
 
     /// The directive kind of the innermost directive that has an associated
@@ -152,7 +152,7 @@ public:
   ///                        should be checked and acted upon.
   ///
   /// \returns The insertion point after the barrier.
-  InsertPointTy CreateBarrier(const LocationDescription &Loc, omp::Directive DK,
+  InsertPointTy createBarrier(const LocationDescription &Loc, omp::Directive DK,
                               bool ForceSimpleCall = false,
                               bool CheckCancelFlag = true);
 
@@ -163,7 +163,7 @@ public:
   /// \param CanceledDirective The kind of directive that is cancled.
   ///
   /// \returns The insertion point after the barrier.
-  InsertPointTy CreateCancel(const LocationDescription &Loc, Value *IfCondition,
+  InsertPointTy createCancel(const LocationDescription &Loc, Value *IfCondition,
                              omp::Directive CanceledDirective);
 
   /// Generator for '#omp parallel'
@@ -180,7 +180,7 @@ public:
   ///
   /// \returns The insertion position *after* the parallel.
   IRBuilder<>::InsertPoint
-  CreateParallel(const LocationDescription &Loc, InsertPointTy AllocaIP,
+  createParallel(const LocationDescription &Loc, InsertPointTy AllocaIP,
                  BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
                  FinalizeCallbackTy FiniCB, Value *IfCondition,
                  Value *NumThreads, omp::ProcBindKind ProcBind,
@@ -202,7 +202,7 @@ public:
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
-  CanonicalLoopInfo *CreateCanonicalLoop(const LocationDescription &Loc,
+  CanonicalLoopInfo *createCanonicalLoop(const LocationDescription &Loc,
                                          LoopBodyGenCallbackTy BodyGenCB,
                                          Value *TripCount);
 
@@ -250,7 +250,7 @@ public:
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
-  CanonicalLoopInfo *CreateCanonicalLoop(const LocationDescription &Loc,
+  CanonicalLoopInfo *createCanonicalLoop(const LocationDescription &Loc,
                                          LoopBodyGenCallbackTy BodyGenCB,
                                          Value *Start, Value *Stop, Value *Step,
                                          bool IsSigned, bool InclusiveStop);
@@ -258,17 +258,17 @@ public:
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
-  void CreateFlush(const LocationDescription &Loc);
+  void createFlush(const LocationDescription &Loc);
 
   /// Generator for '#omp taskwait'
   ///
   /// \param Loc The location where the taskwait directive was encountered.
-  void CreateTaskwait(const LocationDescription &Loc);
+  void createTaskwait(const LocationDescription &Loc);
 
   /// Generator for '#omp taskyield'
   ///
   /// \param Loc The location where the taskyield directive was encountered.
-  void CreateTaskyield(const LocationDescription &Loc);
+  void createTaskyield(const LocationDescription &Loc);
 
   ///}
 
@@ -417,7 +417,7 @@ public:
   ///
   /// \return The insertion position *after* the CopyPrivate call.
 
-  InsertPointTy CreateCopyPrivate(const LocationDescription &Loc,
+  InsertPointTy createCopyPrivate(const LocationDescription &Loc,
                                   llvm::Value *BufSize, llvm::Value *CpyBuf,
                                   llvm::Value *CpyFn, llvm::Value *DidIt);
 
@@ -429,7 +429,7 @@ public:
   /// \param DidIt Local variable used as a flag to indicate 'single' thread
   ///
   /// \returns The insertion position *after* the single call.
-  InsertPointTy CreateSingle(const LocationDescription &Loc,
+  InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB, llvm::Value *DidIt);
 
@@ -440,7 +440,7 @@ public:
   /// \param FiniCB Callback to finalize variable copies.
   ///
   /// \returns The insertion position *after* the master.
-  InsertPointTy CreateMaster(const LocationDescription &Loc,
+  InsertPointTy createMaster(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB);
 
@@ -453,7 +453,7 @@ public:
   /// \param HintInst Hint Instruction for hint clause associated with critical
   ///
   /// \returns The insertion position *after* the master.
-  InsertPointTy CreateCritical(const LocationDescription &Loc,
+  InsertPointTy createCritical(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
                                FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
@@ -470,7 +470,7 @@ public:
   //				 and copy.in.end block
   ///
   /// \returns The insertion point where copying operation to be emitted.
-  InsertPointTy CreateCopyinClauseBlocks(InsertPointTy IP, Value *MasterAddr,
+  InsertPointTy createCopyinClauseBlocks(InsertPointTy IP, Value *MasterAddr,
                                          Value *PrivateAddr,
                                          llvm::IntegerType *IntPtrTy,
                                          bool BranchtoEnd = true);
@@ -483,7 +483,7 @@ public:
   /// \param Name Name of call Instruction for OMP_alloc
   ///
   /// \returns CallInst to the OMP_Alloc call
-  CallInst *CreateOMPAlloc(const LocationDescription &Loc, Value *Size,
+  CallInst *createOMPAlloc(const LocationDescription &Loc, Value *Size,
                            Value *Allocator, std::string Name = "");
 
   /// Create a runtime call for kmpc_free
@@ -494,7 +494,7 @@ public:
   /// \param Name Name of call Instruction for OMP_Free
   ///
   /// \returns CallInst to the OMP_Free call
-  CallInst *CreateOMPFree(const LocationDescription &Loc, Value *Addr,
+  CallInst *createOMPFree(const LocationDescription &Loc, Value *Addr,
                           Value *Allocator, std::string Name = "");
 
   /// Create a runtime call for kmpc_threadprivate_cached
@@ -505,7 +505,7 @@ public:
   /// \param Name Name of call Instruction for callinst
   ///
   /// \returns CallInst to the thread private cache call.
-  CallInst *CreateCachedThreadPrivate(const LocationDescription &Loc,
+  CallInst *createCachedThreadPrivate(const LocationDescription &Loc,
                                       llvm::Value *Pointer,
                                       llvm::ConstantInt *Size,
                                       const llvm::Twine &Name = Twine(""));

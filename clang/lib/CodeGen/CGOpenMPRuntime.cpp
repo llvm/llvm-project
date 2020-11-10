@@ -2260,7 +2260,7 @@ void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
   if (!CGF.HaveInsertPoint())
     return;
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    OMPBuilder.CreateTaskyield(CGF.Builder);
+    OMPBuilder.createTaskyield(CGF.Builder);
   } else {
     // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
     llvm::Value *Args[] = {
@@ -2515,7 +2515,7 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
   auto *OMPRegionInfo =
       dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    CGF.Builder.restoreIP(OMPBuilder.CreateBarrier(
+    CGF.Builder.restoreIP(OMPBuilder.createBarrier(
         CGF.Builder, Kind, ForceSimpleCall, EmitChecks));
     return;
   }
@@ -2877,7 +2877,7 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
                                 SourceLocation Loc, llvm::AtomicOrdering AO) {
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    OMPBuilder.CreateFlush(CGF.Builder);
+    OMPBuilder.createFlush(CGF.Builder);
   } else {
     if (!CGF.HaveInsertPoint())
       return;
@@ -6187,7 +6187,7 @@ void CGOpenMPRuntime::emitTaskwaitCall(CodeGenFunction &CGF,
     return;
 
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    OMPBuilder.CreateTaskwait(CGF.Builder);
+    OMPBuilder.createTaskwait(CGF.Builder);
   } else {
     // Build call kmp_int32 __kmpc_omp_taskwait(ident_t *loc, kmp_int32
     // global_tid);
