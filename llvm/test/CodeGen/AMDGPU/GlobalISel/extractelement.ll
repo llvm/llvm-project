@@ -1679,7 +1679,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
 ; GPRIDX-NEXT:     wavefront_sgpr_count = 9
-; GPRIDX-NEXT:     workitem_vgpr_count = 4
+; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
 ; GPRIDX-NEXT:     reserved_sgpr_first = 0
@@ -1710,10 +1710,9 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s8, 4
 ; GPRIDX-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s6
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, s7
-; GPRIDX-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, 0
+; GPRIDX-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_extract_v5f64_s_s:
@@ -2194,7 +2193,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
 ; GPRIDX-NEXT:     wavefront_sgpr_count = 6
-; GPRIDX-NEXT:     workitem_vgpr_count = 3
+; GPRIDX-NEXT:     workitem_vgpr_count = 2
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
 ; GPRIDX-NEXT:     reserved_sgpr_first = 0
@@ -2211,17 +2210,16 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; GPRIDX-NEXT:  ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GPRIDX-NEXT:    s_load_dword s2, s[4:5], 0x8
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, 0
 ; GPRIDX-NEXT:    s_waitcnt lgkmcnt(0)
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s2, 1
 ; GPRIDX-NEXT:    s_cselect_b32 s3, 2.0, 1.0
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s2, 2
 ; GPRIDX-NEXT:    s_cselect_b32 s3, 0x40400000, s3
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s2, 3
 ; GPRIDX-NEXT:    s_cselect_b32 s2, 4.0, s3
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
-; GPRIDX-NEXT:    global_store_dword v[0:1], v2, off
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s2
+; GPRIDX-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_extract_v4f32_s_s_s:
@@ -2370,7 +2368,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
 ; GPRIDX-NEXT:     wavefront_sgpr_count = 7
-; GPRIDX-NEXT:     workitem_vgpr_count = 4
+; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
 ; GPRIDX-NEXT:     reserved_sgpr_first = 0
@@ -2389,8 +2387,8 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GPRIDX-NEXT:    s_load_dword s6, s[4:5], 0x8
 ; GPRIDX-NEXT:    s_mov_b32 s0, 0
 ; GPRIDX-NEXT:    s_mov_b32 s1, 0x40080000
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, 0
 ; GPRIDX-NEXT:    s_waitcnt lgkmcnt(0)
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s6, 1
 ; GPRIDX-NEXT:    s_cselect_b64 s[4:5], 2.0, 1.0
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s6, 2
@@ -2399,8 +2397,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GPRIDX-NEXT:    s_cselect_b64 s[0:1], 4.0, s[0:1]
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, s3
-; GPRIDX-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GPRIDX-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_extract_v4f64_s_s_s:

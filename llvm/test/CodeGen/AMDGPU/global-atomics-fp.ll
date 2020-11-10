@@ -33,7 +33,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(float addrspace(1)* %
 ; GFX900-NEXT: s_cbranch_execnz [[LOOP]]
 
 ; GFX908-NOT: v_add_f32
-; GFX908:     global_atomic_add_f32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, off
+; GFX908:     global_atomic_add_f32 v{{[0-9]+}}, v{{[0-9]+}}, s
 ; GFX908-NOT: s_cbranch_execnz
 define amdgpu_kernel void @global_atomic_fadd_noret_f32(float addrspace(1)* %ptr) #0 {
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst

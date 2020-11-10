@@ -66,7 +66,7 @@
 ; HSA-VI: s_mov_b32 s[[HI:[0-9]]], 0x1100f000
 ; Make sure we generate flat store for HSA
 ; PRE-GFX10: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
-; GFX10: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
+; GFX10: global_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}
 
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple

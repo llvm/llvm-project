@@ -45,16 +45,13 @@ define amdgpu_kernel void @sin_f16(half addrspace(1)* %r, half addrspace(1)* %a)
 ; GFX9-LABEL: sin_f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mul_f16_e32 v0, 0.15915494, v0
-; GFX9-NEXT:    v_sin_f16_e32 v2, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    global_store_short v[0:1], v2, off
+; GFX9-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX9-NEXT:    v_sin_f16_e32 v1, v1
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %a.val = load half, half addrspace(1)* %a
   %r.val = call half @llvm.sin.f16(half %a.val)
@@ -118,21 +115,18 @@ define amdgpu_kernel void @sin_v2f16(<2 x half> addrspace(1)* %r, <2 x half> add
 ; GFX9-LABEL: sin_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x3118
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_dword v0, v[0:1], off
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3118
+; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mul_f16_e32 v2, 0.15915494, v0
-; GFX9-NEXT:    v_sin_f16_e32 v2, v2
-; GFX9-NEXT:    v_mul_f16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    v_sin_f16_e32 v3, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    v_mul_f16_e32 v3, 0.15915494, v1
+; GFX9-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    v_sin_f16_e32 v3, v3
+; GFX9-NEXT:    v_sin_f16_e32 v1, v1
+; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %r.val = call <2 x half> @llvm.sin.v2f16(<2 x half> %a.val)
