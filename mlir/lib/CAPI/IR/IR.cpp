@@ -479,6 +479,10 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 // Value API.
 //===----------------------------------------------------------------------===//
 
+int mlirValueEqual(MlirValue value1, MlirValue value2) {
+  return unwrap(value1) == unwrap(value2);
+}
+
 int mlirValueIsABlockArgument(MlirValue value) {
   return unwrap(value).isa<BlockArgument>();
 }
