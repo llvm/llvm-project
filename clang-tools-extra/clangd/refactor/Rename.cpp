@@ -256,9 +256,9 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
 
 // Lookup the declarations (if any) with the given Name in the context of
 // RenameDecl.
-NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
-                                 const NamedDecl &RenamedDecl,
-                                 llvm::StringRef Name) {
+const NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
+                                       const NamedDecl &RenamedDecl,
+                                       llvm::StringRef Name) {
   const auto &II = Ctx.Idents.get(Name);
   DeclarationName LookupName(&II);
   DeclContextLookupResult LookupResult;
@@ -285,11 +285,9 @@ NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
     break;
   }
   // Lookup may contain the RenameDecl itself, exclude it.
-  auto It = llvm::find_if(LookupResult, [&RenamedDecl](const NamedDecl *D) {
-    return D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl();
-  });
-  if (It != LookupResult.end())
-    return *It;
+  for (const auto *D : LookupResult)
+    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl())
+      return D;
   return nullptr;
 }
 
