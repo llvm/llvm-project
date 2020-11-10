@@ -109,6 +109,26 @@ std::size_t Descriptor::Elements() const {
   return elements;
 }
 
+int Descriptor::Allocate() {
+  std::size_t byteSize{Elements() * ElementBytes()};
+  void *p{std::malloc(byteSize)};
+  if (!p && byteSize) {
+    return CFI_ERROR_MEM_ALLOCATION;
+  }
+  // TODO: image synchronization
+  // TODO: derived type initialization
+  raw_.base_addr = p;
+  if (int dims{rank()}) {
+    std::size_t stride{ElementBytes()};
+    for (int j{0}; j < dims; ++j) {
+      auto &dimension{GetDimension(j)};
+      dimension.SetByteStride(stride);
+      stride *= dimension.Extent();
+    }
+  }
+  return 0;
+}
+
 int Descriptor::Allocate(const SubscriptValue lb[], const SubscriptValue ub[]) {
   int result{ISO::CFI_allocate(&raw_, lb, ub, ElementBytes())};
   if (result == CFI_SUCCESS) {
