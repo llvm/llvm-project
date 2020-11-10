@@ -263,7 +263,7 @@ void DFAPacketizerEmitter::emitForItineraries(
     OS << "  " << ProcModelStartIdx[Model] << ", // " << Model->ModelName
        << "\n";
   }
-  OS << ScheduleClasses.size() << "\n};\n\n";
+  OS << "  " << ScheduleClasses.size() << "\n};\n\n";
 
   // The type of a state in the nondeterministic automaton we're defining.
   using NfaStateTy = uint64_t;

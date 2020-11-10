@@ -443,7 +443,7 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
 
   // Emit the starting string.
   O << "  assert(Bits != 0 && \"Cannot print this instruction.\");\n"
-    << "  O << AsmStrs+(Bits & " << (1 << AsmStrBits)-1 << ")-1;\n\n";
+    << "  O << AsmStrs + (Bits & " << (1 << AsmStrBits)-1 << ") - 1;\n\n";
 
   // Output the table driven operand information.
   BitsLeft = OpcodeInfoBits-AsmStrBits;

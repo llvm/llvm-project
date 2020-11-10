@@ -85,7 +85,7 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
     EmitAction(CCActions->getElementAsRecord(i), 2, O);
   }
   
-  O << "\n  return true;  // CC didn't match.\n";
+  O << "\n  return true; // CC didn't match.\n";
   O << "}\n";
 }
 
@@ -238,11 +238,11 @@ void CallingConvEmitter::EmitAction(Record *Action,
         O << IndentStr << "LocInfo = CCValAssign::FPExt;\n";
       } else {
         O << IndentStr << "if (ArgFlags.isSExt())\n"
-          << IndentStr << IndentStr << "LocInfo = CCValAssign::SExt;\n"
+          << IndentStr << "  LocInfo = CCValAssign::SExt;\n"
           << IndentStr << "else if (ArgFlags.isZExt())\n"
-          << IndentStr << IndentStr << "LocInfo = CCValAssign::ZExt;\n"
+          << IndentStr << "  LocInfo = CCValAssign::ZExt;\n"
           << IndentStr << "else\n"
-          << IndentStr << IndentStr << "LocInfo = CCValAssign::AExt;\n";
+          << IndentStr << "  LocInfo = CCValAssign::AExt;\n";
       }
     } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
@@ -254,11 +254,11 @@ void CallingConvEmitter::EmitAction(Record *Action,
                         "point");
       } else {
         O << IndentStr << "if (ArgFlags.isSExt())\n"
-          << IndentStr << IndentStr << "LocInfo = CCValAssign::SExtUpper;\n"
+          << IndentStr << "  LocInfo = CCValAssign::SExtUpper;\n"
           << IndentStr << "else if (ArgFlags.isZExt())\n"
-          << IndentStr << IndentStr << "LocInfo = CCValAssign::ZExtUpper;\n"
+          << IndentStr << "  LocInfo = CCValAssign::ZExtUpper;\n"
           << IndentStr << "else\n"
-          << IndentStr << IndentStr << "LocInfo = CCValAssign::AExtUpper;\n";
+          << IndentStr << "  LocInfo = CCValAssign::AExtUpper;\n";
       }
     } else if (Action->isSubClassOf("CCBitConvertToType")) {
       Record *DestTy = Action->getValueAsDef("DestTy");
@@ -282,7 +282,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
       O << IndentStr
         << "if (" << Action->getValueAsString("FuncName") << "(ValNo, ValVT, "
         << "LocVT, LocInfo, ArgFlags, State))\n";
-      O << IndentStr << IndentStr << "return false;\n";
+      O << IndentStr << "  return false;\n";
     } else {
       errs() << *Action;
       PrintFatalError(Action->getLoc(), "Unknown CCAction!");

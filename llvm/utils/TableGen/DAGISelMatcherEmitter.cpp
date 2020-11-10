@@ -250,7 +250,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
   BeginEmitFunction(OS, "StringRef", "getPatternForIndex(unsigned Index)",
                     true/*AddOverride*/);
   OS << "{\n";
-  OS << "static const char * PATTERN_MATCH_TABLE[] = {\n";
+  OS << "static const char *PATTERN_MATCH_TABLE[] = {\n";
 
   for (const auto &It : VecPatterns) {
     OS << "\"" << It.first << "\",\n";
@@ -264,7 +264,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
   BeginEmitFunction(OS, "StringRef", "getIncludePathForIndex(unsigned Index)",
                     true/*AddOverride*/);
   OS << "{\n";
-  OS << "static const char * INCLUDE_PATH_TABLE[] = {\n";
+  OS << "static const char *INCLUDE_PATH_TABLE[] = {\n";
 
   for (const auto &It : VecIncludeStrings) {
     OS << "\"" << It << "\",\n";
@@ -844,7 +844,7 @@ void MatcherTableEmitter::EmitNodePredicatesFunction(
     TreePredicateFn PredFn = Preds[i];
 
     assert(!PredFn.isAlwaysTrue() && "No code in this predicate");
-    OS << "  case " << i << ": { \n";
+    OS << "  case " << i << ": {\n";
     for (auto *SimilarPred :
           NodePredicatesByCodeToRun[PredFn.getCodeToRunOnSDNode()])
       OS << "    // " << TreePredicateFn(SimilarPred).getFnName() <<'\n';
@@ -887,7 +887,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
     BeginEmitFunction(OS, "bool",
           "CheckComplexPattern(SDNode *Root, SDNode *Parent,\n"
           "      SDValue N, unsigned PatternNo,\n"
-          "      SmallVectorImpl<std::pair<SDValue, SDNode*>> &Result)",
+          "      SmallVectorImpl<std::pair<SDValue, SDNode *>> &Result)",
           true/*AddOverride*/);
     OS << "{\n";
     OS << "  unsigned NextRes = Result.size();\n";
