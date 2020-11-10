@@ -273,10 +273,10 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
 
       // We need to remove any kill flags between the original VCMP and the new
       // insertion point.
-      for (MachineInstr &MI :
+      for (MachineInstr &MII :
            make_range(VCMP->getIterator(), MI->getIterator())) {
-        MI.clearRegisterKills(VCMP->getOperand(1).getReg(), TRI);
-        MI.clearRegisterKills(VCMP->getOperand(2).getReg(), TRI);
+        MII.clearRegisterKills(VCMP->getOperand(1).getReg(), TRI);
+        MII.clearRegisterKills(VCMP->getOperand(2).getReg(), TRI);
       }
 
       VCMP->eraseFromParent();

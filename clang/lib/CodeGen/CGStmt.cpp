@@ -947,7 +947,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   Expr::EvalResult Result;
   if (LanguageRequiresProgress()) {
     if (!S.getCond()) {
-      LoopMustProgress = true;
       FnIsMustProgress = false;
     } else if (!S.getCond()->EvaluateAsInt(Result, getContext())) {
       LoopMustProgress = true;

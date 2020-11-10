@@ -1515,6 +1515,20 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     return selectXRayCustomEvent(II);
   case Intrinsic::xray_typedevent:
     return selectXRayTypedEvent(II);
+
+  case Intrinsic::memcpy:
+  case Intrinsic::memcpy_element_unordered_atomic:
+  case Intrinsic::memcpy_inline:
+  case Intrinsic::memmove:
+  case Intrinsic::memmove_element_unordered_atomic:
+  case Intrinsic::memset:
+  case Intrinsic::memset_element_unordered_atomic:
+    // Flush the local value map just like we do for regular calls,
+    // to avoid excessive spills and reloads.
+    // These intrinsics mostly turn into library calls at O0; and
+    // even memcpy_inline should be treated like one for this purpose.
+    flushLocalValueMap();
+    break;
   }
 
   return fastLowerIntrinsicCall(II);

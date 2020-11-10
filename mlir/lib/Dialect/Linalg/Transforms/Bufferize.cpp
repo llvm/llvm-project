@@ -228,9 +228,96 @@ public:
     return success();
   }
 };
-} // namespace
 
-namespace {
+// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
+static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
+  return llvm::to_vector<4>(
+      llvm::map_range(attr.cast<ArrayAttr>(), [](Attribute a) -> int64_t {
+        return a.cast<IntegerAttr>().getInt();
+      }));
+}
+
+/// Convert `subtensor %t [offsets][sizes][strides] -> %st` to an alloc + copy
+/// pattern.
+/// ```
+///   %a = alloc(sizes)
+///   %sv = subview %source [offsets][sizes][strides]
+///   linalg_copy(%sv, %a)
+/// ```
+///
+/// This pattern is arguable a std pattern once linalg::CopyOp becomes
+/// std::CopyOp.
+class SubTensorOpConverter : public OpConversionPattern<SubTensorOp> {
+public:
+  using OpConversionPattern<SubTensorOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SubTensorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    SubTensorOpAdaptor adaptor(operands,
+                               op.getOperation()->getAttrDictionary());
+    Value sourceMemref = adaptor.source();
+    assert(sourceMemref.getType().isa<MemRefType>());
+
+    MemRefType subviewMemRefType =
+        getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
+    // op.sizes() capture exactly the dynamic alloc operands matching the
+    // subviewMemRefType thanks to subview/subtensor canonicalization and
+    // verification.
+    Value alloc =
+        rewriter.create<AllocOp>(op.getLoc(), subviewMemRefType, op.sizes());
+    Value subView = rewriter.create<SubViewOp>(
+        op.getLoc(), sourceMemref, extractFromI64ArrayAttr(op.static_offsets()),
+        extractFromI64ArrayAttr(op.static_sizes()),
+        extractFromI64ArrayAttr(op.static_strides()), op.offsets(), op.sizes(),
+        op.strides());
+    rewriter.create<linalg::CopyOp>(op.getLoc(), subView, alloc);
+    rewriter.replaceOp(op, alloc);
+    return success();
+  }
+};
+
+/// Convert `subtensor_insert %source into %dest [offsets][sizes][strides] ->
+/// %t` to an tensor_to_memref + subview + copy + tensor_load pattern.
+/// tensor_to_memref and tensor_load are inserted automatically by the 
+/// conversion infra:
+/// ```
+///   %sv = subview %dest [offsets][sizes][strides]
+///   linalg_copy(%source, %sv)
+///   // replace with %dest
+/// ```
+///
+/// This pattern is arguable a std pattern once linalg::CopyOp becomes
+/// std::CopyOp.
+class SubTensorInsertOpConverter
+    : public OpConversionPattern<SubTensorInsertOp> {
+public:
+  using OpConversionPattern<SubTensorInsertOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SubTensorInsertOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    SubTensorInsertOpAdaptor adaptor(operands,
+                                     op.getOperation()->getAttrDictionary());
+    Value sourceMemRef = adaptor.source();
+    assert(sourceMemRef.getType().isa<MemRefType>());
+
+    Value destMemRef = adaptor.dest();
+    assert(destMemRef.getType().isa<MemRefType>());
+
+    // Take a subview to copy the small memref.
+    Value subview = rewriter.create<SubViewOp>(
+        op.getLoc(), destMemRef, extractFromI64ArrayAttr(op.static_offsets()),
+        extractFromI64ArrayAttr(op.static_sizes()),
+        extractFromI64ArrayAttr(op.static_strides()), adaptor.offsets(),
+        adaptor.sizes(), adaptor.strides());
+    // Copy the small memref.
+    rewriter.create<linalg::CopyOp>(op.getLoc(), sourceMemRef, subview);
+    rewriter.replaceOp(op, destMemRef);
+    return success();
+  }
+};
+
 /// TensorConstantOp conversion inserts a linearized 1-D vector constant that is
 /// stored in memory. A linalg.reshape is introduced to convert to the desired
 /// n-D buffer form.
@@ -287,28 +374,27 @@ public:
 } // namespace
 
 namespace {
-
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
 struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     ConversionTarget target(context);
-    BufferizeTypeConverter converter;
+    BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
-    // TODO: Remove after TensorConstantOpConverter moves to std-bufferize.
     target.addLegalDialect<StandardOpsDialect, vector::VectorDialect>();
+    target.addIllegalOp<SubTensorOp, SubTensorInsertOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
-      return converter.isLegal(op);
+      return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
     target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
 
     OwningRewritePatternList patterns;
-    populateLinalgBufferizePatterns(&context, converter, patterns);
+    populateLinalgBufferizePatterns(&context, typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -319,10 +405,17 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createLinalgBufferizePass() {
   return std::make_unique<LinalgBufferizePass>();
 }
-void mlir::linalg::populateLinalgBufferizePatterns(
-    MLIRContext *context, BufferizeTypeConverter &converter,
-    OwningRewritePatternList &patterns) {
 
-  patterns.insert<BufferizeAnyLinalgOp>(converter);
-  patterns.insert<TensorConstantOpConverter>(converter, context);
+void mlir::linalg::populateLinalgBufferizePatterns(
+    MLIRContext *context, BufferizeTypeConverter &typeConverter,
+    OwningRewritePatternList &patterns) {
+  patterns.insert<BufferizeAnyLinalgOp>(typeConverter);
+  // TODO: Drop this once tensor constants work in standard.
+  patterns.insert<
+      // clang-format off
+      SubTensorOpConverter,
+      SubTensorInsertOpConverter,
+      TensorConstantOpConverter
+      // clang-format on
+      >(typeConverter, context);
 }
