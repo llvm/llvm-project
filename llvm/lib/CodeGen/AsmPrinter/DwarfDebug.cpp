@@ -158,7 +158,7 @@ static cl::opt<LinkageNameOption>
 static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
-  getActiveStreamer().EmitInt8(
+  getActiveStreamer().emitInt8(
       Op, Comment ? Twine(Comment) + " " + dwarf::OperationEncodingString(Op)
                   : dwarf::OperationEncodingString(Op));
 }
@@ -172,7 +172,7 @@ void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
 }
 
 void DebugLocDwarfExpression::emitData1(uint8_t Value) {
-  getActiveStreamer().EmitInt8(Value, Twine(Value));
+  getActiveStreamer().emitInt8(Value, Twine(Value));
 }
 
 void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
@@ -206,7 +206,7 @@ void DebugLocDwarfExpression::commitTemporaryBuffer() {
     const char *Comment = (Byte.index() < TmpBuf->Comments.size())
                               ? TmpBuf->Comments[Byte.index()].c_str()
                               : "";
-    OutBS.EmitInt8(Byte.value(), Comment);
+    OutBS.emitInt8(Byte.value(), Comment);
   }
   TmpBuf->Bytes.clear();
   TmpBuf->Comments.clear();
@@ -2417,7 +2417,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   for (auto &Op : Expr) {
     assert(Op.getCode() != dwarf::DW_OP_const_type &&
            "3 operand ops not yet supported");
-    Streamer.EmitInt8(Op.getCode(), Comment != End ? *(Comment++) : "");
+    Streamer.emitInt8(Op.getCode(), Comment != End ? *(Comment++) : "");
     Offset++;
     for (unsigned I = 0; I < 2; ++I) {
       if (Op.getDescription().Op[I] == Encoding::SizeNA)
@@ -2433,7 +2433,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
             Comment++;
       } else {
         for (uint64_t J = Offset; J < Op.getOperandEndOffset(I); ++J)
-          Streamer.EmitInt8(Data.getData()[J], Comment != End ? *(Comment++) : "");
+          Streamer.emitInt8(Data.getData()[J], Comment != End ? *(Comment++) : "");
       }
       Offset = Op.getOperandEndOffset(I);
     }
