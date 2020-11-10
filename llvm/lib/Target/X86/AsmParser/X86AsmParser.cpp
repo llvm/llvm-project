@@ -1693,20 +1693,25 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(Tok.getLoc(), "unknown token in expression");
       }
       LLVM_FALLTHROUGH;
-    case AsmToken::At:
-    case AsmToken::String:
-    case AsmToken::Identifier: {
-      if (Parser.isParsingMasm() && Tok.is(AsmToken::String)) {
-        // Single-character strings should be treated as integer constants. This
-        // includes MASM escapes for quotes.
-        char Quote = Tok.getString().front();
-        StringRef Contents = Tok.getStringContents();
-        if (Contents.size() == 1 || Contents == std::string(2, Quote)) {
-          if (SM.onInteger(Contents.front(), ErrMsg))
-            return Error(Tok.getLoc(), ErrMsg);
-          break;
-        }
+    case AsmToken::String: {
+      if (Parser.isParsingMasm()) {
+        // MASM parsers handle strings in expressions as constants.
+        SMLoc ValueLoc = Tok.getLoc();
+        int64_t Res;
+        const MCExpr *Val;
+        if (Parser.parsePrimaryExpr(Val, End, nullptr))
+          return true;
+        UpdateLocLex = false;
+        if (!Val->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
+          return Error(ValueLoc, "expected absolute value");
+        if (SM.onInteger(Res, ErrMsg))
+          return Error(ValueLoc, ErrMsg);
+        break;
       }
+      LLVM_FALLTHROUGH;
+    }
+    case AsmToken::At:
+    case AsmToken::Identifier: {
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
