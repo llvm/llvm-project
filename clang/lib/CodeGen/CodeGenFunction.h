@@ -628,11 +628,15 @@ public:
   class CGFPOptionsRAII {
   public:
     CGFPOptionsRAII(CodeGenFunction &CGF, FPOptions FPFeatures);
+    CGFPOptionsRAII(CodeGenFunction &CGF, const Expr *E);
     ~CGFPOptionsRAII();
 
   private:
+    void ConstructorHelper(FPOptions FPFeatures);
     CodeGenFunction &CGF;
     FPOptions OldFPFeatures;
+    llvm::fp::ExceptionBehavior OldExcept;
+    llvm::RoundingMode OldRounding;
     Optional<CGBuilderTy::FastMathFlagGuard> FMFGuard;
   };
   FPOptions CurFPFeatures;
