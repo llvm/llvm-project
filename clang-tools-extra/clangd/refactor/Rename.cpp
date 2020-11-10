@@ -254,6 +254,86 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
   return Results;
 }
 
+// Lookup the declarations (if any) with the given Name in the context of
+// RenameDecl.
+NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
+                                 const NamedDecl &RenamedDecl,
+                                 llvm::StringRef Name) {
+  const auto &II = Ctx.Idents.get(Name);
+  DeclarationName LookupName(&II);
+  DeclContextLookupResult LookupResult;
+  const auto *DC = RenamedDecl.getDeclContext();
+  while (DC && DC->isTransparentContext())
+    DC = DC->getParent();
+  switch (DC->getDeclKind()) {
+  // The enclosing DeclContext may not be the enclosing scope, it might have
+  // false positives and negatives, so we only choose "confident" DeclContexts
+  // that don't have any subscopes that are neither DeclContexts nor
+  // transparent.
+  //
+  // Notably, FunctionDecl is excluded -- because local variables are not scoped
+  // to the function, but rather to the CompoundStmt that is its body. Lookup
+  // will not find function-local variables.
+  case Decl::TranslationUnit:
+  case Decl::Namespace:
+  case Decl::Record:
+  case Decl::Enum:
+  case Decl::CXXRecord:
+    LookupResult = DC->lookup(LookupName);
+    break;
+  default:
+    break;
+  }
+  // Lookup may contain the RenameDecl itself, exclude it.
+  auto It = llvm::find_if(LookupResult, [&RenamedDecl](const NamedDecl *D) {
+    return D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl();
+  });
+  if (It != LookupResult.end())
+    return *It;
+  return nullptr;
+}
+
+struct InvalidName {
+  enum Kind {
+    Keywords,
+    Conflict,
+  };
+  Kind K;
+  std::string Details;
+};
+
+llvm::Error makeError(InvalidName Reason) {
+  auto Message = [](InvalidName Reason) {
+    switch (Reason.K) {
+    case InvalidName::Keywords:
+      return llvm::formatv("the chosen name \"{0}\" is a keyword",
+                           Reason.Details);
+    case InvalidName::Conflict:
+      return llvm::formatv("conflict with the symbol in {0}", Reason.Details);
+    }
+    llvm_unreachable("unhandled InvalidName kind");
+  };
+  return error("invalid name: {0}", Message(Reason));
+}
+
+// Check if we can rename the given RenameDecl into NewName.
+// Return details if the rename would produce a conflict.
+llvm::Optional<InvalidName> checkName(const NamedDecl &RenameDecl,
+                                      llvm::StringRef NewName) {
+  auto &ASTCtx = RenameDecl.getASTContext();
+  if (isKeyword(NewName, ASTCtx.getLangOpts()))
+    return InvalidName{InvalidName::Keywords, NewName.str()};
+  // Name conflict detection.
+  // Function conflicts are subtle (overloading), so ignore them.
+  if (RenameDecl.getKind() != Decl::Function) {
+    if (auto *Conflict = lookupSiblingWithName(ASTCtx, RenameDecl, NewName))
+      return InvalidName{
+          InvalidName::Conflict,
+          Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
+  }
+  return llvm::None;
+}
+
 // AST-based rename, it renames all occurrences in the main file.
 llvm::Expected<tooling::Replacements>
 renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
@@ -476,11 +556,12 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
-  if (isKeyword(RInputs.NewName, AST.getLangOpts()))
-    return makeError(ReasonToReject::RenameToKeywords);
-
   const auto &RenameDecl =
       llvm::cast<NamedDecl>(*(*DeclsUnderCursor.begin())->getCanonicalDecl());
+  auto Invalid = checkName(RenameDecl, RInputs.NewName);
+  if (Invalid)
+    return makeError(*Invalid);
+
   auto Reject = renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index,
                            Opts.AllowCrossFile);
   if (Reject)
