@@ -504,8 +504,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (FieldNo == 0)
           continue;
 
-        Decomposed.StructOffset +=
-          DL.getStructLayout(STy)->getElementOffset(FieldNo);
+        Decomposed.Offset += DL.getStructLayout(STy)->getElementOffset(FieldNo);
         continue;
       }
 
@@ -513,7 +512,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-        Decomposed.OtherOffset +=
+        Decomposed.Offset +=
             (DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
              CIdx->getValue().sextOrSelf(MaxPointerSize))
                 .sextOrTrunc(MaxPointerSize);
@@ -561,7 +560,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (PointerSize > Width)
           SExtBits += PointerSize - Width;
       } else {
-        Decomposed.OtherOffset += ScaledOffset;
+        Decomposed.Offset += ScaledOffset;
         Scale *= IndexScale.sextOrTrunc(MaxPointerSize);
       }
 
@@ -590,12 +589,8 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
     }
 
     // Take care of wrap-arounds
-    if (GepHasConstantOffset) {
-      Decomposed.StructOffset =
-          adjustToPointerSize(Decomposed.StructOffset, PointerSize);
-      Decomposed.OtherOffset =
-          adjustToPointerSize(Decomposed.OtherOffset, PointerSize);
-    }
+    if (GepHasConstantOffset)
+      Decomposed.Offset = adjustToPointerSize(Decomposed.Offset, PointerSize);
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
@@ -1237,9 +1232,6 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       !DecompObject.VarIndices.empty())
     return false;
 
-  APInt ObjectBaseOffset = DecompObject.StructOffset +
-                           DecompObject.OtherOffset;
-
   // If the GEP has no variable indices, we know the precise offset
   // from the base, then use it. If the GEP has variable indices,
   // we can't get exact GEP offset to identify pointer alias. So return
@@ -1247,10 +1239,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
   if (!DecompGEP.VarIndices.empty())
     return false;
 
-  APInt GEPBaseOffset = DecompGEP.StructOffset;
-  GEPBaseOffset += DecompGEP.OtherOffset;
-
-  return GEPBaseOffset.sge(ObjectBaseOffset + (int64_t)ObjectAccessSize);
+  return DecompGEP.Offset.sge(DecompObject.Offset + (int64_t)ObjectAccessSize);
 }
 
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
@@ -1265,8 +1254,8 @@ AliasResult BasicAAResult::aliasGEP(
     const Value *UnderlyingV1, const Value *UnderlyingV2, AAQueryInfo &AAQI) {
   DecomposedGEP DecompGEP1, DecompGEP2;
   unsigned MaxPointerSize = getMaxPointerSize(DL);
-  DecompGEP1.StructOffset = DecompGEP1.OtherOffset = APInt(MaxPointerSize, 0);
-  DecompGEP2.StructOffset = DecompGEP2.OtherOffset = APInt(MaxPointerSize, 0);
+  DecompGEP1.Offset = APInt(MaxPointerSize, 0);
+  DecompGEP2.Offset = APInt(MaxPointerSize, 0);
   DecompGEP1.HasCompileTimeConstantScale =
       DecompGEP2.HasCompileTimeConstantScale = true;
 
@@ -1281,8 +1270,8 @@ AliasResult BasicAAResult::aliasGEP(
       !DecompGEP2.HasCompileTimeConstantScale)
     return MayAlias;
 
-  APInt GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
-  APInt GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
+  APInt GEP1BaseOffset = DecompGEP1.Offset;
+  APInt GEP2BaseOffset = DecompGEP2.Offset;
 
   assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
          "DecomposeGEPExpression returned a result different from "

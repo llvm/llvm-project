@@ -135,11 +135,8 @@ private:
   struct DecomposedGEP {
     // Base pointer of the GEP
     const Value *Base;
-    // Total constant offset w.r.t the base from indexing into structs
-    APInt StructOffset;
-    // Total constant offset w.r.t the base from indexing through
-    // pointers/arrays/vectors
-    APInt OtherOffset;
+    // Total constant offset from base.
+    APInt Offset;
     // Scaled variable (non-constant) indices.
     SmallVector<VariableGEPIndex, 4> VarIndices;
     // Is GEP index scale compile-time constant.
