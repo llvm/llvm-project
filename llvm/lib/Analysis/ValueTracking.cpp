@@ -995,9 +995,9 @@ static void computeKnownBitsFromShiftOperator(
   if (Known.isConstant()) {
     unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
 
-    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
-    Known.Zero = KZF(Known.Zero, ShiftAmt);
-    Known.One  = KOF(Known.One, ShiftAmt);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
+    Known.Zero = KZF(Known2.Zero, ShiftAmt);
+    Known.One = KOF(Known2.One, ShiftAmt);
     // If the known bits conflict, this must be an overflowing left shift, so
     // the shift result is poison. We can return anything we want. Choose 0 for
     // the best folding opportunity.
