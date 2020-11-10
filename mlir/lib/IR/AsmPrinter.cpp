@@ -289,7 +289,9 @@ public:
 
   /// Print the given operation.
   void print(Operation *op) {
-    // TODO: Consider the operation location for an alias.
+    // Visit the operation location.
+    if (printerFlags.shouldPrintDebugInfo())
+      initializer.visit(op->getLoc());
 
     // If requested, always print the generic form.
     if (!printerFlags.shouldPrintGenericOpForm()) {
@@ -1089,7 +1091,10 @@ public:
                       AttrTypeElision typeElision = AttrTypeElision::Never);
 
   void printType(Type type);
-  void printLocation(LocationAttr loc);
+
+  /// Print the given location to the stream. If `allowAlias` is true, this
+  /// allows for the internal location to use an attribute alias.
+  void printLocation(LocationAttr loc, bool allowAlias = false);
 
   void printAffineMap(AffineMap map);
   void
@@ -1152,7 +1157,7 @@ void ModulePrinter::printTrailingLocation(Location loc) {
     return;
 
   os << " ";
-  printLocation(loc);
+  printLocation(loc, /*allowAlias=*/true);
 }
 
 void ModulePrinter::printLocationInternal(LocationAttr loc, bool pretty) {
@@ -1269,14 +1274,14 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
   os << str;
 }
 
-void ModulePrinter::printLocation(LocationAttr loc) {
-  if (printerFlags.shouldPrintDebugInfoPrettyForm()) {
-    printLocationInternal(loc, /*pretty=*/true);
-  } else {
-    os << "loc(";
+void ModulePrinter::printLocation(LocationAttr loc, bool allowAlias) {
+  if (printerFlags.shouldPrintDebugInfoPrettyForm())
+    return printLocationInternal(loc, /*pretty=*/true);
+
+  os << "loc(";
+  if (!allowAlias || !state || failed(state->getAliasState().getAlias(loc, os)))
     printLocationInternal(loc);
-    os << ')';
-  }
+  os << ')';
 }
 
 /// Returns true if the given dialect symbol data is simple enough to print in
