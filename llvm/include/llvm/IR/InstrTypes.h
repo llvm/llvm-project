@@ -891,9 +891,13 @@ public:
   /// Determine if this CmpInst is commutative.
   bool isCommutative() const;
 
-  /// This is just a convenience that dispatches to the subclasses.
   /// Determine if this is an equals/not equals predicate.
-  bool isEquality() const;
+  /// This is a static version that you can use without an instruction
+  /// available.
+  static bool isEquality(Predicate pred);
+
+  /// Determine if this is an equals/not equals predicate.
+  bool isEquality() const { return isEquality(getPredicate()); }
 
   /// @returns true if the comparison is signed, false otherwise.
   /// Determine if this instruction is using a signed comparison.
