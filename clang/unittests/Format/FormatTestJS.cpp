@@ -2184,6 +2184,16 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                " * @lala {lala {lalala\n"
                " */\n",
                getGoogleJSStyleWithColumns(20));
+  // cases where '{' is around the column limit
+  for (int ColumnLimit = 6; ColumnLimit < 13; ++ColumnLimit) {
+    verifyFormat("/**\n"
+                 " * @param {type}\n"
+                 " */",
+                 "/**\n"
+                 " * @param {type}\n"
+                 " */",
+                 getGoogleJSStyleWithColumns(ColumnLimit));
+  }
   verifyFormat("/**\n"
                " * @see http://very/very/long/url/is/long\n"
                " */",
