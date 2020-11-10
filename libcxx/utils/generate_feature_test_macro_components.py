@@ -393,7 +393,6 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
     "name": "__cpp_lib_generic_unordered_lookup",
     "values": { "c++2a": int(201811) },
     "headers": ["unordered_map", "unordered_set"],
-    "unimplemented": True,
    }, {
     "name": "__cpp_lib_ranges",
     "values": { "c++2a": int(201811) },

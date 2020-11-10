@@ -131,17 +131,11 @@
 #   error "__cpp_lib_erase_if should have the value 202002L in c++2a"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_generic_unordered_lookup
-#     error "__cpp_lib_generic_unordered_lookup should be defined in c++2a"
-#   endif
-#   if __cpp_lib_generic_unordered_lookup != 201811L
-#     error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++2a"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_generic_unordered_lookup
-#     error "__cpp_lib_generic_unordered_lookup should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_generic_unordered_lookup
+#   error "__cpp_lib_generic_unordered_lookup should be defined in c++2a"
+# endif
+# if __cpp_lib_generic_unordered_lookup != 201811L
+#   error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++2a"
 # endif
 
 # ifndef __cpp_lib_node_extract
