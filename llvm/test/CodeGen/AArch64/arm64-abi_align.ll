@@ -290,13 +290,13 @@ entry:
 ; Space for s2 is allocated at sp
 
 ; FAST-LABEL: caller42
-; FAST: sub sp, sp, #96
-; Space for s1 is allocated at fp-24 = sp+56
-; FAST: sub x[[A:[0-9]+]], x29, #24
+; FAST: sub sp, sp, #64
+; Space for s1 is allocated at fp-24 = sp+24
+; FAST: add x[[A:[0-9]+]], sp, #24
 ; Call memcpy with size = 24 (0x18)
 ; FAST: mov {{x[0-9]+}}, #24
-; Space for s2 is allocated at sp+32
-; FAST: add x[[A:[0-9]+]], sp, #32
+; Space for s2 is allocated at sp
+; FAST: mov x[[A:[0-9]+]], sp
 ; FAST: bl _memcpy
   %tmp = alloca %struct.s42, align 4
   %tmp1 = alloca %struct.s42, align 4
@@ -339,8 +339,8 @@ entry:
 ; Call memcpy with size = 24 (0x18)
 ; FAST: mov {{x[0-9]+}}, #24
 ; FAST: bl _memcpy
-; Space for s2 is allocated at fp-48
-; FAST: sub x[[B:[0-9]+]], x29, #48
+; Space for s2 is allocated at sp+32
+; FAST: add x[[B:[0-9]+]], sp, #32
 ; Call memcpy again
 ; FAST: bl _memcpy
 ; Address of s1 is passed on stack at sp+8
