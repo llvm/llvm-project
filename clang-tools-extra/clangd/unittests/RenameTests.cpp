@@ -91,8 +91,8 @@ std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
 }
 
 TEST(RenameTest, WithinFileRename) {
-  // rename is runnning on all "^" points, and "[[]]" ranges point to the
-  // identifier that is being renamed.
+  // For each "^" this test moves cursor to its location and applies renaming
+  // while checking that all identifiers in [[]] ranges are also renamed.
   llvm::StringRef Tests[] = {
       // Function.
       R"cpp(
@@ -119,28 +119,31 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
-      // Rename class, including constructor/destructor.
+      // Class, its constructor and destructor.
       R"cpp(
         class [[F^oo]] {
           [[F^oo]]();
-          ~[[Foo]]();
-          void foo(int x);
+          ~[[F^oo]]();
+          [[F^oo]] *foo(int x);
+
+          [[F^oo]] *Ptr;
         };
-        [[Foo]]::[[Fo^o]]() {}
-        void [[Foo]]::foo(int x) {}
+        [[F^oo]]::[[Fo^o]]() {}
+        [[F^oo]]::~[[Fo^o]]() {}
+        [[F^oo]] *[[F^oo]]::foo(int x) { return Ptr; }
       )cpp",
 
-      // Rename template class, including constructor/destructor.
+      // Template class, its constructor and destructor.
       R"cpp(
         template <typename T>
         class [[F^oo]] {
           [[F^oo]]();
           ~[[F^oo]]();
-          void f([[Foo]] x);
+          void f([[F^oo]] x);
         };
       )cpp",
 
-      // Rename template class constructor.
+      // Template class constructor.
       R"cpp(
         class [[F^oo]] {
           template<typename T>
@@ -166,7 +169,15 @@ TEST(RenameTest, WithinFileRename) {
       // Forward class declaration without definition.
       R"cpp(
         class [[F^oo]];
-        [[Foo]] *f();
+        [[F^oo]] *f();
+      )cpp",
+
+      // Member function.
+      R"cpp(
+        struct X {
+          void [[F^oo]]() {}
+          void Baz() { [[F^oo]](); }
+        };
       )cpp",
 
       // Class methods overrides.
@@ -199,9 +210,9 @@ TEST(RenameTest, WithinFileRename) {
         class [[F^oo]]<T*> {};
 
         void test() {
-          [[Foo]]<int> x;
-          [[Foo]]<bool> y;
-          [[Foo]]<int*> z;
+          [[F^oo]]<int> x;
+          [[F^oo]]<bool> y;
+          [[F^oo]]<int*> z;
         }
       )cpp",
 
@@ -209,7 +220,7 @@ TEST(RenameTest, WithinFileRename) {
       R"cpp(
         template <typename T>
         class [[Fo^o]] {};
-        void func([[Foo]]<int>);
+        void func([[F^oo]]<int>);
       )cpp",
 
       // Template class instantiations.
@@ -242,7 +253,7 @@ TEST(RenameTest, WithinFileRename) {
 
           [[F^oo]]<bool> b;
           b.member = false;
-          [[Foo]]<bool>::foo(false);
+          [[F^oo]]<bool>::foo(false);
         }
       )cpp",
 
@@ -271,9 +282,9 @@ TEST(RenameTest, WithinFileRename) {
 
         class [[F^oo]] : public Baz  {
         public:
-          [[Foo]](int value = 0) : x(value) {}
+          [[F^oo]](int value = 0) : x(value) {}
 
-          [[Foo]] &operator++(int);
+          [[F^oo]] &operator++(int);
 
           bool operator<([[Foo]] const &rhs);
           int getValue() const;
@@ -282,18 +293,41 @@ TEST(RenameTest, WithinFileRename) {
         };
 
         void func() {
-          [[Foo]] *Pointer = 0;
-          [[Foo]] Variable = [[Foo]](10);
-          for ([[Foo]] it; it < Variable; it++);
-          const [[Foo]] *C = new [[Foo]]();
-          const_cast<[[Foo]] *>(C)->getValue();
-          [[Foo]] foo;
+          [[F^oo]] *Pointer = 0;
+          [[F^oo]] Variable = [[Foo]](10);
+          for ([[F^oo]] it; it < Variable; it++);
+          const [[F^oo]] *C = new [[Foo]]();
+          const_cast<[[F^oo]] *>(C)->getValue();
+          [[F^oo]] foo;
           const Baz &BazReference = foo;
           const Baz *BazPointer = &foo;
           reinterpret_cast<const [[^Foo]] *>(BazPointer)->getValue();
           static_cast<const [[^Foo]] &>(BazReference).getValue();
           static_cast<const [[^Foo]] *>(BazPointer)->getValue();
         }
+      )cpp",
+
+      // Reference in lambda parameters.
+      R"cpp(
+        template <class T>
+        class function;
+        template <class R, class... ArgTypes>
+        class function<R(ArgTypes...)> {
+        public:
+          template <typename Functor>
+          function(Functor f) {}
+
+          function() {}
+
+          R operator()(ArgTypes...) const {}
+        };
+
+        namespace ns {
+        class [[Old]] {};
+        void f() {
+          function<void([[Old]])> func;
+        }
+        }  // namespace ns
       )cpp",
 
       // Destructor explicit call.
@@ -360,11 +394,11 @@ TEST(RenameTest, WithinFileRename) {
         void boo(int);
 
         void qoo() {
-          [[foo]]();
-          boo([[foo]]());
+          [[f^oo]]();
+          boo([[f^oo]]());
           M1();
           boo(M1());
-          M2([[foo]]());
+          M2([[f^oo]]());
           M2(M1()); // foo is inside the nested macro body.
         }
       )cpp",
@@ -380,9 +414,9 @@ TEST(RenameTest, WithinFileRename) {
 
         int main() {
           Baz baz;
-          baz.[[Foo]] = 1;
-          MACRO(baz.[[Foo]]);
-          int y = baz.[[Foo]];
+          baz.[[F^oo]] = 1;
+          MACRO(baz.[[F^oo]]);
+          int y = baz.[[F^oo]];
         }
       )cpp",
 
@@ -390,15 +424,15 @@ TEST(RenameTest, WithinFileRename) {
       R"cpp(
         template <typename [[^T]]>
         class Foo {
-          [[T]] foo([[T]] arg, [[T]]& ref, [[^T]]* ptr) {
+          [[T^]] foo([[T^]] arg, [[T^]]& ref, [[^T]]* ptr) {
             [[T]] value;
             int number = 42;
-            value = ([[T]])number;
+            value = ([[T^]])number;
             value = static_cast<[[^T]]>(number);
             return value;
           }
-          static void foo([[T]] value) {}
-          [[T]] member;
+          static void foo([[T^]] value) {}
+          [[T^]] member;
         };
       )cpp",
 
@@ -441,25 +475,34 @@ TEST(RenameTest, WithinFileRename) {
         namespace a { namespace b { void foo(); } }
         namespace [[^x]] = a::b;
         void bar() {
-          [[x]]::foo();
+          [[x^]]::foo();
         }
       )cpp",
 
-      // Scope enums.
+      // Enum.
+      R"cpp(
+        enum [[C^olor]] { Red, Green, Blue };
+        void foo() {
+          [[C^olor]] c;
+          c = [[C^olor]]::Blue;
+        }
+      )cpp",
+
+      // Scoped enum.
       R"cpp(
         enum class [[K^ind]] { ABC };
         void ff() {
           [[K^ind]] s;
-          s = [[Kind]]::ABC;
+          s = [[K^ind]]::ABC;
         }
       )cpp",
 
-      // template class in template argument list.
+      // Template class in template argument list.
       R"cpp(
         template<typename T>
         class [[Fo^o]] {};
         template <template<typename> class Z> struct Bar { };
-        template <> struct Bar<[[Foo]]> {};
+        template <> struct Bar<[[F^oo]]> {};
       )cpp",
 
       // Designated initializer.
@@ -490,14 +533,69 @@ TEST(RenameTest, WithinFileRename) {
         };
         Bar bar { .Foo.[[^Field]] = 42 };
       )cpp",
+
+      // Templated alias.
+      R"cpp(
+        template <typename T>
+        class X { T t; };
+
+        template <typename T>
+        using [[Fo^o]] = X<T>;
+
+        void bar() {
+          [[Fo^o]]<int> Bar;
+        }
+      )cpp",
+
+      // Alias.
+      R"cpp(
+        class X {};
+        using [[F^oo]] = X;
+
+        void bar() {
+          [[Fo^o]] Bar;
+        }
+      )cpp",
+
+      // Alias within a namespace.
+      R"cpp(
+        namespace x { class X {}; }
+        namespace ns {
+        using [[Fo^o]] = x::X;
+        }
+
+        void bar() {
+          ns::[[Fo^o]] Bar;
+        }
+      )cpp",
+
+      // Alias within macros.
+      R"cpp(
+        namespace x { class Old {}; }
+        namespace ns {
+        #define REF(alias) alias alias_var;
+
+        #define ALIAS(old) \
+          using old##Alias = x::old; \
+          REF(old##Alias);
+
+        ALIAS(Old);
+
+        [[Old^Alias]] old_alias;
+        }
+
+        void bar() {
+          ns::[[Old^Alias]] Bar;
+        }
+      )cpp",
   };
+  llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
     SCOPED_TRACE(T);
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     auto AST = TU.build();
-    llvm::StringRef NewName = "abcde";
     for (const auto &RenamePos : Code.points()) {
       auto RenameResult =
           rename({RenamePos, NewName, AST, testPath(TU.Filename)});
