@@ -15504,7 +15504,7 @@ value to a special register or a hardware-loop instruction.
 
 
 '``llvm.start.loop.iterations.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
