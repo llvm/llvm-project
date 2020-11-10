@@ -181,7 +181,7 @@ void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
 }
 
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
-                                              unsigned MachineReg) {
+                                              llvm::Register MachineReg) {
   // This information is not available while emitting .debug_loc entries.
   return false;
 }
