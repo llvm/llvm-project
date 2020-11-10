@@ -5096,8 +5096,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V) {
   }
 
   case APValue::Union: {
-    const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
-    assert(RD && "unexpected type for union value");
+    assert(T->getAsCXXRecordDecl() && "unexpected type for union value");
     const FieldDecl *FD = V.getUnionField();
 
     if (!FD) {
