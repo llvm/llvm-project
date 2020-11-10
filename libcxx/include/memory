@@ -3333,14 +3333,16 @@ private:
     virtual void __on_zero_shared_weak() _NOEXCEPT;
 public:
     _LIBCPP_INLINE_VISIBILITY
-    _Tp* get() _NOEXCEPT {return _VSTD::addressof(__data_.second());}
+    _Alloc& __get_alloc() _NOEXCEPT {return __data_.first();}
+    _LIBCPP_INLINE_VISIBILITY
+    _Tp* __get_elem() _NOEXCEPT {return _VSTD::addressof(__data_.second());}
 };
 
 template <class _Tp, class _Alloc>
 void
 __shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared() _NOEXCEPT
 {
-    __data_.second().~_Tp();
+    __get_elem()->~_Tp();
 }
 
 template <class _Tp, class _Alloc>
@@ -3350,8 +3352,8 @@ __shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
     typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type _Al;
     typedef allocator_traits<_Al> _ATraits;
     typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-    _Al __a(__data_.first());
-    __data_.first().~_Alloc();
+    _Al __a(__get_alloc());
+    __get_alloc().~_Alloc();
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
@@ -4062,7 +4064,7 @@ make_shared(_Args&& ...__args)
     unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
     ::new(__hold2.get()) _CntrlBlk(__a2, _VSTD::forward<_Args>(__args)...);
 
-    _Tp *__ptr = __hold2.get()->get();
+    _Tp *__ptr = __hold2->__get_elem();
     return shared_ptr<_Tp>::__create_with_control_block(__ptr, __hold2.release());
 }
 
@@ -4086,7 +4088,7 @@ allocate_shared(const _Alloc& __a, _Args&& ...__args)
     ::new(static_cast<void*>(_VSTD::addressof(*__hold2.get())))
         _CntrlBlk(__a, _VSTD::forward<_Args>(__args)...);
 
-    typename shared_ptr<_Tp>::element_type *__p = __hold2.get()->get();
+    typename shared_ptr<_Tp>::element_type *__p = __hold2->__get_elem();
     return shared_ptr<_Tp>::__create_with_control_block(__p, _VSTD::addressof(*__hold2.release()));
 }
 
