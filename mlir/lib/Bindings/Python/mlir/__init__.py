@@ -10,6 +10,7 @@
 
 __all__ = [
   "ir",
+  "passmanager",
 ]
 
 # Expose the corresponding C-Extension module with a well-known name at this
@@ -38,7 +39,7 @@ def _reexport_cext(cext_module_name, target_module_name):
 
 # Import sub-modules. Since these may import from here, this must come after
 # any exported definitions.
-from . import ir
+from . import ir, passmanager
 
 # Add our 'dialects' parent module to the search path for implementations.
 _cext.globals.append_dialect_search_prefix("mlir.dialects")
