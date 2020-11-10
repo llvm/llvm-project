@@ -522,8 +522,7 @@ static void updateChildIncompleteness(const DWARFDie &Die, CompileUnit &CU,
     return;
   }
 
-  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
-  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
+  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Die);
 
   if (ChildInfo.Incomplete || ChildInfo.Prune)
     MyInfo.Incomplete = true;
@@ -545,8 +544,7 @@ static void updateRefIncompleteness(const DWARFDie &Die, CompileUnit &CU,
     return;
   }
 
-  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
-  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
+  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Die);
 
   if (MyInfo.Incomplete)
     return;
@@ -578,8 +576,7 @@ void DWARFLinker::lookForChildDIEsToKeep(
   for (auto Child : reverse(Die.children())) {
     // Add a worklist item before every child to calculate incompleteness right
     // after the current child is processed.
-    unsigned Idx = CU.getOrigUnit().getDIEIndex(Child);
-    CompileUnit::DIEInfo &ChildInfo = CU.getInfo(Idx);
+    CompileUnit::DIEInfo &ChildInfo = CU.getInfo(Child);
     Worklist.emplace_back(Die, CU, WorklistItemType::UpdateChildIncompleteness,
                           &ChildInfo);
     Worklist.emplace_back(Child, CU, Flags);
@@ -614,8 +611,7 @@ void DWARFLinker::lookForRefDIEsToKeep(
     CompileUnit *ReferencedCU;
     if (auto RefDie =
             resolveDIEReference(File, Units, Val, Die, ReferencedCU)) {
-      uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDie);
-      CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefIdx);
+      CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefDie);
       bool IsModuleRef = Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset() &&
                          Info.Ctxt->isDefinedInClangModule();
       // If the referenced DIE has a DeclContext that has already been
@@ -649,8 +645,7 @@ void DWARFLinker::lookForRefDIEsToKeep(
   for (auto &P : reverse(ReferencedDIEs)) {
     // Add a worklist item before every child to calculate incompleteness right
     // after the current child is processed.
-    uint32_t RefIdx = P.second.getOrigUnit().getDIEIndex(P.first);
-    CompileUnit::DIEInfo &Info = P.second.getInfo(RefIdx);
+    CompileUnit::DIEInfo &Info = P.second.getInfo(P.first);
     Worklist.emplace_back(Die, CU, WorklistItemType::UpdateRefIncompleteness,
                           &Info);
     Worklist.emplace_back(P.first, P.second,
@@ -854,8 +849,7 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
   if (!RefDie || AttrSpec.Attr == dwarf::DW_AT_sibling)
     return 0;
 
-  unsigned Idx = RefUnit->getOrigUnit().getDIEIndex(RefDie);
-  CompileUnit::DIEInfo &RefInfo = RefUnit->getInfo(Idx);
+  CompileUnit::DIEInfo &RefInfo = RefUnit->getInfo(RefDie);
 
   // If we already have emitted an equivalent DeclContext, just point
   // at it.
@@ -947,8 +941,7 @@ void DWARFLinker::DIECloner::cloneExpression(
       // DW_OP_reinterpret, which is currently not supported.
       if (RefOffset > 0 || Op.getCode() != dwarf::DW_OP_convert) {
         auto RefDie = Unit.getOrigUnit().getDIEForOffset(RefOffset);
-        uint32_t RefIdx = Unit.getOrigUnit().getDIEIndex(RefDie);
-        CompileUnit::DIEInfo &Info = Unit.getInfo(RefIdx);
+        CompileUnit::DIEInfo &Info = Unit.getInfo(RefDie);
         if (DIE *Clone = Info.Clone)
           Offset = Clone->getOffset();
         else
