@@ -2118,7 +2118,7 @@ class TestBase(Base):
         return status.
         """
         # Fail fast if 'cmd' is not meaningful.
-        if not cmd or len(cmd) == 0:
+        if cmd is None:
             raise Exception("Bad 'cmd' parameter encountered")
 
         trace = (True if traceAlways else trace)
