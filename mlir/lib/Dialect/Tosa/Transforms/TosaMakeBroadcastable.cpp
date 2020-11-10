@@ -130,6 +130,7 @@ static int reshapeLowerToHigher(PatternRewriter &rewriter, Location loc,
   ArrayRef<int64_t> outputRankShape = outputType.getShape();
   ArrayRef<int64_t> higherRankShape =
       higherTensorValue.getType().cast<RankedTensorType>().getShape();
+  (void)higherRankShape;
   ArrayRef<int64_t> lowerRankShape =
       lowerTensorValue.getType().cast<RankedTensorType>().getShape();
 
@@ -160,7 +161,8 @@ static int reshapeLowerToHigher(PatternRewriter &rewriter, Location loc,
 }
 
 namespace {
-template <typename OpTy> struct ConvertTosaOp : public OpRewritePattern<OpTy> {
+template <typename OpTy>
+struct ConvertTosaOp : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OpTy tosaBinaryOp,

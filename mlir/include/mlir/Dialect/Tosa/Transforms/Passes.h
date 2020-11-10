@@ -16,7 +16,6 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 namespace tosa {
 
 std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
