@@ -518,15 +518,15 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 
   bytes_read = 0;
   if (addr >= k_dpu_iram_base &&
-      (addr + size) < (k_dpu_iram_base + m_iram_size)) {
+      (addr + size) <= (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->ReadIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy from IRAM");
   } else if (addr >= k_dpu_mram_base &&
-             (addr + size) < (k_dpu_mram_base + m_mram_size)) {
+             (addr + size) <= (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->ReadMRAM(addr - k_dpu_mram_base, buf, size))
       return Status("Cannot copy from MRAM");
   } else if (addr >= k_dpu_wram_base &&
-             (addr + size) < (k_dpu_wram_base + m_wram_size)) {
+             (addr + size) <= (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->ReadWRAM(addr, buf, size))
       return Status("Cannot copy from WRAM");
   } else {
@@ -544,15 +544,15 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
 
   bytes_written = 0;
   if (addr >= k_dpu_iram_base &&
-      (addr + size) < (k_dpu_iram_base + m_iram_size)) {
+      (addr + size) <= (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy to IRAM");
   } else if (addr >= k_dpu_mram_base &&
-             (addr + size) < (k_dpu_mram_base + m_mram_size)) {
+             (addr + size) <= (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->WriteMRAM(addr - k_dpu_mram_base, buf, size))
       return Status("Cannot copy to MRAM");
   } else if (addr >= k_dpu_wram_base &&
-             (addr + size) < (k_dpu_wram_base + m_wram_size)) {
+             (addr + size) <= (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->WriteWRAM(addr, buf, size))
       return Status("Cannot copy to WRAM");
   } else {
