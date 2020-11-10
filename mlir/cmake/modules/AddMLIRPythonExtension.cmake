@@ -122,3 +122,25 @@ function(add_mlir_python_extension libname extname)
   endif()
 
 endfunction()
+
+function(add_mlir_dialect_python_bindings filename dialectname)
+  set(LLVM_TARGET_DEFINITIONS ${filename})
+  mlir_tablegen("${dialectname}.py" -gen-python-op-bindings
+                -bind-dialect=${dialectname})
+  if (${ARGC} GREATER 2)
+    set(suffix ${ARGV2})
+  else()
+    get_filename_component(suffix ${filename} NAME_WE)
+  endif()
+  set(tblgen_target "MLIRBindingsPython${suffix}")
+  add_public_tablegen_target(${tblgen_target})
+
+  add_custom_command(
+    TARGET ${tblgen_target} POST_BUILD
+    COMMENT "Copying generated python source \"dialects/${dialectname}.py\""
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      "${CMAKE_CURRENT_BINARY_DIR}/${dialectname}.py"
+      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialectname}.py")
+  add_dependencies(MLIRBindingsPythonIncGen ${tblgen_target})
+endfunction()
+

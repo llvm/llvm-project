@@ -1321,6 +1321,7 @@ static bool isFormatBinary(StringRef s) {
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &args) {
+  llvm::TimeTraceScope timeScope("Load input files");
   // For --{push,pop}-state.
   std::vector<std::tuple<bool, bool, bool>> stack;
 
@@ -1659,6 +1660,7 @@ static void writeDependencyFile() {
 // result, the passes after the symbol resolution won't see any
 // symbols of type CommonSymbol.
 static void replaceCommonSymbols() {
+  llvm::TimeTraceScope timeScope("Replace common symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<CommonSymbol>(sym);
     if (!s)
@@ -1678,6 +1680,7 @@ static void replaceCommonSymbols() {
 // created from the DSO. Otherwise, they become dangling references
 // that point to a non-existent DSO.
 static void demoteSharedSymbols() {
+  llvm::TimeTraceScope timeScope("Demote shared symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
     if (!s || s->getFile().isNeeded)
@@ -1974,10 +1977,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Fail early if the output file or map file is not writable. If a user has a
   // long link, e.g. due to a large LTO link, they do not wish to run it and
   // find that it failed because there was a mistake in their command-line.
-  if (auto e = tryCreateFile(config->outputFile))
-    error("cannot open output file " + config->outputFile + ": " + e.message());
-  if (auto e = tryCreateFile(config->mapFile))
-    error("cannot open map file " + config->mapFile + ": " + e.message());
+  {
+    llvm::TimeTraceScope timeScope("Create output files");
+    if (auto e = tryCreateFile(config->outputFile))
+      error("cannot open output file " + config->outputFile + ": " +
+            e.message());
+    if (auto e = tryCreateFile(config->mapFile))
+      error("cannot open map file " + config->mapFile + ": " + e.message());
+  }
   if (errorCount())
     return;
 
@@ -2004,8 +2011,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // appended to the Files vector.
   {
     llvm::TimeTraceScope timeScope("Parse input files");
-    for (size_t i = 0; i < files.size(); ++i)
+    for (size_t i = 0; i < files.size(); ++i) {
+      llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
       parseFile(files[i]);
+    }
   }
 
   // Now that we have every file, we can decide if we will need a
@@ -2092,8 +2101,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // For a relocatable output, version scripts don't make sense, and
   // parsing a symbol version string (e.g. dropping "@ver1" from a symbol
   // name "foo@ver1") rather do harm, so we don't call this if -r is given.
-  if (!config->relocatable)
+  if (!config->relocatable) {
+    llvm::TimeTraceScope timeScope("Process symbol versions");
     symtab->scanVersionScript();
+  }
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -2123,37 +2134,43 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (!wrapped.empty())
     wrapSymbols(wrapped);
 
-  // Now that we have a complete list of input files.
-  // Beyond this point, no new files are added.
-  // Aggregate all input sections into one place.
-  for (InputFile *f : objectFiles)
-    for (InputSectionBase *s : f->getSections())
-      if (s && s != &InputSection::discarded)
-        inputSections.push_back(s);
-  for (BinaryFile *f : binaryFiles)
-    for (InputSectionBase *s : f->getSections())
-      inputSections.push_back(cast<InputSection>(s));
+  {
+    llvm::TimeTraceScope timeScope("Aggregate sections");
+    // Now that we have a complete list of input files.
+    // Beyond this point, no new files are added.
+    // Aggregate all input sections into one place.
+    for (InputFile *f : objectFiles)
+      for (InputSectionBase *s : f->getSections())
+        if (s && s != &InputSection::discarded)
+          inputSections.push_back(s);
+    for (BinaryFile *f : binaryFiles)
+      for (InputSectionBase *s : f->getSections())
+        inputSections.push_back(cast<InputSection>(s));
+  }
 
-  llvm::erase_if(inputSections, [](InputSectionBase *s) {
-    if (s->type == SHT_LLVM_SYMPART) {
-      readSymbolPartitionSection<ELFT>(s);
-      return true;
-    }
+  {
+    llvm::TimeTraceScope timeScope("Strip sections");
+    llvm::erase_if(inputSections, [](InputSectionBase *s) {
+      if (s->type == SHT_LLVM_SYMPART) {
+        readSymbolPartitionSection<ELFT>(s);
+        return true;
+      }
 
-    // We do not want to emit debug sections if --strip-all
-    // or -strip-debug are given.
-    if (config->strip == StripPolicy::None)
+      // We do not want to emit debug sections if --strip-all
+      // or -strip-debug are given.
+      if (config->strip == StripPolicy::None)
+        return false;
+
+      if (isDebugSection(*s))
+        return true;
+      if (auto *isec = dyn_cast<InputSection>(s))
+        if (InputSectionBase *rel = isec->getRelocatedSection())
+          if (isDebugSection(*rel))
+            return true;
+
       return false;
-
-    if (isDebugSection(*s))
-      return true;
-    if (auto *isec = dyn_cast<InputSection>(s))
-      if (InputSectionBase *rel = isec->getRelocatedSection())
-        if (isDebugSection(*rel))
-          return true;
-
-    return false;
-  });
+    });
+  }
 
   // Since we now have a complete set of input files, we can create
   // a .d file to record build dependencies.
@@ -2225,23 +2242,33 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (!config->relocatable)
     combineEhSections();
 
-  // Create output sections described by SECTIONS commands.
-  script->processSectionCommands();
+  {
+    llvm::TimeTraceScope timeScope("Assign sections");
 
-  // Linker scripts control how input sections are assigned to output sections.
-  // Input sections that were not handled by scripts are called "orphans", and
-  // they are assigned to output sections by the default rule. Process that.
-  script->addOrphanSections();
+    // Create output sections described by SECTIONS commands.
+    script->processSectionCommands();
 
-  // Migrate InputSectionDescription::sectionBases to sections. This includes
-  // merging MergeInputSections into a single MergeSyntheticSection. From this
-  // point onwards InputSectionDescription::sections should be used instead of
-  // sectionBases.
-  for (BaseCommand *base : script->sectionCommands)
-    if (auto *sec = dyn_cast<OutputSection>(base))
-      sec->finalizeInputSections();
-  llvm::erase_if(inputSections,
-                 [](InputSectionBase *s) { return isa<MergeInputSection>(s); });
+    // Linker scripts control how input sections are assigned to output
+    // sections. Input sections that were not handled by scripts are called
+    // "orphans", and they are assigned to output sections by the default rule.
+    // Process that.
+    script->addOrphanSections();
+  }
+
+  {
+    llvm::TimeTraceScope timeScope("Merge/finalize input sections");
+
+    // Migrate InputSectionDescription::sectionBases to sections. This includes
+    // merging MergeInputSections into a single MergeSyntheticSection. From this
+    // point onwards InputSectionDescription::sections should be used instead of
+    // sectionBases.
+    for (BaseCommand *base : script->sectionCommands)
+      if (auto *sec = dyn_cast<OutputSection>(base))
+        sec->finalizeInputSections();
+    llvm::erase_if(inputSections, [](InputSectionBase *s) {
+      return isa<MergeInputSection>(s);
+    });
+  }
 
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.

@@ -30,6 +30,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -765,6 +766,7 @@ void LinkerScript::addOrphanSections() {
 }
 
 void LinkerScript::diagnoseOrphanHandling() const {
+  llvm::TimeTraceScope timeScope("Diagnose orphan sections");
   for (const InputSectionBase *sec : orphanSections) {
     // Input SHT_REL[A] retained by --emit-relocs are ignored by
     // computeInputSections(). Don't warn/error.

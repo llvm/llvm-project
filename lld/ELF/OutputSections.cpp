@@ -20,6 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <regex>
 #include <unordered_set>
 
@@ -284,6 +285,8 @@ template <class ELFT> void OutputSection::maybeCompress() {
   if (!config->compressDebugSections || (flags & SHF_ALLOC) ||
       !name.startswith(".debug_"))
     return;
+
+  llvm::TimeTraceScope timeScope("Compress debug sections");
 
   // Create a section header.
   zDebugHeader.resize(sizeof(Elf_Chdr));

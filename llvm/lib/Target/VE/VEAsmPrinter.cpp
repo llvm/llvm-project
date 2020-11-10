@@ -60,6 +60,9 @@ public:
   static const char *getRegisterName(unsigned RegNo) {
     return VEInstPrinter::getRegisterName(RegNo);
   }
+  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS);
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &O) override;
 };
 } // end of anonymous namespace
 
@@ -347,6 +350,40 @@ void VEAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerVEMachineInstrToMCInst(&*I, TmpInst, *this);
     EmitToStreamer(*OutStreamer, TmpInst);
   } while ((++I != E) && I->isInsideBundle()); // Delay slot check.
+}
+
+void VEAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
+                                raw_ostream &O) {
+  const MachineOperand &MO = MI->getOperand(OpNum);
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_Register:
+    O << "%" << StringRef(getRegisterName(MO.getReg())).lower();
+    break;
+  default:
+    llvm_unreachable("<unknown operand type>");
+  }
+}
+
+// PrintAsmOperand - Print out an operand for an inline asm expression.
+bool VEAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                   const char *ExtraCode, raw_ostream &O) {
+  if (ExtraCode && ExtraCode[0]) {
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
+
+    switch (ExtraCode[0]) {
+    default:
+      // See if this is a generic print operand
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    case 'r':
+      break;
+    }
+  }
+
+  printOperand(MI, OpNo, O);
+
+  return false;
 }
 
 // Force static initialization.
