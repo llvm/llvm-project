@@ -414,11 +414,11 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB5_8
 ; CHECK-NEXT:  .LBB5_4: @ %vector.ph
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB5_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r4, #4
+; CHECK-NEXT:    adds r6, #4
 ; CHECK-NEXT:    vldrb.u32 q0, [r0], #4
 ; CHECK-NEXT:    vldrb.u32 q1, [r1], #4
 ; CHECK-NEXT:    vmlas.u32 q1, q0, r2
@@ -716,11 +716,11 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB7_8
 ; CHECK-NEXT:  .LBB7_4: @ %vector.ph
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB7_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r4, #4
+; CHECK-NEXT:    adds r6, #4
 ; CHECK-NEXT:    vldrb.u32 q0, [r0], #4
 ; CHECK-NEXT:    vldrb.u32 q1, [r1], #4
 ; CHECK-NEXT:    vmlas.u32 q1, q0, r2
@@ -1018,11 +1018,11 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB9_8
 ; CHECK-NEXT:  .LBB9_4: @ %vector.ph
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB9_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r4, #4
+; CHECK-NEXT:    adds r6, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vmlas.u32 q1, q0, r2

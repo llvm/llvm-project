@@ -660,6 +660,7 @@ static inline bool isVCTP(const MachineInstr *MI) {
 static inline
 bool isLoopStart(MachineInstr &MI) {
   return MI.getOpcode() == ARM::t2DoLoopStart ||
+         MI.getOpcode() == ARM::t2DoLoopStartTP ||
          MI.getOpcode() == ARM::t2WhileLoopStart;
 }
 
