@@ -1223,9 +1223,9 @@ static LogicalResult verify(PoolingSumOp op) {
   return verifySingleInputPoolingOp(op);
 }
 
-DEFINE_POOLING_OP_GET_EFFECTS(PoolingMaxOp);
-DEFINE_POOLING_OP_GET_EFFECTS(PoolingMinOp);
-DEFINE_POOLING_OP_GET_EFFECTS(PoolingSumOp);
+DEFINE_POOLING_OP_GET_EFFECTS(PoolingMaxOp)
+DEFINE_POOLING_OP_GET_EFFECTS(PoolingMinOp)
+DEFINE_POOLING_OP_GET_EFFECTS(PoolingSumOp)
 
 namespace {
 struct EraseDeadLinalgOp;
