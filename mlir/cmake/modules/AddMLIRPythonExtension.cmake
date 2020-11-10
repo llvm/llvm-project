@@ -44,7 +44,7 @@ function(add_mlir_python_extension libname extname)
 
   target_include_directories(${libname} PRIVATE
     "${PYTHON_INCLUDE_DIRS}"
-    "${pybind11_INCLUDE_DIRS}"
+    "${pybind11_INCLUDE_DIR}"
   )
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
