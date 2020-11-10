@@ -1,15 +1,15 @@
 @ RUN: not llvm-mc -triple armv6-eabi -filetype asm -o /dev/null 2>&1 %s \
 @ RUN:   | FileCheck %s -check-prefix CHECK-ARMv6 -check-prefix CHECK-V6
 @ RUN: not llvm-mc -triple armv7-eabi -filetype asm -o /dev/null 2>&1 %s \
-@ RUN:   | FileCheck %s -check-prefix CHECK-ARMv7 -check-prefix CHECK-V7
+@ RUN:   | FileCheck %s -check-prefix CHECK-ARMv7
 @ RUN: not llvm-mc -triple armv7m-eabi -filetype asm -o /dev/null 2>&1 %s \
-@ RUN:   | FileCheck %s -check-prefix CHECK-ARMv7M -check-prefix CHECK-V7M
+@ RUN:   | FileCheck %s -check-prefix CHECK-V7M
 @ RUN: not llvm-mc -triple thumbv6-eabi -filetype asm -o /dev/null 2>&1 %s \
 @ RUN:   | FileCheck %s -check-prefix CHECK-THUMBv6 -check-prefix CHECK-V6
 @ RUN: not llvm-mc -triple thumbv7-eabi -filetype asm -o /dev/null 2>&1 %s \
-@ RUN:   | FileCheck %s -check-prefix CHECK-THUMBv7 -check-prefix CHECK-V7
+@ RUN:   | FileCheck %s -check-prefix CHECK-THUMBv7
 @ RUN: not llvm-mc -triple thumbv7m-eabi -filetype asm -o /dev/null 2>&1 %s \
-@ RUN:   | FileCheck %s -check-prefix CHECK-THUMBv7M -check-prefix CHECK-V7M
+@ RUN:   | FileCheck %s -check-prefix CHECK-V7M
 
 	.syntax unified
 
