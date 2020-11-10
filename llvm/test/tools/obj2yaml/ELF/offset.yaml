@@ -5,37 +5,49 @@
 # RUN: yaml2obj %s -o %t1.o
 # RUN: obj2yaml %t1.o | FileCheck %s --check-prefix=BASIC
 
-# BASIC:      --- !ELF
-# BASIC-NEXT: FileHeader:
-# BASIC-NEXT:   Class: ELFCLASS64
-# BASIC-NEXT:   Data:  ELFDATA2LSB
-# BASIC-NEXT:   Type:  ET_REL
-# BASIC-NEXT: Sections:
-# BASIC-NEXT:   - Name:         .foo1
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     Content:      '00'
-# BASIC-NEXT:   - Name:         .foo2
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     Content:      '00'
-# BASIC-NEXT:   - Name:         .foo3
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     Content:      '00'
-# BASIC-NEXT:   - Name:         .bar1
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     Offset:       0x100
-# BASIC-NEXT:     Content:      '00'
-# BASIC-NEXT:   - Name:         .bar2
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     AddressAlign: 0x10
-# BASIC-NEXT:     Content:      '00'
-# BASIC-NEXT:   - Name:         .bar3
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     AddressAlign: 0x10
-# BASIC-NEXT:     Offset:       0x200
-# BASIC-NEXT:   - Name:         .bar4
-# BASIC-NEXT:     Type:         SHT_PROGBITS
-# BASIC-NEXT:     AddressAlign: 0x100000000
-# BASIC-NEXT:     Offset:       0x210
+#   BASIC:      --- !ELF
+#   BASIC-NEXT: FileHeader:
+#   BASIC-NEXT:   Class: ELFCLASS64
+#   BASIC-NEXT:   Data:  ELFDATA2LSB
+#   BASIC-NEXT:   Type:  ET_REL
+#   BASIC-NEXT: Sections:
+#   BASIC-NEXT:   - Name:         .foo1
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .foo2
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .foo3
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .bar1
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     Offset:       0x100
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .bar2
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     AddressAlign: 0x10
+#   BASIC-NEXT:     Content:      '00'
+#   BASIC-NEXT:   - Name:         .bar3
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     AddressAlign: 0x10
+#   BASIC-NEXT:     Offset:       0x200
+#   BASIC-NEXT:   - Name:         .bar4
+#   BASIC-NEXT:     Type:         SHT_PROGBITS
+#   BASIC-NEXT:     AddressAlign: 0x100000000
+#   BASIC-NEXT:     Offset:       0x210
+# HEADERS-NEXT: SectionHeaderTable:
+# HEADERS-NEXT:   Sections:
+# HEADERS-NEXT:     - Name:            .bar4
+# HEADERS-NEXT:     - Name:            .bar3
+# HEADERS-NEXT:     - Name:            .bar2
+# HEADERS-NEXT:     - Name:            .bar1
+# HEADERS-NEXT:     - Name:            .foo3
+# HEADERS-NEXT:     - Name:            .foo2
+# HEADERS-NEXT:     - Name:            .foo1
+# HEADERS-NEXT:     - Name:            .strtab
+# HEADERS-NEXT:     - Name:            .shstrtab
+# BASIC-NEXT: ...
 
 --- !ELF
 FileHeader:
@@ -91,6 +103,25 @@ Sections:
     Type:         SHT_PROGBITS
     AddressAlign: 0x100000000
     Offset:       0x210
+SectionHeaderTable:
+  Sections:
+## By default we have the same order of sections as defined by the "Sections" key.
+    - Name: [[SEC1=.foo1]]
+    - Name: [[SEC2=.foo2]]
+    - Name: [[SEC3=.foo3]]
+    - Name: [[SEC4=.bar1]]
+    - Name: [[SEC5=.bar2]]
+    - Name: [[SEC6=.bar3]]
+    - Name: [[SEC7=.bar4]]
+    - Name: .strtab
+    - Name: .shstrtab
+
+## In this case we change the order of sections in the section header table.
+## Check that we still dump offsets correctly.
+
+# RUN: yaml2obj %s -DSEC1=.bar4 -DSEC2=.bar3 -DSEC3=.bar2 \
+# RUN:   -DSEC4=.bar1 -DSEC5=.foo3 -DSEC6=.foo2 -DSEC7=.foo1 -o %t1-sechdr.o
+# RUN: obj2yaml %t1-sechdr.o | FileCheck --check-prefixes=BASIC,HEADERS %s
 
 ## Show we dump the "Offset" key for the first section when
 ## it has an unexpected file offset.
