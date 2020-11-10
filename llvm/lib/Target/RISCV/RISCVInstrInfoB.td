@@ -664,9 +664,9 @@ def : Pat<(xor GPR:$rs1, (not GPR:$rs2)), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbb] in {
-def : Pat<(xor (shl (xor GPR:$rs1, -1), GPR:$rs2), -1),
+def : Pat<(not (shl (not GPR:$rs1), GPR:$rs2)),
           (SLO GPR:$rs1, GPR:$rs2)>;
-def : Pat<(xor (srl (xor GPR:$rs1, -1), GPR:$rs2), -1),
+def : Pat<(not (srl (not GPR:$rs1), GPR:$rs2)),
           (SRO GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbb]
 
@@ -676,10 +676,10 @@ def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbs, IsRV32] in
-def : Pat<(and (xor (shl 1, (and GPR:$rs2, 31)), -1), GPR:$rs1),
+def : Pat<(and (not (shl 1, (and GPR:$rs2, 31))), GPR:$rs1),
           (SBCLR GPR:$rs1, GPR:$rs2)>;
 let Predicates = [HasStdExtZbs, IsRV64] in
-def : Pat<(and (xor (shl 1, (and GPR:$rs2, 63)), -1), GPR:$rs1),
+def : Pat<(and (not (shl 1, (and GPR:$rs2, 63))), GPR:$rs1),
           (SBCLR GPR:$rs1, GPR:$rs2)>;
 
 let Predicates = [HasStdExtZbs] in
@@ -818,7 +818,7 @@ def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i64 63))>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt] in {
-def : Pat<(or (and (xor GPR:$rs2, -1), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
+def : Pat<(or (and (not GPR:$rs2), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
           (CMIX GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 def : Pat<(riscv_selectcc GPR:$rs2, (XLenVT 0), (XLenVT 17), GPR:$rs3, GPR:$rs1),
           (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
@@ -942,9 +942,9 @@ def : Pat<(add GPR:$rs1, (and GPR:$rs2, (i64 0xFFFFFFFF))),
           (ADDUW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sub GPR:$rs1, (and GPR:$rs2, (i64 0xFFFFFFFF))),
           (SUBUW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(xor (riscv_sllw (xor GPR:$rs1, -1), GPR:$rs2), -1),
+def : Pat<(not (riscv_sllw (not GPR:$rs1), GPR:$rs2)),
           (SLOW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(xor (riscv_srlw (xor GPR:$rs1, -1), GPR:$rs2), -1),
+def : Pat<(not (riscv_srlw (not GPR:$rs1), GPR:$rs2)),
           (SROW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
