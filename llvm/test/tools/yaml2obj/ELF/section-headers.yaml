@@ -174,7 +174,7 @@ SectionHeaderTable: [[VAL]]
 ## Test that we are still able to override e_shoff, e_shnum and e_shstrndx
 ## fields even when we do not produce section headers.
 # RUN: yaml2obj %s --docnum=6 -o %t4
-# RUN: llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
+# RUN: not llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
 
 # NO-HEADERS-OVERRIDE: Start of section headers:          2 (bytes into file)
 # NO-HEADERS-OVERRIDE: Number of section headers:         3
@@ -188,13 +188,6 @@ FileHeader:
   EShOff:    0x2
   EShNum:    0x3
   EShStrNdx: 0x4
-Sections:
-  - Name: .foo
-    Type: SHT_PROGBITS
-## FIXME: we have to set an arbitrary size to create a
-## piece of dummy data to make llvm-readelf happy.
-## See: https://bugs.llvm.org/show_bug.cgi?id=40804
-    Size: 0x100
 SectionHeaderTable:
   NoHeaders: true
 
