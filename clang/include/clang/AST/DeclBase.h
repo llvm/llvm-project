@@ -1246,8 +1246,7 @@ public:
 
   using IteratorBase =
       llvm::iterator_adaptor_base<iterator, ResultTy::iterator,
-                                  std::random_access_iterator_tag,
-                                  NamedDecl *const>;
+                                  std::random_access_iterator_tag, NamedDecl *>;
 
   class iterator : public IteratorBase {
     value_type SingleElement;
