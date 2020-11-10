@@ -62,8 +62,7 @@ public:
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Probs(std::move(Arg.Probs)), MaxSuccIdx(std::move(Arg.MaxSuccIdx)),
-        LastF(Arg.LastF),
+      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
         PostDominatedByUnreachable(std::move(Arg.PostDominatedByUnreachable)),
         PostDominatedByColdCall(std::move(Arg.PostDominatedByColdCall)) {}
 
@@ -73,7 +72,6 @@ public:
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
     Probs = std::move(RHS.Probs);
-    MaxSuccIdx = std::move(RHS.MaxSuccIdx);
     PostDominatedByColdCall = std::move(RHS.PostDominatedByColdCall);
     PostDominatedByUnreachable = std::move(RHS.PostDominatedByUnreachable);
     return *this;
@@ -123,16 +121,6 @@ public:
   /// returned.
   raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
                                     const BasicBlock *Dst) const;
-
-protected:
-  /// Set the raw edge probability for the given edge.
-  ///
-  /// This allows a pass to explicitly set the edge probability for an edge. It
-  /// can be used when updating the CFG to update and preserve the branch
-  /// probability information. Read the implementation of how these edge
-  /// probabilities are calculated carefully before using!
-  void setEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors,
-                          BranchProbability Prob);
 
 public:
   /// Set the raw probabilities for all edges from the given block.
@@ -274,9 +262,6 @@ private:
   static const uint32_t DEFAULT_WEIGHT = 16;
 
   DenseMap<Edge, BranchProbability> Probs;
-
-  // The maximum successor index ever entered for a given basic block.
-  DenseMap<const BasicBlock *, unsigned> MaxSuccIdx;
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;
