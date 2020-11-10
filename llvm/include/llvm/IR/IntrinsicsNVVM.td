@@ -128,7 +128,7 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
      !eq(A.ptx_elt_type, "u4") : [A],
      !eq(A.ptx_elt_type, "b1") : [A],
      // the rest are FP ops identified by accumulator & result type.
-     1: [D, C]
+     true: [D, C]
      );
    string ret = !foldl("", id_frags, a, b, !strconcat(a, ".", b.ptx_elt_type));
 }
@@ -294,7 +294,7 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
     !eq(t, "s4") : [],
     !eq(t, "u4") : [],
     // All other (non sub-int) are OK.
-    1: [1]
+    true: [1]
   );
 }
 
@@ -307,8 +307,8 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
   string Name = "int_nvvm_shfl_" # Suffix;
   string Builtin = "__nvvm_shfl_" # Suffix;
   string IntrName = "llvm.nvvm.shfl." # !subst("_",".", Suffix);
-  list<int> withGccBuiltin = !if(return_pred, [], [1]);
-  list<int> withoutGccBuiltin = !if(return_pred, [1], []);
+  bit withGccBuiltin = !not(return_pred);
+  bit withoutGccBuiltin = return_pred;
   LLVMType OpType = !cond(
     !eq(type,"i32"): llvm_i32_ty,
     !eq(type,"f32"): llvm_float_ty);
@@ -3998,18 +3998,18 @@ def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
 // SHUFFLE
 //
 // Generate intrinsics for all variants of shfl instruction.
-foreach sync = [0, 1] in {
+foreach sync = [false, true] in {
   foreach mode = ["up", "down", "bfly", "idx"] in {
     foreach type = ["i32", "f32"] in {
-      foreach return_pred = [0, 1] in {
+      foreach return_pred = [false, true] in {
         foreach i = [SHFL_INFO<sync, mode, type, return_pred>] in {
-          foreach _ = i.withGccBuiltin in {
+          if i.withGccBuiltin then {
             def i.Name : GCCBuiltin<i.Builtin>,
                          Intrinsic<i.RetTy, i.ArgsTy,
                                    [IntrInaccessibleMemOnly, IntrConvergent],
                                    i.IntrName>;
           }
-          foreach _ = i.withoutGccBuiltin in {
+          if i.withoutGccBuiltin then {
             def i.Name : Intrinsic<i.RetTy, i.ArgsTy,
                          [IntrInaccessibleMemOnly, IntrConvergent], i.IntrName>;
           }

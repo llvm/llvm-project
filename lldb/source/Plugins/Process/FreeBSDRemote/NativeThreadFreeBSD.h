@@ -64,7 +64,7 @@ private:
   void SetRunning();
   void SetStepping();
 
-  Status CopyWatchpointsFrom(NativeThreadFreeBSD &source);
+  llvm::Error CopyWatchpointsFrom(NativeThreadFreeBSD &source);
 
   // Member Variables
   lldb::StateType m_state;
