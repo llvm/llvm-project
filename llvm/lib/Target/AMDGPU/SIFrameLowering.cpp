@@ -467,7 +467,9 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   //
   // This will return `Register()` in cases where there are no actual
   // uses of the SRSRC.
-  Register ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
+  Register ScratchRsrcReg;
+  if (!ST.enableFlatScratch())
+    ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
 
   // Make the selected register live throughout the function.
   if (ScratchRsrcReg) {

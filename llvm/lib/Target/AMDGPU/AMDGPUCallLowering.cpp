@@ -939,7 +939,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (IsEntryFunc) {
     TLI.allocateSystemSGPRs(CCInfo, MF, *Info, CC, IsGraphics);
   } else {
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+    if (!Subtarget.enableFlatScratch())
+      CCInfo.AllocateReg(Info->getScratchRSrcReg());
     TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
@@ -1227,12 +1228,14 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  // Insert copies for the SRD. In the HSA case, this should be an identity
-  // copy.
-  auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::vector(4, 32),
-                                             MFI->getScratchRSrcReg());
-  MIRBuilder.buildCopy(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
-  MIB.addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Implicit);
+  if (!ST.enableFlatScratch()) {
+    // Insert copies for the SRD. In the HSA case, this should be an identity
+    // copy.
+    auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::vector(4, 32),
+                                               MFI->getScratchRSrcReg());
+    MIRBuilder.buildCopy(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
+    MIB.addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Implicit);
+  }
 
   for (std::pair<MCRegister, Register> ArgReg : ImplicitArgRegs) {
     MIRBuilder.buildCopy((Register)ArgReg.first, ArgReg.second);
