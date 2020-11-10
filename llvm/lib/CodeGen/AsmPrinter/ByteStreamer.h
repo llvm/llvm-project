@@ -29,7 +29,7 @@ class ByteStreamer {
 
  public:
   // For now we're just handling the calls we need for dwarf emission/hashing.
-  virtual void EmitInt8(uint8_t Byte, const Twine &Comment = "") = 0;
+  virtual void emitInt8(uint8_t Byte, const Twine &Comment = "") = 0;
   virtual void emitSLEB128(uint64_t DWord, const Twine &Comment = "") = 0;
   virtual void emitULEB128(uint64_t DWord, const Twine &Comment = "",
                            unsigned PadTo = 0) = 0;
@@ -41,7 +41,7 @@ private:
 
 public:
   APByteStreamer(AsmPrinter &Asm) : AP(Asm) {}
-  void EmitInt8(uint8_t Byte, const Twine &Comment) override {
+  void emitInt8(uint8_t Byte, const Twine &Comment) override {
     AP.OutStreamer->AddComment(Comment);
     AP.emitInt8(Byte);
   }
@@ -61,7 +61,7 @@ class HashingByteStreamer final : public ByteStreamer {
   DIEHash &Hash;
  public:
  HashingByteStreamer(DIEHash &H) : Hash(H) {}
-  void EmitInt8(uint8_t Byte, const Twine &Comment) override {
+  void emitInt8(uint8_t Byte, const Twine &Comment) override {
     Hash.update(Byte);
   }
   void emitSLEB128(uint64_t DWord, const Twine &Comment) override {
@@ -88,7 +88,7 @@ public:
                      std::vector<std::string> &Comments, bool GenerateComments)
       : Buffer(Buffer), Comments(Comments), GenerateComments(GenerateComments) {
   }
-  void EmitInt8(uint8_t Byte, const Twine &Comment) override {
+  void emitInt8(uint8_t Byte, const Twine &Comment) override {
     Buffer.push_back(Byte);
     if (GenerateComments)
       Comments.push_back(Comment.str());
