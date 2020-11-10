@@ -297,7 +297,7 @@ static Optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
   llvm_unreachable("unexpected number of options");
 }
 
-static bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
+bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
   return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
 }
 
