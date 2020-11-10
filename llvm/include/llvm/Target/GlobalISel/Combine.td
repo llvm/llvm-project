@@ -390,6 +390,15 @@ def redundant_and: GICombineRule <
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// Fold (x | y) -> x or (x | y) -> y when (x | y) is known to equal x or equal y.
+def redundant_or_matchinfo : GIDefMatchData<"Register">;
+def redundant_or: GICombineRule <
+  (defs root:$root, redundant_or_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_OR):$root,
+         [{ return Helper.matchRedundantOr(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
+
 // If the input is already sign extended, just drop the extension.
 // sext_inreg x, K ->
 //   if computeNumSignBits(x) >= (x.getScalarSizeInBits() - K + 1)
@@ -551,7 +560,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  redundant_and, redundant_sext_inreg]>;
+  redundant_and, redundant_sext_inreg, redundant_or]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 

@@ -2888,6 +2888,52 @@ bool CombinerHelper::matchRedundantAnd(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchRedundantOr(MachineInstr &MI, Register &Replacement) {
+  // Given
+  //
+  // %y:_(sN) = G_SOMETHING
+  // %x:_(sN) = G_SOMETHING
+  // %res:_(sN) = G_OR %x, %y
+  //
+  // Eliminate the G_OR when it is known that x | y == x or x | y == y.
+  assert(MI.getOpcode() == TargetOpcode::G_OR);
+  if (!KB)
+    return false;
+
+  Register OrDst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(OrDst);
+
+  // FIXME: This should be removed once GISelKnownBits supports vectors.
+  if (DstTy.isVector())
+    return false;
+
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  KnownBits LHSBits = KB->getKnownBits(LHS);
+  KnownBits RHSBits = KB->getKnownBits(RHS);
+
+  // Check that x | Mask == x.
+  // x | 0 == x, always
+  // x | 1 == x, only if x is also 1
+  // Meaning Mask has no effect if every bit is either zero in Mask or one in x.
+  //
+  // Check if we can replace OrDst with the LHS of the G_OR
+  if (canReplaceReg(OrDst, LHS, MRI) &&
+      (LHSBits.One | RHSBits.Zero).isAllOnesValue()) {
+    Replacement = LHS;
+    return true;
+  }
+
+  // Check if we can replace OrDst with the RHS of the G_OR
+  if (canReplaceReg(OrDst, RHS, MRI) &&
+      (LHSBits.Zero | RHSBits.One).isAllOnesValue()) {
+    Replacement = RHS;
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchRedundantSExtInReg(MachineInstr &MI) {
   // If the input is already sign extended, just drop the extension.
   Register Src = MI.getOperand(1).getReg();
