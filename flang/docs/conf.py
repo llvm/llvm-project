@@ -11,6 +11,7 @@
 
 import sys, os
 from datetime import date
+from recommonmark.parser import CommonMarkParser
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -18,6 +19,13 @@ from datetime import date
 #sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration -----------------------------------------------------
+
+# https://github.com/readthedocs/recommonmark/issues/177
+#Method used to remove the warning message.
+class CustomCommonMarkParser(CommonMarkParser):
+    def visit_document(self, node):
+        pass
+
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
@@ -44,7 +52,7 @@ else:
     # This requires 0.5 or later.
     extensions.append('recommonmark')
   else:
-    source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
+    source_parsers = {'.md': CustomCommonMarkParser}
   source_suffix['.md'] = 'markdown'
   extensions.append('sphinx_markdown_tables')
 
