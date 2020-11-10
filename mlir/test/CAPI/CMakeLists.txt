@@ -4,8 +4,6 @@ set(LLVM_OPTIONAL_SOURCES
 )
 
 set(LLVM_LINK_COMPONENTS
-  Core
-  Support
   )
 
 add_llvm_executable(mlir-capi-ir-test
