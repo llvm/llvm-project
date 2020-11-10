@@ -25,6 +25,5 @@ void Helper() {
 
 // Check br i1 to make sure the loop is gone, there will still be a label branch for the infinite loop.
 // CHECK-LABEL: Helper
-// CHECK: entry:
 // CHECK-NOT: br i1
-// CHECK-NEXT: ret void
+// CHECK: ret void
