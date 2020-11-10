@@ -168,8 +168,7 @@ define amdgpu_cs i32 @test_lshr_or_1(i32 inreg %arg1) {
 define amdgpu_cs i32 @test_lshr_or_2(i32 inreg %arg1) {
 ; CHECK-LABEL: test_lshr_or_2:
 ; CHECK:       ; %bb.0: ; %.entry
-; CHECK-NEXT:    s_lshr_b32 s0, s0, 8
-; CHECK-NEXT:    s_or_b32 s0, s0, 0xffffff
+; CHECK-NEXT:    s_mov_b32 s0, 0xffffff
 ; CHECK-NEXT:    ; return to shader part epilog
 .entry:
   %z1 = lshr i32 %arg1, 3

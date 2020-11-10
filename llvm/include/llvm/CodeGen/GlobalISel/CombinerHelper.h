@@ -431,6 +431,15 @@ public:
   /// success.
   bool matchRedundantAnd(MachineInstr &MI, Register &Replacement);
 
+  /// \return true if \p MI is a G_OR instruction whose operands are x and y
+  /// where x | y == x or x | y == y. (E.g., one of operands is all-zeros
+  /// value.)
+  ///
+  /// \param [in] MI - The G_OR instruction.
+  /// \param [out] Replacement - A register the G_OR should be replaced with on
+  /// success.
+  bool matchRedundantOr(MachineInstr &MI, Register &Replacement);
+
   /// \return true if \p MI is a G_SEXT_INREG that can be erased.
   bool matchRedundantSExtInReg(MachineInstr &MI);
 

@@ -128,6 +128,6 @@ def AArch64PostLegalizerCombinerHelper
                         sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
-                        extractvecelt_pairwise_add]> {
+                        extractvecelt_pairwise_add, redundant_or]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
