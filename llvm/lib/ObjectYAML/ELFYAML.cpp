@@ -1497,12 +1497,6 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     return "";
   }
 
-  if (const auto *BBAM = dyn_cast<ELFYAML::BBAddrMapSection>(C.get())) {
-    if ((BBAM->Content || BBAM->Size) && BBAM->Entries)
-      return "\"Entries\" cannot be used with \"Content\" or \"Size\"";
-    return "";
-  }
-
   return "";
 }
 
