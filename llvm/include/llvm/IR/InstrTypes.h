@@ -942,6 +942,18 @@ public:
     return getUnsignedPredicate(getPredicate());
   }
 
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  static Predicate getFlippedSignednessPredicate(Predicate pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  Predicate getFlippedSignednessPredicate() {
+    return getFlippedSignednessPredicate(getPredicate());
+  }
+
   /// This is just a convenience.
   /// Determine if this is true when both operands are the same.
   bool isTrueWhenEqual() const {
