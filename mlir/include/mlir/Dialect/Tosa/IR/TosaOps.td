@@ -104,7 +104,7 @@ def Tosa_Conv2DOp : Tosa_Op<"conv2d", [NoSideEffect]> {
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
 
-  let verifier = [{ return verifyConvOp(*this); }];
+  let verifier = [{ return ::verifyConvOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -134,7 +134,7 @@ def Tosa_Conv3DOp : Tosa_Op<"conv3d", [NoSideEffect]> {
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
 
-  let verifier = [{ return verifyConvOp(*this); }];
+  let verifier = [{ return ::verifyConvOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -165,7 +165,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_Op<"depthwise_conv2d", [NoSideEffect]> {
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
 
-  let verifier = [{ return verifyConvOp(*this); }];
+  let verifier = [{ return ::verifyConvOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -191,7 +191,7 @@ def Tosa_FullyConnectedOp : Tosa_Op<"fully_connected", [NoSideEffect]> {
 
   let builders = [Tosa_FCOpQuantInfoBuilder];
 
-  let verifier = [{ return verifyConvOp(*this); }];
+  let verifier = [{ return ::verifyConvOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//
