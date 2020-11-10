@@ -2110,7 +2110,8 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
       return cast<MCSectionXCOFF>(
                  getSectionForFunctionDescriptor(cast<Function>(GO), TM))
           ->getQualNameSymbol();
-    if (TM.getDataSections() || GOKind.isCommon() || GOKind.isBSSLocal())
+    if ((TM.getDataSections() && !GO->hasSection()) || GOKind.isCommon() ||
+        GOKind.isBSSLocal())
       return cast<MCSectionXCOFF>(SectionForGlobal(GO, GOKind, TM))
           ->getQualNameSymbol();
   }
@@ -2121,7 +2122,22 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
 
 MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  report_fatal_error("XCOFF explicit sections not yet implemented.");
+  if (!GO->hasSection())
+    report_fatal_error("#pragma clang section is not yet supported");
+
+  StringRef SectionName = GO->getSection();
+  XCOFF::StorageMappingClass MappingClass;
+  if (Kind.isText())
+    MappingClass = XCOFF::XMC_PR;
+  else if (Kind.isData() || Kind.isReadOnlyWithRel() || Kind.isBSS())
+    MappingClass = XCOFF::XMC_RW;
+  else if (Kind.isReadOnly())
+    MappingClass = XCOFF::XMC_RO;
+  else
+    report_fatal_error("XCOFF other section types not yet implemented.");
+
+  return getContext().getXCOFFSection(SectionName, MappingClass, XCOFF::XTY_SD,
+                                      Kind, /* MultiSymbolsAllowed*/ true);
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
@@ -2147,7 +2163,7 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     getNameWithPrefix(Name, GO, TM);
     return getContext().getXCOFFSection(
         Name, Kind.isBSSLocal() ? XCOFF::XMC_BS : XCOFF::XMC_RW, XCOFF::XTY_CM,
-        Kind, /* BeginSymbolName */ nullptr);
+        Kind);
   }
 
   if (Kind.isMergeableCString()) {
@@ -2162,8 +2178,9 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     if (TM.getDataSections())
       getNameWithPrefix(Name, GO, TM);
 
-    return getContext().getXCOFFSection(Name, XCOFF::XMC_RO, XCOFF::XTY_SD,
-                                        Kind, /*BeginSymbolName*/ nullptr);
+    return getContext().getXCOFFSection(
+        Name, XCOFF::XMC_RO, XCOFF::XTY_SD, Kind,
+        /* MultiSymbolsAllowed*/ !TM.getDataSections());
   }
 
   if (Kind.isText()) {
@@ -2290,21 +2307,22 @@ MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
         isa_and_nonnull<Function>(cast<GlobalAlias>(Func)->getBaseObject()))) &&
       "Func must be a function or an alias which has a function as base "
       "object.");
+
   SmallString<128> NameStr;
   NameStr.push_back('.');
   getNameWithPrefix(NameStr, Func, TM);
 
-  // When -function-sections is enabled, it's not necessary to emit
-  // function entry point label any more. We will use function entry
-  // point csect instead. And for function delcarations, the undefined symbols
-  // gets treated as csect with XTY_ER property.
-  if ((TM.getFunctionSections() || Func->isDeclaration()) &&
+  // When -function-sections is enabled and explicit section is not specified,
+  // it's not necessary to emit function entry point label any more. We will use
+  // function entry point csect instead. And for function delcarations, the
+  // undefined symbols gets treated as csect with XTY_ER property.
+  if (((TM.getFunctionSections() && !Func->hasSection()) ||
+       Func->isDeclaration()) &&
       isa<Function>(Func)) {
-    return cast<MCSectionXCOFF>(
-               getContext().getXCOFFSection(
-                   NameStr, XCOFF::XMC_PR,
-                   Func->isDeclaration() ? XCOFF::XTY_ER : XCOFF::XTY_SD,
-                   SectionKind::getText()))
+    return getContext()
+        .getXCOFFSection(NameStr, XCOFF::XMC_PR,
+                         Func->isDeclaration() ? XCOFF::XTY_ER : XCOFF::XTY_SD,
+                         SectionKind::getText())
         ->getQualNameSymbol();
   }
 
