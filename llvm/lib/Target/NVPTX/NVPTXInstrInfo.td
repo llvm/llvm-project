@@ -13,7 +13,7 @@
 include "NVPTXInstrFormats.td"
 
 // A NOP instruction
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def NOP : NVPTXInst<(outs), (ins), "", []>;
 }
 
@@ -407,7 +407,7 @@ multiclass F2<string OpcStr, SDNode OpNode> {
 // Type Conversion
 //-----------------------------------
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   // Generate a cvt to the given type from all possible types.  Each instance
   // takes a CvtMode immediate that defines the conversion mode to use.  It can
   // be CvtNONE to omit a conversion mode.
@@ -1367,7 +1367,7 @@ multiclass BFE<string TyStr, RegisterClass RC> {
                 !strconcat("bfe.", TyStr, " \t$d, $a, $b, $c;"), []>;
 }
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   defm BFE_S32 : BFE<"s32", Int32Regs>;
   defm BFE_U32 : BFE<"u32", Int32Regs>;
   defm BFE_S64 : BFE<"s64", Int64Regs>;
@@ -1381,7 +1381,7 @@ let hasSideEffects = 0 in {
 // FIXME: This doesn't cover versions of set and setp that combine with a
 // boolean predicate, e.g. setp.eq.and.b16.
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   multiclass SETP<string TypeStr, RegisterClass RC, Operand ImmCls> {
     def rr :
       NVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, RC:$b, CmpMode:$cmp),
@@ -1427,7 +1427,7 @@ def SETP_f16x2rr :
 // "set.CmpOp{.ftz}.dtype.stype", where dtype is the type of the destination
 // reg, either u32, s32, or f32.  Anyway these aren't used at the moment.
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   multiclass SET<string TypeStr, RegisterClass RC, Operand ImmCls> {
     def rr : NVPTXInst<(outs Int32Regs:$dst),
                        (ins RC:$a, RC:$b, CmpMode:$cmp),
@@ -1462,7 +1462,7 @@ defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   multiclass SELP<string TypeStr, RegisterClass RC, Operand ImmCls> {
     def rr : NVPTXInst<(outs RC:$dst),
                        (ins RC:$a, RC:$b, Int1Regs:$p),
@@ -1572,7 +1572,7 @@ def MOV_ADDR64 : NVPTXInst<(outs Int64Regs:$dst), (ins imem:$a),
                            [(set Int64Regs:$dst, (Wrapper tglobaladdr:$a))]>;
 
 // Get pointer to local stack.
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def MOV_DEPOT_ADDR :    NVPTXInst<(outs Int32Regs:$d), (ins i32imm:$num),
                                      "mov.u32 \t$d, __local_depot$num;", []>;
   def MOV_DEPOT_ADDR_64 : NVPTXInst<(outs Int64Regs:$d), (ins i32imm:$num),
@@ -1988,7 +1988,7 @@ def ProxyReg :
   SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 
-let mayLoad = 1 in {
+let mayLoad = true in {
   class LoadParamMemInst<NVPTXRegClass regclass, string opstr> :
         NVPTXInst<(outs regclass:$dst), (ins i32imm:$b),
                   !strconcat("ld.param", opstr, " \t$dst, [retval0+$b];"),
@@ -2013,7 +2013,7 @@ class LoadParamRegInst<NVPTXRegClass regclass, string opstr> :
                 !strconcat("mov", opstr, " \t$dst, retval$b;"),
                 [(set regclass:$dst, (LoadParam (i32 0), (i32 imm:$b)))]>;
 
-let mayStore = 1 in {
+let mayStore = true in {
   class StoreParamInst<NVPTXRegClass regclass, string opstr> :
         NVPTXInst<(outs), (ins regclass:$val, i32imm:$a, i32imm:$b),
                   !strconcat("st.param", opstr, " \t[param$a+$b], $val;"),
@@ -2823,7 +2823,7 @@ def : Pat<(select Int32Regs:$pred, Float64Regs:$a, Float64Regs:$b),
           (SETP_b32ri (ANDb32ri Int32Regs:$pred, 1), 1, CmpEQ))>;
 
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   // pack a set of smaller int registers to a larger int register
   def V4I16toI64 : NVPTXInst<(outs Int64Regs:$d),
                              (ins Int16Regs:$s1, Int16Regs:$s2,
@@ -2856,7 +2856,7 @@ let hasSideEffects = 0 in {
 
 }
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   // Extract element of f16x2 register. PTX does not provide any way
   // to access elements of f16x2 vector directly, so we need to
   // extract it using a temporary register.
@@ -2899,7 +2899,7 @@ let hasSideEffects = 0 in {
 }
 
 // Count leading zeros
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
                          "clz.b32 \t$d, $a;", []>;
   def CLZr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
@@ -2937,7 +2937,7 @@ def : Pat<(i32 (zext (i16 (ctlz Int16Regs:$a)))),
           (SUBi32ri (CLZr32 (CVT_u32_u16 Int16Regs:$a, CvtNONE)), 16)>;
 
 // Population count
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def POPCr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
                           "popc.b32 \t$d, $a;", []>;
   def POPCr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
