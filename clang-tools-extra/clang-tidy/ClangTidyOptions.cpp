@@ -363,7 +363,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
                      << ParsedOptions.getError().message() << "\n";
       continue;
     }
-    return OptionsSource(*ParsedOptions, ConfigFile.str());
+    return OptionsSource(*ParsedOptions, std::string(ConfigFile));
   }
   return llvm::None;
 }
