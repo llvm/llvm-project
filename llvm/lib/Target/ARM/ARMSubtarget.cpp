@@ -314,6 +314,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     PreISelOperandLatencyAdjustment = 1;
     break;
   case NeoverseN1:
+  case NeoverseV1:
     break;
   case Swift:
     MaxInterleaveFactor = 2;
