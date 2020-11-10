@@ -205,11 +205,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let SchedRW = [Write32Bit];
 
-  field bits<1> DisableSIDecoder = 0;
-  field bits<1> DisableVIDecoder = 0;
-  field bits<1> DisableDecoder = 0;
-
-  let isAsmParserOnly = !ne(DisableDecoder{0}, {0});
   let AsmVariantName = AMDGPUAsmVariants.Default;
 
   // Avoid changing source registers in a way that violates constant bus read limitations.
