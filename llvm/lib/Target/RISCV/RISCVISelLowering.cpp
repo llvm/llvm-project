@@ -111,8 +111,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  for (auto VT : {MVT::i1, MVT::i8, MVT::i16})
-    setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+  if (!Subtarget.hasStdExtZbb()) {
+    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
+    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
+  }
 
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::ADD, MVT::i32, Custom);

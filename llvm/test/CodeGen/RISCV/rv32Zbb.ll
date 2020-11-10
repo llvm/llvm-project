@@ -824,18 +824,14 @@ define i64 @sextb_i64(i64 %a) nounwind {
 ;
 ; RV32IB-LABEL: sextb_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    sext.b a2, a0
-; RV32IB-NEXT:    slli a0, a0, 24
+; RV32IB-NEXT:    sext.b a0, a0
 ; RV32IB-NEXT:    srai a1, a0, 31
-; RV32IB-NEXT:    mv a0, a2
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: sextb_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    sext.b a2, a0
-; RV32IBB-NEXT:    slli a0, a0, 24
+; RV32IBB-NEXT:    sext.b a0, a0
 ; RV32IBB-NEXT:    srai a1, a0, 31
-; RV32IBB-NEXT:    mv a0, a2
 ; RV32IBB-NEXT:    ret
   %shl = shl i64 %a, 56
   %shr = ashr exact i64 %shl, 56
@@ -873,18 +869,14 @@ define i64 @sexth_i64(i64 %a) nounwind {
 ;
 ; RV32IB-LABEL: sexth_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    sext.h a2, a0
-; RV32IB-NEXT:    slli a0, a0, 16
+; RV32IB-NEXT:    sext.h a0, a0
 ; RV32IB-NEXT:    srai a1, a0, 31
-; RV32IB-NEXT:    mv a0, a2
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: sexth_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    sext.h a2, a0
-; RV32IBB-NEXT:    slli a0, a0, 16
+; RV32IBB-NEXT:    sext.h a0, a0
 ; RV32IBB-NEXT:    srai a1, a0, 31
-; RV32IBB-NEXT:    mv a0, a2
 ; RV32IBB-NEXT:    ret
   %shl = shl i64 %a, 48
   %shr = ashr exact i64 %shl, 48
