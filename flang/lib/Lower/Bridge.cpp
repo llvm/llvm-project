@@ -811,7 +811,7 @@ private:
       genFIRIncrementLoopEnd(incrementLoopNestInfo);
   }
 
-  /// Generate FIR to begin a structured or unstructured increment loop.
+  /// Generate FIR to begin a structured or unstructured increment loop nest.
   void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     auto loc = toLocation();
@@ -850,8 +850,7 @@ private:
       if (info.isStructured()) {
         info.doLoop = builder->create<fir::DoLoopOp>(
             loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
-            /*returnFinalCount=*/false,
-            ArrayRef<mlir::Value>{lowerValue}); // initial doLoop result value
+            /*finalCountValue*/ !info.isUnordered);
         builder->setInsertionPointToStart(info.doLoop.getBody());
         // Update the loop variable value, as it may have non-index references.
         auto value = builder->createConvert(loc, genType(info.loopVariableSym),
@@ -918,7 +917,7 @@ private:
     }
   }
 
-  /// Generate FIR to end a structured or unstructured increment loop.
+  /// Generate FIR to end a structured or unstructured increment loop nest.
   void genFIRIncrementLoopEnd(IncrementLoopNestInfo &incrementLoopNestInfo) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     auto loc = toLocation();
@@ -927,13 +926,13 @@ private:
          it != rend; ++it) {
       auto &info = *it;
       if (info.isStructured()) {
-        // End fir.do_loop; an unordered loop result is illegitimate/irrelevant.
-        builder->setInsertionPointToEnd(info.doLoop.getBody());
-        auto result = info.doLoop.getInductionVar();
-        if (!info.isUnordered)
-          result =
-              builder->create<mlir::AddIOp>(loc, result, info.doLoop.step());
-        builder->create<fir::ResultOp>(loc, result);
+        // End fir.do_loop.
+        if (!info.isUnordered) {
+          builder->setInsertionPointToEnd(info.doLoop.getBody());
+          mlir::Value result = builder->create<mlir::AddIOp>(
+              loc, info.doLoop.getInductionVar(), info.doLoop.step());
+          builder->create<fir::ResultOp>(loc, result);
+        }
         builder->setInsertionPointAfter(info.doLoop);
         if (info.isUnordered)
           continue;
@@ -965,7 +964,7 @@ private:
     }
   }
 
-  /// Generate structured or unstructured FIR for an IF statement..
+  /// Generate structured or unstructured FIR for an IF statement.
   void genFIR(const Fortran::parser::IfStmt &stmt) {
     auto &eval = getEval();
     if (eval.lowerAsUnstructured()) {
@@ -1037,7 +1036,7 @@ private:
       genFIR(e);
   }
 
-  /// Generate FIR for a FORALL statement..
+  /// Generate FIR for a FORALL statement.
   void genFIR(const Fortran::parser::ForallStmt &forallStmt) {
     auto incrementLoopNestInfo = getConcurrentControl(
         std::get<
