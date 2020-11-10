@@ -969,3 +969,7 @@ func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : 
 
   return
 }
+
+// CHECK-LABEL: func private @legacy_visibility_syntax
+func @legacy_visibility_syntax() attributes { sym_visibility = "private" }
+
