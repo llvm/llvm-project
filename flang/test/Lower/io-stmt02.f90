@@ -81,6 +81,32 @@ dimension c(n), d(n,n), e(n,n), f(n)
 read(*,'(F7.2)', iostat=mm, advance='no') a, b, (c(j), (d(k,j), e(k,j), k=1,n), f(j), j=1,n), g
 end
 
+! CHECK-LABEL: func @_QPcontrol2
+subroutine control2() ! I/O condition specifier control flow (use index result)
+c = 1; d = 9
+! CHECK: BeginExternalFormattedOutput
+! CHECK: EnableHandlers
+! CHECK: :2 = fir.iterate_while
+! CHECK: = fir.if
+! CHECK: OutputReal
+! CHECK: = fir.if
+! CHECK: OutputReal
+! CHECK: fir.result
+! CHECK: else
+! CHECK: fir.result %false
+! CHECK: fir.result
+! CHECK: else
+! CHECK: fir.result %false
+! CHECK: = addi %arg0, %c1
+! CHECK: = select
+! CHECK: fir.result
+! CHECK: fir.if %{{[0-9]*}}#1
+! CHECK: OutputInteger
+! CHECK: EndIoStatement
+write(*,'(8F4.1,I5)',iostat=m) (c,d,j=11,14), j
+end
+
+
 ! CHECK-LABEL: func @_QPimpliedformat
 subroutine impliedformat
   ! CHECK: BeginExternalListInput(%c-1
