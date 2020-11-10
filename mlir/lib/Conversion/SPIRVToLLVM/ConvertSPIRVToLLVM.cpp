@@ -1269,7 +1269,8 @@ public:
   matchAndRewrite(spirv::ModuleOp spvModuleOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto newModuleOp = rewriter.create<ModuleOp>(spvModuleOp.getLoc());
+    auto newModuleOp =
+        rewriter.create<ModuleOp>(spvModuleOp.getLoc(), spvModuleOp.getName());
     rewriter.inlineRegionBefore(spvModuleOp.body(), newModuleOp.getBody());
 
     // Remove the terminator block that was automatically added by builder
