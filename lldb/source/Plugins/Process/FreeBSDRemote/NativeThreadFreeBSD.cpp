@@ -165,14 +165,14 @@ std::string NativeThreadFreeBSD::GetName() {
     }
     if (error != 0) {
       len = 0;
-      LLDB_LOG(log, "tid = {0} in state {1} failed to get thread name: {2}", GetID(),
-               m_state, strerror(errno));
+      LLDB_LOG(log, "tid = {0} in state {1} failed to get thread name: {2}",
+               GetID(), m_state, strerror(errno));
     }
     kp.resize(len / sizeof(struct kinfo_proc));
     break;
   }
 
-  for (auto& procinfo : kp) {
+  for (auto &procinfo : kp) {
     if (procinfo.ki_tid == static_cast<lwpid_t>(GetID()))
       return procinfo.ki_tdname;
   }
@@ -272,4 +272,15 @@ Status NativeThreadFreeBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   }
 
   return Status("Clearing hardware breakpoint failed.");
+}
+
+llvm::Error
+NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
+  llvm::Error s = GetRegisterContext().CopyHardwareWatchpointsFrom(
+      source.GetRegisterContext());
+  if (!s) {
+    m_watchpoint_index_map = source.m_watchpoint_index_map;
+    m_hw_break_index_map = source.m_hw_break_index_map;
+  }
+  return s;
 }
