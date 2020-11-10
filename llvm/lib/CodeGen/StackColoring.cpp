@@ -1287,7 +1287,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // This is a simple greedy algorithm for merging allocas. First, sort the
   // slots, placing the largest slots first. Next, perform an n^2 scan and look
-  // for disjoint slots. When you find disjoint slots, merge the samller one
+  // for disjoint slots. When you find disjoint slots, merge the smaller one
   // into the bigger one and update the live interval. Remove the small alloca
   // and continue.
 
