@@ -630,7 +630,3 @@ syntax::ParametersAndQualifiers::getTrailingReturn() {
   return cast_or_null<syntax::TrailingReturnType>(
       findChild(syntax::NodeRole::TrailingReturn));
 }
-
-#define NODE(Kind, Parent)                                                     \
-  static_assert(sizeof(syntax::Kind) > 0, "Missing Node subclass definition");
-#include "clang/Tooling/Syntax/Nodes.inc"

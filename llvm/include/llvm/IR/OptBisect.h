@@ -68,9 +68,11 @@ public:
 
   /// isEnabled should return true before calling shouldRunPass
   bool isEnabled() const override { return BisectEnabled; }
-private:
+
+protected:
   bool checkPass(const StringRef PassName, const StringRef TargetDesc);
 
+private:
   bool BisectEnabled = false;
   unsigned LastBisectNum = 0;
 };

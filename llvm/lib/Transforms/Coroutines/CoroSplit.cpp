@@ -606,15 +606,6 @@ void CoroCloner::replaceEntryBlock() {
   Builder.CreateUnreachable();
   BranchToEntry->eraseFromParent();
 
-  // Move any allocas into Entry that weren't moved into the frame.
-  for (auto IT = OldEntry->begin(), End = OldEntry->end(); IT != End;) {
-    Instruction &I = *IT++;
-    if (!isa<AllocaInst>(&I) || I.use_empty())
-      continue;
-
-    I.moveBefore(*Entry, Entry->getFirstInsertionPt());
-  }
-
   // Branch from the entry to the appropriate place.
   Builder.SetInsertPoint(Entry);
   switch (Shape.ABI) {
@@ -643,6 +634,19 @@ void CoroCloner::replaceEntryBlock() {
     Builder.CreateBr(Branch->getSuccessor(0));
     break;
   }
+  }
+
+  // Any alloca that's still being used but not reachable from the new entry
+  // needs to be moved to the new entry.
+  Function *F = OldEntry->getParent();
+  DominatorTree DT{*F};
+  for (auto IT = inst_begin(F), End = inst_end(F); IT != End;) {
+    Instruction &I = *IT++;
+    if (!isa<AllocaInst>(&I) || I.use_empty())
+      continue;
+    if (DT.isReachableFromEntry(I.getParent()))
+      continue;
+    I.moveBefore(*Entry, Entry->getFirstInsertionPt());
   }
 }
 

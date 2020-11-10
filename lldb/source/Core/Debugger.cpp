@@ -1578,14 +1578,11 @@ void Debugger::JoinIOHandlerThread() {
   }
 }
 
-Target *Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  Target *target = nullptr;
+Target &Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {
   if (!prefer_dummy) {
-    target = m_target_list.GetSelectedTarget().get();
-    if (target)
-      return target;
+    if (TargetSP target = m_target_list.GetSelectedTarget())
+      return *target;
   }
-
   return GetDummyTarget();
 }
 
