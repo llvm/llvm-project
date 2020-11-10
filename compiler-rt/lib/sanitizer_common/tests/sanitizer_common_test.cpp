@@ -93,7 +93,7 @@ TEST(SanitizerCommon, InternalMmapVectorRoundUpCapacity) {
   CHECK_EQ(v.capacity(), GetPageSizeCached() / sizeof(uptr));
 }
 
-TEST(SanitizerCommon, InternalMmapVectorReize) {
+TEST(SanitizerCommon, InternalMmapVectorResize) {
   InternalMmapVector<uptr> v;
   CHECK_EQ(0U, v.size());
   CHECK_GE(v.capacity(), v.size());
@@ -174,6 +174,30 @@ TEST(SanitizerCommon, InternalMmapVectorSwap) {
   vector1.swap(vector3);
   EXPECT_EQ(vector2, vector3);
   EXPECT_EQ(vector1, vector4);
+}
+
+TEST(SanitizerCommon, InternalMmapVectorErase) {
+  InternalMmapVector<uptr> v;
+  std::vector<uptr> r;
+  for (uptr i = 0; i < 10; i++) {
+    v.push_back(i);
+    r.push_back(i);
+  }
+
+  v.erase(&v[9]);
+  r.erase(r.begin() + 9);
+  EXPECT_EQ(r.size(), v.size());
+  for (uptr i = 0; i < r.size(); i++) EXPECT_EQ(r[i], v[i]);
+
+  v.erase(&v[3]);
+  r.erase(r.begin() + 3);
+  EXPECT_EQ(r.size(), v.size());
+  for (uptr i = 0; i < r.size(); i++) EXPECT_EQ(r[i], v[i]);
+
+  v.erase(&v[0]);
+  r.erase(r.begin());
+  EXPECT_EQ(r.size(), v.size());
+  for (uptr i = 0; i < r.size(); i++) EXPECT_EQ(r[i], v[i]);
 }
 
 void TestThreadInfo(bool main) {
