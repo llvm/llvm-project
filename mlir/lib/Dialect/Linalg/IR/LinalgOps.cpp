@@ -25,6 +25,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1641,11 +1642,112 @@ struct FoldTensorCastOp : public RewritePattern {
 };
 } // namespace
 
+namespace {
+// Deduplicate redundant args of a linalg op.
+// An arg is redundant if it has the same Value and indexing map as another.
+struct DeduplicateInputs : public RewritePattern {
+  DeduplicateInputs(PatternBenefit benefit = 1)
+      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // This pattern reduces the number of arguments of an op, which breaks
+    // the invariants of semantically charged named ops.
+    if (!isa<GenericOp, IndexedGenericOp>(op))
+      return failure();
+    auto linalgOp = cast<LinalgOp>(op);
+
+    // Associate each input to an equivalent "canonical" input that has the same
+    // Value and indexing map.
+    //
+    // In the non-duplicate case, input `i` will have canonical input `i`. But
+    // in the case of duplicated inputs, the canonical input could be some other
+    // input `< i`. That is, a later input will have some earlier input as its
+    // canonical input.
+    llvm::SmallDenseMap<std::pair<Value, AffineMap>, int> canonicalInput;
+    // For later remapping tasks like deduplicating payload block arguments,
+    // having a simple "inputIndex -> canonicalInputIndex" integer mapping is
+    // convenient.
+    SmallVector<int, 6> canonicalInputIndices;
+    for (int i = 0, e = linalgOp.getNumInputs(); i != e; i++) {
+      Value input = linalgOp.getInput(i);
+      AffineMap indexingMap = linalgOp.getInputIndexingMap(i);
+      // STL-like maps have a convenient behavior for our use case here. In the
+      // case of duplicate keys, the insertion is rejected, and the returned
+      // iterator gives access to the value already in the map.
+      auto pair = canonicalInput.insert({{input, indexingMap}, i});
+      canonicalInputIndices.push_back(pair.first->second);
+    }
+
+    // If there are no duplicate args, then bail out.
+    if (canonicalInput.size() == linalgOp.getNumInputs())
+      return failure();
+
+    // The operands for the newly canonicalized op.
+    SmallVector<Value, 6> newOperands;
+    for (auto v : llvm::enumerate(linalgOp.getInputs()))
+      if (canonicalInputIndices[v.index()] == static_cast<int>(v.index()))
+        newOperands.push_back(v.value());
+    llvm::append_range(newOperands, linalgOp.getOutputBuffers());
+    llvm::append_range(newOperands, linalgOp.getInitTensors());
+    llvm::append_range(newOperands, linalgOp.getAssumedNonShapedOperands());
+
+    // Clone the old op with new operands.
+    Operation *newOp = linalgOp.clone(rewriter, op->getLoc(),
+                                      op->getResultTypes(), newOperands);
+    auto newLinalgOp = cast<LinalgOp>(newOp);
+
+    // Repair the indexing maps by filtering out the ones that have been
+    // eliminated.
+    SmallVector<AffineMap, 6> newIndexingMaps;
+    for (int i = 0, e = newLinalgOp.getNumInputs(); i != e; i++)
+      if (canonicalInputIndices[i] == i)
+        newIndexingMaps.push_back(newLinalgOp.getIndexingMap(i));
+    for (int i = 0, e = newLinalgOp.getNumOutputs(); i != e; i++)
+      newIndexingMaps.push_back(newLinalgOp.getOutputIndexingMap(i));
+    newOp->setAttr("indexing_maps",
+                   rewriter.getAffineMapArrayAttr(newIndexingMaps));
+
+    // Set the number of inputs to the new value. The `clone` call above kept
+    // the value from the original op.
+    newLinalgOp.setNumInputs(canonicalInput.size());
+
+    // linalg.indexed_generic payloads have additional arguments prepended to
+    // the block arg list. The number of such args is one per dimension of the
+    // iteration space.
+    int bbArgBaseOffset = 0;
+    if (isa<IndexedGenericOp>(op))
+      bbArgBaseOffset = newIndexingMaps[0].getNumInputs();
+
+    // Repair the payload entry block by RAUW'ing redundant arguments and
+    // erasing them.
+    Block &payload = newOp->getRegion(0).front();
+    for (int i = 0, e = linalgOp.getNumInputs(); i < e; i++) {
+      // Iterate in reverse, so that we erase later args first, preventing the
+      // argument list from shifting unexpectedly and invalidating all our
+      // indices.
+      int reversed = e - i - 1;
+      int canonicalIndex = canonicalInputIndices[reversed];
+      if (canonicalInputIndices[reversed] == reversed)
+        continue;
+      payload.getArgument(bbArgBaseOffset + reversed)
+          .replaceAllUsesWith(
+              payload.getArgument(bbArgBaseOffset + canonicalIndex));
+      payload.eraseArgument(bbArgBaseOffset + reversed);
+    }
+
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+} // namespace
+
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
   void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
                                         MLIRContext *context) {                \
     results.insert<EraseDeadLinalgOp>();                                       \
     results.insert<FoldTensorCastOp>();                                        \
+    results.insert<DeduplicateInputs>();                                       \
   }                                                                            \
                                                                                \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \
