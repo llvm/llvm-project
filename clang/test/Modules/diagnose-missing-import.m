@@ -2,9 +2,6 @@
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -I%S/Inputs/diagnose-missing-import \
 // RUN:   -Werror=implicit-function-declaration -fsyntax-only \
 // RUN:   -fimplicit-module-maps -verify %s
-// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -I%S/Inputs/diagnose-missing-import \
-// RUN:   -Werror-implicit-function-declaration -fsyntax-only \
-// RUN:   -fimplicit-module-maps -verify %s
 @import NCI;
 
 void foo() {
