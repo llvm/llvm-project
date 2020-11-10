@@ -13,9 +13,11 @@ add_mlir_dialect_library(MLIRTosa
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRDialect
   MLIRStandard
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
+  MLIRQuant
   MLIRSideEffectInterfaces
   MLIRViewLikeInterface
   )
