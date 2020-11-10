@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRTosa
   MLIRStandardOpsIncGen
   MLIRTosaOpsIncGen
   MLIRTosaStructsIncGen
-  MLIRTosaInterfaceIncGen
+  MLIRTosaInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
