@@ -1037,8 +1037,13 @@ def : Pat<(sext_inreg (fshl GPR:$rs3, (shl GPR:$rs1, (i64 32)),
 let Predicates = [HasStdExtZbb, IsRV64] in {
 def : Pat<(add (ctlz (and GPR:$rs1, (i64 0xFFFFFFFF))), (i64 -32)),
           (CLZW GPR:$rs1)>;
-// We don't pattern-match CTZW here as it has the same pattern and result as
-// RV64 CTZ
+// computeKnownBits can't figure out that the and mask on the add result is
+// unnecessary so we need to pattern match it away.
+def : Pat<(and (add (ctlz (and GPR:$rs1, (i64 0xFFFFFFFF))), (i64 -32)),
+               (i64 0xFFFFFFFF)),
+          (CLZW GPR:$rs1)>;
+def : Pat<(cttz (or GPR:$rs1, (i64 0x100000000))),
+          (CTZW GPR:$rs1)>;
 def : Pat<(ctpop (and GPR:$rs1, (i64 0xFFFFFFFF))), (PCNTW GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 

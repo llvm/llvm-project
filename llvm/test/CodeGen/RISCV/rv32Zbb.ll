@@ -362,22 +362,12 @@ define i32 @ctlz_i32(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: ctlz_i32:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    beqz a0, .LBB8_2
-; RV32IB-NEXT:  # %bb.1: # %cond.false
 ; RV32IB-NEXT:    clz a0, a0
-; RV32IB-NEXT:    ret
-; RV32IB-NEXT:  .LBB8_2:
-; RV32IB-NEXT:    addi a0, zero, 32
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: ctlz_i32:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    beqz a0, .LBB8_2
-; RV32IBB-NEXT:  # %bb.1: # %cond.false
 ; RV32IBB-NEXT:    clz a0, a0
-; RV32IBB-NEXT:    ret
-; RV32IBB-NEXT:  .LBB8_2:
-; RV32IBB-NEXT:    addi a0, zero, 32
 ; RV32IBB-NEXT:    ret
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
   ret i32 %1
@@ -545,22 +535,12 @@ define i32 @cttz_i32(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: cttz_i32:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    beqz a0, .LBB10_2
-; RV32IB-NEXT:  # %bb.1: # %cond.false
 ; RV32IB-NEXT:    ctz a0, a0
-; RV32IB-NEXT:    ret
-; RV32IB-NEXT:  .LBB10_2:
-; RV32IB-NEXT:    addi a0, zero, 32
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: cttz_i32:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    beqz a0, .LBB10_2
-; RV32IBB-NEXT:  # %bb.1: # %cond.false
 ; RV32IBB-NEXT:    ctz a0, a0
-; RV32IBB-NEXT:    ret
-; RV32IBB-NEXT:  .LBB10_2:
-; RV32IBB-NEXT:    addi a0, zero, 32
 ; RV32IBB-NEXT:    ret
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %1
