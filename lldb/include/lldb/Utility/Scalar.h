@@ -69,6 +69,8 @@ public:
   }
   Scalar(llvm::APInt v)
       : m_type(e_int), m_integer(std::move(v), false), m_float(0.0f) {}
+  Scalar(llvm::APSInt v)
+      : m_type(e_int), m_integer(std::move(v)), m_float(0.0f) {}
 
   bool SignExtend(uint32_t bit_pos);
 

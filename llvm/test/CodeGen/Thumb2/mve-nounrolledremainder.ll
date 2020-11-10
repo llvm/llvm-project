@@ -9,26 +9,25 @@ define void @tailpred(half* nocapture readonly %pSrcA, half* nocapture readonly 
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    beq .LBB0_6
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
-; CHECK-NEXT:    add.w r4, r2, r3, lsl #1
-; CHECK-NEXT:    add.w r5, r1, r3, lsl #1
-; CHECK-NEXT:    cmp r4, r1
+; CHECK-NEXT:    add.w r5, r2, r3, lsl #1
+; CHECK-NEXT:    add.w r4, r1, r3, lsl #1
+; CHECK-NEXT:    cmp r5, r1
 ; CHECK-NEXT:    cset r12, hi
-; CHECK-NEXT:    cmp r5, r2
+; CHECK-NEXT:    cmp r4, r2
 ; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r4, r0
+; CHECK-NEXT:    cmp r5, r0
 ; CHECK-NEXT:    add.w r5, r0, r3, lsl #1
 ; CHECK-NEXT:    cset r4, hi
 ; CHECK-NEXT:    cmp r5, r2
 ; CHECK-NEXT:    cset r5, hi
 ; CHECK-NEXT:    ands r4, r5
 ; CHECK-NEXT:    lsls r4, r4, #31
-; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r3, lr, r12
-; CHECK-NEXT:    lslseq.w r3, r3, #31
+; CHECK-NEXT:    andeq.w r5, lr, r12
+; CHECK-NEXT:    lslseq.w r5, r5, #31
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.preheader
-; CHECK-NEXT:    dls lr, r4
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB0_3: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s0, [r0]
@@ -41,29 +40,14 @@ define void @tailpred(half* nocapture readonly %pSrcA, half* nocapture readonly 
 ; CHECK-NEXT:    le lr, .LBB0_3
 ; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:  .LBB0_4: @ %vector.ph
-; CHECK-NEXT:    adds r3, r4, #7
-; CHECK-NEXT:    movs r5, #1
-; CHECK-NEXT:    bic r3, r3, #7
-; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    add.w r5, r5, r3, lsr #3
-; CHECK-NEXT:    mov r3, r5
-; CHECK-NEXT:    mov r5, r4
+; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov lr, r3
-; CHECK-NEXT:    vctp.16 r5
-; CHECK-NEXT:    sub.w lr, lr, #1
-; CHECK-NEXT:    subs r5, #8
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrht.u16 q0, [r0], #16
-; CHECK-NEXT:    vldrht.u16 q1, [r1], #16
-; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
 ; CHECK-NEXT:    vadd.f16 q0, q1, q0
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r2], #16
-; CHECK-NEXT:    cmp.w lr, #0
-; CHECK-NEXT:    bne .LBB0_5
-; CHECK-NEXT:    b .LBB0_6
+; CHECK-NEXT:    vstrh.16 q0, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB0_5
 ; CHECK-NEXT:  .LBB0_6: @ %while.end
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -128,73 +112,68 @@ while.end:                                        ; preds = %vector.body, %while
 define void @notailpred(half* nocapture readonly %pSrcA, half* nocapture readonly %pSrcB, half* nocapture %pDst, i32 %blockSize) {
 ; CHECK-LABEL: notailpred:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r8, r9, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r8, r9, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cbz r3, .LBB1_6
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    cmp r3, #8
 ; CHECK-NEXT:    blo .LBB1_3
 ; CHECK-NEXT:  @ %bb.2: @ %vector.memcheck
-; CHECK-NEXT:    add.w r4, r2, r3, lsl #1
-; CHECK-NEXT:    add.w r5, r1, r3, lsl #1
-; CHECK-NEXT:    cmp r4, r1
-; CHECK-NEXT:    add.w r6, r0, r3, lsl #1
-; CHECK-NEXT:    cset r12, hi
-; CHECK-NEXT:    cmp r5, r2
-; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    cmp r4, r0
-; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    add.w r5, r2, r3, lsl #1
+; CHECK-NEXT:    add.w r6, r1, r3, lsl #1
+; CHECK-NEXT:    cmp r5, r1
+; CHECK-NEXT:    add.w r4, r0, r3, lsl #1
+; CHECK-NEXT:    cset r7, hi
 ; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    ands r6, r4
-; CHECK-NEXT:    lsls r6, r6, #31
+; CHECK-NEXT:    cmp r5, r0
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    cmp r4, r2
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    ands r5, r4
+; CHECK-NEXT:    lsls r5, r5, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r6, r5, r12
-; CHECK-NEXT:    lslseq.w r6, r6, #31
+; CHECK-NEXT:    andeq r7, r6
+; CHECK-NEXT:    lslseq.w r7, r7, #31
 ; CHECK-NEXT:    beq .LBB1_7
 ; CHECK-NEXT:  .LBB1_3:
-; CHECK-NEXT:    mov lr, r3
+; CHECK-NEXT:    mov r5, r3
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r2
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:  .LBB1_4: @ %while.body.preheader31
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r5
 ; CHECK-NEXT:  .LBB1_5: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s0, [r12]
-; CHECK-NEXT:    vldr.16 s2, [r5]
-; CHECK-NEXT:    adds r5, #2
+; CHECK-NEXT:    vldr.16 s2, [r4]
+; CHECK-NEXT:    adds r4, #2
 ; CHECK-NEXT:    add.w r12, r12, #2
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vstr.16 s0, [r4]
-; CHECK-NEXT:    adds r4, #2
+; CHECK-NEXT:    vstr.16 s0, [r7]
+; CHECK-NEXT:    adds r7, #2
 ; CHECK-NEXT:    le lr, .LBB1_5
 ; CHECK-NEXT:  .LBB1_6: @ %while.end
-; CHECK-NEXT:    pop.w {r4, r5, r6, r8, r9, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 ; CHECK-NEXT:  .LBB1_7: @ %vector.ph
-; CHECK-NEXT:    bic r8, r3, #7
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    sub.w r5, r8, #8
-; CHECK-NEXT:    and r9, r3, #7
-; CHECK-NEXT:    add.w r12, r0, r8, lsl #1
-; CHECK-NEXT:    add.w r5, r4, r5, lsr #3
-; CHECK-NEXT:    add.w r4, r2, r8, lsl #1
-; CHECK-NEXT:    mov r6, r5
-; CHECK-NEXT:    add.w r5, r1, r8, lsl #1
+; CHECK-NEXT:    bic r6, r3, #7
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    sub.w r7, r6, #8
+; CHECK-NEXT:    add.w r4, r1, r6, lsl #1
+; CHECK-NEXT:    add.w r12, r0, r6, lsl #1
+; CHECK-NEXT:    add.w lr, r5, r7, lsr #3
+; CHECK-NEXT:    add.w r7, r2, r6, lsl #1
+; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    and r5, r3, #7
 ; CHECK-NEXT:  .LBB1_8: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
-; CHECK-NEXT:    mov lr, r6
 ; CHECK-NEXT:    vadd.f16 q0, q1, q0
-; CHECK-NEXT:    subs.w lr, lr, #1
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    mov r6, lr
-; CHECK-NEXT:    bne .LBB1_8
-; CHECK-NEXT:    b .LBB1_9
-; CHECK-NEXT:  .LBB1_9: @ %middle.block
-; CHECK-NEXT:    cmp r8, r3
-; CHECK-NEXT:    mov lr, r9
+; CHECK-NEXT:    le lr, .LBB1_8
+; CHECK-NEXT:  @ %bb.9: @ %middle.block
+; CHECK-NEXT:    cmp r6, r3
 ; CHECK-NEXT:    bne .LBB1_4
 ; CHECK-NEXT:    b .LBB1_6
 entry:

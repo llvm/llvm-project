@@ -24,14 +24,14 @@
     %5 = sub i32 %3, %smin36
     %6 = lshr i32 %5, 2
     %7 = add nuw nsw i32 %6, 1
-    call void @llvm.set.loop.iterations.i32(i32 %7)
+    %start1 = call i32 @llvm.start.loop.iterations.i32(i32 %7)
     br label %do.body
   
   do.body:                                          ; preds = %do.body, %entry
     %count.0 = phi i32 [ %0, %entry ], [ %12, %do.body ]
     %pInT.0 = phi float* [ %pIn, %entry ], [ %add.ptr, %do.body ]
     %sumVec.0 = phi <4 x float> [ zeroinitializer, %entry ], [ %11, %do.body ]
-    %8 = phi i32 [ %7, %entry ], [ %13, %do.body ]
+    %8 = phi i32 [ %start1, %entry ], [ %13, %do.body ]
     %pInT.033 = bitcast float* %pInT.0 to <4 x float>*
     %9 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %count.0)
     %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %pInT.033, i32 4, <4 x i1> %9, <4 x float> zeroinitializer)
@@ -125,7 +125,7 @@
     %50 = bitcast float* %arrayidx17 to <4 x float>*
     %51 = load <4 x float>, <4 x float>* %50, align 4
     %52 = fmul fast <4 x float> %51, %40
-    call void @llvm.set.loop.iterations.i32(i32 %33)
+    %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %33)
     br label %do.body24
   
   do.body24:                                        ; preds = %do.body24, %for.body
@@ -138,7 +138,7 @@
     %sumVec1.0 = phi <4 x float> [ %46, %for.body ], [ %58, %do.body24 ]
     %sumVec2.0 = phi <4 x float> [ %49, %for.body ], [ %60, %do.body24 ]
     %sumVec3.0 = phi <4 x float> [ %52, %for.body ], [ %62, %do.body24 ]
-    %53 = phi i32 [ %33, %for.body ], [ %63, %do.body24 ]
+    %53 = phi i32 [ %start2, %for.body ], [ %63, %do.body24 ]
     %lsr.iv4 = bitcast float* %lsr.iv to <4 x float>*
     %lsr.iv911 = bitcast float* %lsr.iv9 to <4 x float>*
     %lsr.iv1618 = bitcast float* %lsr.iv16 to <4 x float>*
@@ -219,7 +219,7 @@
     %k.1200 = phi i32 [ %inc, %do.end66 ], [ %k.0.lcssa, %for.body56.preheader ]
     %mul57 = mul i32 %k.1200, %0
     %arrayidx58 = getelementptr inbounds float, float* %2, i32 %mul57
-    call void @llvm.set.loop.iterations.i32(i32 %38)
+    %start3 = call i32 @llvm.start.loop.iterations.i32(i32 %38)
     br label %do.body59
   
   do.body59:                                        ; preds = %do.body59, %for.body56
@@ -227,7 +227,7 @@
     %pInT.2 = phi float* [ %pIn, %for.body56 ], [ %add.ptr61, %do.body59 ]
     %pCos0.1 = phi float* [ %arrayidx58, %for.body56 ], [ %add.ptr62, %do.body59 ]
     %sumVec.1 = phi <4 x float> [ zeroinitializer, %for.body56 ], [ %93, %do.body59 ]
-    %89 = phi i32 [ %38, %for.body56 ], [ %95, %do.body59 ]
+    %89 = phi i32 [ %start3, %for.body56 ], [ %95, %do.body59 ]
     %pInT.21 = bitcast float* %pInT.2 to <4 x float>*
     %pCos0.12 = bitcast float* %pCos0.1 to <4 x float>*
     %90 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %count.2)
@@ -264,7 +264,7 @@
   declare <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x i1>, <4 x float>) #1
   declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #3
   declare <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x float>, <4 x i1>) #1
-  declare void @llvm.set.loop.iterations.i32(i32) #4
+  declare i32 @llvm.start.loop.iterations.i32(i32) #4
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32) #4
 
 ...
@@ -414,7 +414,7 @@ body:             |
     $r0 = tMOVr $r4, 14 /* CC::al */, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
     $r1 = tMOVr $r5, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
   
   bb.1.do.body (align 4):
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
@@ -503,7 +503,7 @@ body:             |
     $r3 = tMOVr $r10, 14 /* CC::al */, $noreg
     $r5 = tMOVr $r1, 14 /* CC::al */, $noreg
     $r4 = tMOVr $r12, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
     $r7 = tMOVr $r6, 14 /* CC::al */, $noreg
     renamable $r11 = t2LDRi12 $sp, 16, 14 /* CC::al */, $noreg :: (load 4 from %stack.5)
   
@@ -592,7 +592,7 @@ body:             |
     $r6 = tMOVr $r4, 14 /* CC::al */, $noreg
     $r7 = tMOVr $r5, 14 /* CC::al */, $noreg
     $lr = tMOVr $r3, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $r3
+    $lr = t2DoLoopStart renamable $r3
 
   bb.13:
     successors: %bb.10(0x80000000)

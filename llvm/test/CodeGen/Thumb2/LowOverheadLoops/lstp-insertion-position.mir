@@ -15,14 +15,14 @@
 
   vector.ph:                                        ; preds = %entry
     %6 = insertelement <4 x float> <float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %init, i32 0
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv13 = phi float* [ %scevgep14, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi float* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x float> [ %6, %vector.ph ], [ %13, %vector.body ]
-    %7 = phi i32 [ %5, %vector.ph ], [ %14, %vector.body ]
+    %7 = phi i32 [ %start, %vector.ph ], [ %14, %vector.body ]
     %8 = phi i32 [ %N, %vector.ph ], [ %10, %vector.body ]
     %lsr.iv12 = bitcast float* %lsr.iv to <4 x float>*
     %lsr.iv1315 = bitcast float* %lsr.iv13 to <4 x float>*
@@ -63,14 +63,14 @@
 
   vector.ph:                                        ; preds = %entry
     %6 = insertelement <4 x float> <float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %init, i32 0
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi float* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi float* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x float> [ %6, %vector.ph ], [ %13, %vector.body ]
-    %7 = phi i32 [ %5, %vector.ph ], [ %14, %vector.body ]
+    %7 = phi i32 [ %start, %vector.ph ], [ %14, %vector.body ]
     %8 = phi i32 [ %shr, %vector.ph ], [ %10, %vector.body ]
     %lsr.iv13 = bitcast float* %lsr.iv to <4 x float>*
     %lsr.iv1416 = bitcast float* %lsr.iv14 to <4 x float>*
@@ -99,7 +99,7 @@
   declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
   declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>)
   declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
 
@@ -205,7 +205,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3 = tLDRpci %const.0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
     renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, undef renamable $q1
     $s4 = VMOVS killed $s0, 14 /* CC::al */, $noreg, implicit killed $q1, implicit-def $q1
 
@@ -341,7 +341,7 @@ body:             |
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     renamable $r3 = tLDRpci %const.0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
     renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, undef renamable $q1
     renamable $r2, dead $cpsr = tLSRri killed renamable $r2, 2, 14 /* CC::al */, $noreg
     $s4 = VMOVS killed $s0, 14 /* CC::al */, $noreg, implicit killed $q1, implicit-def $q1

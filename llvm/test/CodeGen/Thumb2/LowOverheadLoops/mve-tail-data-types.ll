@@ -432,8 +432,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, r6, r5, lsr #2
 ; CHECK-NEXT:    adds r5, r0, #3
-; CHECK-NEXT:    adds r6, r1, #1
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    adds r6, r1, #1
 ; CHECK-NEXT:  .LBB5_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrb r8, [r5, #-3]
@@ -734,8 +734,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, r6, r5, lsr #2
 ; CHECK-NEXT:    adds r5, r0, #3
-; CHECK-NEXT:    adds r6, r1, #1
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    adds r6, r1, #1
 ; CHECK-NEXT:  .LBB7_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrb r8, [r5, #-3]
@@ -1036,8 +1036,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    add.w lr, r6, r5, lsr #2
 ; CHECK-NEXT:    add.w r5, r0, #8
-; CHECK-NEXT:    add.w r6, r1, #8
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    add.w r6, r1, #8
 ; CHECK-NEXT:  .LBB9_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r8, [r5, #-8]

@@ -42,7 +42,7 @@ llvm::Error SystemInitializerFull::Initialize() {
     // this, we terminate here before the uninitialized debugger inevitably
     // crashes.
     if (repro::Reproducer::Instance().IsReplaying())
-      llvm::report_fatal_error("system initialization failed");
+      llvm::report_fatal_error(std::move(error));
     return error;
   }
 

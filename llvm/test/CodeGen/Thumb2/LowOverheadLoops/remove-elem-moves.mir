@@ -31,13 +31,13 @@
     %ind.end17 = getelementptr float, float* %pDst, i32 %n.vec
     %scevgep9 = getelementptr float, float* %pDst, i32 -4
     %scevgep14 = getelementptr float, float* %pSrc, i32 -4
-    call void @llvm.set.loop.iterations.i32(i32 %4)
+    %start1 = call i32 @llvm.start.loop.iterations.i32(i32 %4)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv15 = phi float* [ %scevgep16, %vector.body ], [ %scevgep14, %vector.ph ]
     %lsr.iv10 = phi float* [ %scevgep11, %vector.body ], [ %scevgep9, %vector.ph ]
-    %5 = phi i32 [ %4, %vector.ph ], [ %7, %vector.body ]
+    %5 = phi i32 [ %start1, %vector.ph ], [ %7, %vector.body ]
     %lsr.iv1517 = bitcast float* %lsr.iv15 to <4 x float>*
     %lsr.iv1012 = bitcast float* %lsr.iv10 to <4 x float>*
     %scevgep18 = getelementptr <4 x float>, <4 x float>* %lsr.iv1517, i32 1
@@ -61,13 +61,13 @@
     %pDst.addr.06.ph = phi float* [ %pDst, %vector.memcheck ], [ %pDst, %while.body.preheader ], [ %ind.end17, %middle.block ]
     %scevgep1 = getelementptr float, float* %pSrc.addr.07.ph, i32 -1
     %scevgep4 = getelementptr float, float* %pDst.addr.06.ph, i32 -1
-    call void @llvm.set.loop.iterations.i32(i32 %blkCnt.08.ph)
+    %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %blkCnt.08.ph)
     br label %while.body
 
   while.body:                                       ; preds = %while.body, %while.body.preheader19
     %lsr.iv5 = phi float* [ %scevgep6, %while.body ], [ %scevgep4, %while.body.preheader19 ]
     %lsr.iv = phi float* [ %scevgep2, %while.body ], [ %scevgep1, %while.body.preheader19 ]
-    %9 = phi i32 [ %blkCnt.08.ph, %while.body.preheader19 ], [ %12, %while.body ]
+    %9 = phi i32 [ %start2, %while.body.preheader19 ], [ %12, %while.body ]
     %scevgep3 = getelementptr float, float* %lsr.iv, i32 1
     %scevgep7 = getelementptr float, float* %lsr.iv5, i32 1
     %10 = load float, float* %scevgep3, align 4
@@ -84,7 +84,7 @@
   }
   declare float @llvm.fabs.f32(float)
   declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 
 ...
@@ -262,7 +262,7 @@ body:             |
     renamable $r7, dead $cpsr = tSUBrr renamable $r2, renamable $r4, 14, $noreg
     renamable $r3 = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14, $noreg, $noreg
     renamable $r12 = t2ADDrs renamable $r0, renamable $r4, 18, 14, $noreg, $noreg
-    t2DoLoopStart renamable $r3
+    $lr = t2DoLoopStart renamable $r3
     renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 16, 14, $noreg
     $r5 = tMOVr killed $r3, 14, $noreg
     renamable $r3 = t2ADDrs renamable $r1, renamable $r4, 18, 14, $noreg, $noreg
@@ -305,7 +305,7 @@ body:             |
 
     renamable $r0, dead $cpsr = tSUBi3 killed renamable $r3, 4, 14, $noreg
     renamable $r1 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.8.while.body:
     successors: %bb.8(0x7c000000), %bb.9(0x04000000)

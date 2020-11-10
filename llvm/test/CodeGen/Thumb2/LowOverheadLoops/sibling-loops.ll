@@ -8,43 +8,44 @@ define arm_aapcs_vfpcc void @test(i16* noalias nocapture readonly %off, i16* noa
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    blt .LBB0_7
 ; CHECK-NEXT:  @ %bb.1: @ %for.cond1.preheader.us.preheader
+; CHECK-NEXT:    mov r8, r3
 ; CHECK-NEXT:    lsl.w r12, r3, #1
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:  .LBB0_2: @ %for.cond1.preheader.us
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB0_3 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB0_5 Depth 2
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dls lr, r8
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:  .LBB0_3: @ %for.body4.us
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrh.w r6, [r0, r5, lsl #1]
-; CHECK-NEXT:    ldrh.w r7, [r1, r5, lsl #1]
-; CHECK-NEXT:    add r6, r7
-; CHECK-NEXT:    strh.w r6, [r4, r5, lsl #1]
-; CHECK-NEXT:    adds r5, #1
+; CHECK-NEXT:    ldrh.w r5, [r0, r6, lsl #1]
+; CHECK-NEXT:    ldrh.w r7, [r1, r6, lsl #1]
+; CHECK-NEXT:    add r5, r7
+; CHECK-NEXT:    strh.w r5, [r4, r6, lsl #1]
+; CHECK-NEXT:    adds r6, #1
 ; CHECK-NEXT:    le lr, .LBB0_3
 ; CHECK-NEXT:  @ %bb.4: @ %for.body15.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dls lr, r8
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:  .LBB0_5: @ %for.body15.us
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrh.w r7, [r0, r5, lsl #1]
-; CHECK-NEXT:    ldrh.w r6, [r1, r5, lsl #1]
-; CHECK-NEXT:    add r6, r7
-; CHECK-NEXT:    strh.w r6, [r2, r5, lsl #1]
-; CHECK-NEXT:    adds r5, #1
+; CHECK-NEXT:    ldrh.w r7, [r0, r6, lsl #1]
+; CHECK-NEXT:    ldrh.w r5, [r1, r6, lsl #1]
+; CHECK-NEXT:    add r5, r7
+; CHECK-NEXT:    strh.w r5, [r2, r6, lsl #1]
+; CHECK-NEXT:    adds r6, #1
 ; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  @ %bb.6: @ %for.cond.cleanup14.us
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    add.w r8, r8, #1
+; CHECK-NEXT:    adds r3, #1
 ; CHECK-NEXT:    add r2, r12
 ; CHECK-NEXT:    add r4, r12
-; CHECK-NEXT:    cmp r8, r3
+; CHECK-NEXT:    cmp r3, r8
 ; CHECK-NEXT:    bne .LBB0_2
 ; CHECK-NEXT:  .LBB0_7: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
