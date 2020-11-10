@@ -83,9 +83,6 @@ void EmitClangCommentCommandList(llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 void EmitClangOpcodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
-                             llvm::raw_ostream &OS);
-
 void EmitNeon(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitFP16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitBF16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

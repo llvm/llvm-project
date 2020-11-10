@@ -52,6 +52,10 @@ syntax::Leaf::Leaf(const syntax::Token *Tok) : Node(NodeKind::Leaf), Tok(Tok) {
   assert(Tok != nullptr);
 }
 
+bool syntax::Leaf::classof(const Node *N) {
+  return N->getKind() == NodeKind::Leaf;
+}
+
 syntax::Node::Node(NodeKind Kind)
     : Parent(nullptr), NextSibling(nullptr), PreviousSibling(nullptr),
       Kind(static_cast<unsigned>(Kind)), Role(0), Original(false),
@@ -65,6 +69,10 @@ bool syntax::Node::isDetached() const {
 
 void syntax::Node::setRole(NodeRole NR) {
   this->Role = static_cast<unsigned>(NR);
+}
+
+bool syntax::Tree::classof(const Node *N) {
+  return N->getKind() > NodeKind::Leaf;
 }
 
 void syntax::Tree::appendChildLowLevel(Node *Child, NodeRole Role) {
@@ -335,6 +343,18 @@ const syntax::Node *syntax::Tree::findChild(NodeRole R) const {
       return &C;
   }
   return nullptr;
+}
+
+bool syntax::List::classof(const syntax::Node *N) {
+  switch (N->getKind()) {
+  case syntax::NodeKind::NestedNameSpecifier:
+  case syntax::NodeKind::CallArguments:
+  case syntax::NodeKind::ParameterDeclarationList:
+  case syntax::NodeKind::DeclaratorList:
+    return true;
+  default:
+    return false;
+  }
 }
 
 std::vector<syntax::List::ElementAndDelimiter<syntax::Node>>
