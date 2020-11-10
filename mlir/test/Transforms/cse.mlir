@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(cse)' | FileCheck %s
 
-// CHECK-DAG: #map0 = affine_map<(d0) -> (d0 mod 2)>
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0) -> (d0 mod 2)>
 #map0 = affine_map<(d0) -> (d0 mod 2)>
 
 // CHECK-LABEL: @simple_constant
@@ -19,7 +19,7 @@ func @basic() -> (index, index) {
   %c0 = constant 0 : index
   %c1 = constant 0 : index
 
-  // CHECK-NEXT: %0 = affine.apply #map0(%c0)
+  // CHECK-NEXT: %0 = affine.apply #[[$MAP]](%c0)
   %0 = affine.apply #map0(%c0)
   %1 = affine.apply #map0(%c1)
 

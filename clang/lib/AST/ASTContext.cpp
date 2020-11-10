@@ -2487,6 +2487,25 @@ CharUnits ASTContext::getOffsetOfBaseWithVBPtr(const CXXRecordDecl *RD) const {
   return Offset;
 }
 
+CharUnits ASTContext::getMemberPointerPathAdjustment(const APValue &MP) const {
+  const ValueDecl *MPD = MP.getMemberPointerDecl();
+  CharUnits ThisAdjustment = CharUnits::Zero();
+  ArrayRef<const CXXRecordDecl*> Path = MP.getMemberPointerPath();
+  bool DerivedMember = MP.isMemberPointerToDerivedMember();
+  const CXXRecordDecl *RD = cast<CXXRecordDecl>(MPD->getDeclContext());
+  for (unsigned I = 0, N = Path.size(); I != N; ++I) {
+    const CXXRecordDecl *Base = RD;
+    const CXXRecordDecl *Derived = Path[I];
+    if (DerivedMember)
+      std::swap(Base, Derived);
+    ThisAdjustment += getASTRecordLayout(Derived).getBaseClassOffset(Base);
+    RD = Path[I];
+  }
+  if (DerivedMember)
+    ThisAdjustment = -ThisAdjustment;
+  return ThisAdjustment;
+}
+
 /// DeepCollectObjCIvars -
 /// This routine first collects all declared, but not synthesized, ivars in
 /// super class and then collects all ivars, including those synthesized for

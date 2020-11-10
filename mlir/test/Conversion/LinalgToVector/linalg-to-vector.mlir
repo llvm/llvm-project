@@ -5,7 +5,6 @@
 // CHECK-DAG:  #[[$map2:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
 // CHECK-DAG:  #[[$map3:.*]] = affine_map<(d0, d1)[s0] -> (3, -d0 - d1 + s0)>
 // CHECK-DAG:  #[[$map4:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>
-// CHECK-DAG:  #[[$map5:.*]] = affine_map<(d0) -> (d0)>
 
 func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
   linalg.conv_1d ins(%arg0, %arg1 : memref<?xf32>, memref<?xf32>)
