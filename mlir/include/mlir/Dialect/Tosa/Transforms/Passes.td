@@ -24,14 +24,3 @@ def TosaMakeBroadcastable : FunctionPass<"tosa-make-broadcastable"> {
 
   let constructor = "createTosaMakeBroadcastablePass()";
 }
-
-// TOSA Test Passes
-
-def TosaTestQuantUtils : FunctionPass<"tosa-test-quant-utils"> {
-  let summary = "TOSA Test: Exercise the APIs in QuantUtils.cpp";
-  let description = [{
-    Exercises the API that builds a quantized type from min/max quantized range.
-  }];
-
-  let constructor = "createTosaTestQuantUtilAPIPass()";
-}
