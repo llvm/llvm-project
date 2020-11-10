@@ -907,7 +907,7 @@ NextIteration:
       // operands so far.  Remember this count.
       unsigned NewPHINumOperands = APN->getNumOperands();
 
-      unsigned NumEdges = std::count(succ_begin(Pred), succ_end(Pred), BB);
+      unsigned NumEdges = llvm::count(successors(Pred), BB);
       assert(NumEdges && "Must be at least one edge from Pred to BB!");
 
       // Add entries for all the phis.
