@@ -3682,10 +3682,12 @@ bool CmpInst::isCommutative() const {
   return cast<FCmpInst>(this)->isCommutative();
 }
 
-bool CmpInst::isEquality() const {
-  if (const ICmpInst *IC = dyn_cast<ICmpInst>(this))
-    return IC->isEquality();
-  return cast<FCmpInst>(this)->isEquality();
+bool CmpInst::isEquality(Predicate P) {
+  if (ICmpInst::isIntPredicate(P))
+    return ICmpInst::isEquality(P);
+  if (FCmpInst::isFPPredicate(P))
+    return FCmpInst::isEquality(P);
+  llvm_unreachable("Unsupported predicate kind");
 }
 
 CmpInst::Predicate CmpInst::getInversePredicate(Predicate pred) {
