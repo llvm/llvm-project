@@ -32,7 +32,7 @@ entry:
 ; CHECK: COMISDrr [[MOVSDrm_alt1]], [[MOVSDrm_alt]], implicit-def $eflags, implicit $mxcsr
 ; CHECK: [[FsFLD0SD:%[0-9]+]]:fr64 = FsFLD0SD
 ; CHECK: JCC_1
-; CHECK: [[PHI:%[0-9]+]]:fr64 = PHI [[MOVSDrm_alt1]], {{.*}}, [[FsFLD0SD]], {{.*}}
+; CHECK: [[PHI:%[0-9]+]]:fr64 = PHI [[FsFLD0SD]], {{.*}}, [[MOVSDrm_alt1]], {{.*}}
 ; CHECK: [[SUBSDrr:%[0-9]+]]:fr64 = SUBSDrr [[MOVSDrm_alt]], killed [[PHI]], implicit $mxcsr
 ; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, killed [[SUBSDrr]] :: (store 8 into %stack.0)
 ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
