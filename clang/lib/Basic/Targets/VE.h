@@ -160,6 +160,13 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
+    switch (*Name) {
+    default:
+      return false;
+    case 'v':
+      Info.setAllowsRegister();
+      return true;
+    }
     return false;
   }
 
