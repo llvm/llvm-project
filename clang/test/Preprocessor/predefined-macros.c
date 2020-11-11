@@ -123,6 +123,8 @@
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL10
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.0 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL10
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.1 \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL11
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.2 \
