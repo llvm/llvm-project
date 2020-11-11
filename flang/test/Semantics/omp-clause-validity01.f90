@@ -197,7 +197,6 @@ use omp_lib
   enddo
 
   !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
-  !ERROR: Internal: no symbol found for 'b'
   !$omp do linear(ref(b))
   do i = 1, N
      a = 3.14
@@ -217,8 +216,6 @@ use omp_lib
 
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: A loop directive may not have both a LINEAR clause and an ORDERED clause with a parameter
-  !ERROR: Internal: no symbol found for 'b'
-  !ERROR: Internal: no symbol found for 'a'
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
   do i = 1, N
      a = 3.14
@@ -369,7 +366,6 @@ use omp_lib
   enddo
 
   !ERROR: The ALIGNMENT parameter of the ALIGNED clause must be a constant positive integer expression
-  !ERROR: Internal: no symbol found for 'b'
   !$omp simd aligned(b:-2)
   do i = 1, N
      a = 3.14
@@ -388,7 +384,6 @@ use omp_lib
 
   !ERROR: At most one PROC_BIND clause can appear on the PARALLEL DO directive
   !ERROR: A modifier may not be specified in a LINEAR clause on the PARALLEL DO directive
-  !ERROR: Internal: no symbol found for 'b'
   !$omp parallel do proc_bind(master) proc_bind(close) linear(val(b))
   do i = 1, N
      a = 3.14
@@ -558,7 +553,6 @@ use omp_lib
 
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
   !ERROR: The ALIGNMENT parameter of the ALIGNED clause must be a constant positive integer expression
-  !ERROR: Internal: no symbol found for 'a'
   !$omp taskloop simd simdlen(-1) aligned(a:-2)
   do i = 1, N
      a = 3.14
