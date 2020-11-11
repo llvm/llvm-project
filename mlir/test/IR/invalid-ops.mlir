@@ -87,7 +87,8 @@ func @bad_alloc_wrong_dynamic_dim_count() {
 ^bb0:
   %0 = constant 7 : index
   // Test alloc with wrong number of dynamic dimensions.
-  %1 = alloc(%0)[%1] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1> // expected-error {{op 'std.alloc' dimension operand count does not equal memref dynamic dimension count}}
+  // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+  %1 = alloc(%0)[%0] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
   return
 }
 
@@ -97,7 +98,8 @@ func @bad_alloc_wrong_symbol_count() {
 ^bb0:
   %0 = constant 7 : index
   // Test alloc with wrong number of symbols
-  %1 = alloc(%0) : memref<2x?xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1> // expected-error {{operand count does not equal dimension plus symbol operand count}}
+  // expected-error@+1 {{symbol operand count does not equal memref symbol count}}
+  %1 = alloc(%0) : memref<2x?xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
   return
 }
 
