@@ -743,12 +743,12 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    ldr.w r11, [sp, #88]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    dlstp.16 lr, r11
-; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r8, r12
+; CHECK-NEXT:    dlstp.16 lr, r11
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mla r3, r9, r11, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldrd r7, r5, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:  .LBB5_7: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB5_5 Depth=1
@@ -757,10 +757,10 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    vadd.i16 q1, q0, r4
 ; CHECK-NEXT:    vldrb.s16 q0, [r3], #8
 ; CHECK-NEXT:    vmlava.s16 r12, q0, q1
-; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
+; CHECK-NEXT:    vldrb.s16 q1, [r0], #8
 ; CHECK-NEXT:    vadd.i16 q1, q1, r4
 ; CHECK-NEXT:    vmlava.s16 r6, q0, q1
-; CHECK-NEXT:    vldrb.s16 q1, [r0], #8
+; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
 ; CHECK-NEXT:    vadd.i16 q1, q1, r4
 ; CHECK-NEXT:    vmlava.s16 r8, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r1], #8
@@ -915,12 +915,12 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    ldr.w r11, [sp, #88]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    dlstp.16 lr, r11
-; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r8, r12
+; CHECK-NEXT:    dlstp.16 lr, r11
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mla r3, r9, r11, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldrd r7, r5, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:  .LBB6_5: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB6_3 Depth=1
@@ -929,10 +929,10 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    vadd.i16 q1, q0, r4
 ; CHECK-NEXT:    vldrb.s16 q0, [r3], #8
 ; CHECK-NEXT:    vmlava.s16 r12, q0, q1
-; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
+; CHECK-NEXT:    vldrb.s16 q1, [r0], #8
 ; CHECK-NEXT:    vadd.i16 q1, q1, r4
 ; CHECK-NEXT:    vmlava.s16 r6, q0, q1
-; CHECK-NEXT:    vldrb.s16 q1, [r0], #8
+; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
 ; CHECK-NEXT:    vadd.i16 q1, q1, r4
 ; CHECK-NEXT:    vmlava.s16 r8, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r1], #8
