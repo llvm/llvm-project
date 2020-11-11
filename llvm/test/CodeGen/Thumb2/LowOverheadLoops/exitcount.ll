@@ -10,8 +10,8 @@ define void @foo(%struct.SpeexPreprocessState_* nocapture readonly %st, i16* %x)
 ; CHECK-NEXT:    ldrd r12, r4, [r0]
 ; CHECK-NEXT:    ldrd r2, r3, [r0, #8]
 ; CHECK-NEXT:    rsb r12, r12, r4, lsl #1
-; CHECK-NEXT:    dlstp.16 lr, r12
 ; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    dlstp.16 lr, r4
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r3], #16

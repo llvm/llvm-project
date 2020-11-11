@@ -23,9 +23,9 @@ define void @arm_cmplx_mag_squared_f16(half* nocapture readonly %pSrc, half* noc
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    sub.w r3, r4, #8
 ; CHECK-NEXT:    add.w r12, r1, r4, lsl #1
-; CHECK-NEXT:    add.w r5, r5, r3, lsr #3
+; CHECK-NEXT:    add.w lr, r5, r3, lsr #3
 ; CHECK-NEXT:    add.w r3, r0, r4, lsl #2
-; CHECK-NEXT:    dls lr, r5
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    and r5, r2, #7
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -154,9 +154,9 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    subs r3, r4, #4
 ; CHECK-NEXT:    add.w r12, r1, r4, lsl #2
-; CHECK-NEXT:    add.w r5, r5, r3, lsr #2
+; CHECK-NEXT:    add.w lr, r5, r3, lsr #2
 ; CHECK-NEXT:    add.w r3, r0, r4, lsl #3
-; CHECK-NEXT:    dls lr, r5
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    and r5, r2, #3
 ; CHECK-NEXT:  .LBB1_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

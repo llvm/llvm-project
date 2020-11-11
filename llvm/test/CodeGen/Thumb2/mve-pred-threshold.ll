@@ -14,9 +14,9 @@ define arm_aapcs_vfpcc void @thres_i32(i32* %data, i16 zeroext %N, i32 %T) {
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #2
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w r1, r3, r1, lsr #2
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #2
 ; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -71,9 +71,9 @@ define arm_aapcs_vfpcc void @thresh_i16(i16* %data, i16 zeroext %N, i16 signext 
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w r1, r3, r1, lsr #3
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #3
 ; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -128,9 +128,9 @@ define arm_aapcs_vfpcc void @thresh_i8(i8* %data, i16 zeroext %N, i8 signext %T)
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w r1, r3, r1, lsr #4
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #4
 ; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -184,9 +184,9 @@ define arm_aapcs_vfpcc void @thresh_f32(float* %data, i16 zeroext %N, float %T) 
 ; CHECK-NEXT:    mvn r2, #3
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    add.w r2, r2, r1, lsr #2
+; CHECK-NEXT:    add.w lr, r2, r1, lsr #2
 ; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    dls lr, r2
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    eor r2, r1, #-2147483648
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
@@ -241,12 +241,12 @@ define arm_aapcs_vfpcc void @thresh_f16(half* %data, i16 zeroext %N, float %T.co
 ; CHECK-NEXT:  .LBB4_1: @ %vector.ph
 ; CHECK-NEXT:    mvn r3, #7
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #3
-; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vneg.f16 s0, s0
-; CHECK-NEXT:    add.w r3, r3, r1, lsr #3
+; CHECK-NEXT:    movs r3, #1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #3
 ; CHECK-NEXT:    vmov.f16 r1, s0
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -307,9 +307,9 @@ define arm_aapcs_vfpcc void @thres_rev_i32(i32* %data, i16 zeroext %N, i32 %T) {
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #2
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w r1, r3, r1, lsr #2
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #2
 ; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -364,9 +364,9 @@ define arm_aapcs_vfpcc void @thresh_rev_i16(i16* %data, i16 zeroext %N, i16 sign
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w r1, r3, r1, lsr #3
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #3
 ; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB6_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -421,9 +421,9 @@ define arm_aapcs_vfpcc void @thresh_rev_i8(i8* %data, i16 zeroext %N, i8 signext
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w r1, r3, r1, lsr #4
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #4
 ; CHECK-NEXT:    rsbs r1, r2, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB7_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -477,9 +477,9 @@ define arm_aapcs_vfpcc void @thresh_rev_f32(float* %data, i16 zeroext %N, float 
 ; CHECK-NEXT:    mvn r2, #3
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    add.w r2, r2, r1, lsr #2
+; CHECK-NEXT:    add.w lr, r2, r1, lsr #2
 ; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    dls lr, r2
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    eor r2, r1, #-2147483648
 ; CHECK-NEXT:  .LBB8_2: @ %vector.body
@@ -534,12 +534,12 @@ define arm_aapcs_vfpcc void @thresh_rev_f16(half* %data, i16 zeroext %N, float %
 ; CHECK-NEXT:  .LBB9_1: @ %vector.ph
 ; CHECK-NEXT:    mvn r3, #7
 ; CHECK-NEXT:    add.w r1, r3, r1, lsl #3
-; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vneg.f16 s0, s0
-; CHECK-NEXT:    add.w r3, r3, r1, lsr #3
+; CHECK-NEXT:    movs r3, #1
+; CHECK-NEXT:    add.w lr, r3, r1, lsr #3
 ; CHECK-NEXT:    vmov.f16 r1, s0
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB9_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

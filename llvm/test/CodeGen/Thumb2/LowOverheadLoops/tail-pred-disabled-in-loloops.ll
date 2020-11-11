@@ -17,7 +17,7 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; ENABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; ENABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; ENABLED-NEXT:    @ Child Loop BB0_3 Depth 2
-; ENABLED-NEXT:    mov r8, r0
+; ENABLED-NEXT:    mov r12, r0
 ; ENABLED-NEXT:    mov r4, r2
 ; ENABLED-NEXT:    mov r5, r1
 ; ENABLED-NEXT:    mov r6, r3
@@ -28,7 +28,7 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; ENABLED-NEXT:    vldrw.u32 q0, [r5], #16
 ; ENABLED-NEXT:    vldrw.u32 q1, [r4], #16
 ; ENABLED-NEXT:    vadd.i32 q0, q1, q0
-; ENABLED-NEXT:    vstrw.32 q0, [r8], #16
+; ENABLED-NEXT:    vstrw.32 q0, [r12], #16
 ; ENABLED-NEXT:    letp lr, .LBB0_3
 ; ENABLED-NEXT:    b .LBB0_2
 ; ENABLED-NEXT:  .LBB0_4: @ %for.cond.cleanup
@@ -40,20 +40,20 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; DISABLED-NEXT:    cmp r3, #1
 ; DISABLED-NEXT:    blt .LBB0_4
 ; DISABLED-NEXT:  @ %bb.1: @ %vector.ph.preheader
-; DISABLED-NEXT:    adds r6, r3, #3
-; DISABLED-NEXT:    movs r5, #1
-; DISABLED-NEXT:    bic r6, r6, #3
-; DISABLED-NEXT:    subs r6, #4
-; DISABLED-NEXT:    add.w r12, r5, r6, lsr #2
+; DISABLED-NEXT:    adds r7, r3, #3
+; DISABLED-NEXT:    movs r6, #1
+; DISABLED-NEXT:    bic r7, r7, #3
+; DISABLED-NEXT:    subs r7, #4
+; DISABLED-NEXT:    add.w r8, r6, r7, lsr #2
 ; DISABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; DISABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; DISABLED-NEXT:    @ Child Loop BB0_3 Depth 2
-; DISABLED-NEXT:    mov r7, r12
-; DISABLED-NEXT:    mov r8, r0
+; DISABLED-NEXT:    mov r7, r8
+; DISABLED-NEXT:    mov r12, r0
 ; DISABLED-NEXT:    mov r4, r2
 ; DISABLED-NEXT:    mov r5, r1
 ; DISABLED-NEXT:    mov r6, r3
-; DISABLED-NEXT:    dls lr, r12
+; DISABLED-NEXT:    dls lr, r8
 ; DISABLED-NEXT:  .LBB0_3: @ %vector.body
 ; DISABLED-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; DISABLED-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -66,7 +66,7 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; DISABLED-NEXT:    vldrwt.u32 q1, [r4], #16
 ; DISABLED-NEXT:    vadd.i32 q0, q1, q0
 ; DISABLED-NEXT:    vpst
-; DISABLED-NEXT:    vstrwt.32 q0, [r8], #16
+; DISABLED-NEXT:    vstrwt.32 q0, [r12], #16
 ; DISABLED-NEXT:    le lr, .LBB0_3
 ; DISABLED-NEXT:    b .LBB0_2
 ; DISABLED-NEXT:  .LBB0_4: @ %for.cond.cleanup
