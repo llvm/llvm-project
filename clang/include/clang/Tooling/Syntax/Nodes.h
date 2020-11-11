@@ -135,36 +135,12 @@ public:
   static bool classof(const Node *N);
 };
 
-/// Models an `id-expression`, e.g. `std::vector<int>::size`.
-/// C++ [expr.prim.id]
-/// id-expression:
-///   unqualified-id
-///   qualified-id
-/// qualified-id:
-///   nested-name-specifier template_opt unqualified-id
-class IdExpression final : public Expression {
-public:
-  IdExpression() : Expression(NodeKind::IdExpression) {}
-  static bool classof(const Node *N);
-  NestedNameSpecifier *getQualifier();
-  Leaf *getTemplateKeyword();
-  UnqualifiedId *getUnqualifiedId();
-};
-
 /// An expression of an unknown kind, i.e. one not currently handled by the
 /// syntax tree.
 class UnknownExpression final : public Expression {
 public:
   UnknownExpression() : Expression(NodeKind::UnknownExpression) {}
   static bool classof(const Node *N);
-};
-
-/// Models a this expression `this`. C++ [expr.prim.this]
-class ThisExpression final : public Expression {
-public:
-  ThisExpression() : Expression(NodeKind::ThisExpression) {}
-  static bool classof(const Node *N);
-  Leaf *getThisKeyword();
 };
 
 /// Models arguments of a function call.
@@ -178,49 +154,6 @@ public:
   static bool classof(const Node *N);
   std::vector<Expression *> getArguments();
   std::vector<List::ElementAndDelimiter<Expression>> getArgumentsAndCommas();
-};
-
-/// A function call. C++ [expr.call]
-/// call-expression:
-///   expression '(' call-arguments ')'
-/// e.g `f(1, '2')` or `this->Base::f()`
-class CallExpression final : public Expression {
-public:
-  CallExpression() : Expression(NodeKind::CallExpression) {}
-  static bool classof(const Node *N);
-  Expression *getCallee();
-  Leaf *getOpenParen();
-  CallArguments *getArguments();
-  Leaf *getCloseParen();
-};
-
-/// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
-/// e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
-class ParenExpression final : public Expression {
-public:
-  ParenExpression() : Expression(NodeKind::ParenExpression) {}
-  static bool classof(const Node *N);
-  Leaf *getOpenParen();
-  Expression *getSubExpression();
-  Leaf *getCloseParen();
-};
-
-/// Models a class member access. C++ [expr.ref]
-/// member-expression:
-///   expression -> template_opt id-expression
-///   expression .  template_opt id-expression
-/// e.g. `x.a`, `xp->a`
-///
-/// Note: An implicit member access inside a class, i.e. `a` instead of
-/// `this->a`, is an `id-expression`.
-class MemberExpression final : public Expression {
-public:
-  MemberExpression() : Expression(NodeKind::MemberExpression) {}
-  static bool classof(const Node *N);
-  Expression *getObject();
-  Leaf *getAccessToken();
-  Leaf *getTemplateKeyword();
-  IdExpression *getMember();
 };
 
 /// Expression for literals. C++ [lex.literal]
