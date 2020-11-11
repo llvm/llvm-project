@@ -2391,6 +2391,9 @@ public:
   ISD::MemIndexType getIndexType() const {
     return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);
   }
+  void setIndexType(ISD::MemIndexType IndexType) {
+    LSBaseSDNodeBits.AddressingMode = IndexType;
+  }
   bool isIndexScaled() const {
     return (getIndexType() == ISD::SIGNED_SCALED) ||
            (getIndexType() == ISD::UNSIGNED_SCALED);

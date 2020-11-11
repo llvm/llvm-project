@@ -7439,6 +7439,25 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   return SDValue();
 }
 
+// Convert redundant addressing modes (e.g. scaling is redundant
+// when accessing bytes).
+ISD::MemIndexType
+TargetLowering::getCanonicalIndexType(ISD::MemIndexType IndexType, EVT MemVT,
+                                      SDValue Offsets) const {
+  bool IsScaledIndex =
+      (IndexType == ISD::SIGNED_SCALED) || (IndexType == ISD::UNSIGNED_SCALED);
+  bool IsSignedIndex =
+      (IndexType == ISD::SIGNED_SCALED) || (IndexType == ISD::SIGNED_UNSCALED);
+
+  // Scaling is unimportant for bytes, canonicalize to unscaled.
+  if (IsScaledIndex && MemVT.getScalarType() == MVT::i8) {
+    IsScaledIndex = false;
+    IndexType = IsSignedIndex ? ISD::SIGNED_UNSCALED : ISD::UNSIGNED_UNSCALED;
+  }
+
+  return IndexType;
+}
+
 SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
   SDValue LHS = Node->getOperand(0);
