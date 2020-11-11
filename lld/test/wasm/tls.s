@@ -7,7 +7,7 @@
 tls1_addr:
   .functype tls1_addr () -> (i32)
   global.get __tls_base
-  i32.const tls1
+  i32.const tls1@TLSREL
   i32.add
   end_function
 
@@ -15,7 +15,7 @@ tls1_addr:
 tls2_addr:
   .functype tls2_addr () -> (i32)
   global.get __tls_base
-  i32.const tls2
+  i32.const tls2@TLSREL
   i32.add
   end_function
 

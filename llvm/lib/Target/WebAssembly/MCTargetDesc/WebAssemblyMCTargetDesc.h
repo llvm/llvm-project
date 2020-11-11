@@ -101,6 +101,11 @@ enum TOF {
   MO_MEMORY_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol
+  // address relative the __tls_base wasm global.
+  // Only applicable to data symbols.
+  MO_TLS_BASE_REL,
+
+  // On a symbol operand this indicates that the immediate is the symbol
   // address relative the __table_base wasm global.
   // Only applicable to function symbols.
   MO_TABLE_BASE_REL,
