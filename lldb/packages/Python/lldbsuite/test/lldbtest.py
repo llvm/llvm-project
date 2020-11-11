@@ -126,6 +126,8 @@ OBJECT_PRINTED_CORRECTLY = "Object printed correctly"
 
 SOURCE_DISPLAYED_CORRECTLY = "Source code displayed correctly"
 
+STEP_IN_SUCCEEDED = "Thread step-in succeeded"
+
 STEP_OUT_SUCCEEDED = "Thread step-out succeeded"
 
 STOPPED_DUE_TO_EXC_BAD_ACCESS = "Process should be stopped due to bad access exception"
