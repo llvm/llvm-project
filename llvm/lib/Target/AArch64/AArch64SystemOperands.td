@@ -1335,13 +1335,11 @@ def : RWSysReg<"PMMIR_EL1", 0b11, 0b000, 0b1001, 0b1110, 0b110>;
 
 // v8.4a RAS registers
 //                              Op0   Op1    CRn     CRm     Op2
-let Requires = [{ {AArch64::FeatureRASv8_4} }] in {
 def : RWSysReg<"ERXPFGCTL_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b101>;
 def : RWSysReg<"ERXPFGCDN_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b110>;
 def : RWSysReg<"ERXMISC2_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b010>;
 def : RWSysReg<"ERXMISC3_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b011>;
 def : ROSysReg<"ERXPFGF_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b100>;
-} // FeatureRASv8_4
 
 // v8.4a MPAM registers
 //                             Op0   Op1    CRn     CRm     Op2
