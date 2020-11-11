@@ -188,21 +188,10 @@ TEST_F(FormatTestJS, JSDocComments) {
 
   // Break a single line long jsdoc comment pragma.
   EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
-            " */",
-            format("/** @returns {string} jsdoc line 12 */",
-                   getGoogleJSStyleWithColumns(20)));
-  EXPECT_EQ("/**\n"
             " * @returns {string}\n"
             " *     jsdoc line 12\n"
             " */",
             format("/** @returns {string} jsdoc line 12 */",
-                   getGoogleJSStyleWithColumns(25)));
-
-  EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
-            " */",
-            format("/** @returns {string} jsdoc line 12  */",
                    getGoogleJSStyleWithColumns(20)));
 
   // FIXME: this overcounts the */ as a continuation of the 12 when breaking.
@@ -2194,6 +2183,16 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                  " */",
                  getGoogleJSStyleWithColumns(ColumnLimit));
   }
+  // don't break before @tags
+  verifyFormat("/**\n"
+               " * This\n"
+               " * tag @param\n"
+               " * stays.\n"
+               " */",
+               "/**\n"
+               " * This tag @param stays.\n"
+               " */",
+               getGoogleJSStyleWithColumns(13));
   verifyFormat("/**\n"
                " * @see http://very/very/long/url/is/long\n"
                " */",

@@ -118,6 +118,27 @@ static LogicalResult verify(YieldOp op) {
 
 constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
 
+void ExecuteOp::getNumRegionInvocations(
+    ArrayRef<Attribute> operands, SmallVectorImpl<int64_t> &countPerRegion) {
+  (void)operands;
+  assert(countPerRegion.empty());
+  countPerRegion.push_back(1);
+}
+
+void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
+                                    ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `body` region branch back to the parent operation.
+  if (index.hasValue()) {
+    assert(*index == 0);
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  // Otherwise the successor is the body region.
+  regions.push_back(RegionSuccessor(&body()));
+}
+
 static void print(OpAsmPrinter &p, ExecuteOp op) {
   p << op.getOperationName();
 

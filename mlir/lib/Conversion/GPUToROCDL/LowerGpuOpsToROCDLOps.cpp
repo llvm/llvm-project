@@ -72,7 +72,7 @@ struct LowerGpuOpsToROCDLOpsPass
     target.addIllegalDialect<gpu::GPUDialect>();
     target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
                         LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                        LLVM::Log2Op>();
+                        LLVM::Log2Op, LLVM::SinOp>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<ROCDL::ROCDLDialect>();
     // TODO: Remove once we support replacing non-root ops.
@@ -113,6 +113,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                                  "__ocml_log10_f64");
   patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__ocml_log2_f32",
                                                 "__ocml_log2_f64");
+  patterns.insert<OpToFuncCallLowering<SinOp>>(converter, "__ocml_sin_f32",
+                                               "__ocml_sin_f64");
   patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__ocml_tanh_f32",
                                                 "__ocml_tanh_f64");
 }

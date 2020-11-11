@@ -401,7 +401,7 @@ LogicalResult mlir::normalizeMemRef(AllocOp allocOp) {
   // Fetch a new memref type after normalizing the old memref to have an
   // identity map layout.
   MemRefType newMemRefType =
-      normalizeMemRefType(memrefType, b, allocOp.getNumSymbolicOperands());
+      normalizeMemRefType(memrefType, b, allocOp.symbolOperands().size());
   if (newMemRefType == memrefType)
     // Either memrefType already had an identity map or the map couldn't be
     // transformed to an identity map.
@@ -409,9 +409,9 @@ LogicalResult mlir::normalizeMemRef(AllocOp allocOp) {
 
   Value oldMemRef = allocOp.getResult();
 
-  SmallVector<Value, 4> symbolOperands(allocOp.getSymbolicOperands());
+  SmallVector<Value, 4> symbolOperands(allocOp.symbolOperands());
   AllocOp newAlloc = b.create<AllocOp>(allocOp.getLoc(), newMemRefType,
-                                       llvm::None, allocOp.alignmentAttr());
+                                       allocOp.alignmentAttr());
   AffineMap layoutMap = memrefType.getAffineMaps().front();
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,

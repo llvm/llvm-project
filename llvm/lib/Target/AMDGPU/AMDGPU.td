@@ -90,7 +90,7 @@ def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
 def FeatureUnalignedBufferAccess : SubtargetFeature<"unaligned-buffer-access",
   "UnalignedBufferAccess",
   "true",
-  "Support unaligned global loads and stores"
+  "Hardware supports unaligned global loads and stores"
 >;
 
 def FeatureTrapHandler: SubtargetFeature<"trap-handler",
@@ -105,18 +105,10 @@ def FeatureUnalignedScratchAccess : SubtargetFeature<"unaligned-scratch-access",
   "Support unaligned scratch loads and stores"
 >;
 
-// LDS alignment enforcement is controlled by a configuration register:
-// SH_MEM_CONFIG.alignment_mode
-def FeatureUnalignedAccessMode : SubtargetFeature<"unaligned-access-mode",
-  "UnalignedAccessMode",
-  "true",
-  "Support unaligned local and region loads and stores"
->;
-
 def FeatureUnalignedDSAccess : SubtargetFeature<"unaligned-ds-access",
   "UnalignedDSAccess",
   "true",
-  "Does not requires 16 byte alignment for certain local and region loads and stores"
+  "Hardware supports unaligned local and region loads and stores"
 >;
 
 def FeatureApertureRegs : SubtargetFeature<"aperture-regs",
@@ -665,6 +657,15 @@ def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
   "Requires use of fract on arguments to trig instructions"
 >;
 
+// Alignment enforcement is controlled by a configuration register:
+// SH_MEM_CONFIG.alignment_mode
+def FeatureUnalignedAccessMode : SubtargetFeature<"unaligned-access-mode",
+  "UnalignedAccessMode",
+  "true",
+  "Enable unaligned global, local and region loads and stores if the hardware"
+  " supports it"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -691,7 +692,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureWavefrontSize64, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-  FeatureDsSrc2Insts, FeatureDoesNotSupportSRAMECC]
+  FeatureDsSrc2Insts, FeatureDoesNotSupportSRAMECC,
+  FeatureUnalignedBufferAccess]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
@@ -704,7 +706,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-   FeatureDsSrc2Insts, FeatureDoesNotSupportSRAMECC, FeatureFastDenormalF32
+   FeatureDsSrc2Insts, FeatureDoesNotSupportSRAMECC, FeatureFastDenormalF32,
+   FeatureUnalignedBufferAccess
   ]
 >;
 
@@ -721,7 +724,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureSMemTimeInst, FeatureMadMacF32Insts, FeatureDsSrc2Insts,
-   FeatureFastDenormalF32, FeatureUnalignedDSAccess
+   FeatureFastDenormalF32, FeatureUnalignedBufferAccess,
+   FeatureUnalignedDSAccess
   ]
 >;
 
@@ -740,7 +744,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC,
    FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedDSAccess
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
   ]
 >;
 

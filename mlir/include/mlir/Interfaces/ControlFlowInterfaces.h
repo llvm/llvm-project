@@ -41,6 +41,9 @@ LogicalResult verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
+// A constant value to represent unknown number of region invocations.
+extern const int64_t kUnknownNumRegionInvocations;
+
 namespace detail {
 /// Verify that types match along control flow edges described the given op.
 LogicalResult verifyTypesAlongControlFlowEdges(Operation *op);

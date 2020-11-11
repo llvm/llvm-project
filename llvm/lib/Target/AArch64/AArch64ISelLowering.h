@@ -773,9 +773,7 @@ public:
   /// illegal as the original, thus leading to an infinite legalisation loop.
   /// NOTE: Once BUILD_VECTOR is legal or can be custom lowered for all legal
   /// vector types this override can be removed.
-  bool mergeStoresAfterLegalization(EVT VT) const override {
-    return !useSVEForFixedLengthVectors();
-  }
+  bool mergeStoresAfterLegalization(EVT VT) const override;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
@@ -806,6 +804,8 @@ private:
                           SDValue ThisVal) const;
 
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
@@ -1006,7 +1006,6 @@ private:
   bool shouldLocalize(const MachineInstr &MI,
                       const TargetTransformInfo *TTI) const override;
 
-  bool useSVEForFixedLengthVectors() const;
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
   // used for 64bit and 128bit vectors as well.
