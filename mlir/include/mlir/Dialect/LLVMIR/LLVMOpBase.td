@@ -30,6 +30,8 @@ def LLVM_Dialect : Dialect {
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
+    static StringRef getAlignAttrName() { return "llvm.align"; }
+    static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
