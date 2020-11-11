@@ -28,6 +28,8 @@ Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS
 
 For the list of supported features from OpenMP 5.0 see `OpenMP implementation details`_.
 
+Clang has to be built from source to enable offloading support for given GPU.
+
 General improvements
 ====================
 - New collapse clause scheme to avoid expensive remainder operations.
