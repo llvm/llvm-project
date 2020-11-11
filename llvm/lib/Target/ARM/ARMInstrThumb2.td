@@ -5427,6 +5427,9 @@ def t2DoLoopStart :
   t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts), 4, IIC_Br,
   [(set GPRlr:$X, (int_start_loop_iterations rGPR:$elts))]>;
 
+def t2DoLoopStartTP :
+  t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts, rGPR:$count), 4, IIC_Br, []>;
+
 let hasSideEffects = 0 in
 def t2LoopDec :
   t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
