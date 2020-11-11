@@ -55,7 +55,8 @@ struct PrintingPolicy {
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
         AnonymousTagLocations(true), SuppressStrongLifetime(false),
         SuppressLifetimeQualifiers(false),
-        SuppressTemplateArgsInCXXConstructors(false), Bool(LO.Bool),
+        SuppressTemplateArgsInCXXConstructors(false),
+        SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11), Restrict(LO.C99), Alignof(LO.CPlusPlus11),
         UnderscoreAlignof(LO.C11), UseVoidForZeroParams(!LO.CPlusPlus),
         SplitTemplateClosers(!LO.CPlusPlus11), TerseOutput(false),
@@ -166,6 +167,10 @@ struct PrintingPolicy {
   /// When true, suppresses printing template arguments in names of C++
   /// constructors.
   unsigned SuppressTemplateArgsInCXXConstructors : 1;
+
+  /// When true, attempt to suppress template arguments that match the default
+  /// argument for the parameter.
+  unsigned SuppressDefaultTemplateArgs : 1;
 
   /// Whether we can use 'bool' rather than '_Bool' (even if the language
   /// doesn't actually have 'bool', because, e.g., it is defined as a macro).
