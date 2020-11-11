@@ -54,12 +54,10 @@ class ForwardDeclTestCase(TestBase):
         self.expect("expression [j getMember]", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["= 0x"])
 
-    @skipUnlessDarwin
     def test_expr(self):
         self.do_test()
 
     @no_debug_info_test
-    @skipUnlessDarwin
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "7.0"])
     def test_debug_names(self):

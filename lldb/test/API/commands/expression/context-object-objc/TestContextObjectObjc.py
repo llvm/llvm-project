@@ -11,7 +11,7 @@ class ContextObjectObjcTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
+    @add_test_categories(["objc"])
     def test_context_object_objc(self):
         """Tests expression evaluation in context of an objc class."""
         self.build()

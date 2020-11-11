@@ -11,7 +11,6 @@ from ObjCNewSyntaxTest import ObjCNewSyntaxTest
 
 class ObjCNewSyntaxTestCaseArray(ObjCNewSyntaxTest):
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_read_array(self):
@@ -27,7 +26,6 @@ class ObjCNewSyntaxTestCaseArray(ObjCNewSyntaxTest):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["foo"])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_update_array(self):
@@ -43,7 +41,6 @@ class ObjCNewSyntaxTestCaseArray(ObjCNewSyntaxTest):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["bar"])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_array_literal(self):

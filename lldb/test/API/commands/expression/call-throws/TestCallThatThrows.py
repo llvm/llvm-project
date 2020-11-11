@@ -21,7 +21,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         self.main_source = "call-throws.m"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @skipUnlessDarwin
+    @add_test_categories(["objc"])
     def test(self):
         """Test calling a function that throws and ObjC exception."""
         self.build()

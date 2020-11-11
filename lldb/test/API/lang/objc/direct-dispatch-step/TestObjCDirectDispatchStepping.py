@@ -20,7 +20,6 @@ class TestObjCDirectDispatchStepping(TestBase):
         # Find the line numbers that we will step to in main:
         self.main_source = lldb.SBFileSpec("stepping-tests.m")
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi', 'basic_process'])
     def test_with_python_api(self):
         """Test stepping through the 'direct dispatch' optimized method calls."""
