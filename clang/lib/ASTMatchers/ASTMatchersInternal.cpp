@@ -630,13 +630,10 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
     llvm::SmallString<128> NodeName = StringRef("::");
     llvm::raw_svector_ostream OS(NodeName);
 
-    if (SkipUnwritten) {
-      PrintingPolicy Policy = Node.getASTContext().getPrintingPolicy();
-      Policy.SuppressUnwrittenScope = true;
-      Node.printQualifiedName(OS, Policy);
-    } else {
-      Node.printQualifiedName(OS);
-    }
+    PrintingPolicy Policy = Node.getASTContext().getPrintingPolicy();
+    Policy.SuppressUnwrittenScope = SkipUnwritten;
+    Policy.SuppressInlineNamespace = SkipUnwritten;
+    Node.printQualifiedName(OS, Policy);
 
     const StringRef FullName = OS.str();
 

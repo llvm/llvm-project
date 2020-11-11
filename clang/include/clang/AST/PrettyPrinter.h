@@ -52,9 +52,9 @@ struct PrintingPolicy {
       : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
-        AnonymousTagLocations(true), SuppressStrongLifetime(false),
-        SuppressLifetimeQualifiers(false),
+        SuppressInlineNamespace(true), SuppressInitializers(false),
+        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
+        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11), Restrict(LO.C99), Alignof(LO.CPlusPlus11),
@@ -118,9 +118,14 @@ struct PrintingPolicy {
   /// Suppresses printing of scope specifiers.
   unsigned SuppressScope : 1;
 
-  /// Suppress printing parts of scope specifiers that don't need
-  /// to be written, e.g., for inline or anonymous namespaces.
+  /// Suppress printing parts of scope specifiers that are never
+  /// written, e.g., for anonymous namespaces.
   unsigned SuppressUnwrittenScope : 1;
+
+  /// Suppress printing parts of scope specifiers that correspond
+  /// to inline namespaces, where the name is unambiguous with the specifier
+  /// removed.
+  unsigned SuppressInlineNamespace : 1;
 
   /// Suppress printing of variable initializers.
   ///
