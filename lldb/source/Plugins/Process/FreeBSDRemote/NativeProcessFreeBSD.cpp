@@ -192,7 +192,8 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
   }
   assert(info.pl_event == PL_EVENT_SIGNAL);
 
-  LLDB_LOG(log, "got SIGTRAP, pid = {0}, lwpid = {1}", pid, info.pl_lwpid);
+  LLDB_LOG(log, "got SIGTRAP, pid = {0}, lwpid = {1}, flags = {2:x}", pid,
+           info.pl_lwpid, info.pl_flags);
   NativeThreadFreeBSD *thread = nullptr;
 
   if (info.pl_flags & (PL_FLAG_BORN | PL_FLAG_EXITED)) {
@@ -240,6 +241,8 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
 
   if (info.pl_flags & PL_FLAG_SI) {
     assert(info.pl_siginfo.si_signo == SIGTRAP);
+    LLDB_LOG(log, "SIGTRAP siginfo: si_code = {0}, pid = {1}",
+             info.pl_siginfo.si_code, info.pl_siginfo.si_pid);
 
     switch (info.pl_siginfo.si_code) {
     case TRAP_BRKPT:
@@ -248,7 +251,7 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
         FixupBreakpointPCAsNeeded(*thread);
       }
       SetState(StateType::eStateStopped, true);
-      break;
+      return;
     case TRAP_TRACE:
       if (thread) {
         auto &regctx = static_cast<NativeRegisterContextFreeBSD &>(
@@ -272,9 +275,14 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
       }
 
       SetState(StateType::eStateStopped, true);
-      break;
+      return;
     }
   }
+
+  // Either user-generated SIGTRAP or an unknown event that would
+  // otherwise leave the debugger hanging.
+  LLDB_LOG(log, "unknown SIGTRAP, passing to generic handler");
+  MonitorSignal(pid, SIGTRAP);
 }
 
 void NativeProcessFreeBSD::MonitorSignal(lldb::pid_t pid, int signal) {
