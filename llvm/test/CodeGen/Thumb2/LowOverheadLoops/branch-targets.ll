@@ -21,7 +21,7 @@
 ; CHECK-END:   b .LBB0_2
 define void @check_loop_dec_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -49,7 +49,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -64,7 +64,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_ugt_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -92,7 +92,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -107,7 +107,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_ult_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -135,7 +135,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -150,7 +150,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_ult_xor_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -179,7 +179,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -194,7 +194,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_sgt_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -222,7 +222,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -237,7 +237,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_sge_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -265,7 +265,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -280,7 +280,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_sge_xor_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -309,7 +309,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -324,7 +324,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_uge_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -352,7 +352,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -367,7 +367,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.2
 define void @check_loop_dec_uge_xor_brcond_combine(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
 
 for.body.preheader:
@@ -396,7 +396,7 @@ for.header:
   %lsr.iv9 = phi i32* [ %scevgep8, %for.body.preheader ], [ %scevgep10, %for.body ]
   %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
   %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
-  %count = phi i32 [ %N, %for.body.preheader ], [ %count.next, %for.body ]
+  %count = phi i32 [ %start, %for.body.preheader ], [ %count.next, %for.body ]
   br label %for.body
 
 for.cond.cleanup:
@@ -507,6 +507,6 @@ while.end:
   ret void
 }
 
-declare void @llvm.set.loop.iterations.i32(i32)
+declare i32 @llvm.start.loop.iterations.i32(i32)
 declare i1 @llvm.test.set.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)

@@ -20,32 +20,27 @@ define void @arm_cmplx_mag_squared_f16(half* nocapture readonly %pSrc, half* noc
 ; CHECK-NEXT:    bhi .LBB0_9
 ; CHECK-NEXT:  @ %bb.3: @ %vector.ph
 ; CHECK-NEXT:    bic r4, r2, #7
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    sub.w r12, r4, #8
-; CHECK-NEXT:    and r7, r2, #7
-; CHECK-NEXT:    add.w r3, r3, r12, lsr #3
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    sub.w r3, r4, #8
 ; CHECK-NEXT:    add.w r12, r1, r4, lsl #1
-; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    add.w r5, r5, r3, lsr #3
 ; CHECK-NEXT:    add.w r3, r0, r4, lsl #2
+; CHECK-NEXT:    dls lr, r5
+; CHECK-NEXT:    and r5, r2, #7
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    mov lr, r5
-; CHECK-NEXT:    subs.w lr, lr, #1
 ; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
-; CHECK-NEXT:    mov r5, lr
 ; CHECK-NEXT:    vmul.f16 q2, q0, q0
 ; CHECK-NEXT:    vfma.f16 q2, q1, q1
 ; CHECK-NEXT:    vstrb.8 q2, [r1], #16
-; CHECK-NEXT:    bne .LBB0_4
-; CHECK-NEXT:    b .LBB0_5
-; CHECK-NEXT:  .LBB0_5: @ %middle.block
+; CHECK-NEXT:    le lr, .LBB0_4
+; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r4, r2
-; CHECK-NEXT:    mov lr, r7
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r4, r5, r7, pc}
 ; CHECK-NEXT:  .LBB0_6: @ %while.body.preheader26
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r5
 ; CHECK-NEXT:  .LBB0_7: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s0, [r3]
@@ -61,7 +56,7 @@ define void @arm_cmplx_mag_squared_f16(half* nocapture readonly %pSrc, half* noc
 ; CHECK-NEXT:  .LBB0_9:
 ; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    mov lr, r2
+; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    b .LBB0_6
 entry:
   %cmp.not11 = icmp eq i32 %numSamples, 0
@@ -156,32 +151,27 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK-NEXT:    bhi .LBB1_9
 ; CHECK-NEXT:  @ %bb.3: @ %vector.ph
 ; CHECK-NEXT:    bic r4, r2, #3
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    sub.w r12, r4, #4
-; CHECK-NEXT:    and r7, r2, #3
-; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    subs r3, r4, #4
 ; CHECK-NEXT:    add.w r12, r1, r4, lsl #2
-; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    add.w r5, r5, r3, lsr #2
 ; CHECK-NEXT:    add.w r3, r0, r4, lsl #3
+; CHECK-NEXT:    dls lr, r5
+; CHECK-NEXT:    and r5, r2, #3
 ; CHECK-NEXT:  .LBB1_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    mov lr, r5
-; CHECK-NEXT:    subs.w lr, lr, #1
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
-; CHECK-NEXT:    mov r5, lr
 ; CHECK-NEXT:    vmul.f32 q2, q0, q0
 ; CHECK-NEXT:    vfma.f32 q2, q1, q1
 ; CHECK-NEXT:    vstrb.8 q2, [r1], #16
-; CHECK-NEXT:    bne .LBB1_4
-; CHECK-NEXT:    b .LBB1_5
-; CHECK-NEXT:  .LBB1_5: @ %middle.block
+; CHECK-NEXT:    le lr, .LBB1_4
+; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r4, r2
-; CHECK-NEXT:    mov lr, r7
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r4, r5, r7, pc}
 ; CHECK-NEXT:  .LBB1_6: @ %while.body.preheader26
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r5
 ; CHECK-NEXT:  .LBB1_7: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr s0, [r3]
@@ -197,7 +187,7 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK-NEXT:  .LBB1_9:
 ; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    mov lr, r2
+; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    b .LBB1_6
 entry:
   %cmp.not11 = icmp eq i32 %numSamples, 0

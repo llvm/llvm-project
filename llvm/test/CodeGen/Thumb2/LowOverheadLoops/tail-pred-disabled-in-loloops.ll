@@ -83,7 +83,7 @@ entry:
 
 vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
-  call void @llvm.set.loop.iterations.i32(i32 %5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -91,7 +91,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %C, %vector.ph ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
+  %6 = phi i32 [ %start, %vector.ph ], [ %8, %vector.body ]
 
   %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
@@ -118,6 +118,6 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
-declare void @llvm.set.loop.iterations.i32(i32)
+declare i32 @llvm.start.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

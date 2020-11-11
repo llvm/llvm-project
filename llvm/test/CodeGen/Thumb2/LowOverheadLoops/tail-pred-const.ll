@@ -4,14 +4,14 @@
 define dso_local void @foo(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi i32* [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32* [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32* [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 8001, [[ENTRY]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 32003, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV1416:%.*]] = bitcast i32* [[LSR_IV14]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV1113:%.*]] = bitcast i32* [[LSR_IV11]] to <4 x i32>*
@@ -36,7 +36,7 @@ define dso_local void @foo(i32* noalias nocapture %A, i32* noalias nocapture rea
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -44,7 +44,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -77,13 +77,13 @@ for.cond.cleanup:
 define dso_local void @foo2(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 2000)
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 2000)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi i32* [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32* [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32* [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 2000, [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV1416:%.*]] = bitcast i32* [[LSR_IV14]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV1113:%.*]] = bitcast i32* [[LSR_IV11]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV10:%.*]] = bitcast i32* [[LSR_IV]] to <4 x i32>*
@@ -101,14 +101,14 @@ define dso_local void @foo2(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 2000)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 2000)
   br label %vector.body
 
 vector.body:
   %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %A, %entry ]
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
-  %0 = phi i32 [ 2000, %entry ], [ %2, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %2, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -131,14 +131,14 @@ for.cond.cleanup:
 define dso_local void @foo3(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi i32* [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32* [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32* [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 8001, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV1416:%.*]] = bitcast i32* [[LSR_IV14]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV1113:%.*]] = bitcast i32* [[LSR_IV11]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV10:%.*]] = bitcast i32* [[LSR_IV]] to <4 x i32>*
@@ -161,7 +161,7 @@ define dso_local void @foo3(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -169,7 +169,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -199,14 +199,14 @@ for.cond.cleanup:
 define dso_local void @foo5(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 ; CHECK-LABEL: @foo5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 8001)
+; CHECK-NEXT:    [[START:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 8001)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi i32* [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32* [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32* [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 8001, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV1416:%.*]] = bitcast i32* [[LSR_IV14]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV1113:%.*]] = bitcast i32* [[LSR_IV11]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV10:%.*]] = bitcast i32* [[LSR_IV]] to <4 x i32>*
@@ -229,7 +229,7 @@ define dso_local void @foo5(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -237,7 +237,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -273,7 +273,7 @@ for.cond.cleanup:
 ;
 define dso_local void @inconsistent_tripcounts(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -281,7 +281,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -316,7 +316,7 @@ for.cond.cleanup:
 ;
 define dso_local void @overflow_in_sub(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 1073741824)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 1073741824)
   br label %vector.body
 
 vector.body:
@@ -324,7 +324,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -359,7 +359,7 @@ for.cond.cleanup:
 ;
 define dso_local void @IV_not_an_induction(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -367,7 +367,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -402,7 +402,7 @@ for.cond.cleanup:
 ;
 define dso_local void @IV_wrong_step(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -410,7 +410,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -448,7 +448,7 @@ for.cond.cleanup:
 ;
 define dso_local void @IV_step_not_constant(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 8001)
   br label %vector.body
 
 vector.body:
@@ -456,7 +456,7 @@ vector.body:
   %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
+  %0 = phi i32 [ %start, %entry ], [ %3, %vector.body ]
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -502,7 +502,7 @@ vector.ph:                                        ; preds = %vector.ph.preheader
   %lsr.iv31 = phi i32* [ %C, %vector.ph.preheader ], [ %scevgep32, %for.cond.cleanup3 ]
   %lsr.iv = phi i32* [ %A, %vector.ph.preheader ], [ %scevgep, %for.cond.cleanup3 ]
   %j.025 = phi i32 [ %inc11, %for.cond.cleanup3 ], [ 0, %vector.ph.preheader ]
-  call void @llvm.set.loop.iterations.i32(i32 1025)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 1025)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -510,7 +510,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv33 = phi i32* [ %scevgep34, %vector.body ], [ %lsr.iv31, %vector.ph ]
   %lsr.iv28 = phi i32* [ %scevgep29, %vector.body ], [ %lsr.iv, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 1025, %vector.ph ], [ %2, %vector.body ]
+  %0 = phi i32 [ %start, %vector.ph ], [ %2, %vector.body ]
   %lsr.iv3840 = bitcast i32* %lsr.iv38 to <4 x i32>*
   %lsr.iv3335 = bitcast i32* %lsr.iv33 to <4 x i32>*
   %lsr.iv2830 = bitcast i32* %lsr.iv28 to <4 x i32>*
@@ -546,5 +546,5 @@ for.cond.cleanup3:                                ; preds = %vector.body
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #1
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
 declare i32 @llvm.loop.decrement.reg.i32(i32 , i32 )
-declare void @llvm.set.loop.iterations.i32(i32)
+declare i32 @llvm.start.loop.iterations.i32(i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

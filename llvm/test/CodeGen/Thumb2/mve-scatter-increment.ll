@@ -163,10 +163,10 @@ define arm_aapcs_vfpcc void @scatter_inc_v4i32_complex(<4 x i32> %data1, <4 x i3
 ; CHECK-NEXT:  .LBB3_2: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB3_3 Depth 2
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    vmov q6, q4
 ; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    vmov q5, q3
-; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB3_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB3_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2

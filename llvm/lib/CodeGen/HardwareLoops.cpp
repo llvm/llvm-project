@@ -165,7 +165,7 @@ namespace {
     Value *InitLoopCount();
 
     // Insert the set_loop_iteration intrinsic.
-    void InsertIterationSetup(Value *LoopCountInit);
+    Value *InsertIterationSetup(Value *LoopCountInit);
 
     // Insert the loop_decrement intrinsic.
     void InsertLoopDec();
@@ -325,11 +325,11 @@ void HardwareLoop::Create() {
     return;
   }
 
-  InsertIterationSetup(LoopCountInit);
+  Value *Setup = InsertIterationSetup(LoopCountInit);
 
   if (UsePHICounter || ForceHardwareLoopPHI) {
     Instruction *LoopDec = InsertLoopRegDec(LoopCountInit);
-    Value *EltsRem = InsertPHICounter(LoopCountInit, LoopDec);
+    Value *EltsRem = InsertPHICounter(Setup, LoopDec);
     LoopDec->setOperand(0, EltsRem);
     UpdateBranch(LoopDec);
   } else
@@ -437,11 +437,13 @@ Value *HardwareLoop::InitLoopCount() {
   return Count;
 }
 
-void HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
+Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
   IRBuilder<> Builder(BeginBB->getTerminator());
   Type *Ty = LoopCountInit->getType();
-  Intrinsic::ID ID = UseLoopGuard ?
-    Intrinsic::test_set_loop_iterations : Intrinsic::set_loop_iterations;
+  bool UsePhi = UsePHICounter || ForceHardwareLoopPHI;
+  Intrinsic::ID ID = UseLoopGuard ? Intrinsic::test_set_loop_iterations
+                                  : (UsePhi ? Intrinsic::start_loop_iterations
+                                           : Intrinsic::set_loop_iterations);
   Function *LoopIter = Intrinsic::getDeclaration(M, ID, Ty);
   Value *SetCount = Builder.CreateCall(LoopIter, LoopCountInit);
 
@@ -457,6 +459,7 @@ void HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
   }
   LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop counter: "
              << *SetCount << "\n");
+  return UseLoopGuard ? LoopCountInit : SetCount;
 }
 
 void HardwareLoop::InsertLoopDec() {

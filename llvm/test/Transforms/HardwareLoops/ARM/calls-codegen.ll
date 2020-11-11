@@ -4,8 +4,8 @@
 ; DISABLED-NOT: dls lr,
 
 ; CHECK-LABEL: test_target_specific:
-; CHECK:        mov.w lr, #50
-; CHECK:        dls lr, lr
+; CHECK:        movs r2, #50
+; CHECK:        dls lr, r2
 ; CHECK-NOT:    mov lr,
 ; CHECK:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
 ; CHECK:        le lr, [[LOOP_HEADER]]
@@ -31,8 +31,8 @@ exit:
 }
 
 ; CHECK-LABEL: test_fabs:
-; CHECK:        mov.w lr, #100
-; CHECK:        dls lr, lr
+; CHECK:        movs r1, #100
+; CHECK:        dls lr, r1
 ; CHECK-NOT:    mov lr,
 ; CHECK:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
 ; CHECK-NOT:    bl

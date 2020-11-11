@@ -14,11 +14,11 @@
     br i1 %cmp6, label %while.end, label %while.body.preheader
   
   while.body.preheader:                             ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %n)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %n)
     br label %while.body
   
   while.body:                                       ; preds = %while.body, %while.body.preheader
-    %0 = phi i32 [ %n, %while.body.preheader ], [ %1, %while.body ]
+    %0 = phi i32 [ %start, %while.body.preheader ], [ %1, %while.body ]
     %1 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
     %add = add i32 %1, 0
     %2 = icmp ne i32 %1, 0
@@ -29,7 +29,7 @@
     ret i32 %res.0.lcssa
   }
   
-  declare void @llvm.set.loop.iterations.i32(i32) #1
+  declare i32 @llvm.start.loop.iterations.i32(i32) #1
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
   
   attributes #0 = { "target-features"="+mve.fp" }
@@ -96,7 +96,7 @@ body:             |
     liveins: $r0
   
     $lr = tMOVr $r0, 14, $noreg
-    t2DoLoopStart killed $r0
+    $lr = t2DoLoopStart killed $r0
   
   bb.2.while.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

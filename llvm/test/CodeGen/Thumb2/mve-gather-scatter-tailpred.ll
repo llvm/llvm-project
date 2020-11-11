@@ -7,11 +7,11 @@ define dso_local void @mve_gather_qi_wb(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    add.w r12, r0, r3, lsl #2
+; CHECK-NEXT:    movw r0, #1250
+; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    adr r0, .LCPI0_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    movw lr, #1250
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
@@ -79,13 +79,13 @@ define dso_local void @mve_gatherscatter_offset(i32* noalias nocapture readonly 
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
+; CHECK-NEXT:    movw r0, #1250
+; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    adr r0, .LCPI1_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    add.w r12, r3, #4
-; CHECK-NEXT:    movw lr, #1250
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    vmov.i32 q0, #0x14
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
@@ -153,14 +153,14 @@ define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* n
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    add.w r12, r0, r3, lsl #2
+; CHECK-NEXT:    movw r0, #1250
+; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    adr r0, .LCPI2_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    movw lr, #1250
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    vmov.i32 q2, #0x3
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
@@ -239,9 +239,9 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    adr r6, .LCPI3_4
 ; CHECK-NEXT:    adr r5, .LCPI3_3
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
 ; CHECK-NEXT:    adr r4, .LCPI3_2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #160] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [r7]
 ; CHECK-NEXT:    adr.w r8, .LCPI3_1
