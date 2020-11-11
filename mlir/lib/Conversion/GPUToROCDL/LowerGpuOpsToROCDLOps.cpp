@@ -72,7 +72,7 @@ struct LowerGpuOpsToROCDLOpsPass
     target.addIllegalDialect<gpu::GPUDialect>();
     target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
                         LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                        LLVM::Log2Op, LLVM::SinOp, LLVM::TanhOp>();
+                        LLVM::Log2Op, LLVM::SinOp>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<ROCDL::ROCDLDialect>();
     // TODO: Remove once we support replacing non-root ops.
