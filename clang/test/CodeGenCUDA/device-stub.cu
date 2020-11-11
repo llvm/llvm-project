@@ -28,11 +28,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=9.2 -fgpu-rdc -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
-// RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA_NEW
+// RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA-NEW
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -std=c++17 \
 // RUN:     -target-sdk-version=9.2 -fgpu-rdc -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
-// RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA_NEW,LNX_17
+// RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA-NEW,LNX_17
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=9.2 -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
