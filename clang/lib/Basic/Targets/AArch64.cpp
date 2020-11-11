@@ -763,7 +763,9 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 }
 
 void WindowsARM64TargetInfo::setDataLayout() {
-  resetDataLayout("e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128");
+  resetDataLayout(Triple.isOSBinFormatMachO()
+                      ? "e-m:o-i64:64-i128:128-n32:64-S128"
+                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128");
 }
 
 TargetInfo::BuiltinVaListKind
