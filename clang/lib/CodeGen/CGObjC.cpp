@@ -2151,6 +2151,12 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
   // Call the function.
   llvm::CallBase *Inst = CGF.EmitCallOrInvoke(fn, value);
 
+  // Mark calls to objc_autorelease as tail on the assumption that methods
+  // overriding autorelease do not touch anything on the stack.
+  if (fnName == "objc_autorelease")
+    if (auto *Call = dyn_cast<llvm::CallInst>(Inst))
+      Call->setTailCall();
+
   // Cast the result back to the original type.
   return CGF.Builder.CreateBitCast(Inst, origType);
 }
