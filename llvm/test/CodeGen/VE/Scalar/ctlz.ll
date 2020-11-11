@@ -9,8 +9,7 @@ declare i8 @llvm.ctlz.i8(i8, i1)
 define i128 @func128(i128 %p){
 ; CHECK-LABEL: func128:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmps.l %s2, %s1, %s2
+; CHECK-NEXT:    cmps.l %s2, %s1, (0)1
 ; CHECK-NEXT:    ldz %s1, %s1
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, 64(, %s0)
@@ -179,8 +178,7 @@ define zeroext i8 @func8iz() {
 define i128 @func128x(i128 %p){
 ; CHECK-LABEL: func128x:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmps.l %s2, %s1, %s2
+; CHECK-NEXT:    cmps.l %s2, %s1, (0)1
 ; CHECK-NEXT:    ldz %s1, %s1
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, 64(, %s0)

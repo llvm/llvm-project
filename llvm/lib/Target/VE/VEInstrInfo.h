@@ -100,6 +100,13 @@ public:
                             const TargetRegisterInfo *TRI) const override;
   /// } Stack Spill & Reload
 
+  /// Optimization {
+
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+                     MachineRegisterInfo *MRI) const override;
+
+  /// } Optimization
+
   Register getGlobalBaseReg(MachineFunction *MF) const;
 
   // Lower pseudo instructions after register allocation.

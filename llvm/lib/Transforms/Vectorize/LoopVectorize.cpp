@@ -469,7 +469,7 @@ public:
                             VPTransformState &State);
 
   /// Widen a single select instruction within the innermost loop.
-  void widenSelectInstruction(SelectInst &I, VPValue *VPDef, VPUser &Operands,
+  void widenSelectInstruction(SelectInst &I, VPUser &Operands,
                               bool InvariantCond, VPTransformState &State);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
@@ -4686,7 +4686,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
   }
 }
 
-void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I, VPValue *VPDef,
+void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
                                                  VPUser &Operands,
                                                  bool InvariantCond,
                                                  VPTransformState &State) {
@@ -4705,7 +4705,7 @@ void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I, VPValue *VPDef,
     Value *Op0 = State.get(Operands.getOperand(1), Part);
     Value *Op1 = State.get(Operands.getOperand(2), Part);
     Value *Sel = Builder.CreateSelect(Cond, Op0, Op1);
-    State.set(VPDef, &I, Sel, Part);
+    VectorLoopValueMap.setVectorValue(&I, Part, Sel);
     addMetadata(Sel, &I);
   }
 }
@@ -7640,10 +7640,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       NeedDef.insert(Legal->getPrimaryInduction());
     for (auto &Reduction : Legal->getReductionVars()) {
       NeedDef.insert(Reduction.first);
-      // VPWidenSelect is a VPValue already, there is no need to add a separate
-      // VPValue.
-      if (!isa<SelectInst>(Reduction.second.getLoopExitInstr()))
-        NeedDef.insert(Reduction.second.getLoopExitInstr());
+      NeedDef.insert(Reduction.second.getLoopExitInstr());
     }
   }
 
@@ -8003,8 +8000,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(*cast<SelectInst>(getUnderlyingInstr()),
-                                    this, *this, InvariantCond, State);
+  State.ILV->widenSelectInstruction(Ingredient, *this, InvariantCond, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {

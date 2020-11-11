@@ -214,8 +214,8 @@ static unsigned getSubRegIndex(const TargetRegisterClass *RC) {
   return SubIdx;
 }
 
-static const TargetRegisterClass *getRegClassFromGRPhysReg(unsigned Reg) {
-  assert(Register::isPhysicalRegister(Reg));
+static const TargetRegisterClass *getRegClassFromGRPhysReg(Register Reg) {
+  assert(Reg.isPhysical());
   if (X86::GR64RegClass.contains(Reg))
     return &X86::GR64RegClass;
   if (X86::GR32RegClass.contains(Reg))
@@ -239,7 +239,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  if (Register::isPhysicalRegister(DstReg)) {
+  if (DstReg.isPhysical()) {
     assert(I.isCopy() && "Generic operators do not allow physical registers");
 
     if (DstSize > SrcSize && SrcRegBank.getID() == X86::GPRRegBankID &&
@@ -266,12 +266,12 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
     return true;
   }
 
-  assert((!Register::isPhysicalRegister(SrcReg) || I.isCopy()) &&
+  assert((!SrcReg.isPhysical() || I.isCopy()) &&
          "No phys reg on generic operators");
   assert((DstSize == SrcSize ||
           // Copies are a mean to setup initial types, the number of
           // bits may not exactly match.
-          (Register::isPhysicalRegister(SrcReg) &&
+          (SrcReg.isPhysical() &&
            DstSize <= RBI.getSizeInBits(SrcReg, MRI, TRI))) &&
          "Copy with different width?!");
 
@@ -280,7 +280,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 
   if (SrcRegBank.getID() == X86::GPRRegBankID &&
       DstRegBank.getID() == X86::GPRRegBankID && SrcSize > DstSize &&
-      Register::isPhysicalRegister(SrcReg)) {
+      SrcReg.isPhysical()) {
     // Change the physical register to performe truncate.
 
     const TargetRegisterClass *SrcRC = getRegClassFromGRPhysReg(SrcReg);
