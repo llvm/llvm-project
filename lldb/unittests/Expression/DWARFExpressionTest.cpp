@@ -75,6 +75,37 @@ TEST(DWARFExpression, DW_OP_pick) {
                        llvm::Failed());
 }
 
+TEST(DWARFExpression, DW_OP_const) {
+  // Extend to address size.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x88}), llvm::HasValue(0x88));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, 0x88}),
+                       llvm::HasValue(0xffffff88));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const2u, 0x47, 0x88}),
+                       llvm::HasValue(0x8847));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const2s, 0x47, 0x88}),
+                       llvm::HasValue(0xffff8847));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const4u, 0x44, 0x42, 0x47, 0x88}),
+                       llvm::HasValue(0x88474244));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const4s, 0x44, 0x42, 0x47, 0x88}),
+                       llvm::HasValue(0x88474244));
+
+  // Truncate to address size.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const8u, 0x00, 0x11, 0x22, 0x33, 0x44, 0x42, 0x47, 0x88}),
+      llvm::HasValue(0x33221100));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const8s, 0x00, 0x11, 0x22, 0x33, 0x44, 0x42, 0x47, 0x88}),
+      llvm::HasValue(0x33221100));
+
+  // Don't truncate to address size for compatibility with clang (pr48087).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_constu, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
+      llvm::HasValue(0x01010101010101));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_consts, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
+      llvm::HasValue(0xffff010101010101));
+}
+
 TEST(DWARFExpression, DW_OP_convert) {
   /// Auxiliary debug info.
   const char *yamldata = R"(
@@ -157,28 +188,33 @@ DWARF:
   // Positive tests.
   //
 
-  // Truncate to default unspecified (pointer-sized) type.
-  EXPECT_THAT_EXPECTED(
-      t.Eval({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, //
-              DW_OP_convert, 0x00}),
-      llvm::HasValue(GetScalar(32, 0x44332211, not_signed)));
-  // Truncate to 32 bits.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const8u, //
-                               0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,//
-                               DW_OP_convert, offs_uint32_t}),
-                       llvm::HasValue(GetScalar(32, 0x44332211, not_signed)));
-
   // Leave as is.
-  EXPECT_THAT_EXPECTED(
-      t.Eval({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, //
-              DW_OP_convert, offs_uint64_t}),
-      llvm::HasValue(GetScalar(64, 0x8877665544332211, not_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
+                               DW_OP_convert, offs_uint32_t}),
+                       llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
+
+  // Zero-extend to 64 bits.
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
+                               DW_OP_convert, offs_uint64_t}),
+                       llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
 
   // Sign-extend to 64 bits.
   EXPECT_THAT_EXPECTED(
       t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
               DW_OP_convert, offs_sint64_t}),
       llvm::HasValue(GetScalar(64, 0xffffffffffeeddcc, is_signed)));
+
+  // Sign-extend, then truncate.
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
+                               DW_OP_convert, offs_sint64_t,          //
+                               DW_OP_convert, offs_uint32_t}),
+                       llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
+
+  // Truncate to default unspecified (pointer-sized) type.
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
+                               DW_OP_convert, offs_sint64_t,          //
+                               DW_OP_convert, 0x00}),
+                       llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
 
   // Truncate to 8 bits.
   EXPECT_THAT_EXPECTED(
