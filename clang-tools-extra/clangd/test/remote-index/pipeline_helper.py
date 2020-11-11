@@ -36,6 +36,7 @@ def main():
     s.bind(('localhost', 0))
     server_address = 'localhost:' + str(s.getsockname()[1])
 
+  print('Initializing clangd-index-server...', file=sys.stderr)
   index_server_process = subprocess.Popen([
       'clangd-index-server', '--server-address=' + server_address,
       args.index_file, args.project_root
@@ -53,14 +54,17 @@ def main():
   found_init_message = False
   while index_server_process.poll() is None:
     if b'Server listening' in index_server_process.stderr.readline():
+      print('Server initialization complete.', file=sys.stderr)
       found_init_message = True
       break
 
   if not found_init_message:
+    print('Server initialization failed. Shutting down.', file=sys.stderr)
     sys.exit(1)
 
   in_file = open(args.input_file_name)
 
+  print('Staring clangd...', file=sys.stderr)
   clangd_process = subprocess.Popen([
       'clangd', '--remote-index-address=' + server_address,
       '--project-root=' + args.project_root, '--lit-test', '--sync'
@@ -68,6 +72,9 @@ def main():
                                     stdin=in_file)
 
   clangd_process.wait()
+  print(
+      'Clangd executed successfully, shutting down child processes.',
+      file=sys.stderr)
   index_server_process.kill()
 
 

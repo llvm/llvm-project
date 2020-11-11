@@ -1120,12 +1120,14 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
+let Predicates = [IsRV64, NotHasStdExtZbbOrZbp] in
+def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+
 let Predicates = [IsRV64] in {
 
 /// sext and zext
 
 def : Pat<(sext_inreg GPR:$rs1, i32), (ADDIW GPR:$rs1, 0)>;
-def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 
 /// ALU operations
 

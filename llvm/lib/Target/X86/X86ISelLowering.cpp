@@ -4480,7 +4480,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     Register VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!Register::isVirtualRegister(VR))
+    if (!VR.isVirtual())
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
     if (!Def)
@@ -47560,7 +47560,8 @@ static SDValue rebuildGatherScatter(MaskedGatherScatterSDNode *GorS,
   return DAG.getMaskedScatter(Scatter->getVTList(),
                               Scatter->getMemoryVT(), DL,
                               Ops, Scatter->getMemOperand(),
-                              Scatter->getIndexType());
+                              Scatter->getIndexType(),
+                              Scatter->isTruncatingStore());
 }
 
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,

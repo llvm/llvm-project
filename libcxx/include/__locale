@@ -22,7 +22,7 @@
 #if defined(_LIBCPP_MSVCRT_LIKE)
 # include <cstring>
 # include <support/win32/locale_win32.h>
-#elif defined(_AIX)
+#elif defined(_AIX) || defined(__MVS__)
 # include <support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
 # include <support/android/locale_bionic.h>

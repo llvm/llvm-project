@@ -2132,11 +2132,11 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // The order of statements must be preserved w.r.t. their ordered
   // instructions. Without this explicit scan, we would also use non-ordered
   // instructions (whose order is arbitrary) to determine statement order.
-  for (Instruction &Inst : *BB) {
-    if (!isOrderedInstruction(&Inst))
+  for (Instruction *Inst : ModeledInsts) {
+    if (!isOrderedInstruction(Inst))
       continue;
 
-    auto LeaderIt = UnionFind.findLeader(&Inst);
+    auto LeaderIt = UnionFind.findLeader(Inst);
     if (LeaderIt == UnionFind.member_end())
       continue;
 
@@ -2146,15 +2146,15 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
 
   // Collect the instructions of all leaders. UnionFind's member iterator
   // unfortunately are not in any specific order.
-  for (Instruction &Inst : *BB) {
-    auto LeaderIt = UnionFind.findLeader(&Inst);
+  for (Instruction *Inst : ModeledInsts) {
+    auto LeaderIt = UnionFind.findLeader(Inst);
     if (LeaderIt == UnionFind.member_end())
       continue;
 
-    if (&Inst == MainInst)
+    if (Inst == MainInst)
       MainLeader = *LeaderIt;
     std::vector<Instruction *> &InstList = LeaderToInstList[*LeaderIt];
-    InstList.push_back(&Inst);
+    InstList.push_back(Inst);
   }
 
   // Finally build the statements.

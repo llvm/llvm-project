@@ -1,6 +1,8 @@
-; RUN: opt -loop-load-elim -S < %s | FileCheck %s
+; RUN: opt -loop-load-elim -S < %s -enable-new-pm=0 | FileCheck %s
+; New PM does not allow a pass to require another pass to have been run
+; RUN: opt -passes=loop-simplify,loop-load-elim -S < %s | FileCheck %s
 
-; Make sure we create a preheader if we dont' have one.
+; Make sure we create a preheader if we don't have one.
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

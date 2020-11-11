@@ -853,14 +853,13 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPRecipeBase, public VPUser {
-  /// Hold the call to be widened.
-  CallInst &Ingredient;
+class VPWidenCallRecipe : public VPRecipeBase, public VPValue, public VPUser {
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
-      : VPRecipeBase(VPWidenCallSC), VPUser(CallArguments), Ingredient(I) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenCallSC),
+        VPValue(VPValue::VPVWidenCallSC, &I), VPUser(CallArguments) {}
 
   ~VPWidenCallRecipe() override = default;
 
@@ -1245,8 +1244,7 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase,
   }
 
   bool isMasked() const {
-    return (isa<LoadInst>(getUnderlyingInstr()) && getNumOperands() == 2) ||
-           (isa<StoreInst>(getUnderlyingInstr()) && getNumOperands() == 3);
+    return isStore() ? getNumOperands() == 3 : getNumOperands() == 2;
   }
 
 public:
@@ -1281,10 +1279,12 @@ public:
     return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
+  /// Returns true if this recipe is a store.
+  bool isStore() const { return isa<StoreInst>(getUnderlyingInstr()); }
+
   /// Return the address accessed by this recipe.
   VPValue *getStoredValue() const {
-    assert(isa<StoreInst>(getUnderlyingInstr()) &&
-           "Stored value only available for store instructions");
+    assert(isStore() && "Stored value only available for store instructions");
     return getOperand(1); // Stored value is the 2nd, mandatory operand.
   }
 

@@ -147,6 +147,9 @@ test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 static char *
 getprogpath(char ret[PATH_MAX], const char *bin)
 {
+  if (bin == nullptr)
+    return nullptr;
+
   /* First approach: absolute path. */
   if (bin[0] == '/') {
     if (test_dir(ret, "/", bin) == 0)

@@ -11,7 +11,6 @@ from ObjCNewSyntaxTest import ObjCNewSyntaxTest
 
 class ObjCNewSyntaxTestCaseDictionary(ObjCNewSyntaxTest):
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_read_dictionary(self):
@@ -27,7 +26,6 @@ class ObjCNewSyntaxTestCaseDictionary(ObjCNewSyntaxTest):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["value"])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_update_dictionary(self):
@@ -43,7 +41,6 @@ class ObjCNewSyntaxTestCaseDictionary(ObjCNewSyntaxTest):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["object"])
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_dictionary_literal(self):

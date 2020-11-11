@@ -8116,6 +8116,25 @@ The following table illustrates the required format:
   the top 32 bits of the pipeline, so the shader may use the program
   counter's top 32 bits.
 
+.. _pal_call-convention:
+
+Call Convention
+~~~~~~~~~~~~~~~
+
+For graphics use cases, the calling convention is `amdgpu_gfx`.
+
+.. note::
+
+  `amdgpu_gfx` Function calls are currently in development and are
+  subject to major changes.
+
+This calling convention shares most properties with calling non-kernel
+functions (see
+:ref:`amdgpu-amdhsa-function-call-convention-non-kernel-functions`).
+Differences are:
+
+ - Currently there are none, differences will be listed here
+
 Unspecified OS
 --------------
 

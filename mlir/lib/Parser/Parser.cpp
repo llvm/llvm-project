@@ -1136,6 +1136,24 @@ public:
     return success();
   }
 
+  /// Parse a keyword if it is one of the 'allowedKeywords'.
+  ParseResult
+  parseOptionalKeyword(StringRef *keyword,
+                       ArrayRef<StringRef> allowedKeywords) override {
+    // Check that the current token is a keyword.
+    if (!isCurrentTokenAKeyword())
+      return failure();
+
+    StringRef currentKeyword = parser.getTokenSpelling();
+    if (llvm::is_contained(allowedKeywords, currentKeyword)) {
+      *keyword = currentKeyword;
+      parser.consumeToken();
+      return success();
+    }
+
+    return failure();
+  }
+
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
   /// string attribute named 'attrName'.
   ParseResult parseOptionalSymbolName(StringAttr &result, StringRef attrName,

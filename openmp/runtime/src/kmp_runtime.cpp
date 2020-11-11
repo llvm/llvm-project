@@ -441,6 +441,7 @@ void __kmp_abort_process() {
     raise(SIGABRT);
     _exit(3); // Just in case, if signal ignored, exit anyway.
   } else {
+    __kmp_unregister_library();
     abort();
   }
 
@@ -6204,6 +6205,7 @@ void __kmp_internal_end_library(int gtid_req) {
       if (__kmp_root[gtid]->r.r_active) {
         __kmp_global.g.g_abort = -1;
         TCW_SYNC_4(__kmp_global.g.g_done, TRUE);
+        __kmp_unregister_library();
         KA_TRACE(10,
                  ("__kmp_internal_end_library: root still active, abort T#%d\n",
                   gtid));

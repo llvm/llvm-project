@@ -32,6 +32,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -1620,17 +1621,23 @@ std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
 }
 
 void elf::readLinkerScript(MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read linker script",
+                                 mb.getBufferIdentifier());
   ScriptParser(mb).readLinkerScript();
 }
 
 void elf::readVersionScript(MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read version script",
+                                 mb.getBufferIdentifier());
   ScriptParser(mb).readVersionScript();
 }
 
 void elf::readDynamicList(MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read dynamic list", mb.getBufferIdentifier());
   ScriptParser(mb).readDynamicList();
 }
 
 void elf::readDefsym(StringRef name, MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read defsym input", name);
   ScriptParser(mb).readDefsym(name);
 }

@@ -25,12 +25,12 @@ Sections:
       - Tag:   DT_DEBUG
         Value: 0x0000000000000000
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # Sometimes .dynamic section content length can be greater than the
 # length of its entries. In this case, we should not try to dump anything
@@ -67,9 +67,9 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0000000000000000
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

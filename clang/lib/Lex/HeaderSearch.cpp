@@ -164,14 +164,39 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
   return {};
 }
 
+std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
+  const FileEntry *ModuleMap =
+      getModuleMap().getModuleMapFileForUniquing(Module);
+  StringRef ModuleName = Module->Name;
+  StringRef ModuleMapPath = ModuleMap->getName();
+  StringRef ModuleCacheHash = HSOpts->DisableModuleHash ? "" : getModuleHash();
+  for (const std::string &Dir : HSOpts->PrebuiltModulePaths) {
+    SmallString<256> CachePath(Dir);
+    llvm::sys::fs::make_absolute(CachePath);
+    llvm::sys::path::append(CachePath, ModuleCacheHash);
+    std::string FileName =
+        getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
+    if (!FileName.empty() && getFileMgr().getFile(FileName))
+      return FileName;
+  }
+  return {};
+}
+
 std::string HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
                                                   StringRef ModuleMapPath) {
+  return getCachedModuleFileNameImpl(ModuleName, ModuleMapPath,
+                                     getModuleCachePath());
+}
+
+std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
+                                                      StringRef ModuleMapPath,
+                                                      StringRef CachePath) {
   // If we don't have a module cache path or aren't supposed to use one, we
   // can't do anything.
-  if (getModuleCachePath().empty())
+  if (CachePath.empty())
     return {};
 
-  SmallString<256> Result(getModuleCachePath());
+  SmallString<256> Result(CachePath);
   llvm::sys::fs::make_absolute(Result);
 
   if (HSOpts->DisableModuleHash) {

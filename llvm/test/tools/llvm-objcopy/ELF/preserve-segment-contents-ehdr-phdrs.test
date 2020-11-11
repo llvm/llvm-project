@@ -37,6 +37,6 @@ ProgramHeaders:
     Offset:   0
     FileSize: 176 # sizeof(Elf64_Ehdr) + 2 * sizeof(Elf64_Phdr)
   - Type:     PT_LOAD
-    Sections:
-      - Section: .keep_me
+    FirstSec: .keep_me
+    LastSec:  .keep_me
 Symbols: []

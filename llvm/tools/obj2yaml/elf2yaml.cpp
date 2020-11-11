@@ -393,8 +393,11 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     // obj2yaml does not create Fill chunks.
     for (const std::unique_ptr<ELFYAML::Chunk> &C : Chunks) {
       ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
-      if (isInSegment<ELFT>(S, Sections[S.OriginalSecNdx], Phdr))
-        PH.Sections.push_back({S.Name});
+      if (isInSegment<ELFT>(S, Sections[S.OriginalSecNdx], Phdr)) {
+        if (!PH.FirstSec)
+          PH.FirstSec = S.Name;
+        PH.LastSec = S.Name;
+      }
     }
 
     Ret.push_back(PH);

@@ -389,26 +389,8 @@ ProgramHeaders:
     Flags: [ PF_X, PF_R ]
     VAddr: 0x0000000000400000
     Align: 1024
-    Sections:
-      - Section: .interp
-      - Section: .interp
-      - Section: .note.ABI-tag
-      - Section: .note.gnu.build-id
-      - Section: .gnu.hash
-      - Section: .gnu.version
-      - Section: .gnu.version_r
-      - Section: .rela.dyn
-      - Section: .rela.plt
-      - Section: .init
-      - Section: .plt
-      - Section: .plt.got
-      - Section: .text
-      - Section: .fini
-      - Section: .rodata
-      - Section: .eh_frame_hdr
-      - Section: .eh_frame
-      - Section: .dynsym
-      - Section: .dynstr
+    FirstSec: .interp
+    LastSec:  .dynstr
 Symbols:
   - Name:            .interp
     Type:            STT_SECTION

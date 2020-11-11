@@ -63,10 +63,10 @@ DynamicSymbols:
   - Name: foo
   - Name: bar
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x100
-    Sections:
-      - Section: .dynsym
+  - Type:     PT_LOAD
+    VAddr:    0x100
+    FirstSec: .dynsym
+    LastSec:  .dynsym
 
 ## Case 2: Check the output for aliases.
 ## a) Check the two-letter alias --dt is equivalent to the --dyn-symbols
@@ -201,10 +201,10 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x0000
-    Sections:
-      - Section: .dynsym
+  - Type:     PT_LOAD
+    VAddr:    0x0000
+    FirstSec: .dynsym
+    LastSec:  .dynsym
 
 ## Case 6: Check that if we can get the location of the dynamic symbol table using both the DT_SYMTAB value
 ## and the section headers table then we prefer the former and report a warning.
@@ -238,10 +238,10 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x0000
-    Sections:
-      - Section: .mydynsym
+  - Type:     PT_LOAD
+    VAddr:    0x0000
+    FirstSec: .mydynsym
+    LastSec:  .mydynsym
 
 ## Case 7: Check how we dump versioned symbols. Use both -V and --dyn-symbols
 ## to check that printed version is consistent.
@@ -488,10 +488,10 @@ Sections:
     Address: 0x100
     Size:    0x1
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x100
-    Sections:
-      - Section: .dynsym
+  - Type:     PT_LOAD
+    VAddr:    0x100
+    FirstSec: .dynsym
+    LastSec:  .dynsym
 
 --- !ELF
 FileHeader:
@@ -582,11 +582,10 @@ DynamicSymbols:
 ## An arbitrary valid symbol to document we report an error before dumping it.
   - StName:  0x1
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .dynstr
+    LastSec:  .dynamic
 
 ## Case 11: check various warnings we report when fields of the SHT_DYNSYM section are broken.
 

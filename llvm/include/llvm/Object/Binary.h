@@ -91,6 +91,8 @@ public:
   Binary(const Binary &other) = delete;
   virtual ~Binary();
 
+  virtual Error initContent() { return Error::success(); };
+
   StringRef getData() const;
   StringRef getFileName() const;
   MemoryBufferRef getMemoryBufferRef() const;
@@ -178,7 +180,8 @@ DEFINE_ISA_CONVERSION_FUNCTIONS(Binary, LLVMBinaryRef)
 ///
 /// @param Source The data to create the Binary from.
 Expected<std::unique_ptr<Binary>> createBinary(MemoryBufferRef Source,
-                                               LLVMContext *Context = nullptr);
+                                               LLVMContext *Context = nullptr,
+                                               bool InitContent = true);
 
 template <typename T> class OwningBinary {
   std::unique_ptr<T> Bin;
@@ -229,7 +232,8 @@ template <typename T> const T* OwningBinary<T>::getBinary() const {
 }
 
 Expected<OwningBinary<Binary>> createBinary(StringRef Path,
-                                            LLVMContext *Context = nullptr);
+                                            LLVMContext *Context = nullptr,
+                                            bool InitContent = true);
 
 } // end namespace object
 

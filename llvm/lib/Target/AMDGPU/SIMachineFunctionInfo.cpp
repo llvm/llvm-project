@@ -75,16 +75,18 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   }
 
   if (!isEntryFunction()) {
-    // Non-entry functions have no special inputs for now, other registers
-    // required for scratch access.
-    ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
-
     // TODO: Pick a high register, and shift down, similar to a kernel.
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
-    ArgInfo.PrivateSegmentBuffer =
-      ArgDescriptor::createRegister(ScratchRSrcReg);
+    if (!ST.enableFlatScratch()) {
+      // Non-entry functions have no special inputs for now, other registers
+      // required for scratch access.
+      ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+
+      ArgInfo.PrivateSegmentBuffer =
+        ArgDescriptor::createRegister(ScratchRSrcReg);
+    }
 
     if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
       ImplicitArgPtr = true;
@@ -142,7 +144,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
   if (isAmdHsaOrMesa) {
-    PrivateSegmentBuffer = true;
+    if (!ST.enableFlatScratch())
+      PrivateSegmentBuffer = true;
 
     if (UseFixedABI) {
       DispatchPtr = true;

@@ -194,20 +194,21 @@ symbol has one of the following visibilities:
         table, but not outside of the visible IR, as long as each symbol table
         parent also defines a non-private symbol.
 
-A few examples of what this looks like in the IR are shown below:
+For Functions, the visibility is printed after the operation name without a
+quote. A few examples of what this looks like in the IR are shown below:
 
 ```mlir
 module @public_module {
   // This function can be accessed by 'live.user', but cannot be referenced
   // externally; all uses are known to reside within parent regions.
-  func @nested_function() attributes { sym_visibility = "nested" }
+  func nested @nested_function()
 
   // This function cannot be accessed outside of 'public_module'.
-  func @private_function() attributes { sym_visibility = "private" }
+  func private @private_function()
 }
 
 // This function can only be accessed from within the top-level module.
-func @private_function() attributes { sym_visibility = "private" }
+func private @private_function()
 
 // This function may be referenced externally.
 func @public_function()

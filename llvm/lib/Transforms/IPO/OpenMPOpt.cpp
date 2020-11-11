@@ -703,7 +703,7 @@ private:
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
-      InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.CreateParallel(
+      InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.createParallel(
           Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
           OMP_PROC_BIND_default, /* IsCancellable */ false);
       BranchInst::Create(AfterBB, AfterIP.getBlock());
@@ -743,7 +743,7 @@ private:
         if (CI != MergableCIs.back()) {
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
-          OMPInfoCache.OMPBuilder.CreateBarrier(
+          OMPInfoCache.OMPBuilder.createBarrier(
               InsertPointTy(NewCI->getParent(),
                             NewCI->getNextNode()->getIterator()),
               OMPD_parallel);

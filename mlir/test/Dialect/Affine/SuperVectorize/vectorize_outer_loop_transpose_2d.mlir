@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=32,256 test-fastest-varying=0,2" | FileCheck %s
 
 // Permutation maps used in vectorization.
-// CHECK: #[[map_proj_d0d1d2_d2d0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// CHECK: #[[map_proj_d0d1d2_d2d0:map[0-9]*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
 
 func @vec2d(%A : memref<?x?x?xf32>) {
   %c0 = constant 0 : index

@@ -754,7 +754,6 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
     assert(It.second);
     return It.first->getValue();
   }
-  assert(false);
   // Default construction gives an empty style.
   auto It = NamingStylesCache.try_emplace(Parent);
   assert(It.second);

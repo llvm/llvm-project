@@ -4,9 +4,8 @@
 define i64 @test1(i64 %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, 625
-; CHECK-NEXT:    sldi 4, 4, 36
-; CHECK-NEXT:    mulld 3, 3, 4
+; CHECK-NEXT:    mulli 3, 3, 625
+; CHECK-NEXT:    sldi 3, 3, 36
 ; CHECK-NEXT:    blr
   %y = mul i64 %x, 42949672960000
   ret i64 %y
@@ -15,9 +14,8 @@ define i64 @test1(i64 %x) {
 define i64 @test2(i64 %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, -625
-; CHECK-NEXT:    sldi 4, 4, 36
-; CHECK-NEXT:    mulld 3, 3, 4
+; CHECK-NEXT:    mulli 3, 3, -625
+; CHECK-NEXT:    sldi 3, 3, 36
 ; CHECK-NEXT:    blr
   %y = mul i64 %x, -42949672960000
   ret i64 %y
@@ -26,9 +24,8 @@ define i64 @test2(i64 %x) {
 define i64 @test3(i64 %x) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, 74
-; CHECK-NEXT:    ori 4, 4, 16384
-; CHECK-NEXT:    mulld 3, 3, 4
+; CHECK-NEXT:    mulli 3, 3, 297
+; CHECK-NEXT:    sldi 3, 3, 14
 ; CHECK-NEXT:    blr
   %y = mul i64 %x, 4866048
   ret i64 %y
@@ -37,9 +34,8 @@ define i64 @test3(i64 %x) {
 define i64 @test4(i64 %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 4, -75
-; CHECK-NEXT:    ori 4, 4, 49152
-; CHECK-NEXT:    mulld 3, 3, 4
+; CHECK-NEXT:    mulli 3, 3, -297
+; CHECK-NEXT:    sldi 3, 3, 14
 ; CHECK-NEXT:    blr
   %y = mul i64 %x, -4866048
   ret i64 %y
@@ -96,9 +92,8 @@ define i64 @test9(i64 %x) {
 ; CHECK-NEXT:    sldi 4, 3, 12
 ; CHECK-NEXT:    sldi 5, 3, 32
 ; CHECK-NEXT:    add 4, 5, 4
-; CHECK-NEXT:    li 5, 8193
-; CHECK-NEXT:    sldi 5, 5, 19
-; CHECK-NEXT:    mulld 3, 3, 5
+; CHECK-NEXT:    mulli 3, 3, 8193
+; CHECK-NEXT:    sldi 3, 3, 19
 ; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
   %y = mul i64 %x, 4294971392

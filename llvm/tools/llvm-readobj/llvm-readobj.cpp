@@ -458,11 +458,16 @@ createDumper(const ObjectFile &Obj, ScopedPrinter &Writer) {
 }
 
 /// Dumps the specified object file.
-static void dumpObject(const ObjectFile &Obj, ScopedPrinter &Writer,
+static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
                        const Archive *A = nullptr) {
   std::string FileStr =
       A ? Twine(A->getFileName() + "(" + Obj.getFileName() + ")").str()
         : Obj.getFileName().str();
+
+  std::string ContentErrString;
+  if (Error ContentErr = Obj.initContent())
+    ContentErrString = "unable to continue dumping, the file is corrupt: " +
+                       toString(std::move(ContentErr));
 
   ObjDumper *Dumper;
   Expected<std::unique_ptr<ObjDumper>> DumperOrErr = createDumper(Obj, Writer);
@@ -485,6 +490,11 @@ static void dumpObject(const ObjectFile &Obj, ScopedPrinter &Writer,
 
   if (opts::FileHeaders)
     Dumper->printFileHeaders();
+
+  // This is only used for ELF currently. In some cases, when an object is
+  // corrupt (e.g. truncated), we can't dump anything except the file header.
+  if (!ContentErrString.empty())
+    reportError(createError(ContentErrString), FileStr);
 
   if (opts::SectionDetails || opts::SectionHeaders) {
     if (opts::Output == opts::GNU && opts::SectionDetails)
@@ -637,7 +647,8 @@ static void dumpWindowsResourceFile(WindowsResource *WinRes,
 /// Opens \a File and dumps it.
 static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   // Attempt to open the binary.
-  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
+  Expected<OwningBinary<Binary>> BinaryOrErr =
+      createBinary(File, /*Context=*/nullptr, /*InitContent=*/false);
   if (!BinaryOrErr)
     reportError(BinaryOrErr.takeError(), File);
   Binary &Binary = *BinaryOrErr.get().getBinary();

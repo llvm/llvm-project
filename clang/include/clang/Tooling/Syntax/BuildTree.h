@@ -19,8 +19,9 @@ namespace clang {
 namespace syntax {
 
 /// Build a syntax tree for the main file.
-syntax::TranslationUnit *buildSyntaxTree(Arena &A,
-                                         const clang::TranslationUnitDecl &TU);
+/// This usually covers the whole TranslationUnitDecl, but can be restricted by
+/// the ASTContext's traversal scope.
+syntax::TranslationUnit *buildSyntaxTree(Arena &A, ASTContext &Context);
 
 // Create syntax trees from subtrees not backed by the source code.
 

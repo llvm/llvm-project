@@ -271,6 +271,7 @@ static bool lowerShiftReservedVGPR(MachineFunction &MF,
   FuncInfo->setSGPRSpillVGPRs(LowestAvailableVGPR, FI, Index);
 
   for (MachineBasicBlock &MBB : MF) {
+    assert(LowestAvailableVGPR.isValid() && "Did not find an available VGPR");
     MBB.addLiveIn(LowestAvailableVGPR);
     MBB.sortUniqueLiveIns();
   }

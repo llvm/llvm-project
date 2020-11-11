@@ -181,3 +181,63 @@ def testNamedAttr():
     print("named:", named)
 
 run(testNamedAttr)
+
+
+# CHECK-LABEL: TEST: testDenseIntAttr
+def testDenseIntAttr():
+  with Context():
+    raw = Attribute.parse("dense<[[0,1,2],[3,4,5]]> : vector<2x3xi32>")
+    # CHECK: attr: dense<[{{\[}}0, 1, 2], [3, 4, 5]]>
+    print("attr:", raw)
+
+    a = DenseIntElementsAttr(raw)
+    assert len(a) == 6
+
+    # CHECK: 0 1 2 3 4 5
+    for value in a:
+      print(value, end=" ")
+    print()
+
+    # CHECK: i32
+    print(ShapedType(a.type).element_type)
+
+    raw = Attribute.parse("dense<[true,false,true,false]> : vector<4xi1>")
+    # CHECK: attr: dense<[true, false, true, false]>
+    print("attr:", raw)
+
+    a = DenseIntElementsAttr(raw)
+    assert len(a) == 4
+
+    # CHECK: 1 0 1 0
+    for value in a:
+      print(value, end=" ")
+    print()
+
+    # CHECK: i1
+    print(ShapedType(a.type).element_type)
+
+
+run(testDenseIntAttr)
+
+
+# CHECK-LABEL: TEST: testDenseFPAttr
+def testDenseFPAttr():
+  with Context():
+    raw = Attribute.parse("dense<[0.0, 1.0, 2.0, 3.0]> : vector<4xf32>")
+    # CHECK: attr: dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00]>
+
+    print("attr:", raw)
+
+    a = DenseFPElementsAttr(raw)
+    assert len(a) == 4
+
+    # CHECK: 0.0 1.0 2.0 3.0
+    for value in a:
+      print(value, end=" ")
+    print()
+
+    # CHECK: f32
+    print(ShapedType(a.type).element_type)
+
+
+run(testDenseFPAttr)

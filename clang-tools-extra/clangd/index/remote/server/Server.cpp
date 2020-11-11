@@ -357,24 +357,23 @@ int main(int argc, char *argv[]) {
     return Status.getError().value();
   }
 
-  auto Index = std::make_unique<clang::clangd::SwapIndex>(
-      clang::clangd::loadIndex(IndexPath));
-
-  if (!Index) {
+  auto SymIndex = clang::clangd::loadIndex(IndexPath);
+  if (!SymIndex) {
     llvm::errs() << "Failed to open the index.\n";
     return -1;
   }
+  clang::clangd::SwapIndex Index(std::move(SymIndex));
 
   std::thread HotReloadThread([&Index, &Status, &FS]() {
     llvm::vfs::Status LastStatus = *Status;
     static constexpr auto RefreshFrequency = std::chrono::seconds(30);
     while (!clang::clangd::shutdownRequested()) {
-      hotReload(*Index, llvm::StringRef(IndexPath), LastStatus, FS);
+      hotReload(Index, llvm::StringRef(IndexPath), LastStatus, FS);
       std::this_thread::sleep_for(RefreshFrequency);
     }
   });
 
-  runServerAndWait(*Index, ServerAddress, IndexPath);
+  runServerAndWait(Index, ServerAddress, IndexPath);
 
   HotReloadThread.join();
 }

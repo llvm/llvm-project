@@ -523,6 +523,7 @@ BEGIN_TWO_BYTE_PACK()
   class StoreSDNodeBitfields {
     friend class StoreSDNode;
     friend class MaskedStoreSDNode;
+    friend class MaskedScatterSDNode;
 
     uint16_t : NumLSBaseSDNodeBits;
 
@@ -2441,9 +2442,16 @@ public:
 
   MaskedScatterSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
                       EVT MemVT, MachineMemOperand *MMO,
-                      ISD::MemIndexType IndexType)
+                      ISD::MemIndexType IndexType, bool IsTrunc)
       : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, VTs, MemVT, MMO,
-                                  IndexType) {}
+                                  IndexType) {
+    StoreSDNodeBits.IsTruncating = IsTrunc;
+  }
+
+  /// Return true if the op does a truncation before store.
+  /// For integers this is the same as doing a TRUNCATE and storing the result.
+  /// For floats, it is the same as doing an FP_ROUND and storing the result.
+  bool isTruncatingStore() const { return StoreSDNodeBits.IsTruncating; }
 
   const SDValue &getValue() const { return getOperand(1); }
 

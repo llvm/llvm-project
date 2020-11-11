@@ -297,6 +297,10 @@ public:
     return getTLI()->isTypeLegal(VT);
   }
 
+  unsigned getRegUsageForType(Type *Ty) {
+    return getTLI()->getTypeLegalizationCost(DL, Ty).first;
+  }
+
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) {
     return BaseT::getGEPCost(PointeeType, Ptr, Operands);
@@ -1158,9 +1162,6 @@ public:
     FastMathFlags FMF = ICA.getFlags();
     switch (IID) {
     default:
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       break;
 
     case Intrinsic::cttz:

@@ -28,12 +28,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 2: Test that MIPS machine-specific tags can be dumped.
 ##         MIPS has a few long tag names. Show that we indent columns properly.
@@ -190,12 +190,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 3: Test that PPC machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=3 -o %t.ppc %s
@@ -222,12 +222,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 4: Test that PPC64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=4 -o %t.ppc64 %s
@@ -251,12 +251,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:      PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 5: Test that AARCH64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=5 -o %t.aarch64 %s
@@ -283,9 +283,9 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

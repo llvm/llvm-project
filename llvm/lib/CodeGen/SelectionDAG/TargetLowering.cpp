@@ -3396,21 +3396,30 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
   EVT CTVT = CTPOP.getValueType();
   SDValue CTOp = CTPOP.getOperand(0);
 
+  // If this is a vector CTPOP, keep the CTPOP if it is legal.
+  // TODO: Should we check if CTPOP is legal(or custom) for scalars?
+  if (VT.isVector() && TLI.isOperationLegal(ISD::CTPOP, CTVT))
+    return SDValue();
+
   // (ctpop x) u< 2 -> (x & x-1) == 0
   // (ctpop x) u> 1 -> (x & x-1) != 0
-  if ((Cond == ISD::SETULT && C1 == 2) || (Cond == ISD::SETUGT && C1 == 1)) {
-    // If this is a vector CTPOP, keep the CTPOP if it is legal.
-    // This based on X86's custom lowering for vector CTPOP which produces more
-    // instructions than the expansion here.
-    // TODO: Should we check if CTPOP is legal(or custom) for scalars?
-    if (VT.isVector() && TLI.isOperationLegal(ISD::CTPOP, CTVT))
+  if (Cond == ISD::SETULT || Cond == ISD::SETUGT) {
+    unsigned CostLimit = TLI.getCustomCtpopCost(CTVT, Cond);
+    if (C1.ugt(CostLimit + (Cond == ISD::SETULT)))
       return SDValue();
+    if (C1 == 0 && (Cond == ISD::SETULT))
+      return SDValue(); // This is handled elsewhere.
+
+    unsigned Passes = C1.getLimitedValue() - (Cond == ISD::SETULT);
 
     SDValue NegOne = DAG.getAllOnesConstant(dl, CTVT);
-    SDValue Add = DAG.getNode(ISD::ADD, dl, CTVT, CTOp, NegOne);
-    SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Add);
+    SDValue Result = CTOp;
+    for (unsigned i = 0; i < Passes; i++) {
+      SDValue Add = DAG.getNode(ISD::ADD, dl, CTVT, Result, NegOne);
+      Result = DAG.getNode(ISD::AND, dl, CTVT, Result, Add);
+    }
     ISD::CondCode CC = Cond == ISD::SETULT ? ISD::SETEQ : ISD::SETNE;
-    return DAG.getSetCC(dl, VT, And, DAG.getConstant(0, dl, CTVT), CC);
+    return DAG.getSetCC(dl, VT, Result, DAG.getConstant(0, dl, CTVT), CC);
   }
 
   // If ctpop is not supported, expand a power-of-2 comparison based on it.
@@ -3418,11 +3427,8 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
     // For scalars, keep CTPOP if it is legal or custom.
     if (!VT.isVector() && TLI.isOperationLegalOrCustom(ISD::CTPOP, CTVT))
       return SDValue();
-    // For vectors, keep CTPOP only if it is legal.
     // This is based on X86's custom lowering for CTPOP which produces more
     // instructions than the expansion here.
-    if (VT.isVector() && TLI.isOperationLegal(ISD::CTPOP, CTVT))
-      return SDValue();
 
     // (ctpop x) == 1 --> (x != 0) && ((x & x-1) == 0)
     // (ctpop x) != 1 --> (x == 0) || ((x & x-1) != 0)

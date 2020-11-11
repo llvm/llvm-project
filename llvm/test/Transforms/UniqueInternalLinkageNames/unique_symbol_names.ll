@@ -1,4 +1,5 @@
 ; RUN: opt -S -unique-internal-linkage-names < %s | FileCheck %s
+; RUN: opt -S -passes=unique-internal-linkage-names < %s | FileCheck %s
 
 source_filename = "foo.c"
 

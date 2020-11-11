@@ -12,9 +12,6 @@
 
 // -----
 
-// Index of the buffer for the second DMA is remapped.
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @loop_nest_1d() {
 func @loop_nest_1d() {
   %A = alloc() : memref<256 x f32>

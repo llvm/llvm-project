@@ -155,6 +155,64 @@ def testOperationOperands():
 run(testOperationOperands)
 
 
+# CHECK-LABEL: TEST: testOperationOperandsSlice
+def testOperationOperandsSlice():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      func @f1() {
+        %0 = "test.producer0"() : () -> i64
+        %1 = "test.producer1"() : () -> i64
+        %2 = "test.producer2"() : () -> i64
+        %3 = "test.producer3"() : () -> i64
+        %4 = "test.producer4"() : () -> i64
+        "test.consumer"(%0, %1, %2, %3, %4) : (i64, i64, i64, i64, i64) -> ()
+        return
+      }""")
+    func = module.body.operations[0]
+    entry_block = func.regions[0].blocks[0]
+    consumer = entry_block.operations[5]
+    assert len(consumer.operands) == 5
+    for left, right in zip(consumer.operands, consumer.operands[::-1][::-1]):
+      assert left == right
+
+    # CHECK: test.producer0
+    # CHECK: test.producer1
+    # CHECK: test.producer2
+    # CHECK: test.producer3
+    # CHECK: test.producer4
+    full_slice = consumer.operands[:]
+    for operand in full_slice:
+      print(operand)
+
+    # CHECK: test.producer0
+    # CHECK: test.producer1
+    first_two = consumer.operands[0:2]
+    for operand in first_two:
+      print(operand)
+
+    # CHECK: test.producer3
+    # CHECK: test.producer4
+    last_two = consumer.operands[3:]
+    for operand in last_two:
+      print(operand)
+
+    # CHECK: test.producer0
+    # CHECK: test.producer2
+    # CHECK: test.producer4
+    even = consumer.operands[::2]
+    for operand in even:
+      print(operand)
+
+    # CHECK: test.producer2
+    fourth = consumer.operands[::2][1::2]
+    for operand in fourth:
+      print(operand)
+
+
+run(testOperationOperandsSlice)
+
+
 # CHECK-LABEL: TEST: testDetachedOperation
 def testDetachedOperation():
   ctx = Context()
@@ -275,6 +333,104 @@ def testOperationResultList():
 
 
 run(testOperationResultList)
+
+
+# CHECK-LABEL: TEST: testOperationResultListSlice
+def testOperationResultListSlice():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      func @f1() {
+        "some.op"() : () -> (i1, i2, i3, i4, i5)
+        return
+      }
+    """)
+    func = module.body.operations[0]
+    entry_block = func.regions[0].blocks[0]
+    producer = entry_block.operations[0]
+
+    assert len(producer.results) == 5
+    for left, right in zip(producer.results, producer.results[::-1][::-1]):
+      assert left == right
+      assert left.result_number == right.result_number
+
+    # CHECK: Result 0, type i1
+    # CHECK: Result 1, type i2
+    # CHECK: Result 2, type i3
+    # CHECK: Result 3, type i4
+    # CHECK: Result 4, type i5
+    full_slice = producer.results[:]
+    for res in full_slice:
+      print(f"Result {res.result_number}, type {res.type}")
+
+    # CHECK: Result 1, type i2
+    # CHECK: Result 2, type i3
+    # CHECK: Result 3, type i4
+    middle = producer.results[1:4]
+    for res in middle:
+      print(f"Result {res.result_number}, type {res.type}")
+
+    # CHECK: Result 1, type i2
+    # CHECK: Result 3, type i4
+    odd = producer.results[1::2]
+    for res in odd:
+      print(f"Result {res.result_number}, type {res.type}")
+
+    # CHECK: Result 3, type i4
+    # CHECK: Result 1, type i2
+    inverted_middle = producer.results[-2:0:-2]
+    for res in inverted_middle:
+      print(f"Result {res.result_number}, type {res.type}")
+
+
+run(testOperationResultListSlice)
+
+
+# CHECK-LABEL: TEST: testOperationAttributes
+def testOperationAttributes():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(r"""
+    "some.op"() { some.attribute = 1 : i8,
+                  other.attribute = 3.0,
+                  dependent = "text" } : () -> ()
+  """, ctx)
+  op = module.body.operations[0]
+  assert len(op.attributes) == 3
+  iattr = IntegerAttr(op.attributes["some.attribute"])
+  fattr = FloatAttr(op.attributes["other.attribute"])
+  sattr = StringAttr(op.attributes["dependent"])
+  # CHECK: Attribute type i8, value 1
+  print(f"Attribute type {iattr.type}, value {iattr.value}")
+  # CHECK: Attribute type f64, value 3.0
+  print(f"Attribute type {fattr.type}, value {fattr.value}")
+  # CHECK: Attribute value text
+  print(f"Attribute value {sattr.value}")
+
+  # We don't know in which order the attributes are stored.
+  # CHECK-DAG: NamedAttribute(dependent="text")
+  # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
+  # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
+  for attr in op.attributes:
+    print(str(attr))
+
+  # Check that exceptions are raised as expected.
+  try:
+    op.attributes["does_not_exist"]
+  except KeyError:
+    pass
+  else:
+    assert False, "expected KeyError on accessing a non-existent attribute"
+
+  try:
+    op.attributes[42]
+  except IndexError:
+    pass
+  else:
+    assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+
+run(testOperationAttributes)
 
 
 # CHECK-LABEL: TEST: testOperationPrint

@@ -1,7 +1,5 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
-// CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
-
 // CHECK-LABEL: func @vector_transfer_ops(
 func @vector_transfer_ops(%arg0: memref<?x?xf32>,
                           %arg1 : memref<?x?xvector<4x3xf32>>,

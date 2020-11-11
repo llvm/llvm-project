@@ -259,6 +259,8 @@ public:
 
   bool isTypeLegal(Type *Ty) { return false; }
 
+  unsigned getRegUsageForType(Type *Ty) { return 1; }
+
   bool shouldBuildLookupTables() { return true; }
   bool shouldBuildLookupTablesForConstant(Constant *C) { return true; }
 

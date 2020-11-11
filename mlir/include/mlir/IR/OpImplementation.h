@@ -351,6 +351,12 @@ public:
   /// Parse a keyword, if present, into 'keyword'.
   virtual ParseResult parseOptionalKeyword(StringRef *keyword) = 0;
 
+  /// Parse a keyword, if present, and if one of the 'allowedValues',
+  /// into 'keyword'
+  virtual ParseResult
+  parseOptionalKeyword(StringRef *keyword,
+                       ArrayRef<StringRef> allowedValues) = 0;
+
   /// Parse a `(` token.
   virtual ParseResult parseLParen() = 0;
 

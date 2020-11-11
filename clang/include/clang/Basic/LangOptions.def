@@ -274,6 +274,9 @@ BENIGN_LANGOPT(DebuggerObjCLiteral , 1, 0, "debugger Objective-C literals and su
 BENIGN_LANGOPT(SpellChecking , 1, 1, "spell-checking")
 LANGOPT(SinglePrecisionConstants , 1, 0, "treating double-precision floating point constants as single precision constants")
 LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
+BENIGN_LANGOPT(CLNoSignedZero , 1, 0, "Permit Floating Point optimization without regard to signed zeros")
+COMPATIBLE_LANGOPT(CLUnsafeMath , 1, 0, "Unsafe Floating Point Math")
+COMPATIBLE_LANGOPT(CLFiniteMathOnly , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 /// FP_CONTRACT mode (on/off/fast).
 BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contraction type")
 COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")

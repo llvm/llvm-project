@@ -43,6 +43,16 @@ public:
   std::unique_ptr<FrontendAction> create() override {
     SymbolCollector::Options Opts;
     Opts.CountReferences = true;
+    Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
+      const auto *F = SM.getFileEntryForID(FID);
+      if (!F)
+        return false; // Skip invalid files.
+      auto AbsPath = getCanonicalPath(F, SM);
+      if (!AbsPath)
+        return false; // Skip files without absolute path.
+      std::lock_guard<std::mutex> Lock(FilesMu);
+      return Files.insert(*AbsPath).second; // Skip already processed files.
+    };
     return createStaticIndexingAction(
         Opts,
         [&](SymbolSlab S) {
@@ -56,7 +66,7 @@ public:
           }
         },
         [&](RefSlab S) {
-          std::lock_guard<std::mutex> Lock(SymbolsMu);
+          std::lock_guard<std::mutex> Lock(RefsMu);
           for (const auto &Sym : S) {
             // Deduplication happens during insertion.
             for (const auto &Ref : Sym.second)
@@ -64,7 +74,7 @@ public:
           }
         },
         [&](RelationSlab S) {
-          std::lock_guard<std::mutex> Lock(SymbolsMu);
+          std::lock_guard<std::mutex> Lock(RelsMu);
           for (const auto &R : S) {
             Relations.insert(R);
           }
@@ -82,9 +92,13 @@ public:
 
 private:
   IndexFileIn &Result;
+  std::mutex FilesMu;
+  llvm::StringSet<> Files;
   std::mutex SymbolsMu;
   SymbolSlab::Builder Symbols;
+  std::mutex RefsMu;
   RefSlab::Builder Refs;
+  std::mutex RelsMu;
   RelationSlab::Builder Relations;
 };
 

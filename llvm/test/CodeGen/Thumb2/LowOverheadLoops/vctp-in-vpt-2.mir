@@ -17,13 +17,13 @@
     br i1 %tmp, label %bb27, label %bb3
 
   bb3:                                              ; preds = %bb
-    call void @llvm.set.loop.iterations.i32(i32 %tmp6)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp6)
     br label %bb9
 
   bb9:                                              ; preds = %bb9, %bb3
     %lsr.iv2 = phi i32* [ %scevgep3, %bb9 ], [ %arg1, %bb3 ]
     %lsr.iv = phi i32* [ %scevgep, %bb9 ], [ %arg, %bb3 ]
-    %tmp7 = phi i32 [ %tmp6, %bb3 ], [ %tmp12, %bb9 ]
+    %tmp7 = phi i32 [ %start, %bb3 ], [ %tmp12, %bb9 ]
     %tmp8 = phi i32 [ %arg2, %bb3 ], [ %tmp11, %bb9 ]
     %lsr.iv24 = bitcast i32* %lsr.iv2 to <4 x i32>*
     %lsr.iv1 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -47,7 +47,7 @@
   }
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
   declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
@@ -163,7 +163,7 @@ body:             |
     VSTR_P0_off killed renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
     $r3 = tMOVr $r0, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.bb9:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

@@ -69,7 +69,7 @@ TEST_CASE(create_directory_symlinks) {
   scoped_test_env env;
   const path root = env.create_dir("dir");
   const path sym_dest_dead = env.make_env_path("dead");
-  const path dead_sym = env.create_symlink(sym_dest_dead, "dir/sym_dir");
+  const path dead_sym = env.create_directory_symlink(sym_dest_dead, "dir/sym_dir");
   const path target = env.make_env_path("dir/sym_dir/foo");
   {
     std::error_code ec = GetTestEC();
@@ -84,7 +84,7 @@ TEST_CASE(create_directory_symlinks) {
 TEST_CASE(create_directory_through_symlinks) {
   scoped_test_env env;
   const path root = env.create_dir("dir");
-  const path sym_dir = env.create_symlink(root, "sym_dir");
+  const path sym_dir = env.create_directory_symlink(root, "sym_dir");
   const path target = env.make_env_path("sym_dir/foo");
   const path resolved_target = env.make_env_path("dir/foo");
   TEST_REQUIRE(is_directory(sym_dir));

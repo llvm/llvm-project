@@ -19,8 +19,8 @@ class MachineRegisterInfo;
 
 namespace AMDGPU {
 
-/// Returns Base register, constant offset, and offset def point.
-std::tuple<Register, unsigned, MachineInstr *>
+/// Returns base register and constant offset.
+std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg);
 
 bool isLegalVOP3PShuffleMask(ArrayRef<int> Mask);

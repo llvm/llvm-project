@@ -44,3 +44,12 @@ def Blurmpq : Flag<["--"], "blurmp">;
 def Blurmpq_eq : Flag<["--"], "blurmp=">;
 
 def DashDash : Option<["--"], "", KIND_REMAINING_ARGS>;
+
+def marshalled_flag_0 : Flag<["-"], "marshalled-flag-0">,
+  MarshallingInfoFlag<"MarshalledFlag0", DefaultAnyOf<[]>>;
+def marshalled_flag_1 : Flag<["-"], "marshalled-flag-1">,
+  MarshallingInfoFlag<"MarshalledFlag1", DefaultAnyOf<[marshalled_flag_0]>>;
+def marshalled_flag_2 : Flag<["-"], "marshalled-flag-2">,
+  MarshallingInfoFlag<"MarshalledFlag2", DefaultAnyOf<[marshalled_flag_0]>>;
+def marshalled_flag_3 : Flag<["-"], "marshalled-flag-3">,
+  MarshallingInfoFlag<"MarshalledFlag3", DefaultAnyOf<[marshalled_flag_1, marshalled_flag_2]>>;

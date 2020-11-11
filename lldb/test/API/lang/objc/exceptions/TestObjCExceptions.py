@@ -15,7 +15,6 @@ class ObjCExceptionsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
     def test_objc_exceptions_at_throw(self):
         self.build()
 
@@ -126,7 +125,6 @@ class ObjCExceptionsTestCase(TestBase):
         for n in ["objc_exception_throw", "foo(int)", "main"]:
             self.assertTrue(n in names, "%s is in the exception backtrace (%s)" % (n, names))
 
-    @skipUnlessDarwin
     def test_objc_exceptions_at_abort(self):
         self.build()
 
@@ -183,7 +181,6 @@ class ObjCExceptionsTestCase(TestBase):
         for n in ["objc_exception_throw", "foo(int)", "rethrow(int)", "main"]:
             self.assertEqual(len([f for f in history_thread.frames if f.GetFunctionName() == n]), 1)
 
-    @skipUnlessDarwin
     def test_cxx_exceptions_at_abort(self):
         self.build()
 

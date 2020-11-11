@@ -171,8 +171,8 @@ define i128 @_Z24atomic_load_relaxed_i128RNSt3__16atomicInEE(%"struct.std::__1::
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
-; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s1, -8(, %s9)
@@ -196,8 +196,8 @@ define i128 @_Z24atomic_load_relaxed_u128RNSt3__16atomicIoEE(%"struct.std::__1::
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
-; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s1, -8(, %s9)
@@ -332,8 +332,8 @@ define i128 @_Z24atomic_load_acquire_i128RNSt3__16atomicInEE(%"struct.std::__1::
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
-; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 2, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s1, -8(, %s9)
@@ -357,8 +357,8 @@ define i128 @_Z24atomic_load_acquire_u128RNSt3__16atomicIoEE(%"struct.std::__1::
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
-; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 2, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s1, -8(, %s9)
@@ -493,8 +493,8 @@ define i128 @_Z24atomic_load_seq_cst_i128RNSt3__16atomicInEE(%"struct.std::__1::
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
-; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 5, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s1, -8(, %s9)
@@ -518,8 +518,8 @@ define i128 @_Z24atomic_load_seq_cst_u128RNSt3__16atomicIoEE(%"struct.std::__1::
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
-; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    lea %s2, -16(, %s9)
+; CHECK-NEXT:    or %s0, 16, (0)1
 ; CHECK-NEXT:    or %s3, 5, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s1, -8(, %s9)

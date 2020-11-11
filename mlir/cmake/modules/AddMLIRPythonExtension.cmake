@@ -24,12 +24,12 @@ function(add_mlir_python_extension libname extname)
   # symbols, which is better for development. Note that not all python
   # configurations provide build-time libraries to link against, in which
   # case, we fall back to MODULE linking.
-  if(PYTHON_LIBRARIES STREQUAL "" OR NOT MLIR_PYTHON_BINDINGS_VERSION_LOCKED)
+  if(Python3_LIBRARIES STREQUAL "" OR NOT MLIR_PYTHON_BINDINGS_VERSION_LOCKED)
     set(PYEXT_LINK_MODE MODULE)
     set(PYEXT_LIBADD)
   else()
     set(PYEXT_LINK_MODE SHARED)
-    set(PYEXT_LIBADD ${PYTHON_LIBRARIES})
+    set(PYEXT_LIBADD ${Python3_LIBRARIES})
   endif()
 
   # The actual extension library produces a shared-object or DLL and has
@@ -40,7 +40,7 @@ function(add_mlir_python_extension libname extname)
   )
 
   target_include_directories(${libname} PRIVATE
-    "${PYTHON_INCLUDE_DIRS}"
+    "${Python3_INCLUDE_DIRS}"
     "${pybind11_INCLUDE_DIR}"
   )
 
@@ -122,3 +122,25 @@ function(add_mlir_python_extension libname extname)
   endif()
 
 endfunction()
+
+function(add_mlir_dialect_python_bindings filename dialectname)
+  set(LLVM_TARGET_DEFINITIONS ${filename})
+  mlir_tablegen("${dialectname}.py" -gen-python-op-bindings
+                -bind-dialect=${dialectname})
+  if (${ARGC} GREATER 2)
+    set(suffix ${ARGV2})
+  else()
+    get_filename_component(suffix ${filename} NAME_WE)
+  endif()
+  set(tblgen_target "MLIRBindingsPython${suffix}")
+  add_public_tablegen_target(${tblgen_target})
+
+  add_custom_command(
+    TARGET ${tblgen_target} POST_BUILD
+    COMMENT "Copying generated python source \"dialects/${dialectname}.py\""
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      "${CMAKE_CURRENT_BINARY_DIR}/${dialectname}.py"
+      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialectname}.py")
+  add_dependencies(MLIRBindingsPythonIncGen ${tblgen_target})
+endfunction()
+

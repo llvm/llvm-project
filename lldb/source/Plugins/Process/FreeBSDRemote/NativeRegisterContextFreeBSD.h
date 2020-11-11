@@ -29,6 +29,8 @@ public:
   static NativeRegisterContextFreeBSD *
   CreateHostNativeRegisterContextFreeBSD(const ArchSpec &target_arch,
                                          NativeThreadProtocol &native_thread);
+  virtual llvm::Error
+  CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) = 0;
 
 protected:
   virtual NativeProcessFreeBSD &GetProcess();

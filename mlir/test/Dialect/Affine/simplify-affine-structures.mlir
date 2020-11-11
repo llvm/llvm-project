@@ -274,8 +274,6 @@ func @affine.apply(%N : index) {
 
 // -----
 
-// CHECK-DAG: #[[MAP_0D:.*]] = affine_map<() -> ()>
-
 // CHECK-LABEL: func @simplify_zero_dim_map
 func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {
   %out = affine.load %in[] : memref<f32>

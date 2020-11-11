@@ -1397,6 +1397,15 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
 
       break;
     }
+
+    case Decl::TemplateParamObject: {
+      // The template parameter object can be referenced from anywhere its type
+      // and value can be referenced.
+      auto *TPO = cast<TemplateParamObjectDecl>(D);
+      LinkageInfo LV = getLVForType(*TPO->getType(), computation);
+      LV.merge(getLVForValue(TPO->getValue(), computation));
+      return LV;
+    }
   }
 
   // Handle linkage for namespace-scope names.

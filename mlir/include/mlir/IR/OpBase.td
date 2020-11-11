@@ -1750,6 +1750,9 @@ def Terminator : NativeOpTrait<"IsTerminator">;
 // Op can be safely normalized in the presence of MemRefs with
 // non-identity maps.
 def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
+// Op can be systematically interconverted between scalar and vector/tensor
+// form by mapping elementwise based on the type.
+def ElementwiseMappable : NativeOpTrait<"ElementwiseMappable">;
 
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>

@@ -29,7 +29,7 @@ public:
   static NativeRegisterContextNetBSD *
   CreateHostNativeRegisterContextNetBSD(const ArchSpec &target_arch,
                                         NativeThreadProtocol &native_thread);
-  virtual Status
+  virtual llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) = 0;
 
 protected:

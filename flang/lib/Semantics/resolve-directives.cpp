@@ -243,6 +243,15 @@ public:
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
+    const auto &name{std::get<std::optional<parser::Name>>(x.t)};
+    if (name) {
+      ResolveOmpName(*name, Symbol::Flag::OmpDeclareSimd);
+    }
+    return true;
+  }
+  void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
@@ -273,7 +282,27 @@ public:
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyIn);
     return false;
   }
-
+  bool Pre(const parser::OmpLinearClause &x) {
+    std::visit(common::visitors{
+                   [&](const parser::OmpLinearClause::WithoutModifier
+                           &linearWithoutModifier) {
+                     ResolveOmpNameList(
+                         linearWithoutModifier.names, Symbol::Flag::OmpLinear);
+                   },
+                   [&](const parser::OmpLinearClause::WithModifier
+                           &linearWithModifier) {
+                     ResolveOmpNameList(
+                         linearWithModifier.names, Symbol::Flag::OmpLinear);
+                   },
+               },
+        x.u);
+    return false;
+  }
+  bool Pre(const parser::OmpAlignedClause &x) {
+    const auto &alignedNameList{std::get<std::list<parser::Name>>(x.t)};
+    ResolveOmpNameList(alignedNameList, Symbol::Flag::OmpAligned);
+    return false;
+  }
   void Post(const parser::Name &);
 
 private:
@@ -323,6 +352,9 @@ private:
   Symbol *ResolveOmp(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *ResolveOmp(Symbol &, Symbol::Flag, Scope &);
   Symbol *ResolveOmpCommonBlockName(const parser::Name *);
+  void ResolveOmpNameList(const std::list<parser::Name> &, Symbol::Flag);
+  void ResolveOmpName(const parser::Name &, Symbol::Flag);
+  Symbol *ResolveName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(
@@ -923,6 +955,34 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       }
     }
   } // within OpenMP construct
+}
+
+Symbol *OmpAttributeVisitor::ResolveName(const parser::Name *name) {
+  if (auto *resolvedSymbol{
+          name ? GetContext().scope.FindSymbol(name->source) : nullptr}) {
+    name->symbol = resolvedSymbol;
+    return resolvedSymbol;
+  } else {
+    return nullptr;
+  }
+}
+
+void OmpAttributeVisitor::ResolveOmpName(
+    const parser::Name &name, Symbol::Flag ompFlag) {
+  if (ResolveName(&name)) {
+    if (auto *resolvedSymbol{ResolveOmp(name, ompFlag, currScope())}) {
+      if (dataSharingAttributeFlags.test(ompFlag)) {
+        AddToContextObjectWithDSA(*resolvedSymbol, ompFlag);
+      }
+    }
+  }
+}
+
+void OmpAttributeVisitor::ResolveOmpNameList(
+    const std::list<parser::Name> &nameList, Symbol::Flag ompFlag) {
+  for (const auto &name : nameList) {
+    ResolveOmpName(name, ompFlag);
+  }
 }
 
 Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(

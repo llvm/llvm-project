@@ -97,28 +97,23 @@ ProgramHeaders:
     Flags:    [ PF_R, PF_X ]
     Offset:   0
     Align:    0x1000
-    Sections:
-      - Section: .note1
-      - Section: .note2
-      - Section: .text
+    FirstSec: .note1
+    LastSec:  .text
   - Type:     PT_LOAD
     Flags:    [ PF_R, PF_W ]
     VAddr:    0x1480    # Ensure Offset=VAddr (mod Align) if Offset changes
     Align:    0x1000
-    Sections:
-      - Section: .tdata
-      - Section: .bss
+    FirstSec: .tdata
+    LastSec:  .bss
   - Type:     PT_TLS
     Flags:    [ PF_R, PF_W ]
     VAddr:    0x1480    # Ensure Offset=VAddr (mod Align) if Offset changes
-    Sections:
-      - Section: .tdata
-      - Section: .tbss
+    FirstSec: .tdata
+    LastSec:  .tbss
   - Type:     PT_NOTE
     VAddr:    0x400
-    Sections:
-      - Section: .note1
-      - Section: .note2
+    FirstSec: .note1
+    LastSec:  .note2
 ...
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
@@ -175,9 +170,8 @@ ProgramHeaders:
     Flags:    [ PF_R, PF_X ]
     Offset:   0
     Align:    4096
-    Sections:
-      - Section: .text
-      - Section: .note
+    FirstSec: .text
+    LastSec:  .note
   - Type:     PT_LOAD
     Flags:    [ PF_R, PF_W ]
     Offset:   0x202

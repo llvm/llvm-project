@@ -62,6 +62,37 @@ substitution_test_with_value PROC
   ret
 substitution_test_with_value ENDP
 
+ambiguous_substitution_macro MACRO x, y
+  x&y BYTE 0
+ENDM
+
+ambiguous_substitution_test PROC
+; CHECK-LABEL: ambiguous_substitution_test:
+
+; should expand to ab BYTE 0
+  ambiguous_substitution_macro a, b
+
+; CHECK: ab:
+; CHECK-NOT: ay:
+; CHECK-NOT: xb:
+; CHECK-NOT: xy:
+ambiguous_substitution_test ENDP
+
+ambiguous_substitution_in_string_macro MACRO x, y
+  BYTE "x&y"
+ENDM
+
+ambiguous_substitution_in_string_test PROC
+; CHECK-LABEL: ambiguous_substitution_in_string_test:
+
+; should expand to BYTE "5y"
+  ambiguous_substitution_in_string_macro 5, 7
+
+; CHECK: .byte 53
+; CHECK-NEXT: .byte 121
+; CHECK-NOT: .byte
+ambiguous_substitution_in_string_test ENDP
+
 optional_parameter_macro MACRO a1:req, a2
   mov eax, a1
 IFNB <a2>

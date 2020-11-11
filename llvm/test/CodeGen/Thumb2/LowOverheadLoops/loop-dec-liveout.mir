@@ -18,7 +18,7 @@
     br i1 %tmp7, label %bb13, label %bb12
 
   bb12:                                             ; preds = %bb4
-    call void @llvm.set.loop.iterations.i32(i32 %tmp11)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp11)
     br label %bb28
 
   bb13:                                             ; preds = %bb28, %bb4
@@ -46,7 +46,7 @@
     ret i32 %res
 
   bb28:                                             ; preds = %bb28, %bb12
-    %lsr.iv15 = phi i32 [ %lsr.iv.next16, %bb28 ], [ %tmp11, %bb12 ]
+    %lsr.iv15 = phi i32 [ %lsr.iv.next16, %bb28 ], [ %start, %bb12 ]
     %lsr.iv = phi i32 [ %lsr.iv.next, %bb28 ], [ 0, %bb12 ]
     %tmp29 = phi i32 [ 0, %bb12 ], [ %tmp54, %bb28 ]
     %0 = bitcast i32* %arg1 to i8*
@@ -146,7 +146,7 @@
     br label %bb27
   }
 
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 
 ...
@@ -265,7 +265,8 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r8 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3 = nuw nsw t2ADDrs killed renamable $r4, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $r3
+  ; CHECK:   dead $lr = t2DLS renamable $r3
+  ; CHECK:   $lr = tMOVr killed $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
   ; CHECK: bb.5.bb28:
   ; CHECK:   successors: %bb.5(0x7c000000), %bb.6(0x04000000)
@@ -403,7 +404,7 @@ body:             |
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14, $noreg
     renamable $r8 = t2MOVi 0, 14, $noreg, $noreg
     renamable $r3 = nuw nsw t2ADDrs killed renamable $r4, killed renamable $r3, 19, 14, $noreg, $noreg
-    t2DoLoopStart renamable $r3
+    $lr = t2DoLoopStart renamable $r3
     $lr = tMOVr $r3, 14, $noreg
     renamable $r3, dead $cpsr = tMOVi8 0, 14, $noreg
 

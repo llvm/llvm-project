@@ -578,6 +578,11 @@ void OmpStructureChecker::Enter(const parser::OmpScheduleClause &x) {
             parser::ToUpperCaseLetters(
                 parser::OmpScheduleClause::EnumToString(kind)));
       }
+      if (const auto &chunkExpr{
+              std::get<std::optional<parser::ScalarIntExpr>>(x.t)}) {
+        RequiresPositiveParameter(
+            llvm::omp::Clause::OMPC_schedule, *chunkExpr, "chunk size");
+      }
     }
 
     if (ScheduleModifierHasType(

@@ -15,7 +15,7 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Content:         000000000000000000000000
 ProgramHeaders:
-  - Type: PT_NOTE
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .note.foo
+  - Type:     PT_NOTE
+    Flags:    [ PF_R ]
+    FirstSec: .note.foo
+    LastSec:  .note.foo

@@ -271,6 +271,9 @@ TransformationMode hasLICMVersioningTransformation(Loop *L);
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
 
+/// Returns true if Name is applied to TheLoop and enabled.
+bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
+
 /// Returns a loop's estimated trip count based on branch weight metadata.
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
 /// initialized with weight of loop's latch leading to the exit.

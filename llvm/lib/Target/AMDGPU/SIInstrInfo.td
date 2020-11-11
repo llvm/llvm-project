@@ -1438,32 +1438,29 @@ multiclass EXP_m<bit done> {
   let mayLoad = done, DisableWQM = 1 in {
     let isPseudo = 1, isCodeGenOnly = 1 in {
       def "" : EXP_Helper<done>,
-               SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.NONE>;
+               SIMCInstr <NAME, SIEncodingFamily.NONE>;
     }
 
     let done = done in {
       def _si : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
+                SIMCInstr <NAME, SIEncodingFamily.SI>,
                 EXPe {
         let AssemblerPredicate = isGFX6GFX7;
         let DecoderNamespace = "GFX6GFX7";
-        let DisableDecoder = DisableSIDecoder;
       }
 
       def _vi : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
+                SIMCInstr <NAME, SIEncodingFamily.VI>,
                 EXPe_vi {
         let AssemblerPredicate = isGFX8GFX9;
         let DecoderNamespace = "GFX8";
-        let DisableDecoder = DisableVIDecoder;
       }
 
       def _gfx10 : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX10>,
-                EXPe {
+                   SIMCInstr <NAME, SIEncodingFamily.GFX10>,
+                   EXPe {
         let AssemblerPredicate = isGFX10Plus;
         let DecoderNamespace = "GFX10";
-        let DisableDecoder = DisableSIDecoder;
       }
     }
   }
@@ -2379,7 +2376,6 @@ class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe <op>,
   SIMCInstr<opName, encodingFamily> {
-  let DisableDecoder = DisableSIDecoder;
 }
 
 class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
@@ -2389,7 +2385,6 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   SIMCInstr<opName, SIEncodingFamily.VI> {
   let AssemblerPredicate = VIAssemblerPredicate;
   let DecoderNamespace = "GFX8";
-  let DisableDecoder = DisableVIDecoder;
 }
 
 // FIXME-GFX10: WIP.

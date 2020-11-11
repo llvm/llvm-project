@@ -144,6 +144,11 @@ class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
 
 // Helpers for defining marshalling information.
 
+class DefaultAnyOf<list<Option> defaults> {
+  code DefaultValue = !foldl("false", defaults, accumulator, option,
+                             !strconcat(accumulator, " || ", !cast<string>(option.KeyPath)));
+}
+
 class MarshallingInfo<code keypath, code defaultvalue> {
   code KeyPath = keypath;
   code DefaultValue = defaultvalue;
@@ -154,8 +159,8 @@ class MarshallingInfoString<code keypath, code defaultvalue, code normalizerrett
   code NormalizerRetTy = normalizerretty;
 }
 
-class MarshallingInfoFlag<code keypath, code defaultvalue>
-  : MarshallingInfo<keypath, defaultvalue> {
+class MarshallingInfoFlag<code keypath, DefaultAnyOf defaults = DefaultAnyOf<[]>>
+  : MarshallingInfo<keypath, defaults.DefaultValue> {
   string MarshallingKind = "flag";
 }
 

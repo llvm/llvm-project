@@ -13,9 +13,10 @@ define void @callee_no_stack() #0 {
 ; GCN-LABEL: {{^}}callee_no_stack_no_fp_elim_all:
 ; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
-; GCN-NEXT: s_mov_b32 s4, s33
+; MUBUF-NEXT:   s_mov_b32 [[FP_COPY:s4]], s33
+; FLATSCR-NEXT: s_mov_b32 [[FP_COPY:s0]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
-; GCN-NEXT: s_mov_b32 s33, s4
+; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack_no_fp_elim_all() #1 {
   ret void
@@ -48,7 +49,8 @@ define void @callee_with_stack() #0 {
 ; GCN-LABEL: {{^}}callee_with_stack_no_fp_elim_all:
 ; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
-; GCN-NEXT: s_mov_b32 s4, s33
+; MUBUF-NEXT:   s_mov_b32 [[FP_COPY:s4]], s33
+; FLATSCR-NEXT: s_mov_b32 [[FP_COPY:s0]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
 ; MUBUF-NEXT:   s_add_u32 s32, s32, 0x200
 ; FLATSCR-NEXT: s_add_u32 s32, s32, 8
@@ -57,7 +59,7 @@ define void @callee_with_stack() #0 {
 ; FLATSCR-NEXT: scratch_store_dword off, v0, s33 offset:4{{$}}
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x200
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 8
-; GCN-NEXT: s_mov_b32 s33, s4
+; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_all() #1 {
@@ -100,8 +102,10 @@ define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
 
 ; GCN: s_swappc_b64
 
-; GCN-DAG: v_readlane_b32 s5, [[CSR_VGPR]]
-; GCN-DAG: v_readlane_b32 s4, [[CSR_VGPR]]
+; MUBUF-DAG: v_readlane_b32 s5, [[CSR_VGPR]]
+; MUBUF-DAG: v_readlane_b32 s4, [[CSR_VGPR]]
+; FLATSCR-DAG: v_readlane_b32 s0, [[CSR_VGPR]]
+; FLATSCR-DAG: v_readlane_b32 s1, [[CSR_VGPR]]
 
 ; MUBUF:    s_sub_u32 s32, s32, 0x400{{$}}
 ; FLATSCR:  s_sub_u32 s32, s32, 16{{$}}
@@ -140,8 +144,10 @@ define void @callee_with_stack_and_call() #0 {
 ; GCN-DAG: v_writelane_b32 [[CSR_VGPR]], s31, 1
 ; GCN: s_swappc_b64
 
-; GCN-DAG: v_readlane_b32 s4, v40, 0
-; GCN-DAG: v_readlane_b32 s5, v40, 1
+; MUBUF-DAG: v_readlane_b32 s4, v40, 0
+; MUBUF-DAG: v_readlane_b32 s5, v40, 1
+; FLATSCR-DAG: v_readlane_b32 s0, v40, 0
+; FLATSCR-DAG: v_readlane_b32 s1, v40, 1
 
 ; MUBUF:   s_sub_u32 s32, s32, 0x400
 ; FLATSCR: s_sub_u32 s32, s32, 16
@@ -238,9 +244,10 @@ define void @spill_only_csr_sgpr() #0 {
 ; FLATSCR: scratch_load_dword v41, off, s33 ; 4-byte Folded Reload
 ; MUBUF:        s_add_u32 s32, s32, 0x300
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x300
+; MUBUF-NEXT:   s_mov_b32 s33, s4
 ; FLATSCR:      s_add_u32 s32, s32, 12
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 12
-; GCN-NEXT: s_mov_b32 s33, s4
+; FLATSCR-NEXT: s_mov_b32 s33, s0
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
@@ -323,7 +330,7 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 
 ; GCN-LABEL: {{^}}realign_stack_no_fp_elim:
 ; GCN: s_waitcnt
-; GCN-NEXT:     s_mov_b32 s4, s33
+; GCN-NEXT:     s_mov_b32
 ; MUBUF-NEXT:   s_add_u32 [[SCRATCH:s[0-9]+]], s32, 0x7ffc0
 ; FLATSCR-NEXT: s_add_u32 [[SCRATCH:s[0-9]+]], s32, 0x1fff
 ; MUBUF-NEXT:   s_and_b32 s33, [[SCRATCH]], 0xfff80000
@@ -335,7 +342,7 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; FLATSCR-NEXT: scratch_store_dword off, [[ZERO]], s33
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x100000
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 0x4000
-; GCN-NEXT: s_mov_b32 s33, s4
+; GCN-NEXT: s_mov_b32
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @realign_stack_no_fp_elim() #1 {
@@ -356,13 +363,14 @@ define void @realign_stack_no_fp_elim() #1 {
 ; GCN: ;;#ASMSTART
 ; MUBUF:   s_add_u32 s32, s32, 0x200
 ; FLATSCR: s_add_u32 s32, s32, 8
-; GCN: v_readlane_b32 s4, v1, 0
-; GCN-NEXT:     v_readlane_b32 s5, v1, 1
+; GCN: v_readlane_b32
+; GCN-NEXT:     v_readlane_b32
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x200
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 8
-; GCN-NEXT: v_readlane_b32 s33, v1, 2
-; GCN-NEXT: s_waitcnt vmcnt(0)
-; GCN-NEXT: s_setpc_b64 s[4:5]
+; GCN-NEXT:     v_readlane_b32 s33, v1, 2
+; GCN-NEXT:     s_waitcnt vmcnt(0)
+; MUBUF-NEXT:   s_setpc_b64 s[4:5]
+; FLATSCR-NEXT: s_setpc_b64 s[0:1]
 define void @no_unused_non_csr_sgpr_for_fp() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
@@ -395,8 +403,8 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; FLATSCR:     s_add_u32 s32, s32, 12{{$}}
 
 ; GCN-DAG:      ;;#ASMSTART
-; GCN-DAG:      v_readlane_b32 s4, [[CSR_VGPR]], 0
-; GCN:          v_readlane_b32 s5, [[CSR_VGPR]], 1
+; GCN-DAG:      v_readlane_b32
+; GCN:          v_readlane_b32
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x300{{$}}
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 12{{$}}
 ; GCN-NEXT: v_readlane_b32 s33, [[CSR_VGPR]], 2
@@ -446,7 +454,8 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; FLATSCR-DAG: scratch_store_dword
 
 ; GCN: ;;#ASMSTART
-; GCN: v_readlane_b32 s5, [[CSR_VGPR]], 1
+; MUBUF:   v_readlane_b32 s5, [[CSR_VGPR]], 1
+; FLATSCR: v_readlane_b32 s1, [[CSR_VGPR]], 1
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x40300{{$}}
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 0x100c{{$}}
 ; GCN-NEXT: v_readlane_b32 s33, [[CSR_VGPR]], 2
@@ -496,7 +505,7 @@ define internal void @local_empty_func() #0 {
 ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33{{$}}
 ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s33{{$}}
 ; GCN:     s_swappc_b64
-; MUBUF:   s_sub_u32 s32, s32, 0x400
+; MUBUF:   s_sub_u32
 ; FLATSCR: s_sub_u32 s32, s32, 16
 ; GCN: s_mov_b32 s33, [[FP_COPY:s[0-9]+]]
 define void @ipra_call_with_stack() #0 {
@@ -508,20 +517,21 @@ define void @ipra_call_with_stack() #0 {
 
 ; With no free registers, we must spill the FP to memory.
 ; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_memory:
-; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GCN: v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
+; MUBUF:   s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; MUBUF:   v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
 ; MUBUF:   buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:4
-; FLATSCR: scratch_store_dword off, [[TMP_VGPR1]], s32 offset:4
-; GCN: s_mov_b64 exec, [[COPY_EXEC1]]
-; GCN: s_mov_b32 s33, s32
-; GCN: s_or_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; MUBUF:   s_mov_b64 exec, [[COPY_EXEC1]]
+; FLATSCR: s_mov_b32 s0, s33
+; GCN:     s_mov_b32 s33, s32
+; MUBUF:   s_or_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF:   buffer_load_dword [[TMP_VGPR2:v[0-9]+]], off, s[0:3], s32 offset:4
-; FLATSCR: scratch_load_dword [[TMP_VGPR2:v[0-9]+]], off, s32 offset:4
-; GCN: s_waitcnt vmcnt(0)
-; GCN: v_readfirstlane_b32 s33, [[TMP_VGPR2]]
-; GCN: s_mov_b64 exec, [[COPY_EXEC2]]
-; GCN: s_setpc_b64
-; GCN: ScratchSize: 8
+; FLATSCR: s_mov_b32 s33, s0
+; MUBUF:   s_waitcnt vmcnt(0)
+; MUBUF:   v_readfirstlane_b32 s33, [[TMP_VGPR2]]
+; MUBUF:   s_mov_b64 exec, [[COPY_EXEC2]]
+; GCN:     s_setpc_b64
+; MUBUF:   ScratchSize: 8
+; FLATSCR: ScratchSize: 0
 define void @callee_need_to_spill_fp_to_memory() #3 {
   call void asm sideeffect "; clobber nonpreserved SGPRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
@@ -541,20 +551,19 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; need to spill the FP to memory if there are no free lanes in the reserved
 ; VGPR.
 ; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_memory_full_reserved_vgpr:
-; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GCN: v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
+; MUBUF:   s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; MUBUF:   v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
 ; MUBUF:   buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:[[OFF:[0-9]+]]
-; FLATSCR: scratch_store_dword off, [[TMP_VGPR1]], s32 offset:[[OFF:[0-9]+]]
-; GCN: s_mov_b64 exec, [[COPY_EXEC1]]
+; MUBUF:   s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN-NOT: v_writelane_b32 v40, s33
-; GCN: s_mov_b32 s33, s32
+; MUBUF:   s_mov_b32 s33, s32
+; FLATSCR: s_mov_b32 s33, s0
 ; GCN-NOT: v_readlane_b32 s33, v40
-; GCN: s_or_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; MUBUF:   s_or_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF:   buffer_load_dword [[TMP_VGPR2:v[0-9]+]], off, s[0:3], s32 offset:[[OFF]]
-; FLATSCR: scratch_load_dword [[TMP_VGPR2:v[0-9]+]], off, s32 offset:[[OFF]]
-; GCN: v_readfirstlane_b32 s33, [[TMP_VGPR2]]
-; GCN: s_mov_b64 exec, [[COPY_EXEC2]]
-; GCN: s_setpc_b64
+; MUBUF:   v_readfirstlane_b32 s33, [[TMP_VGPR2]]
+; MUBUF:   s_mov_b64 exec, [[COPY_EXEC2]]
+; GCN:     s_setpc_b64
 define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
@@ -578,14 +587,10 @@ define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
 
 ; If the size of the offset exceeds the MUBUF offset field we need another
 ; scratch VGPR to hold the offset.
-; GCN: s_or_saveexec_b64 s[4:5], -1
 ; MUBUF: v_mov_b32_e32 v0, s33
 ; GCN-NOT: v_mov_b32_e32 v0, 0x1008
 ; MUBUF-NEXT: v_mov_b32_e32 v1, 0x1008
 ; MUBUF-NEXT: buffer_store_dword v0, v1, s[0:3], s32 offen ; 4-byte Folded Spill
-; FLATSCR-NEXT: v_mov_b32_e32 v0, s33
-; FLATSCR-NEXT: s_add_u32 [[SOFF:s[0-9]+]], s32, 0x1008
-; FLATSCR-NEXT: scratch_store_dword off, v0, [[SOFF]] ; 4-byte Folded Spill
 define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval align 4 %arg) #3 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca

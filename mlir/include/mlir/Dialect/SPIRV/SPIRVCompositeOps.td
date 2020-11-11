@@ -171,7 +171,8 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
 // -----
 
 def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic",
-            [NoSideEffect, TypesMatchWith<"type of 'value' matches element type of 'vector'",
+            [NoSideEffect,
+            TypesMatchWith<"type of 'result' matches element type of 'vector'",
                      "vector", "result",
                      "$_self.cast<mlir::VectorType>().getElementType()">]> {
   let summary = [{
@@ -221,6 +222,69 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic",
     $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index) 
   }];
   
+}
+
+// -----
+
+def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic",
+        [NoSideEffect,
+        TypesMatchWith<"type of 'component' matches element type of 'vector'",
+                "vector", "component",
+                "$_self.cast<mlir::VectorType>().getElementType()">,
+                AllTypesMatch<["vector", "result"]>]> {
+  let summary = [{
+    Make a copy of a vector, with a single, variably selected, component
+    modified.
+  }];
+
+  let description = [{
+    Result Type must be an OpTypeVector.
+
+    Vector must have the same type as Result Type and is the vector that the
+    non-written components are copied from.
+
+    Component is the value supplied for the component selected by Index. It
+    must have the same type as the type of components in Result Type.
+
+    Index must be a scalar integer. It is interpreted as a 0-based index of
+    which component to modify.
+
+    Behavior is undefined if Index's value is less than zero or greater than
+    or equal to the number of components in Vector.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scalar-type ::= integer-type | float-type | boolean-type 
+    vector-insert-dynamic-op ::= `spv.VectorInsertDynamic ` ssa-use `,`
+                                  ssa-use `[` ssa-use `]`
+                                  `:` `vector<` integer-literal `x` scalar-type `>` `,`
+                                  integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %scalar = ... : f32
+    %2 = spv.VectorInsertDynamic %scalar %0[%1] : f32, vector<8xf32>, i32
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_Vector:$vector,
+    SPV_Scalar:$component,
+    SPV_Integer:$index
+  );
+
+  let results = (outs
+    SPV_Vector:$result
+  );
+  
+  let verifier = [{ return success(); }];
+  
+  let assemblyFormat = [{
+    $component `,` $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index) 
+  }];
 }
 
 // -----

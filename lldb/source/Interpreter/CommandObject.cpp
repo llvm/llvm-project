@@ -930,11 +930,11 @@ const char *CommandObject::GetArgumentDescriptionAsCString(
 }
 
 Target &CommandObject::GetDummyTarget() {
-  return *m_interpreter.GetDebugger().GetDummyTarget();
+  return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
 Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return *m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
 }
 
 Target &CommandObject::GetSelectedTarget() {

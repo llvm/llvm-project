@@ -18,11 +18,11 @@
     %trip.count.minus.1 = add i32 %N, -1
     %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
     %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-    call void @llvm.set.loop.iterations.i32(i32 %tmp5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
-    %lsr.iv = phi i32 [ %lsr.iv.next, %vector.body ], [ %tmp5, %vector.ph ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
     %lsr.iv3 = phi i32* [ %scevgep4, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv1 = phi i32* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.ind = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
@@ -54,7 +54,7 @@
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 ...
 ---
@@ -165,7 +165,7 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $r3 = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    t2DoLoopStart renamable $r3
+    $lr = t2DoLoopStart renamable $r3
     $r4 = tMOVr killed $r3, 14 /* CC::al */, $noreg
     renamable $r3 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
     renamable $q0 = MVE_VLDRWU32 killed renamable $r3, 0, 0, $noreg :: (load 16 from constant-pool)

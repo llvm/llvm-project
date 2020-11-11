@@ -51,9 +51,8 @@ Sections:
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x0
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+    FirstSec: .dynstr
+    LastSec:  .dynamic
 
 ## Check what we print when the dynamic string table is empty.
 # RUN: yaml2obj %s --docnum=2 -o %t2
@@ -94,8 +93,7 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x0
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x0
+    FirstSec: .dynstr
+    LastSec:  .dynamic

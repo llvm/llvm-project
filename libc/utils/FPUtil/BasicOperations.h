@@ -62,6 +62,22 @@ static inline T fmax(T x, T y) {
   }
 }
 
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T fdim(T x, T y) {
+  FPBits<T> bitx(x), bity(y);
+
+  if (bitx.isNaN()) {
+    return x;
+  }
+
+  if (bity.isNaN()) {
+    return y;
+  }
+
+  return (x > y ? x - y : 0);
+}
+
 } // namespace fputil
 } // namespace __llvm_libc
 

@@ -69,3 +69,18 @@ func @test_unknown_dynamically_legal() {
   "foo.unknown_op"() {} : () -> ()
   "test.return"() : () -> ()
 }
+
+// -----
+
+// Test that region inlining can be properly undone.
+func @test_undo_region_inline() {
+  "test.region"() ({
+    ^bb1(%i0: i64):
+       // expected-error@+1 {{failed to legalize operation 'std.br'}}
+       br ^bb2(%i0 : i64)
+    ^bb2(%i1: i64):
+      "test.invalid"(%i1) : (i64) -> ()
+  }) {} : () -> ()
+
+  "test.return"() : () -> ()
+}

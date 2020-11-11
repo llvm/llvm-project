@@ -2980,6 +2980,18 @@ TEST_F(PopulateSwitchTest, Test) {
             void function() { switch (ns::A) {case ns::A:break;} }
           )"",
       },
+      {
+          // Duplicated constant names
+          Function,
+          R""(enum Enum {A,B,b=B}; ^switch (A) {})"",
+          R""(enum Enum {A,B,b=B}; switch (A) {case A:case B:break;})"",
+      },
+      {
+          // Duplicated constant names all in switch
+          Function,
+          R""(enum Enum {A,B,b=B}; ^switch (A) {case A:case B:break;})"",
+          "unavailable",
+      },
   };
 
   for (const auto &Case : Cases) {
