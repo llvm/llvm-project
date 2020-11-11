@@ -2907,10 +2907,11 @@ private:
   }
 
   void lowerMod(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    // TODO: Implement instantiation of module data.
-    // llvm::DenseMap<std::size_t, mlir::Value> storeMap;
+    llvm::DenseMap<std::size_t, mlir::Value> storeMap;
+    if (!mod.getOrderedSymbolTable().empty())
+      TODO("modules");
     // for (const auto &var : mod.getOrderedSymbolTable())
-    //   instantiateVar(var, storeMap);
+    //  instantiateVar(var, storeMap);
     for (auto &f : mod.nestedFunctions)
       lowerFunc(f);
   }
