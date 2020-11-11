@@ -75,6 +75,7 @@ def use_lldb_substitutions(config):
         ]
 
     _disallow(config, 'lldb')
+    _disallow(config, 'lldb-server')
     _disallow(config, 'debugserver')
     _disallow(config, 'platformserver')
 
