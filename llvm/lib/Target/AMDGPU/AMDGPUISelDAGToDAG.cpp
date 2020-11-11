@@ -191,6 +191,9 @@ private:
   bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
+  bool isBaseWithConstantOffset64(SDValue Addr, SDValue &LHS,
+                                  SDValue &RHS) const;
+
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
 
   SDNode *glueCopyToOp(SDNode *N, SDValue NewChain, SDValue Glue) const;
@@ -928,6 +931,53 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
          Term->getMetadata("structurizecfg.uniform");
 }
 
+static bool getBaseWithOffsetUsingSplitOR(SelectionDAG &DAG, SDValue Addr,
+                                          SDValue &N0, SDValue &N1) {
+  if (Addr.getValueType() == MVT::i64 && Addr.getOpcode() == ISD::BITCAST &&
+      Addr.getOperand(0).getOpcode() == ISD::BUILD_VECTOR) {
+    // As we split 64-bit `or` earlier, it's complicated pattern to match, i.e.
+    // (i64 (bitcast (v2i32 (build_vector
+    //                        (or (extract_vector_elt V, 0), OFFSET),
+    //                        (extract_vector_elt V, 1)))))
+    SDValue Lo = Addr.getOperand(0).getOperand(0);
+    if (Lo.getOpcode() == ISD::OR && DAG.isBaseWithConstantOffset(Lo)) {
+      SDValue BaseLo = Lo.getOperand(0);
+      SDValue BaseHi = Addr.getOperand(0).getOperand(1);
+      // Check that split base (Lo and Hi) are extracted from the same one.
+      if (BaseLo.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          BaseHi.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          BaseLo.getOperand(0) == BaseHi.getOperand(0) &&
+          // Lo is statically extracted from index 0.
+          isa<ConstantSDNode>(BaseLo.getOperand(1)) &&
+          BaseLo.getConstantOperandVal(1) == 0 &&
+          // Hi is statically extracted from index 0.
+          isa<ConstantSDNode>(BaseHi.getOperand(1)) &&
+          BaseHi.getConstantOperandVal(1) == 1) {
+        N0 = BaseLo.getOperand(0).getOperand(0);
+        N1 = Lo.getOperand(1);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::isBaseWithConstantOffset64(SDValue Addr, SDValue &LHS,
+                                                    SDValue &RHS) const {
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    LHS = Addr.getOperand(0);
+    RHS = Addr.getOperand(1);
+    return true;
+  }
+
+  if (getBaseWithOffsetUsingSplitOR(*CurDAG, Addr, LHS, RHS)) {
+    assert(LHS && RHS && isa<ConstantSDNode>(RHS));
+    return true;
+  }
+
+  return false;
+}
+
 StringRef AMDGPUDAGToDAGISel::getPassName() const {
   return "AMDGPU DAG->DAG Pattern Instruction Selection";
 }
@@ -1660,37 +1710,6 @@ static MemSDNode* findMemSDNode(SDNode *N) {
   llvm_unreachable("cannot find MemSDNode in the pattern!");
 }
 
-static bool getBaseWithOffsetUsingSplitOR(SelectionDAG &DAG, SDValue Addr,
-                                          SDValue &N0, SDValue &N1) {
-  if (Addr.getValueType() == MVT::i64 && Addr.getOpcode() == ISD::BITCAST &&
-      Addr.getOperand(0).getOpcode() == ISD::BUILD_VECTOR) {
-    // As we split 64-bit `or` earlier, it's complicated pattern to match, i.e.
-    // (i64 (bitcast (v2i32 (build_vector
-    //                        (or (extract_vector_elt V, 0), OFFSET),
-    //                        (extract_vector_elt V, 1)))))
-    SDValue Lo = Addr.getOperand(0).getOperand(0);
-    if (Lo.getOpcode() == ISD::OR && DAG.isBaseWithConstantOffset(Lo)) {
-      SDValue BaseLo = Lo.getOperand(0);
-      SDValue BaseHi = Addr.getOperand(0).getOperand(1);
-      // Check that split base (Lo and Hi) are extracted from the same one.
-      if (BaseLo.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          BaseHi.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          BaseLo.getOperand(0) == BaseHi.getOperand(0) &&
-          // Lo is statically extracted from index 0.
-          isa<ConstantSDNode>(BaseLo.getOperand(1)) &&
-          BaseLo.getConstantOperandVal(1) == 0 &&
-          // Hi is statically extracted from index 0.
-          isa<ConstantSDNode>(BaseHi.getOperand(1)) &&
-          BaseHi.getConstantOperandVal(1) == 1) {
-        N0 = BaseLo.getOperand(0).getOperand(0);
-        N1 = Lo.getOperand(1);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 template <bool IsSigned>
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
                                           SDValue Addr,
@@ -1704,13 +1723,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
       (!Subtarget->hasFlatSegmentOffsetBug() ||
        AS != AMDGPUAS::FLAT_ADDRESS)) {
     SDValue N0, N1;
-    if (CurDAG->isBaseWithConstantOffset(Addr)) {
-      N0 = Addr.getOperand(0);
-      N1 = Addr.getOperand(1);
-    } else if (getBaseWithOffsetUsingSplitOR(*CurDAG, Addr, N0, N1)) {
-      assert(N0 && N1 && isa<ConstantSDNode>(N1));
-    }
-    if (N0 && N1) {
+    if (isBaseWithConstantOffset64(Addr, N0, N1)) {
       uint64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
       const SIInstrInfo *TII = Subtarget->getInstrInfo();
