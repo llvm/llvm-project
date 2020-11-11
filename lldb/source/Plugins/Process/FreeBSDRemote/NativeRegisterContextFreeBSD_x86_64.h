@@ -70,11 +70,7 @@ private:
 
   // Private member variables.
   std::array<uint8_t, sizeof(struct reg)> m_gpr;
-#if defined(__x86_64__)
-  struct fpreg m_fpr;
-#else
-  struct xmmreg m_fpr;
-#endif
+  std::array<uint8_t, 512> m_fpr; // FXSAVE
   struct dbreg m_dbr;
   std::vector<uint8_t> m_xsave;
   std::array<uint32_t, MaxXSaveSet + 1> m_xsave_offsets;
@@ -84,6 +80,8 @@ private:
 
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);
+
+  size_t GetFPROffset() const;
 };
 
 } // namespace process_freebsd
