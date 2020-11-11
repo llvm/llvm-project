@@ -66,6 +66,40 @@ static uptr RingBufferSize() {
   return 0;
 }
 
+struct ThreadListHead {
+  Thread *list_;
+
+  ThreadListHead() : list_(nullptr) {}
+
+  void Push(Thread *t) {
+    t->next_ = list_;
+    list_ = t;
+  }
+
+  Thread *Pop() {
+    Thread *t = list_;
+    if (t)
+      list_ = t->next_;
+    return t;
+  }
+
+  void Remove(Thread *t) {
+    Thread **cur = &list_;
+    while (*cur != t) cur = &(*cur)->next_;
+    CHECK(*cur && "thread not found");
+    *cur = (*cur)->next_;
+  }
+
+  template <class CB>
+  void ForEach(CB cb) {
+    Thread *t = list_;
+    while (t) {
+      cb(t);
+      t = t->next_;
+    }
+  }
+};
+
 struct ThreadStats {
   uptr n_live_threads;
   uptr total_stack_size;
@@ -89,15 +123,14 @@ class HwasanThreadList {
     Thread *t;
     {
       SpinMutexLock l(&list_mutex_);
-      if (!free_list_.empty()) {
-        t = free_list_.back();
-        free_list_.pop_back();
+      t = free_list_.Pop();
+      if (t) {
         uptr start = (uptr)t - ring_buffer_size_;
         internal_memset((void *)start, 0, ring_buffer_size_ + sizeof(Thread));
       } else {
         t = AllocThread();
       }
-      live_list_.push_back(t);
+      live_list_.Push(t);
     }
     t->Init((uptr)t - ring_buffer_size_, ring_buffer_size_);
     AddThreadStats(t);
@@ -109,21 +142,12 @@ class HwasanThreadList {
     ReleaseMemoryPagesToOS(start, start + thread_alloc_size_);
   }
 
-  void RemoveThreadFromLiveList(Thread *t) {
-    for (Thread *&t2 : live_list_)
-      if (t2 == t) {
-        live_list_.erase(&t2);
-        return;
-      }
-    CHECK(0 && "thread not found in live list");
-  }
-
   void ReleaseThread(Thread *t) {
     RemoveThreadStats(t);
     t->Destroy();
     SpinMutexLock l(&list_mutex_);
-    RemoveThreadFromLiveList(t);
-    free_list_.push_back(t);
+    live_list_.Remove(t);
+    free_list_.Push(t);
     DontNeedThread(t);
   }
 
@@ -142,7 +166,7 @@ class HwasanThreadList {
   template <class CB>
   void VisitAllLiveThreads(CB cb) {
     SpinMutexLock l(&list_mutex_);
-    for (Thread *t : live_list_) cb(t);
+    live_list_.ForEach(cb);
   }
 
   void AddThreadStats(Thread *t) {
@@ -177,8 +201,8 @@ class HwasanThreadList {
   uptr ring_buffer_size_;
   uptr thread_alloc_size_;
 
-  InternalMmapVector<Thread *> free_list_;
-  InternalMmapVector<Thread *> live_list_;
+  ThreadListHead free_list_;
+  ThreadListHead live_list_;
   SpinMutex list_mutex_;
 
   ThreadStats stats_;
