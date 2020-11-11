@@ -236,7 +236,7 @@ bool VEDAGToDAGISel::selectADDRzii(SDValue Addr, SDValue &Base, SDValue &Index,
       Addr.getOpcode() == ISD::TargetGlobalTLSAddress)
     return false; // direct calls.
 
-  if (ConstantSDNode *CN = cast<ConstantSDNode>(Addr)) {
+  if (auto *CN = dyn_cast<ConstantSDNode>(Addr)) {
     if (isInt<32>(CN->getSExtValue())) {
       Base = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
       Index = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
