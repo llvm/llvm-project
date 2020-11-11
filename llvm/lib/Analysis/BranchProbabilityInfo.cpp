@@ -1090,15 +1090,16 @@ BranchProbabilityInfo::getHotSucc(const BasicBlock *BB) const {
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           unsigned IndexInSuccessors) const {
-  auto I = Probs.find(Src);
-  if (I == Probs.end())
-    return {1, static_cast<uint32_t>(succ_size(Src))};
+  auto I = Probs.find(std::make_pair(Src, IndexInSuccessors));
+  assert((Probs.end() == Probs.find(std::make_pair(Src, 0))) ==
+             (Probs.end() == I) &&
+         "Probability for I-th successor must always be defined along with the "
+         "probability for the first successor");
 
-  const SmallVector<BranchProbability, 2> &SrcProbs = I->second;
-  assert(SrcProbs.size() == Src->getTerminator()->getNumSuccessors() &&
-         "The number of edge probabilities must match the number of "
-         "successors.");
-  return SrcProbs[IndexInSuccessors];
+  if (I != Probs.end())
+    return I->second;
+
+  return {1, static_cast<uint32_t>(succ_size(Src))};
 }
 
 BranchProbability
@@ -1112,18 +1113,13 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const BasicBlock *Dst) const {
-  auto SrcProbsIt = Probs.find(Src);
-  if (SrcProbsIt == Probs.end())
+  if (!Probs.count(std::make_pair(Src, 0)))
     return BranchProbability(llvm::count(successors(Src), Dst), succ_size(Src));
 
-  const SmallVector<BranchProbability, 2> &SrcProbs = SrcProbsIt->second;
-  assert(SrcProbs.size() == Src->getTerminator()->getNumSuccessors() &&
-         "The number of edge probabilities must match the number of "
-         "successors.");
   auto Prob = BranchProbability::getZero();
   for (const_succ_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
     if (*I == Dst)
-      Prob += SrcProbs[I.getSuccessorIndex()];
+      Prob += Probs.find(std::make_pair(Src, I.getSuccessorIndex()))->second;
 
   return Prob;
 }
@@ -1138,10 +1134,8 @@ void BranchProbabilityInfo::setEdgeProbability(
 
   Handles.insert(BasicBlockCallbackVH(Src, this));
   uint64_t TotalNumerator = 0;
-  auto &SrcProbs = this->Probs[Src];
-  SrcProbs.reserve(Probs.size());
   for (unsigned SuccIdx = 0; SuccIdx < Probs.size(); ++SuccIdx) {
-    SrcProbs.push_back(Probs[SuccIdx]);
+    this->Probs[std::make_pair(Src, SuccIdx)] = Probs[SuccIdx];
     LLVM_DEBUG(dbgs() << "set edge " << Src->getName() << " -> " << SuccIdx
                       << " successor probability to " << Probs[SuccIdx]
                       << "\n");
@@ -1164,17 +1158,16 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   assert(NumSuccessors == Dst->getTerminator()->getNumSuccessors());
   if (NumSuccessors == 0)
     return; // Nothing to set.
-  auto SrcProbsIt = this->Probs.find(Src);
-  if (SrcProbsIt == this->Probs.end())
+  if (this->Probs.find(std::make_pair(Src, 0)) == this->Probs.end())
     return; // No probability is set for edges from Src. Keep the same for Dst.
 
   Handles.insert(BasicBlockCallbackVH(Dst, this));
-  auto &DstProbs = this->Probs[Dst];
-  DstProbs = SrcProbsIt->second;
-  for (unsigned SuccIdx = 0; SuccIdx < NumSuccessors; ++SuccIdx)
+  for (unsigned SuccIdx = 0; SuccIdx < NumSuccessors; ++SuccIdx) {
+    auto Prob = this->Probs[std::make_pair(Src, SuccIdx)];
+    this->Probs[std::make_pair(Dst, SuccIdx)] = Prob;
     LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << SuccIdx
-                      << " successor probability to " << DstProbs[SuccIdx]
-                      << "\n");
+                      << " successor probability to " << Prob << "\n");
+  }
 }
 
 raw_ostream &
@@ -1190,8 +1183,23 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
 }
 
 void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
+  // Note that we cannot use successors of BB because the terminator of BB may
+  // have changed when eraseBlock is called as a BasicBlockCallbackVH callback.
+  // Instead we remove prob data for the block by iterating successors by their
+  // indices from 0 till the last which exists. There could not be prob data for
+  // a pair (BB, N) if there is no data for (BB, N-1) because the data is always
+  // set for all successors from 0 to M at once by the method
+  // setEdgeProbability().
   Handles.erase(BasicBlockCallbackVH(BB, this));
-  Probs.erase(BB);
+  for (unsigned I = 0;; ++I) {
+    auto MapI = Probs.find(std::make_pair(BB, I));
+    if (MapI == Probs.end()) {
+      assert(Probs.count(std::make_pair(BB, I + 1)) == 0 &&
+             "Must be no more successors");
+      return;
+    }
+    Probs.erase(MapI);
+  }
 }
 
 void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
