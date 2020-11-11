@@ -101,23 +101,29 @@ static_assert((sizeof(g_fpu_regnums_x86_64) / sizeof(g_fpu_regnums_x86_64[0])) -
                   k_num_fpr_registers_x86_64,
               "g_fpu_regnums_x86_64 has wrong number of register infos");
 
-// x86 64-bit registers available via XState.
-static const uint32_t g_xstate_regnums_x86_64[] = {
-    lldb_ymm0_x86_64, lldb_ymm1_x86_64, lldb_ymm2_x86_64, lldb_ymm3_x86_64,
-    lldb_ymm4_x86_64, lldb_ymm5_x86_64, lldb_ymm6_x86_64, lldb_ymm7_x86_64,
-    lldb_ymm8_x86_64, lldb_ymm9_x86_64, lldb_ymm10_x86_64, lldb_ymm11_x86_64,
-    lldb_ymm12_x86_64, lldb_ymm13_x86_64, lldb_ymm14_x86_64, lldb_ymm15_x86_64,
-    // Note: we currently do not provide them but this is needed to avoid
-    // unnamed groups in SBFrame::GetRegisterContext().
-    lldb_bnd0_x86_64, lldb_bnd1_x86_64, lldb_bnd2_x86_64, lldb_bnd3_x86_64,
-    lldb_bndcfgu_x86_64, lldb_bndstatus_x86_64,
+static const uint32_t g_avx_regnums_x86_64[] = {
+    lldb_ymm0_x86_64,   lldb_ymm1_x86_64,  lldb_ymm2_x86_64,  lldb_ymm3_x86_64,
+    lldb_ymm4_x86_64,   lldb_ymm5_x86_64,  lldb_ymm6_x86_64,  lldb_ymm7_x86_64,
+    lldb_ymm8_x86_64,   lldb_ymm9_x86_64,  lldb_ymm10_x86_64, lldb_ymm11_x86_64,
+    lldb_ymm12_x86_64,  lldb_ymm13_x86_64, lldb_ymm14_x86_64, lldb_ymm15_x86_64,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
-static_assert((sizeof(g_xstate_regnums_x86_64) /
-               sizeof(g_xstate_regnums_x86_64[0])) -
+static_assert((sizeof(g_avx_regnums_x86_64) / sizeof(g_avx_regnums_x86_64[0])) -
                       1 ==
-                  k_num_avx_registers_x86_64 + k_num_mpx_registers_x86_64,
-              "g_xstate_regnums_x86_64 has wrong number of register infos");
+                  k_num_avx_registers_x86_64,
+              "g_avx_regnums_x86_64 has wrong number of register infos");
+
+static const uint32_t g_mpx_regnums_x86_64[] = {
+    // Note: we currently do not provide them but this is needed to avoid
+    // unnamed groups in SBFrame::GetRegisterContext().
+    lldb_bnd0_x86_64,   lldb_bnd1_x86_64,    lldb_bnd2_x86_64,
+    lldb_bnd3_x86_64,   lldb_bndcfgu_x86_64, lldb_bndstatus_x86_64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+static_assert((sizeof(g_mpx_regnums_x86_64) / sizeof(g_mpx_regnums_x86_64[0])) -
+                      1 ==
+                  k_num_mpx_registers_x86_64,
+              "g_mpx_regnums_x86_64 has wrong number of register infos");
 
 // x86 debug registers.
 static const uint32_t g_dbr_regnums_x86_64[] = {
@@ -165,20 +171,27 @@ static_assert((sizeof(g_fpu_regnums_i386) / sizeof(g_fpu_regnums_i386[0])) -
                   k_num_fpr_registers_i386,
               "g_fpu_regnums_i386 has wrong number of register infos");
 
-// x86 64-bit registers available via XState.
-static const uint32_t g_xstate_regnums_i386[] = {
-    lldb_ymm0_i386, lldb_ymm1_i386, lldb_ymm2_i386, lldb_ymm3_i386,
-    lldb_ymm4_i386, lldb_ymm5_i386, lldb_ymm6_i386, lldb_ymm7_i386,
-    // Note: we currently do not provide them but this is needed to avoid
-    // unnamed groups in SBFrame::GetRegisterContext().
-    lldb_bnd0_i386, lldb_bnd1_i386, lldb_bnd2_i386, lldb_bnd3_i386,
-    lldb_bndcfgu_i386, lldb_bndstatus_i386,
+static const uint32_t g_avx_regnums_i386[] = {
+    lldb_ymm0_i386,     lldb_ymm1_i386, lldb_ymm2_i386, lldb_ymm3_i386,
+    lldb_ymm4_i386,     lldb_ymm5_i386, lldb_ymm6_i386, lldb_ymm7_i386,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
-static_assert(
-    (sizeof(g_xstate_regnums_i386) / sizeof(g_xstate_regnums_i386[0])) - 1 ==
-        k_num_avx_registers_i386 + k_num_mpx_registers_i386,
-    "g_xstate_regnums_i386 has wrong number of register infos");
+static_assert((sizeof(g_avx_regnums_i386) / sizeof(g_avx_regnums_i386[0])) -
+                      1 ==
+                  k_num_avx_registers_i386,
+              "g_avx_regnums_i386 has wrong number of register infos");
+
+static const uint32_t g_mpx_regnums_i386[] = {
+    // Note: we currently do not provide them but this is needed to avoid
+    // unnamed groups in SBFrame::GetRegisterContext().
+    lldb_bnd0_i386,     lldb_bnd1_i386,    lldb_bnd2_i386,
+    lldb_bnd3_i386,     lldb_bndcfgu_i386, lldb_bndstatus_i386,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+static_assert((sizeof(g_mpx_regnums_i386) / sizeof(g_mpx_regnums_i386[0])) -
+                      1 ==
+                  k_num_mpx_registers_i386,
+              "g_mpx_regnums_i386 has wrong number of register infos");
 
 // x86 debug registers.
 static const uint32_t g_dbr_regnums_i386[] = {
@@ -192,7 +205,7 @@ static_assert((sizeof(g_dbr_regnums_i386) / sizeof(g_dbr_regnums_i386[0])) -
               "g_dbr_regnums_i386 has wrong number of register infos");
 
 // Number of register sets provided by this context.
-enum { k_num_register_sets = 4 };
+enum { k_num_register_sets = 5 };
 
 // Register sets for x86 32-bit.
 static const RegisterSet g_reg_sets_i386[k_num_register_sets] = {
@@ -200,10 +213,11 @@ static const RegisterSet g_reg_sets_i386[k_num_register_sets] = {
      g_gpr_regnums_i386},
     {"Floating Point Registers", "fpu", k_num_fpr_registers_i386,
      g_fpu_regnums_i386},
-    {"Extended State Registers", "xstate",
-     k_num_avx_registers_i386 + k_num_mpx_registers_i386,
-     g_xstate_regnums_i386},
     {"Debug Registers", "dbr", k_num_dbr_registers_i386, g_dbr_regnums_i386},
+    {"Extended AVX registers", "avx", k_num_avx_registers_i386,
+     g_avx_regnums_i386},
+    {"Extended MPX registers", "mpx", k_num_mpx_registers_i386,
+     g_mpx_regnums_i386},
 };
 
 // Register sets for x86 64-bit.
@@ -212,11 +226,12 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
      g_gpr_regnums_x86_64},
     {"Floating Point Registers", "fpu", k_num_fpr_registers_x86_64,
      g_fpu_regnums_x86_64},
-    {"Extended State Registers", "xstate",
-     k_num_avx_registers_x86_64 + k_num_mpx_registers_x86_64,
-     g_xstate_regnums_x86_64},
     {"Debug Registers", "dbr", k_num_dbr_registers_x86_64,
      g_dbr_regnums_x86_64},
+    {"Extended AVX registers", "avx", k_num_avx_registers_x86_64,
+     g_avx_regnums_x86_64},
+    {"Extended MPX registers", "mpx", k_num_mpx_registers_x86_64,
+     g_mpx_regnums_x86_64},
 };
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())
@@ -251,8 +266,6 @@ NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
   assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
 }
 
-// CONSIDER after local and llgs debugging are merged, register set support can
-// be moved into a base x86-64 class with IsRegisterSetAvailable made virtual.
 uint32_t NativeRegisterContextFreeBSD_x86_64::GetRegisterSetCount() const {
   uint32_t sets = 0;
   for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
@@ -275,31 +288,6 @@ NativeRegisterContextFreeBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
   }
 }
 
-static constexpr int RegNumX86ToX86_64(int regnum) {
-  switch (regnum) {
-  case lldb_ymm0_i386:
-  case lldb_ymm1_i386:
-  case lldb_ymm2_i386:
-  case lldb_ymm3_i386:
-  case lldb_ymm4_i386:
-  case lldb_ymm5_i386:
-  case lldb_ymm6_i386:
-  case lldb_ymm7_i386:
-    return lldb_ymm0_x86_64 + regnum - lldb_ymm0_i386;
-  case lldb_bnd0_i386:
-  case lldb_bnd1_i386:
-  case lldb_bnd2_i386:
-  case lldb_bnd3_i386:
-    return lldb_bnd0_x86_64 + regnum - lldb_bnd0_i386;
-  case lldb_bndcfgu_i386:
-    return lldb_bndcfgu_x86_64;
-  case lldb_bndstatus_i386:
-    return lldb_bndstatus_x86_64;
-  default:
-    llvm_unreachable("Unhandled i386 register.");
-  }
-}
-
 llvm::Optional<enum NativeRegisterContextFreeBSD_x86_64::RegSetKind>
 NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(int reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
@@ -309,7 +297,7 @@ NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(int reg_num) const {
     if (reg_num >= k_first_fpr_i386 && reg_num <= k_last_fpr_i386)
       return FPRegSet;
     if (reg_num >= k_first_avx_i386 && reg_num <= k_last_avx_i386)
-      return XSaveRegSet; // AVX
+      return YMMRegSet;
     if (reg_num >= k_first_mpxr_i386 && reg_num <= k_last_mpxr_i386)
       return llvm::None; // MPXR
     if (reg_num >= k_first_mpxc_i386 && reg_num <= k_last_mpxc_i386)
@@ -323,7 +311,7 @@ NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(int reg_num) const {
     if (reg_num >= k_first_fpr_x86_64 && reg_num <= k_last_fpr_x86_64)
       return FPRegSet;
     if (reg_num >= k_first_avx_x86_64 && reg_num <= k_last_avx_x86_64)
-      return XSaveRegSet; // AVX
+      return YMMRegSet;
     if (reg_num >= k_first_mpxr_x86_64 && reg_num <= k_last_mpxr_x86_64)
       return llvm::None; // MPXR
     if (reg_num >= k_first_mpxc_x86_64 && reg_num <= k_last_mpxc_x86_64)
@@ -354,7 +342,8 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
   case DBRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETDBREGS, m_thread.GetID(),
                                                m_dbr.data());
-  case XSaveRegSet: {
+  case YMMRegSet:
+  case MPXRegSet: {
     struct ptrace_xstate_info info;
     Status ret = NativeProcessFreeBSD::PtraceWrapper(
         PT_GETXSTATE_INFO, GetProcessPid(), &info, sizeof(info));
@@ -364,11 +353,10 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
     assert(info.xsave_mask & XFEATURE_ENABLED_X87);
     assert(info.xsave_mask & XFEATURE_ENABLED_SSE);
 
-    m_xsave_offsets[YMMXSaveSet] = LLDB_INVALID_XSAVE_OFFSET;
+    m_xsave_offsets[YMMRegSet] = LLDB_INVALID_XSAVE_OFFSET;
     if (info.xsave_mask & XFEATURE_ENABLED_YMM_HI128) {
       uint32_t eax, ecx, edx;
-      __get_cpuid_count(0x0D, 2, &eax, &m_xsave_offsets[YMMXSaveSet], &ecx,
-                        &edx);
+      __get_cpuid_count(0x0D, 2, &eax, &m_xsave_offsets[YMMRegSet], &ecx, &edx);
     }
 
     m_xsave.resize(info.xsave_len);
@@ -395,7 +383,8 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
   case DBRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
                                                m_dbr.data());
-  case XSaveRegSet:
+  case YMMRegSet:
+  case MPXRegSet:
     // ReadRegisterSet() must always be called before WriteRegisterSet().
     assert(m_xsave.size() > 0);
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETXSTATE, GetProcessPid(),
@@ -442,66 +431,29 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case GPRegSet:
     reg_value.SetBytes(m_gpr.data() + reg_info->byte_offset,
                        reg_info->byte_size, endian::InlHostByteOrder());
-    return error;
+    break;
   case FPRegSet:
     reg_value.SetBytes(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
                        reg_info->byte_size, endian::InlHostByteOrder());
-    return error;
+    break;
   case DBRegSet:
     reg_value.SetBytes(m_dbr.data() + reg_info->byte_offset - GetDBROffset(),
                        reg_info->byte_size, endian::InlHostByteOrder());
-    return error;
-  case XSaveRegSet:
-    // legacy logic
     break;
-  }
-
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86_64:
-    break;
-  case llvm::Triple::x86:
-    reg = RegNumX86ToX86_64(reg);
-    break;
-  default:
-    llvm_unreachable("Unhandled target architecture.");
-  }
-
-  switch (reg) {
-  case lldb_ymm0_x86_64:
-  case lldb_ymm1_x86_64:
-  case lldb_ymm2_x86_64:
-  case lldb_ymm3_x86_64:
-  case lldb_ymm4_x86_64:
-  case lldb_ymm5_x86_64:
-  case lldb_ymm6_x86_64:
-  case lldb_ymm7_x86_64:
-  case lldb_ymm8_x86_64:
-  case lldb_ymm9_x86_64:
-  case lldb_ymm10_x86_64:
-  case lldb_ymm11_x86_64:
-  case lldb_ymm12_x86_64:
-  case lldb_ymm13_x86_64:
-  case lldb_ymm14_x86_64:
-  case lldb_ymm15_x86_64: {
-    uint32_t offset = m_xsave_offsets[YMMXSaveSet];
-    if (offset == LLDB_INVALID_XSAVE_OFFSET) {
+  case YMMRegSet: {
+    llvm::Optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
+    if (!ymm_reg) {
       error.SetErrorStringWithFormat(
           "register \"%s\" not supported by CPU/kernel", reg_info->name);
     } else {
-      uint32_t reg_index = reg - lldb_ymm0_x86_64;
-      auto *fpreg = reinterpret_cast<struct savexmm_ymm *>(m_xsave.data());
-      auto *ymmreg = reinterpret_cast<struct ymmacc *>(m_xsave.data() + offset);
-
-      YMMReg ymm =
-          XStateToYMM(reinterpret_cast<void *>(&fpreg->sv_xmm[reg_index]),
-                      reinterpret_cast<void *>(&ymmreg[reg_index]));
+      YMMReg ymm = XStateToYMM(ymm_reg->xmm, ymm_reg->ymm_hi);
       reg_value.SetBytes(ymm.bytes, reg_info->byte_size,
                          endian::InlHostByteOrder());
     }
     break;
   }
-  default:
-    llvm_unreachable("Reading unknown/unsupported register");
+  case MPXRegSet:
+    llvm_unreachable("MPX regset should have returned error");
   }
 
   return error;
@@ -545,65 +497,29 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
   case GPRegSet:
     ::memcpy(m_gpr.data() + reg_info->byte_offset, reg_value.GetBytes(),
              reg_value.GetByteSize());
-    return WriteRegisterSet(set);
+    break;
   case FPRegSet:
     ::memcpy(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
              reg_value.GetBytes(), reg_value.GetByteSize());
-    return WriteRegisterSet(set);
+    break;
   case DBRegSet:
     ::memcpy(m_dbr.data() + reg_info->byte_offset - GetDBROffset(),
              reg_value.GetBytes(), reg_value.GetByteSize());
-    return WriteRegisterSet(set);
-  case XSaveRegSet:
-    // legacy logic
     break;
-  }
-
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86_64:
-    break;
-  case llvm::Triple::x86:
-    reg = RegNumX86ToX86_64(reg);
-    break;
-  default:
-    llvm_unreachable("Unhandled target architecture.");
-  }
-
-  switch (reg) {
-  case lldb_ymm0_x86_64:
-  case lldb_ymm1_x86_64:
-  case lldb_ymm2_x86_64:
-  case lldb_ymm3_x86_64:
-  case lldb_ymm4_x86_64:
-  case lldb_ymm5_x86_64:
-  case lldb_ymm6_x86_64:
-  case lldb_ymm7_x86_64:
-  case lldb_ymm8_x86_64:
-  case lldb_ymm9_x86_64:
-  case lldb_ymm10_x86_64:
-  case lldb_ymm11_x86_64:
-  case lldb_ymm12_x86_64:
-  case lldb_ymm13_x86_64:
-  case lldb_ymm14_x86_64:
-  case lldb_ymm15_x86_64: {
-    uint32_t offset = m_xsave_offsets[YMMXSaveSet];
-    if (offset == LLDB_INVALID_XSAVE_OFFSET) {
+  case YMMRegSet: {
+    llvm::Optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
+    if (!ymm_reg) {
       error.SetErrorStringWithFormat(
           "register \"%s\" not supported by CPU/kernel", reg_info->name);
     } else {
-      uint32_t reg_index = reg - lldb_ymm0_x86_64;
-      auto *fpreg = reinterpret_cast<struct savexmm_ymm *>(m_xsave.data());
-      auto *ymmreg = reinterpret_cast<struct ymmacc *>(m_xsave.data() + offset);
-
       YMMReg ymm;
       ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
-      YMMToXState(ymm, reinterpret_cast<void *>(&fpreg->sv_xmm[reg_index]),
-                  reinterpret_cast<void *>(&ymmreg[reg_index]));
+      YMMToXState(ymm, ymm_reg->xmm, ymm_reg->ymm_hi);
     }
     break;
   }
-  default:
-    llvm_unreachable("Reading unknown/unsupported register");
+  case MPXRegSet:
+    llvm_unreachable("MPX regset should have returned error");
   }
 
   return WriteRegisterSet(set);
@@ -709,6 +625,30 @@ size_t NativeRegisterContextFreeBSD_x86_64::GetDBROffset() const {
   }
 
   return GetRegisterInfoInterface().GetRegisterInfo()[regno].byte_offset;
+}
+
+llvm::Optional<NativeRegisterContextFreeBSD_x86_64::YMMSplitPtr>
+NativeRegisterContextFreeBSD_x86_64::GetYMMSplitReg(uint32_t reg) {
+  uint32_t offset = m_xsave_offsets[YMMRegSet];
+  if (offset == LLDB_INVALID_XSAVE_OFFSET)
+    return llvm::None;
+
+  uint32_t reg_index;
+  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+    reg_index = reg - lldb_ymm0_i386;
+    break;
+  case llvm::Triple::x86_64:
+    reg_index = reg - lldb_ymm0_x86_64;
+    break;
+  default:
+    llvm_unreachable("Unhandled target architecture.");
+  }
+
+  auto *fpreg = reinterpret_cast<struct savexmm_ymm *>(m_xsave.data());
+  auto *ymmreg = reinterpret_cast<struct ymmacc *>(m_xsave.data() + offset);
+
+  return YMMSplitPtr{&fpreg->sv_xmm[reg_index], &ymmreg[reg_index]};
 }
 
 #endif // defined(__x86_64__)
