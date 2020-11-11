@@ -354,6 +354,24 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
   diagnoseUseOfInternalDeclInInlineFunction(*this, D, Loc);
 
+  // CUDA/HIP: Diagnose invalid references of host global variables in device
+  // functions. Reference of device global variables in host functions is
+  // allowed through shadow variables therefore it is not diagnosed.
+  if (LangOpts.CUDAIsDevice) {
+    auto *FD = dyn_cast_or_null<FunctionDecl>(CurContext);
+    auto Target = IdentifyCUDATarget(FD);
+    if (FD && Target != CFT_Host) {
+      const auto *VD = dyn_cast<VarDecl>(D);
+      if (VD && VD->hasGlobalStorage() && !VD->hasAttr<CUDADeviceAttr>() &&
+          !VD->hasAttr<CUDAConstantAttr>() && !VD->hasAttr<CUDASharedAttr>() &&
+          !VD->getType()->isCUDADeviceBuiltinSurfaceType() &&
+          !VD->getType()->isCUDADeviceBuiltinTextureType() &&
+          !VD->isConstexpr() && !VD->getType().isConstQualified())
+        targetDiag(*Locs.begin(), diag::err_ref_bad_target)
+            << /*host*/ 2 << /*variable*/ 1 << VD << Target;
+    }
+  }
+
   if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)) {
     if (const auto *VD = dyn_cast<ValueDecl>(D))
       checkDeviceDecl(VD, Loc);
