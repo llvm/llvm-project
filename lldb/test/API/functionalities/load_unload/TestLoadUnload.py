@@ -91,7 +91,7 @@ class LoadUnloadTestCase(TestBase):
     # libloadunload_d.so does not appear in the image list because executable
     # dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
-    @not_remote_testsuite_ready
+    @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @skipIfReproducer # VFS is a snapshot.
     def test_modules_search_paths(self):
