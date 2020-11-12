@@ -5,15 +5,9 @@
 
 ; CHECK-INTERESTINGNESS: define void @fn3
 
-; CHECK-FINAL: @g1 = global
-; CHECK-FINAL: @g2 = global
+; CHECK-FINAL-NOT: global
 
-; CHECK-FINAL-NOT: $a1
-; CHECK-FINAL-NOT: $a2
-; CHECK-FINAL-NOT: $a3
-; CHECK-FINAL-NOT: $a4
-; CHECK-FINAL: $a5
-; CHECK-FINAL: $a6
+; CHECK-FINAL-NOT: = alias
 
 ; CHECK-FINAL-NOT: @llvm.used
 ; CHECK-FINAL-NOT: @llvm.compiler.used
