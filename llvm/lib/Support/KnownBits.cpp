@@ -110,7 +110,7 @@ KnownBits KnownBits::umax(const KnownBits &LHS, const KnownBits &RHS) {
   // are common to these two values are also known in the result.
   KnownBits L = LHS.makeGE(RHS.getMinValue());
   KnownBits R = RHS.makeGE(LHS.getMinValue());
-  return KnownBits(L.Zero & R.Zero, L.One & R.One);
+  return KnownBits::commonBits(L, R);
 }
 
 KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {

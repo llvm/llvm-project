@@ -367,8 +367,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
 
     // Only known if known in both the LHS and RHS.
-    Known.One = RHSKnown.One & LHSKnown.One;
-    Known.Zero = RHSKnown.Zero & LHSKnown.Zero;
+    Known = KnownBits::commonBits(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::ZExt:
