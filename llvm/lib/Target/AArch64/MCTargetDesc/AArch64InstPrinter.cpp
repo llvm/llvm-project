@@ -1644,3 +1644,10 @@ void AArch64InstPrinter::printGPR64as32(const MCInst *MI, unsigned OpNum,
   unsigned Reg = MI->getOperand(OpNum).getReg();
   O << getRegisterName(getWRegFromXReg(Reg));
 }
+
+void AArch64InstPrinter::printGPR64x8(const MCInst *MI, unsigned OpNum,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  O << getRegisterName(MRI.getSubReg(Reg, AArch64::x8sub_0));
+}

@@ -257,6 +257,7 @@ private:
   OperandMatchResultTy tryParseVectorList(OperandVector &Operands,
                                           bool ExpectMatch = false);
   OperandMatchResultTy tryParseSVEPattern(OperandVector &Operands);
+  OperandMatchResultTy tryParseGPR64x8(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -1168,6 +1169,12 @@ public:
   bool isGPR64as32() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
       AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(Reg.RegNum);
+  }
+
+  bool isGPR64x8() const {
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
+           AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID].contains(
+               Reg.RegNum);
   }
 
   bool isWSeqPair() const {
@@ -6289,5 +6296,28 @@ AArch64AsmParser::tryParseSVEPattern(OperandVector &Operands) {
       AArch64Operand::CreateImm(MCConstantExpr::create(Pattern, getContext()),
                                 SS, getLoc(), getContext()));
 
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+AArch64AsmParser::tryParseGPR64x8(OperandVector &Operands) {
+  SMLoc SS = getLoc();
+
+  unsigned XReg;
+  if (tryParseScalarRegister(XReg) != MatchOperand_Success)
+    return MatchOperand_NoMatch;
+
+  MCContext &ctx = getContext();
+  const MCRegisterInfo *RI = ctx.getRegisterInfo();
+  int X8Reg = RI->getMatchingSuperReg(
+      XReg, AArch64::x8sub_0,
+      &AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID]);
+  if (!X8Reg) {
+    Error(SS, "expected an even-numbered x-register in the range [x0,x22]");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(
+      AArch64Operand::CreateReg(X8Reg, RegKind::Scalar, SS, getLoc(), ctx));
   return MatchOperand_Success;
 }
