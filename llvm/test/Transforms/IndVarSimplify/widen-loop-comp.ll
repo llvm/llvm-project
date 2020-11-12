@@ -607,13 +607,10 @@ define i32 @test12(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i32 [[TMP1]], -1
-; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[IV_NEXT]] to i64
-; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
-; CHECK-NEXT:    [[LOAD_ADDR:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q]], align 4
+; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
