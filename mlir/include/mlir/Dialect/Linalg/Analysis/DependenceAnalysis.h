@@ -45,7 +45,7 @@ class LinalgDependenceGraph {
 public:
   struct LinalgOpView {
     Operation *op;
-    Value view;
+    unsigned operandIndex;
   };
   struct LinalgDependenceGraphElem {
     // dependentOpView may be either:
@@ -55,7 +55,7 @@ public:
     // View in the op that is used to index in the graph:
     //   1. src in the case of dependencesFromDstGraphs.
     //   2. dst in the case of dependencesIntoGraphs.
-    Value indexingView;
+    LinalgOpView indexingOpView;
   };
   using LinalgDependences = SmallVector<LinalgDependenceGraphElem, 8>;
   using DependenceGraph = DenseMap<Operation *, LinalgDependences>;
