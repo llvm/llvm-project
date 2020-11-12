@@ -58,7 +58,7 @@ public:
     /// This element is a literal.
     Literal,
 
-    /// This element is printed as a space. It is ignored by the parser.
+    /// This element prints or omits a space. It is ignored by the parser.
     Space,
 
     /// This element is an variable value.
@@ -300,13 +300,20 @@ bool LiteralElement::isValidLiteral(StringRef value) {
 
 namespace {
 /// This class represents an instance of a space element. It's a literal that
-/// is only printed, but ignored by the parser.
+/// prints or omits printing a space. It is ignored by the parser.
 class SpaceElement : public Element {
 public:
-  SpaceElement() : Element{Kind::Space} {}
+  SpaceElement(bool value) : Element{Kind::Space}, value(value) {}
   static bool classof(const Element *element) {
     return element->getKind() == Kind::Space;
   }
+
+  /// Returns true if this element should print as a space. Otherwise, the
+  /// element should omit printing a space between the surrounding elements.
+  bool getValue() const { return value; }
+
+private:
+  bool value;
 };
 } // end anonymous namespace
 
@@ -319,9 +326,9 @@ namespace {
 class OptionalElement : public Element {
 public:
   OptionalElement(std::vector<std::unique_ptr<Element>> &&elements,
-                  unsigned anchor)
-      : Element{Kind::Optional}, elements(std::move(elements)), anchor(anchor) {
-  }
+                  unsigned anchor, unsigned parseStart)
+      : Element{Kind::Optional}, elements(std::move(elements)), anchor(anchor),
+        parseStart(parseStart) {}
   static bool classof(const Element *element) {
     return element->getKind() == Kind::Optional;
   }
@@ -332,11 +339,16 @@ public:
   /// Return the anchor of this optional group.
   Element *getAnchor() const { return elements[anchor].get(); }
 
+  /// Return the index of the first element that needs to be parsed.
+  unsigned getParseStart() const { return parseStart; }
+
 private:
   /// The child elements of this optional.
   std::vector<std::unique_ptr<Element>> elements;
   /// The index of the element that acts as the anchor for the optional group.
   unsigned anchor;
+  /// The index of the first element that is parsed (is not a SpaceElement).
+  unsigned parseStart;
 };
 } // end anonymous namespace
 
@@ -1026,7 +1038,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
                                        FmtContext &attrTypeCtx) {
   /// Optional Group.
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
-    auto elements = optional->getElements();
+    auto elements =
+        llvm::drop_begin(optional->getElements(), optional->getParseStart());
 
     // Generate a special optional parser for the first element to gate the
     // parsing of the rest of the elements.
@@ -1493,11 +1506,13 @@ static void genLiteralPrinter(StringRef value, OpMethodBody &body,
 
 /// Generate the printer for a space. `shouldEmitSpace` and `lastWasPunctuation`
 /// are set to false.
-static void genSpacePrinter(OpMethodBody &body, bool &shouldEmitSpace,
-                            bool &lastWasPunctuation) {
-  body << "  p << ' ';\n";
+static void genSpacePrinter(bool value, OpMethodBody &body,
+                            bool &shouldEmitSpace, bool &lastWasPunctuation) {
+  if (value) {
+    body << "  p << ' ';\n";
+    lastWasPunctuation = false;
+  }
   shouldEmitSpace = false;
-  lastWasPunctuation = false;
 }
 
 /// Generate the printer for a custom directive.
@@ -1598,8 +1613,9 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
     return genLiteralPrinter(literal->getLiteral(), body, shouldEmitSpace,
                              lastWasPunctuation);
 
-  if (isa<SpaceElement>(element))
-    return genSpacePrinter(body, shouldEmitSpace, lastWasPunctuation);
+  if (SpaceElement *space = dyn_cast<SpaceElement>(element))
+    return genSpacePrinter(space->getValue(), body, shouldEmitSpace,
+                           lastWasPunctuation);
 
   // Emit an optional group.
   if (OptionalElement *optional = dyn_cast<OptionalElement>(element)) {
@@ -2570,9 +2586,9 @@ LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element) {
 
   StringRef value = literalTok.getSpelling().drop_front().drop_back();
 
-  // The parsed literal is a space.
-  if (value.size() == 1 && value.front() == ' ') {
-    element = std::make_unique<SpaceElement>();
+  // The parsed literal is a space element (`` or ` `).
+  if (value.empty() || (value.size() == 1 && value.front() == ' ')) {
+    element = std::make_unique<SpaceElement>(!value.empty());
     return ::mlir::success();
   }
 
@@ -2608,14 +2624,17 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
   if (!anchorIdx)
     return emitError(curLoc, "optional group specified no anchor element");
 
-  // The first element of the group must be one that can be parsed/printed in an
+  // The first parsable element of the group must be able to be parsed in an
   // optional fashion.
-  Element *firstElement = &*elements.front();
+  auto parseBegin = llvm::find_if_not(
+      elements, [](auto &element) { return isa<SpaceElement>(element.get()); });
+  Element *firstElement = parseBegin->get();
   if (!isa<AttributeVariable>(firstElement) &&
       !isa<LiteralElement>(firstElement) &&
       !isa<OperandVariable>(firstElement) && !isa<RegionVariable>(firstElement))
-    return emitError(curLoc, "first element of an operand group must be an "
-                             "attribute, literal, operand, or region");
+    return emitError(curLoc,
+                     "first parsable element of an operand group must be "
+                     "an attribute, literal, operand, or region");
 
   // After parsing all of the elements, ensure that all type directives refer
   // only to elements within the group.
@@ -2642,7 +2661,9 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
   }
 
   optionalVariables.insert(seenVariables.begin(), seenVariables.end());
-  element = std::make_unique<OptionalElement>(std::move(elements), *anchorIdx);
+  auto parseStart = parseBegin - elements.begin();
+  element = std::make_unique<OptionalElement>(std::move(elements), *anchorIdx,
+                                              parseStart);
   return ::mlir::success();
 }
 
