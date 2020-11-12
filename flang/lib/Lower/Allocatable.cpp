@@ -33,7 +33,7 @@ static void genAllocatableInitIntrinsic(Fortran::lower::FirOpBuilder &builder,
                                         mlir::Value kind, mlir::Value rank,
                                         mlir::Value corank) {
   auto callee =
-      Fortran::lower::genRuntimeFunction<mkRTKey(AllocatableInitIntrinsic)>(
+      Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableInitIntrinsic)>(
           loc, builder);
   llvm::SmallVector<mlir::Value, 5> args = {boxAddress, typeCategory, kind,
                                             rank, corank};
@@ -47,9 +47,8 @@ static void genAllocatableSetBounds(Fortran::lower::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value boxAddress,
                                     mlir::Value dimIndex, mlir::Value lowerBoud,
                                     mlir::Value upperBound) {
-  auto callee =
-      Fortran::lower::genRuntimeFunction<mkRTKey(AllocatableSetBounds)>(
-          loc, builder);
+  auto callee = Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableSetBounds)>(
+      loc, builder);
   llvm::SmallVector<mlir::Value, 4> args{boxAddress, dimIndex, lowerBoud,
                                          upperBound};
   llvm::SmallVector<mlir::Value, 4> operands;
@@ -63,9 +62,8 @@ genAllocatableAllocate(Fortran::lower::FirOpBuilder &builder,
                        mlir::Location loc, mlir::Value boxAddress,
                        mlir::Value hasStat, mlir::Value errMsgBox,
                        mlir::Value sourceFile, mlir::Value sourceLine) {
-  auto callee =
-      Fortran::lower::genRuntimeFunction<mkRTKey(AllocatableAllocate)>(loc,
-                                                                       builder);
+  auto callee = Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(
+      loc, builder);
   llvm::SmallVector<mlir::Value, 5> args{boxAddress, hasStat, errMsgBox,
                                          sourceFile, sourceLine};
   llvm::SmallVector<mlir::Value, 5> operands;
@@ -79,9 +77,8 @@ genAllocatableDeallocate(Fortran::lower::FirOpBuilder &builder,
                          mlir::Location loc, mlir::Value boxAddress,
                          mlir::Value hasStat, mlir::Value errMsgBox,
                          mlir::Value sourceFile, mlir::Value sourceLine) {
-  auto callee =
-      Fortran::lower::genRuntimeFunction<mkRTKey(AllocatableDeallocate)>(
-          loc, builder);
+  auto callee = Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
+      loc, builder);
   llvm::SmallVector<mlir::Value, 5> args{boxAddress, hasStat, errMsgBox,
                                          sourceFile, sourceLine};
   llvm::SmallVector<mlir::Value, 5> operands;
