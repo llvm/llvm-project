@@ -41,6 +41,9 @@ static void on_ompt_callback_implicit_task(ompt_scope_endpoint_t endpoint,
            ", memory_addr=%p, memory_size=%lu, result=%d \n",
            task_data->value, addr, size, result);
     break;
+  case ompt_scope_beginend:
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
   }
 }
 

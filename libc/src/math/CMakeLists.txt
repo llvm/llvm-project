@@ -641,3 +641,39 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
+
+add_entrypoint_object(
+  fdim
+  SRCS
+    fdim.cpp
+  HDRS
+    fdim.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fdimf
+  SRCS
+    fdimf.cpp
+  HDRS
+    fdimf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fdiml
+  SRCS
+    fdiml.cpp
+  HDRS
+    fdiml.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)

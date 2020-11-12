@@ -80,48 +80,7 @@ namespace {
       CurrentSourceLocExprScope::SourceLocExprScopeGuard;
 
   static QualType getType(APValue::LValueBase B) {
-    if (!B) return QualType();
-    if (const ValueDecl *D = B.dyn_cast<const ValueDecl*>()) {
-      // FIXME: It's unclear where we're supposed to take the type from, and
-      // this actually matters for arrays of unknown bound. Eg:
-      //
-      // extern int arr[]; void f() { extern int arr[3]; };
-      // constexpr int *p = &arr[1]; // valid?
-      //
-      // For now, we take the array bound from the most recent declaration.
-      for (auto *Redecl = cast<ValueDecl>(D->getMostRecentDecl()); Redecl;
-           Redecl = cast_or_null<ValueDecl>(Redecl->getPreviousDecl())) {
-        QualType T = Redecl->getType();
-        if (!T->isIncompleteArrayType())
-          return T;
-      }
-      return D->getType();
-    }
-
-    if (B.is<TypeInfoLValue>())
-      return B.getTypeInfoType();
-
-    if (B.is<DynamicAllocLValue>())
-      return B.getDynamicAllocType();
-
-    const Expr *Base = B.get<const Expr*>();
-
-    // For a materialized temporary, the type of the temporary we materialized
-    // may not be the type of the expression.
-    if (const MaterializeTemporaryExpr *MTE =
-            dyn_cast<MaterializeTemporaryExpr>(Base)) {
-      SmallVector<const Expr *, 2> CommaLHSs;
-      SmallVector<SubobjectAdjustment, 2> Adjustments;
-      const Expr *Temp = MTE->getSubExpr();
-      const Expr *Inner = Temp->skipRValueSubobjectAdjustments(CommaLHSs,
-                                                               Adjustments);
-      // Keep any cv-qualifiers from the reference if we generated a temporary
-      // for it directly. Otherwise use the type after adjustment.
-      if (!Adjustments.empty())
-        return Inner->getType();
-    }
-
-    return Base->getType();
+    return B.getType();
   }
 
   /// Get an LValue path entry, which is known to not be an array index, as a

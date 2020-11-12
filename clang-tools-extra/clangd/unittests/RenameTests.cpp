@@ -774,6 +774,13 @@ TEST(RenameTest, Renameable) {
         }
       )cpp",
        nullptr, !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(// Trying to rename into the same name, SameName == SameName.
+        void func() {
+          int S^ameName;
+        }
+      )cpp",
+       "new name is the same", !HeaderFile, nullptr, "SameName"},
   };
 
   for (const auto& Case : Cases) {
@@ -876,7 +883,7 @@ TEST(RenameTest, PrepareRename) {
 
   auto Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
                                   /*NewName=*/llvm::None, {/*CrossFile=*/true});
-  // verify that for multi-file rename, we only return main-file occurrences.
+  // Verify that for multi-file rename, we only return main-file occurrences.
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   // We don't know the result is complete in prepareRename (passing a nullptr
   // index internally), so GlobalChanges should be empty.
@@ -884,7 +891,7 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(FooCC.ranges(),
               testing::UnorderedElementsAreArray(Results->LocalChanges));
 
-  // verify name validation.
+  // Name validation.
   Results =
       runPrepareRename(Server, FooCCPath, FooCC.point(),
                        /*NewName=*/std::string("int"), {/*CrossFile=*/true});
@@ -892,7 +899,7 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("keyword"));
 
-  // single-file rename on global symbols, we should report an error.
+  // Single-file rename on global symbols, we should report an error.
   Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
                              /*NewName=*/llvm::None, {/*CrossFile=*/false});
   EXPECT_FALSE(Results);

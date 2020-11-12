@@ -33,6 +33,7 @@
 
 // Static initialization of HIP context for device ordinal 0.
 static auto InitializeCtx = [] {
+  HIP_REPORT_IF_ERROR(hipInit(/*flags=*/0));
   hipDevice_t device;
   HIP_REPORT_IF_ERROR(hipDeviceGet(&device, /*ordinal=*/0));
   hipContext_t context;

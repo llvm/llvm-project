@@ -111,6 +111,14 @@ def extractvecelt_pairwise_add : GICombineRule<
   (apply [{ applyExtractVecEltPairwiseAdd(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def mul_const_matchdata : GIDefMatchData<"std::function<void(MachineIRBuilder&, Register)>">;
+def mul_const : GICombineRule<
+  (defs root:$root, mul_const_matchdata:$matchinfo),
+  (match (wip_match_opcode G_MUL):$root,
+          [{ return matchAArch64MulConstCombine(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -128,6 +136,7 @@ def AArch64PostLegalizerCombinerHelper
                         sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
-                        extractvecelt_pairwise_add, redundant_or]> {
+                        extractvecelt_pairwise_add, redundant_or,
+                        mul_const]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

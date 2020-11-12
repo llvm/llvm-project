@@ -19,43 +19,7 @@ include "VOPInstructions.td"
 include "SMInstructions.td"
 include "FLATInstructions.td"
 include "BUFInstructions.td"
-
-//===----------------------------------------------------------------------===//
-// EXP Instructions
-//===----------------------------------------------------------------------===//
-
-defm EXP : EXP_m<0>;
-defm EXP_DONE : EXP_m<1>;
-
-class ExpPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
-  (int_amdgcn_exp timm:$tgt, timm:$en,
-                  (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
-                  (vt ExpSrc2:$src2), (vt ExpSrc3:$src3),
-                  done_val, timm:$vm),
-  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
-        ExpSrc2:$src2, ExpSrc3:$src3, timm:$vm, 0, timm:$en)
->;
-
-class ExpComprPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
-  (int_amdgcn_exp_compr timm:$tgt, timm:$en,
-                        (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
-                        done_val, timm:$vm),
-  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
-        (IMPLICIT_DEF), (IMPLICIT_DEF), timm:$vm, 1, timm:$en)
->;
-
-// FIXME: The generated DAG matcher seems to have strange behavior
-// with a 1-bit literal to match, so use a -1 for checking a true
-// 1-bit value.
-def : ExpPattern<i32, EXP, 0>;
-def : ExpPattern<i32, EXP_DONE, -1>;
-def : ExpPattern<f32, EXP, 0>;
-def : ExpPattern<f32, EXP_DONE, -1>;
-
-def : ExpComprPattern<v2i16, EXP, 0>;
-def : ExpComprPattern<v2i16, EXP_DONE, -1>;
-def : ExpComprPattern<v2f16, EXP, 0>;
-def : ExpComprPattern<v2f16, EXP_DONE, -1>;
+include "EXPInstructions.td"
 
 //===----------------------------------------------------------------------===//
 // VINTRP Instructions

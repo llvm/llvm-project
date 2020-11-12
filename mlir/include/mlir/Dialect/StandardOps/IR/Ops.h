@@ -313,16 +313,6 @@ llvm::Optional<SmallVector<bool, 4>>
 computeRankReductionMask(ArrayRef<int64_t> originalShape,
                          ArrayRef<int64_t> reducedShape);
 
-/// Prints dimension and symbol list.
-void printDimAndSymbolList(Operation::operand_iterator begin,
-                           Operation::operand_iterator end, unsigned numDims,
-                           OpAsmPrinter &p);
-
-/// Parses dimension and symbol list and returns true if parsing failed.
-ParseResult parseDimAndSymbolList(OpAsmParser &parser,
-                                  SmallVectorImpl<Value> &operands,
-                                  unsigned &numDims);
-
 /// Determines whether MemRefCastOp casts to a more dynamic version of the
 /// source memref. This is useful to to fold a memref_cast into a consuming op
 /// and implement canonicalization patterns for ops in different dialects that

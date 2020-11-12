@@ -118,6 +118,14 @@ public:
   /// documentation for the same method on the Pass class.
   void getDependentDialects(DialectRegistry &dialects) const;
 
+  /// Enable or disable the implicit nesting on this particular PassManager.
+  /// This will also apply to any newly nested PassManager built from this
+  /// instance.
+  void setNesting(Nesting nesting);
+
+  /// Return the current nesting mode.
+  Nesting getNesting();
+
 private:
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;

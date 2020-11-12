@@ -119,7 +119,8 @@ namespace {
 
     void printBefore(QualType T, raw_ostream &OS);
     void printAfter(QualType T, raw_ostream &OS);
-    void AppendScope(DeclContext *DC, raw_ostream &OS);
+    void AppendScope(DeclContext *DC, raw_ostream &OS,
+                     DeclarationName NameInScope);
     void printTag(TagDecl *T, raw_ostream &OS);
     void printFunctionAfter(const FunctionType::ExtInfo &Info, raw_ostream &OS);
 #define ABSTRACT_TYPE(CLASS, PARENT)
@@ -1025,7 +1026,7 @@ void TypePrinter::printTypeSpec(NamedDecl *D, raw_ostream &OS) {
   // In C, this will always be empty except when the type
   // being printed is anonymous within other Record.
   if (!Policy.SuppressScope)
-    AppendScope(D->getDeclContext(), OS);
+    AppendScope(D->getDeclContext(), OS, D->getDeclName());
 
   IdentifierInfo *II = D->getIdentifier();
   OS << II->getName();
@@ -1128,7 +1129,9 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
       OS << T->getTypeConstraintConcept()->getName();
       auto Args = T->getTypeConstraintArguments();
       if (!Args.empty())
-        printTemplateArgumentList(OS, Args, Policy);
+        printTemplateArgumentList(
+            OS, Args, Policy,
+            T->getTypeConstraintConcept()->getTemplateParameters());
       OS << ' ';
     }
     switch (T->getKeyword()) {
@@ -1213,32 +1216,51 @@ void TypePrinter::printDependentExtIntAfter(const DependentExtIntType *T,
                                             raw_ostream &OS) {}
 
 /// Appends the given scope to the end of a string.
-void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS) {
-  if (DC->isTranslationUnit()) return;
-  if (DC->isFunctionOrMethod()) return;
-  AppendScope(DC->getParent(), OS);
+void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
+                              DeclarationName NameInScope) {
+  if (DC->isTranslationUnit())
+    return;
+
+  // FIXME: Consider replacing this with NamedDecl::printNestedNameSpecifier,
+  // which can also print names for function and method scopes.
+  if (DC->isFunctionOrMethod())
+    return;
 
   if (const auto *NS = dyn_cast<NamespaceDecl>(DC)) {
-    if (Policy.SuppressUnwrittenScope &&
-        (NS->isAnonymousNamespace() || NS->isInline()))
-      return;
+    if (Policy.SuppressUnwrittenScope && NS->isAnonymousNamespace())
+      return AppendScope(DC->getParent(), OS, NameInScope);
+
+    // Only suppress an inline namespace if the name has the same lookup
+    // results in the enclosing namespace.
+    if (Policy.SuppressInlineNamespace && NS->isInline() && NameInScope &&
+        DC->getParent()->lookup(NameInScope).size() ==
+            DC->lookup(NameInScope).size())
+      return AppendScope(DC->getParent(), OS, NameInScope);
+
+    AppendScope(DC->getParent(), OS, NS->getDeclName());
     if (NS->getIdentifier())
       OS << NS->getName() << "::";
     else
       OS << "(anonymous namespace)::";
   } else if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
+    AppendScope(DC->getParent(), OS, Spec->getDeclName());
     IncludeStrongLifetimeRAII Strong(Policy);
     OS << Spec->getIdentifier()->getName();
     const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    printTemplateArgumentList(OS, TemplateArgs.asArray(), Policy);
+    printTemplateArgumentList(
+        OS, TemplateArgs.asArray(), Policy,
+        Spec->getSpecializedTemplate()->getTemplateParameters());
     OS << "::";
   } else if (const auto *Tag = dyn_cast<TagDecl>(DC)) {
+    AppendScope(DC->getParent(), OS, Tag->getDeclName());
     if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
       OS << Typedef->getIdentifier()->getName() << "::";
     else if (Tag->getIdentifier())
       OS << Tag->getIdentifier()->getName() << "::";
     else
       return;
+  } else {
+    AppendScope(DC->getParent(), OS, NameInScope);
   }
 }
 
@@ -1265,7 +1287,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   // In C, this will always be empty except when the type
   // being printed is anonymous within other Record.
   if (!Policy.SuppressScope)
-    AppendScope(D->getDeclContext(), OS);
+    AppendScope(D->getDeclContext(), OS, D->getDeclName());
 
   if (const IdentifierInfo *II = D->getIdentifier())
     OS << II->getName();
@@ -1328,7 +1350,9 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
       Args = TemplateArgs.asArray();
     }
     IncludeStrongLifetimeRAII Strong(Policy);
-    printTemplateArgumentList(OS, Args, Policy);
+    printTemplateArgumentList(
+        OS, Args, Policy,
+        Spec->getSpecializedTemplate()->getTemplateParameters());
   }
 
   spaceBeforePlaceHolder(OS);
@@ -1400,7 +1424,11 @@ void TypePrinter::printTemplateSpecializationBefore(
   IncludeStrongLifetimeRAII Strong(Policy);
   T->getTemplateName().print(OS, Policy);
 
-  printTemplateArgumentList(OS, T->template_arguments(), Policy);
+  const TemplateParameterList *TPL = nullptr;
+  if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl())
+    TPL = TD->getTemplateParameters();
+
+  printTemplateArgumentList(OS, T->template_arguments(), Policy, TPL);
   spaceBeforePlaceHolder(OS);
 }
 
@@ -1801,9 +1829,159 @@ static void printArgument(const TemplateArgumentLoc &A,
   return A.getArgument().print(PP, OS);
 }
 
+static bool isSubstitutedTemplateArgument(ASTContext &Ctx, TemplateArgument Arg,
+                                          TemplateArgument Pattern,
+                                          ArrayRef<TemplateArgument> Args,
+                                          unsigned Depth);
+
+static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
+                              ArrayRef<TemplateArgument> Args, unsigned Depth) {
+  if (Ctx.hasSameType(T, Pattern))
+    return true;
+
+  // A type parameter matches its argument.
+  if (auto *TTPT = Pattern->getAs<TemplateTypeParmType>()) {
+    if (TTPT->getDepth() == Depth && TTPT->getIndex() < Args.size() &&
+        Args[TTPT->getIndex()].getKind() == TemplateArgument::Type) {
+      QualType SubstArg = Ctx.getQualifiedType(
+          Args[TTPT->getIndex()].getAsType(), Pattern.getQualifiers());
+      return Ctx.hasSameType(SubstArg, T);
+    }
+    return false;
+  }
+
+  // FIXME: Recurse into array types.
+
+  // All other cases will need the types to be identically qualified.
+  Qualifiers TQual, PatQual;
+  T = Ctx.getUnqualifiedArrayType(T, TQual);
+  Pattern = Ctx.getUnqualifiedArrayType(Pattern, PatQual);
+  if (TQual != PatQual)
+    return false;
+
+  // Recurse into pointer-like types.
+  {
+    QualType TPointee = T->getPointeeType();
+    QualType PPointee = Pattern->getPointeeType();
+    if (!TPointee.isNull() && !PPointee.isNull())
+      return T->getTypeClass() == Pattern->getTypeClass() &&
+             isSubstitutedType(Ctx, TPointee, PPointee, Args, Depth);
+  }
+
+  // Recurse into template specialization types.
+  if (auto *PTST =
+          Pattern.getCanonicalType()->getAs<TemplateSpecializationType>()) {
+    TemplateName Template;
+    ArrayRef<TemplateArgument> TemplateArgs;
+    if (auto *TTST = T->getAs<TemplateSpecializationType>()) {
+      Template = TTST->getTemplateName();
+      TemplateArgs = TTST->template_arguments();
+    } else if (auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+                   T->getAsCXXRecordDecl())) {
+      Template = TemplateName(CTSD->getSpecializedTemplate());
+      TemplateArgs = CTSD->getTemplateArgs().asArray();
+    } else {
+      return false;
+    }
+
+    if (!isSubstitutedTemplateArgument(Ctx, Template, PTST->getTemplateName(),
+                                       Args, Depth))
+      return false;
+    if (TemplateArgs.size() != PTST->getNumArgs())
+      return false;
+    for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
+      if (!isSubstitutedTemplateArgument(Ctx, TemplateArgs[I], PTST->getArg(I),
+                                         Args, Depth))
+        return false;
+    return true;
+  }
+
+  // FIXME: Handle more cases.
+  return false;
+}
+
+static bool isSubstitutedTemplateArgument(ASTContext &Ctx, TemplateArgument Arg,
+                                          TemplateArgument Pattern,
+                                          ArrayRef<TemplateArgument> Args,
+                                          unsigned Depth) {
+  Arg = Ctx.getCanonicalTemplateArgument(Arg);
+  Pattern = Ctx.getCanonicalTemplateArgument(Pattern);
+  if (Arg.structurallyEquals(Pattern))
+    return true;
+
+  if (Pattern.getKind() == TemplateArgument::Expression) {
+    if (auto *DRE =
+            dyn_cast<DeclRefExpr>(Pattern.getAsExpr()->IgnoreParenImpCasts())) {
+      if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(DRE->getDecl()))
+        return NTTP->getDepth() == Depth && Args.size() > NTTP->getIndex() &&
+               Args[NTTP->getIndex()].structurallyEquals(Arg);
+    }
+  }
+
+  if (Arg.getKind() != Pattern.getKind())
+    return false;
+
+  if (Arg.getKind() == TemplateArgument::Type)
+    return isSubstitutedType(Ctx, Arg.getAsType(), Pattern.getAsType(), Args,
+                             Depth);
+
+  if (Arg.getKind() == TemplateArgument::Template) {
+    TemplateDecl *PatTD = Pattern.getAsTemplate().getAsTemplateDecl();
+    if (auto *TTPD = dyn_cast_or_null<TemplateTemplateParmDecl>(PatTD))
+      return TTPD->getDepth() == Depth && Args.size() > TTPD->getIndex() &&
+             Ctx.getCanonicalTemplateArgument(Args[TTPD->getIndex()])
+                 .structurallyEquals(Arg);
+  }
+
+  // FIXME: Handle more cases.
+  return false;
+}
+
+/// Make a best-effort determination of whether the type T can be produced by
+/// substituting Args into the default argument of Param.
+static bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
+                                         const NamedDecl *Param,
+                                         ArrayRef<TemplateArgument> Args,
+                                         unsigned Depth) {
+  // An empty pack is equivalent to not providing a pack argument.
+  if (Arg.getKind() == TemplateArgument::Pack && Arg.pack_size() == 0)
+    return true;
+
+  if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Param)) {
+    return TTPD->hasDefaultArgument() &&
+           isSubstitutedTemplateArgument(Ctx, Arg, TTPD->getDefaultArgument(),
+                                         Args, Depth);
+  } else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+    return TTPD->hasDefaultArgument() &&
+           isSubstitutedTemplateArgument(
+               Ctx, Arg, TTPD->getDefaultArgument().getArgument(), Args, Depth);
+  } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    return NTTPD->hasDefaultArgument() &&
+           isSubstitutedTemplateArgument(Ctx, Arg, NTTPD->getDefaultArgument(),
+                                         Args, Depth);
+  }
+  return false;
+}
+
 template<typename TA>
 static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
-                    const PrintingPolicy &Policy, bool SkipBrackets) {
+                    const PrintingPolicy &Policy, bool SkipBrackets,
+                    const TemplateParameterList *TPL) {
+  // Drop trailing template arguments that match default arguments.
+  if (TPL && Policy.SuppressDefaultTemplateArgs &&
+      !Policy.PrintCanonicalTypes && !Args.empty() &&
+      Args.size() <= TPL->size()) {
+    ASTContext &Ctx = TPL->getParam(0)->getASTContext();
+    llvm::SmallVector<TemplateArgument, 8> OrigArgs;
+    for (const TA &A : Args)
+      OrigArgs.push_back(getArgument(A));
+    while (!Args.empty() &&
+           isSubstitutedDefaultArgument(Ctx, getArgument(Args.back()),
+                                        TPL->getParam(Args.size() - 1),
+                                        OrigArgs, TPL->getDepth()))
+      Args = Args.drop_back();
+  }
+
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
   if (!SkipBrackets)
     OS << '<';
@@ -1818,7 +1996,7 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
     if (Argument.getKind() == TemplateArgument::Pack) {
       if (Argument.pack_size() && !FirstArg)
         OS << Comma;
-      printTo(ArgOS, Argument.getPackAsArray(), Policy, true);
+      printTo(ArgOS, Argument.getPackAsArray(), Policy, true, nullptr);
     } else {
       if (!FirstArg)
         OS << Comma;
@@ -1851,20 +2029,23 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
                                       const TemplateArgumentListInfo &Args,
-                                      const PrintingPolicy &Policy) {
-  return printTo(OS, Args.arguments(), Policy, false);
+                                      const PrintingPolicy &Policy,
+                                      const TemplateParameterList *TPL) {
+  printTemplateArgumentList(OS, Args.arguments(), Policy, TPL);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgument> Args,
-                                      const PrintingPolicy &Policy) {
-  printTo(OS, Args, Policy, false);
+                                      const PrintingPolicy &Policy,
+                                      const TemplateParameterList *TPL) {
+  printTo(OS, Args, Policy, false, TPL);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgumentLoc> Args,
-                                      const PrintingPolicy &Policy) {
-  printTo(OS, Args, Policy, false);
+                                      const PrintingPolicy &Policy,
+                                      const TemplateParameterList *TPL) {
+  printTo(OS, Args, Policy, false, TPL);
 }
 
 std::string PointerAuthQualifier::getAsString() const {

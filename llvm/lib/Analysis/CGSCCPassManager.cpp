@@ -549,7 +549,9 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     // TODO: This only allows trivial edges to be added for now.
     assert((RC == &TargetRC ||
            RC->isAncestorOf(TargetRC)) && "New call edge is not trivial!");
-    RC->insertTrivialCallEdge(N, *CallTarget);
+    // Add a trivial ref edge to be promoted later on alongside
+    // PromotedRefTargets.
+    RC->insertTrivialRefEdge(N, *CallTarget);
   }
 
   // Include synthetic reference edges to known, defined lib functions.
@@ -663,6 +665,11 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, *RefTarget), G, N,
                                C, AM, UR);
   }
+
+  // We added a ref edge earlier for new call edges, promote those to call edges
+  // alongside PromotedRefTargets.
+  for (Node *E : NewCallEdges)
+    PromotedRefTargets.insert(E);
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {

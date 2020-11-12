@@ -1433,8 +1433,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
     // Check if alignment requirements for ds_read/write instructions are
     // disabled.
-    if (Subtarget->hasUnalignedDSAccess() &&
-        Subtarget->hasUnalignedAccessMode() &&
+    if (Subtarget->hasUnalignedDSAccessEnabled() &&
         !Subtarget->hasLDSMisalignedBug()) {
       if (IsFast)
         *IsFast = Alignment != Align(2);
@@ -1484,7 +1483,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccess() &&
+  if (Subtarget->hasUnalignedBufferAccessEnabled() &&
       !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
         AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
     // If we have an uniform constant load, it still requires using a slow

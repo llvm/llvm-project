@@ -12,132 +12,10 @@ using namespace clang;
 
 raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
   switch (K) {
-  case NodeKind::Leaf:
-    return OS << "Leaf";
-  case NodeKind::TranslationUnit:
-    return OS << "TranslationUnit";
-  case NodeKind::UnknownExpression:
-    return OS << "UnknownExpression";
-  case NodeKind::ParenExpression:
-    return OS << "ParenExpression";
-  case NodeKind::ThisExpression:
-    return OS << "ThisExpression";
-  case NodeKind::IntegerLiteralExpression:
-    return OS << "IntegerLiteralExpression";
-  case NodeKind::CharacterLiteralExpression:
-    return OS << "CharacterLiteralExpression";
-  case NodeKind::FloatingLiteralExpression:
-    return OS << "FloatingLiteralExpression";
-  case NodeKind::StringLiteralExpression:
-    return OS << "StringLiteralExpression";
-  case NodeKind::BoolLiteralExpression:
-    return OS << "BoolLiteralExpression";
-  case NodeKind::CxxNullPtrExpression:
-    return OS << "CxxNullPtrExpression";
-  case NodeKind::IntegerUserDefinedLiteralExpression:
-    return OS << "IntegerUserDefinedLiteralExpression";
-  case NodeKind::FloatUserDefinedLiteralExpression:
-    return OS << "FloatUserDefinedLiteralExpression";
-  case NodeKind::CharUserDefinedLiteralExpression:
-    return OS << "CharUserDefinedLiteralExpression";
-  case NodeKind::StringUserDefinedLiteralExpression:
-    return OS << "StringUserDefinedLiteralExpression";
-  case NodeKind::PrefixUnaryOperatorExpression:
-    return OS << "PrefixUnaryOperatorExpression";
-  case NodeKind::PostfixUnaryOperatorExpression:
-    return OS << "PostfixUnaryOperatorExpression";
-  case NodeKind::BinaryOperatorExpression:
-    return OS << "BinaryOperatorExpression";
-  case NodeKind::UnqualifiedId:
-    return OS << "UnqualifiedId";
-  case NodeKind::IdExpression:
-    return OS << "IdExpression";
-  case NodeKind::CallExpression:
-    return OS << "CallExpression";
-  case NodeKind::UnknownStatement:
-    return OS << "UnknownStatement";
-  case NodeKind::DeclarationStatement:
-    return OS << "DeclarationStatement";
-  case NodeKind::EmptyStatement:
-    return OS << "EmptyStatement";
-  case NodeKind::SwitchStatement:
-    return OS << "SwitchStatement";
-  case NodeKind::CaseStatement:
-    return OS << "CaseStatement";
-  case NodeKind::DefaultStatement:
-    return OS << "DefaultStatement";
-  case NodeKind::IfStatement:
-    return OS << "IfStatement";
-  case NodeKind::ForStatement:
-    return OS << "ForStatement";
-  case NodeKind::WhileStatement:
-    return OS << "WhileStatement";
-  case NodeKind::ContinueStatement:
-    return OS << "ContinueStatement";
-  case NodeKind::BreakStatement:
-    return OS << "BreakStatement";
-  case NodeKind::ReturnStatement:
-    return OS << "ReturnStatement";
-  case NodeKind::RangeBasedForStatement:
-    return OS << "RangeBasedForStatement";
-  case NodeKind::ExpressionStatement:
-    return OS << "ExpressionStatement";
-  case NodeKind::CompoundStatement:
-    return OS << "CompoundStatement";
-  case NodeKind::UnknownDeclaration:
-    return OS << "UnknownDeclaration";
-  case NodeKind::EmptyDeclaration:
-    return OS << "EmptyDeclaration";
-  case NodeKind::StaticAssertDeclaration:
-    return OS << "StaticAssertDeclaration";
-  case NodeKind::LinkageSpecificationDeclaration:
-    return OS << "LinkageSpecificationDeclaration";
-  case NodeKind::SimpleDeclaration:
-    return OS << "SimpleDeclaration";
-  case NodeKind::TemplateDeclaration:
-    return OS << "TemplateDeclaration";
-  case NodeKind::ExplicitTemplateInstantiation:
-    return OS << "ExplicitTemplateInstantiation";
-  case NodeKind::NamespaceDefinition:
-    return OS << "NamespaceDefinition";
-  case NodeKind::NamespaceAliasDefinition:
-    return OS << "NamespaceAliasDefinition";
-  case NodeKind::UsingNamespaceDirective:
-    return OS << "UsingNamespaceDirective";
-  case NodeKind::UsingDeclaration:
-    return OS << "UsingDeclaration";
-  case NodeKind::TypeAliasDeclaration:
-    return OS << "TypeAliasDeclaration";
-  case NodeKind::SimpleDeclarator:
-    return OS << "SimpleDeclarator";
-  case NodeKind::ParenDeclarator:
-    return OS << "ParenDeclarator";
-  case NodeKind::ArraySubscript:
-    return OS << "ArraySubscript";
-  case NodeKind::TrailingReturnType:
-    return OS << "TrailingReturnType";
-  case NodeKind::ParametersAndQualifiers:
-    return OS << "ParametersAndQualifiers";
-  case NodeKind::MemberPointer:
-    return OS << "MemberPointer";
-  case NodeKind::GlobalNameSpecifier:
-    return OS << "GlobalNameSpecifier";
-  case NodeKind::DecltypeNameSpecifier:
-    return OS << "DecltypeNameSpecifier";
-  case NodeKind::IdentifierNameSpecifier:
-    return OS << "IdentifierNameSpecifier";
-  case NodeKind::SimpleTemplateNameSpecifier:
-    return OS << "SimpleTemplateNameSpecifier";
-  case NodeKind::NestedNameSpecifier:
-    return OS << "NestedNameSpecifier";
-  case NodeKind::MemberExpression:
-    return OS << "MemberExpression";
-  case NodeKind::CallArguments:
-    return OS << "CallArguments";
-  case NodeKind::ParameterDeclarationList:
-    return OS << "ParameterDeclarationList";
-  case NodeKind::DeclaratorList:
-    return OS << "DeclaratorList";
+#define CONCRETE_NODE(Kind, Parent)                                            \
+  case NodeKind::Kind:                                                         \
+    return OS << #Kind;
+#include "clang/Tooling/Syntax/Nodes.inc"
   }
   llvm_unreachable("unknown node kind");
 }
@@ -318,58 +196,6 @@ syntax::DeclaratorList::getDeclaratorsAndCommas() {
   return Children;
 }
 
-syntax::Expression *syntax::MemberExpression::getObject() {
-  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Object));
-}
-
-syntax::Leaf *syntax::MemberExpression::getTemplateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::TemplateKeyword));
-}
-
-syntax::Leaf *syntax::MemberExpression::getAccessToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::AccessToken));
-}
-
-syntax::IdExpression *syntax::MemberExpression::getMember() {
-  return cast_or_null<syntax::IdExpression>(
-      findChild(syntax::NodeRole::Member));
-}
-
-syntax::NestedNameSpecifier *syntax::IdExpression::getQualifier() {
-  return cast_or_null<syntax::NestedNameSpecifier>(
-      findChild(syntax::NodeRole::Qualifier));
-}
-
-syntax::Leaf *syntax::IdExpression::getTemplateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::TemplateKeyword));
-}
-
-syntax::UnqualifiedId *syntax::IdExpression::getUnqualifiedId() {
-  return cast_or_null<syntax::UnqualifiedId>(
-      findChild(syntax::NodeRole::UnqualifiedId));
-}
-
-syntax::Leaf *syntax::ParenExpression::getOpenParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::Expression *syntax::ParenExpression::getSubExpression() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::SubExpression));
-}
-
-syntax::Leaf *syntax::ParenExpression::getCloseParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
-}
-
-syntax::Leaf *syntax::ThisExpression::getThisKeyword() {
-  return cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
 syntax::Leaf *syntax::LiteralExpression::getLiteralToken() {
   return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::LiteralToken));
 }
@@ -394,23 +220,6 @@ syntax::Leaf *syntax::BinaryOperatorExpression::getOperatorToken() {
 syntax::Expression *syntax::BinaryOperatorExpression::getRhs() {
   return cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::RightHandSide));
-}
-
-syntax::Expression *syntax::CallExpression::getCallee() {
-  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Callee));
-}
-
-syntax::Leaf *syntax::CallExpression::getOpenParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::CallArguments *syntax::CallExpression::getArguments() {
-  return cast_or_null<syntax::CallArguments>(
-      findChild(syntax::NodeRole::Arguments));
-}
-
-syntax::Leaf *syntax::CallExpression::getCloseParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
 }
 
 syntax::Leaf *syntax::SwitchStatement::getSwitchKeyword() {
@@ -630,3 +439,7 @@ syntax::ParametersAndQualifiers::getTrailingReturn() {
   return cast_or_null<syntax::TrailingReturnType>(
       findChild(syntax::NodeRole::TrailingReturn));
 }
+
+#define NODE(Kind, Parent)                                                     \
+  static_assert(sizeof(syntax::Kind) > 0, "Missing Node subclass definition");
+#include "clang/Tooling/Syntax/Nodes.inc"

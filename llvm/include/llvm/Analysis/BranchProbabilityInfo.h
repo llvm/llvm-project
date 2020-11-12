@@ -266,7 +266,7 @@ private:
   // weight to just "inherit" the non-zero weight of an adjacent successor.
   static const uint32_t DEFAULT_WEIGHT = 16;
 
-  DenseMap<const BasicBlock *, SmallVector<BranchProbability, 2>> Probs;
+  DenseMap<Edge, BranchProbability> Probs;
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;

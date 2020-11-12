@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -emit-llvm -x c++ \
 // RUN:     -debug-info-kind=limited < %s | \
-// RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
+// RUN:   FileCheck %s
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm -x c++ \
 // RUN:     -debug-info-kind=limited  < %s | \
-// RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
+// RUN:   FileCheck %s
 
 struct X {
   X();

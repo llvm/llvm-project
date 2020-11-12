@@ -388,7 +388,7 @@ def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
 
 // Standard Options
 
-def _HASH_HASH_HASH : Flag<["-"], "###">, Flags<[NoXarchOption, CoreOption]>,
+def _HASH_HASH_HASH : Flag<["-"], "###">, Flags<[NoXarchOption, CoreOption, FlangOption]>,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
     Flags<[NoXarchOption, CoreOption]>;
@@ -595,7 +595,7 @@ def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>,
   HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
   MarshallingInfoFlag<"LangOpts->CLNoSignedZero">;
 def cl_std_EQ : Joined<["-"], "cl-std=">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL language standard to compile for.">, Values<"cl,CL,cl1.1,CL1.1,cl1.2,CL1.2,cl2.0,CL2.0,cl3.0,CL3.0,clc++,CLC++">;
+  HelpText<"OpenCL language standard to compile for.">, Values<"cl,CL,cl1.0,CL1.0,cl1.1,CL1.1,cl1.2,CL1.2,cl2.0,CL2.0,cl3.0,CL3.0,clc++,CLC++">;
 def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">, Group<opencl_Group>,
   HelpText<"OpenCL only. Allow denormals to be flushed to zero.">;
 def cl_fp32_correctly_rounded_divide_sqrt : Flag<["-"], "cl-fp32-correctly-rounded-divide-sqrt">, Group<opencl_Group>, Flags<[CC1Option]>,
@@ -1290,7 +1290,8 @@ defm rewrite_includes : OptInFFlag<"rewrite-includes", "">;
 
 defm delete_null_pointer_checks : OptOutFFlag<"delete-null-pointer-checks",
   "Treat usage of null pointers as undefined behavior (default)",
-  "Do not treat usage of null pointers as undefined behavior">;
+  "Do not treat usage of null pointers as undefined behavior",
+  "", [CoreOption]>;
 
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
@@ -1476,6 +1477,11 @@ def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Grou
 def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
   Flags<[NoXarchOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the prebuilt module path">;
+def fprebuilt_implicit_modules : Flag<["-"], "fprebuilt-implicit-modules">, Group<f_Group>,
+  Flags<[NoXarchOption, CC1Option]>,
+  HelpText<"Look up implicit modules in the prebuilt module path">;
+def fno_prebuilt_implicit_modules : Flag<["-"], "fno_prebuilt-implicit-modules">, Group<f_Group>,
+  Flags<[NoXarchOption, CC1Option]>;
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">;

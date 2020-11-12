@@ -18,6 +18,7 @@
 ! HELP:USAGE: flang-new
 ! HELP-EMPTY:
 ! HELP-NEXT:OPTIONS:
+! HELP-NEXT: -###                   Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -E                     Only run the preprocessor
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics

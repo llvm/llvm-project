@@ -1068,6 +1068,57 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
   return success();
 }
 
+/// Checks if two ShapedTypes are the same, ignoring the element type.
+static bool areSameShapedTypeIgnoringElementType(ShapedType a, ShapedType b) {
+  if (a.getTypeID() != b.getTypeID())
+    return false;
+  if (!a.hasRank())
+    return !b.hasRank();
+  return a.getShape() == b.getShape();
+}
+
+LogicalResult OpTrait::impl::verifyElementwiseMappable(Operation *op) {
+  auto isMappableType = [](Type type) {
+    return type.isa<VectorType, TensorType>();
+  };
+  auto resultMappableTypes = llvm::to_vector<1>(
+      llvm::make_filter_range(op->getResultTypes(), isMappableType));
+  auto operandMappableTypes = llvm::to_vector<2>(
+      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+
+  // If the op only has scalar operand/result types, then we have nothing to
+  // check.
+  if (resultMappableTypes.empty() && operandMappableTypes.empty())
+    return success();
+
+  if (!resultMappableTypes.empty() && operandMappableTypes.empty())
+    return op->emitOpError("if a result is non-scalar, then at least one "
+                           "operand must be non-scalar");
+
+  assert(!operandMappableTypes.empty());
+
+  if (resultMappableTypes.empty())
+    return op->emitOpError("if an operand is non-scalar, then there must be at "
+                           "least one non-scalar result");
+
+  if (resultMappableTypes.size() != op->getNumResults())
+    return op->emitOpError(
+        "if an operand is non-scalar, then all results must be non-scalar");
+
+  auto mustMatchType = operandMappableTypes[0].cast<ShapedType>();
+  for (auto type :
+       llvm::concat<Type>(resultMappableTypes, operandMappableTypes)) {
+    if (!areSameShapedTypeIgnoringElementType(type.cast<ShapedType>(),
+                                              mustMatchType)) {
+      return op->emitOpError() << "all non-scalar operands/results must have "
+                                  "the same shape and base type: found "
+                               << type << " and " << mustMatchType;
+    }
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // BinaryOp implementation
 //===----------------------------------------------------------------------===//

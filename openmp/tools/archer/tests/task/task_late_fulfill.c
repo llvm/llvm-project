@@ -34,7 +34,7 @@ int main() {
     usleep(10000);
     a++;
     printf("%i: calling omp_fulfill_event\n", omp_get_thread_num());
-    omp_fulfill_event(*f_event);
+    omp_fulfill_event(event);
 //#pragma omp task if (0) depend(in : f_event)
 //    {}
     b++;
@@ -46,14 +46,6 @@ int main() {
 
 // no race for a++ in line 32:
 // CHECK-NOT: #0 {{.*}}task_late_fulfill.c:35
-
-// we expect a race on f_event:
-
-// CHECK: WARNING: ThreadSanitizer: data race
-// CHECK-NEXT:   {{(Write|Read)}} of size 8
-// CHECK-NEXT: #0 {{.*}}task_late_fulfill.c:37
-// CHECK:   Previous write of size 8
-// CHECK-NEXT: #0 {{.*}}task_late_fulfill.c:26
 
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK-NEXT:   {{(Write|Read)}} of size 4

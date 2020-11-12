@@ -1064,7 +1064,7 @@ public:
   /// Streamer specific finalization.
   virtual void finishImpl();
   /// Finish emission of machine code.
-  void Finish();
+  void Finish(SMLoc EndLoc = SMLoc());
 
   virtual bool mayHaveInstructions(MCSection &Sec) const { return true; }
 };

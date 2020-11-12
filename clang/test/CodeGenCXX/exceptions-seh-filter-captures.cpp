@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fblocks -fms-extensions %s -triple=x86_64-windows-msvc -emit-llvm \
-// RUN:         -o - -mconstructor-aliases -fcxx-exceptions -fexceptions | \
-// RUN:         FileCheck %s --check-prefix=CHECK --check-prefix=CXXEH
+// RUN:         -o - -mconstructor-aliases -fcxx-exceptions -fexceptions | FileCheck %s
 
 extern "C" int basic_filter(int v, ...);
 extern "C" void might_crash();

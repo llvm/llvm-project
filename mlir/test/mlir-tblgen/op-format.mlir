@@ -5,8 +5,8 @@
 // CHECK: %[[MEMREF:.*]] =
 %memref = "foo.op"() : () -> (memref<1xf64>)
 
-// CHECK: test.format_literal_op keyword_$. -> :, = <> () [] ( ) {foo.some_attr}
-test.format_literal_op keyword_$. -> :, = <> () [] ( ) {foo.some_attr}
+// CHECK: test.format_literal_op keyword_$. -> :, = <> () []( ) {foo.some_attr}
+test.format_literal_op keyword_$. -> :, = <> () []( ) {foo.some_attr}
 
 // CHECK: test.format_attr_op 10
 // CHECK-NOT: {attr

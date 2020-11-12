@@ -738,20 +738,10 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // width, the Loop Start instruction will immediately generate one or more
   // false lane mask which can, incorrectly, affect the proceeding MVE
   // instructions in the preheader.
-  auto CannotInsertWDLSTPBetween = [](MachineBasicBlock::iterator I,
-                                      MachineBasicBlock::iterator E) {
-    for (; I != E; ++I) {
-      if (shouldInspect(*I)) {
-        LLVM_DEBUG(dbgs() << "ARM Loops: Instruction blocks [W|D]LSTP"
-                          << " insertion: " << *I);
-        return true;
-      }
-    }
+  if (std::any_of(StartInsertPt, StartInsertBB->end(), shouldInspect)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Instruction blocks [W|D]LSTP\n");
     return false;
-  };
-
-  if (CannotInsertWDLSTPBetween(StartInsertPt, StartInsertBB->end()))
-    return false;
+  }
 
   // Check that the value change of the element count is what we expect and
   // that the predication will be equivalent. For this we need:

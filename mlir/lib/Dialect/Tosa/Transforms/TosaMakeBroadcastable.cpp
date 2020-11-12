@@ -117,9 +117,10 @@ static int reshapeLowerToHigher(PatternRewriter &rewriter, Location loc,
 
   Value higherTensorValue, lowerTensorValue;
   // return if rank already match
-  if (input1Rank == input2Rank) {
+  if (input1Rank == input2Rank)
     return 1;
-  } else if (input1Rank > input2Rank) {
+
+  if (input1Rank > input2Rank) {
     higherTensorValue = input1;
     lowerTensorValue = input2;
   } else {
@@ -166,7 +167,7 @@ struct ConvertTosaOp : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OpTy tosaBinaryOp,
-                                PatternRewriter &rewriter) const {
+                                PatternRewriter &rewriter) const override {
 
     Value input1 = tosaBinaryOp.input1();
     Value input2 = tosaBinaryOp.input2();
@@ -192,7 +193,7 @@ struct ConvertTosaOp<tosa::MulOp> : public OpRewritePattern<tosa::MulOp> {
   using OpRewritePattern<tosa::MulOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tosa::MulOp tosaBinaryOp,
-                                PatternRewriter &rewriter) const {
+                                PatternRewriter &rewriter) const override {
 
     Value input1 = tosaBinaryOp.input1();
     Value input2 = tosaBinaryOp.input2();
@@ -221,7 +222,7 @@ struct ConvertTosaOp<tosa::ArithmeticRightShiftOp>
   using OpRewritePattern<tosa::ArithmeticRightShiftOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tosa::ArithmeticRightShiftOp tosaBinaryOp,
-                                PatternRewriter &rewriter) const {
+                                PatternRewriter &rewriter) const override {
 
     Value input1 = tosaBinaryOp.input1();
     Value input2 = tosaBinaryOp.input2();
