@@ -499,10 +499,10 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   }
   if (Chunks.count("cmdl")) {
     Reader CmdReader(Chunks.lookup("cmdl"));
-    if (CmdReader.err())
-      return error("malformed or truncated commandline section");
     InternedCompileCommand Cmd =
         readCompileCommand(CmdReader, Strings->Strings);
+    if (CmdReader.err())
+      return error("malformed or truncated commandline section");
     Result.Cmd.emplace();
     Result.Cmd->Directory = std::string(Cmd.Directory);
     Result.Cmd->CommandLine.reserve(Cmd.CommandLine.size());
