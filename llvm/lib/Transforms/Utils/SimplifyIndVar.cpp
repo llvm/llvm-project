@@ -1539,8 +1539,26 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   ExtendKind ExtKind = getExtendKind(NarrowDef);
   bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
   bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
-  if (!CanSignExtend && !CanZeroExtend)
-    return false;
+  auto AnotherOpExtKind = ExtKind;
+  if (!CanSignExtend && !CanZeroExtend) {
+    // Because InstCombine turns 'sub nuw' to 'add' losing the no-wrap flag, we
+    // will most likely not see it. Let's try to prove it.
+    if (OpCode != Instruction::Add)
+      return false;
+    if (ExtKind != ZeroExtended)
+      return false;
+    const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
+    const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
+    if (!SE->isKnownNegative(RHS))
+      return false;
+    bool ProvedSubNUW = SE->isKnownPredicateAt(
+        ICmpInst::ICMP_UGE, LHS, SE->getNegativeSCEV(RHS), NarrowUse);
+    if (!ProvedSubNUW)
+      return false;
+    // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
+    // neg(zext(neg(op))), which is basically sext(op).
+    AnotherOpExtKind = SignExtended;
+  }
 
   // Verifying that Defining operand is an AddRec
   const SCEV *Op1 = SE->getSCEV(WideDef);
@@ -1564,11 +1582,11 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(0), WideType,
-                                      ExtKind, NarrowUse);
+                                      AnotherOpExtKind, NarrowUse);
   Value *RHS = (NarrowUse->getOperand(1) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(1), WideType,
-                                      ExtKind, NarrowUse);
+                                      AnotherOpExtKind, NarrowUse);
 
   auto *NarrowBO = cast<BinaryOperator>(NarrowUse);
   auto *WideBO = BinaryOperator::Create(NarrowBO->getOpcode(), LHS, RHS,
