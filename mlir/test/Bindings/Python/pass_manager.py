@@ -5,8 +5,7 @@ from mlir.ir import *
 from mlir.passmanager import *
 
 # Log everything to stderr and flush so that we have a unified stream to match
-# errors emitted by MLIR to stderr. TODO: this shouldn't be needed when
-# everything is plumbed.
+# errors/info emitted by MLIR to stderr.
 def log(*args):
   print(*args, file=sys.stderr)
   sys.stderr.flush()
@@ -52,3 +51,18 @@ def testParseFail():
     else:
       log("Exception not produced")
 run(testParseFail)
+
+
+# Verify that a pass manager can execute on IR
+# CHECK-LABEL: TEST: testRun
+def testRunPipeline():
+  with Context():
+    pm = PassManager.parse("print-op-stats")
+    module = Module.parse(r"""func @successfulParse() { return }""")
+    pm.run(module)
+# CHECK: Operations encountered:
+# CHECK: func              , 1
+# CHECK: module            , 1
+# CHECK: module_terminator , 1
+# CHECK: std.return        , 1
+run(testRunPipeline)
