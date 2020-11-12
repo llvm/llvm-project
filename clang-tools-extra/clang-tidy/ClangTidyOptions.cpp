@@ -116,7 +116,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.User = llvm::None;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
-    Options = Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
+    Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
   return Options;
 }
 
@@ -142,27 +142,31 @@ static void overrideValue(Optional<T> &Dest, const Optional<T> &Src) {
     Dest = Src;
 }
 
-ClangTidyOptions ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
-                                             unsigned Priority) const {
-  ClangTidyOptions Result = *this;
-
-  mergeCommaSeparatedLists(Result.Checks, Other.Checks);
-  mergeCommaSeparatedLists(Result.WarningsAsErrors, Other.WarningsAsErrors);
-  overrideValue(Result.HeaderFilterRegex, Other.HeaderFilterRegex);
-  overrideValue(Result.SystemHeaders, Other.SystemHeaders);
-  overrideValue(Result.FormatStyle, Other.FormatStyle);
-  overrideValue(Result.User, Other.User);
-  overrideValue(Result.UseColor, Other.UseColor);
-  mergeVectors(Result.ExtraArgs, Other.ExtraArgs);
-  mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
+ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
+                                              unsigned Order) {
+  mergeCommaSeparatedLists(Checks, Other.Checks);
+  mergeCommaSeparatedLists(WarningsAsErrors, Other.WarningsAsErrors);
+  overrideValue(HeaderFilterRegex, Other.HeaderFilterRegex);
+  overrideValue(SystemHeaders, Other.SystemHeaders);
+  overrideValue(FormatStyle, Other.FormatStyle);
+  overrideValue(User, Other.User);
+  overrideValue(UseColor, Other.UseColor);
+  mergeVectors(ExtraArgs, Other.ExtraArgs);
+  mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
 
   for (const auto &KeyValue : Other.CheckOptions) {
-    Result.CheckOptions.insert_or_assign(
+    CheckOptions.insert_or_assign(
         KeyValue.getKey(),
         ClangTidyValue(KeyValue.getValue().Value,
-                       KeyValue.getValue().Priority + Priority));
+                       KeyValue.getValue().Priority + Order));
   }
+  return *this;
+}
 
+ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
+                                         unsigned Order) const {
+  ClangTidyOptions Result = *this;
+  Result.mergeWith(Other, Order);
   return Result;
 }
 
@@ -178,8 +182,8 @@ ClangTidyOptions
 ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
-  for (const auto &Source : getRawOptions(FileName))
-    Result = Result.mergeWith(Source.first, ++Priority);
+  for (auto &Source : getRawOptions(FileName))
+    Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
 
