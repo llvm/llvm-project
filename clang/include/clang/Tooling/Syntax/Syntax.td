@@ -31,10 +31,28 @@
 class NodeType {
   // The NodeType that this node is derived from in the Node class hierarchy.
   NodeType base = ?;
+  // Documentation for this Node subclass.
+  string documentation;
 }
 
 // A node type which is defined in Nodes.h rather than by generated code.
 // We merely specify the inheritance hierarchy here.
 class External<NodeType base_> : NodeType { let base = base_; }
 
-// FIXME: add sequence, list, and alternative archetypes.
+// Special nodes defined here.
+def Node : External<?> {}
+def Leaf : External<Node> {}
+def Tree : External<Node> {}
+
+// An abstract node type which merely serves as a base for more specific types.
+//
+// This corresponds to an alternative rule in the grammar, such as:
+//   Statement = IfStatement | ForStatement | ...
+// Statement is modeled using Alternatives, and IfStatement.base is Statement.
+class Alternatives<NodeType base_ = Tree> : NodeType { let base = base_; }
+
+// A node type which may contain anything and has no specific accessors.
+// These are generally placeholders for a more precise implementation.
+class Unconstrained<NodeType base_ = Tree> : NodeType { let base = base_; }
+
+// FIXME: add sequence and list archetypes.
