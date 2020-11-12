@@ -61,6 +61,17 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
       .def(
+          "run",
+          [](PyPassManager &passManager, PyModule &module) {
+            MlirLogicalResult status =
+                mlirPassManagerRun(passManager.get(), module.get());
+            if (mlirLogicalResultIsFailure(status))
+              throw SetPyError(PyExc_RuntimeError,
+                               "Failure while executing pass pipeline.");
+          },
+          "Run the pass manager on the provided module, throw a RuntimeError "
+          "on failure.")
+      .def(
           "__str__",
           [](PyPassManager &self) {
             MlirPassManager passManager = self.get();
