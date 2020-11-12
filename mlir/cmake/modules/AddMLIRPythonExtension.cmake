@@ -24,12 +24,12 @@ function(add_mlir_python_extension libname extname)
   # symbols, which is better for development. Note that not all python
   # configurations provide build-time libraries to link against, in which
   # case, we fall back to MODULE linking.
-  if(PYTHON_LIBRARIES STREQUAL "" OR NOT MLIR_PYTHON_BINDINGS_VERSION_LOCKED)
+  if(Python3_LIBRARIES STREQUAL "" OR NOT MLIR_PYTHON_BINDINGS_VERSION_LOCKED)
     set(PYEXT_LINK_MODE MODULE)
     set(PYEXT_LIBADD)
   else()
     set(PYEXT_LINK_MODE SHARED)
-    set(PYEXT_LIBADD ${PYTHON_LIBRARIES})
+    set(PYEXT_LIBADD ${Python3_LIBRARIES})
   endif()
 
   # The actual extension library produces a shared-object or DLL and has
@@ -40,7 +40,7 @@ function(add_mlir_python_extension libname extname)
   )
 
   target_include_directories(${libname} PRIVATE
-    "${PYTHON_INCLUDE_DIRS}"
+    "${Python3_INCLUDE_DIRS}"
     "${pybind11_INCLUDE_DIR}"
   )
 
