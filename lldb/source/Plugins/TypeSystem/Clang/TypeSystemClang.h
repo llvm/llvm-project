@@ -1063,6 +1063,13 @@ public:
   }
 
 private:
+  /// Returns the PrintingPolicy used when generating the internal type names.
+  /// These type names are mostly used for the formatter selection.
+  clang::PrintingPolicy GetTypePrintingPolicy();
+  /// Returns the internal type name for the given NamedDecl using the
+  /// type printing policy.
+  std::string GetTypeNameForDecl(const clang::NamedDecl *named_decl);
+
   const clang::ClassTemplateSpecializationDecl *
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
 

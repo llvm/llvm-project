@@ -35,7 +35,7 @@ struct GPR {
   uint32_t gs;
 };
 
-struct dbreg {
+struct DBG {
   uint32_t dr[8]; /* debug registers */
                   /* Index 0-3: debug address registers */
                   /* Index 4-5: reserved */
@@ -48,10 +48,13 @@ using FPR_i386 = FXSAVE;
 struct UserArea {
   GPR gpr;
   FPR_i386 i387;
+  DBG dbg;
 };
 
 #define DR_SIZE sizeof(uint32_t)
-#define DR_OFFSET(reg_index) (LLVM_EXTENSION offsetof(dbreg, dr[reg_index]))
+#define DR_OFFSET(reg_index)                                                   \
+  (LLVM_EXTENSION offsetof(UserArea, dbg) +                                    \
+   LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
 // Include RegisterInfos_i386 to declare our g_register_infos_i386 structure.
 #define DECLARE_REGISTER_INFOS_I386_STRUCT

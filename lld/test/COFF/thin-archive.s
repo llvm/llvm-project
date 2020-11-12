@@ -17,9 +17,9 @@
 # RUN: rm %t.lib.obj
 # RUN: lld-link /entry:main %t.main.obj %t.lib /out:%t.exe 2>&1 | \
 # RUN:     FileCheck --allow-empty %s
-# RUN: not lld-link /entry:main %t.main.obj %t_thin.lib /out:%t.exe 2>&1 | \
-# RUN:     FileCheck --check-prefix=NOOBJ %s
-# RUN: not lld-link /entry:main %t.main.obj %t_thin.lib /out:%t.exe \
+# RUN: env LLD_IN_TEST=1 not lld-link /entry:main %t.main.obj %t_thin.lib \
+# RUN:     /out:%t.exe 2>&1 | FileCheck --check-prefix=NOOBJ %s
+# RUN: env LLD_IN_TEST=1 not lld-link /entry:main %t.main.obj %t_thin.lib /out:%t.exe \
 # RUN:     /demangle:no 2>&1 | FileCheck --check-prefix=NOOBJNODEMANGLE %s
 
 # CHECK-NOT: error: could not get the buffer for the member defining
