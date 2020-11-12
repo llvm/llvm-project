@@ -1016,18 +1016,19 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   // This is really a 6 bit field.
   uint32_t Tgt = MI->getOperand(OpNo).getImm() & ((1 << 6) - 1);
 
-  if (Tgt <= 7)
-    O << " mrt" << Tgt;
-  else if (Tgt == 8)
+  if (Tgt <= Exp::ET_MRT7)
+    O << " mrt" << Tgt - Exp::ET_MRT0;
+  else if (Tgt == Exp::ET_MRTZ)
     O << " mrtz";
-  else if (Tgt == 9)
+  else if (Tgt == Exp::ET_NULL)
     O << " null";
-  else if ((Tgt >= 12 && Tgt <= 15) || (Tgt == 16 && AMDGPU::isGFX10(STI)))
-    O << " pos" << Tgt - 12;
-  else if (AMDGPU::isGFX10(STI) && Tgt == 20)
+  else if (Tgt >= Exp::ET_POS0 &&
+           Tgt <= (isGFX10(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
+    O << " pos" << Tgt - Exp::ET_POS0;
+  else if (isGFX10(STI) && Tgt == Exp::ET_PRIM)
     O << " prim";
-  else if (Tgt >= 32 && Tgt <= 63)
-    O << " param" << Tgt - 32;
+  else if (Tgt >= Exp::ET_PARAM0 && Tgt <= Exp::ET_PARAM31)
+    O << " param" << Tgt - Exp::ET_PARAM0;
   else {
     // Reserved values 10, 11
     O << " invalid_target_" << Tgt;

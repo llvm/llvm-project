@@ -1737,6 +1737,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           } else {
             setOrigin(A, getCleanOrigin());
           }
+
+          break;
         }
 
         if (!FArgEagerCheck)

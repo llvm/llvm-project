@@ -1259,10 +1259,8 @@ AliasResult BasicAAResult::aliasGEP(
   DecompGEP1.HasCompileTimeConstantScale =
       DecompGEP2.HasCompileTimeConstantScale = true;
 
-  bool GEP1MaxLookupReached =
-    DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
-  bool GEP2MaxLookupReached =
-    DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
+  DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
+  DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
 
   // Don't attempt to analyze the decomposed GEP if index scale is not a
   // compile-time constant.
@@ -1280,8 +1278,7 @@ AliasResult BasicAAResult::aliasGEP(
   // If the GEP's offset relative to its base is such that the base would
   // fall below the start of the object underlying V2, then the GEP and V2
   // cannot alias.
-  if (!GEP1MaxLookupReached && !GEP2MaxLookupReached &&
-      isGEPBaseAtNegativeOffset(GEP1, DecompGEP1, DecompGEP2, V2Size))
+  if (isGEPBaseAtNegativeOffset(GEP1, DecompGEP1, DecompGEP2, V2Size))
     return NoAlias;
   // If we have two gep instructions with must-alias or not-alias'ing base
   // pointers, figure out if the indexes to the GEP tell us anything about the
@@ -1289,8 +1286,7 @@ AliasResult BasicAAResult::aliasGEP(
   if (const GEPOperator *GEP2 = dyn_cast<GEPOperator>(V2)) {
     // Check for the GEP base being at a negative offset, this time in the other
     // direction.
-    if (!GEP1MaxLookupReached && !GEP2MaxLookupReached &&
-        isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
+    if (isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
       return NoAlias;
     // Do the base pointers alias?
     AliasResult BaseAlias =
@@ -1301,8 +1297,7 @@ AliasResult BasicAAResult::aliasGEP(
     // and AAInfo when performing the alias check on the underlying objects.
     if (BaseAlias == MayAlias && V1Size == V2Size &&
         GEP1BaseOffset == GEP2BaseOffset &&
-        DecompGEP1.VarIndices == DecompGEP2.VarIndices &&
-        !GEP1MaxLookupReached && !GEP2MaxLookupReached) {
+        DecompGEP1.VarIndices == DecompGEP2.VarIndices) {
       AliasResult PreciseBaseAlias = aliasCheck(
           UnderlyingV1, V1Size, V1AAInfo, UnderlyingV2, V2Size, V2AAInfo, AAQI);
       if (PreciseBaseAlias == NoAlias)
@@ -1331,10 +1326,6 @@ AliasResult BasicAAResult::aliasGEP(
         return R;
     }
 
-    // If the max search depth is reached, the result is undefined
-    if (GEP2MaxLookupReached || GEP1MaxLookupReached)
-      return MayAlias;
-
     // Subtract the GEP2 pointer from the GEP1 pointer to find out their
     // symbolic difference.
     GEP1BaseOffset -= GEP2BaseOffset;
@@ -1361,10 +1352,6 @@ AliasResult BasicAAResult::aliasGEP(
       assert(R == NoAlias || R == MayAlias);
       return R;
     }
-
-    // If the max search depth is reached the result is undefined
-    if (GEP1MaxLookupReached)
-      return MayAlias;
   }
 
   // In the two GEP Case, if there is no difference in the offsets of the

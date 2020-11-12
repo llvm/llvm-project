@@ -347,6 +347,13 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
   }
 
+  if (!(ArchDefs & ArchDefinePwr10) &&
+      llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
+    // We have MMA on PPC but not power 10 and above.
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
+    return false;
+  }
+
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 

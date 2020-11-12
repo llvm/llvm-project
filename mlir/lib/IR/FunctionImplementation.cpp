@@ -159,9 +159,10 @@ void mlir::impl::addArgAndResultAttrs(Builder &builder, OperationState &result,
 
 /// Parser implementation for function-like operations.  Uses `funcTypeBuilder`
 /// to construct the custom function type given lists of input and output types.
-ParseResult mlir::impl::parseFunctionLikeOp(
-    OpAsmParser &parser, OperationState &result, bool allowVariadic,
-    mlir::impl::FuncTypeBuilder funcTypeBuilder, bool allowInlineVisibility) {
+ParseResult
+mlir::impl::parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
+                                bool allowVariadic,
+                                mlir::impl::FuncTypeBuilder funcTypeBuilder) {
   SmallVector<OpAsmParser::OperandType, 4> entryArgs;
   SmallVector<NamedAttrList, 4> argAttrs;
   SmallVector<NamedAttrList, 4> resultAttrs;
@@ -169,9 +170,8 @@ ParseResult mlir::impl::parseFunctionLikeOp(
   SmallVector<Type, 4> resultTypes;
   auto &builder = parser.getBuilder();
 
-  // Parse visibility if inline visibility is allowed.
-  if (allowInlineVisibility)
-    impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+  // Parse visibility.
+  impl::parseOptionalVisibilityKeyword(parser, result.attributes);
 
   // Parse the name as a symbol.
   StringAttr nameAttr;
@@ -306,24 +306,21 @@ void mlir::impl::printFunctionAttributes(OpAsmPrinter &p, Operation *op,
 /// argument and result types to use while printing.
 void mlir::impl::printFunctionLikeOp(OpAsmPrinter &p, Operation *op,
                                      ArrayRef<Type> argTypes, bool isVariadic,
-                                     ArrayRef<Type> resultTypes,
-                                     bool printVisibilityInline) {
+                                     ArrayRef<Type> resultTypes) {
   // Print the operation and the function name.
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
           .getValue();
   p << op->getName() << ' ';
-  StringRef elidedAttr;
-  if (printVisibilityInline) {
-    elidedAttr = SymbolTable::getVisibilityAttrName();
-    if (auto visibility = op->getAttrOfType<StringAttr>(elidedAttr))
-      p << visibility.getValue() << ' ';
-  }
+
+  StringRef visibilityAttrName = SymbolTable::getVisibilityAttrName();
+  if (auto visibility = op->getAttrOfType<StringAttr>(visibilityAttrName))
+    p << visibility.getValue() << ' ';
   p.printSymbolName(funcName);
 
   printFunctionSignature(p, op, argTypes, isVariadic, resultTypes);
   printFunctionAttributes(p, op, argTypes.size(), resultTypes.size(),
-                          {elidedAttr});
+                          {visibilityAttrName});
   // Print the body if this is not an external function.
   Region &body = op->getRegion(0);
   if (!body.empty())
