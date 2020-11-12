@@ -258,29 +258,30 @@ public:
   Result operator()(const CoarrayRef &) const { return "coindexed reference"; }
 
   Result operator()(const semantics::Symbol &symbol) const {
-    const auto &ultimate{symbol.GetUltimate()};
-    if (semantics::IsNamedConstant(ultimate) || ultimate.owner().IsModule() ||
-        ultimate.owner().IsSubmodule()) {
+    if (semantics::IsNamedConstant(symbol)) {
       return std::nullopt;
-    } else if (scope_.IsDerivedType() &&
-        IsVariableName(ultimate)) { // C750, C754
+    } else if (scope_.IsDerivedType() && IsVariableName(symbol)) { // C750, C754
       return "derived type component or type parameter value not allowed to "
              "reference variable '"s +
-          ultimate.name().ToString() + "'";
-    } else if (IsDummy(ultimate)) {
-      if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
+          symbol.name().ToString() + "'";
+    } else if (IsDummy(symbol)) {
+      if (symbol.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
-            ultimate.name().ToString() + "'";
-      } else if (ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
+            symbol.name().ToString() + "'";
+      } else if (symbol.attrs().test(semantics::Attr::INTENT_OUT)) {
         return "reference to INTENT(OUT) dummy argument '"s +
-            ultimate.name().ToString() + "'";
-      } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
+            symbol.name().ToString() + "'";
+      } else if (symbol.has<semantics::ObjectEntityDetails>()) {
         return std::nullopt;
       } else {
         return "dummy procedure argument";
       }
+    } else if (symbol.has<semantics::UseDetails>() ||
+        symbol.has<semantics::HostAssocDetails>() ||
+        symbol.owner().kind() == semantics::Scope::Kind::Module) {
+      return std::nullopt;
     } else if (const auto *object{
-                   ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+                   symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
       // TODO: what about EQUIVALENCE with data in COMMON?
       // TODO: does this work for blank COMMON?
       if (object->commonBlock()) {
@@ -289,11 +290,11 @@ public:
     }
     for (const semantics::Scope *s{&scope_}; !s->IsGlobal();) {
       s = &s->parent();
-      if (s == &ultimate.owner()) {
+      if (s == &symbol.owner()) {
         return std::nullopt;
       }
     }
-    return "reference to local entity '"s + ultimate.name().ToString() + "'";
+    return "reference to local entity '"s + symbol.name().ToString() + "'";
   }
 
   Result operator()(const Component &x) const {
