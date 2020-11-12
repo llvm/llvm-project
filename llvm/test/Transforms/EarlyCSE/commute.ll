@@ -301,6 +301,41 @@ define i8 @smax_nsw(i8 %a, i8 %b) {
   ret i8 %r
 }
 
+
+define i8 @abs_swapped_sge(i8 %a) {
+; CHECK-LABEL: @abs_swapped_sge(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[A]], 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 0
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp sge i8 %a, 0
+  %cmp2 = icmp slt i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = xor i8 %m2, %m1
+  ret i8 %r
+}
+
+define i8 @nabs_swapped_sge(i8 %a) {
+; CHECK-LABEL: @nabs_swapped_sge(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 0
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp slt i8 %a, 0
+  %cmp2 = icmp sge i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = xor i8 %m2, %m1
+  ret i8 %r
+}
+
 ; Abs/nabs may exist with non-canonical operands. Value tracking can match those.
 ; But we do not use value tracking, so we expect instcombine will canonicalize
 ; this code to a form that allows CSE.
@@ -694,9 +729,10 @@ define i32 @inverted_max(i32 %i) {
 ; CHECK-LABEL: @inverted_max(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 0, [[I:%.*]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP]], i32 [[I]], i32 0
-; CHECK-NEXT:    [[CMPINV:%.*]] = icmp sgt i32 0, [[I:%.*]]
+; CHECK-NEXT:    [[CMPINV:%.*]] = icmp sgt i32 0, [[I]]
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[M1]], [[M1]]
 ; CHECK-NEXT:    ret i32 [[R]]
+;
   %cmp = icmp sle i32 0, %i
   %m1 = select i1 %cmp, i32 %i, i32 0
   %cmpinv = icmp sgt i32 0, %i
