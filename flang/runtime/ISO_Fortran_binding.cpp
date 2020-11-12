@@ -78,7 +78,7 @@ int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
     byteSize *= extent;
   }
   void *p{std::malloc(byteSize)};
-  if (!p) {
+  if (!p && byteSize) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
   descriptor->base_addr = p;

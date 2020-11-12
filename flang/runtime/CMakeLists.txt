@@ -50,6 +50,7 @@ add_flang_library(FortranRuntime
   io-stmt.cpp
   main.cpp
   memory.cpp
+  stat.cpp
   stop.cpp
   terminator.cpp
   tools.cpp
