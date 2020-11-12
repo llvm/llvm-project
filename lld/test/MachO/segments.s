@@ -28,7 +28,7 @@
 ## dyld3 assumes that the __TEXT segment starts from the file header
 # CHECK-NEXT:   fileoff: 0
 # CHECK-NEXT:   filesize:
-# CHECK-NEXT:   maxprot: rwx
+# CHECK-NEXT:   maxprot: r-x
 # CHECK-NEXT:   initprot: r-x
 # CHECK-NEXT:   nsects: 1
 # CHECK-NEXT:   flags: 0x0
@@ -46,7 +46,7 @@
 # CHECK-NEXT: vmsize:
 # CHECK-NEXT: fileoff: [[#%u, LINKEDIT_OFF:]]
 # CHECK-NEXT: filesize: [[#%u, LINKEDIT_SIZE:]]
-# CHECK-NEXT: maxprot: rwx
+# CHECK-NEXT: maxprot: r--
 # CHECK-NEXT: initprot: r--
 # CHECK-NOT:  Cmd: LC_SEGMENT_64
 
