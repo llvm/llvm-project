@@ -113,15 +113,6 @@ inline static uint64_t getFpImmVal(const ConstantFPSDNode *N) {
   return Val;
 }
 
-/// convMImmVal - Convert a mimm integer immediate value to target immediate.
-inline static uint64_t convMImmVal(uint64_t Val) {
-  if (Val == 0)
-    return 0; // (0)1
-  if (Val & (1UL << 63))
-    return countLeadingOnes(Val);       // (m)1
-  return countLeadingZeros(Val) | 0x40; // (m)0
-}
-
 //===--------------------------------------------------------------------===//
 /// VEDAGToDAGISel - VE specific code to select VE machine
 /// instructions for SelectionDAG operations.
