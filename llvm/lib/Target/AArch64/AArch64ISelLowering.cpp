@@ -4287,10 +4287,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     assert(!Res && "Call operand has unhandled type");
     (void)Res;
   }
-  assert(ArgLocs.size() == Ins.size());
   SmallVector<SDValue, 16> ArgValues;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  unsigned ExtraArgLocs = 0;
+  for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
 
     if (Ins[i].Flags.isByVal()) {
       // Byval is used for HFAs in the PCS, but the system should work in a
@@ -4418,16 +4418,44 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     if (VA.getLocInfo() == CCValAssign::Indirect) {
       assert(VA.getValVT().isScalableVector() &&
            "Only scalable vectors can be passed indirectly");
-      // If value is passed via pointer - do a load.
-      ArgValue =
-          DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue, MachinePointerInfo());
-    }
 
-    if (Subtarget->isTargetILP32() && Ins[i].Flags.isPointer())
-      ArgValue = DAG.getNode(ISD::AssertZext, DL, ArgValue.getValueType(),
-                             ArgValue, DAG.getValueType(MVT::i32));
-    InVals.push_back(ArgValue);
+      uint64_t PartSize = VA.getValVT().getStoreSize().getKnownMinSize();
+      unsigned NumParts = 1;
+      if (Ins[i].Flags.isInConsecutiveRegs()) {
+        assert(!Ins[i].Flags.isInConsecutiveRegsLast());
+        while (!Ins[i + NumParts - 1].Flags.isInConsecutiveRegsLast())
+          ++NumParts;
+      }
+
+      MVT PartLoad = VA.getValVT();
+      SDValue Ptr = ArgValue;
+
+      // Ensure we generate all loads for each tuple part, whilst updating the
+      // pointer after each load correctly using vscale.
+      while (NumParts > 0) {
+        ArgValue = DAG.getLoad(PartLoad, DL, Chain, Ptr, MachinePointerInfo());
+        InVals.push_back(ArgValue);
+        NumParts--;
+        if (NumParts > 0) {
+          SDValue BytesIncrement = DAG.getVScale(
+              DL, Ptr.getValueType(),
+              APInt(Ptr.getValueSizeInBits().getFixedSize(), PartSize));
+          SDNodeFlags Flags;
+          Flags.setNoUnsignedWrap(true);
+          Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
+                            BytesIncrement, Flags);
+          ExtraArgLocs++;
+          i++;
+        }
+      }
+    } else {
+      if (Subtarget->isTargetILP32() && Ins[i].Flags.isPointer())
+        ArgValue = DAG.getNode(ISD::AssertZext, DL, ArgValue.getValueType(),
+                               ArgValue, DAG.getValueType(MVT::i32));
+      InVals.push_back(ArgValue);
+    }
   }
+  assert((ArgLocs.size() + ExtraArgLocs) == Ins.size());
 
   // varargs
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
@@ -5025,8 +5053,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Walk the register/memloc assignments, inserting copies/loads.
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  unsigned ExtraArgLocs = 0;
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
     SDValue Arg = OutVals[i];
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
 
@@ -5068,18 +5097,49 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     case CCValAssign::Indirect:
       assert(VA.getValVT().isScalableVector() &&
              "Only scalable vectors can be passed indirectly");
+
+      uint64_t StoreSize = VA.getValVT().getStoreSize().getKnownMinSize();
+      uint64_t PartSize = StoreSize;
+      unsigned NumParts = 1;
+      if (Outs[i].Flags.isInConsecutiveRegs()) {
+        assert(!Outs[i].Flags.isInConsecutiveRegsLast());
+        while (!Outs[i + NumParts - 1].Flags.isInConsecutiveRegsLast())
+          ++NumParts;
+        StoreSize *= NumParts;
+      }
+
       MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
       Type *Ty = EVT(VA.getValVT()).getTypeForEVT(*DAG.getContext());
       Align Alignment = DAG.getDataLayout().getPrefTypeAlign(Ty);
-      int FI = MFI.CreateStackObject(
-          VA.getValVT().getStoreSize().getKnownMinSize(), Alignment, false);
+      int FI = MFI.CreateStackObject(StoreSize, Alignment, false);
       MFI.setStackID(FI, TargetStackID::SVEVector);
 
-      SDValue SpillSlot = DAG.getFrameIndex(
+      MachinePointerInfo MPI =
+          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+      SDValue Ptr = DAG.getFrameIndex(
           FI, DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-      Chain = DAG.getStore(
-          Chain, DL, Arg, SpillSlot,
-          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+      SDValue SpillSlot = Ptr;
+
+      // Ensure we generate all stores for each tuple part, whilst updating the
+      // pointer after each store correctly using vscale.
+      while (NumParts) {
+        Chain = DAG.getStore(Chain, DL, OutVals[i], Ptr, MPI);
+        NumParts--;
+        if (NumParts > 0) {
+          SDValue BytesIncrement = DAG.getVScale(
+              DL, Ptr.getValueType(),
+              APInt(Ptr.getValueSizeInBits().getFixedSize(), PartSize));
+          SDNodeFlags Flags;
+          Flags.setNoUnsignedWrap(true);
+
+          MPI = MachinePointerInfo(MPI.getAddrSpace());
+          Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
+                            BytesIncrement, Flags);
+          ExtraArgLocs++;
+          i++;
+        }
+      }
+
       Arg = SpillSlot;
       break;
     }
@@ -5131,7 +5191,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       uint32_t BEAlign = 0;
       unsigned OpSize;
       if (VA.getLocInfo() == CCValAssign::Indirect)
-        OpSize = VA.getLocVT().getSizeInBits();
+        OpSize = VA.getLocVT().getFixedSizeInBits();
       else
         OpSize = Flags.isByVal() ? Flags.getByValSize() * 8
                                  : VA.getValVT().getSizeInBits();
