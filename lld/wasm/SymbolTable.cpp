@@ -206,7 +206,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
                                         flags, nullptr, function);
 }
 
-// Adds an optional, linker generated, data symbols.  The symbol will only be
+// Adds an optional, linker generated, data symbol.  The symbol will only be
 // added if there is an undefine reference to it, or if it is explicitly
 // exported via the --export flag.  Otherwise we don't add the symbol and return
 // nullptr.
@@ -239,6 +239,18 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
   syntheticGlobals.emplace_back(global);
   return replaceSymbol<DefinedGlobal>(insertName(name).first, name, flags,
                                       nullptr, global);
+}
+
+DefinedGlobal *SymbolTable::addOptionalGlobalSymbols(StringRef name,
+                                                     uint32_t flags,
+                                                     InputGlobal *global) {
+  LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbols: " << name << " -> " << global
+                    << "\n");
+  Symbol *s = find(name);
+  if (!s || s->isDefined())
+    return nullptr;
+  syntheticGlobals.emplace_back(global);
+  return replaceSymbol<DefinedGlobal>(s, name, flags, nullptr, global);
 }
 
 static bool shouldReplace(const Symbol *existing, InputFile *newFile,
