@@ -811,12 +811,12 @@ Near Future Work
    (e.g. Objective C and Swift) and other JIT specific runtime code. This should
    be built in a similar manner to compiler-rt (possibly even as part of it).
 
-2. **Remote ``jit_dlopen`` / ``jit_dlclose``**
+2. **Remote jit_dlopen / jit_dlclose**
 
    To more fully mimic the environment that static programs operate in we would
-   like JIT'd code to be able to "dlopen" JITDylibs, running all of their
-   initializers on the current thread. This would require support from the runtime
-   library described above.
+   like JIT'd code to be able to "dlopen" and "dlclose" JITDylibs, running all of
+   their initializers/deinitializers on the current thread. This would require
+   support from the runtime library described above.
 
 3. **Debugging support**
 
