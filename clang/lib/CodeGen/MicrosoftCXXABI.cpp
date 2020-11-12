@@ -1244,12 +1244,14 @@ void MicrosoftCXXABI::EmitCXXConstructors(const CXXConstructorDecl *D) {
   // the typical calling convention and have a single 'this' pointer for an
   // argument -or- they get a wrapper function which appropriately thunks to the
   // real default constructor.  This thunk is the default constructor closure.
-  if (D->hasAttr<DLLExportAttr>() && D->isDefaultConstructor())
+  if (D->hasAttr<DLLExportAttr>() && D->isDefaultConstructor() &&
+      D->isDefined()) {
     if (!hasDefaultCXXMethodCC(getContext(), D) || D->getNumParams() != 0) {
       llvm::Function *Fn = getAddrOfCXXCtorClosure(D, Ctor_DefaultClosure);
       Fn->setLinkage(llvm::GlobalValue::WeakODRLinkage);
       CGM.setGVProperties(Fn, D);
     }
+  }
 }
 
 void MicrosoftCXXABI::EmitVBPtrStores(CodeGenFunction &CGF,
