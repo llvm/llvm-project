@@ -3737,13 +3737,18 @@ def TensorToMemrefOp : Std_Op<"tensor_to_memref",
                     "getTensorTypeFromMemRefType($_self)">]> {
   let summary = "tensor to memref operation";
   let description = [{
-    Create a memref from a tensor. This is equivalent to allocating a new
-    memref of the appropriate (possibly dynamic) shape, and then copying the
-    elements (as if by a tensor_store op) into the newly allocated memref.
+    Create a memref from a tensor. This is a transient op created as a
+    materialization during type conversions between tensors and memrefs.
 
     The opposite of this op is tensor_load. Together, these two ops are useful
     for source/target materializations when doing type conversions involving
     tensors and memrefs.
+
+    This op is defined by the fold
+    `tensor_to_memref(tensor_load(%memref)) -> %memref`, which is the property
+    that makes it a valid materialization in the type conversion framework.
+    This implies that one cannot assume that this op allocates a new memref for
+    its result.
 
     Note: This op takes the memref type in its pretty form because the tensor
     type can always be inferred from the memref type, but the reverse is not
@@ -3752,13 +3757,12 @@ def TensorToMemrefOp : Std_Op<"tensor_to_memref",
 
     ```mlir
     // Result type is tensor<4x?xf32>
-    %12 = tensor_to_memref %10 :  memref<4x?xf32, #map0, 42>
+    %12 = tensor_to_memref %10 : memref<4x?xf32, #map0, 42>
     ```
   }];
 
   let arguments = (ins AnyTensor:$tensor);
-  let results = (outs Res<AnyRankedOrUnrankedMemRef,
-                      "the memref to create", [MemAlloc]>:$memref);
+  let results = (outs AnyRankedOrUnrankedMemRef:$memref);
   // This op is fully verified by traits.
   let verifier = ?;
 
