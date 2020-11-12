@@ -131,7 +131,8 @@ static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
       /*outputBuffers=*/outputs,
       /*initTensors=*/llvm::None, genericOp.indexing_maps(),
       genericOp.iterator_types(), genericOp.docAttr(),
-      genericOp.library_callAttr(), genericOp.symbol_sourceAttr());
+      genericOp.library_callAttr(), genericOp.sparseAttr(),
+      genericOp.symbol_sourceAttr());
 
   // Create a new block in the region of the new Generic Op.
   Block *oldBlock = genericOp.getBody();
