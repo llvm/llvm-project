@@ -60,6 +60,51 @@ APValue::LValueBase APValue::LValueBase::getTypeInfo(TypeInfoLValue LV,
   return Base;
 }
 
+QualType APValue::LValueBase::getType() const {
+  if (!*this) return QualType();
+  if (const ValueDecl *D = dyn_cast<const ValueDecl*>()) {
+    // FIXME: It's unclear where we're supposed to take the type from, and
+    // this actually matters for arrays of unknown bound. Eg:
+    //
+    // extern int arr[]; void f() { extern int arr[3]; };
+    // constexpr int *p = &arr[1]; // valid?
+    //
+    // For now, we take the most complete type we can find.
+    for (auto *Redecl = cast<ValueDecl>(D->getMostRecentDecl()); Redecl;
+         Redecl = cast_or_null<ValueDecl>(Redecl->getPreviousDecl())) {
+      QualType T = Redecl->getType();
+      if (!T->isIncompleteArrayType())
+        return T;
+    }
+    return D->getType();
+  }
+
+  if (is<TypeInfoLValue>())
+    return getTypeInfoType();
+
+  if (is<DynamicAllocLValue>())
+    return getDynamicAllocType();
+
+  const Expr *Base = get<const Expr*>();
+
+  // For a materialized temporary, the type of the temporary we materialized
+  // may not be the type of the expression.
+  if (const MaterializeTemporaryExpr *MTE =
+          clang::dyn_cast<MaterializeTemporaryExpr>(Base)) {
+    SmallVector<const Expr *, 2> CommaLHSs;
+    SmallVector<SubobjectAdjustment, 2> Adjustments;
+    const Expr *Temp = MTE->getSubExpr();
+    const Expr *Inner = Temp->skipRValueSubobjectAdjustments(CommaLHSs,
+                                                             Adjustments);
+    // Keep any cv-qualifiers from the reference if we generated a temporary
+    // for it directly. Otherwise use the type after adjustment.
+    if (!Adjustments.empty())
+      return Inner->getType();
+  }
+
+  return Base->getType();
+}
+
 unsigned APValue::LValueBase::getCallIndex() const {
   return (is<TypeInfoLValue>() || is<DynamicAllocLValue>()) ? 0
                                                             : Local.CallIndex;
@@ -685,31 +730,25 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     else if (isLValueOnePastTheEnd())
       Out << "*(&";
 
-    QualType ElemTy;
+    QualType ElemTy = Base.getType();
     if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>()) {
       Out << *VD;
-      ElemTy = VD->getType();
     } else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
       TI.print(Out, Ctx.getPrintingPolicy());
-      ElemTy = Base.getTypeInfoType();
     } else if (DynamicAllocLValue DA = Base.dyn_cast<DynamicAllocLValue>()) {
       Out << "{*new "
           << Base.getDynamicAllocType().stream(Ctx.getPrintingPolicy()) << "#"
           << DA.getIndex() << "}";
-      ElemTy = Base.getDynamicAllocType();
     } else {
       const Expr *E = Base.get<const Expr*>();
       assert(E != nullptr && "Expecting non-null Expr");
       E->printPretty(Out, nullptr, Ctx.getPrintingPolicy());
-      // FIXME: This is wrong if E is a MaterializeTemporaryExpr with an lvalue
-      // adjustment.
-      ElemTy = E->getType();
     }
 
     ArrayRef<LValuePathEntry> Path = getLValuePath();
     const CXXRecordDecl *CastToBase = nullptr;
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
-      if (ElemTy->getAs<RecordType>()) {
+      if (ElemTy->isRecordType()) {
         // The lvalue refers to a class type, so the next path entry is a base
         // or member.
         const Decl *BaseOrMember = Path[I].getAsBaseOrMember().getPointer();

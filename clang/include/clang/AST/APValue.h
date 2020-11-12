@@ -173,6 +173,8 @@ public:
     QualType getTypeInfoType() const;
     QualType getDynamicAllocType() const;
 
+    QualType getType() const;
+
     friend bool operator==(const LValueBase &LHS, const LValueBase &RHS);
     friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
       return !(LHS == RHS);
