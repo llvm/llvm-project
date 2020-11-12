@@ -273,9 +273,9 @@ bool MCStreamer::hasUnfinishedDwarfFrameInfo() {
 
 MCDwarfFrameInfo *MCStreamer::getCurrentDwarfFrameInfo() {
   if (!hasUnfinishedDwarfFrameInfo()) {
-    getContext().reportError(SMLoc(), "this directive must appear between "
-                                      ".cfi_startproc and .cfi_endproc "
-                                      "directives");
+    getContext().reportError(getStartTokLoc(),
+                             "this directive must appear between "
+                             ".cfi_startproc and .cfi_endproc directives");
     return nullptr;
   }
   return &DwarfFrameInfos.back();
@@ -967,10 +967,10 @@ void MCStreamer::emitRawText(const Twine &T) {
 void MCStreamer::EmitWindowsUnwindTables() {
 }
 
-void MCStreamer::Finish() {
+void MCStreamer::Finish(SMLoc EndLoc) {
   if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
       (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
-    getContext().reportError(SMLoc(), "Unfinished frame!");
+    getContext().reportError(EndLoc, "Unfinished frame!");
     return;
   }
 
