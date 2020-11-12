@@ -107,33 +107,6 @@ struct OptionValidator {
   virtual const char *LongConditionString() const = 0;
 };
 
-struct OptionDefinition {
-  /// Used to mark options that can be used together.  If
-  /// `(1 << n & usage_mask) != 0` then this option belongs to option set n.
-  uint32_t usage_mask;
-  /// This option is required (in the current usage level).
-  bool required;
-  /// Full name for this option.
-  const char *long_option;
-  /// Single character for this option.
-  int short_option;
-  /// no_argument, required_argument or optional_argument
-  int option_has_arg;
-  /// If non-NULL, option is valid iff |validator->IsValid()|, otherwise
-  /// always valid.
-  OptionValidator *validator;
-  /// If not empty, an array of enum values.
-  OptionEnumValues enum_values;
-  /// The kind of completion for this option.
-  /// Contains values of the CommandCompletions::CommonCompletionTypes enum.
-  uint32_t completion_type;
-  /// Type of argument this option takes.
-  lldb::CommandArgumentType argument_type;
-  /// Full text explaining what this options does and what (if any) argument to
-  /// pass it.
-  const char *usage_text;
-};
-
 typedef struct type128 { uint64_t x[2]; } type128;
 typedef struct type256 { uint64_t x[4]; } type256;
 
