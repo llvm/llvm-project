@@ -24,6 +24,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Config/llvm-config.h"
@@ -58,6 +59,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "memoryssa"
+
+static cl::opt<std::string>
+    DotCFGMSSA("dot-cfg-mssa",
+               cl::value_desc("file name for generated dot file"),
+               cl::desc("file name for generated dot file"), cl::init(""));
 
 INITIALIZE_PASS_BEGIN(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                       true)
@@ -2256,9 +2262,94 @@ void MemorySSAPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MemorySSAWrapperPass>();
 }
 
+class DOTFuncMSSAInfo {
+private:
+  const Function &F;
+  MemorySSAAnnotatedWriter MSSAWriter;
+
+public:
+  DOTFuncMSSAInfo(const Function &F, MemorySSA &MSSA)
+      : F(F), MSSAWriter(&MSSA) {}
+
+  const Function *getFunction() { return &F; }
+  MemorySSAAnnotatedWriter &getWriter() { return MSSAWriter; }
+};
+
+template <>
+struct GraphTraits<DOTFuncMSSAInfo *> : public GraphTraits<const BasicBlock *> {
+  static NodeRef getEntryNode(DOTFuncMSSAInfo *CFGInfo) {
+    return &(CFGInfo->getFunction()->getEntryBlock());
+  }
+
+  // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
+  using nodes_iterator = pointer_iterator<Function::const_iterator>;
+
+  static nodes_iterator nodes_begin(DOTFuncMSSAInfo *CFGInfo) {
+    return nodes_iterator(CFGInfo->getFunction()->begin());
+  }
+
+  static nodes_iterator nodes_end(DOTFuncMSSAInfo *CFGInfo) {
+    return nodes_iterator(CFGInfo->getFunction()->end());
+  }
+
+  static size_t size(DOTFuncMSSAInfo *CFGInfo) {
+    return CFGInfo->getFunction()->size();
+  }
+};
+
+template <>
+struct DOTGraphTraits<DOTFuncMSSAInfo *> : public DefaultDOTGraphTraits {
+
+  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
+
+  static std::string getGraphName(DOTFuncMSSAInfo *CFGInfo) {
+    return "MSSA CFG for '" + CFGInfo->getFunction()->getName().str() +
+           "' function";
+  }
+
+  std::string getNodeLabel(const BasicBlock *Node, DOTFuncMSSAInfo *CFGInfo) {
+    return DOTGraphTraits<DOTFuncInfo *>::getCompleteNodeLabel(
+        Node, nullptr,
+        [CFGInfo](raw_string_ostream &OS, const BasicBlock &BB) -> void {
+          BB.print(OS, &CFGInfo->getWriter(), true, true);
+        },
+        [](std::string &S, unsigned &I, unsigned Idx) -> void {
+          std::string Str = S.substr(I, Idx - I);
+          StringRef SR = Str;
+          if (SR.count(" = MemoryDef(") || SR.count(" = MemoryPhi(") ||
+              SR.count("MemoryUse("))
+            return;
+          DOTGraphTraits<DOTFuncInfo *>::eraseComment(S, I, Idx);
+        });
+  }
+
+  static std::string getEdgeSourceLabel(const BasicBlock *Node,
+                                        const_succ_iterator I) {
+    return DOTGraphTraits<DOTFuncInfo *>::getEdgeSourceLabel(Node, I);
+  }
+
+  /// Display the raw branch weights from PGO.
+  std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
+                                DOTFuncMSSAInfo *CFGInfo) {
+    return "";
+  }
+
+  std::string getNodeAttributes(const BasicBlock *Node,
+                                DOTFuncMSSAInfo *CFGInfo) {
+    return getNodeLabel(Node, CFGInfo).find(';') != std::string::npos
+               ? "style=filled, fillcolor=lightpink"
+               : "";
+  }
+};
+
 bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {
   auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
-  MSSA.print(dbgs());
+  if (DotCFGMSSA != "") {
+    DOTFuncMSSAInfo CFGInfo(F, MSSA);
+    WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA);
+  } else
+    MSSA.print(dbgs());
+
   if (VerifyMemorySSA)
     MSSA.verifyMemorySSA();
   return false;
@@ -2284,8 +2375,14 @@ bool MemorySSAAnalysis::Result::invalidate(
 
 PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
-  OS << "MemorySSA for function: " << F.getName() << "\n";
-  AM.getResult<MemorySSAAnalysis>(F).getMSSA().print(OS);
+  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  if (DotCFGMSSA != "") {
+    DOTFuncMSSAInfo CFGInfo(F, MSSA);
+    WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA);
+  } else {
+    OS << "MemorySSA for function: " << F.getName() << "\n";
+    MSSA.print(OS);
+  }
 
   return PreservedAnalyses::all();
 }
