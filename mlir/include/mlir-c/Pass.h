@@ -53,6 +53,11 @@ MLIR_CAPI_EXPORTED MlirPassManager mlirPassManagerCreate(MlirContext ctx);
 /// Destroy the provided PassManager.
 MLIR_CAPI_EXPORTED void mlirPassManagerDestroy(MlirPassManager passManager);
 
+/// Checks if a PassManager is null.
+static inline int mlirPassManagerIsNull(MlirPassManager passManager) {
+  return !passManager.ptr;
+}
+
 /// Cast a top-level PassManager to a generic OpPassManager.
 MLIR_CAPI_EXPORTED MlirOpPassManager
 mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);

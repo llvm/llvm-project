@@ -16,6 +16,19 @@ def run(f):
   gc.collect()
   assert Context._get_live_count() == 0
 
+# Verify capsule interop.
+# CHECK-LABEL: TEST: testCapsule
+def testCapsule():
+  with Context():
+    pm = PassManager()
+    pm_capsule = pm._CAPIPtr
+    assert '"mlir.passmanager.PassManager._CAPIPtr"' in repr(pm_capsule)
+    pm._testing_release()
+    pm1 = PassManager._CAPICreate(pm_capsule)
+    assert pm1 is not None  # And does not crash.
+run(testCapsule)
+
+
 # Verify successful round-trip.
 # CHECK-LABEL: TEST: testParseSuccess
 def testParseSuccess():
