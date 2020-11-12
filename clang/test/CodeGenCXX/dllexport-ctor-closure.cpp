@@ -50,6 +50,14 @@ template struct __declspec(dllexport) TemplateWithClosure<int>;
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_F?$TemplateWithClosure@H@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 // CHECK:   call {{.*}} @"??0?$TemplateWithClosure@H@@QAE@H@Z"({{.*}}, i32 4)
 
+template <typename T> struct __declspec(dllexport) ExportedTemplateWithClosure {
+  ExportedTemplateWithClosure(int x = sizeof(T)) {}
+};
+template <> ExportedTemplateWithClosure<int>::ExportedTemplateWithClosure(int); // Don't try to emit the closure for a declaration.
+template <> ExportedTemplateWithClosure<int>::ExportedTemplateWithClosure(int) {};
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_F?$ExportedTemplateWithClosure@H@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+// CHECK:   call {{.*}} @"??0?$ExportedTemplateWithClosure@H@@QAE@H@Z"({{.*}}, i32 4)
+
 struct __declspec(dllexport) NestedOuter {
   DELETE_IMPLICIT_MEMBERS(NestedOuter);
   NestedOuter(void *p = 0) {}

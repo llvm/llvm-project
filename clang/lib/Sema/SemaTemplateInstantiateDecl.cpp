@@ -715,6 +715,26 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
   }
 }
 
+/// In the MS ABI, we need to instantiate default arguments of dllexported
+/// default constructors along with the constructor definition. This allows IR
+/// gen to emit a constructor closure which calls the default constructor with
+/// its default arguments.
+void Sema::InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor) {
+  assert(Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+         Ctor->isDefaultConstructor());
+  unsigned NumParams = Ctor->getNumParams();
+  if (NumParams == 0)
+    return;
+  DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>();
+  if (!Attr)
+    return;
+  for (unsigned I = 0; I != NumParams; ++I) {
+    (void)CheckCXXDefaultArgExpr(Attr->getLocation(), Ctor,
+                                   Ctor->getParamDecl(I));
+    DiscardCleanupsInEvaluationContext();
+  }
+}
+
 /// Get the previous declaration of a declaration for the purposes of template
 /// instantiation. If this finds a previous declaration, then the previous
 /// declaration of the instantiation of D should be an instantiation of the
@@ -4608,27 +4628,6 @@ Sema::InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
   return cast_or_null<FunctionDecl>(SubstDecl(FD, FD->getParent(), MArgs));
 }
 
-/// In the MS ABI, we need to instantiate default arguments of dllexported
-/// default constructors along with the constructor definition. This allows IR
-/// gen to emit a constructor closure which calls the default constructor with
-/// its default arguments.
-static void InstantiateDefaultCtorDefaultArgs(Sema &S,
-                                              CXXConstructorDecl *Ctor) {
-  assert(S.Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-         Ctor->isDefaultConstructor());
-  unsigned NumParams = Ctor->getNumParams();
-  if (NumParams == 0)
-    return;
-  DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>();
-  if (!Attr)
-    return;
-  for (unsigned I = 0; I != NumParams; ++I) {
-    (void)S.CheckCXXDefaultArgExpr(Attr->getLocation(), Ctor,
-                                   Ctor->getParamDecl(I));
-    S.DiscardCleanupsInEvaluationContext();
-  }
-}
-
 /// Instantiate the definition of the given function from its
 /// template.
 ///
@@ -4847,7 +4846,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         // default arguments.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
             Ctor->isDefaultConstructor()) {
-          InstantiateDefaultCtorDefaultArgs(*this, Ctor);
+          InstantiateDefaultCtorDefaultArgs(Ctor);
         }
       }
 
