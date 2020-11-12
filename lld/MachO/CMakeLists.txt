@@ -12,6 +12,7 @@ add_lld_library(lldMachO2
   ExportTrie.cpp
   InputFiles.cpp
   InputSection.cpp
+  LTO.cpp
   MergedOutputSection.cpp
   ObjC.cpp
   OutputSection.cpp
@@ -26,8 +27,11 @@ add_lld_library(lldMachO2
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
   Core
+  LTO
+  MC
   Object
   Option
+  Passes
   Support
   TextAPI
 
