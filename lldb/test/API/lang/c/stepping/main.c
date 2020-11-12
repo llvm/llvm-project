@@ -39,7 +39,7 @@ int main (int argc, char const *argv[])
 {
     int A1 = a(1); // frame select 2, thread step-out while stopped at "c(1)"
 
-    int B2 = b(2);
+    int B2 = b(2); // assignment to B2
 
     int A3 = a(3); // frame select 1, thread step-out while stopped at "c(3)"
 
