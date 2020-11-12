@@ -698,8 +698,9 @@ enum Target {
   ET_NULL = 9,
   ET_POS0 = 12,
   ET_POS3 = 15,
-  ET_POS4 = 16, // GFX10+
-  ET_PRIM = 20, // GFX10+
+  ET_POS4 = 16,          // GFX10+
+  ET_POS_LAST = ET_POS4, // Highest pos used on any subtarget
+  ET_PRIM = 20,          // GFX10+
   ET_PARAM0 = 32,
   ET_PARAM31 = 63,
 };
