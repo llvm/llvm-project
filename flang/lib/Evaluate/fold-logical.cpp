@@ -89,6 +89,15 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
               return Scalar<T>{std::invoke(fptr, i, j)};
             }));
+  } else if (name == "isnan") {
+    // A warning about an invalid argument is discarded from converting
+    // the argument of isnan().
+    auto restorer{context.messages().DiscardMessages()};
+    using DefaultReal = Type<TypeCategory::Real, 4>;
+    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+          return Scalar<T>{x.IsNotANumber()};
+        }));
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {

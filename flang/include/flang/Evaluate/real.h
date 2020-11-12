@@ -247,12 +247,17 @@ public:
   template <typename A>
   static ValueWithRealFlags<Real> Convert(
       const A &x, Rounding rounding = defaultRounding) {
+    ValueWithRealFlags<Real> result;
+    if (x.IsNotANumber()) {
+      result.flags.set(RealFlag::InvalidArgument);
+      result.value = NotANumber();
+      return result;
+    }
     bool isNegative{x.IsNegative()};
     A absX{x};
     if (isNegative) {
       absX = x.Negate();
     }
-    ValueWithRealFlags<Real> result;
     int exponent{exponentBias + x.UnbiasedExponent()};
     int bitsLost{A::binaryPrecision - binaryPrecision};
     if (exponent < 1) {
