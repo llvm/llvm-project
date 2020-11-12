@@ -4,7 +4,7 @@
 ; RUN: opt -O3 -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=O1 --check-prefix=O2O3
 ; RUN: opt -dce -gvn-hoist -loweratomic -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=MORE
 ; RUN: opt -indvars -licm -loop-deletion -loop-extract -loop-idiom -loop-instsimplify -loop-reduce -loop-reroll -loop-rotate -loop-unroll -loop-unswitch -enable-new-pm=0 -S -debug %s 2>&1 | FileCheck %s --check-prefix=LOOP
-; RUN: opt -enable-npm-optnone -passes='default<O0>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-O0
+; RUN: opt -enable-npm-optnone -passes='default<O0>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=%llvmcheckext-NPM-O0
 ; RUN: opt -enable-npm-optnone -passes='default<O1>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-O1
 ; RUN: opt -enable-npm-optnone -passes='default<O2>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-O1 --check-prefix=NPM-O2O3
 ; RUN: opt -enable-npm-optnone -passes='default<O3>' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-O1 --check-prefix=NPM-O2O3
@@ -40,9 +40,10 @@ while.end:                                        ; preds = %while.cond
 
 attributes #0 = { optnone noinline }
 
-; Nothing that runs at -O0 gets skipped.
+; Nothing that runs at -O0 gets skipped (except when the Bye extension is present).
 ; O0-NOT: Skipping pass
-; NPM-O0-NOT: Skipping pass
+; CHECK-EXT-NPM-O0: Skipping pass {{.*}}Bye
+; CHECK-NOEXT-NPM-O0-NOT: Skipping pass
 
 ; IR passes run at -O1 and higher.
 ; O1-DAG: Skipping pass 'Aggressive Dead Code Elimination'
