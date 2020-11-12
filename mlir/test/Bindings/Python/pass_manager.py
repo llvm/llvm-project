@@ -66,6 +66,21 @@ def testParseFail():
 run(testParseFail)
 
 
+# Verify failure on incorrect level of nesting.
+# CHECK-LABEL: TEST: testInvalidNesting
+def testInvalidNesting():
+  with Context():
+    try:
+      pm = PassManager.parse("func(print-op-graph)")
+    except ValueError as e:
+      # CHECK: Can't add pass 'PrintOp' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
+      # CHECK: ValueError exception: invalid pass pipeline 'func(print-op-graph)'.
+      log("ValueError exception:", e)
+    else:
+      log("Exception not produced")
+run(testInvalidNesting)
+
+
 # Verify that a pass manager can execute on IR
 # CHECK-LABEL: TEST: testRun
 def testRunPipeline():

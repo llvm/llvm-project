@@ -28,8 +28,12 @@ class PassOptions;
 
 /// A registry function that adds passes to the given pass manager. This should
 /// also parse options and return success() if parsing succeeded.
-using PassRegistryFunction =
-    std::function<LogicalResult(OpPassManager &, StringRef options)>;
+/// `errorHandler` is a functor used to emit errors during parsing.
+/// parameter corresponds to the raw location within the pipeline string. This
+/// should always return failure.
+using PassRegistryFunction = std::function<LogicalResult(
+    OpPassManager &, StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler)>;
 using PassAllocatorFunction = std::function<std::unique_ptr<Pass>()>;
 
 //===----------------------------------------------------------------------===//
@@ -43,10 +47,12 @@ public:
   /// Adds this pass registry entry to the given pass manager. `options` is
   /// an opaque string that will be parsed by the builder. The success of
   /// parsing will be returned.
-  LogicalResult addToPipeline(OpPassManager &pm, StringRef options) const {
+  LogicalResult
+  addToPipeline(OpPassManager &pm, StringRef options,
+                function_ref<LogicalResult(const Twine &)> errorHandler) const {
     assert(builder &&
            "cannot call addToPipeline on PassRegistryEntry without builder");
-    return builder(pm, options);
+    return builder(pm, options, errorHandler);
   }
 
   /// Returns the command line option that may be passed to 'mlir-opt' that will
@@ -163,7 +169,8 @@ struct PassPipelineRegistration {
       std::function<void(OpPassManager &, const Options &options)> builder) {
     registerPassPipeline(
         arg, description,
-        [builder](OpPassManager &pm, StringRef optionsStr) {
+        [builder](OpPassManager &pm, StringRef optionsStr,
+                  function_ref<LogicalResult(const Twine &)> errorHandler) {
           Options options;
           if (failed(options.parseFromString(optionsStr)))
             return failure();
@@ -183,7 +190,8 @@ template <> struct PassPipelineRegistration<EmptyPipelineOptions> {
                            std::function<void(OpPassManager &)> builder) {
     registerPassPipeline(
         arg, description,
-        [builder](OpPassManager &pm, StringRef optionsStr) {
+        [builder](OpPassManager &pm, StringRef optionsStr,
+                  function_ref<LogicalResult(const Twine &)> errorHandler) {
           if (!optionsStr.empty())
             return failure();
           builder(pm);
@@ -230,7 +238,9 @@ public:
   /// Adds the passes defined by this parser entry to the given pass manager.
   /// Returns failure() if the pass could not be properly constructed due
   /// to options parsing.
-  LogicalResult addToPipeline(OpPassManager &pm) const;
+  LogicalResult
+  addToPipeline(OpPassManager &pm,
+                function_ref<LogicalResult(const Twine &)> errorHandler) const;
 
 private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
