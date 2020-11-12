@@ -454,6 +454,7 @@ bool CrashRecoveryContext::throwIfCrash(int RetCode) {
   ::RaiseException(RetCode, 0, 0, NULL);
 #else
   // On Unix, signals are represented by return codes of 128 or higher.
+  // Exit code 128 is a reserved value and should not be raised as a signal.
   if (RetCode <= 128)
     return false;
   llvm::sys::unregisterHandlers();
