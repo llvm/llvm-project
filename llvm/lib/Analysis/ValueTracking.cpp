@@ -1221,14 +1221,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Shl: {
-    // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     auto KF = [NSW](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = KnownShiftVal.Zero << ShiftAmt;
-      Result.One = KnownShiftVal.One << ShiftAmt;
-      // Low bits known zero.
-      Result.Zero.setLowBits(ShiftAmt);
+      APInt ShiftAmtV(KnownShiftVal.getBitWidth(), ShiftAmt);
+      KnownBits KnownShiftAmt;
+      KnownShiftAmt.One = ShiftAmtV;
+      KnownShiftAmt.Zero = ~ShiftAmtV;
+      KnownBits Result = KnownBits::shl(KnownShiftVal, KnownShiftAmt);
       // If this shift has "nsw" keyword, then the result is either a poison
       // value or has the same sign bit as the first operand.
       if (NSW) {
@@ -1244,26 +1243,24 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::LShr: {
-    // (lshr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
     auto KF = [](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = KnownShiftVal.Zero.lshr(ShiftAmt);
-      Result.One = KnownShiftVal.One.lshr(ShiftAmt);
-      // High bits known zero.
-      Result.Zero.setHighBits(ShiftAmt);
-      return Result;
+      APInt ShiftAmtV(KnownShiftVal.getBitWidth(), ShiftAmt);
+      KnownBits KnownShiftAmt;
+      KnownShiftAmt.One = ShiftAmtV;
+      KnownShiftAmt.Zero = ~ShiftAmtV;
+      return KnownBits::lshr(KnownShiftVal, KnownShiftAmt);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
     break;
   }
   case Instruction::AShr: {
-    // (ashr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
     auto KF = [](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = KnownShiftVal.Zero.ashr(ShiftAmt);
-      Result.One = KnownShiftVal.One.ashr(ShiftAmt);
-      return Result;
+      APInt ShiftAmtV(KnownShiftVal.getBitWidth(), ShiftAmt);
+      KnownBits KnownShiftAmt;
+      KnownShiftAmt.One = ShiftAmtV;
+      KnownShiftAmt.Zero = ~ShiftAmtV;
+      return KnownBits::ashr(KnownShiftVal, KnownShiftAmt);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
