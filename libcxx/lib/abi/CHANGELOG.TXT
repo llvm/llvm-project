@@ -810,7 +810,6 @@ Version 4.0
 
   x86_64-linux-gnu
   ----------------
-  Symbol added: posix_memalign@GLIBC_2.2.5
   Symbol added: _ZdaPvSt11align_val_t
   Symbol added: _ZdlPvSt11align_val_t
   Symbol added: _ZnamSt11align_val_t
