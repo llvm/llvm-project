@@ -8214,8 +8214,9 @@ public:
           return Type & OMP_MAP_PRESENT;
         }))
       CombinedInfo.Types.back() |= OMP_MAP_PRESENT;
-    // Remove TARGET_PARAM flag from the first element
-    CurTypes.front() &= ~OMP_MAP_TARGET_PARAM;
+    // Remove TARGET_PARAM flag from the first element if any.
+    if (!CurTypes.empty())
+      CurTypes.front() &= ~OMP_MAP_TARGET_PARAM;
 
     // All other current entries will be MEMBER_OF the combined entry
     // (except for PTR_AND_OBJ entries which do not have a placeholder value
