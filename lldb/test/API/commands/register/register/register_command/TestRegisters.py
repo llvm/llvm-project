@@ -71,7 +71,6 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
-    @expectedFailureNetBSD
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
         self.build()
@@ -120,7 +119,6 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
-    @expectedFailureNetBSD
     def test_convenience_registers_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
@@ -130,7 +128,6 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
-    @expectedFailureNetBSD
     def test_convenience_registers_16bit_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()

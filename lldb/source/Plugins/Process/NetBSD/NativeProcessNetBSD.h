@@ -107,6 +107,7 @@ private:
   void SigchldHandler();
 
   Status Attach();
+  Status SetupTrace();
   Status ReinitializeThreads();
 };
 
