@@ -954,9 +954,14 @@ public:
   /// monotonically increasing or decreasing, returns
   /// Some(MonotonicallyIncreasing) and Some(MonotonicallyDecreasing)
   /// respectively. If we could not prove either of these facts, returns None.
+  ///
+  /// If NumIter was provided, then we are proving monotonicity during at least
+  /// NumIter first iterations. If it was not provided, then we are proving
+  /// monotonicity on all iteration space.
   Optional<MonotonicPredicateType>
-  getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
-                            ICmpInst::Predicate Pred);
+  getMonotonicPredicateType(const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
+                            Optional<const SCEV *> NumIter = None,
+                            const Instruction *Context = nullptr);
 
   /// Return true if the result of the predicate LHS `Pred` RHS is loop
   /// invariant with respect to L.  Set InvariantPred, InvariantLHS and
@@ -1893,9 +1898,9 @@ private:
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
-  Optional<MonotonicPredicateType>
-  getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
-                                ICmpInst::Predicate Pred);
+  Optional<MonotonicPredicateType> getMonotonicPredicateTypeImpl(
+      const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
+      Optional<const SCEV *> NumIter, const Instruction *Context);
 
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)
