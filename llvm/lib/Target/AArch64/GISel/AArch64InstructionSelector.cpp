@@ -176,15 +176,7 @@ private:
                           std::initializer_list<llvm::SrcOp> SrcOps,
                           MachineIRBuilder &MIRBuilder,
                           const ComplexRendererFns &RenderFns = None) const;
-  /// Helper function to emit a binary operation such as an ADD, ADDS, etc.
-  ///
-  /// This is intended for instructions with the following opcode variants:
-  ///
-  ///  - Xri, Wri (arithmetic immediate form)
-  ///  - Xrs, Wrs (shifted register form)
-  ///  - Xrr, Wrr (register form)
-  ///
-  /// For example, for ADD, we have ADDXri, ADDWri, ADDXrs, etc.
+  /// Helper function to emit an add or sub instruction.
   ///
   /// \p AddrModeAndSizeToOpcode must contain each of the opcode variants above
   /// in a specific order.
@@ -192,10 +184,11 @@ private:
   /// Below is an example of the expected input to \p AddrModeAndSizeToOpcode.
   ///
   /// \code
-  ///   const std::array<std::array<unsigned, 2>, 3> Table {
+  ///   const std::array<std::array<unsigned, 2>, 4> Table {
   ///    {{AArch64::ADDXri, AArch64::ADDWri},
   ///     {AArch64::ADDXrs, AArch64::ADDWrs},
-  ///     {AArch64::ADDXrr, AArch64::ADDWrr}}};
+  ///     {AArch64::ADDXrr, AArch64::ADDWrr},
+  ///     {AArch64::SUBXri, AArch64::SUBWri}}};
   /// \endcode
   ///
   /// Each row in the table corresponds to a different addressing mode. Each
@@ -205,6 +198,7 @@ private:
   ///   - Row 0: The ri opcode variants
   ///   - Row 1: The rs opcode variants
   ///   - Row 2: The rr opcode variants
+  ///   - Row 3: The ri opcode variants for negative immediates
   ///
   /// \attention Columns must be structured as follows:
   ///   - Column 0: The 64-bit opcode variants
@@ -213,8 +207,8 @@ private:
   /// \p Dst is the destination register of the binop to emit.
   /// \p LHS is the left-hand operand of the binop to emit.
   /// \p RHS is the right-hand operand of the binop to emit.
-  MachineInstr *emitBinOp(
-      const std::array<std::array<unsigned, 2>, 3> &AddrModeAndSizeToOpcode,
+  MachineInstr *emitAddSub(
+      const std::array<std::array<unsigned, 2>, 4> &AddrModeAndSizeToOpcode,
       Register Dst, MachineOperand &LHS, MachineOperand &RHS,
       MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitADD(Register DefReg, MachineOperand &LHS,
@@ -3826,8 +3820,8 @@ MachineInstr *AArch64InstructionSelector::emitInstr(
   return &*MI;
 }
 
-MachineInstr *AArch64InstructionSelector::emitBinOp(
-    const std::array<std::array<unsigned, 2>, 3> &AddrModeAndSizeToOpcode,
+MachineInstr *AArch64InstructionSelector::emitAddSub(
+    const std::array<std::array<unsigned, 2>, 4> &AddrModeAndSizeToOpcode,
     Register Dst, MachineOperand &LHS, MachineOperand &RHS,
     MachineIRBuilder &MIRBuilder) const {
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
@@ -3837,9 +3831,18 @@ MachineInstr *AArch64InstructionSelector::emitBinOp(
   unsigned Size = Ty.getSizeInBits();
   assert((Size == 32 || Size == 64) && "Expected a 32-bit or 64-bit type only");
   bool Is32Bit = Size == 32;
+
+  // INSTRri form with positive arithmetic immediate.
   if (auto Fns = selectArithImmed(RHS))
     return emitInstr(AddrModeAndSizeToOpcode[0][Is32Bit], {Dst}, {LHS},
                      MIRBuilder, Fns);
+
+  // INSTRri form with negative arithmetic immediate.
+  if (auto Fns = selectNegArithImmed(RHS))
+    return emitInstr(AddrModeAndSizeToOpcode[3][Is32Bit], {Dst}, {LHS},
+                     MIRBuilder, Fns);
+
+  // INSTRrs form.
   if (auto Fns = selectShiftedRegister(RHS))
     return emitInstr(AddrModeAndSizeToOpcode[1][Is32Bit], {Dst}, {LHS},
                      MIRBuilder, Fns);
@@ -3851,33 +3854,36 @@ MachineInstr *
 AArch64InstructionSelector::emitADD(Register DefReg, MachineOperand &LHS,
                                     MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
-  const std::array<std::array<unsigned, 2>, 3> OpcTable{
+  const std::array<std::array<unsigned, 2>, 4> OpcTable{
       {{AArch64::ADDXri, AArch64::ADDWri},
        {AArch64::ADDXrs, AArch64::ADDWrs},
-       {AArch64::ADDXrr, AArch64::ADDWrr}}};
-  return emitBinOp(OpcTable, DefReg, LHS, RHS, MIRBuilder);
+       {AArch64::ADDXrr, AArch64::ADDWrr},
+       {AArch64::SUBXri, AArch64::SUBWri}}};
+  return emitAddSub(OpcTable, DefReg, LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *
 AArch64InstructionSelector::emitADDS(Register Dst, MachineOperand &LHS,
                                      MachineOperand &RHS,
                                      MachineIRBuilder &MIRBuilder) const {
-  const std::array<std::array<unsigned, 2>, 3> OpcTable{
+  const std::array<std::array<unsigned, 2>, 4> OpcTable{
       {{AArch64::ADDSXri, AArch64::ADDSWri},
        {AArch64::ADDSXrs, AArch64::ADDSWrs},
-       {AArch64::ADDSXrr, AArch64::ADDSWrr}}};
-  return emitBinOp(OpcTable, Dst, LHS, RHS, MIRBuilder);
+       {AArch64::ADDSXrr, AArch64::ADDSWrr},
+       {AArch64::SUBSXri, AArch64::SUBSWri}}};
+  return emitAddSub(OpcTable, Dst, LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *
 AArch64InstructionSelector::emitSUBS(Register Dst, MachineOperand &LHS,
                                      MachineOperand &RHS,
                                      MachineIRBuilder &MIRBuilder) const {
-  const std::array<std::array<unsigned, 2>, 3> OpcTable{
+  const std::array<std::array<unsigned, 2>, 4> OpcTable{
       {{AArch64::SUBSXri, AArch64::SUBSWri},
        {AArch64::SUBSXrs, AArch64::SUBSWrs},
-       {AArch64::SUBSXrr, AArch64::SUBSWrr}}};
-  return emitBinOp(OpcTable, Dst, LHS, RHS, MIRBuilder);
+       {AArch64::SUBSXrr, AArch64::SUBSWrr},
+       {AArch64::ADDSXri, AArch64::ADDSWri}}};
+  return emitAddSub(OpcTable, Dst, LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *

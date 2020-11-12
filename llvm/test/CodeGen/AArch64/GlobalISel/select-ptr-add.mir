@@ -72,3 +72,20 @@ body:             |
     %3:fpr(<2 x p0>) = G_PTR_ADD %0, %1(<2 x s64>)
     $q0 = COPY %3(<2 x p0>)
 ...
+---
+name:            ptr_add_neg_imm
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+      liveins: $x0
+    ; CHECK-LABEL: name: ptr_add_neg_imm
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
+    ; CHECK: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY1]], 10, 0, implicit-def $nzcv
+    ; CHECK: $x0 = COPY [[SUBSXri]]
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s64) = G_CONSTANT i64 -10
+    %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
+    $x0 = COPY %2(p0)
+...
