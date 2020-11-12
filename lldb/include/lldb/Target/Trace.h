@@ -32,6 +32,10 @@ namespace lldb_private {
 /// Processor trace information can also be fetched through the process
 /// interfaces during a live debug session if your process supports gathering
 /// this information.
+///
+/// In order to support live tracing, the name of the plug-in should match the
+/// name of the tracing type returned by the gdb-remote packet
+/// \a jLLDBTraceSupportedType.
 class Trace : public PluginInterface,
               public std::enable_shared_from_this<Trace> {
 public:

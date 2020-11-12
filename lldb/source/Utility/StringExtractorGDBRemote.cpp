@@ -310,6 +310,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jTraceStart;
     if (PACKET_STARTS_WITH("jTraceStop:"))
       return eServerPacketType_jTraceStop;
+    if (PACKET_MATCHES("jLLDBTraceSupportedType"))
+      return eServerPacketType_jLLDBTraceSupportedType;
     break;
 
   case 'v':
