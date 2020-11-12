@@ -771,8 +771,8 @@ listed below.
 Current Work
 ------------
 
-1. **``TargetProcessControl``: Improvements to in-tree support for
-   out-of-process execution.**
+1. **TargetProcessControl: Improvements to in-tree support for out-of-process
+   execution**
 
    The ``TargetProcessControl`` API provides various operations on the JIT
    target process (the one which will execute the JIT'd code), including
@@ -782,7 +782,7 @@ Current Work
    JITing.
 
 
-2. **ORC RPC based ``TargetProcessControl`` implementation**
+2. **ORC RPC based TargetProcessControl implementation**
 
    An ORC RPC based implementation of the ``TargetProcessControl`` API is
    currently under development to enable easy out-of-process JITing via
