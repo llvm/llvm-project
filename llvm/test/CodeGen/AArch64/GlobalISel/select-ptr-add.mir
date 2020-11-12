@@ -110,3 +110,22 @@ body:             |
     %ptr_add:gpr(p0) = G_PTR_ADD %ptr, %shift(s64)
     $x0 = COPY %ptr_add(p0)
 ...
+---
+name:            ptr_add_negated_reg
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+      liveins: $x0, $x1
+    ; CHECK-LABEL: name: ptr_add_negated_reg
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: %src:gpr64 = COPY $x1
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], %src, implicit-def $nzcv
+    ; CHECK: $x0 = COPY [[SUBSXrr]]
+    %0:gpr(p0) = COPY $x0
+    %src:gpr(s64) = COPY $x1
+    %1:gpr(s64) = G_CONSTANT i64 0
+    %neg:gpr(s64) = G_SUB %1, %src
+    %2:gpr(p0) = G_PTR_ADD %0, %neg(s64)
+    $x0 = COPY %2(p0)
+...
