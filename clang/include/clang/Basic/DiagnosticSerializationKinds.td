@@ -17,17 +17,10 @@ def err_fe_pch_malformed : Error<
     "malformed or corrupted AST file: '%0'">, DefaultFatal;
 def err_fe_pch_malformed_block : Error<
     "malformed block record in PCH file: '%0'">, DefaultFatal;
-def err_fe_pch_file_modified : Error<
-    "file '%0' has been modified since the precompiled header '%1' was built"
-    ": %select{size|mtime|content}2 changed">,
-    DefaultFatal;
-def err_fe_module_file_modified : Error<
-    "file '%0' has been modified since the module file '%1' was built"
-    ": %select{size|mtime|content}2 changed">,
-    DefaultFatal;
 def err_fe_ast_file_modified : Error<
-    "file '%0' has been modified since the AST file '%1' was built"
-    ": %select{size|mtime|content}2 changed">,
+    "file '%0' has been modified since the "
+    "%select{precompiled header|module file|AST file}1 '%2' was built"
+    ": %select{size|mtime|content}3 changed">,
     DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
