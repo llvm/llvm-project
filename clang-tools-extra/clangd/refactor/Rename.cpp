@@ -123,6 +123,7 @@ enum class ReasonToReject {
 
   // name validation.
   RenameToKeywords,
+  SameName,
 };
 
 llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
@@ -213,6 +214,8 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "there are multiple symbols at the given location";
     case ReasonToReject::RenameToKeywords:
       return "the chosen name is a keyword";
+    case ReasonToReject::SameName:
+      return "new name is the same as the old name";
     }
     llvm_unreachable("unhandled reason kind");
   };
@@ -556,6 +559,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::AmbiguousSymbol);
   const auto &RenameDecl =
       llvm::cast<NamedDecl>(*(*DeclsUnderCursor.begin())->getCanonicalDecl());
+  if (RenameDecl.getName() == RInputs.NewName)
+    return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, RInputs.NewName);
   if (Invalid)
     return makeError(*Invalid);
