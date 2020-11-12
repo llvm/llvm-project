@@ -458,9 +458,10 @@ static LogicalResult processParallelLoop(
           if (!boundIsPrecise) {
             upperBound = deriveStaticUpperBound(upperBound, rewriter);
             if (!upperBound) {
-              return parallelOp.emitOpError()
-                     << "cannot derive loop-invariant upper bound for number "
-                        "of iterations";
+              return rewriter.notifyMatchFailure(
+                  parallelOp,
+                  "cannot derive loop-invariant upper bound for number of"
+                  "iterations");
             }
           }
           // Compute the number of iterations needed. We compute this as an
@@ -481,9 +482,9 @@ static LogicalResult processParallelLoop(
           // todo(herhut,ravishankarm): Update the behavior of setMappingAttr
           // when this condition is relaxed.
           if (bounds.find(processor) != bounds.end()) {
-            return parallelOp.emitOpError()
-                   << "cannot redefine the bound for processor "
-                   << static_cast<int64_t>(processor);
+            return rewriter.notifyMatchFailure(
+                parallelOp, "cannot redefine the bound for processor " +
+                                Twine(static_cast<int64_t>(processor)));
           }
           bounds[processor] = launchBound;
         }
@@ -565,6 +566,10 @@ static LogicalResult processParallelLoop(
 LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
+  // We can only transform starting at the outer-most loop. Launches inside of
+  // parallel loops are not supported.
+  if (auto parentLoop = parallelOp.getParentOfType<ParallelOp>())
+    return failure();
   // Create a launch operation. We start with bound one for all grid/block
   // sizes. Those will be refined later as we discover them from mappings.
   Location loc = parallelOp.getLoc();
@@ -639,4 +644,10 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
 void mlir::populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
                                              MLIRContext *ctx) {
   patterns.insert<ParallelToGpuLaunchLowering>(ctx);
+}
+
+void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {
+  target.addDynamicallyLegalOp<scf::ParallelOp>([](scf::ParallelOp parallelOp) {
+    return !parallelOp.getAttr(gpu::getMappingAttrName());
+  });
 }

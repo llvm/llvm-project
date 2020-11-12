@@ -53,7 +53,7 @@ struct ParallelLoopToGpuPass
     target.addLegalDialect<AffineDialect>();
     target.addLegalDialect<gpu::GPUDialect>();
     target.addLegalDialect<scf::SCFDialect>();
-    target.addIllegalOp<scf::ParallelOp>();
+    configureParallelLoopToGPULegality(target);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
