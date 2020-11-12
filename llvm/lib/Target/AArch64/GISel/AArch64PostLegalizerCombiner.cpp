@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
@@ -100,6 +101,138 @@ bool applyExtractVecEltPairwiseAdd(
   auto Elt0 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 0));
   auto Elt1 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 1));
   B.buildInstr(Opc, {MI.getOperand(0).getReg()}, {Elt0, Elt1});
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
+  // TODO: check if extended build vector as well.
+  unsigned Opc = MRI.getVRegDef(R)->getOpcode();
+  return Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG;
+}
+
+static bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
+  // TODO: check if extended build vector as well.
+  return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_ZEXT;
+}
+
+bool matchAArch64MulConstCombine(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    std::function<void(MachineIRBuilder &B, Register DstReg)> &ApplyFn) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL);
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+  const LLT Ty = MRI.getType(LHS);
+
+  // The below optimizations require a constant RHS.
+  auto Const = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (!Const)
+    return false;
+
+  const APInt &ConstValue = APInt(Ty.getSizeInBits(), Const->Value, true);
+  // The following code is ported from AArch64ISelLowering.
+  // Multiplication of a power of two plus/minus one can be done more
+  // cheaply as as shift+add/sub. For now, this is true unilaterally. If
+  // future CPUs have a cheaper MADD instruction, this may need to be
+  // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
+  // 64-bit is 5 cycles, so this is always a win.
+  // More aggressively, some multiplications N0 * C can be lowered to
+  // shift+add+shift if the constant C = A * B where A = 2^N + 1 and B = 2^M,
+  // e.g. 6=3*2=(2+1)*2.
+  // TODO: consider lowering more cases, e.g. C = 14, -6, -14 or even 45
+  // which equals to (1+2)*16-(1+2).
+  // TrailingZeroes is used to test if the mul can be lowered to
+  // shift+add+shift.
+  unsigned TrailingZeroes = ConstValue.countTrailingZeros();
+  if (TrailingZeroes) {
+    // Conservatively do not lower to shift+add+shift if the mul might be
+    // folded into smul or umul.
+    if (MRI.hasOneNonDBGUse(LHS) &&
+        (isSignExtended(LHS, MRI) || isZeroExtended(LHS, MRI)))
+      return false;
+    // Conservatively do not lower to shift+add+shift if the mul might be
+    // folded into madd or msub.
+    if (MRI.hasOneNonDBGUse(Dst)) {
+      MachineInstr &UseMI = *MRI.use_instr_begin(Dst);
+      if (UseMI.getOpcode() == TargetOpcode::G_ADD ||
+          UseMI.getOpcode() == TargetOpcode::G_SUB)
+        return false;
+    }
+  }
+  // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
+  // and shift+add+shift.
+  APInt ShiftedConstValue = ConstValue.ashr(TrailingZeroes);
+
+  unsigned ShiftAmt, AddSubOpc;
+  // Is the shifted value the LHS operand of the add/sub?
+  bool ShiftValUseIsLHS = true;
+  // Do we need to negate the result?
+  bool NegateResult = false;
+
+  if (ConstValue.isNonNegative()) {
+    // (mul x, 2^N + 1) => (add (shl x, N), x)
+    // (mul x, 2^N - 1) => (sub (shl x, N), x)
+    // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
+    APInt SCVMinus1 = ShiftedConstValue - 1;
+    APInt CVPlus1 = ConstValue + 1;
+    if (SCVMinus1.isPowerOf2()) {
+      ShiftAmt = SCVMinus1.logBase2();
+      AddSubOpc = TargetOpcode::G_ADD;
+    } else if (CVPlus1.isPowerOf2()) {
+      ShiftAmt = CVPlus1.logBase2();
+      AddSubOpc = TargetOpcode::G_SUB;
+    } else
+      return false;
+  } else {
+    // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
+    // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
+    APInt CVNegPlus1 = -ConstValue + 1;
+    APInt CVNegMinus1 = -ConstValue - 1;
+    if (CVNegPlus1.isPowerOf2()) {
+      ShiftAmt = CVNegPlus1.logBase2();
+      AddSubOpc = TargetOpcode::G_SUB;
+      ShiftValUseIsLHS = false;
+    } else if (CVNegMinus1.isPowerOf2()) {
+      ShiftAmt = CVNegMinus1.logBase2();
+      AddSubOpc = TargetOpcode::G_ADD;
+      NegateResult = true;
+    } else
+      return false;
+  }
+
+  if (NegateResult && TrailingZeroes)
+    return false;
+
+  ApplyFn = [=](MachineIRBuilder &B, Register DstReg) {
+    auto Shift = B.buildConstant(LLT::scalar(64), ShiftAmt);
+    auto ShiftedVal = B.buildShl(Ty, LHS, Shift);
+
+    Register AddSubLHS = ShiftValUseIsLHS ? ShiftedVal.getReg(0) : LHS;
+    Register AddSubRHS = ShiftValUseIsLHS ? LHS : ShiftedVal.getReg(0);
+    auto Res = B.buildInstr(AddSubOpc, {Ty}, {AddSubLHS, AddSubRHS});
+    assert(!(NegateResult && TrailingZeroes) &&
+           "NegateResult and TrailingZeroes cannot both be true for now.");
+    // Negate the result.
+    if (NegateResult) {
+      B.buildSub(DstReg, B.buildConstant(Ty, 0), Res);
+      return;
+    }
+    // Shift the result.
+    if (TrailingZeroes) {
+      B.buildShl(DstReg, Res, B.buildConstant(LLT::scalar(64), TrailingZeroes));
+      return;
+    }
+    B.buildCopy(DstReg, Res.getReg(0));
+  };
+  return true;
+}
+
+bool applyAArch64MulConstCombine(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    std::function<void(MachineIRBuilder &B, Register DstReg)> &ApplyFn) {
+  B.setInstrAndDebugLoc(MI);
+  ApplyFn(B, MI.getOperand(0).getReg());
   MI.eraseFromParent();
   return true;
 }
