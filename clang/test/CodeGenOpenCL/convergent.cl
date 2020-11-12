@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - -fno-experimental-new-pass-manager | opt -instnamer -S | FileCheck -enable-var-scope %s --check-prefixes=CHECK,CHECK-LEGACY
-// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - -fexperimental-new-pass-manager | opt -instnamer -S | FileCheck -enable-var-scope %s --check-prefixes=CHECK,CHECK-NEWPM
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - -fno-experimental-new-pass-manager | opt -instnamer -S | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - -fexperimental-new-pass-manager | opt -instnamer -S | FileCheck -enable-var-scope %s
 
 // This is initially assumed convergent, but can be deduced to not require it.
 
@@ -118,12 +118,7 @@ void test_unroll() {
 // CHECK: [[for_body]]:
 // CHECK:  tail call spir_func void @nodupfun() #[[attr5:[0-9]+]]
 // CHECK-NOT: call spir_func void @nodupfun()
-
-// The new PM produces a slightly different IR for the loop from the legacy PM,
-// but the test still checks that the loop is not unrolled.
-// CHECK-LEGACY:  br i1 %{{.+}}, label %[[for_body]], label %[[for_cond_cleanup]]
-// CHECK-NEW:     br i1 %{{.+}}, label %[[for_body_crit_edge:.+]], label %[[for_cond_cleanup]]
-// CHECK-NEW:     [[for_body_crit_edge]]:
+// CHECK:  br i1 %{{.+}}, label %[[for_body]], label %[[for_cond_cleanup]]
 
 void test_not_unroll() {
   for (int i = 0; i < 10; i++)
