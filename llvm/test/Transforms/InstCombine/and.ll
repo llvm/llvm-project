@@ -973,3 +973,78 @@ define <2 x i59> @lowbitmask_casted_shift_vec_splat(<2 x i47> %x) {
   %r = and <2 x i59> %s, <i59 18014398509481983, i59 18014398509481983>  ;  -1 u>> 5 == 0x3f_ffff_ffff_ffff
   ret <2 x i59> %r
 }
+
+define i32 @lowmask_sext_in_reg(i32 %x) {
+; CHECK-LABEL: @lowmask_sext_in_reg(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 20
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 20
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 20
+  %r = ashr i32 %l, 20
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4095
+  ret i32 %and
+}
+
+define i32 @lowmask_not_sext_in_reg(i32 %x) {
+; CHECK-LABEL: @lowmask_not_sext_in_reg(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 19
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[L]], 20
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 19
+  %r = ashr i32 %l, 20
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4095
+  ret i32 %and
+}
+
+define i32 @not_lowmask_sext_in_reg(i32 %x) {
+; CHECK-LABEL: @not_lowmask_sext_in_reg(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 20
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 20
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4096
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 20
+  %r = ashr i32 %l, 20
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4096
+  ret i32 %and
+}
+
+define i32 @not_lowmask_sext_in_reg2(i32 %x) {
+; CHECK-LABEL: @not_lowmask_sext_in_reg2(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 21
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 21
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 21
+  %r = ashr i32 %l, 21
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4095
+  ret i32 %and
+}
+
+define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, <2 x i32>* %p) {
+; CHECK-LABEL: @lowmask_sext_in_reg_splat(
+; CHECK-NEXT:    [[L:%.*]] = shl <2 x i32> [[X:%.*]], <i32 20, i32 20>
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i32> [[L]], <i32 20, i32 20>
+; CHECK-NEXT:    store <2 x i32> [[R]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[R]], <i32 4095, i32 4095>
+; CHECK-NEXT:    ret <2 x i32> [[AND]]
+;
+  %l = shl <2 x i32> %x, <i32 20, i32 20>
+  %r = ashr <2 x i32> %l, <i32 20, i32 20>
+  store <2 x i32> %r, <2 x i32>* %p
+  %and = and <2 x i32> %r, <i32 4095, i32 4095>
+  ret <2 x i32> %and
+}
