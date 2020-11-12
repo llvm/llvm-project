@@ -34,14 +34,13 @@ struct AsyncToken {
 };
 
 // Create a new `async.token` in not-ready state.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncToken *mlirAsyncRuntimeCreateToken() {
+extern "C" AsyncToken *mlirAsyncRuntimeCreateToken() {
   AsyncToken *token = new AsyncToken;
   return token;
 }
 
 // Switches `async.token` to ready state and runs all awaiters.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
+extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
   token->ready = true;
   token->cv.notify_all();
@@ -49,16 +48,14 @@ mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
     awaiter();
 }
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
+extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
   if (!token->ready)
     token->cv.wait(lock, [token] { return token->ready; });
   delete token;
 }
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
+extern "C" void mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
 #if LLVM_ENABLE_THREADS
   std::thread thread([handle, resume]() { (*resume)(handle); });
   thread.detach();
@@ -67,9 +64,9 @@ mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
 #endif
 }
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token, CoroHandle handle,
-                                     CoroResume resume) {
+extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
+                                                     CoroHandle handle,
+                                                     CoroResume resume) {
   std::unique_lock<std::mutex> lock(token->mu);
 
   auto execute = [token, handle, resume]() {
@@ -87,8 +84,7 @@ mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token, CoroHandle handle,
 // Small async runtime support library for testing.
 //===----------------------------------------------------------------------===//
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimePrintCurrentThreadId() {
+extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
   static thread_local std::thread::id thisId = std::this_thread::get_id();
   std::cout << "Current thread id: " << thisId << "\n";
 }
