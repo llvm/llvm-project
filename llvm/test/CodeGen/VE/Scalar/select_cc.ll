@@ -129,8 +129,7 @@ define zeroext i1 @select_cc_i128_i1(i128 %0, i128 %1, i1 zeroext %2, i1 zeroext
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -146,8 +145,7 @@ define zeroext i1 @select_cc_u128_i1(i128 %0, i128 %1, i1 zeroext %2, i1 zeroext
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -319,8 +317,7 @@ define signext i8 @select_cc_i128_i8(i128 %0, i128 %1, i8 signext %2, i8 signext
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -336,8 +333,7 @@ define signext i8 @select_cc_u128_i8(i128 %0, i128 %1, i8 signext %2, i8 signext
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -509,8 +505,7 @@ define zeroext i8 @select_cc_i128_u8(i128 %0, i128 %1, i8 zeroext %2, i8 zeroext
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -526,8 +521,7 @@ define zeroext i8 @select_cc_u128_u8(i128 %0, i128 %1, i8 zeroext %2, i8 zeroext
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -699,8 +693,7 @@ define signext i16 @select_cc_i128_i16(i128 %0, i128 %1, i16 signext %2, i16 sig
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -716,8 +709,7 @@ define signext i16 @select_cc_u128_i16(i128 %0, i128 %1, i16 signext %2, i16 sig
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -889,8 +881,7 @@ define zeroext i16 @select_cc_i128_u16(i128 %0, i128 %1, i16 zeroext %2, i16 zer
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -906,8 +897,7 @@ define zeroext i16 @select_cc_u128_u16(i128 %0, i128 %1, i16 zeroext %2, i16 zer
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1079,8 +1069,7 @@ define signext i32 @select_cc_i128_i32(i128 %0, i128 %1, i32 signext %2, i32 sig
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1096,8 +1085,7 @@ define signext i32 @select_cc_u128_i32(i128 %0, i128 %1, i32 signext %2, i32 sig
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.sx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1269,8 +1257,7 @@ define zeroext i32 @select_cc_i128_u32(i128 %0, i128 %1, i32 zeroext %2, i32 zer
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1286,8 +1273,7 @@ define zeroext i32 @select_cc_u128_u32(i128 %0, i128 %1, i32 zeroext %2, i32 zer
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s5, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1460,8 +1446,7 @@ define i64 @select_cc_i128_i64(i128 %0, i128 %1, i64 %2, i64 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1477,8 +1462,7 @@ define i64 @select_cc_u128_i64(i128 %0, i128 %1, i64 %2, i64 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1651,8 +1635,7 @@ define i64 @select_cc_i128_u64(i128 %0, i128 %1, i64 %2, i64 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1668,8 +1651,7 @@ define i64 @select_cc_u128_u64(i128 %0, i128 %1, i64 %2, i64 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -1860,8 +1842,7 @@ define i128 @select_cc_i128_i128(i128 %0, i128 %1, i128 %2, i128 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s6, %s4, %s0
 ; CHECK-NEXT:    cmov.l.eq %s7, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s6
@@ -1879,8 +1860,7 @@ define i128 @select_cc_u128_i128(i128 %0, i128 %1, i128 %2, i128 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s6, %s4, %s0
 ; CHECK-NEXT:    cmov.l.eq %s7, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s6
@@ -2079,8 +2059,7 @@ define i128 @select_cc_i128_u128(i128 %0, i128 %1, i128 %2, i128 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s6, %s4, %s0
 ; CHECK-NEXT:    cmov.l.eq %s7, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s6
@@ -2098,8 +2077,7 @@ define i128 @select_cc_u128_u128(i128 %0, i128 %1, i128 %2, i128 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s6, %s4, %s0
 ; CHECK-NEXT:    cmov.l.eq %s7, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s6
@@ -2280,8 +2258,7 @@ define float @select_cc_i128_float(i128 %0, i128 %1, float %2, float %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -2297,8 +2274,7 @@ define float @select_cc_u128_float(i128 %0, i128 %1, float %2, float %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -2471,8 +2447,7 @@ define double @select_cc_i128_double(i128 %0, i128 %1, double %2, double %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -2488,8 +2463,7 @@ define double @select_cc_u128_double(i128 %0, i128 %1, double %2, double %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -2680,8 +2654,7 @@ define fp128 @select_cc_i128_quad(i128 %0, i128 %1, fp128 %2, fp128 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s6, %s4, %s0
 ; CHECK-NEXT:    cmov.l.eq %s7, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s6
@@ -2699,8 +2672,7 @@ define fp128 @select_cc_u128_quad(i128 %0, i128 %1, fp128 %2, fp128 %3) {
 ; CHECK-NEXT:    xor %s1, %s1, %s3
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s6, %s4, %s0
 ; CHECK-NEXT:    cmov.l.eq %s7, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s6

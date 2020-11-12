@@ -129,7 +129,7 @@ define zeroext i1 @setcc_i128(i128 %0, i128 %1) {
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s1, (63)0, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -145,7 +145,7 @@ define zeroext i1 @setcc_u128(i128 %0, i128 %1) {
 ; CHECK-NEXT:    xor %s0, %s0, %s2
 ; CHECK-NEXT:    or %s0, %s0, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmps.l %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.l.eq %s1, (63)0, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
