@@ -119,7 +119,8 @@ namespace {
 
     void printBefore(QualType T, raw_ostream &OS);
     void printAfter(QualType T, raw_ostream &OS);
-    void AppendScope(DeclContext *DC, raw_ostream &OS);
+    void AppendScope(DeclContext *DC, raw_ostream &OS,
+                     DeclarationName NameInScope);
     void printTag(TagDecl *T, raw_ostream &OS);
     void printFunctionAfter(const FunctionType::ExtInfo &Info, raw_ostream &OS);
 #define ABSTRACT_TYPE(CLASS, PARENT)
@@ -1025,7 +1026,7 @@ void TypePrinter::printTypeSpec(NamedDecl *D, raw_ostream &OS) {
   // In C, this will always be empty except when the type
   // being printed is anonymous within other Record.
   if (!Policy.SuppressScope)
-    AppendScope(D->getDeclContext(), OS);
+    AppendScope(D->getDeclContext(), OS, D->getDeclName());
 
   IdentifierInfo *II = D->getIdentifier();
   OS << II->getName();
@@ -1215,20 +1216,34 @@ void TypePrinter::printDependentExtIntAfter(const DependentExtIntType *T,
                                             raw_ostream &OS) {}
 
 /// Appends the given scope to the end of a string.
-void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS) {
-  if (DC->isTranslationUnit()) return;
-  if (DC->isFunctionOrMethod()) return;
-  AppendScope(DC->getParent(), OS);
+void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
+                              DeclarationName NameInScope) {
+  if (DC->isTranslationUnit())
+    return;
+
+  // FIXME: Consider replacing this with NamedDecl::printNestedNameSpecifier,
+  // which can also print names for function and method scopes.
+  if (DC->isFunctionOrMethod())
+    return;
 
   if (const auto *NS = dyn_cast<NamespaceDecl>(DC)) {
-    if (Policy.SuppressUnwrittenScope &&
-        (NS->isAnonymousNamespace() || NS->isInline()))
-      return;
+    if (Policy.SuppressUnwrittenScope && NS->isAnonymousNamespace())
+      return AppendScope(DC->getParent(), OS, NameInScope);
+
+    // Only suppress an inline namespace if the name has the same lookup
+    // results in the enclosing namespace.
+    if (Policy.SuppressInlineNamespace && NS->isInline() && NameInScope &&
+        DC->getParent()->lookup(NameInScope).size() ==
+            DC->lookup(NameInScope).size())
+      return AppendScope(DC->getParent(), OS, NameInScope);
+
+    AppendScope(DC->getParent(), OS, NS->getDeclName());
     if (NS->getIdentifier())
       OS << NS->getName() << "::";
     else
       OS << "(anonymous namespace)::";
   } else if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
+    AppendScope(DC->getParent(), OS, Spec->getDeclName());
     IncludeStrongLifetimeRAII Strong(Policy);
     OS << Spec->getIdentifier()->getName();
     const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
@@ -1237,12 +1252,15 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS) {
         Spec->getSpecializedTemplate()->getTemplateParameters());
     OS << "::";
   } else if (const auto *Tag = dyn_cast<TagDecl>(DC)) {
+    AppendScope(DC->getParent(), OS, Tag->getDeclName());
     if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
       OS << Typedef->getIdentifier()->getName() << "::";
     else if (Tag->getIdentifier())
       OS << Tag->getIdentifier()->getName() << "::";
     else
       return;
+  } else {
+    AppendScope(DC->getParent(), OS, NameInScope);
   }
 }
 
@@ -1269,7 +1287,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   // In C, this will always be empty except when the type
   // being printed is anonymous within other Record.
   if (!Policy.SuppressScope)
-    AppendScope(D->getDeclContext(), OS);
+    AppendScope(D->getDeclContext(), OS, D->getDeclName());
 
   if (const IdentifierInfo *II = D->getIdentifier())
     OS << II->getName();
