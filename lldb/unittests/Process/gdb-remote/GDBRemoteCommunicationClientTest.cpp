@@ -363,59 +363,62 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedTypePacket) {
+  TraceTypeInfo trace_type;
+  std::string error_message;
+  auto callback = [&] {
+    if (llvm::Expected<TraceTypeInfo> trace_type_or_err =
+            client.SendGetSupportedTraceType()) {
+      trace_type = *trace_type_or_err;
+      error_message = "";
+      return true;
+    } else {
+      trace_type = {};
+      error_message = llvm::toString(trace_type_or_err.takeError());
+      return false;
+    }
+  };
+
   // Success response
   {
-    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
-        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+    std::future<bool> result = std::async(std::launch::async, callback);
 
     HandlePacket(
         server, "jLLDBTraceSupportedType",
         R"({"name":"intel-pt","description":"Intel Processor Trace"}])");
 
-    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
-    EXPECT_THAT_EXPECTED(trace_type_or_err, llvm::Succeeded());
-    ASSERT_STREQ(trace_type_or_err->name.c_str(), "intel-pt");
-    ASSERT_STREQ(trace_type_or_err->description.c_str(),
-                 "Intel Processor Trace");
+    EXPECT_TRUE(result.get());
+    ASSERT_STREQ(trace_type.name.c_str(), "intel-pt");
+    ASSERT_STREQ(trace_type.description.c_str(), "Intel Processor Trace");
   }
 
   // Error response - wrong json
   {
-    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
-        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+    std::future<bool> result = std::async(std::launch::async, callback);
 
     HandlePacket(server, "jLLDBTraceSupportedType", R"({"type":"intel-pt"}])");
 
-    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
-    ASSERT_THAT_EXPECTED(
-        trace_type_or_err,
-        llvm::Failed<StringError>(testing::Property(
-            &StringError::getMessage,
-            testing::HasSubstr("missing value at (root).name"))));
+    EXPECT_FALSE(result.get());
+    ASSERT_STREQ(error_message.c_str(), "missing value at (root).name");
   }
 
   // Error response
   {
-    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
-        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+    std::future<bool> result = std::async(std::launch::async, callback);
 
     HandlePacket(server, "jLLDBTraceSupportedType", "E23");
-    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
-    ASSERT_THAT_EXPECTED(trace_type_or_err, llvm::Failed());
+
+    EXPECT_FALSE(result.get());
   }
 
   // Error response with error message
   {
-    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
-        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+    std::future<bool> result = std::async(std::launch::async, callback);
 
     HandlePacket(server, "jLLDBTraceSupportedType",
                  "E23;50726F63657373206E6F742072756E6E696E672E");
-    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
-    ASSERT_THAT_EXPECTED(trace_type_or_err,
-                         llvm::Failed<StringError>(testing::Property(
-                             &StringError::getMessage,
-                             testing::HasSubstr("Process not running."))));
+
+    EXPECT_FALSE(result.get());
+    ASSERT_STREQ(error_message.c_str(), "Process not running.");
   }
 }
 
