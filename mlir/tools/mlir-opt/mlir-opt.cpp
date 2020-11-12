@@ -81,6 +81,8 @@ void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
+void registerTestNumberOfBlockExecutionsPass();
+void registerTestNumberOfOperationExecutionsPass();
 void registerTestOpaqueLoc();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
@@ -145,6 +147,8 @@ void registerTestPasses() {
   test::registerTestLoopUnrollingPass();
   test::registerTestMemRefDependenceCheck();
   test::registerTestMemRefStrideCalculation();
+  test::registerTestNumberOfBlockExecutionsPass();
+  test::registerTestNumberOfOperationExecutionsPass();
   test::registerTestOpaqueLoc();
   test::registerTestRecursiveTypesPass();
   test::registerTestSCFUtilsPass();
