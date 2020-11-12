@@ -5,15 +5,24 @@
 # RUN: ld.lld -o %t1 --script %t1.script %tfile1.o
 # RUN: llvm-readelf -x .abc %t1 | FileCheck %s
 
-## FIXME Some input sections are duplicated in .abc and their second occurrences are zeros.
+## Sections matched by patterns between two SORT are sorted separately by input order.
+## Note, GNU ld has a strange behavior with more than one SORT* https://sourceware.org/pipermail/binutils/2020-November/114083.html
+## In the absence of SORT, our multi-pattern behavior matches GNU ld.
 # CHECK:      Hex dump of section '.abc'
-# CHECK-NEXT: 0x00000000 01020306 05040000 00070908 0b0c0a
+# CHECK-NEXT: 0x00000000 01020306 05040708 090b0c0a
 
 # RUN: echo "SECTIONS { \
 # RUN:   .abc : { *(SORT(.foo.* EXCLUDE_FILE (*file1.o) .bar.*) .a* SORT(.bar.*) .b*) } \
 # RUN:  }" > %t2.script
 # RUN: ld.lld -o %t2 --script %t2.script %tfile1.o
 # RUN: llvm-readelf -x .abc %t2 | FileCheck %s
+
+## Non-SORT patterns are sorted by --sort-section, breaking tie by input order.
+# RUN: ld.lld -o %t4 --script %t1.script --sort-section=name %tfile1.o
+# RUN: llvm-readelf -x .abc %t4 | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:      Hex dump of section '.abc'
+# CHECK2-NEXT: 0x00000000 01020304 05060708 090a0b0c
 
 .text
 .globl _start
