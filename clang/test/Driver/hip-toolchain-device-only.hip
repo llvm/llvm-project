@@ -3,7 +3,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
 // RUN:   --cuda-device-only -nogpuinc -nogpulib -c \
-// RUN:   %s 2>&1 | FileCheck -check-prefixes=CHECK,LINK %s
+// RUN:   %s 2>&1 | FileCheck %s
 
 // CHECK-NOT: error:
 
