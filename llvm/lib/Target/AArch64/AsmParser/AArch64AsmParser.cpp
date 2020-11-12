@@ -230,6 +230,7 @@ private:
                                               RegKind MatchKind);
   OperandMatchResultTy tryParseOptionalShiftExtend(OperandVector &Operands);
   OperandMatchResultTy tryParseBarrierOperand(OperandVector &Operands);
+  OperandMatchResultTy tryParseBarriernXSOperand(OperandVector &Operands);
   OperandMatchResultTy tryParseMRSSystemRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseSysReg(OperandVector &Operands);
   OperandMatchResultTy tryParseSysCROperand(OperandVector &Operands);
@@ -401,6 +402,7 @@ private:
     const char *Data;
     unsigned Length;
     unsigned Val; // Not the enum since not all values have names.
+    bool HasnXSModifier;
   };
 
   struct SysRegOp {
@@ -568,6 +570,11 @@ public:
   StringRef getBarrierName() const {
     assert(Kind == k_Barrier && "Invalid access!");
     return StringRef(Barrier.Data, Barrier.Length);
+  }
+
+  bool getBarriernXSModifier() const {
+    assert(Kind == k_Barrier && "Invalid access!");
+    return Barrier.HasnXSModifier;
   }
 
   unsigned getReg() const override {
@@ -1031,7 +1038,12 @@ public:
            AArch64_AM::getFP64Imm(getFPImm().bitcastToAPInt()) != -1;
   }
 
-  bool isBarrier() const { return Kind == k_Barrier; }
+  bool isBarrier() const {
+    return Kind == k_Barrier && !getBarriernXSModifier();
+  }
+  bool isBarriernXS() const {
+    return Kind == k_Barrier && getBarriernXSModifier();
+  }
   bool isSysReg() const { return Kind == k_SysReg; }
 
   bool isMRSSystemRegister() const {
@@ -1721,6 +1733,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getBarrier()));
   }
 
+  void addBarriernXSOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getBarrier()));
+  }
+
   void addMRSSystemRegisterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
 
@@ -1956,11 +1973,13 @@ public:
   static std::unique_ptr<AArch64Operand> CreateBarrier(unsigned Val,
                                                        StringRef Str,
                                                        SMLoc S,
-                                                       MCContext &Ctx) {
+                                                       MCContext &Ctx,
+                                                       bool HasnXSModifier) {
     auto Op = std::make_unique<AArch64Operand>(k_Barrier, Ctx);
     Op->Barrier.Val = Val;
     Op->Barrier.Data = Str.data();
     Op->Barrier.Length = Str.size();
+    Op->Barrier.HasnXSModifier = HasnXSModifier;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -2886,6 +2905,7 @@ static const struct Extension {
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
     {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
+    {"xs", {AArch64::FeatureXS}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},
@@ -2906,6 +2926,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv8.5a";
   else if (FBS[AArch64::HasV8_6aOps])
     Str += "ARMv8.6a";
+  else if (FBS[AArch64::HasV8_7aOps])
+    Str += "ARMv8.7a";
   else {
     SmallVector<std::string, 2> ExtMatches;
     for (const auto& Ext : ExtensionMap) {
@@ -3043,8 +3065,81 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   if (Mnemonic == "tsb" && Tok.isNot(AsmToken::Identifier)) {
     TokError("'csync' operand expected");
     return MatchOperand_ParseFail;
-  // Can be either a #imm style literal or an option name
   } else if (parseOptionalToken(AsmToken::Hash) || Tok.is(AsmToken::Integer)) {
+    // Immediate operand.
+    const MCExpr *ImmVal;
+    SMLoc ExprLoc = getLoc();
+    AsmToken IntTok = Tok;
+    if (getParser().parseExpression(ImmVal))
+      return MatchOperand_ParseFail;
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
+    if (!MCE) {
+      Error(ExprLoc, "immediate value expected for barrier operand");
+      return MatchOperand_ParseFail;
+    }
+    int64_t Value = MCE->getValue();
+    if (Mnemonic == "dsb" && Value > 15) {
+      // This case is a no match here, but it might be matched by the nXS
+      // variant. Deliberately not unlex the optional '#' as it is not necessary
+      // to characterize an integer immediate.
+      Parser.getLexer().UnLex(IntTok);
+      return MatchOperand_NoMatch;
+    }
+    if (Value < 0 || Value > 15) {
+      Error(ExprLoc, "barrier operand out of range");
+      return MatchOperand_ParseFail;
+    }
+    auto DB = AArch64DB::lookupDBByEncoding(Value);
+    Operands.push_back(AArch64Operand::CreateBarrier(Value, DB ? DB->Name : "",
+                                                     ExprLoc, getContext(),
+                                                     false /*hasnXSModifier*/));
+    return MatchOperand_Success;
+  }
+
+  if (Tok.isNot(AsmToken::Identifier)) {
+    TokError("invalid operand for instruction");
+    return MatchOperand_ParseFail;
+  }
+
+  StringRef Operand = Tok.getString();
+  auto TSB = AArch64TSB::lookupTSBByName(Operand);
+  auto DB = AArch64DB::lookupDBByName(Operand);
+  // The only valid named option for ISB is 'sy'
+  if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy)) {
+    TokError("'sy' or #imm operand expected");
+    return MatchOperand_ParseFail;
+  // The only valid named option for TSB is 'csync'
+  } else if (Mnemonic == "tsb" && (!TSB || TSB->Encoding != AArch64TSB::csync)) {
+    TokError("'csync' operand expected");
+    return MatchOperand_ParseFail;
+  } else if (!DB && !TSB) {
+    if (Mnemonic == "dsb") {
+      // This case is a no match here, but it might be matched by the nXS
+      // variant.
+      return MatchOperand_NoMatch;
+    }
+    TokError("invalid barrier option name");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AArch64Operand::CreateBarrier(
+      DB ? DB->Encoding : TSB->Encoding, Tok.getString(), getLoc(),
+      getContext(), false /*hasnXSModifier*/));
+  Parser.Lex(); // Consume the option
+
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+AArch64AsmParser::tryParseBarriernXSOperand(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  const AsmToken &Tok = Parser.getTok();
+
+  assert(Mnemonic == "dsb" && "Instruction does not accept nXS operands");
+  if (Mnemonic != "dsb")
+    return MatchOperand_ParseFail;
+
+  if (parseOptionalToken(AsmToken::Hash) || Tok.is(AsmToken::Integer)) {
     // Immediate operand.
     const MCExpr *ImmVal;
     SMLoc ExprLoc = getLoc();
@@ -3055,13 +3150,17 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
       Error(ExprLoc, "immediate value expected for barrier operand");
       return MatchOperand_ParseFail;
     }
-    if (MCE->getValue() < 0 || MCE->getValue() > 15) {
+    int64_t Value = MCE->getValue();
+    // v8.7-A DSB in the nXS variant accepts only the following immediate
+    // values: 16, 20, 24, 28.
+    if (Value != 16 && Value != 20 && Value != 24 && Value != 28) {
       Error(ExprLoc, "barrier operand out of range");
       return MatchOperand_ParseFail;
     }
-    auto DB = AArch64DB::lookupDBByEncoding(MCE->getValue());
-    Operands.push_back(AArch64Operand::CreateBarrier(
-        MCE->getValue(), DB ? DB->Name : "", ExprLoc, getContext()));
+    auto DB = AArch64DBnXS::lookupDBnXSByImmValue(Value);
+    Operands.push_back(AArch64Operand::CreateBarrier(DB->Encoding, DB->Name,
+                                                     ExprLoc, getContext(),
+                                                     true /*hasnXSModifier*/));
     return MatchOperand_Success;
   }
 
@@ -3070,23 +3169,17 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  auto TSB = AArch64TSB::lookupTSBByName(Tok.getString());
-  // The only valid named option for ISB is 'sy'
-  auto DB = AArch64DB::lookupDBByName(Tok.getString());
-  if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy)) {
-    TokError("'sy' or #imm operand expected");
-    return MatchOperand_ParseFail;
-  // The only valid named option for TSB is 'csync'
-  } else if (Mnemonic == "tsb" && (!TSB || TSB->Encoding != AArch64TSB::csync)) {
-    TokError("'csync' operand expected");
-    return MatchOperand_ParseFail;
-  } else if (!DB && !TSB) {
+  StringRef Operand = Tok.getString();
+  auto DB = AArch64DBnXS::lookupDBnXSByName(Operand);
+
+  if (!DB) {
     TokError("invalid barrier option name");
     return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(AArch64Operand::CreateBarrier(
-      DB ? DB->Encoding : TSB->Encoding, Tok.getString(), getLoc(), getContext()));
+  Operands.push_back(
+      AArch64Operand::CreateBarrier(DB->Encoding, Tok.getString(), getLoc(),
+                                    getContext(), true /*hasnXSModifier*/));
   Parser.Lex(); // Consume the option
 
   return MatchOperand_Success;

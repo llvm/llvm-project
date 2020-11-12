@@ -1297,8 +1297,9 @@ class SimpleSystemI<bit L, dag iops, string asm, string operands,
 }
 
 // System instructions which have an Rt register.
-class RtSystemI<bit L, dag oops, dag iops, string asm, string operands>
-    : BaseSystemI<L, oops, iops, asm, operands>,
+class RtSystemI<bit L, dag oops, dag iops, string asm, string operands,
+                list<dag> pattern = []>
+    : BaseSystemI<L, oops, iops, asm, operands, pattern>,
       Sched<[WriteSys]> {
   bits<5> Rt;
   let Inst{4-0} = Rt;
@@ -1324,6 +1325,16 @@ class TMSystemI<bits<4> CRm, string asm, list<dag> pattern>
                     (outs GPR64:$Rt), (ins), asm, "\t$Rt", pattern> {
   bits<5> Rt;
   let Inst{4-0} = Rt;
+}
+
+// System instructions that pass a register argument
+// This class assumes the register is for input rather than output.
+class RegInputSystemI<bits<4> CRm, bits<3> Op2, string asm,
+                      list<dag> pattern = []>
+    : RtSystemI<0, (outs), (ins GPR64:$Rt), asm, "\t$Rt", pattern> {
+  let Inst{20-12} = 0b000110001;
+  let Inst{11-8} = CRm;
+  let Inst{7-5} = Op2;
 }
 
 // System instructions for transactional memory - no operand
@@ -1365,6 +1376,14 @@ def BarrierAsmOperand : AsmOperandClass {
 def barrier_op : Operand<i32> {
   let PrintMethod = "printBarrierOption";
   let ParserMatchClass = BarrierAsmOperand;
+}
+def BarriernXSAsmOperand : AsmOperandClass {
+  let Name = "BarriernXS";
+  let ParserMethod = "tryParseBarriernXSOperand";
+}
+def barrier_nxs_op : Operand<i32> {
+  let PrintMethod = "printBarriernXSOption";
+  let ParserMatchClass = BarriernXSAsmOperand;
 }
 class CRmSystemI<Operand crmtype, bits<3> opc, string asm,
                  list<dag> pattern = []>

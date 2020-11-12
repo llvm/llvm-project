@@ -25,6 +25,8 @@ def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
                                  AssemblerPredicate<(all_of HasV8_5aOps), "armv8.5a">;
 def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
                                  AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
+def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
+                                 AssemblerPredicate<(all_of HasV8_7aOps), "armv8.7a">;
 def HasVH            : Predicate<"Subtarget->hasVH()">,
                        AssemblerPredicate<(all_of FeatureVH), "vh">;
 
@@ -149,6 +151,10 @@ def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
                        AssemblerPredicate<(all_of FeatureMatMulFP32), "f32mm">;
 def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
                        AssemblerPredicate<(all_of FeatureMatMulFP64), "f64mm">;
+def HasXS            : Predicate<"Subtarget->hasXS()">,
+                       AssemblerPredicate<(all_of FeatureXS), "xs">;
+def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
+                       AssemblerPredicate<(all_of FeatureWFxT), "wfxt">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -789,6 +795,18 @@ def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
   let Inst{12}   = 0;
   let Predicates = [HasTRACEV8_4];
 }
+
+def DSBnXS  : CRmSystemI<barrier_nxs_op, 0b001, "dsb"> {
+  let CRm{1-0}   = 0b11;
+  let Inst{9-8}  = 0b10;
+  let Predicates = [HasXS];
+}
+
+let Predicates = [HasWFxT] in {
+def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
+def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
+}
+
 }
 
 // ARMv8.2-A Dot Product

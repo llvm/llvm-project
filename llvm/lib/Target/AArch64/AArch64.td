@@ -400,6 +400,15 @@ def FeatureMatMulFP32 : SubtargetFeature<"f32mm", "HasMatMulFP32",
 def FeatureMatMulFP64 : SubtargetFeature<"f64mm", "HasMatMulFP64",
     "true", "Enable Matrix Multiply FP64 Extension", [FeatureSVE]>;
 
+def FeatureXS : SubtargetFeature<"xs", "HasXS",
+    "true", "Enable Armv8.7-A limited-TLB-maintenance instruction">;
+
+def FeatureWFxT : SubtargetFeature<"wfxt", "HasWFxT",
+    "true", "Enable Armv8.7-A WFET and WFIT instruction">;
+
+def FeatureHCX : SubtargetFeature<
+    "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register">;
+
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
     "true", "Enable fine grained virtualization traps extension">;
 
@@ -439,6 +448,10 @@ def HasV8_6aOps : SubtargetFeature<
   "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
    FeatureEnhancedCounterVirtualization, FeatureMatMulInt8]>;
+
+def HasV8_7aOps : SubtargetFeature<
+  "v8.7a", "HasV8_7aOps", "true", "Support ARM v8.7a instructions",
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX]>;
 
 def HasV8_0rOps : SubtargetFeature<
   "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",
