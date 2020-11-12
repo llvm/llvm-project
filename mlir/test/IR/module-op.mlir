@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -mlir-print-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -mlir-print-debuginfo -mlir-print-local-scope  | FileCheck %s
 
 // CHECK: module {
 module {

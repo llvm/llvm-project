@@ -23,11 +23,13 @@
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceMetadata.h"
 #include "deltas/ReduceOperandBundles.h"
+#include "deltas/ReduceSpecialGlobals.h"
 
 namespace llvm {
 
 // TODO: Add CLI option to run only specified Passes (for unit tests)
 inline void runDeltaPasses(TestRunner &Tester) {
+  reduceSpecialGlobalsDeltaPass(Tester);
   reduceAliasesDeltaPass(Tester);
   reduceFunctionBodiesDeltaPass(Tester);
   reduceFunctionsDeltaPass(Tester);

@@ -30,7 +30,7 @@ void test1(id x) {
   // CALLS: {{call.*@objc_allocWithZone}}
   // CALLS: {{call.*@objc_retain}}
   // CALLS: {{call.*@objc_release}}
-  // CALLS: {{call.*@objc_autorelease}}
+  // CALLS: {{tail call.*@objc_autorelease}}
   [NSObject alloc];
   [NSObject allocWithZone:nil];
   [x retain];
@@ -121,7 +121,7 @@ A* test_retain_class_ptr(B *b) {
 // call will return i8* which we have to cast to A*
 // CHECK-LABEL: define {{.*}}void @test_autorelease_class_ptr
 A* test_autorelease_class_ptr(B *b) {
-  // CALLS: {{call.*@objc_autorelease}}
+  // CALLS: {{tail call.*@objc_autorelease}}
   // CALLS-NEXT: bitcast i8*
   // CALLS-NEXT: ret
   return [b autorelease];

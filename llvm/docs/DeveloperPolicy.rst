@@ -569,8 +569,12 @@ collaboration across industry and academia.
 
 That said, we need to strike a balance between being inclusive of new ideas and
 people and the cost of ongoing maintenance that new code requires.  As such, we
-have the following general policies for introducing major new components into
-the LLVM world.  However, this is really only intended to cover common cases
+have a general :doc:`support policy<SupportPolicy>` for introducing major new
+components into the LLVM world, depending on the degree of detail and
+responsibility required. *Core* projects need a higher degree of scrutiny
+than *peripheral* projects, and the latter may have additional differences.
+
+However, this is really only intended to cover common cases
 that we have seen arise: different situations are different, and we are open
 to discussing unusual cases as well - just start an RFC thread on the
 `llvm-dev mailing list`_.
@@ -580,13 +584,16 @@ Adding a New Target
 
 LLVM is very receptive to new targets, even experimental ones, but a number of
 problems can appear when adding new large portions of code, and back-ends are
-normally added in bulk.  We have found that landing large pieces of new code
-and then trying to fix emergent problems in-tree is problematic for a variety
-of reasons.
+normally added in bulk. New targets need the same level of support as other
+*core* parts of the compiler, so they are covered in the *core tier* of our
+:doc:`support policy<SupportPolicy>`.
 
-For these reasons, new targets are *always* added as *experimental* until
-they can be proven stable, and later moved to non-experimental. The differences
-between both classes are:
+We have found that landing large pieces of new code and then trying to fix
+emergent problems in-tree is problematic for a variety of reasons. For these
+reasons, new targets are *always* added as *experimental* until they can be
+proven stable, and later moved to non-experimental.
+
+The differences between both classes are:
 
 * Experimental targets are not built by default (they need to be explicitly
   enabled at CMake time).
@@ -670,10 +677,11 @@ in general <https://en.wikipedia.org/wiki/Monorepo>`_ are great because they
 allow atomic commits to the project, simplify CI, and make it easier for
 subcommunities to collaborate.
 
-That said, the burden to add things to the LLVM monorepo needs to be very high -
-code that is added to this repository is checked out by everyone in the
-community.  As such, we hold subprojects to a high bar similar to "official
-targets", they:
+Like new targets, most projects already in the monorepo are considered to be in
+the *core tier* of our :doc:`support policy<SupportPolicy>`. The burden to add
+things to the LLVM monorepo needs to be very high - code that is added to this
+repository is checked out by everyone in the community.  As such, we hold
+components to a high bar similar to "official targets", they:
 
  * Must be generally aligned with the mission of the LLVM project to advance
    compilers, languages, tools, runtimes, etc.

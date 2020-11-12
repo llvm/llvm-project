@@ -210,12 +210,12 @@ TableGen provides "bang operators" that have a wide variety of uses:
 .. productionlist::
    BangOperator: one of
                : !add        !and         !cast        !con         !dag 
-               : !empty      !eq          !foldl       !foreach     !ge
-               : !getdagop   !gt          !head        !if          !interleave
-               : !isa        !le          !listconcat  !listsplat   !lt
-               : !mul        !ne          !not         !or          !setdagop
-               : !shl        !size        !sra         !srl         !strconcat
-               : !sub        !subst       !tail        !xor
+               : !empty      !eq          !foldl       !foreach     !filter
+               : !ge         !getdagop    !gt          !head        !if
+               : !interleave !isa         !le          !listconcat  !listsplat
+               : !lt         !mul         !ne          !not         !or
+               : !setdagop   !shl         !size        !sra         !srl
+               : !strconcat  !sub         !subst       !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1563,6 +1563,17 @@ and non-0 as true.
     The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
+``!filter(``\ *var*\ ``,`` *list*\ ``,`` *predicate*\ ``)``
+
+    This operator creates a new ``list`` by filtering the elements in
+    *list*. To perform the filtering, TableGen binds the variable *var* to each
+    element and then evaluates the *predicate* expression, which presumably
+    refers to *var*. The predicate must
+    produce a boolean value (``bit``, ``bits``, or ``int``). The value is
+    interpreted as with ``!if``:
+    if the value is 0, the element is not included in the new list. If the value
+    is anything else, the element is included.
+
 ``!foldl(``\ *init*\ ``,`` *list*\ ``,`` *acc*\ ``,`` *var*\ ``,`` *expr*\ ``)``
     This operator performs a left-fold over the items in *list*. The
     variable *acc* acts as the accumulator and is initialized to *init*.
@@ -1576,6 +1587,9 @@ and non-0 as true.
     list of records in ``RecList``::
 
       int x = !foldl(0, RecList, total, rec, !add(total, rec.Number));
+
+    If your goal is to filter the list and produce a new list that includes only
+    some of the elements, see ``!filter``.
 
 ``!foreach(``\ *var*\ ``,`` *sequence*\ ``,`` *expr*\ ``)``
     This operator creates a new ``list``/``dag`` in which each element is a

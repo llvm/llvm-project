@@ -368,15 +368,4 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let VALU = 1;
 }
 
-class EXPCommon<dag outs, dag ins, string asm = ""> :
-  InstSI<outs, ins, asm> {
-  let EXP = 1;
-  let EXP_CNT = 1;
-  let mayLoad = 0; // Set to 1 if done bit is set.
-  let mayStore = 1;
-  let UseNamedOperandTable = 1;
-  let Uses = [EXEC];
-  let SchedRW = [WriteExport];
-}
-
 } // End Uses = [EXEC]

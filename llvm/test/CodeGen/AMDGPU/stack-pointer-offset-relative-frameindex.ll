@@ -60,26 +60,18 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR-NEXT:    s_addc_u32 s3, s3, 0
 ; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
-; FLATSCR-NEXT:    s_load_dword s0, s[0:1], 0x24
-; FLATSCR-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
-; FLATSCR-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
-; FLATSCR-NEXT:    s_mov_b32 s38, -1
-; FLATSCR-NEXT:    s_mov_b32 s39, 0x31c16000
-; FLATSCR-NEXT:    s_add_u32 s36, s36, s5
-; FLATSCR-NEXT:    s_addc_u32 s37, s37, 0
+; FLATSCR-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, 0x400000
 ; FLATSCR-NEXT:    ; implicit-def: $vcc_hi
-; FLATSCR-NEXT:    s_getpc_b64 s[4:5]
-; FLATSCR-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
-; FLATSCR-NEXT:    s_addc_u32 s5, s5, svm_eval_nodes@rel32@hi+12
+; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
+; FLATSCR-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
+; FLATSCR-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    v_mov_b32_e32 v0, s0
-; FLATSCR-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; FLATSCR-NEXT:    s_mov_b64 s[2:3], s[38:39]
-; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; FLATSCR-NEXT:    v_mov_b32_e32 v0, s2
+; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; FLATSCR-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; FLATSCR-NEXT:    s_cbranch_execz BB0_2

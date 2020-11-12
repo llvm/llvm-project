@@ -16,14 +16,14 @@
 
 #ifdef _WIN32
 #ifndef MLIR_ASYNCRUNTIME_EXPORT
-#ifdef mlir_c_runner_utils_EXPORTS
+#ifdef mlir_async_runtime_EXPORTS
 // We are building this library
 #define MLIR_ASYNCRUNTIME_EXPORT __declspec(dllexport)
 #define MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
 #else
 // We are using this library
 #define MLIR_ASYNCRUNTIME_EXPORT __declspec(dllimport)
-#endif // mlir_c_runner_utils_EXPORTS
+#endif // mlir_async_runtime_EXPORTS
 #endif // MLIR_ASYNCRUNTIME_EXPORT
 #else
 #define MLIR_ASYNCRUNTIME_EXPORT

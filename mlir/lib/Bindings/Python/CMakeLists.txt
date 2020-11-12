@@ -6,15 +6,20 @@ add_custom_target(MLIRBindingsPythonExtension)
 
 set(PY_SRC_FILES
   mlir/__init__.py
+  mlir/_dlloader.py
   mlir/ir.py
   mlir/dialects/__init__.py
-  mlir/dialects/std.py
+  mlir/ir.py
+  mlir/passmanager.py
+  mlir/transforms/__init__.py
 )
 
 add_custom_target(MLIRBindingsPythonSources ALL
   DEPENDS ${PY_SRC_FILES}
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonSources)
+
+add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonIncGen)
 
 foreach(PY_SRC_FILE ${PY_SRC_FILES})
   set(PY_DEST_FILE "${PROJECT_BINARY_DIR}/python/${PY_SRC_FILE}")
@@ -37,6 +42,7 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
     MainModule.cpp
     IRModules.cpp
     PybindUtils.cpp
+    Pass.cpp
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRCoreBindingsPythonExtension)
 
@@ -56,3 +62,5 @@ if (NOT LLVM_ENABLE_IDE)
     DEPENDS MLIRBindingsPythonSources
     COMPONENT MLIRBindingsPythonSources)
 endif()
+
+add_subdirectory(Transforms)

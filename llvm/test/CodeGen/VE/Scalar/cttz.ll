@@ -9,8 +9,7 @@ declare i8 @llvm.cttz.i8(i8, i1)
 define i128 @func128(i128 %p) {
 ; CHECK-LABEL: func128:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmps.l %s2, %s0, %s2
+; CHECK-NEXT:    cmps.l %s2, %s0, (0)1
 ; CHECK-NEXT:    lea %s3, -1(, %s0)
 ; CHECK-NEXT:    nnd %s0, %s0, %s3
 ; CHECK-NEXT:    pcnt %s3, %s0

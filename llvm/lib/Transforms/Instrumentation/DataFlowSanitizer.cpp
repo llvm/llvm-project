@@ -186,6 +186,13 @@ static cl::opt<bool> ClFast16Labels(
              "labels to 16."),
     cl::Hidden, cl::init(false));
 
+// Controls whether the pass tracks the control flow of select instructions.
+static cl::opt<bool> ClTrackSelectControlFlow(
+    "dfsan-track-select-control-flow",
+    cl::desc("Propagate labels from condition values of select instructions "
+             "to results."),
+    cl::Hidden, cl::init(true));
+
 static StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
   Type *GType = G.getValueType();
@@ -1541,22 +1548,21 @@ void DFSanVisitor::visitSelectInst(SelectInst &I) {
   Value *CondShadow = DFSF.getShadow(I.getCondition());
   Value *TrueShadow = DFSF.getShadow(I.getTrueValue());
   Value *FalseShadow = DFSF.getShadow(I.getFalseValue());
+  Value *ShadowSel = nullptr;
 
   if (isa<VectorType>(I.getCondition()->getType())) {
-    DFSF.setShadow(
-        &I,
-        DFSF.combineShadows(
-            CondShadow, DFSF.combineShadows(TrueShadow, FalseShadow, &I), &I));
+    ShadowSel = DFSF.combineShadows(TrueShadow, FalseShadow, &I);
   } else {
-    Value *ShadowSel;
     if (TrueShadow == FalseShadow) {
       ShadowSel = TrueShadow;
     } else {
       ShadowSel =
           SelectInst::Create(I.getCondition(), TrueShadow, FalseShadow, "", &I);
     }
-    DFSF.setShadow(&I, DFSF.combineShadows(CondShadow, ShadowSel, &I));
   }
+  DFSF.setShadow(&I, ClTrackSelectControlFlow
+                         ? DFSF.combineShadows(CondShadow, ShadowSel, &I)
+                         : ShadowSel);
 }
 
 void DFSanVisitor::visitMemSetInst(MemSetInst &I) {

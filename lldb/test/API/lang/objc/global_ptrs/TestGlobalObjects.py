@@ -17,7 +17,6 @@ class TestObjCGlobalVar(TestBase):
         TestBase.setUp(self)
         self.main_source = lldb.SBFileSpec("main.m")
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test that a global ObjC object found before the process is started updates correctly."""

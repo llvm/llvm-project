@@ -26,14 +26,14 @@
     call void @llvm.dbg.value(metadata i32 0, metadata !31, metadata !DIExpression()), !dbg !32
     %arrayidx7.us = getelementptr inbounds i32, i32* %e, i32 %i.031.us, !dbg !38
     %arrayidx7.promoted.us = load i32, i32* %arrayidx7.us, align 4, !dbg !41
-    call void @llvm.set.loop.iterations.i32(i32 %d), !dbg !46
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %d), !dbg !46
     br label %for.body3.us, !dbg !46
 
   for.body3.us:                                     ; preds = %for.body3.us, %for.cond1.preheader.us
     %lsr.iv5 = phi i16* [ %scevgep6, %for.body3.us ], [ %lsr.iv2, %for.cond1.preheader.us ], !dbg !32
     %lsr.iv1 = phi i16* [ %scevgep, %for.body3.us ], [ %l, %for.cond1.preheader.us ], !dbg !32
     %add829.us = phi i32 [ %arrayidx7.promoted.us, %for.cond1.preheader.us ], [ %add8.us, %for.body3.us ], !dbg !32
-    %1 = phi i32 [ %d, %for.cond1.preheader.us ], [ %4, %for.body3.us ], !dbg !32
+    %1 = phi i32 [ %start, %for.cond1.preheader.us ], [ %4, %for.body3.us ], !dbg !32
     call void @llvm.dbg.value(metadata i32 undef, metadata !31, metadata !DIExpression()), !dbg !32
     %2 = load i16, i16* %lsr.iv5, align 2, !dbg !47
     %conv.us = sext i16 %2 to i32, !dbg !47
@@ -67,7 +67,7 @@
   }
   declare !dbg !4 dso_local arm_aapcscc signext i16 @get_input(i32, i32*, i16 signext)
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 
   !llvm.dbg.cu = !{!0}
@@ -325,7 +325,7 @@ body:             |
     $r3 = tMOVr $r5, 14, $noreg, debug-location !32
     $r0 = tMOVr $r8, 14, $noreg, debug-location !32
     $lr = tMOVr $r10, 14, $noreg, debug-location !32
-    t2DoLoopStart renamable $r10, debug-location !46
+    $lr = t2DoLoopStart renamable $r10, debug-location !46
 
   bb.3.for.body3.us:
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)

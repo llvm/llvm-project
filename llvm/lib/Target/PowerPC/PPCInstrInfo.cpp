@@ -1361,7 +1361,33 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = PPC::CROR;
   else if (PPC::SPERCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::EVOR;
-  else
+  else if ((PPC::ACCRCRegClass.contains(DestReg) ||
+            PPC::UACCRCRegClass.contains(DestReg)) &&
+           (PPC::ACCRCRegClass.contains(SrcReg) ||
+            PPC::UACCRCRegClass.contains(SrcReg))) {
+    // If primed, de-prime the source register, copy the individual registers
+    // and prime the destination if needed. The vector subregisters are
+    // vs[(u)acc * 4] - vs[(u)acc * 4 + 3]. If the copy is not a kill and the
+    // source is primed, we need to re-prime it after the copy as well.
+    PPCRegisterInfo::emitAccCopyInfo(MBB, DestReg, SrcReg);
+    bool DestPrimed = PPC::ACCRCRegClass.contains(DestReg);
+    bool SrcPrimed = PPC::ACCRCRegClass.contains(SrcReg);
+    MCRegister VSLSrcReg =
+        PPC::VSL0 + (SrcReg - (SrcPrimed ? PPC::ACC0 : PPC::UACC0)) * 4;
+    MCRegister VSLDestReg =
+        PPC::VSL0 + (DestReg - (DestPrimed ? PPC::ACC0 : PPC::UACC0)) * 4;
+    if (SrcPrimed)
+      BuildMI(MBB, I, DL, get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
+    for (unsigned Idx = 0; Idx < 4; Idx++)
+      BuildMI(MBB, I, DL, get(PPC::XXLOR), VSLDestReg + Idx)
+          .addReg(VSLSrcReg + Idx)
+          .addReg(VSLSrcReg + Idx, getKillRegState(KillSrc));
+    if (DestPrimed)
+      BuildMI(MBB, I, DL, get(PPC::XXMTACC), DestReg).addReg(DestReg);
+    if (SrcPrimed && !KillSrc)
+      BuildMI(MBB, I, DL, get(PPC::XXMTACC), SrcReg).addReg(SrcReg);
+    return;
+  } else
     llvm_unreachable("Impossible reg-to-reg copy");
 
   const MCInstrDesc &MCID = get(Opc);
@@ -1372,7 +1398,7 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, MCID, DestReg).addReg(SrcReg, getKillRegState(KillSrc));
 }
 
-static unsigned getSpillIndex(const TargetRegisterClass *RC) {
+unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
   int OpcodeIndex = 0;
 
   if (PPC::GPRCRegClass.hasSubClassEq(RC) ||
@@ -1401,6 +1427,18 @@ static unsigned getSpillIndex(const TargetRegisterClass *RC) {
     OpcodeIndex = SOK_VectorFloat4Spill;
   } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_SpillToVSR;
+  } else if (PPC::ACCRCRegClass.hasSubClassEq(RC)) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "Register unexpected when paired memops are disabled.");
+    OpcodeIndex = SOK_AccumulatorSpill;
+  } else if (PPC::UACCRCRegClass.hasSubClassEq(RC)) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "Register unexpected when paired memops are disabled.");
+    OpcodeIndex = SOK_UAccumulatorSpill;
+  } else if (PPC::VSRpRCRegClass.hasSubClassEq(RC)) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "Register unexpected when paired memops are disabled.");
+    OpcodeIndex = SOK_PairedVecSpill;
   } else {
     llvm_unreachable("Unknown regclass!");
   }
@@ -2799,7 +2837,10 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
 }
 
 unsigned PPCInstrInfo::getSpillTarget() const {
-  return Subtarget.hasP9Vector() ? 1 : 0;
+  // With P10, we may need to spill paired vector registers or accumulator
+  // registers. MMA implies paired vectors, so we can just check that.
+  bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
+  return IsP10Variant ? 2 : Subtarget.hasP9Vector() ? 1 : 0;
 }
 
 const unsigned *PPCInstrInfo::getStoreOpcodesForSpillArray() const {

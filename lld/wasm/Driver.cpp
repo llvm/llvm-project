@@ -541,21 +541,30 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   return sym;
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
-                                          int value) {
+static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   llvm::wasm::WasmGlobal wasmGlobal;
   if (config->is64.getValueOr(false)) {
     wasmGlobal.Type = {WASM_TYPE_I64, isMutable};
-    wasmGlobal.InitExpr.Value.Int64 = value;
     wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I64_CONST;
+    wasmGlobal.InitExpr.Value.Int64 = 0;
   } else {
     wasmGlobal.Type = {WASM_TYPE_I32, isMutable};
-    wasmGlobal.InitExpr.Value.Int32 = value;
     wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    wasmGlobal.InitExpr.Value.Int32 = 0;
   }
   wasmGlobal.SymbolName = name;
-  return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN,
-                                    make<InputGlobal>(wasmGlobal, nullptr));
+  return make<InputGlobal>(wasmGlobal, nullptr);
+}
+
+static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
+  InputGlobal *g = createGlobal(name, isMutable);
+  return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN, g);
+}
+
+static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
+  InputGlobal *g = createGlobal(name, isMutable);
+  return symtab->addOptionalGlobalSymbols(name, WASM_SYMBOL_VISIBILITY_HIDDEN,
+                                          g);
 }
 
 // Create ABI-defined synthetic symbols
@@ -602,7 +611,7 @@ static void createSyntheticSymbols() {
     WasmSym::tableBase->markLive();
   } else {
     // For non-PIC code
-    WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true, 0);
+    WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
     WasmSym::stackPointer->markLive();
   }
 
@@ -616,9 +625,9 @@ static void createSyntheticSymbols() {
     WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
         "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
     assert(WasmSym::initMemoryFlag);
-    WasmSym::tlsBase = createGlobalVariable("__tls_base", true, 0);
-    WasmSym::tlsSize = createGlobalVariable("__tls_size", false, 0);
-    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false, 1);
+    WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
+    WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
+    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(
@@ -642,6 +651,18 @@ static void createOptionalSymbols() {
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
   }
+
+  // For non-shared memory programs we still need to define __tls_base since we
+  // allow object files built with TLS to be linked into single threaded
+  // programs, and such object files can contains refernced to this symbol.
+  //
+  // However, in this case __tls_base is immutable and points directly to the
+  // start of the `.tdata` static segment.
+  //
+  // __tls_size and __tls_align are not needed in this case since they are only
+  // needed for __wasm_init_tls (which we do not create in this case).
+  if (!config->sharedMemory)
+    WasmSym::tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
 // Reconstructs command line arguments so that so that you can re-run

@@ -9,6 +9,7 @@
 # COMMON-DAG: cmd LC_DYLD_INFO_ONLY
 # COMMON-DAG: cmd LC_SYMTAB
 # COMMON-DAG: cmd LC_DYSYMTAB
+# COMMON-DAG: cmd LC_UUID
 
 ## Check for the presence of load commands that are essential for a working
 ## executable. Also check that it has the right filetype.

@@ -130,7 +130,6 @@ protected:
 
   // ARMv8.4 extensions
   bool HasNV = false;
-  bool HasRASv8_4 = false;
   bool HasMPAM = false;
   bool HasDIT = false;
   bool HasTRACEV8_4 = false;
@@ -486,7 +485,6 @@ public:
   bool hasComplxNum() const { return HasComplxNum; }
 
   bool hasNV() const { return HasNV; }
-  bool hasRASv8_4() const { return HasRASv8_4; }
   bool hasMPAM() const { return HasMPAM; }
   bool hasDIT() const { return HasDIT; }
   bool hasTRACEV8_4() const { return HasTRACEV8_4; }
@@ -557,6 +555,7 @@ public:
   // implied by the architecture.
   unsigned getMaxSVEVectorSizeInBits() const;
   unsigned getMinSVEVectorSizeInBits() const;
+  bool useSVEForFixedLengthVectors() const;
 };
 } // End llvm namespace
 

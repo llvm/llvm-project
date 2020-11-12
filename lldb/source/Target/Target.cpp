@@ -128,13 +128,10 @@ Target::~Target() {
   DeleteCurrentProcess();
 }
 
-void Target::PrimeFromDummyTarget(Target *target) {
-  if (!target)
-    return;
+void Target::PrimeFromDummyTarget(Target &target) {
+  m_stop_hooks = target.m_stop_hooks;
 
-  m_stop_hooks = target->m_stop_hooks;
-
-  for (const auto &breakpoint_sp : target->m_breakpoint_list.Breakpoints()) {
+  for (const auto &breakpoint_sp : target.m_breakpoint_list.Breakpoints()) {
     if (breakpoint_sp->IsInternal())
       continue;
 
@@ -143,14 +140,14 @@ void Target::PrimeFromDummyTarget(Target *target) {
     AddBreakpoint(std::move(new_bp), false);
   }
 
-  for (auto bp_name_entry : target->m_breakpoint_names) {
+  for (auto bp_name_entry : target.m_breakpoint_names) {
 
     BreakpointName *new_bp_name = new BreakpointName(*bp_name_entry.second);
     AddBreakpointName(new_bp_name);
   }
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
-      *target->m_frame_recognizer_manager_up);
+      *target.m_frame_recognizer_manager_up);
 }
 
 void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {

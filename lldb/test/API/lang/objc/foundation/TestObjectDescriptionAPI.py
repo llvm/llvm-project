@@ -24,7 +24,6 @@ class ObjectDescriptionAPITestCase(TestBase):
             self.source, '// Set break point at this line.')
 
     # rdar://problem/10857337
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_find_global_variables_then_object_description(self):
         """Exercise SBTarget.FindGlobalVariables() API."""

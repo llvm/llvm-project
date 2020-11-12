@@ -190,6 +190,18 @@ write_cmake_config("config") {
     ]
   }
 
+  if (current_os == "win" || current_cpu == "arm") {
+    values += [
+      "HAVE_DEREGISTER_FRAME=",
+      "HAVE_REGISTER_FRAME=",
+    ]
+  } else {
+    values += [
+      "HAVE_DEREGISTER_FRAME=1",
+      "HAVE_REGISTER_FRAME=1",
+    ]
+  }
+
   if (current_os == "win") {
     values += [
       "HAVE_DECL_STRERROR_S=1",

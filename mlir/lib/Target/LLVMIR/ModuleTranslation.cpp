@@ -459,7 +459,7 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   // above.
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP(builder.saveIP());
   builder.restoreIP(
-      ompBuilder->CreateParallel(builder, allocaIP, bodyGenCB, privCB, finiCB,
+      ompBuilder->createParallel(builder, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable));
   return success();
 }
@@ -475,15 +475,15 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
   }
   return llvm::TypeSwitch<Operation *, LogicalResult>(&opInst)
       .Case([&](omp::BarrierOp) {
-        ompBuilder->CreateBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
+        ompBuilder->createBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
         return success();
       })
       .Case([&](omp::TaskwaitOp) {
-        ompBuilder->CreateTaskwait(builder.saveIP());
+        ompBuilder->createTaskwait(builder.saveIP());
         return success();
       })
       .Case([&](omp::TaskyieldOp) {
-        ompBuilder->CreateTaskyield(builder.saveIP());
+        ompBuilder->createTaskyield(builder.saveIP());
         return success();
       })
       .Case([&](omp::FlushOp) {
@@ -495,7 +495,7 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
         //
         // The argument list is discarded so that, flush with a list is treated
         // same as a flush without a list.
-        ompBuilder->CreateFlush(builder.saveIP());
+        ompBuilder->createFlush(builder.saveIP());
         return success();
       })
       .Case([&](omp::TerminatorOp) {
@@ -823,7 +823,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvm::Argument &llvmArg = std::get<1>(kvp);
     BlockArgument mlirArg = std::get<0>(kvp);
 
-    if (auto attr = func.getArgAttrOfType<BoolAttr>(argIdx, "llvm.noalias")) {
+    if (auto attr = func.getArgAttrOfType<BoolAttr>(
+            argIdx, LLVMDialect::getNoAliasAttrName())) {
       // NB: Attribute already verified to be boolean, so check if we can indeed
       // attach the attribute to this argument, based on its type.
       auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
@@ -834,7 +835,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
         llvmArg.addAttr(llvm::Attribute::AttrKind::NoAlias);
     }
 
-    if (auto attr = func.getArgAttrOfType<IntegerAttr>(argIdx, "llvm.align")) {
+    if (auto attr = func.getArgAttrOfType<IntegerAttr>(
+            argIdx, LLVMDialect::getAlignAttrName())) {
       // NB: Attribute already verified to be int, so check if we can indeed
       // attach the attribute to this argument, based on its type.
       auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();

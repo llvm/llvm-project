@@ -1,6 +1,6 @@
 ; RUN: opt -debug-pass=Executions -phi-values -memcpyopt -instcombine -disable-output < %s -enable-new-pm=0 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-MEMCPY
 ; RUN: opt -debug-pass=Executions -memdep -instcombine -disable-output < %s -enable-new-pm=0 2>&1 | FileCheck %s -check-prefix=CHECK
-; RUN: opt -debug-pass-manager -aa-pipeline=basic-aa -passes=memcpyopt,instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefixes=NPM,NPM-MEMCPY
+; RUN: opt -debug-pass-manager -aa-pipeline=basic-aa -passes=memcpyopt,instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefixes=NPM
 
 ; Check that phi values is not run when it's not already available, and that
 ; basicaa is not freed after a pass that preserves CFG, as it preserves CFG.

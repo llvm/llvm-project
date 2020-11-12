@@ -1361,8 +1361,8 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
     BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addImm(0);
   } else {
-    std::tie(BaseOffset, ImmOffset, OffsetDef)
-      = AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset);
+    std::tie(BaseOffset, ImmOffset) =
+        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset);
 
     if (Readfirstlane) {
       // We have the constant offset now, so put the readfirstlane back on the
@@ -2588,10 +2588,8 @@ computeIndirectRegIndex(MachineRegisterInfo &MRI,
                         unsigned EltSize) {
   Register IdxBaseReg;
   int Offset;
-  MachineInstr *Unused;
 
-  std::tie(IdxBaseReg, Offset, Unused)
-    = AMDGPU::getBaseWithConstantOffset(MRI, IdxReg);
+  std::tie(IdxBaseReg, Offset) = AMDGPU::getBaseWithConstantOffset(MRI, IdxReg);
   if (IdxBaseReg == AMDGPU::NoRegister) {
     // This will happen if the index is a known constant. This should ordinarily
     // be legalized out, but handle it as a register just in case.

@@ -1347,10 +1347,9 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
 
   Register Base;
   unsigned Offset;
-  MachineInstr *Unused;
 
-  std::tie(Base, Offset, Unused)
-    = AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
+  std::tie(Base, Offset) =
+      AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
 
   uint32_t SOffset, ImmOffset;
   if (Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
@@ -2708,8 +2707,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     Register BaseIdxReg;
     unsigned ConstOffset;
-    MachineInstr *OffsetDef;
-    std::tie(BaseIdxReg, ConstOffset, OffsetDef) =
+    std::tie(BaseIdxReg, ConstOffset) =
         AMDGPU::getBaseWithConstantOffset(MRI, MI.getOperand(2).getReg());
 
     // See if the index is an add of a constant which will be foldable by moving
@@ -2840,9 +2838,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     Register BaseIdxReg;
     unsigned ConstOffset;
-    MachineInstr *OffsetDef;
-    std::tie(BaseIdxReg, ConstOffset, OffsetDef) =
-      AMDGPU::getBaseWithConstantOffset(MRI, MI.getOperand(3).getReg());
+    std::tie(BaseIdxReg, ConstOffset) =
+        AMDGPU::getBaseWithConstantOffset(MRI, MI.getOperand(3).getReg());
 
     // See if the index is an add of a constant which will be foldable by moving
     // the base register of the index later if this is going to be executed in a

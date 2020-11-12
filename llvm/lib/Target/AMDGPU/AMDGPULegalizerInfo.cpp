@@ -1068,9 +1068,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     return false;
   };
 
-  unsigned GlobalAlign32 = ST.hasUnalignedBufferAccess() ? 0 : 32;
-  unsigned GlobalAlign16 = ST.hasUnalignedBufferAccess() ? 0 : 16;
-  unsigned GlobalAlign8 = ST.hasUnalignedBufferAccess() ? 0 : 8;
+  unsigned GlobalAlign32 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 32;
+  unsigned GlobalAlign16 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 16;
+  unsigned GlobalAlign8 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 8;
 
   // TODO: Refine based on subtargets which support unaligned access or 128-bit
   // LDS
@@ -3488,11 +3488,10 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   const unsigned MaxImm = 4095;
   Register BaseReg;
   unsigned TotalConstOffset;
-  MachineInstr *OffsetDef;
   const LLT S32 = LLT::scalar(32);
 
-  std::tie(BaseReg, TotalConstOffset, OffsetDef)
-    = AMDGPU::getBaseWithConstantOffset(*B.getMRI(), OrigOffset);
+  std::tie(BaseReg, TotalConstOffset) =
+      AMDGPU::getBaseWithConstantOffset(*B.getMRI(), OrigOffset);
 
   unsigned ImmOffset = TotalConstOffset;
 

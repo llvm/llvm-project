@@ -662,3 +662,28 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
   %or = or i64 %shl, %and
   ret i64 %or
 }
+
+define i64 @zextw_i64(i64 %a) nounwind {
+; RV64I-LABEL: zextw_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: zextw_i64:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.w a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: zextw_i64:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    zext.w a0, a0
+; RV64IBB-NEXT:    ret
+;
+; RV64IBP-LABEL: zextw_i64:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    pack a0, a0, zero
+; RV64IBP-NEXT:    ret
+  %and = and i64 %a, 4294967295
+  ret i64 %and
+}

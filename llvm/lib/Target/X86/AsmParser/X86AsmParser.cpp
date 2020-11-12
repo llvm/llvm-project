@@ -57,22 +57,28 @@ static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
 namespace {
 
 static const char OpPrecedence[] = {
-  0, // IC_OR
-  1, // IC_XOR
-  2, // IC_AND
-  3, // IC_LSHIFT
-  3, // IC_RSHIFT
-  4, // IC_PLUS
-  4, // IC_MINUS
-  5, // IC_MULTIPLY
-  5, // IC_DIVIDE
-  5, // IC_MOD
-  6, // IC_NOT
-  7, // IC_NEG
-  8, // IC_RPAREN
-  9, // IC_LPAREN
-  0, // IC_IMM
-  0  // IC_REGISTER
+    0,  // IC_OR
+    1,  // IC_XOR
+    2,  // IC_AND
+    4,  // IC_LSHIFT
+    4,  // IC_RSHIFT
+    5,  // IC_PLUS
+    5,  // IC_MINUS
+    6,  // IC_MULTIPLY
+    6,  // IC_DIVIDE
+    6,  // IC_MOD
+    7,  // IC_NOT
+    8,  // IC_NEG
+    9,  // IC_RPAREN
+    10, // IC_LPAREN
+    0,  // IC_IMM
+    0,  // IC_REGISTER
+    3,  // IC_EQ
+    3,  // IC_NE
+    3,  // IC_LT
+    3,  // IC_LE
+    3,  // IC_GT
+    3   // IC_GE
 };
 
 class X86AsmParser : public MCTargetAsmParser {
@@ -143,7 +149,13 @@ private:
     IC_RPAREN,
     IC_LPAREN,
     IC_IMM,
-    IC_REGISTER
+    IC_REGISTER,
+    IC_EQ,
+    IC_NE,
+    IC_LT,
+    IC_LE,
+    IC_GT,
+    IC_GE
   };
 
   enum IntelOperatorKind {
@@ -332,6 +344,44 @@ private:
             Val = Op1.second >> Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
+          case IC_EQ:
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Equals operation with an immediate and a register!");
+            Val = (Op1.second == Op2.second) ? -1 : 0;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_NE:
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Not-equals operation with an immediate and a register!");
+            Val = (Op1.second != Op2.second) ? -1 : 0;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_LT:
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Less-than operation with an immediate and a register!");
+            Val = (Op1.second < Op2.second) ? -1 : 0;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_LE:
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Less-than-or-equal operation with an immediate and a "
+                   "register!");
+            Val = (Op1.second <= Op2.second) ? -1 : 0;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_GT:
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Greater-than operation with an immediate and a register!");
+            Val = (Op1.second > Op2.second) ? -1 : 0;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_GE:
+            assert(Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                   "Greater-than-or-equal operation with an immediate and a "
+                   "register!");
+            Val = (Op1.second >= Op2.second) ? -1 : 0;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
           }
         }
       }
@@ -345,6 +395,12 @@ private:
     IES_OR,
     IES_XOR,
     IES_AND,
+    IES_EQ,
+    IES_NE,
+    IES_LT,
+    IES_LE,
+    IES_GT,
+    IES_GE,
     IES_LSHIFT,
     IES_RSHIFT,
     IES_PLUS,
@@ -461,6 +517,96 @@ private:
       }
       PrevState = CurrState;
     }
+    void onEq() {
+      IntelExprState CurrState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+      case IES_REGISTER:
+        State = IES_EQ;
+        IC.pushOperator(IC_EQ);
+        break;
+      }
+      PrevState = CurrState;
+    }
+    void onNE() {
+      IntelExprState CurrState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+      case IES_REGISTER:
+        State = IES_NE;
+        IC.pushOperator(IC_NE);
+        break;
+      }
+      PrevState = CurrState;
+    }
+    void onLT() {
+      IntelExprState CurrState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+      case IES_REGISTER:
+        State = IES_LT;
+        IC.pushOperator(IC_LT);
+        break;
+      }
+      PrevState = CurrState;
+    }
+    void onLE() {
+      IntelExprState CurrState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+      case IES_REGISTER:
+        State = IES_LE;
+        IC.pushOperator(IC_LE);
+        break;
+      }
+      PrevState = CurrState;
+    }
+    void onGT() {
+      IntelExprState CurrState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+      case IES_REGISTER:
+        State = IES_GT;
+        IC.pushOperator(IC_GT);
+        break;
+      }
+      PrevState = CurrState;
+    }
+    void onGE() {
+      IntelExprState CurrState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+      case IES_REGISTER:
+        State = IES_GE;
+        IC.pushOperator(IC_GE);
+        break;
+      }
+      PrevState = CurrState;
+    }
     void onLShift() {
       IntelExprState CurrState = State;
       switch (State) {
@@ -531,6 +677,12 @@ private:
       case IES_OR:
       case IES_XOR:
       case IES_AND:
+      case IES_EQ:
+      case IES_NE:
+      case IES_LT:
+      case IES_LE:
+      case IES_GT:
+      case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
       case IES_PLUS:
@@ -586,6 +738,12 @@ private:
       case IES_OR:
       case IES_XOR:
       case IES_AND:
+      case IES_EQ:
+      case IES_NE:
+      case IES_LT:
+      case IES_LE:
+      case IES_GT:
+      case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
       case IES_PLUS:
@@ -686,6 +844,12 @@ private:
       case IES_OR:
       case IES_XOR:
       case IES_AND:
+      case IES_EQ:
+      case IES_NE:
+      case IES_LT:
+      case IES_LE:
+      case IES_GT:
+      case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
       case IES_DIVIDE:
@@ -822,6 +986,12 @@ private:
       case IES_OR:
       case IES_XOR:
       case IES_AND:
+      case IES_EQ:
+      case IES_NE:
+      case IES_LT:
+      case IES_LE:
+      case IES_GT:
+      case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
       case IES_MULTIPLY:
@@ -932,6 +1102,8 @@ private:
   bool ParseRoundingModeOp(SMLoc Start, OperandVector &Operands);
   bool ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM,
                                bool &ParseError, SMLoc &End);
+  bool ParseMasmNamedOperator(StringRef Name, IntelExprStateMachine &SM,
+                              bool &ParseError, SMLoc &End);
   void RewriteIntelExpression(IntelExprStateMachine &SM, SMLoc Start,
                               SMLoc End);
   bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
@@ -1608,8 +1780,10 @@ bool X86AsmParser::CreateMemForMSInlineAsm(
 bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
                                            IntelExprStateMachine &SM,
                                            bool &ParseError, SMLoc &End) {
-  // A named operator should be either lower or upper case, but not a mix
-  if (Name.compare(Name.lower()) && Name.compare(Name.upper()))
+  // A named operator should be either lower or upper case, but not a mix...
+  // except in MASM, which uses full case-insensitivity.
+  if (Name.compare(Name.lower()) && Name.compare(Name.upper()) &&
+      !getParser().isParsingMasm())
     return false;
   if (Name.equals_lower("not")) {
     SM.onNot();
@@ -1643,6 +1817,27 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   }
   if (!Name.equals_lower("offset"))
     End = consumeToken();
+  return true;
+}
+bool X86AsmParser::ParseMasmNamedOperator(StringRef Name,
+                                          IntelExprStateMachine &SM,
+                                          bool &ParseError, SMLoc &End) {
+  if (Name.equals_lower("eq")) {
+    SM.onEq();
+  } else if (Name.equals_lower("ne")) {
+    SM.onNE();
+  } else if (Name.equals_lower("lt")) {
+    SM.onLT();
+  } else if (Name.equals_lower("le")) {
+    SM.onLE();
+  } else if (Name.equals_lower("gt")) {
+    SM.onGT();
+  } else if (Name.equals_lower("ge")) {
+    SM.onGE();
+  } else {
+    return false;
+  }
+  End = consumeToken();
   return true;
 }
 
@@ -1783,6 +1978,12 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       // Operator synonymous ("not", "or" etc.)
       bool ParseError = false;
       if (ParseIntelNamedOperator(Identifier, SM, ParseError, End)) {
+        if (ParseError)
+          return true;
+        break;
+      }
+      if (Parser.isParsingMasm() &&
+          ParseMasmNamedOperator(Identifier, SM, ParseError, End)) {
         if (ParseError)
           return true;
         break;

@@ -13,6 +13,5 @@ add_mlir_conversion_library(MLIRStandardToLLVM
 
   LINK_LIBS PUBLIC
   MLIRLLVMIR
-  MLIRStandardOpsTransforms
   MLIRTransforms
   )

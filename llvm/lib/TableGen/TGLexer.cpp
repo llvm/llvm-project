@@ -584,6 +584,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("subst", tgtok::XSubst)
     .Case("foldl", tgtok::XFoldl)
     .Case("foreach", tgtok::XForEach)
+    .Case("filter", tgtok::XFilter)
     .Case("listconcat", tgtok::XListConcat)
     .Case("listsplat", tgtok::XListSplat)
     .Case("strconcat", tgtok::XStrConcat)

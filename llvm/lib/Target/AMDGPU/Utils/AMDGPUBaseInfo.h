@@ -574,6 +574,9 @@ LLVM_READNONE
 bool isShader(CallingConv::ID CC);
 
 LLVM_READNONE
+bool isGraphics(CallingConv::ID CC);
+
+LLVM_READNONE
 bool isCompute(CallingConv::ID CC);
 
 LLVM_READNONE

@@ -215,11 +215,10 @@ Retry:
       DeclGroupPtrTy Decl;
       if (GNUAttributeLoc.isValid()) {
         DeclStart = GNUAttributeLoc;
-        Decl = ParseDeclaration(DeclaratorContext::BlockContext, DeclEnd, Attrs,
+        Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, Attrs,
                                 &GNUAttributeLoc);
       } else {
-        Decl =
-            ParseDeclaration(DeclaratorContext::BlockContext, DeclEnd, Attrs);
+        Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, Attrs);
       }
       if (Attrs.Range.getBegin().isValid())
         DeclStart = Attrs.Range.getBegin();
@@ -1119,7 +1118,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
         SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
         DeclGroupPtrTy Res =
-            ParseDeclaration(DeclaratorContext::BlockContext, DeclEnd, attrs);
+            ParseDeclaration(DeclaratorContext::Block, DeclEnd, attrs);
         R = Actions.ActOnDeclStmt(Res, DeclStart, DeclEnd);
       } else {
         // Otherwise this was a unary __extension__ marker.
@@ -1872,7 +1871,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     DeclGroupPtrTy DG = ParseSimpleDeclaration(
-        DeclaratorContext::ForContext, DeclEnd, attrs, false,
+        DeclaratorContext::ForInit, DeclEnd, attrs, false,
         MightBeForRangeStmt ? &ForRangeInfo : nullptr);
     FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     if (ForRangeInfo.ParsedForRangeDecl()) {
@@ -2471,7 +2470,7 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
     if (ParseCXXTypeSpecifierSeq(DS))
       return StmtError();
 
-    Declarator ExDecl(DS, DeclaratorContext::CXXCatchContext);
+    Declarator ExDecl(DS, DeclaratorContext::CXXCatch);
     ParseDeclarator(ExDecl);
     ExceptionDecl = Actions.ActOnExceptionDeclarator(getCurScope(), ExDecl);
   } else

@@ -333,7 +333,7 @@ class TargetAPITestCase(TestBase):
         self.expect(desc, exe=False,
                     substrs=['Target', 'Module', 'a.out', 'Breakpoint'])
 
-    @not_remote_testsuite_ready
+    @skipIfRemote
     @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIfReproducer # Inferior doesn't run during replay.

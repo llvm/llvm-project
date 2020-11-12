@@ -148,7 +148,7 @@ LogicalResult OperationVerifier::verifyBlock(Block &block) {
   if (failed(verifyOperation(block.back())))
     return failure();
   if (block.back().isKnownNonTerminator())
-    return emitError(block, "block with no terminator");
+    return block.back().emitError("block with no terminator");
 
   // Verify that this block is not branching to a block of a different
   // region.

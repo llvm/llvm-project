@@ -29,7 +29,7 @@ class TargetEnv {
 public:
   explicit TargetEnv(TargetEnvAttr targetAttr);
 
-  Version getVersion();
+  Version getVersion() const;
 
   /// Returns true if the given capability is allowed.
   bool allows(Capability) const;
@@ -43,8 +43,22 @@ public:
   /// Returns llvm::None otherwise.
   Optional<Extension> allows(ArrayRef<Extension>) const;
 
+  /// Returns the vendor ID.
+  Vendor getVendorID() const;
+
+  /// Returns the device type.
+  DeviceType getDeviceType() const;
+
+  /// Returns the device ID.
+  uint32_t getDeviceID() const;
+
   /// Returns the MLIRContext.
   MLIRContext *getContext() const;
+
+  /// Returns the target resource limits.
+  ResourceLimitsAttr getResourceLimits() const;
+
+  TargetEnvAttr getAttr() const { return targetAttr; }
 
   /// Allows implicity converting to the underlying spirv::TargetEnvAttr.
   operator TargetEnvAttr() const { return targetAttr; }

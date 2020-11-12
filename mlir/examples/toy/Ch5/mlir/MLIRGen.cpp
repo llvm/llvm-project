@@ -172,7 +172,7 @@ private:
 
     // If this function isn't main, then set the visibility to private.
     if (funcAST.getProto()->getName() != "main")
-      function.setVisibility(mlir::FuncOp::Visibility::Private);
+      function.setPrivate();
 
     return function;
   }

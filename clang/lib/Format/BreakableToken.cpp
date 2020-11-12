@@ -124,9 +124,10 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
       continue;
     }
 
-    // Avoid ever breaking before a { in JavaScript.
+    // Avoid ever breaking before a @tag or a { in JavaScript.
     if (Style.Language == FormatStyle::LK_JavaScript &&
-        SpaceOffset + 1 < Text.size() && Text[SpaceOffset + 1] == '{') {
+        SpaceOffset + 1 < Text.size() &&
+        (Text[SpaceOffset + 1] == '{' || Text[SpaceOffset + 1] == '@')) {
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
       continue;
     }

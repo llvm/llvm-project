@@ -606,15 +606,6 @@ void CoroCloner::replaceEntryBlock() {
   Builder.CreateUnreachable();
   BranchToEntry->eraseFromParent();
 
-  // Move any allocas into Entry that weren't moved into the frame.
-  for (auto IT = OldEntry->begin(), End = OldEntry->end(); IT != End;) {
-    Instruction &I = *IT++;
-    if (!isa<AllocaInst>(&I) || I.use_empty())
-      continue;
-
-    I.moveBefore(*Entry, Entry->getFirstInsertionPt());
-  }
-
   // Branch from the entry to the appropriate place.
   Builder.SetInsertPoint(Entry);
   switch (Shape.ABI) {
@@ -644,6 +635,19 @@ void CoroCloner::replaceEntryBlock() {
     break;
   }
   }
+
+  // Any alloca that's still being used but not reachable from the new entry
+  // needs to be moved to the new entry.
+  Function *F = OldEntry->getParent();
+  DominatorTree DT{*F};
+  for (auto IT = inst_begin(F), End = inst_end(F); IT != End;) {
+    Instruction &I = *IT++;
+    if (!isa<AllocaInst>(&I) || I.use_empty())
+      continue;
+    if (DT.isReachableFromEntry(I.getParent()))
+      continue;
+    I.moveBefore(*Entry, Entry->getFirstInsertionPt());
+  }
 }
 
 /// Derive the value of the new frame pointer.
@@ -664,16 +668,23 @@ Value *CoroCloner::deriveNewFramePointer() {
     auto *FramePtrTy = Shape.FrameTy->getPointerTo();
     auto *ProjectionFunc = cast<CoroSuspendAsyncInst>(ActiveSuspend)
                                ->getAsyncContextProjectionFunction();
+    auto DbgLoc =
+        cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
     // Calling i8* (i8*)
     auto *CallerContext = Builder.CreateCall(
         cast<FunctionType>(ProjectionFunc->getType()->getPointerElementType()),
         ProjectionFunc, CalleeContext);
     CallerContext->setCallingConv(ProjectionFunc->getCallingConv());
+    CallerContext->setDebugLoc(DbgLoc);
     // The frame is located after the async_context header.
     auto &Context = Builder.getContext();
     auto *FramePtrAddr = Builder.CreateConstInBoundsGEP1_32(
         Type::getInt8Ty(Context), CallerContext,
         Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr");
+    // Inline the projection function.
+    InlineFunctionInfo InlineInfo;
+    auto InlineRes = InlineFunction(*CallerContext, InlineInfo);
+    assert(InlineRes.isSuccess());
     return Builder.CreateBitCast(FramePtrAddr, FramePtrTy);
   }
   // In continuation-lowering, the argument is the opaque storage.
@@ -1360,6 +1371,22 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
   Suspend->setOperand(0, UndefValue::get(Int8PtrTy));
 }
 
+/// Coerce the arguments in \p FnArgs according to \p FnTy in \p CallArgs.
+static void coerceArguments(IRBuilder<> &Builder, FunctionType *FnTy,
+                            ArrayRef<Value *> FnArgs,
+                            SmallVectorImpl<Value *> &CallArgs) {
+  size_t ArgIdx = 0;
+  for (auto paramTy : FnTy->params()) {
+    assert(ArgIdx < FnArgs.size());
+    if (paramTy != FnArgs[ArgIdx]->getType())
+      CallArgs.push_back(
+          Builder.CreateBitOrPointerCast(FnArgs[ArgIdx], paramTy));
+    else
+      CallArgs.push_back(FnArgs[ArgIdx]);
+    ++ArgIdx;
+  }
+}
+
 static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
                                 SmallVectorImpl<Function *> &Clones) {
   assert(Shape.ABI == coro::ABI::Async);
@@ -1416,14 +1443,23 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
 
     IRBuilder<> Builder(ReturnBB);
 
-    // Insert the call to the tail call function.
-    auto *Fun = Suspend->getMustTailCallFunction();
+    // Insert the call to the tail call function and inline it.
+    auto *Fn = Suspend->getMustTailCallFunction();
+    auto DbgLoc = Suspend->getDebugLoc();
     SmallVector<Value *, 8> Args(Suspend->operand_values());
-    auto *TailCall = Builder.CreateCall(
-        cast<FunctionType>(Fun->getType()->getPointerElementType()), Fun,
-        ArrayRef<Value *>(Args).drop_front(3).drop_back(1));
-    TailCall->setTailCallKind(CallInst::TCK_MustTail);
-    TailCall->setCallingConv(Fun->getCallingConv());
+    auto FnArgs = ArrayRef<Value *>(Args).drop_front(3).drop_back(1);
+    auto FnTy = cast<FunctionType>(Fn->getType()->getPointerElementType());
+    // Coerce the arguments, llvm optimizations seem to ignore the types in
+    // vaarg functions and throws away casts in optimized mode.
+    SmallVector<Value *, 8> CallArgs;
+    coerceArguments(Builder, FnTy, FnArgs, CallArgs);
+    auto *TailCall = Builder.CreateCall(FnTy, Fn, CallArgs);
+    TailCall->setDebugLoc(DbgLoc);
+    TailCall->setTailCall();
+    TailCall->setCallingConv(Fn->getCallingConv());
+    InlineFunctionInfo FnInfo;
+    auto InlineRes = InlineFunction(*TailCall, FnInfo);
+    assert(InlineRes.isSuccess() && "Expected inlining to succeed");
     Builder.CreateRetVoid();
 
     // Replace the lvm.coro.async.resume intrisic call.

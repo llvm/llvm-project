@@ -20,7 +20,6 @@ class ObjCModulesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_expr(self):

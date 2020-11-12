@@ -241,6 +241,9 @@ namespace CallingConv {
     /// The remainder matches the regular calling convention.
     WASM_EmscriptenInvoke = 99,
 
+    /// Calling convention used for AMD graphics targets.
+    AMDGPU_Gfx = 100,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

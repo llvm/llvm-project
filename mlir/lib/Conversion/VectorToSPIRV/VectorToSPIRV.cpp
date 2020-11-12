@@ -97,14 +97,32 @@ struct VectorExtractElementOpConvert final
   }
 };
 
+struct VectorInsertElementOpConvert final
+    : public SPIRVOpLowering<vector::InsertElementOp> {
+  using SPIRVOpLowering<vector::InsertElementOp>::SPIRVOpLowering;
+  LogicalResult
+  matchAndRewrite(vector::InsertElementOp insertElementOp,
+                  ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!spirv::CompositeType::isValid(insertElementOp.getDestVectorType()))
+      return failure();
+    vector::InsertElementOp::Adaptor adaptor(operands);
+    Value newInsertElement = rewriter.create<spirv::VectorInsertDynamicOp>(
+        insertElementOp.getLoc(), insertElementOp.getType(),
+        insertElementOp.dest(), adaptor.source(), insertElementOp.position());
+    rewriter.replaceOp(insertElementOp, newInsertElement);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToSPIRVPatterns(MLIRContext *context,
                                          SPIRVTypeConverter &typeConverter,
                                          OwningRewritePatternList &patterns) {
   patterns.insert<VectorBroadcastConvert, VectorExtractOpConvert,
-                  VectorInsertOpConvert, VectorExtractElementOpConvert>(
-      context, typeConverter);
+                  VectorInsertOpConvert, VectorExtractElementOpConvert,
+                  VectorInsertElementOpConvert>(context, typeConverter);
 }
 
 namespace {

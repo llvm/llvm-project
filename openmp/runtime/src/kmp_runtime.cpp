@@ -441,6 +441,7 @@ void __kmp_abort_process() {
     raise(SIGABRT);
     _exit(3); // Just in case, if signal ignored, exit anyway.
   } else {
+    __kmp_unregister_library();
     abort();
   }
 
@@ -3985,12 +3986,6 @@ void __kmp_unregister_root_current_thread(int gtid) {
 
   __kmp_reset_root(gtid, root);
 
-  /* free up this thread slot */
-  __kmp_gtid_set_specific(KMP_GTID_DNE);
-#ifdef KMP_TDATA_GTID
-  __kmp_gtid = KMP_GTID_DNE;
-#endif
-
   KMP_MB();
   KC_TRACE(10,
            ("__kmp_unregister_root_current_thread: T#%d unregistered\n", gtid));
@@ -5828,20 +5823,6 @@ void __kmp_internal_end_dest(void *specific_gtid) {
   /* NOTE: the gtid is stored as gitd+1 in the thread-local-storage
    * this is because 0 is reserved for the nothing-stored case */
 
-  /* josh: One reason for setting the gtid specific data even when it is being
-     destroyed by pthread is to allow gtid lookup through thread specific data
-     (__kmp_gtid_get_specific).  Some of the code, especially stat code,
-     that gets executed in the call to __kmp_internal_end_thread, actually
-     gets the gtid through the thread specific data.  Setting it here seems
-     rather inelegant and perhaps wrong, but allows __kmp_internal_end_thread
-     to run smoothly.
-     todo: get rid of this after we remove the dependence on
-     __kmp_gtid_get_specific  */
-  if (gtid >= 0 && KMP_UBER_GTID(gtid))
-    __kmp_gtid_set_specific(gtid);
-#ifdef KMP_TDATA_GTID
-  __kmp_gtid = gtid;
-#endif
   __kmp_internal_end_thread(gtid);
 }
 
@@ -6170,6 +6151,7 @@ void __kmp_internal_end_library(int gtid_req) {
       if (__kmp_root[gtid]->r.r_active) {
         __kmp_global.g.g_abort = -1;
         TCW_SYNC_4(__kmp_global.g.g_done, TRUE);
+        __kmp_unregister_library();
         KA_TRACE(10,
                  ("__kmp_internal_end_library: root still active, abort T#%d\n",
                   gtid));

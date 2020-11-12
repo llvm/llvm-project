@@ -1433,68 +1433,6 @@ class SIMCInstr <string pseudo, int subtarget> {
 }
 
 //===----------------------------------------------------------------------===//
-// EXP classes
-//===----------------------------------------------------------------------===//
-
-class EXP_Helper<bit done> : EXPCommon<
-  (outs),
-  (ins exp_tgt:$tgt,
-       ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
-       exp_vm:$vm, exp_compr:$compr, i32imm:$en)> {
-}
-
-class EXP_Real_ComprVM<bit done> : EXP_Helper<done> {
-  let AsmString = "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm";
-  let AsmMatchConverter = "cvtExp";
-}
-
-class EXP_Real<bit done> : EXP_Helper<done> {
-  let AsmString = "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "");
-  let AsmMatchConverter = "cvtExp";
-}
-
-// Split EXP instruction into EXP and EXP_DONE so we can set
-// mayLoad for done=1.
-multiclass EXP_m<bit done> {
-  let mayLoad = done, DisableWQM = 1 in {
-    let isPseudo = 1, isCodeGenOnly = 1 in
-    def "" : EXP_Helper<done>,
-             SIMCInstr <"exp"#!if(done, "_done", ""),
-             SIEncodingFamily.NONE>;
-
-    let done = done in {
-      def _si : EXP_Real_ComprVM<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
-                EXPe_ComprVM {
-        let AssemblerPredicate = isGFX6GFX7;
-        let DecoderNamespace = "GFX6GFX7";
-      }
-
-      def _vi : EXP_Real_ComprVM<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
-                EXPe_vi {
-        let AssemblerPredicate = isGFX8GFX9;
-        let DecoderNamespace = "GFX8";
-      }
-
-      def _gfx10 : EXP_Real_ComprVM<done>,
-                   SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX10>,
-                   EXPe_ComprVM {
-        let AssemblerPredicate = isGFX10Only;
-        let DecoderNamespace = "GFX10";
-      }
-
-      def _gfx11 : EXP_Real<done>,
-                   SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX11>,
-                   EXPe {
-        let AssemblerPredicate = isGFX11Plus;
-        let DecoderNamespace = "GFX11";
-      }
-    }
-  }
-}
-
-//===----------------------------------------------------------------------===//
 // Vector ALU classes
 //===----------------------------------------------------------------------===//
 

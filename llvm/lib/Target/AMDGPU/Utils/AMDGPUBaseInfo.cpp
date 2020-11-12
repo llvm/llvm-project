@@ -1046,8 +1046,12 @@ bool isShader(CallingConv::ID cc) {
   }
 }
 
+bool isGraphics(CallingConv::ID cc) {
+  return isShader(cc) || cc == CallingConv::AMDGPU_Gfx;
+}
+
 bool isCompute(CallingConv::ID cc) {
-  return !isShader(cc) || cc == CallingConv::AMDGPU_CS;
+  return !isGraphics(cc) || cc == CallingConv::AMDGPU_CS;
 }
 
 bool isEntryFunctionCC(CallingConv::ID CC) {
@@ -1462,6 +1466,7 @@ bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_Gfx:
     // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
     // Everything else is in VGPRs.
     return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||

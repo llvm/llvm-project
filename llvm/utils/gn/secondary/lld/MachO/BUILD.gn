@@ -28,6 +28,7 @@ static_library("MachO2") {
     "ExportTrie.cpp",
     "InputFiles.cpp",
     "InputSection.cpp",
+    "LTO.cpp",
     "MergedOutputSection.cpp",
     "ObjC.cpp",
     "OutputSection.cpp",

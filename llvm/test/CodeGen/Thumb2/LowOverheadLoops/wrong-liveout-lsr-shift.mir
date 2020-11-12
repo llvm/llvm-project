@@ -14,7 +14,7 @@
     br i1 %cmp11, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     %6 = shl i32 %4, 3
     %7 = sub i32 %N, %6
     br label %vector.body
@@ -23,7 +23,7 @@
     %lsr.iv20 = phi i8* [ %scevgep21, %vector.body ], [ %c, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %b, %vector.ph ]
     %vec.phi = phi <8 x i16> [ <i16 32767, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %vector.ph ], [ %15, %vector.body ]
-    %8 = phi i32 [ %5, %vector.ph ], [ %16, %vector.body ]
+    %8 = phi i32 [ %start, %vector.ph ], [ %16, %vector.body ]
     %9 = phi i32 [ %N, %vector.ph ], [ %11, %vector.body ]
     %lsr.iv2022 = bitcast i8* %lsr.iv20 to <8 x i8>*
     %lsr.iv19 = bitcast i8* %lsr.iv to <8 x i8>*
@@ -55,7 +55,7 @@
   }
   declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32 immarg, <8 x i1>, <8 x i8>)
   declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 
@@ -189,7 +189,7 @@ body:             |
     renamable $r12 = t2LSRri killed renamable $r12, 2, 14, $noreg, $noreg
     renamable $q0 = MVE_VLDRWU32 killed renamable $r3, 0, 0, $noreg :: (load 16 from constant-pool)
     renamable $r3 = t2SUBrs renamable $r2, killed renamable $r12, 26, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

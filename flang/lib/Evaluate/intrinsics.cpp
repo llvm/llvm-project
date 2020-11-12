@@ -476,6 +476,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", SameInt}, {"shift", AnyInt},
             {"size", AnyInt, Rank::elemental, Optionality::optional}},
         SameInt},
+    {"isnan", {{"a", AnyFloating}}, DefaultLogical},
     {"is_contiguous", {{"array", Addressable, Rank::anyOrAssumedRank}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"is_iostat_end", {{"i", AnyInt}}, DefaultLogical},
@@ -744,7 +745,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 //  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF,
 //  MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR
 //  IARG, IARGC, NARGS, NUMARG, BADDRESS, IADDR, CACHESIZE,
-//  EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC
+//  EOF, FP_CLASS, INT_PTR_KIND, MALLOC
 //  probably more (these are PGI + Intel, possibly incomplete)
 // TODO: Optionally warn on use of non-standard intrinsics:
 //  LOC, probably others

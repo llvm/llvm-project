@@ -78,10 +78,9 @@ set(MLIR_PYTHON_BINDINGS_VERSION_LOCKED 1 CACHE BOOL
        "Links to specific python libraries, resolving all symbols.")
 
 if(MLIR_BINDINGS_PYTHON_ENABLED)
-  find_package(PythonInterp REQUIRED)
-  find_package(PythonLibs REQUIRED)
-  message(STATUS "Found python include dirs: ${PYTHON_INCLUDE_DIRS}")
-  message(STATUS "Found python libraries: ${PYTHON_LIBRARIES}")
+  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+  message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
+  message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
   find_package(pybind11 CONFIG REQUIRED)
   # TODO: pybind11 v2.6 switched from pybind11_INCLUDE_DIRS (plural) to
   # pybind11_INCLUDE_DIR (singular). A lot has changed in this area since this
@@ -100,6 +99,12 @@ include_directories( ${MLIR_INCLUDE_DIR})
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
 add_subdirectory(tools/mlir-tblgen)
+
+# Create an anchor target that will depend on dialect-specific op bindings.
+if (MLIR_BINDINGS_PYTHON_ENABLED)
+  add_custom_target(MLIRBindingsPythonIncGen)
+  include(AddMLIRPythonExtension)
+endif()
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)

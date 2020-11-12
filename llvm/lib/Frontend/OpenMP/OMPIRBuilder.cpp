@@ -290,7 +290,7 @@ Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateBarrier(const LocationDescription &Loc, Directive DK,
+OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive DK,
                                bool ForceSimpleCall, bool CheckCancelFlag) {
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -345,7 +345,7 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateCancel(const LocationDescription &Loc,
+OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
                               Value *IfCondition,
                               omp::Directive CanceledDirective) {
   if (!updateToLocation(Loc))
@@ -422,7 +422,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(
   Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
 }
 
-IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
+IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
     BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
     FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
@@ -748,7 +748,7 @@ void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
   Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush), Args);
 }
 
-void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
   emitFlush(Loc);
@@ -766,7 +766,7 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
                      Args);
 }
 
-void OpenMPIRBuilder::CreateTaskwait(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
   emitTaskwaitImpl(Loc);
@@ -783,14 +783,14 @@ void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
                      Args);
 }
 
-void OpenMPIRBuilder::CreateTaskyield(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
   emitTaskyieldImpl(Loc);
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
+OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB) {
 
@@ -813,8 +813,163 @@ OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
+CanonicalLoopInfo *
+OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
+                                     LoopBodyGenCallbackTy BodyGenCB,
+                                     Value *TripCount) {
+  BasicBlock *BB = Loc.IP.getBlock();
+  BasicBlock *NextBB = BB->getNextNode();
+  Function *F = BB->getParent();
+  Type *IndVarTy = TripCount->getType();
+
+  // Create the basic block structure.
+  BasicBlock *Preheader =
+      BasicBlock::Create(M.getContext(), "omp_for.preheader", F, NextBB);
+  BasicBlock *Header =
+      BasicBlock::Create(M.getContext(), "omp_for.header", F, NextBB);
+  BasicBlock *Cond =
+      BasicBlock::Create(M.getContext(), "omp_for.cond", F, NextBB);
+  BasicBlock *Body =
+      BasicBlock::Create(M.getContext(), "omp_for.body", F, NextBB);
+  BasicBlock *Latch =
+      BasicBlock::Create(M.getContext(), "omp_for.inc", F, NextBB);
+  BasicBlock *Exit =
+      BasicBlock::Create(M.getContext(), "omp_for.exit", F, NextBB);
+  BasicBlock *After =
+      BasicBlock::Create(M.getContext(), "omp_for.after", F, NextBB);
+
+  updateToLocation(Loc);
+  Builder.CreateBr(Preheader);
+
+  Builder.SetInsertPoint(Preheader);
+  Builder.CreateBr(Header);
+
+  Builder.SetInsertPoint(Header);
+  PHINode *IndVarPHI = Builder.CreatePHI(IndVarTy, 2, "omp_for.iv");
+  IndVarPHI->addIncoming(ConstantInt::get(IndVarTy, 0), Preheader);
+  Builder.CreateBr(Cond);
+
+  Builder.SetInsertPoint(Cond);
+  Value *Cmp = Builder.CreateICmpULT(IndVarPHI, TripCount, "omp_for.cmp");
+  Builder.CreateCondBr(Cmp, Body, Exit);
+
+  Builder.SetInsertPoint(Body);
+  Builder.CreateBr(Latch);
+
+  Builder.SetInsertPoint(Latch);
+  Value *Next = Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
+                                  "omp_for.next", /*HasNUW=*/true);
+  Builder.CreateBr(Header);
+  IndVarPHI->addIncoming(Next, Latch);
+
+  Builder.SetInsertPoint(Exit);
+  Builder.CreateBr(After);
+
+  // After all control flow has been created, insert the body user code.
+  BodyGenCB(InsertPointTy(Body, Body->begin()), IndVarPHI);
+
+  // Remember and return the canonical control flow.
+  LoopInfos.emplace_front();
+  CanonicalLoopInfo *CL = &LoopInfos.front();
+
+  CL->Preheader = Preheader;
+  CL->Header = Header;
+  CL->Cond = Cond;
+  CL->Body = Body;
+  CL->Latch = Latch;
+  CL->Exit = Exit;
+  CL->After = After;
+
+  CL->IsValid = true;
+
+#ifndef NDEBUG
+  CL->assertOK();
+#endif
+  return CL;
+}
+
+CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
+    const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop) {
+  // Consider the following difficulties (assuming 8-bit signed integers):
+  //  * Adding \p Step to the loop counter which passes \p Stop may overflow:
+  //      DO I = 1, 100, 50
+  ///  * A \p Step of INT_MIN cannot not be normalized to a positive direction:
+  //      DO I = 100, 0, -128
+
+  // Start, Stop and Step must be of the same integer type.
+  auto *IndVarTy = cast<IntegerType>(Start->getType());
+  assert(IndVarTy == Stop->getType() && "Stop type mismatch");
+  assert(IndVarTy == Step->getType() && "Step type mismatch");
+
+  updateToLocation(Loc);
+
+  ConstantInt *Zero = ConstantInt::get(IndVarTy, 0);
+  ConstantInt *One = ConstantInt::get(IndVarTy, 1);
+
+  // Like Step, but always positive.
+  Value *Incr = Step;
+
+  // Distance between Start and Stop; always positive.
+  Value *Span;
+
+  // Condition whether there are no iterations are executed at all, e.g. because
+  // UB < LB.
+  Value *ZeroCmp;
+
+  if (IsSigned) {
+    // Ensure that increment is positive. If not, negate and invert LB and UB.
+    Value *IsNeg = Builder.CreateICmpSLT(Step, Zero);
+    Incr = Builder.CreateSelect(IsNeg, Builder.CreateNeg(Step), Step);
+    Value *LB = Builder.CreateSelect(IsNeg, Stop, Start);
+    Value *UB = Builder.CreateSelect(IsNeg, Start, Stop);
+    Span = Builder.CreateSub(UB, LB, "", false, true);
+    ZeroCmp = Builder.CreateICmp(
+        InclusiveStop ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE, UB, LB);
+  } else {
+    Span = Builder.CreateSub(Stop, Start, "", true);
+    ZeroCmp = Builder.CreateICmp(
+        InclusiveStop ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE, Stop, Start);
+  }
+
+  Value *CountIfLooping;
+  if (InclusiveStop) {
+    CountIfLooping = Builder.CreateAdd(Builder.CreateUDiv(Span, Incr), One);
+  } else {
+    // Avoid incrementing past stop since it could overflow.
+    Value *CountIfTwo = Builder.CreateAdd(
+        Builder.CreateUDiv(Builder.CreateSub(Span, One), Incr), One);
+    Value *OneCmp = Builder.CreateICmp(
+        InclusiveStop ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE, Span, Incr);
+    CountIfLooping = Builder.CreateSelect(OneCmp, One, CountIfTwo);
+  }
+  Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping);
+
+  auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
+    Builder.restoreIP(CodeGenIP);
+    Value *Span = Builder.CreateMul(IV, Step);
+    Value *IndVar = Builder.CreateAdd(Span, Start);
+    BodyGenCB(Builder.saveIP(), IndVar);
+  };
+  return createCanonicalLoop(Builder.saveIP(), BodyGen, TripCount);
+}
+
+void CanonicalLoopInfo::eraseFromParent() {
+  assert(IsValid && "can only erase previously valid loop cfg");
+  IsValid = false;
+
+  SmallVector<BasicBlock *, 5> BBsToRemove{Header, Cond, Latch, Exit};
+  SmallVector<Instruction *, 16> InstsToRemove;
+
+  // Only remove preheader if not re-purposed somewhere else.
+  if (Preheader->getNumUses() == 0)
+    BBsToRemove.push_back(Preheader);
+
+  DeleteDeadBlocks(BBsToRemove);
+}
+
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateCopyPrivate(const LocationDescription &Loc,
+OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
                                    llvm::Value *BufSize, llvm::Value *CpyBuf,
                                    llvm::Value *CpyFn, llvm::Value *DidIt) {
   if (!updateToLocation(Loc))
@@ -835,7 +990,7 @@ OpenMPIRBuilder::CreateCopyPrivate(const LocationDescription &Loc,
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateSingle(const LocationDescription &Loc,
+OpenMPIRBuilder::createSingle(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB, llvm::Value *DidIt) {
 
@@ -869,7 +1024,7 @@ OpenMPIRBuilder::CreateSingle(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCritical(
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
 
@@ -1033,7 +1188,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
                                   ExitCall->getIterator());
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCopyinClauseBlocks(
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCopyinClauseBlocks(
     InsertPointTy IP, Value *MasterAddr, Value *PrivateAddr,
     llvm::IntegerType *IntPtrTy, bool BranchtoEnd) {
   if (!IP.isSet())
@@ -1083,7 +1238,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCopyinClauseBlocks(
   return Builder.saveIP();
 }
 
-CallInst *OpenMPIRBuilder::CreateOMPAlloc(const LocationDescription &Loc,
+CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
                                           Value *Size, Value *Allocator,
                                           std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
@@ -1099,7 +1254,7 @@ CallInst *OpenMPIRBuilder::CreateOMPAlloc(const LocationDescription &Loc,
   return Builder.CreateCall(Fn, Args, Name);
 }
 
-CallInst *OpenMPIRBuilder::CreateOMPFree(const LocationDescription &Loc,
+CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
                                          Value *Addr, Value *Allocator,
                                          std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
@@ -1113,7 +1268,7 @@ CallInst *OpenMPIRBuilder::CreateOMPFree(const LocationDescription &Loc,
   return Builder.CreateCall(Fn, Args, Name);
 }
 
-CallInst *OpenMPIRBuilder::CreateCachedThreadPrivate(
+CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
     const LocationDescription &Loc, llvm::Value *Pointer,
     llvm::ConstantInt *Size, const llvm::Twine &Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
@@ -1217,4 +1372,76 @@ void OpenMPIRBuilder::OutlineInfo::collectBlocks(
       if (BlockSet.insert(SuccBB).second)
         Worklist.push_back(SuccBB);
   }
+}
+
+void CanonicalLoopInfo::assertOK() const {
+#ifndef NDEBUG
+  if (!IsValid)
+    return;
+
+  // Verify standard control-flow we use for OpenMP loops.
+  assert(Preheader);
+  assert(isa<BranchInst>(Preheader->getTerminator()) &&
+         "Preheader must terminate with unconditional branch");
+  assert(Preheader->getSingleSuccessor() == Header &&
+         "Preheader must jump to header");
+
+  assert(Header);
+  assert(isa<BranchInst>(Header->getTerminator()) &&
+         "Header must terminate with unconditional branch");
+  assert(Header->getSingleSuccessor() == Cond &&
+         "Header must jump to exiting block");
+
+  assert(Cond);
+  assert(Cond->getSinglePredecessor() == Header &&
+         "Exiting block only reachable from header");
+
+  assert(isa<BranchInst>(Cond->getTerminator()) &&
+         "Exiting block must terminate with conditional branch");
+  assert(size(successors(Cond)) == 2 &&
+         "Exiting block must have two successors");
+  assert(cast<BranchInst>(Cond->getTerminator())->getSuccessor(0) == Body &&
+         "Exiting block's first successor jump to the body");
+  assert(cast<BranchInst>(Cond->getTerminator())->getSuccessor(1) == Exit &&
+         "Exiting block's second successor must exit the loop");
+
+  assert(Body);
+  assert(Body->getSinglePredecessor() == Cond &&
+         "Body only reachable from exiting block");
+
+  assert(Latch);
+  assert(isa<BranchInst>(Latch->getTerminator()) &&
+         "Latch must terminate with unconditional branch");
+  assert(Latch->getSingleSuccessor() == Header && "Latch must jump to header");
+
+  assert(Exit);
+  assert(isa<BranchInst>(Exit->getTerminator()) &&
+         "Exit block must terminate with unconditional branch");
+  assert(Exit->getSingleSuccessor() == After &&
+         "Exit block must jump to after block");
+
+  assert(After);
+  assert(After->getSinglePredecessor() == Exit &&
+         "After block only reachable from exit block");
+
+  Instruction *IndVar = getIndVar();
+  assert(IndVar && "Canonical induction variable not found?");
+  assert(isa<IntegerType>(IndVar->getType()) &&
+         "Induction variable must be an integer");
+  assert(cast<PHINode>(IndVar)->getParent() == Header &&
+         "Induction variable must be a PHI in the loop header");
+
+  Value *TripCount = getTripCount();
+  assert(TripCount && "Loop trip count not found?");
+  assert(IndVar->getType() == TripCount->getType() &&
+         "Trip count and induction variable must have the same type");
+
+  auto *CmpI = cast<CmpInst>(&Cond->front());
+  assert(CmpI->getPredicate() == CmpInst::ICMP_ULT &&
+         "Exit condition must be a signed less-than comparison");
+  assert(CmpI->getOperand(0) == IndVar &&
+         "Exit condition must compare the induction variable");
+  assert(CmpI->getOperand(1) == TripCount &&
+         "Exit condition must compare with the trip count");
+#endif
 }

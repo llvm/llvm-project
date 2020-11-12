@@ -248,9 +248,9 @@ define arm_aapcs_vfpcc void @nearbyint(float* noalias nocapture readonly %pSrcA,
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
 ; CHECK-NEXT:    adr r3, .LCPI5_0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vadd.i32 q2, q0, r12

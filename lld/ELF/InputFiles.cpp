@@ -105,6 +105,8 @@ InputFile::InputFile(Kind k, MemoryBufferRef m)
 }
 
 Optional<MemoryBufferRef> elf::readFile(StringRef path) {
+  llvm::TimeTraceScope timeScope("Load input files", path);
+
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
   if (!config->chroot.empty() && path.startswith("/"))

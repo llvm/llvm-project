@@ -326,8 +326,32 @@ public:
   /// Parse a '<' token.
   virtual ParseResult parseLess() = 0;
 
+  /// Parse a '<' token if present.
+  virtual ParseResult parseOptionalLess() = 0;
+
   /// Parse a '>' token.
   virtual ParseResult parseGreater() = 0;
+
+  /// Parse a '>' token if present.
+  virtual ParseResult parseOptionalGreater() = 0;
+
+  /// Parse a '?' token.
+  virtual ParseResult parseQuestion() = 0;
+
+  /// Parse a '?' token if present.
+  virtual ParseResult parseOptionalQuestion() = 0;
+
+  /// Parse a '+' token.
+  virtual ParseResult parsePlus() = 0;
+
+  /// Parse a '+' token if present.
+  virtual ParseResult parseOptionalPlus() = 0;
+
+  /// Parse a '*' token.
+  virtual ParseResult parseStar() = 0;
+
+  /// Parse a '*' token if present.
+  virtual ParseResult parseOptionalStar() = 0;
 
   /// Parse a given keyword.
   ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
@@ -351,6 +375,12 @@ public:
   /// Parse a keyword, if present, into 'keyword'.
   virtual ParseResult parseOptionalKeyword(StringRef *keyword) = 0;
 
+  /// Parse a keyword, if present, and if one of the 'allowedValues',
+  /// into 'keyword'
+  virtual ParseResult
+  parseOptionalKeyword(StringRef *keyword,
+                       ArrayRef<StringRef> allowedValues) = 0;
+
   /// Parse a `(` token.
   virtual ParseResult parseLParen() = 0;
 
@@ -362,9 +392,6 @@ public:
 
   /// Parse a `)` token if present.
   virtual ParseResult parseOptionalRParen() = 0;
-
-  /// Parses a '?' if present.
-  virtual ParseResult parseOptionalQuestion() = 0;
 
   /// Parse a `[` token.
   virtual ParseResult parseLSquare() = 0;

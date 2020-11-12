@@ -46,9 +46,6 @@ def HasComplxNum      : Predicate<"Subtarget->hasComplxNum()">,
 def HasNV            : Predicate<"Subtarget->hasNV()">,
                        AssemblerPredicate<(all_of FeatureNV), "nv">;
 
-def HasRASv8_4       : Predicate<"Subtarget->hasRASv8_4()">,
-                       AssemblerPredicate<(all_of FeatureRASv8_4), "rasv8_4">;
-
 def HasMPAM          : Predicate<"Subtarget->hasMPAM()">,
                        AssemblerPredicate<(all_of FeatureMPAM), "mpam">;
 

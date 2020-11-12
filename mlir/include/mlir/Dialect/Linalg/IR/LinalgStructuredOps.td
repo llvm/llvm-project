@@ -493,6 +493,8 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
                        ArrayAttr:$iterator_types,
                        OptionalAttr<StrAttr>:$doc,
                        OptionalAttr<StrAttr>:$library_call,
+                       // ArrayAttr of StrArrayAttr:
+                       OptionalAttr<ArrayAttr>:$sparse,
                        Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>
                          :$symbol_source);
   let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
@@ -549,6 +551,8 @@ def GenericOp : GenericOpBase<"generic"> {
         Each element of the list represents and iterator of one of the following
         types:
           parallel, reduction, window
+      - sparse: an optional list with per-dimension sparsity annotations (either
+        "D" for dense or "S" for sparse) for each input and output view.
       - symbol_source: index of the operand whose dimensions will be propagated
         as symbols to the indexing maps. When specified the number of symbols
         in each of the indexing maps has to be either 0 or the rank of the

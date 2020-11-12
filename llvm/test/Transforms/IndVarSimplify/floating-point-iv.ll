@@ -150,7 +150,7 @@ define double @test_max_be() {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[TMP11_INT]] to double
 ; CHECK-NEXT:    [[TMP12]] = fadd double [[TMP10]], [[INDVAR_CONV]]
 ; CHECK-NEXT:    [[TMP13_INT]] = add nuw nsw i32 [[TMP11_INT]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i32 [[TMP13_INT]], 99999
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13_INT]], 99999
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[BB22]], label [[BB6:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[BB6]]
@@ -189,7 +189,7 @@ define float @test_max_be2() {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[TMP11_INT]] to float
 ; CHECK-NEXT:    [[TMP12]] = fadd float [[TMP10]], [[INDVAR_CONV]]
 ; CHECK-NEXT:    [[TMP13_INT]] = add nuw nsw i32 [[TMP11_INT]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i32 [[TMP13_INT]], 99999
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13_INT]], 99999
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[BB22]], label [[BB6:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[BB6]]
@@ -229,7 +229,7 @@ define float @test_max_be3() {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[TMP11_INT]] to float
 ; CHECK-NEXT:    [[TMP12]] = fadd float [[TMP10]], [[INDVAR_CONV]]
 ; CHECK-NEXT:    [[TMP13_INT]] = add nuw nsw i32 [[TMP11_INT]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i32 [[TMP13_INT]], 99999
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13_INT]], 99999
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[BB22]], label [[BB6:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[BB6]]

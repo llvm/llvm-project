@@ -231,9 +231,6 @@ public:
   // Location Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Parse an inline location.
-  ParseResult parseLocation(LocationAttr &loc);
-
   /// Parse a raw location instance.
   ParseResult parseLocationInstance(LocationAttr &loc);
 
@@ -248,20 +245,9 @@ public:
 
   /// Parse an optional trailing location.
   ///
-  ///   trailing-location     ::= (`loc` `(` location `)`)?
+  ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
   ///
-  ParseResult parseOptionalTrailingLocation(Location &loc) {
-    // If there is a 'loc' we parse a trailing location.
-    if (!getToken().is(Token::kw_loc))
-      return success();
-
-    // Parse the location.
-    LocationAttr directLoc;
-    if (parseLocation(directLoc))
-      return failure();
-    loc = directLoc;
-    return success();
-  }
+  ParseResult parseOptionalTrailingLocation(Location &loc);
 
   //===--------------------------------------------------------------------===//
   // Affine Parsing

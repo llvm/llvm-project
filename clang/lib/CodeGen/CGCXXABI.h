@@ -220,12 +220,6 @@ protected:
   /// is required.
   llvm::Constant *getMemberPointerAdjustment(const CastExpr *E);
 
-  /// Computes the non-virtual adjustment needed for a member pointer
-  /// conversion along an inheritance path stored in an APValue.  Unlike
-  /// getMemberPointerAdjustment(), the adjustment can be negative if the path
-  /// is from a derived type to a base type.
-  CharUnits getMemberPointerPathAdjustment(const APValue &MP);
-
 public:
   virtual void emitVirtualObjectDelete(CodeGenFunction &CGF,
                                        const CXXDeleteExpr *DE,

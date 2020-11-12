@@ -553,8 +553,7 @@ define i64 @ull2ull(i64 returned %0) {
 define float @ull2f(i64 %x) {
 ; CHECK-LABEL: ull2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmps.l %s2, %s0, %s1
+; CHECK-NEXT:    cmps.l %s2, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.l %s1, %s0
 ; CHECK-NEXT:    cvt.s.d %s1, %s1
 ; CHECK-NEXT:    srl %s3, %s0, 1

@@ -460,8 +460,8 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B,
 
   CallingConv::ID CC = B.getMF().getFunction().getCallingConv();
   const bool IsShader = AMDGPU::isShader(CC);
-  const bool IsWaveEnd = (IsShader && MFI->returnsVoid()) ||
-                         AMDGPU::isKernel(CC);
+  const bool IsWaveEnd =
+      (IsShader && MFI->returnsVoid()) || AMDGPU::isKernel(CC);
   if (IsWaveEnd) {
     B.buildInstr(AMDGPU::S_ENDPGM)
       .addImm(0);
@@ -785,7 +785,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (CC == CallingConv::AMDGPU_KERNEL)
     return lowerFormalArgumentsKernel(B, F, VRegs);
 
-  const bool IsShader = AMDGPU::isShader(CC);
+  const bool IsGraphics = AMDGPU::isGraphics(CC);
   const bool IsEntryFunc = AMDGPU::isEntryFunctionCC(CC);
 
   MachineFunction &MF = B.getMF();
@@ -826,7 +826,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     const bool InReg = Arg.hasAttribute(Attribute::InReg);
 
     // SGPR arguments to functions not implemented.
-    if (!IsShader && InReg)
+    if (!IsGraphics && InReg)
       return false;
 
     if (Arg.hasAttribute(Attribute::SwiftSelf) ||
@@ -937,9 +937,10 @@ bool AMDGPUCallLowering::lowerFormalArguments(
 
   // Start adding system SGPRs.
   if (IsEntryFunc) {
-    TLI.allocateSystemSGPRs(CCInfo, MF, *Info, CC, IsShader);
+    TLI.allocateSystemSGPRs(CCInfo, MF, *Info, CC, IsGraphics);
   } else {
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+    if (!Subtarget.enableFlatScratch())
+      CCInfo.AllocateReg(Info->getScratchRSrcReg());
     TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
@@ -1131,11 +1132,6 @@ static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
 
 bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    CallLoweringInfo &Info) const {
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI) {
-    LLVM_DEBUG(dbgs() << "Variable function ABI not implemented\n");
-    return false;
-  }
-
   if (Info.IsVarArg) {
     LLVM_DEBUG(dbgs() << "Variadic functions not implemented\n");
     return false;
@@ -1149,8 +1145,15 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
   const DataLayout &DL = F.getParent()->getDataLayout();
+  CallingConv::ID CallConv = F.getCallingConv();
 
-  if (AMDGPU::isShader(F.getCallingConv())) {
+  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
+      CallConv != CallingConv::AMDGPU_Gfx) {
+    LLVM_DEBUG(dbgs() << "Variable function ABI not implemented\n");
+    return false;
+  }
+
+  if (AMDGPU::isShader(CallConv)) {
     LLVM_DEBUG(dbgs() << "Unhandled call from graphics shader\n");
     return false;
   }
@@ -1225,12 +1228,14 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  // Insert copies for the SRD. In the HSA case, this should be an identity
-  // copy.
-  auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::vector(4, 32),
-                                             MFI->getScratchRSrcReg());
-  MIRBuilder.buildCopy(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
-  MIB.addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Implicit);
+  if (!ST.enableFlatScratch()) {
+    // Insert copies for the SRD. In the HSA case, this should be an identity
+    // copy.
+    auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::vector(4, 32),
+                                               MFI->getScratchRSrcReg());
+    MIRBuilder.buildCopy(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
+    MIB.addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Implicit);
+  }
 
   for (std::pair<MCRegister, Register> ArgReg : ImplicitArgRegs) {
     MIRBuilder.buildCopy((Register)ArgReg.first, ArgReg.second);

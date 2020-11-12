@@ -390,8 +390,8 @@ public:
   Segment *ParentSegment = nullptr;
   uint64_t HeaderOffset = 0;
   uint32_t Index = 0;
-  bool HasSymbol = false;
 
+  uint32_t OriginalIndex = 0;
   uint64_t OriginalFlags = 0;
   uint64_t OriginalType = ELF::SHT_NULL;
   uint64_t OriginalOffset = std::numeric_limits<uint64_t>::max();
@@ -407,6 +407,7 @@ public:
   uint64_t Size = 0;
   uint64_t Type = ELF::SHT_NULL;
   ArrayRef<uint8_t> OriginalData;
+  bool HasSymbol = false;
 
   SectionBase() = default;
   SectionBase(const SectionBase &) = default;
@@ -435,9 +436,9 @@ private:
     bool operator()(const SectionBase *Lhs, const SectionBase *Rhs) const {
       // Some sections might have the same address if one of them is empty. To
       // fix this we can use the lexicographic ordering on ->Addr and the
-      // address of the actully stored section.
+      // original index.
       if (Lhs->OriginalOffset == Rhs->OriginalOffset)
-        return Lhs < Rhs;
+        return Lhs->OriginalIndex < Rhs->OriginalIndex;
       return Lhs->OriginalOffset < Rhs->OriginalOffset;
     }
   };

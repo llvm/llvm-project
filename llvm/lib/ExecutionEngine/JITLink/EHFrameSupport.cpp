@@ -10,6 +10,7 @@
 #include "EHFrameSupportImpl.h"
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -629,16 +630,8 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
   return PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
 }
 
-// Determine whether we can register EH tables.
-#if (defined(__GNUC__) && !defined(__ARM_EABI__) && !defined(__ia64__) &&      \
-     !(defined(_AIX) && defined(__ibmxl__)) && !defined(__MVS__) &&            \
-     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__))
-#define HAVE_EHTABLE_SUPPORT 1
-#else
-#define HAVE_EHTABLE_SUPPORT 0
-#endif
-
-#if HAVE_EHTABLE_SUPPORT
+#if defined(HAVE_REGISTER_FRAME) && defined(HAVE_DEREGISTER_FRAME) &&          \
+    !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
 extern "C" void __register_frame(const void *);
 extern "C" void __deregister_frame(const void *);
 

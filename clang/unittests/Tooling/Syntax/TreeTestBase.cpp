@@ -81,7 +81,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
       Tokens = nullptr; // make sure we fail if this gets called twice.
       Arena = std::make_unique<syntax::Arena>(Ctx.getSourceManager(),
                                               Ctx.getLangOpts(), *TB);
-      Root = syntax::buildSyntaxTree(*Arena, *Ctx.getTranslationUnitDecl());
+      Root = syntax::buildSyntaxTree(*Arena, Ctx);
     }
 
   private:

@@ -539,19 +539,19 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value = (uint64_t)m_gpr.regs[_REG_CS];
     break;
   case lldb_fs_x86_64:
-    reg_value = (uint64_t)m_gpr.regs[_REG_FS];
+    reg_value = (uint16_t)m_gpr.regs[_REG_FS];
     break;
   case lldb_gs_x86_64:
-    reg_value = (uint64_t)m_gpr.regs[_REG_GS];
+    reg_value = (uint16_t)m_gpr.regs[_REG_GS];
     break;
   case lldb_ss_x86_64:
     reg_value = (uint64_t)m_gpr.regs[_REG_SS];
     break;
   case lldb_ds_x86_64:
-    reg_value = (uint64_t)m_gpr.regs[_REG_DS];
+    reg_value = (uint16_t)m_gpr.regs[_REG_DS];
     break;
   case lldb_es_x86_64:
-    reg_value = (uint64_t)m_gpr.regs[_REG_ES];
+    reg_value = (uint16_t)m_gpr.regs[_REG_ES];
     break;
 #else
   case lldb_rax_x86_64:
@@ -588,19 +588,19 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value = (uint32_t)m_gpr.r_cs;
     break;
   case lldb_fs_x86_64:
-    reg_value = (uint32_t)m_gpr.r_fs;
+    reg_value = (uint16_t)m_gpr.r_fs;
     break;
   case lldb_gs_x86_64:
-    reg_value = (uint32_t)m_gpr.r_gs;
+    reg_value = (uint16_t)m_gpr.r_gs;
     break;
   case lldb_ss_x86_64:
     reg_value = (uint32_t)m_gpr.r_ss;
     break;
   case lldb_ds_x86_64:
-    reg_value = (uint32_t)m_gpr.r_ds;
+    reg_value = (uint16_t)m_gpr.r_ds;
     break;
   case lldb_es_x86_64:
-    reg_value = (uint32_t)m_gpr.r_es;
+    reg_value = (uint16_t)m_gpr.r_es;
     break;
 #endif
   case lldb_fctrl_x86_64:
@@ -830,19 +830,19 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     m_gpr.regs[_REG_CS] = reg_value.GetAsUInt64();
     break;
   case lldb_fs_x86_64:
-    m_gpr.regs[_REG_FS] = reg_value.GetAsUInt64();
+    m_gpr.regs[_REG_FS] = reg_value.GetAsUInt16();
     break;
   case lldb_gs_x86_64:
-    m_gpr.regs[_REG_GS] = reg_value.GetAsUInt64();
+    m_gpr.regs[_REG_GS] = reg_value.GetAsUInt16();
     break;
   case lldb_ss_x86_64:
     m_gpr.regs[_REG_SS] = reg_value.GetAsUInt64();
     break;
   case lldb_ds_x86_64:
-    m_gpr.regs[_REG_DS] = reg_value.GetAsUInt64();
+    m_gpr.regs[_REG_DS] = reg_value.GetAsUInt16();
     break;
   case lldb_es_x86_64:
-    m_gpr.regs[_REG_ES] = reg_value.GetAsUInt64();
+    m_gpr.regs[_REG_ES] = reg_value.GetAsUInt16();
     break;
 #else
   case lldb_rax_x86_64:
@@ -879,19 +879,19 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     m_gpr.r_cs = reg_value.GetAsUInt32();
     break;
   case lldb_fs_x86_64:
-    m_gpr.r_fs = reg_value.GetAsUInt32();
+    m_gpr.r_fs = reg_value.GetAsUInt16();
     break;
   case lldb_gs_x86_64:
-    m_gpr.r_gs = reg_value.GetAsUInt32();
+    m_gpr.r_gs = reg_value.GetAsUInt16();
     break;
   case lldb_ss_x86_64:
     m_gpr.r_ss = reg_value.GetAsUInt32();
     break;
   case lldb_ds_x86_64:
-    m_gpr.r_ds = reg_value.GetAsUInt32();
+    m_gpr.r_ds = reg_value.GetAsUInt16();
     break;
   case lldb_es_x86_64:
-    m_gpr.r_es = reg_value.GetAsUInt32();
+    m_gpr.r_es = reg_value.GetAsUInt16();
     break;
 #endif
   case lldb_fctrl_x86_64:
@@ -1087,19 +1087,19 @@ int NativeRegisterContextNetBSD_x86_64::GetDR(int num) const {
   }
 }
 
-Status NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
+llvm::Error NativeRegisterContextNetBSD_x86_64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextNetBSD &source) {
   auto &r_source = static_cast<NativeRegisterContextNetBSD_x86_64&>(source);
   Status res = r_source.ReadRegisterSet(DBRegSet);
   if (!res.Fail()) {
     // copy dbregs only if any watchpoints were set
     if ((r_source.m_dbr.dr[7] & 0xFF) == 0)
-      return res;
+      return llvm::Error::success();
 
     m_dbr = r_source.m_dbr;
     res = WriteRegisterSet(DBRegSet);
   }
-  return res;
+  return res.ToError();
 }
 
 #endif // defined(__x86_64__)

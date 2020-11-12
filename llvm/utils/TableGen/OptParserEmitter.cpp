@@ -39,10 +39,12 @@ static const std::string getOptionSpelling(const Record &R,
                                            size_t &PrefixLength) {
   std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
   StringRef Name = R.getValueAsString("Name");
+
   if (Prefixes.empty()) {
     PrefixLength = 0;
     return Name.str();
   }
+
   PrefixLength = Prefixes[0].size();
   return (Twine(Prefixes[0]) + Twine(Name)).str();
 }
@@ -435,7 +437,12 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "nullptr";
   };
 
-  std::vector<std::unique_ptr<MarshallingKindInfo>> OptsWithMarshalling;
+  auto IsMarshallingOption = [](const Record &R) {
+    return !isa<UnsetInit>(R.getValueInit("MarshallingKind")) &&
+           !R.getValueAsString("KeyPath").empty();
+  };
+
+  std::vector<const Record *> OptsWithMarshalling;
   for (unsigned I = 0, E = Opts.size(); I != E; ++I) {
     const Record &R = *Opts[I];
 
@@ -443,12 +450,33 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "OPTION(";
     WriteOptRecordFields(OS, R);
     OS << ")\n";
-    if (!isa<UnsetInit>(R.getValueInit("MarshallingKind")))
-      OptsWithMarshalling.push_back(MarshallingKindInfo::create(R));
+    if (IsMarshallingOption(R))
+      OptsWithMarshalling.push_back(&R);
   }
   OS << "#endif // OPTION\n";
 
-  for (const auto &KindInfo : OptsWithMarshalling) {
+  auto CmpMarshallingOpts = [](const Record *const *A, const Record *const *B) {
+    unsigned AID = (*A)->getID();
+    unsigned BID = (*B)->getID();
+
+    if (AID < BID)
+      return -1;
+    if (AID > BID)
+      return 1;
+    return 0;
+  };
+  // The RecordKeeper stores records (options) in lexicographical order, and we
+  // have reordered the options again when generating prefix groups. We need to
+  // restore the original definition order of options with marshalling to honor
+  // the topology of the dependency graph implied by `DefaultAnyOf`.
+  array_pod_sort(OptsWithMarshalling.begin(), OptsWithMarshalling.end(),
+                 CmpMarshallingOpts);
+
+  std::vector<std::unique_ptr<MarshallingKindInfo>> MarshallingKindInfos;
+  for (const auto *R : OptsWithMarshalling)
+    MarshallingKindInfos.push_back(MarshallingKindInfo::create(*R));
+
+  for (const auto &KindInfo : MarshallingKindInfos) {
     OS << "#ifdef " << KindInfo->MacroName << "\n";
     OS << KindInfo->MacroName << "(";
     WriteOptRecordFields(OS, KindInfo->R);
@@ -463,7 +491,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
   OS << MarshallingStringInfo::ValueTablePreamble;
   std::vector<StringRef> ValueTableNames;
-  for (const auto &KindInfo : OptsWithMarshalling)
+  for (const auto &KindInfo : MarshallingKindInfos)
     if (auto MaybeValueTableName = KindInfo->emitValueTable(OS))
       ValueTableNames.push_back(*MaybeValueTableName);
 

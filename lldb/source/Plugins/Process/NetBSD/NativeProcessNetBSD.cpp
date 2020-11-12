@@ -98,18 +98,7 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
       Info.GetArchitecture(), mainloop));
 
-  // Enable event reporting
-  ptrace_event_t events;
-  status = PtraceWrapper(PT_GET_EVENT_MASK, pid, &events, sizeof(events));
-  if (status.Fail())
-    return status.ToError();
-  // TODO: PTRACE_FORK | PTRACE_VFORK | PTRACE_POSIX_SPAWN?
-  events.pe_set_event |= PTRACE_LWP_CREATE | PTRACE_LWP_EXIT;
-  status = PtraceWrapper(PT_SET_EVENT_MASK, pid, &events, sizeof(events));
-  if (status.Fail())
-    return status.ToError();
-
-  status = process_up->ReinitializeThreads();
+  status = process_up->SetupTrace();
   if (status.Fail())
     return status.ToError();
 
@@ -218,10 +207,14 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
 
   // Get details on the signal raised.
   if (siginfo_err.Fail()) {
+    LLDB_LOG(log, "PT_GET_SIGINFO failed {0}", siginfo_err);
     return;
   }
 
+  LLDB_LOG(log, "got SIGTRAP, pid = {0}, lwpid = {1}, si_code = {2}", pid,
+           info.psi_lwpid, info.psi_siginfo.si_code);
   NativeThreadNetBSD* thread = nullptr;
+
   if (info.psi_lwpid > 0) {
     for (const auto &t : m_threads) {
       if (t->GetID() == static_cast<lldb::tid_t>(info.psi_lwpid)) {
@@ -243,12 +236,12 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
       FixupBreakpointPCAsNeeded(*thread);
     }
     SetState(StateType::eStateStopped, true);
-    break;
+    return;
   case TRAP_TRACE:
     if (thread)
       thread->SetStoppedByTrace();
     SetState(StateType::eStateStopped, true);
-    break;
+    return;
   case TRAP_EXEC: {
     Status error = ReinitializeThreads();
     if (error.Fail()) {
@@ -262,7 +255,8 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     for (const auto &thread : m_threads)
       static_cast<NativeThreadNetBSD &>(*thread).SetStoppedByExec();
     SetState(StateType::eStateStopped, true);
-  } break;
+    return;
+  }
   case TRAP_LWP: {
     ptrace_state_t pst;
     Status error = PtraceWrapper(PT_GET_PROCESS_STATE, pid, &pst, sizeof(pst));
@@ -296,11 +290,10 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     }
 
     error = PtraceWrapper(PT_CONTINUE, pid, reinterpret_cast<void*>(1), 0);
-    if (error.Fail()) {
+    if (error.Fail())
       SetState(StateType::eStateInvalid);
-      return;
-    }
-  } break;
+    return;
+  }
   case TRAP_DBREG: {
     if (!thread)
       break;
@@ -318,19 +311,31 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
       thread->SetStoppedByWatchpoint(wp_index);
       regctx.ClearWatchpointHit(wp_index);
       SetState(StateType::eStateStopped, true);
-      break;
+      return;
     }
 
     thread->SetStoppedByTrace();
     SetState(StateType::eStateStopped, true);
-  } break;
+    return;
   }
+  }
+
+  // Either user-generated SIGTRAP or an unknown event that would
+  // otherwise leave the debugger hanging.
+  LLDB_LOG(log, "unknown SIGTRAP, passing to generic handler");
+  MonitorSignal(pid, SIGTRAP);
 }
 
 void NativeProcessNetBSD::MonitorSignal(lldb::pid_t pid, int signal) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   ptrace_siginfo_t info;
+
   const auto siginfo_err =
       PtraceWrapper(PT_GET_SIGINFO, pid, &info, sizeof(info));
+  if (siginfo_err.Fail()) {
+    LLDB_LOG(log, "PT_LWPINFO failed {0}", siginfo_err);
+    return;
+  }
 
   for (const auto &abs_thread : m_threads) {
     NativeThreadNetBSD &thread = static_cast<NativeThreadNetBSD &>(*abs_thread);
@@ -801,8 +806,9 @@ Status NativeProcessNetBSD::Attach() {
           m_pid, nullptr, WALLSIG)) < 0)
     return Status(errno, eErrorTypePOSIX);
 
-  /* Initialize threads */
-  status = ReinitializeThreads();
+  // Initialize threads and tracing status
+  // NB: this needs to be called before we set thread state
+  status = SetupTrace();
   if (status.Fail())
     return status;
 
@@ -810,7 +816,8 @@ Status NativeProcessNetBSD::Attach() {
     static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
 
   // Let our process instance know the thread has stopped.
-  SetState(StateType::eStateStopped);
+  SetCurrentThreadID(m_threads.front()->GetID());
+  SetState(StateType::eStateStopped, false);
   return Status();
 }
 
@@ -855,7 +862,8 @@ Status NativeProcessNetBSD::WriteMemory(lldb::addr_t addr, const void *buf,
   io.piod_len = size;
 
   do {
-    io.piod_addr = const_cast<void *>(static_cast<const void *>(src + bytes_written));
+    io.piod_addr =
+        const_cast<void *>(static_cast<const void *>(src + bytes_written));
     io.piod_offs = (void *)(addr + bytes_written);
 
     Status error = NativeProcessNetBSD::PtraceWrapper(PT_IO, GetID(), &io);
@@ -898,6 +906,21 @@ NativeProcessNetBSD::GetAuxvData() const {
     return std::error_code(ECANCELED, std::generic_category());
 
   return std::move(buf);
+}
+
+Status NativeProcessNetBSD::SetupTrace() {
+  // Enable event reporting
+  ptrace_event_t events;
+  Status status = PtraceWrapper(PT_GET_EVENT_MASK, GetID(), &events, sizeof(events));
+  if (status.Fail())
+    return status;
+  // TODO: PTRACE_FORK | PTRACE_VFORK | PTRACE_POSIX_SPAWN?
+  events.pe_set_event |= PTRACE_LWP_CREATE | PTRACE_LWP_EXIT;
+  status = PtraceWrapper(PT_SET_EVENT_MASK, GetID(), &events, sizeof(events));
+  if (status.Fail())
+    return status;
+
+  return ReinitializeThreads();
 }
 
 Status NativeProcessNetBSD::ReinitializeThreads() {

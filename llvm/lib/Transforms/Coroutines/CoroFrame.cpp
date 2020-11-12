@@ -1191,19 +1191,51 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
       continue;
     auto *G = GetFramePointer(Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
+
+    SmallPtrSet<BasicBlock *, 4> SeenDbgBBs;
     TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(Alloca);
-    if (!DIs.empty())
-      DIBuilder(*Alloca->getModule(),
-                /*AllowUnresolved*/ false)
-          .insertDeclare(G, DIs.front()->getVariable(),
-                         DIs.front()->getExpression(),
-                         DIs.front()->getDebugLoc(), DIs.front());
+    DIBuilder DIB(*Alloca->getModule(), /*AllowUnresolved*/ false);
+    Instruction *FirstDbgDecl = nullptr;
+
+    if (!DIs.empty()) {
+      FirstDbgDecl = DIB.insertDeclare(G, DIs.front()->getVariable(),
+                                       DIs.front()->getExpression(),
+                                       DIs.front()->getDebugLoc(), DIs.front());
+      SeenDbgBBs.insert(DIs.front()->getParent());
+    }
     for (auto *DI : FindDbgDeclareUses(Alloca))
       DI->eraseFromParent();
     replaceDbgUsesWithUndef(Alloca);
 
-    for (Instruction *I : UsersToUpdate)
+    for (Instruction *I : UsersToUpdate) {
       I->replaceUsesOfWith(Alloca, G);
+
+      // After cloning, transformations might not guarantee that all uses
+      // of this alloca are dominated by the already existing dbg.declare's,
+      // compromising the debug quality. Instead of writing another
+      // transformation to patch each clone, go ahead and early populate
+      // basic blocks that use such allocas with more debug info.
+      if (SeenDbgBBs.count(I->getParent()))
+        continue;
+
+      // If there isn't a prior dbg.declare for this alloca, it probably
+      // means the state hasn't changed prior to one of the relevant suspend
+      // point for this frame access.
+      if (!FirstDbgDecl)
+        continue;
+
+      // These instructions are all dominated by the alloca, insert the
+      // dbg.value in the beginning of the BB to enhance debugging
+      // experience and allow values to be inspected as early as possible.
+      // Prefer dbg.value over dbg.declare since it better sets expectations
+      // that control flow can be later changed by other passes.
+      auto *DI = cast<DbgDeclareInst>(FirstDbgDecl);
+      BasicBlock *CurrentBlock = I->getParent();
+      DIB.insertDbgValueIntrinsic(G, DI->getVariable(), DI->getExpression(),
+                                  DI->getDebugLoc(),
+                                  &*CurrentBlock->getFirstInsertionPt());
+      SeenDbgBBs.insert(CurrentBlock);
+    }
   }
   Builder.SetInsertPoint(FramePtr->getNextNode());
   for (const auto &A : FrameData.Allocas) {
@@ -1879,8 +1911,7 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
     for (User *U : Def->users()) {
       auto Inst = cast<Instruction>(U);
       if (Inst->getParent() != CoroBegin->getParent() ||
-          Dom.dominates(CoroBegin, Inst) ||
-          isa<CoroIdAsyncInst>(Inst) /*'fake' use of async context argument*/)
+          Dom.dominates(CoroBegin, Inst))
         continue;
       if (ToMove.insert(Inst))
         Worklist.push_back(Inst);

@@ -10,6 +10,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -282,6 +283,26 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   assert(index.getValue() == 0 && "expected loop region");
   regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
+}
+
+void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<int64_t> &countPerRegion) {
+  assert(countPerRegion.empty());
+  countPerRegion.resize(1);
+
+  auto lb = operands[0].dyn_cast_or_null<IntegerAttr>();
+  auto ub = operands[1].dyn_cast_or_null<IntegerAttr>();
+  auto step = operands[2].dyn_cast_or_null<IntegerAttr>();
+
+  // Loop bounds are not known statically.
+  if (!lb || !ub || !step || step.getValue().getSExtValue() == 0) {
+    countPerRegion[0] = -1;
+    return;
+  }
+
+  countPerRegion[0] =
+      ceilDiv(ub.getValue().getSExtValue() - lb.getValue().getSExtValue(),
+              step.getValue().getSExtValue());
 }
 
 ValueVector mlir::scf::buildLoopNest(

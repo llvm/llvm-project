@@ -76,7 +76,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   const GCNSubtarget *ST;
   const SITargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
-  bool IsGraphicsShader;
+  bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
   unsigned MaxVGPRs;
@@ -88,7 +88,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
     AMDGPU::FeatureFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca,
-    AMDGPU::FeatureUnalignedBufferAccess,
     AMDGPU::FeatureUnalignedScratchAccess,
     AMDGPU::FeatureUnalignedAccessMode,
 
@@ -142,7 +141,7 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()),
         ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
         TLI(ST->getTargetLowering()), CommonTTI(TM, F),
-        IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())),
+        IsGraphics(AMDGPU::isGraphics(F.getCallingConv())),
         MaxVGPRs(ST->getMaxNumVGPRs(
             std::max(ST->getWavesPerEU(F).first,
                      ST->getWavesPerEUForWorkGroup(
@@ -222,7 +221,7 @@ public:
   unsigned getFlatAddressSpace() const {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.
-    if (IsGraphicsShader)
+    if (IsGraphics)
       return -1;
     return AMDGPUAS::FLAT_ADDRESS;
   }

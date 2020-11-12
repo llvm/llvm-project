@@ -227,7 +227,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.attach_commandline_continue_app_exits()
 
-    @expectedFailureNetBSD
     @llgs_test
     def test_attach_commandline_continue_app_exits_llgs(self):
         self.init_llgs_test()
@@ -480,7 +479,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qThreadInfo_contains_thread()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
-    @expectedFailureNetBSD
     @llgs_test
     def test_qThreadInfo_contains_thread_attach_llgs(self):
         self.init_llgs_test()
@@ -540,7 +538,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qThreadInfo_matches_qC()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
-    @expectedFailureNetBSD
     @llgs_test
     def test_qThreadInfo_matches_qC_attach_llgs(self):
         self.init_llgs_test()
@@ -688,7 +685,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.Hg_switches_to_3_threads()
 
     @expectedFailureAll(oslist=["windows"]) # expecting one more thread
-    @expectedFailureNetBSD
     @llgs_test
     def test_Hg_switches_to_3_threads_attach_llgs(self):
         self.init_llgs_test()

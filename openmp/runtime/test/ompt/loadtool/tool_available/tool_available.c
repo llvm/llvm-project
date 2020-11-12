@@ -51,10 +51,8 @@ int main()
 #include <stdio.h>
 #include <omp-tools.h>
 
-int ompt_initialize(
-  ompt_function_lookup_t lookup,
-  ompt_data_t* tool_data)
-{
+int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
+                    ompt_data_t *tool_data) {
   printf("0: NULL_POINTER=%p\n", (void*)NULL);
   return 1; //success
 }

@@ -348,6 +348,10 @@ void OpPassManager::getDependentDialects(DialectRegistry &dialects) const {
   registerDialectsForPipeline(*this, dialects);
 }
 
+OpPassManager::Nesting OpPassManager::getNesting() { return impl->nesting; }
+
+void OpPassManager::setNesting(Nesting nesting) { impl->nesting = nesting; }
+
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
 //===----------------------------------------------------------------------===//

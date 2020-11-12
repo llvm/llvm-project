@@ -32,8 +32,11 @@ class LiveIntervals;
 namespace ARMRI {
 
   enum {
+    // Used for LDRD register pairs
     RegPairOdd  = 1,
-    RegPairEven = 2
+    RegPairEven = 2,
+    // Used to hint for lr in t2DoLoopStart
+    RegLR = 3
   };
 
 } // end namespace ARMRI

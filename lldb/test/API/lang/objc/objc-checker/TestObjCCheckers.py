@@ -23,7 +23,6 @@ class ObjCCheckerTestCase(TestBase):
         # Find the line number to break for main.c.
         self.source_name = 'main.m'
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_objc_checker(self):
         """Test that checkers catch unrecognized selectors"""

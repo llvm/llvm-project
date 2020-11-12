@@ -1433,8 +1433,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
     // Check if alignment requirements for ds_read/write instructions are
     // disabled.
-    if (Subtarget->hasUnalignedDSAccess() &&
-        Subtarget->hasUnalignedAccessMode() &&
+    if (Subtarget->hasUnalignedDSAccessEnabled() &&
         !Subtarget->hasLDSMisalignedBug()) {
       if (IsFast)
         *IsFast = Alignment != Align(2);
@@ -1484,7 +1483,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccess() &&
+  if (Subtarget->hasUnalignedBufferAccessEnabled() &&
       !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
         AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
     // If we have an uniform constant load, it still requires using a slow
@@ -1780,12 +1779,11 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
   return CreateLiveInRegister(DAG, RC, Reg->getRegister(), VT);
 }
 
-static void processShaderInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
-                                   CallingConv::ID CallConv,
-                                   ArrayRef<ISD::InputArg> Ins,
-                                   BitVector &Skipped,
-                                   FunctionType *FType,
-                                   SIMachineFunctionInfo *Info) {
+static void processPSInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
+                               CallingConv::ID CallConv,
+                               ArrayRef<ISD::InputArg> Ins, BitVector &Skipped,
+                               FunctionType *FType,
+                               SIMachineFunctionInfo *Info) {
   for (unsigned I = 0, E = Ins.size(), PSInputNum = 0; I != E; ++I) {
     const ISD::InputArg *Arg = &Ins[I];
 
@@ -2118,26 +2116,28 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // the scratch registers to pass in.
   bool RequiresStackAccess = HasStackObjects || MFI.hasCalls();
 
-  if (RequiresStackAccess && ST.isAmdHsaOrMesa(MF.getFunction())) {
-    // If we have stack objects, we unquestionably need the private buffer
-    // resource. For the Code Object V2 ABI, this will be the first 4 user
-    // SGPR inputs. We can reserve those and use them directly.
+  if (!ST.enableFlatScratch()) {
+    if (RequiresStackAccess && ST.isAmdHsaOrMesa(MF.getFunction())) {
+      // If we have stack objects, we unquestionably need the private buffer
+      // resource. For the Code Object V2 ABI, this will be the first 4 user
+      // SGPR inputs. We can reserve those and use them directly.
 
-    Register PrivateSegmentBufferReg =
-        Info.getPreloadedReg(AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
-    Info.setScratchRSrcReg(PrivateSegmentBufferReg);
-  } else {
-    unsigned ReservedBufferReg = TRI.reservedPrivateSegmentBufferReg(MF);
-    // We tentatively reserve the last registers (skipping the last registers
-    // which may contain VCC, FLAT_SCR, and XNACK). After register allocation,
-    // we'll replace these with the ones immediately after those which were
-    // really allocated. In the prologue copies will be inserted from the
-    // argument to these reserved registers.
+      Register PrivateSegmentBufferReg =
+          Info.getPreloadedReg(AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
+      Info.setScratchRSrcReg(PrivateSegmentBufferReg);
+    } else {
+      unsigned ReservedBufferReg = TRI.reservedPrivateSegmentBufferReg(MF);
+      // We tentatively reserve the last registers (skipping the last registers
+      // which may contain VCC, FLAT_SCR, and XNACK). After register allocation,
+      // we'll replace these with the ones immediately after those which were
+      // really allocated. In the prologue copies will be inserted from the
+      // argument to these reserved registers.
 
-    // Without HSA, relocations are used for the scratch pointer and the
-    // buffer resource setup is always inserted in the prologue. Scratch wave
-    // offset is still in an input SGPR.
-    Info.setScratchRSrcReg(ReservedBufferReg);
+      // Without HSA, relocations are used for the scratch pointer and the
+      // buffer resource setup is always inserted in the prologue. Scratch wave
+      // offset is still in an input SGPR.
+      Info.setScratchRSrcReg(ReservedBufferReg);
+    }
   }
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -2237,7 +2237,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  if (Subtarget->isAmdHsaOS() && AMDGPU::isShader(CallConv)) {
+  if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
         Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
@@ -2250,12 +2250,21 @@ SDValue SITargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
-  bool IsShader = AMDGPU::isShader(CallConv);
+  bool IsGraphics = AMDGPU::isGraphics(CallConv);
   bool IsKernel = AMDGPU::isKernel(CallConv);
   bool IsEntryFunc = AMDGPU::isEntryFunctionCC(CallConv);
 
-  if (IsShader) {
-    processShaderInputArgs(Splits, CallConv, Ins, Skipped, FType, Info);
+  if (IsGraphics) {
+    assert(!Info->hasDispatchPtr() && !Info->hasKernargSegmentPtr() &&
+           (!Info->hasFlatScratchInit() || Subtarget->enableFlatScratch()) &&
+           !Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
+           !Info->hasWorkGroupIDZ() && !Info->hasWorkGroupInfo() &&
+           !Info->hasWorkItemIDX() && !Info->hasWorkItemIDY() &&
+           !Info->hasWorkItemIDZ());
+  }
+
+  if (CallConv == CallingConv::AMDGPU_PS) {
+    processPSInputArgs(Splits, CallConv, Ins, Skipped, FType, Info);
 
     // At least one interpolation mode must be enabled or else the GPU will
     // hang.
@@ -2270,40 +2279,28 @@ SDValue SITargetLowering::LowerFormalArguments(
     // - At least one of PERSP_* (0xF) or LINEAR_* (0x70) must be enabled.
     // - If POS_W_FLOAT (11) is enabled, at least one of PERSP_* must be
     //   enabled too.
-    if (CallConv == CallingConv::AMDGPU_PS) {
-      if ((Info->getPSInputAddr() & 0x7F) == 0 ||
-           ((Info->getPSInputAddr() & 0xF) == 0 &&
-            Info->isPSInputAllocated(11))) {
-        CCInfo.AllocateReg(AMDGPU::VGPR0);
-        CCInfo.AllocateReg(AMDGPU::VGPR1);
-        Info->markPSInputAllocated(0);
-        Info->markPSInputEnabled(0);
-      }
-      if (Subtarget->isAmdPalOS()) {
-        // For isAmdPalOS, the user does not enable some bits after compilation
-        // based on run-time states; the register values being generated here are
-        // the final ones set in hardware. Therefore we need to apply the
-        // workaround to PSInputAddr and PSInputEnable together.  (The case where
-        // a bit is set in PSInputAddr but not PSInputEnable is where the
-        // frontend set up an input arg for a particular interpolation mode, but
-        // nothing uses that input arg. Really we should have an earlier pass
-        // that removes such an arg.)
-        unsigned PsInputBits = Info->getPSInputAddr() & Info->getPSInputEnable();
-        if ((PsInputBits & 0x7F) == 0 ||
-            ((PsInputBits & 0xF) == 0 &&
-             (PsInputBits >> 11 & 1)))
-          Info->markPSInputEnabled(
-              countTrailingZeros(Info->getPSInputAddr(), ZB_Undefined));
-      }
+    if ((Info->getPSInputAddr() & 0x7F) == 0 ||
+        ((Info->getPSInputAddr() & 0xF) == 0 && Info->isPSInputAllocated(11))) {
+      CCInfo.AllocateReg(AMDGPU::VGPR0);
+      CCInfo.AllocateReg(AMDGPU::VGPR1);
+      Info->markPSInputAllocated(0);
+      Info->markPSInputEnabled(0);
     }
-
-    assert(!Info->hasDispatchPtr() &&
-           !Info->hasKernargSegmentPtr() &&
-           (!Info->hasFlatScratchInit() || Subtarget->enableFlatScratch()) &&
-           !Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
-           !Info->hasWorkGroupIDZ() && !Info->hasWorkGroupInfo() &&
-           !Info->hasWorkItemIDX() && !Info->hasWorkItemIDY() &&
-           !Info->hasWorkItemIDZ());
+    if (Subtarget->isAmdPalOS()) {
+      // For isAmdPalOS, the user does not enable some bits after compilation
+      // based on run-time states; the register values being generated here are
+      // the final ones set in hardware. Therefore we need to apply the
+      // workaround to PSInputAddr and PSInputEnable together.  (The case where
+      // a bit is set in PSInputAddr but not PSInputEnable is where the
+      // frontend set up an input arg for a particular interpolation mode, but
+      // nothing uses that input arg. Really we should have an earlier pass
+      // that removes such an arg.)
+      unsigned PsInputBits = Info->getPSInputAddr() & Info->getPSInputEnable();
+      if ((PsInputBits & 0x7F) == 0 ||
+          ((PsInputBits & 0xF) == 0 && (PsInputBits >> 11 & 1)))
+        Info->markPSInputEnabled(
+            countTrailingZeros(Info->getPSInputAddr(), ZB_Undefined));
+    }
   } else if (IsKernel) {
     assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
   } else {
@@ -2450,7 +2447,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   // Start adding system SGPRs.
   if (IsEntryFunc) {
-    allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsShader);
+    allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);
   } else {
     CCInfo.AllocateReg(Info->getScratchRSrcReg());
     allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
@@ -2933,7 +2930,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     report_fatal_error("unsupported libcall legalization");
 
   if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      !CLI.CB->getCalledFunction()) {
+      !CLI.CB->getCalledFunction() && CallConv != CallingConv::AMDGPU_Gfx) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported indirect call to function ");
   }
@@ -2943,11 +2940,19 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                               "unsupported required tail call to function ");
   }
 
-  if (AMDGPU::isShader(MF.getFunction().getCallingConv())) {
-    // Note the issue is with the CC of the calling function, not of the call
+  if (AMDGPU::isShader(CallConv)) {
+    // Note the issue is with the CC of the called function, not of the call
     // itself.
     return lowerUnhandledCall(CLI, InVals,
-                          "unsupported call from graphics shader of function ");
+                              "unsupported call to a shader function ");
+  }
+
+  if (AMDGPU::isShader(MF.getFunction().getCallingConv()) &&
+      CallConv != CallingConv::AMDGPU_Gfx) {
+    // Only allow calls with specific calling conventions.
+    return lowerUnhandledCall(CLI, InVals,
+                              "unsupported calling convention for call from "
+                              "graphics shader of function ");
   }
 
   if (IsTailCall) {
@@ -2978,7 +2983,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
 
-  if (AMDGPUTargetMachine::EnableFixedFunctionABI) {
+  if (AMDGPUTargetMachine::EnableFixedFunctionABI &&
+      CallConv != CallingConv::AMDGPU_Gfx) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
@@ -3007,14 +3013,16 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!IsSibCall) {
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
-    SmallVector<SDValue, 4> CopyFromChains;
+    if (!Subtarget->enableFlatScratch()) {
+      SmallVector<SDValue, 4> CopyFromChains;
 
-    // In the HSA case, this should be an identity copy.
-    SDValue ScratchRSrcReg
-      = DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-    RegsToPass.emplace_back(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
-    CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
-    Chain = DAG.getTokenFactor(DL, CopyFromChains);
+      // In the HSA case, this should be an identity copy.
+      SDValue ScratchRSrcReg
+        = DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
+      RegsToPass.emplace_back(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
+      CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
+      Chain = DAG.getTokenFactor(DL, CopyFromChains);
+    }
   }
 
   MVT PtrVT = MVT::i32;
@@ -3112,7 +3120,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI) {
+  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
+      CallConv != CallingConv::AMDGPU_Gfx) {
     // Copy special input registers after user input arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }

@@ -605,6 +605,12 @@ public:
     return false;
   }
 
+  /// Return the maximum number of "x & (x - 1)" operations that can be done
+  /// instead of deferring to a custom CTPOP.
+  virtual unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const {
+    return 1;
+  }
+
   /// Return true if instruction generated for equality comparison is folded
   /// with instruction generated for signed comparison.
   virtual bool isEqualityCmpFoldedWithSignedCmp() const { return true; }
@@ -4503,6 +4509,10 @@ public:
   // fact that this can be implemented as a ctlz/srl pair, so that the dag
   // combiner can fold the new nodes.
   SDValue lowerCmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) const;
+
+  /// Give targets the chance to reduce the number of distinct addresing modes.
+  ISD::MemIndexType getCanonicalIndexType(ISD::MemIndexType IndexType,
+                                          EVT MemVT, SDValue Offsets) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

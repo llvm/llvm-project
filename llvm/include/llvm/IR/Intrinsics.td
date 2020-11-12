@@ -1188,7 +1188,7 @@ def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
     []>;
 def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
 def int_coro_id_async : Intrinsic<[llvm_token_ty],
-  [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
   []>;
 def int_coro_async_context_alloc : Intrinsic<[llvm_ptr_ty],
     [llvm_ptr_ty, llvm_ptr_ty],
@@ -1575,6 +1575,11 @@ def int_matrix_column_major_store
 // will execute.
 def int_set_loop_iterations :
   DefaultAttrsIntrinsic<[], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
+// Same as the above, but produces a value (the same as the input operand) to
+// be fed into the loop.
+def int_start_loop_iterations :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrNoDuplicate]>;
 
 // Specify that the value given is the number of iterations that the next loop
 // will execute. Also test that the given count is not zero, allowing it to

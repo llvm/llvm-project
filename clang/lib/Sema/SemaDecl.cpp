@@ -5160,7 +5160,7 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
     Diag(DS.getBeginLoc(), diag::ext_no_declarators) << DS.getSourceRange();
 
   // Mock up a declarator.
-  Declarator Dc(DS, DeclaratorContext::MemberContext);
+  Declarator Dc(DS, DeclaratorContext::Member);
   TypeSourceInfo *TInfo = GetTypeForDeclarator(Dc, S);
   assert(TInfo && "couldn't build declarator info for anonymous struct/union");
 
@@ -5257,7 +5257,7 @@ Decl *Sema::BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
   assert(Record && "expected a record!");
 
   // Mock up a declarator.
-  Declarator Dc(DS, DeclaratorContext::TypeNameContext);
+  Declarator Dc(DS, DeclaratorContext::TypeName);
   TypeSourceInfo *TInfo = GetTypeForDeclarator(Dc, S);
   assert(TInfo && "couldn't build declarator info for anonymous struct");
 
@@ -12778,7 +12778,7 @@ Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
   DS.SetTypeSpecType(DeclSpec::TST_auto, IdentLoc, PrevSpec, DiagID,
                      getPrintingPolicy());
 
-  Declarator D(DS, DeclaratorContext::ForContext);
+  Declarator D(DS, DeclaratorContext::ForInit);
   D.SetIdentifier(Ident, IdentLoc);
   D.takeAttributes(Attrs, AttrEnd);
 
@@ -13758,7 +13758,7 @@ void Sema::ActOnFinishKNRParamDeclarations(Scope *S, Declarator &D,
         // Use the identifier location for the type source range.
         DS.SetRangeStart(FTI.Params[i].IdentLoc);
         DS.SetRangeEnd(FTI.Params[i].IdentLoc);
-        Declarator ParamD(DS, DeclaratorContext::KNRTypeListContext);
+        Declarator ParamD(DS, DeclaratorContext::KNRTypeList);
         ParamD.SetIdentifier(FTI.Params[i].Ident, FTI.Params[i].IdentLoc);
         FTI.Params[i].Param = ActOnParamDeclarator(S, ParamD);
       }
@@ -13992,6 +13992,16 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(Attr->getLocation(), diag::err_alias_is_definition) << FD << 1;
     FD->dropAttr<IFuncAttr>();
     FD->setInvalidDecl();
+  }
+
+  if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
+    if (Ctor->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
+        Ctor->isDefaultConstructor() &&
+        Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+      // If this is an MS ABI dllexport default constructor, instantiate any
+      // default arguments.
+      InstantiateDefaultCtorDefaultArgs(Ctor);
+    }
   }
 
   // See if this is a redefinition. If 'will have body' (or similar) is already
@@ -14695,7 +14705,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   (void)Error; // Silence warning.
   assert(!Error && "Error setting up implicit decl!");
   SourceLocation NoLoc;
-  Declarator D(DS, DeclaratorContext::BlockContext);
+  Declarator D(DS, DeclaratorContext::Block);
   D.AddTypeInfo(DeclaratorChunk::getFunction(/*HasProto=*/false,
                                              /*IsAmbiguous=*/false,
                                              /*LParenLoc=*/NoLoc,

@@ -280,11 +280,6 @@ def FeatureNV : SubtargetFeature<
     "nv", "HasNV", "true",
     "Enable v8.4-A Nested Virtualization Enchancement">;
 
-def FeatureRASv8_4 : SubtargetFeature<
-    "rasv8_4", "HasRASv8_4", "true",
-    "Enable v8.4-A Reliability, Availability and Serviceability extension",
-    [FeatureRAS]>;
-
 def FeatureMPAM : SubtargetFeature<
     "mpam", "HasMPAM", "true",
     "Enable v8.4-A Memory system Partitioning and Monitoring extension">;
@@ -427,7 +422,7 @@ def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
 
 def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
   "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd,
-  FeatureNV, FeatureRASv8_4, FeatureMPAM, FeatureDIT,
+  FeatureNV, FeatureMPAM, FeatureDIT,
   FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeaturePMU, FeatureTLB_RMI,
   FeatureFMI, FeatureRCPC_IMMO]>;
 
@@ -454,7 +449,7 @@ def HasV8_0rOps : SubtargetFeature<
   FeatureComplxNum, FeatureCCIDX, FeatureJS,
   FeaturePA, FeatureRCPC,
   //v8.4
-  FeatureDotProd, FeatureFP16FML, FeatureRASv8_4, FeatureTRACEV8_4,
+  FeatureDotProd, FeatureFP16FML, FeatureTRACEV8_4,
   FeatureTLB_RMI, FeatureFMI, FeatureDIT, FeatureSEL2, FeatureRCPC_IMMO,
   //v8.5
   FeatureSSBS, FeaturePredRes, FeatureSB, FeatureSpecRestrict]>;

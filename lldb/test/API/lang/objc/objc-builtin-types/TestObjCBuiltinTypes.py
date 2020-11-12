@@ -20,7 +20,6 @@ class TestObjCBuiltinTypes(TestBase):
         self.break_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     #<rdar://problem/10591460> [regression] Can't print ivar value: error: reference to 'id' is ambiguous
     def test_with_python_api(self):

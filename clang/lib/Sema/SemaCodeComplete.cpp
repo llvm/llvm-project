@@ -5395,8 +5395,8 @@ void Sema::CodeCompleteFunctionQualifiers(DeclSpec &DS, Declarator &D,
   AddTypeQualifierResults(DS, Results, LangOpts);
   if (LangOpts.CPlusPlus11) {
     Results.AddResult("noexcept");
-    if (D.getContext() == DeclaratorContext::MemberContext &&
-        !D.isCtorOrDtor() && !D.isStaticMember()) {
+    if (D.getContext() == DeclaratorContext::Member && !D.isCtorOrDtor() &&
+        !D.isStaticMember()) {
       if (!VS || !VS->isFinalSpecified())
         Results.AddResult("final");
       if (!VS || !VS->isOverrideSpecified())

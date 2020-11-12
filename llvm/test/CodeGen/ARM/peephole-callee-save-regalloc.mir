@@ -1,0 +1,45 @@
+# RUN: llc -mtriple=thumbv8 -run-pass=peephole-opt %s -o - | FileCheck %s
+
+# Test case for PR 47980:
+# Ensure that peephole optimization to fold move immediate doesn't unconstrain
+# the register class of the consumer.
+#
+# Check that register class for %5 is unchanged as 'tcgpr'
+# CHECK: { id: 5, class: tcgpr, preferred-register: '' }
+# CHECK: TCRETURNri killed %5
+
+--- |
+  define i32 @foo(i32 %in) {
+    ret i32 undef
+  }
+...
+---
+name:            foo
+registers:
+  - { id: 0, class: gpr}
+  - { id: 1, class: gpr }
+  - { id: 2, class: rgpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: rgpr }
+  - { id: 5, class: tcgpr }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+  - { reg: '$r2', virtual-reg: '%2' }
+  - { reg: '$r3', virtual-reg: '%3' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $r0, $r1, $r2, $r3
+    %0 = COPY $r0
+    %1 = COPY $r1
+    %2 = COPY $r2
+    %3 = COPY $r3
+
+    %4 = t2MOVi32imm 270337
+    %5 = t2ADDrr killed %2, killed %4, 14, $noreg, $noreg
+    $r0 = COPY %0
+    $r1 = COPY %1
+    $r2 = COPY %2
+    $r3 = COPY %3
+    TCRETURNri killed %5, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
+...

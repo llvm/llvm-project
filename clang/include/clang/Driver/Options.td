@@ -245,9 +245,11 @@ def clang_ignored_gcc_optimization_f_Group : OptionGroup<
 // Args.hasArg(OPT_ffoo) is used to check that the flag is enabled.
 // This is useful if the option is usually disabled.
 multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
-                      string help="", list<OptionFlag> flags=[]> {
+                      string help="", list<OptionFlag> flags=[], code keypath="",
+                      DefaultAnyOf defaults = DefaultAnyOf<[]>> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<!listconcat([CC1Option], flags)>,
-               Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>;
+               Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>,
+               MarshallingInfoFlag<keypath, defaults>;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<flags>,
                Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
 }
@@ -255,11 +257,13 @@ multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
 // A boolean option which is opt-out in CC1. The negative option exists in CC1 and
 // Args.hasArg(OPT_fno_foo) is used to check that the flag is disabled.
 multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
-                       string help="", list<OptionFlag> flags=[]> {
+                       string help="", list<OptionFlag> flags=[], code keypath="",
+                       DefaultAnyOf defaults = DefaultAnyOf<[]>> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<flags>,
                Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<!listconcat([CC1Option], flags)>,
-               Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
+               Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>,
+               MarshallingInfoFlag<keypath, defaults>;
 }
 
 /////////
@@ -377,7 +381,7 @@ def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
 
 // Standard Options
 
-def _HASH_HASH_HASH : Flag<["-"], "###">, Flags<[NoXarchOption, CoreOption]>,
+def _HASH_HASH_HASH : Flag<["-"], "###">, Flags<[NoXarchOption, CoreOption, FlangOption]>,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
     Flags<[NoXarchOption, CoreOption]>;
@@ -563,27 +567,36 @@ def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>, Flags<[
 def cl_strict_aliasing : Flag<["-"], "cl-strict-aliasing">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. This option is added for compatibility with OpenCL 1.0.">;
 def cl_single_precision_constant : Flag<["-"], "cl-single-precision-constant">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Treat double precision floating-point constant as single precision constant.">;
+  HelpText<"OpenCL only. Treat double precision floating-point constant as single precision constant.">,
+  MarshallingInfoFlag<"LangOpts->SinglePrecisionConstants">;
 def cl_finite_math_only : Flag<["-"], "cl-finite-math-only">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">;
+  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">,
+  MarshallingInfoFlag<"LangOpts->CLFiniteMathOnly">;
 def cl_kernel_arg_info : Flag<["-"], "cl-kernel-arg-info">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Generate kernel argument metadata.">;
+  HelpText<"OpenCL only. Generate kernel argument metadata.">,
+  MarshallingInfoFlag<"CodeGenOpts.EmitOpenCLArgMetadata">;
 def cl_unsafe_math_optimizations : Flag<["-"], "cl-unsafe-math-optimizations">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Allow unsafe floating-point optimizations.  Also implies -cl-no-signed-zeros and -cl-mad-enable.">;
+  HelpText<"OpenCL only. Allow unsafe floating-point optimizations.  Also implies -cl-no-signed-zeros and -cl-mad-enable.">,
+  MarshallingInfoFlag<"LangOpts->CLUnsafeMath">;
 def cl_fast_relaxed_math : Flag<["-"], "cl-fast-relaxed-math">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Sets -cl-finite-math-only and -cl-unsafe-math-optimizations, and defines __FAST_RELAXED_MATH__.">;
+  HelpText<"OpenCL only. Sets -cl-finite-math-only and -cl-unsafe-math-optimizations, and defines __FAST_RELAXED_MATH__.">,
+  MarshallingInfoFlag<"LangOpts->FastRelaxedMath">;
 def cl_mad_enable : Flag<["-"], "cl-mad-enable">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Allow use of less precise MAD computations in the generated binary.">;
+  HelpText<"OpenCL only. Allow use of less precise MAD computations in the generated binary.">,
+  MarshallingInfoFlag<"CodeGenOpts.LessPreciseFPMAD", DefaultAnyOf<[cl_unsafe_math_optimizations, cl_fast_relaxed_math]>>;
 def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">;
+  HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
+  MarshallingInfoFlag<"LangOpts->CLNoSignedZero">;
 def cl_std_EQ : Joined<["-"], "cl-std=">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL language standard to compile for.">, Values<"cl,CL,cl1.1,CL1.1,cl1.2,CL1.2,cl2.0,CL2.0,cl3.0,CL3.0,clc++,CLC++">;
+  HelpText<"OpenCL language standard to compile for.">, Values<"cl,CL,cl1.0,CL1.0,cl1.1,CL1.1,cl1.2,CL1.2,cl2.0,CL2.0,cl3.0,CL3.0,clc++,CLC++">;
 def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">, Group<opencl_Group>,
   HelpText<"OpenCL only. Allow denormals to be flushed to zero.">;
 def cl_fp32_correctly_rounded_divide_sqrt : Flag<["-"], "cl-fp32-correctly-rounded-divide-sqrt">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded.">;
+  HelpText<"OpenCL only. Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded.">,
+  MarshallingInfoFlag<"CodeGenOpts.CorrectlyRoundedDivSqrt">;
 def cl_uniform_work_group_size : Flag<["-"], "cl-uniform-work-group-size">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Defines that the global work-size be a multiple of the work-group size specified to clEnqueueNDRangeKernel">;
+  HelpText<"OpenCL only. Defines that the global work-size be a multiple of the work-group size specified to clEnqueueNDRangeKernel">,
+  MarshallingInfoFlag<"CodeGenOpts.UniformWGSize">;
 def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[NoXarchOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
@@ -890,7 +903,7 @@ def fdiagnostics_color : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
 def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Flags<[CoreOption, CC1Option]>, HelpText<"Use ANSI escape codes for diagnostics">,
-  MarshallingInfoFlag<"DiagnosticOpts->UseANSIEscapeCodes", "false">;
+  MarshallingInfoFlag<"DiagnosticOpts->UseANSIEscapeCodes">;
 def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
   MetaVarName<"<arg>">;
@@ -1002,7 +1015,11 @@ def ffp_model_EQ : Joined<["-"], "ffp-model=">, Group<f_Group>, Flags<[NoXarchOp
   HelpText<"Controls the semantics of floating-point calculations.">;
 def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Specifies the exception behavior of floating-point operations.">;
-defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations">;
+defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations", "", "", [],
+  "LangOpts->FastMath", DefaultAnyOf<[cl_fast_relaxed_math]>>;
+def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">, Flags<[CC1Option]>,
+  HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
+  MarshallingInfoFlag<"LangOpts->UnsafeFPMath", DefaultAnyOf<[cl_unsafe_math_optimizations, ffast_math]>>;
 defm math_errno : OptInFFlag<"math-errno", "Require math functions to indicate errors by setting errno">;
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>, Flags<[CoreOption]>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
@@ -1215,16 +1232,14 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
-def freciprocal_math :
-  Flag<["-"], "freciprocal-math">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Allow division operations to be reassociated">;
-def fno_reciprocal_math : Flag<["-"], "fno-reciprocal-math">, Group<f_Group>;
-def ffinite_math_only : Flag<["-"], "ffinite-math-only">, Group<f_Group>, Flags<[CC1Option]>;
-def fno_finite_math_only : Flag<["-"], "fno-finite-math-only">, Group<f_Group>;
-def fsigned_zeros : Flag<["-"], "fsigned-zeros">, Group<f_Group>;
-def fno_signed_zeros :
-  Flag<["-"], "fno-signed-zeros">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Allow optimizations that ignore the sign of floating point zeros">;
+defm reciprocal_math : OptInFFlag<"reciprocal-math", "Allow division operations to be reassociated", "", "", [],
+  "LangOpts->AllowRecip", DefaultAnyOf<[menable_unsafe_fp_math]>>;
+def fapprox_func : Flag<["-"], "fapprox-func">, Group<f_Group>, Flags<[CC1Option, NoDriverOption]>,
+  MarshallingInfoFlag<"LangOpts->ApproxFunc", DefaultAnyOf<[menable_unsafe_fp_math]>>;
+defm finite_math_only : OptInFFlag<"finite-math-only", "", "", "", [],
+  "LangOpts->FiniteMathOnly", DefaultAnyOf<[cl_finite_math_only, ffast_math]>>;
+defm signed_zeros : OptOutFFlag<"signed-zeros", "Allow optimizations that ignore the sign of floating point zeros", "", "", [],
+  "LangOpts->NoSignedZero", DefaultAnyOf<[cl_no_signed_zeros, menable_unsafe_fp_math]>>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;
 def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Group<f_Group>;
 def fhonor_infinities : Flag<["-"], "fhonor-infinities">, Group<f_Group>;
@@ -1253,7 +1268,8 @@ defm rewrite_includes : OptInFFlag<"rewrite-includes", "">;
 
 defm delete_null_pointer_checks : OptOutFFlag<"delete-null-pointer-checks",
   "Treat usage of null pointers as undefined behavior (default)",
-  "Do not treat usage of null pointers as undefined behavior">;
+  "Do not treat usage of null pointers as undefined behavior",
+  "", [CoreOption]>;
 
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
@@ -1439,6 +1455,11 @@ def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Grou
 def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
   Flags<[NoXarchOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the prebuilt module path">;
+def fprebuilt_implicit_modules : Flag<["-"], "fprebuilt-implicit-modules">, Group<f_Group>,
+  Flags<[NoXarchOption, CC1Option]>,
+  HelpText<"Look up implicit modules in the prebuilt module path">;
+def fno_prebuilt_implicit_modules : Flag<["-"], "fno_prebuilt-implicit-modules">, Group<f_Group>,
+  Flags<[NoXarchOption, CC1Option]>;
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">;
@@ -3847,14 +3868,14 @@ def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
 def mdisable_tail_calls : Flag<["-"], "mdisable-tail-calls">,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">;
 def menable_no_infinities : Flag<["-"], "menable-no-infs">,
-  HelpText<"Allow optimization to assume there are no infinities.">;
+  HelpText<"Allow optimization to assume there are no infinities.">,
+  MarshallingInfoFlag<"LangOpts->NoHonorInfs", DefaultAnyOf<[ffinite_math_only]>>;
 def menable_no_nans : Flag<["-"], "menable-no-nans">,
-  HelpText<"Allow optimization to assume there are no NaNs.">;
-def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">,
-  HelpText<"Allow unsafe floating-point math optimizations which may decrease "
-           "precision">;
+  HelpText<"Allow optimization to assume there are no NaNs.">,
+  MarshallingInfoFlag<"LangOpts->NoHonorNaNs", DefaultAnyOf<[ffinite_math_only]>>;
 def mreassociate : Flag<["-"], "mreassociate">,
-  HelpText<"Allow reassociation transformations for floating-point instructions">;
+  HelpText<"Allow reassociation transformations for floating-point instructions">,
+  MarshallingInfoFlag<"LangOpts->AllowFPReassoc", DefaultAnyOf<[menable_unsafe_fp_math]>>;
 def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,
@@ -4405,7 +4426,7 @@ def fmodules_hash_content : Flag<["-"], "fmodules-hash-content">,
 def fmodules_strict_context_hash : Flag<["-"], "fmodules-strict-context-hash">,
   HelpText<"Enable hashing of all compiler options that could impact the "
            "semantics of a module in an implicit build">,
-  MarshallingInfoFlag<"HeaderSearchOpts->ModulesStrictContextHash", "false">;
+  MarshallingInfoFlag<"HeaderSearchOpts->ModulesStrictContextHash">;
 def c_isystem : JoinedOrSeparate<["-"], "c-isystem">, MetaVarName<"<directory>">,
   HelpText<"Add directory to the C SYSTEM include search path">;
 def objc_isystem : JoinedOrSeparate<["-"], "objc-isystem">,
