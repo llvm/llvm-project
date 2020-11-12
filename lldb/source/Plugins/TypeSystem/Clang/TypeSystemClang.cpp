@@ -1995,6 +1995,24 @@ TypeSystemClang::GetDeclarationName(llvm::StringRef name,
   return getASTContext().DeclarationNames.getCXXOperatorName(op_kind);
 }
 
+PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
+  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
+  printing_policy.SuppressTagKeyword = true;
+  // Inline namespaces are important for some type formatters (e.g., libc++
+  // and libstdc++ are differentiated by their inline namespaces).
+  printing_policy.SuppressInlineNamespace = false;
+  printing_policy.SuppressUnwrittenScope = false;
+  return printing_policy;
+}
+
+std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl) {
+  clang::PrintingPolicy printing_policy = GetTypePrintingPolicy();
+  std::string result;
+  llvm::raw_string_ostream os(result);
+  named_decl->printQualifiedName(os, printing_policy);
+  return result;
+}
+
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, const CompilerType &function_clang_type,
@@ -3656,12 +3674,10 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
   // For a typedef just return the qualified name.
   if (const auto *typedef_type = qual_type->getAs<clang::TypedefType>()) {
     const clang::TypedefNameDecl *typedef_decl = typedef_type->getDecl();
-    return ConstString(typedef_decl->getQualifiedNameAsString());
+    return ConstString(GetTypeNameForDecl(typedef_decl));
   }
 
-  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
-  printing_policy.SuppressTagKeyword = true;
-  return ConstString(qual_type.getAsString(printing_policy));
+  return ConstString(qual_type.getAsString(GetTypePrintingPolicy()));
 }
 
 ConstString
@@ -3675,6 +3691,7 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type,
   printing_policy.SuppressTagKeyword = true;
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
+  printing_policy.SuppressInlineNamespace = true;
   return ConstString(qual_type.getAsString(printing_policy));
 }
 
@@ -8939,8 +8956,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       if (level == eDescriptionLevelVerbose)
         typedef_decl->dump(llvm_ostrm);
       else {
-        std::string clang_typedef_name(
-            typedef_decl->getQualifiedNameAsString());
+        std::string clang_typedef_name(GetTypeNameForDecl(typedef_decl));
         if (!clang_typedef_name.empty()) {
           s->PutCString("typedef ");
           s->PutCString(clang_typedef_name);
@@ -9417,8 +9433,7 @@ TypeSystemClang::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
     if (named_decl)
-      return ConstString(
-          llvm::StringRef(named_decl->getQualifiedNameAsString()));
+      return ConstString(GetTypeNameForDecl(named_decl));
   }
   return ConstString();
 }
