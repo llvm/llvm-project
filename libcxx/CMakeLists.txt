@@ -521,8 +521,12 @@ function(cxx_add_basic_build_flags target)
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
-  # because they are provided by the dylib itself.
-  target_add_compile_flags_if_supported(${target} PRIVATE -faligned-allocation)
+  # because they are provided by the dylib itself with the excepton of z/OS.
+  if (ZOS)
+    target_add_compile_flags_if_supported(${target} PRIVATE -fno-aligned-allocation)
+  else()
+    target_add_compile_flags_if_supported(${target} PRIVATE -faligned-allocation)
+  endif()
 
   # On all systems the system c++ standard library headers need to be excluded.
   # MSVC only has -X, which disables all default includes; including the crt.
