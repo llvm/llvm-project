@@ -494,8 +494,8 @@ public:
     return LDSBankCount;
   }
 
-  unsigned getMaxPrivateElementSize() const {
-    return MaxPrivateElementSize;
+  unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
+    return (ForBufferRSrc || !enableFlatScratch()) ? MaxPrivateElementSize : 16;
   }
 
   unsigned getConstantBusLimit(unsigned Opcode) const;

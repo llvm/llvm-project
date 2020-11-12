@@ -8618,7 +8618,8 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         return SplitVectorStore(Op, DAG);
       return SDValue();
     case 16:
-      if (NumElements > 4 || NumElements == 3)
+      if (NumElements > 4 ||
+          (NumElements == 3 && !Subtarget->enableFlatScratch()))
         return SplitVectorStore(Op, DAG);
       return SDValue();
     default:

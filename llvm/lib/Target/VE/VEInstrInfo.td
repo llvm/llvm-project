@@ -2221,3 +2221,6 @@ def : Pat<(i64 (and i64:$val, 0xffffffff)),
 
 // Vector instructions.
 include "VEInstrVec.td"
+
+// The vevlintrin
+include "VEInstrIntrinsicVL.td"

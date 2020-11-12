@@ -6589,7 +6589,7 @@ uint64_t SIInstrInfo::getScratchRsrcWords23() const {
 
   // GFX9 doesn't have ELEMENT_SIZE.
   if (ST.getGeneration() <= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    uint64_t EltSizeValue = Log2_32(ST.getMaxPrivateElementSize()) - 1;
+    uint64_t EltSizeValue = Log2_32(ST.getMaxPrivateElementSize(true)) - 1;
     Rsrc23 |= EltSizeValue << AMDGPU::RSRC_ELEMENT_SIZE_SHIFT;
   }
 
