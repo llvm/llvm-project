@@ -508,10 +508,8 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   if (Chunks.count("rela")) {
     Reader RelationsReader(Chunks.lookup("rela"));
     RelationSlab::Builder Relations;
-    while (!RelationsReader.eof()) {
-      auto Relation = readRelation(RelationsReader);
-      Relations.insert(Relation);
-    }
+    while (!RelationsReader.eof())
+      Relations.insert(readRelation(RelationsReader));
     if (RelationsReader.err())
       return error("malformed or truncated relations");
     Result.Relations = std::move(Relations).build();
