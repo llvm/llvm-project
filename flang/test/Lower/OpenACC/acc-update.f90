@@ -67,6 +67,6 @@ subroutine acc_update
 !CHECK: acc.update device_type([[DEVTYPE1]], [[DEVTYPE2]] : i32, i32) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc update host(a) device_type(*)
-!CHECK: [[DEVTYPE3:%.*]] = constant -1 : i32
-!CHECK: acc.update device_type([[DEVTYPE3]] : i32) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
+!CHECK: [[DEVTYPE3:%.*]] = constant -1 : index
+!CHECK: acc.update device_type([[DEVTYPE3]] : index) host([[A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 end subroutine acc_update
