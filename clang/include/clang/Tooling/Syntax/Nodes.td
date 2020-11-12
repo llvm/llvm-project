@@ -23,6 +23,15 @@ def TranslationUnit : Unconstrained {
   }];
 }
 
+def UnqualifiedId : External<Tree> {}
+
+// Lists
+def List : External<Tree> {}
+def DeclaratorList : External<List> {}
+def ParameterDeclarationList : External<List> {}
+def CallArguments : External<List> {}
+def NestedNameSpecifier : External<List> {}
+
 def Expression : Alternatives {
   let documentation = [{
     A base class for all expressions. Note that expressions are not statements,
@@ -34,7 +43,17 @@ def UnaryOperatorExpression : External<Tree> {}
 def PrefixUnaryOperatorExpression : External<UnaryOperatorExpression> {}
 def PostfixUnaryOperatorExpression : External<UnaryOperatorExpression> {}
 def BinaryOperatorExpression : External<Expression> {}
-def ParenExpression : External<Expression> {}
+def ParenExpression : Sequence<Expression> {
+  let documentation = [{
+    Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
+    e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
+  }];
+  let children = [
+    Role<"OpenParen", Token<"l_paren">>,
+    Role<"SubExpression", Expression>,
+    Role<"CloseParen", Token<"r_paren">>,
+  ];
+}
 def LiteralExpression : External<Expression> {}
 def IntegerLiteralExpression : External<LiteralExpression> {}
 def CharacterLiteralExpression : External<LiteralExpression> {}
@@ -47,10 +66,62 @@ def IntegerUserDefinedLiteralExpression : External<UserDefinedLiteralExpression>
 def FloatUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
 def CharUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
 def StringUserDefinedLiteralExpression : External<UserDefinedLiteralExpression> {}
-def IdExpression : External<Expression> {}
-def MemberExpression : External<Expression> {}
-def ThisExpression : External<Expression> {}
-def CallExpression : External<Expression> {}
+def IdExpression : Sequence<Expression> {
+  let documentation = [{
+    Models an `id-expression`, e.g. `std::vector<int>::size`.
+    C++ [expr.prim.id]
+    id-expression:
+      unqualified-id
+      qualified-id
+    qualified-id:
+      nested-name-specifier template_opt unqualified-id
+  }];
+  let children = [
+    Role<"Qualifier", Optional<NestedNameSpecifier>>,
+    Role<"TemplateKeyword", Optional<Keyword<"template">>>,
+    Role<"UnqualifiedId", UnqualifiedId>,
+  ];
+}
+def MemberExpression : Sequence<Expression> {
+  let documentation = [{
+    Models a class member access. C++ [expr.ref]
+    member-expression:
+      expression -> template_opt id-expression
+      expression .  template_opt id-expression
+    e.g. `x.a`, `xp->a`
+
+    Note: An implicit member access inside a class, i.e. `a` instead of
+    `this->a`, is an `id-expression`.
+  }];
+  let children = [
+    Role<"Object", Expression>,
+    Role<"AccessToken", AnyToken<["period","arrow"]>>,
+    Role<"TemplateKeyword", Optional<Keyword<"template">>>,
+    Role<"Member", IdExpression>,
+  ];
+}
+def ThisExpression : Sequence<Expression> {
+  let documentation = [{
+    Models a this expression `this`. C++ [expr.prim.this]
+  }];
+  let children = [
+    Role<"IntroducerKeyword", Keyword<"this">>,
+  ];
+}
+def CallExpression : Sequence<Expression> {
+  let documentation = [{
+    A function call. C++ [expr.call]
+    call-expression:
+      expression '(' call-arguments ')'
+    e.g `f(1, '2')` or `this->Base::f()`
+  }];
+  let children = [
+    Role<"Callee", Expression>,
+    Role<"OpenParen", Token<"l_paren">>,
+    Role<"Arguments", CallArguments>,
+    Role<"CloseParen", Token<"r_paren">>,
+  ];
+}
 
 // Statements.
 def Statement : External<Tree> {}
@@ -94,14 +165,6 @@ def ArraySubscript : External<Tree> {}
 def TrailingReturnType : External<Tree> {}
 def ParametersAndQualifiers : External<Tree> {}
 def MemberPointer : External<Tree> {}
-def UnqualifiedId : External<Tree> {}
-
-// Lists
-def List : External<Tree> {}
-def DeclaratorList : External<List> {}
-def ParameterDeclarationList : External<List> {}
-def CallArguments : External<List> {}
-def NestedNameSpecifier : External<List> {}
 
 // Name Specifiers.
 def NameSpecifier : Alternatives {

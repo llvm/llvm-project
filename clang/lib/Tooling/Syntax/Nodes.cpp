@@ -196,58 +196,6 @@ syntax::DeclaratorList::getDeclaratorsAndCommas() {
   return Children;
 }
 
-syntax::Expression *syntax::MemberExpression::getObject() {
-  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Object));
-}
-
-syntax::Leaf *syntax::MemberExpression::getTemplateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::TemplateKeyword));
-}
-
-syntax::Leaf *syntax::MemberExpression::getAccessToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::AccessToken));
-}
-
-syntax::IdExpression *syntax::MemberExpression::getMember() {
-  return cast_or_null<syntax::IdExpression>(
-      findChild(syntax::NodeRole::Member));
-}
-
-syntax::NestedNameSpecifier *syntax::IdExpression::getQualifier() {
-  return cast_or_null<syntax::NestedNameSpecifier>(
-      findChild(syntax::NodeRole::Qualifier));
-}
-
-syntax::Leaf *syntax::IdExpression::getTemplateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::TemplateKeyword));
-}
-
-syntax::UnqualifiedId *syntax::IdExpression::getUnqualifiedId() {
-  return cast_or_null<syntax::UnqualifiedId>(
-      findChild(syntax::NodeRole::UnqualifiedId));
-}
-
-syntax::Leaf *syntax::ParenExpression::getOpenParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::Expression *syntax::ParenExpression::getSubExpression() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::SubExpression));
-}
-
-syntax::Leaf *syntax::ParenExpression::getCloseParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
-}
-
-syntax::Leaf *syntax::ThisExpression::getThisKeyword() {
-  return cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
 syntax::Leaf *syntax::LiteralExpression::getLiteralToken() {
   return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::LiteralToken));
 }
@@ -272,23 +220,6 @@ syntax::Leaf *syntax::BinaryOperatorExpression::getOperatorToken() {
 syntax::Expression *syntax::BinaryOperatorExpression::getRhs() {
   return cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::RightHandSide));
-}
-
-syntax::Expression *syntax::CallExpression::getCallee() {
-  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Callee));
-}
-
-syntax::Leaf *syntax::CallExpression::getOpenParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::CallArguments *syntax::CallExpression::getArguments() {
-  return cast_or_null<syntax::CallArguments>(
-      findChild(syntax::NodeRole::Arguments));
-}
-
-syntax::Leaf *syntax::CallExpression::getCloseParen() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
 }
 
 syntax::Leaf *syntax::SwitchStatement::getSwitchKeyword() {
