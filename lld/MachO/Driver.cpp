@@ -312,6 +312,7 @@ static InputFile *addFile(StringRef path) {
     newFile = make<ObjFile>(mbref);
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
+  case file_magic::macho_dynamically_linked_shared_lib_stub:
     newFile = make<DylibFile>(mbref);
     break;
   case file_magic::tapi_file: {
