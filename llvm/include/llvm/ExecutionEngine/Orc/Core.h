@@ -1536,7 +1536,14 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
     return Error::success();
   } else
     DEBUG_WITH_TYPE("orc", {
-      dbgs() << "Defining MU " << MU->getName() << " for " << getName() << "\n";
+      dbgs() << "Defining MU " << MU->getName() << " for " << getName()
+             << " (tracker: ";
+      if (RT == getDefaultResourceTracker())
+        dbgs() << "default)";
+      else if (RT)
+        dbgs() << RT.get() << ")\n";
+      else
+        dbgs() << "0x0, default will be used)\n";
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
@@ -1570,7 +1577,14 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU,
     return Error::success();
   } else
     DEBUG_WITH_TYPE("orc", {
-      dbgs() << "Defining MU " << MU->getName() << " for " << getName() << "\n";
+      dbgs() << "Defining MU " << MU->getName() << " for " << getName()
+             << " (tracker: ";
+      if (RT == getDefaultResourceTracker())
+        dbgs() << "default)";
+      else if (RT)
+        dbgs() << RT.get() << ")\n";
+      else
+        dbgs() << "0x0, default will be used)\n";
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
