@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -O3 -fno-experimental-new-pass-manager  -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LEGACY
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -O3 -fexperimental-new-pass-manager  -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NEWPM
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -O3 -fno-experimental-new-pass-manager  -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -O3 -fexperimental-new-pass-manager  -o - | FileCheck %s
 // RUN: %clang_cc1 %s -triple=x86_64-windows-gnu -emit-llvm -o - | FileCheck %s -check-prefix MINGW64
 struct A {
   virtual int vf1() { return 1; }
