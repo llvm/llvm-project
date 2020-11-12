@@ -1914,9 +1914,17 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::LoadOp load, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto ty = convertType(load.getType());
-    auto at = load.getAttrs();
-    rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(load, ty, operands, at);
+    // fir.box is a special case because it is considered as an ssa values in
+    // fir, but it is lowered as a pointer to a descriptor. So fir.ref<fir.box>
+    // and fir.box end up being the same llvm types and loading a fir.ref<box>
+    // is actually a no op in LLVM.
+    if (load.getType().isa<fir::BoxType>()) {
+      rewriter.replaceOp(load, operands[0]);
+    } else {
+      auto ty = convertType(load.getType());
+      auto at = load.getAttrs();
+      rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(load, ty, operands, at);
+    }
     return success();
   }
 };
