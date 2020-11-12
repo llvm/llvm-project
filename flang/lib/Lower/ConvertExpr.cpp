@@ -440,7 +440,7 @@ private:
     } else {
       static_assert(TC == Fortran::common::TypeCategory::Complex,
                     "Expected numeric type");
-      return createBinaryOp<fir::NegcOp>(op);
+      return builder.create<fir::NegcOp>(getLoc(), input);
     }
   }
 
@@ -572,12 +572,6 @@ private:
     TODO("");
   }
 
-  mlir::Value createComplexCompare(mlir::Value cplx1, mlir::Value cplx2,
-                                   bool eq) {
-    return Fortran::lower::ComplexExprHelper{builder, getLoc()}
-        .createComplexCompare(cplx1, cplx2, eq);
-  }
-
   template <Fortran::common::TypeCategory TC, int KIND>
   fir::ExtendedValue
   genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC, KIND>>
@@ -587,14 +581,7 @@ private:
     } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
       return createFltCmpOp<fir::CmpfOp>(op, translateFloatRelational(op.opr));
     } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
-      bool eq{op.opr == Fortran::common::RelationalOperator::EQ};
-      if (!eq && op.opr != Fortran::common::RelationalOperator::NE)
-        llvm_unreachable("relation undefined for complex");
-      auto lhs = genunbox(op.left());
-      auto rhs = genunbox(op.right());
-      if (!lhs || !rhs)
-        TODO("Array expression comparisons");
-      return createComplexCompare(lhs, rhs, eq);
+      return createFltCmpOp<fir::CmpcOp>(op, translateFloatRelational(op.opr));
     } else {
       static_assert(TC == Fortran::common::TypeCategory::Character);
       return createCharCompare(op, translateRelational(op.opr));
@@ -615,7 +602,7 @@ private:
     auto operand = genunbox(convert.left());
     if (!operand)
       TODO("Array expression conversion");
-    return builder.createConvert(getLoc(), ty, operand);
+    return builder.convertWithSemantics(getLoc(), ty, operand);
   }
 
   template <typename A>

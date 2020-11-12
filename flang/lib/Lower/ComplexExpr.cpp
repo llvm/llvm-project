@@ -38,21 +38,3 @@ mlir::Value Fortran::lower::ComplexExprHelper::createComplex(mlir::Type cplxTy,
   mlir::Value und = builder.create<fir::UndefOp>(loc, cplxTy);
   return insert<Part::Imag>(insert<Part::Real>(und, real), imag);
 }
-
-mlir::Value Fortran::lower::ComplexExprHelper::createComplexCompare(
-    mlir::Value cplx1, mlir::Value cplx2, bool eq) {
-  auto real1 = extract<Part::Real>(cplx1);
-  auto real2 = extract<Part::Real>(cplx2);
-  auto imag1 = extract<Part::Imag>(cplx1);
-  auto imag2 = extract<Part::Imag>(cplx2);
-
-  mlir::CmpFPredicate predicate =
-      eq ? mlir::CmpFPredicate::UEQ : mlir::CmpFPredicate::UNE;
-  mlir::Value realCmp =
-      builder.create<mlir::CmpFOp>(loc, predicate, real1, real2);
-  mlir::Value imagCmp =
-      builder.create<mlir::CmpFOp>(loc, predicate, imag1, imag2);
-
-  return eq ? builder.create<mlir::AndOp>(loc, realCmp, imagCmp).getResult()
-            : builder.create<mlir::OrOp>(loc, realCmp, imagCmp).getResult();
-}
