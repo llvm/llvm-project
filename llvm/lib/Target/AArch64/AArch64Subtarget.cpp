@@ -368,3 +368,8 @@ unsigned AArch64Subtarget::getMinSVEVectorSizeInBits() const {
     return (SVEVectorBitsMin / 128) * 128;
   return (std::min(SVEVectorBitsMin, SVEVectorBitsMax) / 128) * 128;
 }
+
+bool AArch64Subtarget::useSVEForFixedLengthVectors() const {
+  // Prefer NEON unless larger SVE registers are available.
+  return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
+}
