@@ -198,8 +198,7 @@ private:
 using chrono::duration;
 using chrono::duration_cast;
 
-using TimeSpec = struct timespec;
-using TimeVal = struct timeval;
+using TimeSpec = timespec;
 using StatT = struct stat;
 
 template <class FileTimeT, class TimeT,
@@ -382,38 +381,26 @@ public:
 using fs_time = time_util<file_time_type, time_t, TimeSpec>;
 
 #if defined(__APPLE__)
-inline TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
-inline TimeSpec extract_atime(StatT const& st) { return st.st_atimespec; }
-#elif defined(__MVS__)
-inline TimeSpec extract_mtime(StatT const& st) {
-  TimeSpec TS = {st.st_mtime, 0};
-  return TS;
-}
-inline TimeSpec extract_atime(StatT const& st) {
-  TimeSpec TS = {st.st_atime, 0};
-  return TS;
-}
+TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
+TimeSpec extract_atime(StatT const& st) { return st.st_atimespec; }
 #else
-inline TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
-inline TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
+TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
+TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
 #endif
 
-inline TimeVal make_timeval(TimeSpec const& ts) {
+// allow the utimes implementation to compile even it we're not going
+// to use it.
+
+bool posix_utimes(const path& p, std::array<TimeSpec, 2> const& TS,
+                  error_code& ec) {
   using namespace chrono;
   auto Convert = [](long nsec) {
-    using int_type = decltype(std::declval<TimeVal>().tv_usec);
+    using int_type = decltype(std::declval< ::timeval>().tv_usec);
     auto dur = duration_cast<microseconds>(nanoseconds(nsec)).count();
     return static_cast<int_type>(dur);
   };
-  TimeVal TV = {};
-  TV.tv_sec = ts.tv_sec;
-  TV.tv_usec = Convert(ts.tv_nsec);
-  return TV;
-}
-
-inline bool posix_utimes(const path& p, std::array<TimeSpec, 2> const& TS,
-                  error_code& ec) {
-  TimeVal ConvertedTS[2] = {make_timeval(TS[0]), make_timeval(TS[1])};
+  struct ::timeval ConvertedTS[2] = {{TS[0].tv_sec, Convert(TS[0].tv_nsec)},
+                                     {TS[1].tv_sec, Convert(TS[1].tv_nsec)}};
   if (::utimes(p.c_str(), ConvertedTS) == -1) {
     ec = capture_errno();
     return true;
