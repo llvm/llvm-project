@@ -5895,13 +5895,22 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
 
         // The function will be passed to the consumer when its definition is
         // encountered.
-      } else if (!MD->isTrivial() || MD->isExplicitlyDefaulted() ||
+      } else if (MD->isExplicitlyDefaulted()) {
+        // Synthesize and instantiate explicitly defaulted methods.
+        S.MarkFunctionReferenced(Class->getLocation(), MD);
+
+        if (TSK != TSK_ExplicitInstantiationDefinition) {
+          // Except for explicit instantiation defs, we will not see the
+          // definition again later, so pass it to the consumer now.
+          S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
+        }
+      } else if (!MD->isTrivial() ||
                  MD->isCopyAssignmentOperator() ||
                  MD->isMoveAssignmentOperator()) {
-        // Synthesize and instantiate non-trivial implicit methods, explicitly
-        // defaulted methods, and the copy and move assignment operators. The
-        // latter are exported even if they are trivial, because the address of
-        // an operator can be taken and should compare equal across libraries.
+        // Synthesize and instantiate non-trivial implicit methods, and the copy
+        // and move assignment operators. The latter are exported even if they
+        // are trivial, because the address of an operator can be taken and
+        // should compare equal across libraries.
         S.MarkFunctionReferenced(Class->getLocation(), MD);
 
         // There is no later point when we will see the definition of this

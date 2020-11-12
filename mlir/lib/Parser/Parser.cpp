@@ -994,9 +994,19 @@ public:
     return parser.parseToken(Token::less, "expected '<'");
   }
 
+  /// Parse a '<' token if present.
+  ParseResult parseOptionalLess() override {
+    return success(parser.consumeIf(Token::less));
+  }
+
   /// Parse a '>' token.
   ParseResult parseGreater() override {
     return parser.parseToken(Token::greater, "expected '>'");
+  }
+
+  /// Parse a '>' token if present.
+  ParseResult parseOptionalGreater() override {
+    return success(parser.consumeIf(Token::greater));
   }
 
   /// Parse a `(` token.
@@ -1019,11 +1029,6 @@ public:
     return success(parser.consumeIf(Token::r_paren));
   }
 
-  /// Parses a '?' if present.
-  ParseResult parseOptionalQuestion() override {
-    return success(parser.consumeIf(Token::question));
-  }
-
   /// Parse a `[` token.
   ParseResult parseLSquare() override {
     return parser.parseToken(Token::l_square, "expected '['");
@@ -1042,6 +1047,36 @@ public:
   /// Parses a ']' if present.
   ParseResult parseOptionalRSquare() override {
     return success(parser.consumeIf(Token::r_square));
+  }
+
+  /// Parses a '?' token.
+  ParseResult parseQuestion() override {
+    return parser.parseToken(Token::question, "expected '?'");
+  }
+
+  /// Parses a '?' token if present.
+  ParseResult parseOptionalQuestion() override {
+    return success(parser.consumeIf(Token::question));
+  }
+
+  /// Parses a '+' token.
+  ParseResult parsePlus() override {
+    return parser.parseToken(Token::plus, "expected '+'");
+  }
+
+  /// Parses a '+' token if present.
+  ParseResult parseOptionalPlus() override {
+    return success(parser.consumeIf(Token::plus));
+  }
+
+  /// Parses a '*' token.
+  ParseResult parseStar() override {
+    return parser.parseToken(Token::star, "expected '*'");
+  }
+
+  /// Parses a '*' token if present.
+  ParseResult parseOptionalStar() override {
+    return success(parser.consumeIf(Token::star));
   }
 
   //===--------------------------------------------------------------------===//

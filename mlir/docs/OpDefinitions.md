@@ -768,7 +768,7 @@ A literal is either a keyword or punctuation surrounded by \`\`.
 
 The following are the set of valid punctuation:
 
-`:`, `,`, `=`, `<`, `>`, `(`, `)`, `{`, `}`, `[`, `]`, `->`
+`:`, `,`, `=`, `<`, `>`, `(`, `)`, `{`, `}`, `[`, `]`, `->`, `?`, `+`, `*`
 
 #### Variables
 
