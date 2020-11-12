@@ -3454,6 +3454,32 @@ Status GDBRemoteCommunicationClient::SendGetMetaDataPacket(
   return SendGetTraceDataPacket(escaped_packet, uid, thread_id, buffer, offset);
 }
 
+llvm::Expected<TraceTypeInfo>
+GDBRemoteCommunicationClient::SendGetSupportedTraceType() {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("jLLDBTraceSupportedType");
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (!response.IsNormalResponse())
+      return response.GetStatus().ToError();
+
+    if (llvm::Expected<TraceTypeInfo> type =
+            llvm::json::parse<TraceTypeInfo>(response.Peek()))
+      return *type;
+    else
+      return type.takeError();
+  }
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceSupportedType");
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "failed to send packet: jLLDBTraceSupportedType");
+}
+
 Status
 GDBRemoteCommunicationClient::SendGetTraceConfigPacket(lldb::user_id_t uid,
                                                        TraceOptions &options) {

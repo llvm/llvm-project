@@ -362,6 +362,63 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
   EXPECT_FALSE(result.get().Success());
 }
 
+TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedTypePacket) {
+  // Success response
+  {
+    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
+        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+
+    HandlePacket(
+        server, "jLLDBTraceSupportedType",
+        R"({"name":"intel-pt","description":"Intel Processor Trace"}])");
+
+    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
+    EXPECT_THAT_EXPECTED(trace_type_or_err, llvm::Succeeded());
+    ASSERT_STREQ(trace_type_or_err->name.c_str(), "intel-pt");
+    ASSERT_STREQ(trace_type_or_err->description.c_str(),
+                 "Intel Processor Trace");
+  }
+
+  // Error response - wrong json
+  {
+    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
+        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+
+    HandlePacket(server, "jLLDBTraceSupportedType", R"({"type":"intel-pt"}])");
+
+    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
+    ASSERT_THAT_EXPECTED(
+        trace_type_or_err,
+        llvm::Failed<StringError>(testing::Property(
+            &StringError::getMessage,
+            testing::HasSubstr("missing value at (root).name"))));
+  }
+
+  // Error response
+  {
+    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
+        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+
+    HandlePacket(server, "jLLDBTraceSupportedType", "E23");
+    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
+    ASSERT_THAT_EXPECTED(trace_type_or_err, llvm::Failed());
+  }
+
+  // Error response with error message
+  {
+    std::future<llvm::Expected<TraceTypeInfo>> result = std::async(
+        std::launch::async, [&] { return client.SendGetSupportedTraceType(); });
+
+    HandlePacket(server, "jLLDBTraceSupportedType",
+                 "E23;50726F63657373206E6F742072756E6E696E672E");
+    llvm::Expected<TraceTypeInfo> trace_type_or_err = result.get();
+    ASSERT_THAT_EXPECTED(trace_type_or_err,
+                         llvm::Failed<StringError>(testing::Property(
+                             &StringError::getMessage,
+                             testing::HasSubstr("Process not running."))));
+  }
+}
+
 TEST_F(GDBRemoteCommunicationClientTest, SendStartTracePacket) {
   TraceOptions options;
   Status error;
