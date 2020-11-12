@@ -426,40 +426,42 @@ set(arm_Thumb1_SjLj_EH_SOURCES
   arm/restore_vfp_d8_d15_regs.S
   arm/save_vfp_d8_d15_regs.S
 )
-set(arm_Thumb1_VFPv2_SOURCES
+set(arm_Thumb1_VFPv2_DP_SOURCES
   arm/adddf3vfp.S
-  arm/addsf3vfp.S
   arm/divdf3vfp.S
-  arm/divsf3vfp.S
   arm/eqdf2vfp.S
-  arm/eqsf2vfp.S
   arm/extendsfdf2vfp.S
   arm/fixdfsivfp.S
-  arm/fixsfsivfp.S
   arm/fixunsdfsivfp.S
-  arm/fixunssfsivfp.S
   arm/floatsidfvfp.S
-  arm/floatsisfvfp.S
   arm/floatunssidfvfp.S
-  arm/floatunssisfvfp.S
   arm/gedf2vfp.S
-  arm/gesf2vfp.S
   arm/gtdf2vfp.S
-  arm/gtsf2vfp.S
   arm/ledf2vfp.S
-  arm/lesf2vfp.S
   arm/ltdf2vfp.S
-  arm/ltsf2vfp.S
   arm/muldf3vfp.S
-  arm/mulsf3vfp.S
   arm/nedf2vfp.S
   arm/negdf2vfp.S
-  arm/negsf2vfp.S
-  arm/nesf2vfp.S
   arm/subdf3vfp.S
-  arm/subsf3vfp.S
   arm/truncdfsf2vfp.S
   arm/unorddf2vfp.S
+)
+set(arm_Thumb1_VFPv2_SP_SOURCES
+  arm/addsf3vfp.S
+  arm/divsf3vfp.S
+  arm/eqsf2vfp.S
+  arm/fixsfsivfp.S
+  arm/fixunssfsivfp.S
+  arm/floatsisfvfp.S
+  arm/floatunssisfvfp.S
+  arm/gesf2vfp.S
+  arm/gtsf2vfp.S
+  arm/lesf2vfp.S
+  arm/ltsf2vfp.S
+  arm/mulsf3vfp.S
+  arm/negsf2vfp.S
+  arm/nesf2vfp.S
+  arm/subsf3vfp.S
   arm/unordsf2vfp.S
 )
 set(arm_Thumb1_icache_SOURCES
@@ -468,7 +470,8 @@ set(arm_Thumb1_icache_SOURCES
 set(arm_Thumb1_SOURCES
   ${arm_Thumb1_JT_SOURCES}
   ${arm_Thumb1_SjLj_EH_SOURCES}
-  ${arm_Thumb1_VFPv2_SOURCES}
+  ${arm_Thumb1_VFPv2_DP_SOURCES}
+  ${arm_Thumb1_VFPv2_SP_SOURCES}
   ${arm_Thumb1_icache_SOURCES}
 )
 
@@ -655,7 +658,16 @@ else ()
         string(REPLACE ";" " " _TARGET_${arch}_CFLAGS "${TARGET_${arch}_CFLAGS}")
         check_compile_definition(__VFP_FP__ "${CMAKE_C_FLAGS} ${_TARGET_${arch}_CFLAGS}" COMPILER_RT_HAS_${arch}_VFP)
         if(NOT COMPILER_RT_HAS_${arch}_VFP)
-          list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_SOURCES} ${arm_Thumb1_SjLj_EH_SOURCES})
+          list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_DP_SOURCES} ${arm_Thumb1_VFPv2_SP_SOURCES} ${arm_Thumb1_SjLj_EH_SOURCES})
+        else()
+          # Exclude any double-precision builtins if VFP is single-precision-only
+          check_c_source_compiles("#if !(__ARM_FP & 0x8)
+                                   #error No double-precision support!
+                                   #endif
+                                   int main() { return 0; }" COMPILER_RT_HAS_${arch}_VFP_DP)
+          if(NOT COMPILER_RT_HAS_${arch}_VFP_DP)
+            list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_DP_SOURCES})
+          endif()
         endif()
       endif()
 
