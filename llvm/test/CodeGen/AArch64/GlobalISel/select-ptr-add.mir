@@ -89,3 +89,24 @@ body:             |
     %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
     $x0 = COPY %2(p0)
 ...
+---
+name:            ptr_add_arith_extended
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+      liveins: $x0
+    ; CHECK-LABEL: name: ptr_add_arith_extended
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %ptr:gpr64 = COPY $x1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY %ptr
+    ; CHECK: %ptr_add:gpr64sp = ADDXrx [[COPY]], %reg0, 18
+    ; CHECK: $x0 = COPY %ptr_add
+    %reg0:gpr(s32) = COPY $w0
+    %ptr:gpr(p0) = COPY $x1
+    %ext:gpr(s64) = G_ZEXT %reg0(s32)
+    %cst:gpr(s64) = G_CONSTANT i64 2
+    %shift:gpr(s64) = G_SHL %ext, %cst(s64)
+    %ptr_add:gpr(p0) = G_PTR_ADD %ptr, %shift(s64)
+    $x0 = COPY %ptr_add(p0)
+...
