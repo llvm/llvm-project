@@ -170,6 +170,7 @@ void MachineModuleInfo::finalize() {
   AddrLabelSymbols = nullptr;
 
   Context.reset();
+  // We don't clear the ExternalContext.
 
   delete ObjFileMMI;
   ObjFileMMI = nullptr;
@@ -187,12 +188,21 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   HasSplitStack = MMI.HasSplitStack;
   HasNosplitStack = MMI.HasNosplitStack;
   AddrLabelSymbols = MMI.AddrLabelSymbols;
+  ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
 
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
     : TM(*TM), Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
                        TM->getObjFileLowering(), nullptr, nullptr, false) {
+  initialize();
+}
+
+MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
+                                     MCContext *ExtContext)
+    : TM(*TM), Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+                       TM->getObjFileLowering(), nullptr, nullptr, false),
+      ExternalContext(ExtContext) {
   initialize();
 }
 
@@ -204,7 +214,7 @@ ArrayRef<MCSymbol *>
 MachineModuleInfo::getAddrLabelSymbolToEmit(const BasicBlock *BB) {
   // Lazily create AddrLabelSymbols.
   if (!AddrLabelSymbols)
-    AddrLabelSymbols = new MMIAddrLabelMap(Context);
+    AddrLabelSymbols = new MMIAddrLabelMap(getContext());
  return AddrLabelSymbols->getAddrLabelSymbolToEmit(const_cast<BasicBlock*>(BB));
 }
 
@@ -293,6 +303,12 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const LLVMTargetMachine *TM)
     : ImmutablePass(ID), MMI(TM) {
+  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
+
+MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
+    const LLVMTargetMachine *TM, MCContext *ExtContext)
+    : ImmutablePass(ID), MMI(TM, ExtContext) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
