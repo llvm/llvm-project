@@ -1211,13 +1211,15 @@ void ConversionPatternRewriterImpl::notifyBlocksBeingMerged(Block *block,
 
 void ConversionPatternRewriterImpl::notifyRegionIsBeingInlinedBefore(
     Region &region, Region &parent, Region::iterator before) {
-  Block *origPrevBlock = nullptr;
-  for (auto &pair : llvm::enumerate(region)) {
-    Block &block = pair.value();
+  if (region.empty())
+    return;
+  Block *laterBlock = &region.back();
+  for (auto &earlierBlock : llvm::drop_begin(llvm::reverse(region), 1)) {
     blockActions.push_back(
-        BlockAction::getMove(&block, {&region, origPrevBlock}));
-    origPrevBlock = &block;
+        BlockAction::getMove(laterBlock, {&region, &earlierBlock}));
+    laterBlock = &earlierBlock;
   }
+  blockActions.push_back(BlockAction::getMove(laterBlock, {&region, nullptr}));
 }
 
 void ConversionPatternRewriterImpl::notifyRegionWasClonedBefore(
