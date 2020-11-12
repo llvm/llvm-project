@@ -230,6 +230,11 @@ bool MVEVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
     if ((InsertPt != MBB->end() && !DT->dominates(&*InsertPt, &Use)) ||
         !DT->dominates(ML->getHeader(), Use.getParent()))
       InsertPt = &Use;
+  if (InsertPt != MBB->end() &&
+      !DT->dominates(MRI->getVRegDef(CountReg), &*InsertPt)) {
+    LLVM_DEBUG(dbgs() << "  InsertPt does not dominate CountReg!\n");
+    return false;
+  }
 
   MachineInstrBuilder MI = BuildMI(*MBB, InsertPt, LoopStart->getDebugLoc(),
                                    TII->get(ARM::t2DoLoopStartTP))
