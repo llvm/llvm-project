@@ -47560,7 +47560,8 @@ static SDValue rebuildGatherScatter(MaskedGatherScatterSDNode *GorS,
   return DAG.getMaskedScatter(Scatter->getVTList(),
                               Scatter->getMemoryVT(), DL,
                               Ops, Scatter->getMemOperand(),
-                              Scatter->getIndexType());
+                              Scatter->getIndexType(),
+                              Scatter->isTruncatingStore());
 }
 
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
