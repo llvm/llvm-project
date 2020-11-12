@@ -2261,9 +2261,9 @@ HasSafePathToPredecessorCall(const Value *Arg, Instruction *Retain,
 static CallInst *
 FindPredecessorRetainWithSafePath(const Value *Arg, BasicBlock *BB,
                                   Instruction *Autorelease,
-                                  SmallPtrSetImpl<Instruction *> &DepInsts,
                                   SmallPtrSetImpl<const BasicBlock *> &Visited,
                                   ProvenanceAnalysis &PA) {
+  SmallPtrSet<Instruction *, 4> DepInsts;
   FindDependencies(CanChangeRetainCount, Arg,
                    BB, Autorelease, DepInsts, Visited, PA);
   if (DepInsts.size() != 1)
@@ -2286,9 +2286,9 @@ FindPredecessorRetainWithSafePath(const Value *Arg, BasicBlock *BB,
 static CallInst *
 FindPredecessorAutoreleaseWithSafePath(const Value *Arg, BasicBlock *BB,
                                        ReturnInst *Ret,
-                                       SmallPtrSetImpl<Instruction *> &DepInsts,
                                        SmallPtrSetImpl<const BasicBlock *> &V,
                                        ProvenanceAnalysis &PA) {
+  SmallPtrSet<Instruction *, 4> DepInsts;
   FindDependencies(NeedsPositiveRetainCount, Arg,
                    BB, Ret, DepInsts, V, PA);
   if (DepInsts.size() != 1)
@@ -2334,18 +2334,15 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
     // Look for an ``autorelease'' instruction that is a predecessor of Ret and
     // dependent on Arg such that there are no instructions dependent on Arg
     // that need a positive ref count in between the autorelease and Ret.
-    CallInst *Autorelease = FindPredecessorAutoreleaseWithSafePath(
-        Arg, &BB, Ret, DependingInstructions, Visited, PA);
-    DependingInstructions.clear();
+    CallInst *Autorelease =
+        FindPredecessorAutoreleaseWithSafePath(Arg, &BB, Ret, Visited, PA);
     Visited.clear();
 
     if (!Autorelease)
       continue;
 
     CallInst *Retain = FindPredecessorRetainWithSafePath(
-        Arg, Autorelease->getParent(), Autorelease, DependingInstructions,
-        Visited, PA);
-    DependingInstructions.clear();
+        Arg, Autorelease->getParent(), Autorelease, Visited, PA);
     Visited.clear();
 
     if (!Retain)
