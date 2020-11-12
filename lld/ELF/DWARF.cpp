@@ -77,18 +77,23 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
 namespace {
 template <class RelTy> struct LLDRelocationResolver {
   // In the ELF ABIs, S sepresents the value of the symbol in the relocation
-  // entry. For Rela, the addend is stored as part of the relocation entry.
-  static uint64_t resolve(object::RelocationRef ref, uint64_t s,
-                          uint64_t /* A */) {
-    return s + ref.getRawDataRefImpl().p;
+  // entry. For Rela, the addend is stored as part of the relocation entry and
+  // is provided by the `findAux` method.
+  // In resolve() methods, the `type` and `offset` arguments would always be 0,
+  // because we don't set an owning object for the `RelocationRef` instance that
+  // we create in `findAux()`.
+  static uint64_t resolve(uint64_t /*type*/, uint64_t /*offset*/, uint64_t s,
+                          uint64_t /*locData*/, int64_t addend) {
+    return s + addend;
   }
 };
 
 template <class ELFT> struct LLDRelocationResolver<Elf_Rel_Impl<ELFT, false>> {
-  // For Rel, the addend A is supplied by the caller.
-  static uint64_t resolve(object::RelocationRef /*Ref*/, uint64_t s,
-                          uint64_t a) {
-    return s + a;
+  // For Rel, the addend is extracted from the relocated location and is
+  // supplied by the caller.
+  static uint64_t resolve(uint64_t /*type*/, uint64_t /*offset*/, uint64_t s,
+                          uint64_t locData, int64_t /*addend*/) {
+    return s + locData;
   }
 };
 } // namespace
