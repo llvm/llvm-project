@@ -7071,6 +7071,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
+  // TODO-GFX11: Remove this.
+  // Hack to allow some GFX11 codegen tests to run before all the encodings are
+  // implemented.
+  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX11)
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX10);
+
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
     return Opcode;
