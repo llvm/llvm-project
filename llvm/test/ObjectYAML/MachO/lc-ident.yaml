@@ -1,0 +1,22 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      16
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_IDENT
+    cmdsize:         16
+    PayloadBytes:    [ 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7 ]
+...
+
+# CHECK: LoadCommands:
+# CHECK-NEXT:   - cmd:             LC_IDENT
+# CHECK-NEXT:     cmdsize:         16
+# CHECK-NEXT:     PayloadBytes:    [ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 ]
