@@ -69,15 +69,13 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
   };
 
   return impl::parseFunctionLikeOp(parser, result, /*allowVariadic=*/false,
-                                   buildFuncType,
-                                   /*allowInlineVisibility=*/true);
+                                   buildFuncType);
 }
 
 void FuncOp::print(OpAsmPrinter &p) {
   FunctionType fnType = getType();
   impl::printFunctionLikeOp(p, *this, fnType.getInputs(), /*isVariadic=*/false,
-                            fnType.getResults(),
-                            /*printVisibilityInline=*/true);
+                            fnType.getResults());
 }
 
 LogicalResult FuncOp::verify() {
