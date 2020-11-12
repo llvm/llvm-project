@@ -39,10 +39,12 @@ static const std::string getOptionSpelling(const Record &R,
                                            size_t &PrefixLength) {
   std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
   StringRef Name = R.getValueAsString("Name");
+
   if (Prefixes.empty()) {
     PrefixLength = 0;
     return Name.str();
   }
+
   PrefixLength = Prefixes[0].size();
   return (Twine(Prefixes[0]) + Twine(Name)).str();
 }
