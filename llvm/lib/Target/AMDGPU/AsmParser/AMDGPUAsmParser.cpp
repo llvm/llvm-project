@@ -5840,21 +5840,21 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
 OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
                                                       uint8_t &Val) {
   if (Str == "null") {
-    Val = 9;
+    Val = Exp::ET_NULL;
     return MatchOperand_Success;
   }
 
   if (Str.startswith("mrt")) {
     Str = Str.drop_front(3);
     if (Str == "z") { // == mrtz
-      Val = 8;
+      Val = Exp::ET_MRTZ;
       return MatchOperand_Success;
     }
 
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 7)
+    if (Val > Exp::ET_MRT7)
       return MatchOperand_ParseFail;
 
     return MatchOperand_Success;
@@ -5865,15 +5865,15 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 4 || (Val == 4 && !isGFX10()))
+    if (Val > (isGFX10() ? 4 : 3))
       return MatchOperand_ParseFail;
 
-    Val += 12;
+    Val += Exp::ET_POS0;
     return MatchOperand_Success;
   }
 
   if (isGFX10() && Str == "prim") {
-    Val = 20;
+    Val = Exp::ET_PRIM;
     return MatchOperand_Success;
   }
 
@@ -5885,7 +5885,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Val >= 32)
       return MatchOperand_ParseFail;
 
-    Val += 32;
+    Val += Exp::ET_PARAM0;
     return MatchOperand_Success;
   }
 

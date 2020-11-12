@@ -688,6 +688,24 @@ enum DppFiMode {
 };
 
 } // namespace DPP
+
+namespace Exp {
+
+enum Target {
+  ET_MRT0 = 0,
+  ET_MRT7 = 7,
+  ET_MRTZ = 8,
+  ET_NULL = 9,
+  ET_POS0 = 12,
+  ET_POS3 = 15,
+  ET_POS4 = 16,          // GFX10+
+  ET_POS_LAST = ET_POS4, // Highest pos used on any subtarget
+  ET_PRIM = 20,          // GFX10+
+  ET_PARAM0 = 32,
+  ET_PARAM31 = 63,
+};
+
+} // namespace Exp
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
