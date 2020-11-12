@@ -29,7 +29,6 @@
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -416,17 +415,14 @@ static OverflowResult checkOverflow(struct FlattenInfo &FI,
 
 static bool FlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
                             LoopInfo *LI, ScalarEvolution *SE,
-                            AssumptionCache *AC, const TargetTransformInfo *TTI,
-                            std::function<void(Loop *)> markLoopAsDeleted) {
+                            AssumptionCache *AC, TargetTransformInfo *TTI) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
-
   LLVM_DEBUG(dbgs() << "Loop flattening running on outer loop "
                     << FI.OuterLoop->getHeader()->getName() << " and inner loop "
                     << FI.InnerLoop->getHeader()->getName() << " in "
                     << F->getName() << "\n");
 
   SmallPtrSet<Instruction *, 8> IterationInstructions;
-
   if (!findLoopComponents(FI.InnerLoop, IterationInstructions, FI.InnerInductionPHI,
                           FI.InnerLimit, FI.InnerIncrement, FI.InnerBranch, SE))
     return false;
@@ -528,40 +524,51 @@ static bool FlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
   // deleted, and any information that have about the outer loop invalidated.
-  markLoopAsDeleted(FI.InnerLoop);
   SE->forgetLoop(FI.OuterLoop);
   SE->forgetLoop(FI.InnerLoop);
   LI->erase(FI.InnerLoop);
-
   return true;
 }
 
-PreservedAnalyses LoopFlattenPass::run(Loop &L, LoopAnalysisManager &AM,
-                                       LoopStandardAnalysisResults &AR,
-                                       LPMUpdater &Updater) {
-  if (L.getSubLoops().size() != 1)
+bool Flatten(DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
+             AssumptionCache *AC, TargetTransformInfo *TTI) {
+  bool Changed = false;
+  for (auto *InnerLoop : LI->getLoopsInPreorder()) {
+    auto *OuterLoop = InnerLoop->getParentLoop();
+    if (!OuterLoop)
+      continue;
+    struct FlattenInfo FI(OuterLoop, InnerLoop);
+    Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+  }
+  return Changed;
+}
+
+PreservedAnalyses LoopFlattenPass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  auto *LI = &AM.getResult<LoopAnalysis>(F);
+  auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *AC = &AM.getResult<AssumptionAnalysis>(F);
+  auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
+
+  if (!Flatten(DT, LI, SE, AC, TTI))
     return PreservedAnalyses::all();
 
-  Loop *InnerLoop = *L.begin();
-  std::string LoopName(InnerLoop->getName());
-  struct FlattenInfo FI(InnerLoop->getParentLoop(), InnerLoop);
-  if (!FlattenLoopPair(
-          FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI,
-          [&](Loop *L) { Updater.markLoopAsDeleted(*L, LoopName); }))
-    return PreservedAnalyses::all();
-  return getLoopPassPreservedAnalyses();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {
-class LoopFlattenLegacyPass : public LoopPass {
+class LoopFlattenLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
-  LoopFlattenLegacyPass() : LoopPass(ID) {
+  LoopFlattenLegacyPass() : FunctionPass(ID) {
     initializeLoopFlattenLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   // Possibly flatten loop L into its child.
-  bool runOnLoop(Loop *L, LPPassManager &) override;
+  bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     getLoopAnalysisUsage(AU);
@@ -576,33 +583,20 @@ public:
 char LoopFlattenLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopFlattenLegacyPass, "loop-flatten", "Flattens loops",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(LoopFlattenLegacyPass, "loop-flatten", "Flattens loops",
                     false, false)
 
-Pass *llvm::createLoopFlattenPass() { return new LoopFlattenLegacyPass(); }
+FunctionPass *llvm::createLoopFlattenPass() { return new LoopFlattenLegacyPass(); }
 
-bool LoopFlattenLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-
-  if (L->getSubLoops().size() != 1)
-    return false;
-
+bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   auto &TTIP = getAnalysis<TargetTransformInfoWrapperPass>();
-  TargetTransformInfo *TTI = &TTIP.getTTI(*L->getHeader()->getParent());
-  AssumptionCache *AC =
-      &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-          *L->getHeader()->getParent());
-
-  Loop *InnerLoop = *L->begin();
-  struct FlattenInfo FI(InnerLoop->getParentLoop(), InnerLoop);
-  return FlattenLoopPair(FI, DT, LI, SE, AC, TTI,
-                         [&](Loop *L) { LPM.markLoopAsDeleted(*L); });
+  auto *TTI = &TTIP.getTTI(F);
+  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  return Flatten(DT, LI, SE, AC, TTI);
 }
