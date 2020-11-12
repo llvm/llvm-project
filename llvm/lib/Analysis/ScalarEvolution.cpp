@@ -9589,17 +9589,19 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
   if (!ICmpInst::isRelational(Pred))
     return false;
 
-  // TODO: Support steps other than +/- 1.
   const SCEV *Step = AR->getStepRecurrence(*this);
-  auto *One = getOne(Step->getType());
-  auto *MinusOne = getNegativeSCEV(One);
-  if (Step != One && Step != MinusOne)
+  bool IsStepNonPositive = isKnownNonPositive(Step);
+  if (!IsStepNonPositive && !isKnownNonNegative(Step))
     return false;
-
-  // Type mismatch here means that MaxIter is potentially larger than max
-  // unsigned value in start type, which mean we cannot prove no wrap for the
-  // indvar.
-  if (AR->getType() != MaxIter->getType())
+  bool HasNoSelfWrap = AR->hasNoSelfWrap();
+  if (!HasNoSelfWrap)
+    // If num iter has same type as the AddRec, and step is +/- 1, even max
+    // possible number of iterations is not enough to self-wrap.
+    if (MaxIter->getType() == AR->getType())
+      if (Step == getOne(AR->getType()) || Step == getMinusOne(AR->getType()))
+        HasNoSelfWrap = true;
+  // Only proceed with non-self-wrapping ARs.
+  if (!HasNoSelfWrap)
     return false;
 
   // Value of IV on suggested last iteration.
@@ -9607,14 +9609,13 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
   // Does it still meet the requirement?
   if (!isKnownPredicateAt(Pred, Last, RHS, Context))
     return false;
-  // Because step is +/- 1 and MaxIter has same type as Start (i.e. it does
-  // not exceed max unsigned value of this type), this effectively proves
-  // that there is no wrap during the iteration. To prove that there is no
-  // signed/unsigned wrap, we need to check that
-  // Start <= Last for step = 1 or Start >= Last for step = -1.
+  // We know that the addrec does not have a self-wrap. To prove that there is
+  // no signed/unsigned wrap, we need to check that
+  // Start <= Last for positive step or Start >= Last for negative step. Either
+  // works for zero step.
   ICmpInst::Predicate NoOverflowPred =
       CmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-  if (Step == MinusOne)
+  if (IsStepNonPositive)
     NoOverflowPred = CmpInst::getSwappedPredicate(NoOverflowPred);
   const SCEV *Start = AR->getStart();
   if (!isKnownPredicateAt(NoOverflowPred, Start, Last, Context))
