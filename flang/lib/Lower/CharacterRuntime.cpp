@@ -50,16 +50,13 @@ Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
   mlir::FuncOp beginFunc;
   switch (discoverKind(lhsBuff.getType())) {
   case 1:
-    beginFunc =
-        genRuntimeFunction<mkRTKey(CharacterCompareScalar1)>(loc, builder);
+    beginFunc = getRuntimeFunc<mkRTKey(CharacterCompareScalar1)>(loc, builder);
     break;
   case 2:
-    beginFunc =
-        genRuntimeFunction<mkRTKey(CharacterCompareScalar2)>(loc, builder);
+    beginFunc = getRuntimeFunc<mkRTKey(CharacterCompareScalar2)>(loc, builder);
     break;
   case 4:
-    beginFunc =
-        genRuntimeFunction<mkRTKey(CharacterCompareScalar4)>(loc, builder);
+    beginFunc = getRuntimeFunc<mkRTKey(CharacterCompareScalar4)>(loc, builder);
     break;
   default:
     llvm_unreachable("runtime does not support CHARACTER KIND");

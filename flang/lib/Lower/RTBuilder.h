@@ -337,8 +337,8 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// Clients should add "using namespace Fortran::runtime"
 /// in order to use this function.
 template <typename RuntimeEntry>
-static mlir::FuncOp genRuntimeFunction(mlir::Location loc,
-                                       Fortran::lower::FirOpBuilder &builder) {
+static mlir::FuncOp getRuntimeFunc(mlir::Location loc,
+                                   Fortran::lower::FirOpBuilder &builder) {
   auto name = RuntimeEntry::name;
   auto func = builder.getNamedFunction(name);
   if (func)
