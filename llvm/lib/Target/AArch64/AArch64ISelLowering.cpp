@@ -5854,6 +5854,22 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
   llvm_unreachable("Unexpected platform trying to use TLS");
 }
 
+// Looks through \param Val to determine the bit that can be used to
+// check the sign of the value. It returns the unextended value and
+// the sign bit position.
+std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
+  if (Val.getOpcode() == ISD::SIGN_EXTEND_INREG)
+    return {Val.getOperand(0),
+            cast<VTSDNode>(Val.getOperand(1))->getVT().getFixedSizeInBits() -
+                1};
+
+  if (Val.getOpcode() == ISD::SIGN_EXTEND)
+    return {Val.getOperand(0),
+            Val.getOperand(0)->getValueType(0).getFixedSizeInBits() - 1};
+
+  return {Val, Val.getValueSizeInBits() - 1};
+}
+
 SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressViaGOT(
   SDValue Wrapper, AArch64PACKey::ID Key, bool HasAddrDiversity,
   GlobalAddressSDNode *PtrBaseGA, SelectionDAG &DAG) const {
@@ -5967,22 +5983,6 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
                           Discriminator, X17Copy.getValue(1)});
   return DAG.getCopyFromReg(SDValue(MOV, 0), DL, AArch64::X16, MVT::i64,
                             SDValue(MOV, 1));
-}
-
-// Looks through \param Val to determine the bit that can be used to
-// check the sign of the value. It returns the unextended value and
-// the sign bit position.
-std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
-  if (Val.getOpcode() == ISD::SIGN_EXTEND_INREG)
-    return {Val.getOperand(0),
-            cast<VTSDNode>(Val.getOperand(1))->getVT().getFixedSizeInBits() -
-                1};
-
-  if (Val.getOpcode() == ISD::SIGN_EXTEND)
-    return {Val.getOperand(0),
-            Val.getOperand(0)->getValueType(0).getFixedSizeInBits() - 1};
-
-  return {Val, Val.getValueSizeInBits() - 1};
 }
 
 SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
