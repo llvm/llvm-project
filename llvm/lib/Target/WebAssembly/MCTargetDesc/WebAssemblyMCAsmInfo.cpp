@@ -23,9 +23,7 @@ WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
 
 WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
                                            const MCTargetOptions &Options) {
-  CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
-  // So far this is used for DWARF DW_AT_low_pc which is always 32-bit in Wasm.
-  CodePointerSize = 4;
+  CodePointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
 
   // TODO: What should MaxInstLength be?
 

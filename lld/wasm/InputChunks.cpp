@@ -97,6 +97,7 @@ void InputChunk::verifyRelocTargets() const {
       break;
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
+    case R_WASM_FUNCTION_OFFSET_I64:
       existingValue = read64le(loc);
       break;
     default:
@@ -176,6 +177,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
       break;
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
+    case R_WASM_FUNCTION_OFFSET_I64:
       write64le(loc, value);
       break;
     default:

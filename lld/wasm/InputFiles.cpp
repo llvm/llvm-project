@@ -124,6 +124,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->outputOffset + reloc.Addend;
@@ -171,7 +172,8 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
     else
       llvm_unreachable("unknown init expr opcode");
   }
-  case R_WASM_FUNCTION_OFFSET_I32: {
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     InputFunction *f =
         functions[sym.Info.ElementIndex - wasmObj->getNumImportedFunctions()];
@@ -258,7 +260,8 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
     return sym->getGOTIndex();
   case R_WASM_EVENT_INDEX_LEB:
     return getEventSymbol(reloc.Index)->getEventIndex();
-  case R_WASM_FUNCTION_OFFSET_I32: {
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64: {
     auto *f = cast<DefinedFunction>(sym);
     return f->function->outputOffset +
            (f->function->getFunctionCodeOffset() + reloc.Addend);
