@@ -20,7 +20,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 
-#include <stddef.h> // for _Exit
+#include <stdlib.h> // for _Exit
 
 using namespace llvm;
 using namespace sys;
