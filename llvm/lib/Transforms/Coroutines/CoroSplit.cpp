@@ -685,6 +685,7 @@ Value *CoroCloner::deriveNewFramePointer() {
     InlineFunctionInfo InlineInfo;
     auto InlineRes = InlineFunction(*CallerContext, InlineInfo);
     assert(InlineRes.isSuccess());
+    (void)InlineRes;
     return Builder.CreateBitCast(FramePtrAddr, FramePtrTy);
   }
   // In continuation-lowering, the argument is the opaque storage.
@@ -1460,6 +1461,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     InlineFunctionInfo FnInfo;
     auto InlineRes = InlineFunction(*TailCall, FnInfo);
     assert(InlineRes.isSuccess() && "Expected inlining to succeed");
+    (void)InlineRes;
     Builder.CreateRetVoid();
 
     // Replace the lvm.coro.async.resume intrisic call.
