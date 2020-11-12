@@ -39,7 +39,7 @@ for.end:
 ; CHECK-NEXT:    "loop:\n" +
 ; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi 0, %iv.next\l" +
 ; CHECK-NEXT:      "WIDEN\l""  %cond0 = icmp %iv, 13\l" +
-; CHECK-NEXT:      "WIDEN-SELECT%s = select %cond0, 10, 20\l"
+; CHECK-NEXT:      "WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>\l"
 ; CHECK-NEXT:  ]
 define void @test() {
 entry:
