@@ -77,6 +77,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::u32string) u32_empty = ""'%ns,
                 '(%s::basic_string<unsigned char, %s::char_traits<unsigned char>, '
                 '%s::allocator<unsigned char> >) uchar = "aaaaa"'%(ns,ns,ns),
+                '(%s::string *) null_str = nullptr'%ns,
         ])
 
         self.runCmd("n")
@@ -114,6 +115,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::u32string) u32_empty = ""'%ns,
                 '(%s::basic_string<unsigned char, %s::char_traits<unsigned char>, '
                 '%s::allocator<unsigned char> >) uchar = "aaaaa"'%(ns,ns,ns),
+                '(%s::string *) null_str = nullptr'%ns,
         ])
 
         # The test assumes that std::string is in its cap-size-data layout.

@@ -355,22 +355,33 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
   if (err_cstr)
     error.assign(err_cstr);
 
-  if (ShouldPrintValueObject()) {
-    if (IsNil())
-      summary.assign("nil");
-    else if (IsUninitialized())
-      summary.assign("<uninitialized>");
-    else if (m_options.m_omit_summary_depth == 0) {
-      TypeSummaryImpl *entry = GetSummaryFormatter();
-      if (entry)
-        m_valobj->GetSummaryAsCString(entry, summary,
-                                      m_options.m_varformat_language);
-      else {
-        const char *sum_cstr =
-            m_valobj->GetSummaryAsCString(m_options.m_varformat_language);
-        if (sum_cstr)
-          summary.assign(sum_cstr);
-      }
+  if (!ShouldPrintValueObject())
+    return;
+
+  if (IsNil()) {
+    lldb::LanguageType lang_type =
+        (m_options.m_varformat_language == lldb::eLanguageTypeUnknown)
+            ? m_valobj->GetPreferredDisplayLanguage()
+            : m_options.m_varformat_language;
+    if (Language *lang_plugin = Language::FindPlugin(lang_type)) {
+      summary.assign(lang_plugin->GetNilReferenceSummaryString().str());
+    } else {
+      // We treat C as the fallback language rather than as a separate Language
+      // plugin.
+      summary.assign("NULL");
+    }
+  } else if (IsUninitialized()) {
+    summary.assign("<uninitialized>");
+  } else if (m_options.m_omit_summary_depth == 0) {
+    TypeSummaryImpl *entry = GetSummaryFormatter();
+    if (entry) {
+      m_valobj->GetSummaryAsCString(entry, summary,
+                                    m_options.m_varformat_language);
+    } else {
+      const char *sum_cstr =
+          m_valobj->GetSummaryAsCString(m_options.m_varformat_language);
+      if (sum_cstr)
+        summary.assign(sum_cstr);
     }
   }
 }
@@ -403,7 +414,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       // this thing is nil (but show the value if the user passes a format
       // explicitly)
       TypeSummaryImpl *entry = GetSummaryFormatter();
-      if (!IsNil() && !IsUninitialized() && !m_value.empty() &&
+      const bool has_nil_or_uninitialized_summary =
+          (IsNil() || IsUninitialized()) && !m_summary.empty();
+      if (!has_nil_or_uninitialized_summary && !m_value.empty() &&
           (entry == nullptr ||
            (entry->DoesPrintValue(m_valobj) ||
             m_options.m_format != eFormatDefault) ||

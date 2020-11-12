@@ -211,6 +211,10 @@ public:
   // nil/null object, this method returns true
   virtual bool IsNilReference(ValueObject &valobj);
 
+  /// Returns the summary string for ValueObjects for which IsNilReference() is
+  /// true.
+  virtual llvm::StringRef GetNilReferenceSummaryString() { return {}; }
+
   // for a ValueObject of some "reference type", if the language provides a
   // technique to decide whether the reference has ever been assigned to some
   // object, this method will return true if such detection is possible, and if
