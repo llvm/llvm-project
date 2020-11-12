@@ -575,8 +575,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
 
   SDValue Res;
   if (N->isStrictFPOpcode()) {
-    Res = DAG.getNode(NewOpc, dl, { NVT, MVT::Other }, 
-                      { N->getOperand(0), N->getOperand(1) });
+    Res = DAG.getNode(NewOpc, dl, {NVT, MVT::Other},
+                      {N->getOperand(0), N->getOperand(1)});
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -1260,7 +1260,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo) {
 }
 
 // Handle promotion for the ADDE/SUBE/ADDCARRY/SUBCARRY nodes. Notice that
-// the third operand of ADDE/SUBE nodes is carry flag, which differs from 
+// the third operand of ADDE/SUBE nodes is carry flag, which differs from
 // the ADDCARRY/SUBCARRY nodes in that the third operand is carry Boolean.
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
   if (ResNo == 1)
@@ -3096,7 +3096,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
     ReplaceValueWith(SDValue(N, 1), Swap.getValue(2));
     return;
   }
-  
+
   if (ISD::isNormalLoad(N)) {
     ExpandRes_NormalLoad(N, Lo, Hi);
     return;
