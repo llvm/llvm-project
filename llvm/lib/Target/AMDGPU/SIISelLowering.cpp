@@ -7409,6 +7409,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
     return Op;
   }
+  case Intrinsic::amdgcn_waterfall_begin: {
+    // If the index in a waterfall.begin is uniform, it can be removed
+    if (!Op->getOperand(3)->isDivergent()) {
+      SDValue InChain = Op.getOperand(0);
+      SDValue OutChain = Op.getValue(1);
+      DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
+      DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), Op.getOperand(2));
+    }
+    return Op;
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
