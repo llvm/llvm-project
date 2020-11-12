@@ -543,12 +543,6 @@ class InternalMmapVectorNoCtor {
     Swap(size_, other.size_);
   }
 
-  void erase(T *t) {
-    if (t + 1 < end())
-      internal_memmove(t, t + 1, (end() - t - 1) * sizeof(T));
-    --size_;
-  }
-
  private:
   void Realloc(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);
