@@ -14,7 +14,7 @@ static_assert(A<int>::id == 1, "fail");
 static_assert(A<float>::id == 2, "fail");
 static_assert(A<double, double>::id == 3, "fail");
 
-A<char> a1; // expected-note {{in instantiation of template class 'A<char, void *>' requested here}}
+A<char> a1; // expected-note {{in instantiation of template class 'A<char>' requested here}}
 A<short, int> a2; // expected-note {{in instantiation of template class 'A<short, int>' requested here}}
 
 template <typename T, typename U>
