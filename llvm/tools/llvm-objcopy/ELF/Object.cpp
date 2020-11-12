@@ -1775,6 +1775,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSectionHeaders() {
     Sec->Align = Shdr.sh_addralign;
     Sec->EntrySize = Shdr.sh_entsize;
     Sec->Index = Index++;
+    Sec->OriginalIndex = Sec->Index;
     Sec->OriginalData =
         ArrayRef<uint8_t>(ElfFile.base() + Shdr.sh_offset,
                           (Shdr.sh_type == SHT_NOBITS) ? 0 : Shdr.sh_size);
