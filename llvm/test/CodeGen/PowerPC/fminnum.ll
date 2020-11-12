@@ -51,36 +51,48 @@ define ppc_fp128 @test_fminl(ppc_fp128 %x, ppc_fp128 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    stwu 1, -80(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    stwu 1, -112(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    stfd 1, 40(1)
 ; CHECK-NEXT:    lwz 3, 44(1)
 ; CHECK-NEXT:    stfd 2, 32(1)
 ; CHECK-NEXT:    stw 3, 60(1)
 ; CHECK-NEXT:    lwz 3, 40(1)
+; CHECK-NEXT:    stfd 3, 72(1)
 ; CHECK-NEXT:    stw 3, 56(1)
 ; CHECK-NEXT:    lwz 3, 36(1)
-; CHECK-NEXT:    lfd 1, 56(1)
+; CHECK-NEXT:    stfd 4, 64(1)
 ; CHECK-NEXT:    stw 3, 52(1)
 ; CHECK-NEXT:    lwz 3, 32(1)
+; CHECK-NEXT:    lfd 1, 56(1)
 ; CHECK-NEXT:    stw 3, 48(1)
+; CHECK-NEXT:    lwz 3, 76(1)
 ; CHECK-NEXT:    lfd 2, 48(1)
+; CHECK-NEXT:    stw 3, 92(1)
+; CHECK-NEXT:    lwz 3, 72(1)
+; CHECK-NEXT:    stw 3, 88(1)
+; CHECK-NEXT:    lwz 3, 68(1)
+; CHECK-NEXT:    lfd 3, 88(1)
+; CHECK-NEXT:    stw 3, 84(1)
+; CHECK-NEXT:    lwz 3, 64(1)
+; CHECK-NEXT:    stw 3, 80(1)
+; CHECK-NEXT:    lfd 4, 80(1)
 ; CHECK-NEXT:    bl fminl
 ; CHECK-NEXT:    stfd 1, 16(1)
 ; CHECK-NEXT:    lwz 3, 20(1)
 ; CHECK-NEXT:    stfd 2, 24(1)
-; CHECK-NEXT:    stw 3, 76(1)
+; CHECK-NEXT:    stw 3, 108(1)
 ; CHECK-NEXT:    lwz 3, 16(1)
-; CHECK-NEXT:    stw 3, 72(1)
+; CHECK-NEXT:    stw 3, 104(1)
 ; CHECK-NEXT:    lwz 3, 28(1)
-; CHECK-NEXT:    lfd 1, 72(1)
-; CHECK-NEXT:    stw 3, 68(1)
+; CHECK-NEXT:    lfd 1, 104(1)
+; CHECK-NEXT:    stw 3, 100(1)
 ; CHECK-NEXT:    lwz 3, 24(1)
-; CHECK-NEXT:    stw 3, 64(1)
-; CHECK-NEXT:    lfd 2, 64(1)
-; CHECK-NEXT:    lwz 0, 84(1)
-; CHECK-NEXT:    addi 1, 1, 80
+; CHECK-NEXT:    stw 3, 96(1)
+; CHECK-NEXT:    lfd 2, 96(1)
+; CHECK-NEXT:    lwz 0, 116(1)
+; CHECK-NEXT:    addi 1, 1, 112
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %z = call ppc_fp128 @fminl(ppc_fp128 %x, ppc_fp128 %y) readnone
@@ -126,36 +138,48 @@ define ppc_fp128 @test_intrinsic_fmin_f128(ppc_fp128 %x, ppc_fp128 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    stwu 1, -80(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    stwu 1, -112(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    stfd 1, 40(1)
 ; CHECK-NEXT:    lwz 3, 44(1)
 ; CHECK-NEXT:    stfd 2, 32(1)
 ; CHECK-NEXT:    stw 3, 60(1)
 ; CHECK-NEXT:    lwz 3, 40(1)
+; CHECK-NEXT:    stfd 3, 72(1)
 ; CHECK-NEXT:    stw 3, 56(1)
 ; CHECK-NEXT:    lwz 3, 36(1)
-; CHECK-NEXT:    lfd 1, 56(1)
+; CHECK-NEXT:    stfd 4, 64(1)
 ; CHECK-NEXT:    stw 3, 52(1)
 ; CHECK-NEXT:    lwz 3, 32(1)
+; CHECK-NEXT:    lfd 1, 56(1)
 ; CHECK-NEXT:    stw 3, 48(1)
+; CHECK-NEXT:    lwz 3, 76(1)
 ; CHECK-NEXT:    lfd 2, 48(1)
+; CHECK-NEXT:    stw 3, 92(1)
+; CHECK-NEXT:    lwz 3, 72(1)
+; CHECK-NEXT:    stw 3, 88(1)
+; CHECK-NEXT:    lwz 3, 68(1)
+; CHECK-NEXT:    lfd 3, 88(1)
+; CHECK-NEXT:    stw 3, 84(1)
+; CHECK-NEXT:    lwz 3, 64(1)
+; CHECK-NEXT:    stw 3, 80(1)
+; CHECK-NEXT:    lfd 4, 80(1)
 ; CHECK-NEXT:    bl fminl
 ; CHECK-NEXT:    stfd 1, 16(1)
 ; CHECK-NEXT:    lwz 3, 20(1)
 ; CHECK-NEXT:    stfd 2, 24(1)
-; CHECK-NEXT:    stw 3, 76(1)
+; CHECK-NEXT:    stw 3, 108(1)
 ; CHECK-NEXT:    lwz 3, 16(1)
-; CHECK-NEXT:    stw 3, 72(1)
+; CHECK-NEXT:    stw 3, 104(1)
 ; CHECK-NEXT:    lwz 3, 28(1)
-; CHECK-NEXT:    lfd 1, 72(1)
-; CHECK-NEXT:    stw 3, 68(1)
+; CHECK-NEXT:    lfd 1, 104(1)
+; CHECK-NEXT:    stw 3, 100(1)
 ; CHECK-NEXT:    lwz 3, 24(1)
-; CHECK-NEXT:    stw 3, 64(1)
-; CHECK-NEXT:    lfd 2, 64(1)
-; CHECK-NEXT:    lwz 0, 84(1)
-; CHECK-NEXT:    addi 1, 1, 80
+; CHECK-NEXT:    stw 3, 96(1)
+; CHECK-NEXT:    lfd 2, 96(1)
+; CHECK-NEXT:    lwz 0, 116(1)
+; CHECK-NEXT:    addi 1, 1, 112
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %z = call ppc_fp128 @llvm.minnum.ppcf128(ppc_fp128 %x, ppc_fp128 %y) readnone
@@ -376,36 +400,44 @@ define ppc_fp128 @fminnum_const(ppc_fp128 %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    stwu 1, -80(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    stwu 1, -96(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    stfd 1, 40(1)
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    stw 3, 76(1)
+; CHECK-NEXT:    lis 4, 16368
+; CHECK-NEXT:    stw 3, 68(1)
+; CHECK-NEXT:    stw 3, 64(1)
 ; CHECK-NEXT:    lwz 3, 44(1)
 ; CHECK-NEXT:    stfd 2, 32(1)
 ; CHECK-NEXT:    stw 3, 60(1)
 ; CHECK-NEXT:    lwz 3, 40(1)
+; CHECK-NEXT:    stw 4, 72(1)
 ; CHECK-NEXT:    stw 3, 56(1)
 ; CHECK-NEXT:    lwz 3, 36(1)
-; CHECK-NEXT:    lfd 1, 56(1)
+; CHECK-NEXT:    lfd 3, 72(1)
 ; CHECK-NEXT:    stw 3, 52(1)
 ; CHECK-NEXT:    lwz 3, 32(1)
+; CHECK-NEXT:    lfd 4, 64(1)
 ; CHECK-NEXT:    stw 3, 48(1)
+; CHECK-NEXT:    lfd 1, 56(1)
 ; CHECK-NEXT:    lfd 2, 48(1)
 ; CHECK-NEXT:    bl fminl
 ; CHECK-NEXT:    stfd 1, 16(1)
 ; CHECK-NEXT:    lwz 3, 20(1)
 ; CHECK-NEXT:    stfd 2, 24(1)
-; CHECK-NEXT:    stw 3, 76(1)
+; CHECK-NEXT:    stw 3, 92(1)
 ; CHECK-NEXT:    lwz 3, 16(1)
-; CHECK-NEXT:    stw 3, 72(1)
+; CHECK-NEXT:    stw 3, 88(1)
 ; CHECK-NEXT:    lwz 3, 28(1)
-; CHECK-NEXT:    lfd 1, 72(1)
-; CHECK-NEXT:    stw 3, 68(1)
+; CHECK-NEXT:    lfd 1, 88(1)
+; CHECK-NEXT:    stw 3, 84(1)
 ; CHECK-NEXT:    lwz 3, 24(1)
-; CHECK-NEXT:    stw 3, 64(1)
-; CHECK-NEXT:    lfd 2, 64(1)
-; CHECK-NEXT:    lwz 0, 84(1)
-; CHECK-NEXT:    addi 1, 1, 80
+; CHECK-NEXT:    stw 3, 80(1)
+; CHECK-NEXT:    lfd 2, 80(1)
+; CHECK-NEXT:    lwz 0, 100(1)
+; CHECK-NEXT:    addi 1, 1, 96
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %2 = tail call fast ppc_fp128 @llvm.minnum.ppcf128(ppc_fp128 %0, ppc_fp128 0xM3FF00000000000000000000000000000)
