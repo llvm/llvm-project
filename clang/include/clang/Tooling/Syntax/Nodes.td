@@ -17,13 +17,18 @@
 
 include "clang/Tooling/Syntax/Syntax.td"
 
-def Node : External<?> {}
-def Leaf : External<Node> {}
-def Tree : External<Node> {}
+def TranslationUnit : Unconstrained {
+  let documentation = [{
+    A root node for a translation unit. Parent is always null.
+  }];
+}
 
-def TranslationUnit : External<Tree> {}
-
-def Expression : External<Tree> {}
+def Expression : Alternatives {
+  let documentation = [{
+    A base class for all expressions. Note that expressions are not statements,
+    even though they are in clang.
+  }];
+}
 def UnknownExpression : External<Expression> {}
 def UnaryOperatorExpression : External<Tree> {}
 def PrefixUnaryOperatorExpression : External<UnaryOperatorExpression> {}
@@ -99,8 +104,36 @@ def CallArguments : External<List> {}
 def NestedNameSpecifier : External<List> {}
 
 // Name Specifiers.
-def NameSpecifier : External<Tree> {}
-def GlobalNameSpecifier : External<NameSpecifier> {}
-def DecltypeNameSpecifier : External<NameSpecifier> {}
-def IdentifierNameSpecifier : External<NameSpecifier> {}
-def SimpleTemplateNameSpecifier : External<NameSpecifier> {}
+def NameSpecifier : Alternatives {
+  let documentation = [{
+    A sequence of these specifiers make a `nested-name-specifier`.
+    e.g. the `std` or `vector<int>` in `std::vector<int>::size`.
+  }];
+}
+def GlobalNameSpecifier : Unconstrained<NameSpecifier> {
+  let documentation = [{
+    The global namespace name specifier, this specifier doesn't correspond to a
+    token instead an absence of tokens before a `::` characterizes it, in
+    `::std::vector<int>` it would be characterized by the absence of a token
+    before the first `::`
+  }];
+}
+def DecltypeNameSpecifier : Unconstrained<NameSpecifier> {
+  let documentation = [{
+    A name specifier holding a decltype, of the form: `decltype ( expression ) `
+    e.g. the `decltype(s)` in `decltype(s)::size`.
+  }];
+}
+def IdentifierNameSpecifier : Unconstrained<NameSpecifier> {
+  let documentation = [{
+    A identifier name specifier, of the form `identifier`
+    e.g. the `std` in `std::vector<int>::size`.
+  }];
+}
+def SimpleTemplateNameSpecifier : Unconstrained<NameSpecifier> {
+  let documentation = [{
+    A name specifier with a simple-template-id, of the form `template_opt
+    identifier < template-args >` e.g. the `vector<int>` in
+    `std::vector<int>::size`.
+  }];
+}

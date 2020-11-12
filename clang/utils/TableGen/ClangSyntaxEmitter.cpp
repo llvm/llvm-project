@@ -16,19 +16,25 @@
 //   ABSTRACT_NODE(Type, Base, FirstKind, LastKind)
 // similar to those for AST nodes such as AST/DeclNodes.inc.
 //
-// In future, the class definitions will be produced by additional backends.
+// The -gen-clang-syntax-node-classes backend produces definitions for the
+// syntax::Node subclasses (except those marked as External).
+//
+// In future, another backend will encode the structure of the various node
+// types in tables so their invariants can be checked and enforced.
 //
 //===----------------------------------------------------------------------===//
 #include "TableGenBackends.h"
 
 #include <deque>
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 namespace {
+using llvm::formatv;
 
 // The class hierarchy of Node types.
 // We assemble this in order to be able to define the NodeKind enum in a
@@ -41,10 +47,15 @@ public:
     for (llvm::Record *Derived : Records.getAllDerivedDefinitions("NodeType"))
       if (llvm::Record *Base = Derived->getValueAsOptionalDef("base"))
         link(Derived, Base);
-    for (NodeType &N : AllTypes)
+    for (NodeType &N : AllTypes) {
       llvm::sort(N.Derived, [](const NodeType *L, const NodeType *R) {
         return L->Record->getName() < R->Record->getName();
       });
+      // Alternatives nodes must have subclasses, External nodes may do.
+      assert(N.Record->isSubClassOf("Alternatives") ||
+             N.Record->isSubClassOf("External") || N.Derived.empty());
+      assert(!N.Record->isSubClassOf("Alternatives") || !N.Derived.empty());
+    }
   }
 
   struct NodeType {
@@ -58,6 +69,16 @@ public:
     auto NI = ByName.find(Name);
     assert(NI != ByName.end() && "no such node");
     return *NI->second;
+  }
+
+  // Traverse the hierarchy in pre-order (base classes before derived).
+  void visit(llvm::function_ref<void(const NodeType &)> CB,
+             const NodeType *Start = nullptr) {
+    if (Start == nullptr)
+      Start = &get();
+    CB(*Start);
+    for (const NodeType *D : Start->Derived)
+      visit(CB, D);
   }
 
 private:
@@ -87,26 +108,12 @@ const Hierarchy::NodeType &lastConcrete(const Hierarchy::NodeType &N) {
   return N.Derived.empty() ? N : lastConcrete(*N.Derived.back());
 }
 
-void emitNodeList(const Hierarchy::NodeType &N, llvm::raw_ostream &OS) {
-  // Don't emit ABSTRACT_NODE for node itself, which has no parent.
-  if (N.Base != nullptr) {
-    if (N.Derived.empty())
-      OS << llvm::formatv("CONCRETE_NODE({0},{1})\n", N.name(), N.Base->name());
-    else
-      OS << llvm::formatv("ABSTRACT_NODE({0},{1},{2},{3})\n", N.name(),
-                          N.Base->name(), firstConcrete(N).name(),
-                          lastConcrete(N).name());
-  }
-  for (const auto *C : N.Derived)
-    emitNodeList(*C, OS);
-}
-
 } // namespace
 
 void clang::EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
                                     llvm::raw_ostream &OS) {
   llvm::emitSourceFileHeader("Syntax tree node list", OS);
-  OS << "// Generated from " << Records.getInputFilename() << "\n";
+  Hierarchy H(Records);
   OS << R"cpp(
 #ifndef NODE
 #define NODE(Kind, Base)
@@ -121,10 +128,77 @@ void clang::EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
 #endif
 
 )cpp";
-  emitNodeList(Hierarchy(Records).get(), OS);
+  H.visit([&](const Hierarchy::NodeType &N) {
+    // Don't emit ABSTRACT_NODE for node itself, which has no parent.
+    if (N.Base == nullptr)
+      return;
+    if (N.Derived.empty())
+      OS << formatv("CONCRETE_NODE({0},{1})\n", N.name(), N.Base->name());
+    else
+      OS << formatv("ABSTRACT_NODE({0},{1},{2},{3})\n", N.name(),
+                    N.Base->name(), firstConcrete(N).name(),
+                    lastConcrete(N).name());
+  });
   OS << R"cpp(
 #undef NODE
 #undef CONCRETE_NODE
 #undef ABSTRACT_NODE
 )cpp";
+}
+
+// Format a documentation string as a C++ comment.
+// Trims leading whitespace handling since comments come from a TableGen file:
+//    documentation = [{
+//      This is a widget. Example:
+//        widget.explode()
+//    }];
+// and should be formatted as:
+//    /// This is a widget. Example:
+//    ///   widget.explode()
+// Leading and trailing whitespace lines are stripped.
+// The indentation of the first line is stripped from all lines.
+static void printDoc(llvm::StringRef Doc, llvm::raw_ostream &OS) {
+  Doc = Doc.rtrim();
+  llvm::StringRef Line;
+  while (Line.trim().empty() && !Doc.empty())
+    std::tie(Line, Doc) = Doc.split('\n');
+  llvm::StringRef Indent = Line.take_while(llvm::isSpace);
+  for (; !Line.empty() || !Doc.empty(); std::tie(Line, Doc) = Doc.split('\n')) {
+    Line.consume_front(Indent);
+    OS << "/// " << Line << "\n";
+  }
+}
+
+void clang::EmitClangSyntaxNodeClasses(llvm::RecordKeeper &Records,
+                                       llvm::raw_ostream &OS) {
+  llvm::emitSourceFileHeader("Syntax tree node list", OS);
+  Hierarchy H(Records);
+
+  OS << "\n// Forward-declare node types so we don't have to carefully "
+        "sequence definitions.\n";
+  H.visit([&](const Hierarchy::NodeType &N) {
+    OS << "class " << N.name() << ";\n";
+  });
+
+  OS << "\n// Node definitions\n\n";
+  H.visit([&](const Hierarchy::NodeType &N) {
+    if (N.Record->isSubClassOf("External"))
+      return;
+    printDoc(N.Record->getValueAsString("documentation"), OS);
+    OS << formatv("class {0}{1} : public {2} {{\n", N.name(),
+                  N.Derived.empty() ? " final" : "", N.Base->name());
+
+    // Constructor.
+    if (N.Derived.empty())
+      OS << formatv("public:\n  {0}() : {1}(NodeKind::{0}) {{}\n", N.name(),
+                    N.Base->name());
+    else
+      OS << formatv("protected:\n  {0}(NodeKind K) : {1}(K) {{}\npublic:\n",
+                    N.name(), N.Base->name());
+
+    // classof. FIXME: move definition inline once ~all nodes are generated.
+    OS << "  static bool classof(const Node *N);\n";
+
+    OS << "};\n\n";
+  });
 }
