@@ -58,6 +58,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -563,6 +564,11 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
   subsections.insert(subsections.end(), file->subsections.begin(),
                      file->subsections.end());
+}
+
+BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
+    : InputFile(BitcodeKind, mbref) {
+  obj = check(lto::InputFile::create(mbref));
 }
 
 // Returns "<internal>" or "baz.o".
