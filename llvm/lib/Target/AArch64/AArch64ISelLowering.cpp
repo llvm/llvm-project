@@ -273,7 +273,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::nxv8bf16, &AArch64::ZPRRegClass);
     }
 
-    if (useSVEForFixedLengthVectors()) {
+    if (Subtarget->useSVEForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
         if (useSVEForFixedLengthVectorVT(VT))
           addRegisterClass(VT, &AArch64::ZPRRegClass);
@@ -1091,7 +1091,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
-    if (useSVEForFixedLengthVectors()) {
+    if (Subtarget->useSVEForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
         if (useSVEForFixedLengthVectorVT(VT))
           addTypeForFixedLengthSVE(VT);
@@ -4150,14 +4150,13 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   }
 }
 
-bool AArch64TargetLowering::useSVEForFixedLengthVectors() const {
-  // Prefer NEON unless larger SVE registers are available.
-  return Subtarget->hasSVE() && Subtarget->getMinSVEVectorSizeInBits() >= 256;
+bool AArch64TargetLowering::mergeStoresAfterLegalization(EVT VT) const {
+  return !Subtarget->useSVEForFixedLengthVectors();
 }
 
 bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
     EVT VT, bool OverrideNEON) const {
-  if (!useSVEForFixedLengthVectors())
+  if (!Subtarget->useSVEForFixedLengthVectors())
     return false;
 
   if (!VT.isFixedLengthVector())
