@@ -236,6 +236,7 @@ bool MVEVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
                                .add(LoopStart->getOperand(0))
                                .add(LoopStart->getOperand(1))
                                .addReg(CountReg);
+  (void)MI;
   LLVM_DEBUG(dbgs() << "Replacing " << *LoopStart << "  with "
                     << *MI.getInstr());
   MRI->constrainRegClass(CountReg, &ARM::rGPRRegClass);
