@@ -55,9 +55,6 @@ public:
                       : insert<Part::Real>(cplx, part);
   }
 
-  mlir::Value createComplexCompare(mlir::Value cplx1, mlir::Value cplx2,
-                                   bool eq);
-
 protected:
   template <Part partId>
   mlir::Value extract(mlir::Value cplx) {
