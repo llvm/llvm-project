@@ -78,13 +78,7 @@ public:
   /// are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPValue objects. They are used for concrete
   /// type identification.
-  enum {
-    VPValueSC,
-    VPInstructionSC,
-    VPMemoryInstructionSC,
-    VPVWidenCallSC,
-    VPVWidenSelectSC
-  };
+  enum { VPValueSC, VPInstructionSC, VPMemoryInstructionSC, VPVWidenCallSC };
 
   VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
   VPValue(const VPValue &) = delete;
