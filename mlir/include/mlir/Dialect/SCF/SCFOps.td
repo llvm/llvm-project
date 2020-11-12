@@ -196,6 +196,11 @@ def ForOp : SCF_Op<"for",
     /// induction variable. LoopOp only has one region, so 0 is the only valid
     /// value for `index`.
     OperandRange getSuccessorEntryOperands(unsigned index);
+
+    /// Returns the number of invocations of the body block if the loop bounds
+    /// are constants. Returns `kUnknownNumRegionInvocations` otherwise.
+    void getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<int64_t> &countPerRegion);
   }];
 
   let hasCanonicalizer = 1;
