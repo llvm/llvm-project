@@ -1223,10 +1223,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::Shl: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     auto KF = [NSW](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      APInt ShiftAmtV(KnownShiftVal.getBitWidth(), ShiftAmt);
-      KnownBits KnownShiftAmt;
-      KnownShiftAmt.One = ShiftAmtV;
-      KnownShiftAmt.Zero = ~ShiftAmtV;
+      KnownBits KnownShiftAmt = KnownBits::makeConstant(APInt(32, ShiftAmt));
       KnownBits Result = KnownBits::shl(KnownShiftVal, KnownShiftAmt);
       // If this shift has "nsw" keyword, then the result is either a poison
       // value or has the same sign bit as the first operand.
@@ -1244,10 +1241,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::LShr: {
     auto KF = [](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      APInt ShiftAmtV(KnownShiftVal.getBitWidth(), ShiftAmt);
-      KnownBits KnownShiftAmt;
-      KnownShiftAmt.One = ShiftAmtV;
-      KnownShiftAmt.Zero = ~ShiftAmtV;
+      KnownBits KnownShiftAmt = KnownBits::makeConstant(APInt(32, ShiftAmt));
       return KnownBits::lshr(KnownShiftVal, KnownShiftAmt);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
@@ -1256,10 +1250,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::AShr: {
     auto KF = [](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      APInt ShiftAmtV(KnownShiftVal.getBitWidth(), ShiftAmt);
-      KnownBits KnownShiftAmt;
-      KnownShiftAmt.One = ShiftAmtV;
-      KnownShiftAmt.Zero = ~ShiftAmtV;
+      KnownBits KnownShiftAmt = KnownBits::makeConstant(APInt(32, ShiftAmt));
       return KnownBits::ashr(KnownShiftVal, KnownShiftAmt);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
