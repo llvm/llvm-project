@@ -48,7 +48,7 @@ detached_task foo() {
   co_return;
 }
 
-// check that the lifetime of the coroutine handle used to obtain the address is contained within single basic block.
+// check that the lifetime of the coroutine handle used to obtain the address is contained within single basic block, and hence does not live across suspension points.
 // CHECK-LABEL: final.suspend:
 // CHECK:         %[[PTR1:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP:.+]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[PTR1]])
