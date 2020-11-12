@@ -100,6 +100,7 @@ endif()
 if(MLIR_BINDINGS_PYTHON_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRBindingsPythonExtension
+    MLIRTransformsBindingsPythonExtension
   )
 endif()
 
