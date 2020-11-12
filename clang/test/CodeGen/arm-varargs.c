@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-LE %s
-// RUN: %clang_cc1 -triple armeb-none-eabi -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-BE %s
+// RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple armeb-none-eabi -emit-llvm -o - %s | FileCheck %s
 
 #include <stdarg.h>
 
