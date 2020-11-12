@@ -258,6 +258,10 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
 
+          FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"fdimf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"fdiml", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+
           FunctionSpec<"floor", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"floorf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"floorl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
