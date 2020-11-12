@@ -1566,7 +1566,11 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
 
+  // Check that all uses are either s/zext, or narrow def (in case of we are
+  // widening the IV increment).
   for (Use &U : NarrowUse->uses()) {
+    if (U.getUser() == NarrowDef)
+      continue;
     Instruction *User = nullptr;
     if (ExtKind == SignExtended)
       User = dyn_cast<SExtInst>(U.getUser());
@@ -1597,6 +1601,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   ExtendKindMap[NarrowUse] = ExtKind;
 
   for (Use &U : NarrowUse->uses()) {
+    // Ignore narrow def: it will be removed after the transform.
+    if (U.getUser() == NarrowDef)
+      continue;
     Instruction *User = nullptr;
     if (ExtKind == SignExtended)
       User = cast<SExtInst>(U.getUser());
