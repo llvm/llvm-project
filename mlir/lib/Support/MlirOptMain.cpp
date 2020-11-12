@@ -62,8 +62,13 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   pm.enableVerifier(verifyPasses);
   applyPassManagerCLOptions(pm);
 
+  auto errorHandler = [&](const Twine &msg) {
+    emitError(UnknownLoc::get(context)) << msg;
+    return failure();
+  };
+
   // Build the provided pipeline.
-  if (failed(passPipeline.addToPipeline(pm)))
+  if (failed(passPipeline.addToPipeline(pm, errorHandler)))
     return failure();
 
   // Run the pipeline.
