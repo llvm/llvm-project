@@ -979,17 +979,14 @@ public:
 
       // Because we are modifying the MemoryAccess list, collect them first to
       // avoid iterator invalidation.
-      SmallVector<MemoryAccess *, 16> Accs;
-      for (MemoryAccess *RA : Stmt) {
+      SmallVector<MemoryAccess *, 16> Accs(Stmt.begin(), Stmt.end());
+
+      for (MemoryAccess *RA : Accs) {
         if (!RA->isRead())
           continue;
         if (!RA->isLatestScalarKind())
           continue;
 
-        Accs.push_back(RA);
-      }
-
-      for (MemoryAccess *RA : Accs) {
         if (tryForwardTree(RA)) {
           Modified = true;
           StmtModified = true;
