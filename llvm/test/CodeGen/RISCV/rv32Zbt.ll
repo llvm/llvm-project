@@ -131,11 +131,13 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32IB-LABEL: fshl_i32:
 ; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a2, a2, 31
 ; RV32IB-NEXT:    fsl a0, a0, a1, a2
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBT-LABEL: fshl_i32:
 ; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    andi a2, a2, 31
 ; RV32IBT-NEXT:    fsl a0, a0, a1, a2
 ; RV32IBT-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
@@ -315,11 +317,13 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32IB-LABEL: fshr_i32:
 ; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a2, a2, 31
 ; RV32IB-NEXT:    fsr a0, a1, a0, a2
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBT-LABEL: fshr_i32:
 ; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    andi a2, a2, 31
 ; RV32IBT-NEXT:    fsr a0, a1, a0, a2
 ; RV32IBT-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)

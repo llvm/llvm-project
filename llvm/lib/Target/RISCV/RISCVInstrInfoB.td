@@ -802,15 +802,32 @@ def : Pat<(or (and (not GPR:$rs2), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
           (CMIX GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 def : Pat<(riscv_selectcc GPR:$rs2, (XLenVT 0), (XLenVT 17), GPR:$rs3, GPR:$rs1),
           (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+} // Predicates = [HasStdExtZbt]
 
 // fshl and fshr concatenate their operands in the same order. fsr and fsl
 // instruction use different orders. fshl will return its first operand for
 // shift of zero, fshr will return its second operand. fsl and fsr both return
 // $rs1 so the patterns need to have different operand orders.
+//
+// fshl and fshr only read the lower log2(xlen) bits of the shift amount, but
+// fsl/fsr instructions read log2(xlen)+1 bits. DAG combine may have removed
+// an AND mask on the shift amount that we need to add back to avoid a one in
+// the extra bit.
+// FIXME: If we can prove that the extra bit in the shift amount is zero, we
+// don't need this mask.
+let Predicates = [HasStdExtZbt, IsRV32] in {
 def : Pat<(fshl GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSL GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+          (FSL GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
 def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
-          (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+          (FSR GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
+}
+let Predicates = [HasStdExtZbt, IsRV64] in {
+def : Pat<(fshl GPR:$rs1, GPR:$rs3, GPR:$rs2),
+          (FSL GPR:$rs1, (ANDI GPR:$rs2, 63), GPR:$rs3)>;
+def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
+          (FSR GPR:$rs1, (ANDI GPR:$rs2, 63), GPR:$rs3)>;
+}
+let Predicates = [HasStdExtZbt] in {
 def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
 // We can use FSRI for fshl by immediate if we subtract the immediate from
@@ -1019,11 +1036,11 @@ let Predicates = [HasStdExtZbt, IsRV64] in {
 def : Pat<(sext_inreg (fshl GPR:$rs1, (shl GPR:$rs3, (i64 32)),
                             (and GPR:$rs2, (i64 31))),
                       i32),
-          (FSLW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+          (FSLW GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
 def : Pat<(sext_inreg (fshr GPR:$rs3, (shl GPR:$rs1, (i64 32)),
                             (or GPR:$rs2, (i64 32))),
                       i32),
-          (FSRW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+          (FSRW GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
 def : Pat<(sext_inreg (fshr GPR:$rs3, (shl GPR:$rs1, (i64 32)),
                             uimm6gt32:$shamt),
                       i32),
