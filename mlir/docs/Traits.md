@@ -239,6 +239,20 @@ This trait requires that the operands are either vector or tensor types.
 This trait adds the property that the operation is commutative, i.e. `X op Y ==
 Y op X`
 
+### ElementwiseMappable
+
+* `OpTrait::ElementwiseMappable` -- `ElementwiseMappable`
+
+This trait tags scalar ops that also can be applied to vectors/tensors, with
+their semantics on vectors/tensors being elementwise application. This trait
+establishes a set of properties that allow reasoning about / converting between
+scalar/vector/tensor code. These same properties allow blanket implementations
+of various analyses/transformations for all `ElementwiseMappable` ops.
+
+Note: Not all ops that are "elementwise" in some abstract sense satisfy this
+trait. In particular, broadcasting behavior is not allowed. See the comments on
+`OpTrait::ElementwiseMappable` for the precise requirements.
+
 ### Function-Like
 
 *   `OpTrait::FunctionLike`
