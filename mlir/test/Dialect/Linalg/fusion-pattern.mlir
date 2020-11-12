@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-fusion-transform-patterns -canonicalize -cse -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-fusion-transform-patterns -canonicalize -cse -split-input-file -verify-diagnostics | FileCheck %s
 
 module {
   func @basic_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
@@ -295,3 +295,121 @@ module {
 //      CHECK:   }
 //      CHECK:   linalg.matmul
 // CHECK-SAME:     __internal_linalg_transform__ = "after_lhs_fusion_original"
+
+// -----
+
+module {
+  func @matmul_plus_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
+                           %arg2: memref<?x?xf32>) {
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    %0 = dim %arg2, %c0 : memref<?x?xf32>
+    %1 = dim %arg2, %c1 : memref<?x?xf32>
+    %2 = alloc(%0, %1) : memref<?x?xf32>
+    linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%2 : memref<?x?xf32>)
+    linalg.generic
+      {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                        affine_map<(d0, d1) -> (d0, d1)>,
+                        affine_map<(d0, d1) -> (d0, d1)>],
+       iterator_types = ["parallel", "parallel"],
+       __internal_linalg_transform__ = "transpose_fusion"}
+      ins(%2, %2 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%arg2 : memref<?x?xf32>) {
+      ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
+        %3 = addf %arg3, %arg4 : f32
+        linalg.yield %3 : f32
+      }
+    return
+  }
+}
+//       CHECK: func @matmul_plus_matmul
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
+//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
+//       CHECK:   %[[T2:.+]] = alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
+//       CHECK:   linalg.matmul
+//  CHECK-SAME:     after_transpose_fusion_original
+//       CHECK:   scf.parallel (%[[ARG3:[a-zA-Z0-9_]+]], %[[ARG4:.[a-zA-Z0-9_]+]])
+//       CHECK:     %[[T5:.+]] = subview %[[T2]][%[[ARG3]], %[[ARG4]]]
+//       CHECK:     %[[T6:.+]] = subview %[[ARG2]][%[[ARG3]], %[[ARG4]]]
+//       CHECK:     %[[T8:.+]] = subview %[[ARG0]][%[[ARG3]], 0]
+//       CHECK:     %[[T9:.+]] = subview %[[ARG1]][0, %[[ARG4]]]
+//       CHECK:     linalg.matmul
+//  CHECK-SAME:       after_transpose_fusion_producer
+//  CHECK-SAME:       ins(%[[T8]], %[[T9]]
+//  CHECK-SAME:       outs(%[[T5]]
+//   CHECK-NOT:     linalg.matmul
+//       CHECK:     linalg.generic
+//  CHECK-SAME:       ins(%[[T5]], %[[T5]]
+//  CHECK-SAME:       outs(%[[T6]]
+//  CHECK-SAME:       after_transpose_fusion
+
+// -----
+
+module {
+  func @matmul_plus_transpose_matmul(%arg0: memref<?x?xf32>,
+                                     %arg1: memref<?x?xf32>,
+                                     %arg2: memref<?x?xf32>) {
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    %0 = dim %arg2, %c0 : memref<?x?xf32>
+    %1 = dim %arg2, %c1 : memref<?x?xf32>
+    %2 = alloc(%0, %1) : memref<?x?xf32>
+    linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%2 : memref<?x?xf32>)
+    // expected-remark @+1 {{unhandled fusion to the same producer but with different indexing maps}}
+    linalg.generic
+      {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                        affine_map<(d0, d1) -> (d1, d0)>,
+                        affine_map<(d0, d1) -> (d0, d1)>],
+       iterator_types = ["parallel", "parallel"],
+       __internal_linalg_transform__ = "transpose_fusion"}
+      ins(%2, %2 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%arg2 : memref<?x?xf32>) {
+      ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
+        %3 = addf %arg3, %arg4 : f32
+        linalg.yield %3 : f32
+      }
+    return
+  }
+}
+
+// -----
+
+#map0 = affine_map<(d0)[s0] -> (32, -d0 + s0)>
+#map1 = affine_map<(d0)[s0] -> (64, -d0 + s0)>
+#map2 = affine_map<(d0)[s0] -> (16, -d0 + s0)>
+#map3 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+module {
+  func @basic_no_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
+                        %arg2: memref<?x?xf32>) {
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    %c2 = constant 2 : index
+    %c32 = constant 32 : index
+    %c64 = constant 64 : index
+    %c16 = constant 16 : index
+    %cst = constant 0.000000e+00 : f32
+    linalg.fill(%arg2, %cst) : memref<?x?xf32>, f32
+    %0 = dim %arg0, %c0 : memref<?x?xf32>
+    %1 = dim %arg1, %c1 : memref<?x?xf32>
+    %2 = dim %arg0, %c1 : memref<?x?xf32>
+    scf.parallel (%arg3, %arg4) = (%c0, %c0) to (%0, %1) step (%c32, %c64) {
+      scf.for %arg5 = %c0 to %2 step %c16 {
+        %3 = affine.min #map0(%arg3)[%0]
+        %4 = affine.min #map1(%arg4)[%1]
+        %5 = affine.min #map2(%arg5)[%2]
+        %6 = subview %arg0[%arg3, %arg5] [%3, %5] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map3>
+        %7 = subview %arg1[%arg5, %arg4] [%5, %4] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map3>
+        %8 = subview %arg2[%arg3, %arg4] [%3, %4] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map3>
+	// expected-remark @+1 {{unhandled fusion of ops in different basic blocks}}
+        linalg.matmul {__internal_linalg_transform__ = "basic_fusion"}
+          ins(%6, %7 : memref<?x?xf32, #map3>, memref<?x?xf32, #map3>)
+          outs(%8 : memref<?x?xf32, #map3>)
+      }
+      scf.yield
+    }
+    return
+  }
+}

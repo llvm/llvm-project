@@ -3493,10 +3493,13 @@ void CXXNameMangler::mangleType(const DependentSizedExtVectorType *T) {
 }
 
 void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
-  // Mangle matrix types using a vendor extended type qualifier:
-  // U<Len>matrix_type<Rows><Columns><element type>
+  // Mangle matrix types as a vendor extended type:
+  // u<Len>matrix_typeI<Rows><Columns><element type>E
+
   StringRef VendorQualifier = "matrix_type";
-  Out << "U" << VendorQualifier.size() << VendorQualifier;
+  Out << "u" << VendorQualifier.size() << VendorQualifier;
+
+  Out << "I";
   auto &ASTCtx = getASTContext();
   unsigned BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
   llvm::APSInt Rows(BitWidth);
@@ -3506,15 +3509,20 @@ void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
   Columns = T->getNumColumns();
   mangleIntegerLiteral(ASTCtx.getSizeType(), Columns);
   mangleType(T->getElementType());
+  Out << "E";
 }
 
 void CXXNameMangler::mangleType(const DependentSizedMatrixType *T) {
-  // U<Len>matrix_type<row expr><column expr><element type>
+  // Mangle matrix types as a vendor extended type:
+  // u<Len>matrix_typeI<row expr><column expr><element type>E
   StringRef VendorQualifier = "matrix_type";
-  Out << "U" << VendorQualifier.size() << VendorQualifier;
+  Out << "u" << VendorQualifier.size() << VendorQualifier;
+
+  Out << "I";
   mangleTemplateArg(T->getRowExpr());
   mangleTemplateArg(T->getColumnExpr());
   mangleType(T->getElementType());
+  Out << "E";
 }
 
 void CXXNameMangler::mangleType(const DependentAddressSpaceType *T) {

@@ -27,9 +27,7 @@ public:
 };
 
 static bool isExport(const SUnit &SU) {
-  const MachineInstr *MI = SU.getInstr();
-  return MI->getOpcode() == AMDGPU::EXP ||
-         MI->getOpcode() == AMDGPU::EXP_DONE;
+  return SIInstrInfo::isEXP(*SU.getInstr());
 }
 
 static bool isPositionExport(const SIInstrInfo *TII, SUnit *SU) {

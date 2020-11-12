@@ -13,6 +13,11 @@ __all__ = [
   "passmanager",
 ]
 
+# The _dlloader takes care of platform specific setup before we try to
+# load a shared library.
+from . import _dlloader
+_dlloader.preload_dependency("MLIRPublicAPI")
+
 # Expose the corresponding C-Extension module with a well-known name at this
 # top-level module. This allows relative imports like the following to
 # function:

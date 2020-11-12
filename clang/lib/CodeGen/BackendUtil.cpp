@@ -1020,6 +1020,9 @@ static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   default:
     llvm_unreachable("Invalid optimization level!");
 
+  case 0:
+    return PassBuilder::OptimizationLevel::O0;
+
   case 1:
     return PassBuilder::OptimizationLevel::O1;
 
@@ -1249,6 +1252,10 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   ModulePassManager MPM(CodeGenOpts.DebugPassManager);
 
   if (!CodeGenOpts.DisableLLVMPasses) {
+    // Map our optimization levels into one of the distinct levels used to
+    // configure the pipeline.
+    PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
+
     bool IsThinLTO = CodeGenOpts.PrepareForThinLTO;
     bool IsLTO = CodeGenOpts.PrepareForLTO;
 
@@ -1297,10 +1304,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM.addPass(NameAnonGlobalPass());
       }
     } else {
-      // Map our optimization levels into one of the distinct levels used to
-      // configure the pipeline.
-      PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
-
       // If we reached here with a non-empty index file name, then the index
       // file was empty and we are not performing ThinLTO backend compilation
       // (used in testing in a distributed build environment). Drop any the type
@@ -1438,6 +1441,8 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     }
 
     if (CodeGenOpts.OptimizationLevel == 0) {
+      PB.runRegisteredEPCallbacks(MPM, Level, CodeGenOpts.DebugPassManager);
+
       // FIXME: the backends do not handle matrix intrinsics currently. Make
       // sure they are also lowered in O0. A lightweight version of the pass
       // should run in the backend pipeline on demand.

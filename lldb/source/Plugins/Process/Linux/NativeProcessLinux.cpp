@@ -1995,6 +1995,12 @@ Status NativeProcessLinux::GetTraceConfig(lldb::user_id_t traceid,
   return error;
 }
 
+llvm::Expected<TraceTypeInfo> NativeProcessLinux::GetSupportedTraceType() {
+  if (ProcessorTraceMonitor::IsSupported())
+    return TraceTypeInfo{"intel-pt", "Intel Processor Trace"};
+  return NativeProcessProtocol::GetSupportedTraceType();
+}
+
 lldb::user_id_t
 NativeProcessLinux::StartTraceGroup(const TraceOptions &config,
                                            Status &error) {

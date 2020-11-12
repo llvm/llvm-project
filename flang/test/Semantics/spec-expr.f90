@@ -173,3 +173,12 @@ subroutine s15()
     real, dimension((param + 2)) :: realField
   end type dtype
 end subroutine s15
+
+! Regression test: don't get confused by host association
+subroutine s16(n)
+  integer :: n
+ contains
+  subroutine inner(r)
+    real, dimension(n) :: r
+  end subroutine
+end subroutine s16

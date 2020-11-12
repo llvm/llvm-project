@@ -61,20 +61,74 @@ static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
   OS << "[" << PrefixLength << "]";
 }
 
-class MarshallingInfo {
+class MarshallingKindInfo {
 public:
-  static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
-
   const Record &R;
+  const char *MacroName;
   bool ShouldAlwaysEmit;
   StringRef KeyPath;
   StringRef DefaultValue;
   StringRef NormalizedValuesScope;
+
+  void emit(raw_ostream &OS) const {
+    write_cstring(OS, StringRef(getOptionSpelling(R)));
+    OS << ", ";
+    OS << ShouldAlwaysEmit;
+    OS << ", ";
+    OS << KeyPath;
+    OS << ", ";
+    emitScopedNormalizedValue(OS, DefaultValue);
+    OS << ", ";
+    emitSpecific(OS);
+  }
+
+  virtual Optional<StringRef> emitValueTable(raw_ostream &OS) const {
+    return None;
+  }
+
+  virtual ~MarshallingKindInfo() = default;
+
+  static std::unique_ptr<MarshallingKindInfo> create(const Record &R);
+
+protected:
+  void emitScopedNormalizedValue(raw_ostream &OS,
+                                 StringRef NormalizedValue) const {
+    if (!NormalizedValuesScope.empty())
+      OS << NormalizedValuesScope << "::";
+    OS << NormalizedValue;
+  }
+
+  virtual void emitSpecific(raw_ostream &OS) const = 0;
+  MarshallingKindInfo(const Record &R, const char *MacroName)
+      : R(R), MacroName(MacroName) {}
+};
+
+class MarshallingFlagInfo final : public MarshallingKindInfo {
+public:
+  bool IsPositive;
+
+  void emitSpecific(raw_ostream &OS) const override { OS << IsPositive; }
+
+  static std::unique_ptr<MarshallingKindInfo> create(const Record &R) {
+    std::unique_ptr<MarshallingFlagInfo> Ret(new MarshallingFlagInfo(R));
+    Ret->IsPositive = R.getValueAsBit("IsPositive");
+    // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+    //   The constructor that is supposed to allow for Derived to Base
+    //   conversion does not work. Remove this if we drop support for such
+    //   configurations.
+    return std::unique_ptr<MarshallingKindInfo>(Ret.release());
+  }
+
+private:
+  MarshallingFlagInfo(const Record &R)
+      : MarshallingKindInfo(R, "OPTION_WITH_MARSHALLING_FLAG") {}
+};
+
+class MarshallingStringInfo final : public MarshallingKindInfo {
+public:
   StringRef NormalizerRetTy;
   StringRef Normalizer;
   StringRef Denormalizer;
-  StringRef ValueMerger;
-  StringRef ValueExtractor;
   int TableIndex = -1;
   std::vector<StringRef> Values;
   std::vector<StringRef> NormalizedValues;
@@ -95,29 +149,17 @@ struct SimpleEnumValueTable {
   static constexpr const char *ValueTablesDecl =
       "static const SimpleEnumValueTable SimpleEnumValueTables[] = ";
 
-  void emit(raw_ostream &OS) const {
-    write_cstring(OS, StringRef(getOptionSpelling(R)));
-    OS << ", ";
-    OS << ShouldAlwaysEmit;
-    OS << ", ";
-    OS << KeyPath;
-    OS << ", ";
-    emitScopedNormalizedValue(OS, DefaultValue);
-    OS << ", ";
+  void emitSpecific(raw_ostream &OS) const override {
     emitScopedNormalizedValue(OS, NormalizerRetTy);
     OS << ", ";
     OS << Normalizer;
     OS << ", ";
     OS << Denormalizer;
     OS << ", ";
-    OS << ValueMerger;
-    OS << ", ";
-    OS << ValueExtractor;
-    OS << ", ";
     OS << TableIndex;
   }
 
-  Optional<StringRef> emitValueTable(raw_ostream &OS) const {
+  Optional<StringRef> emitValueTable(raw_ostream &OS) const override {
     if (TableIndex == -1)
       return {};
     OS << "static const SimpleEnumValue " << ValueTableName << "[] = {\n";
@@ -133,32 +175,23 @@ struct SimpleEnumValueTable {
     return StringRef(ValueTableName);
   }
 
-  static MarshallingInfo create(const Record &R) {
-    assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
-           !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
-           !isa<UnsetInit>(R.getValueInit("NormalizerRetTy")) &&
-           !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
-           "MarshallingInfo must have a type");
+  static std::unique_ptr<MarshallingKindInfo> create(const Record &R) {
+    assert(!isa<UnsetInit>(R.getValueInit("NormalizerRetTy")) &&
+           "String options must have a type");
 
-    MarshallingInfo Ret(R);
-    Ret.ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
-    Ret.KeyPath = R.getValueAsString("KeyPath");
-    Ret.DefaultValue = R.getValueAsString("DefaultValue");
-    Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
-    Ret.NormalizerRetTy = R.getValueAsString("NormalizerRetTy");
+    std::unique_ptr<MarshallingStringInfo> Ret(new MarshallingStringInfo(R));
+    Ret->NormalizerRetTy = R.getValueAsString("NormalizerRetTy");
 
-    Ret.Normalizer = R.getValueAsString("Normalizer");
-    Ret.Denormalizer = R.getValueAsString("Denormalizer");
-    Ret.ValueMerger = R.getValueAsString("ValueMerger");
-    Ret.ValueExtractor = R.getValueAsString("ValueExtractor");
+    Ret->Normalizer = R.getValueAsString("Normalizer");
+    Ret->Denormalizer = R.getValueAsString("Denormalizer");
 
     if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
       assert(!isa<UnsetInit>(R.getValueInit("Values")) &&
              "Cannot provide normalized values for value-less options");
-      Ret.TableIndex = NextTableIndex++;
-      Ret.NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
-      Ret.Values.reserve(Ret.NormalizedValues.size());
-      Ret.ValueTableName = getOptionName(R) + "ValueTable";
+      Ret->TableIndex = NextTableIndex++;
+      Ret->NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
+      Ret->Values.reserve(Ret->NormalizedValues.size());
+      Ret->ValueTableName = getOptionName(R) + "ValueTable";
 
       StringRef ValuesStr = R.getValueAsString("Values");
       for (;;) {
@@ -166,34 +199,55 @@ struct SimpleEnumValueTable {
         if (Idx == StringRef::npos)
           break;
         if (Idx > 0)
-          Ret.Values.push_back(ValuesStr.slice(0, Idx));
+          Ret->Values.push_back(ValuesStr.slice(0, Idx));
         ValuesStr = ValuesStr.slice(Idx + 1, StringRef::npos);
       }
       if (!ValuesStr.empty())
-        Ret.Values.push_back(ValuesStr);
+        Ret->Values.push_back(ValuesStr);
 
-      assert(Ret.Values.size() == Ret.NormalizedValues.size() &&
+      assert(Ret->Values.size() == Ret->NormalizedValues.size() &&
              "The number of normalized values doesn't match the number of "
              "values");
     }
 
-    return Ret;
+    // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+    //   The constructor that is supposed to allow for Derived to Base
+    //   conversion does not work. Remove this if we drop support for such
+    //   configurations.
+    return std::unique_ptr<MarshallingKindInfo>(Ret.release());
   }
 
 private:
-  void emitScopedNormalizedValue(raw_ostream &OS,
-                                 StringRef NormalizedValue) const {
-    if (!NormalizedValuesScope.empty())
-      OS << NormalizedValuesScope << "::";
-    OS << NormalizedValue;
-  }
-
-  MarshallingInfo(const Record &R) : R(R){};
+  MarshallingStringInfo(const Record &R)
+      : MarshallingKindInfo(R, "OPTION_WITH_MARSHALLING_STRING") {}
 
   static size_t NextTableIndex;
 };
 
-size_t MarshallingInfo::NextTableIndex = 0;
+size_t MarshallingStringInfo::NextTableIndex = 0;
+
+std::unique_ptr<MarshallingKindInfo>
+MarshallingKindInfo::create(const Record &R) {
+  assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
+         !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
+         "Must provide at least a key-path and a default value for emitting "
+         "marshalling information");
+
+  std::unique_ptr<MarshallingKindInfo> Ret = nullptr;
+  StringRef MarshallingKindStr = R.getValueAsString("MarshallingKind");
+
+  if (MarshallingKindStr == "flag")
+    Ret = MarshallingFlagInfo::create(R);
+  else if (MarshallingKindStr == "string")
+    Ret = MarshallingStringInfo::create(R);
+
+  Ret->ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
+  Ret->KeyPath = R.getValueAsString("KeyPath");
+  Ret->DefaultValue = R.getValueAsString("DefaultValue");
+  if (!isa<UnsetInit>(R.getValueInit("NormalizedValuesScope")))
+    Ret->NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
+  return Ret;
+}
 
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
@@ -384,7 +438,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   };
 
   auto IsMarshallingOption = [](const Record &R) {
-    return !isa<UnsetInit>(R.getValueInit("KeyPath")) &&
+    return !isa<UnsetInit>(R.getValueInit("MarshallingKind")) &&
            !R.getValueAsString("KeyPath").empty();
   };
 
@@ -418,30 +472,30 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   array_pod_sort(OptsWithMarshalling.begin(), OptsWithMarshalling.end(),
                  CmpMarshallingOpts);
 
-  std::vector<MarshallingInfo> MarshallingInfos;
+  std::vector<std::unique_ptr<MarshallingKindInfo>> MarshallingKindInfos;
   for (const auto *R : OptsWithMarshalling)
-    MarshallingInfos.push_back(MarshallingInfo::create(*R));
+    MarshallingKindInfos.push_back(MarshallingKindInfo::create(*R));
 
-  for (const auto &MI : MarshallingInfos) {
-    OS << "#ifdef " << MI.MacroName << "\n";
-    OS << MI.MacroName << "(";
-    WriteOptRecordFields(OS, MI.R);
+  for (const auto &KindInfo : MarshallingKindInfos) {
+    OS << "#ifdef " << KindInfo->MacroName << "\n";
+    OS << KindInfo->MacroName << "(";
+    WriteOptRecordFields(OS, KindInfo->R);
     OS << ", ";
-    MI.emit(OS);
+    KindInfo->emit(OS);
     OS << ")\n";
-    OS << "#endif // " << MI.MacroName << "\n";
+    OS << "#endif // " << KindInfo->MacroName << "\n";
   }
 
   OS << "\n";
   OS << "#ifdef SIMPLE_ENUM_VALUE_TABLE";
   OS << "\n";
-  OS << MarshallingInfo::ValueTablePreamble;
+  OS << MarshallingStringInfo::ValueTablePreamble;
   std::vector<StringRef> ValueTableNames;
-  for (const auto &MI : MarshallingInfos)
-    if (auto MaybeValueTableName = MI.emitValueTable(OS))
+  for (const auto &KindInfo : MarshallingKindInfos)
+    if (auto MaybeValueTableName = KindInfo->emitValueTable(OS))
       ValueTableNames.push_back(*MaybeValueTableName);
 
-  OS << MarshallingInfo::ValueTablesDecl << "{";
+  OS << MarshallingStringInfo::ValueTablesDecl << "{";
   for (auto ValueTableName : ValueTableNames)
     OS << "{" << ValueTableName << ", sizeof(" << ValueTableName
        << ") / sizeof(SimpleEnumValue)"

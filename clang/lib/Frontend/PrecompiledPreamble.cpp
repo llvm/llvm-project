@@ -303,9 +303,9 @@ template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
 } // namespace
 
 PreambleBounds clang::ComputePreambleBounds(const LangOptions &LangOpts,
-                                            const llvm::MemoryBuffer *Buffer,
+                                            const llvm::MemoryBufferRef &Buffer,
                                             unsigned MaxLines) {
-  return Lexer::ComputePreamble(Buffer->getBuffer(), LangOpts, MaxLines);
+  return Lexer::ComputePreamble(Buffer.getBuffer(), LangOpts, MaxLines);
 }
 
 llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
@@ -621,7 +621,7 @@ void PrecompiledPreamble::AddImplicitPreamble(
 void PrecompiledPreamble::OverridePreamble(
     CompilerInvocation &CI, IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS,
     llvm::MemoryBuffer *MainFileBuffer) const {
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), MainFileBuffer, 0);
+  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *MainFileBuffer, 0);
   configurePreamble(Bounds, CI, VFS, MainFileBuffer);
 }
 

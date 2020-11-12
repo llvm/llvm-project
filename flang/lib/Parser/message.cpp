@@ -260,11 +260,6 @@ bool Message::AtSameLocation(const Message &that) const {
       location_, that.location_);
 }
 
-void Messages::clear() {
-  messages_.clear();
-  ResetLastPointer();
-}
-
 bool Messages::Merge(const Message &msg) {
   if (msg.IsMergeable()) {
     for (auto &m : messages_) {
@@ -284,12 +279,12 @@ void Messages::Merge(Messages &&that) {
       if (Merge(that.messages_.front())) {
         that.messages_.pop_front();
       } else {
-        messages_.splice_after(
-            last_, that.messages_, that.messages_.before_begin());
-        ++last_;
+        auto next{that.messages_.begin()};
+        ++next;
+        messages_.splice(
+            messages_.end(), that.messages_, that.messages_.begin(), next);
       }
     }
-    that.ResetLastPointer();
   }
 }
 

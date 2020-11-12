@@ -3122,7 +3122,7 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
       // FIXME: Skipping EXP/EXP_DONE temporarily disabled in PS.  A better fix
       // would be to have a pixel-shader-only pass that adds an extra EXP_DONE
       // if there is no EXP_DONE in the final basic block.
-      ((Opcode == AMDGPU::EXP || Opcode == AMDGPU::EXP_DONE) &&
+      (isEXP(Opcode) &&
        MI.getParent()->getParent()->getFunction().getCallingConv() != CallingConv::AMDGPU_PS) ||
       Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::S_TRAP ||
       Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER)

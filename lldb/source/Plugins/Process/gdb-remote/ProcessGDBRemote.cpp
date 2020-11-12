@@ -1224,6 +1224,10 @@ Status ProcessGDBRemote::GetTraceConfig(lldb::user_id_t uid,
   return m_gdb_comm.SendGetTraceConfigPacket(uid, options);
 }
 
+llvm::Expected<TraceTypeInfo> ProcessGDBRemote::GetSupportedTraceType() {
+  return m_gdb_comm.SendGetSupportedTraceType();
+}
+
 void ProcessGDBRemote::DidExit() {
   // When we exit, disconnect from the GDB server communications
   m_gdb_comm.Disconnect();

@@ -209,5 +209,16 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printClose();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printComma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 
-#endif // EXECUTIONENGINE_CRUNNERUTILS_H_
+//===----------------------------------------------------------------------===//
+// Small runtime support for sparse tensors.
+//===----------------------------------------------------------------------===//
+extern "C" MLIR_CRUNNERUTILS_EXPORT void openMatrixC(char *filename,
+                                                     uint64_t *mdata,
+                                                     uint64_t *ndata,
+                                                     uint64_t *nnzdata);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void
+readMatrixItemC(uint64_t *idata, uint64_t *jdata, double *ddata);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void closeMatrix();
+extern "C" MLIR_CRUNNERUTILS_EXPORT char *getMatrix(uint64_t id);
 
+#endif // EXECUTIONENGINE_CRUNNERUTILS_H_

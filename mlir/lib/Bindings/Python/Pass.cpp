@@ -9,6 +9,7 @@
 #include "Pass.h"
 
 #include "IRModules.h"
+#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Pass.h"
 
 namespace py = pybind11;
@@ -21,8 +22,27 @@ namespace {
 class PyPassManager {
 public:
   PyPassManager(MlirPassManager passManager) : passManager(passManager) {}
-  ~PyPassManager() { mlirPassManagerDestroy(passManager); }
+  PyPassManager(PyPassManager &&other) : passManager(other.passManager) {
+    other.passManager.ptr = nullptr;
+  }
+  ~PyPassManager() {
+    if (!mlirPassManagerIsNull(passManager))
+      mlirPassManagerDestroy(passManager);
+  }
   MlirPassManager get() { return passManager; }
+
+  void release() { passManager.ptr = nullptr; }
+  pybind11::object getCapsule() {
+    return py::reinterpret_steal<py::object>(
+        mlirPythonPassManagerToCapsule(get()));
+  }
+
+  static pybind11::object createFromCapsule(pybind11::object capsule) {
+    MlirPassManager rawPm = mlirPythonCapsuleToPassManager(capsule.ptr());
+    if (mlirPassManagerIsNull(rawPm))
+      throw py::error_already_set();
+    return py::cast(PyPassManager(rawPm), py::return_value_policy::move);
+  }
 
 private:
   MlirPassManager passManager;
@@ -43,6 +63,11 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
            }),
            py::arg("context") = py::none(),
            "Create a new PassManager for the current (or provided) Context.")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyPassManager::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyPassManager::createFromCapsule)
+      .def("_testing_release", &PyPassManager::release,
+           "Releases (leaks) the backing pass manager (testing)")
       .def_static(
           "parse",
           [](const std::string pipeline, DefaultingPyMlirContext context) {

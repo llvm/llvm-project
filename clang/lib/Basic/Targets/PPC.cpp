@@ -122,6 +122,10 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (LongDoubleWidth == 128) {
     Builder.defineMacro("__LONG_DOUBLE_128__");
     Builder.defineMacro("__LONGDOUBLE128");
+    if (Opts.PPCIEEELongDouble)
+      Builder.defineMacro("__LONG_DOUBLE_IEEE128__");
+    else
+      Builder.defineMacro("__LONG_DOUBLE_IBM128__");
   }
 
   // Define this for elfv2 (64-bit only) or 64-bit darwin.

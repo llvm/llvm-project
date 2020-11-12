@@ -1294,6 +1294,18 @@ let Predicates = [MMA] in {
     XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
                      "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  let mayStore = 1 in {
+    def SPILL_ACC: PPCEmitTimePseudo<(outs), (ins acc:$AT, memrix16:$dst),
+                                     "#SPILL_ACC", []>;
+    def SPILL_UACC: PPCEmitTimePseudo<(outs), (ins uacc:$AT, memrix16:$dst),
+                                     "#SPILL_UACC", []>;
+  }
+  let mayLoad = 1, hasSideEffects = 0 in {
+    def RESTORE_ACC: PPCEmitTimePseudo<(outs acc:$AT), (ins memrix16:$src),
+                                       "#RESTORE_ACC", []>;
+    def RESTORE_UACC: PPCEmitTimePseudo<(outs uacc:$AT), (ins memrix16:$src),
+                                       "#RESTORE_UACC", []>;
+  }
 }
 
 let Predicates = [MMA, PrefixInstrs] in {

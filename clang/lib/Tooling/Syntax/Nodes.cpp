@@ -196,10 +196,6 @@ syntax::DeclaratorList::getDeclaratorsAndCommas() {
   return Children;
 }
 
-syntax::Leaf *syntax::LiteralExpression::getLiteralToken() {
-  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::LiteralToken));
-}
-
 syntax::Expression *syntax::BinaryOperatorExpression::getLhs() {
   return cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::LeftHandSide));

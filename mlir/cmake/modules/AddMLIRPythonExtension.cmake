@@ -75,6 +75,15 @@ function(add_mlir_python_extension libname extname)
     SUFFIX "${PYTHON_MODULE_SUFFIX}${PYTHON_MODULE_EXTENSION}"
   )
 
+  if(WIN32)
+    # Need to also set the RUNTIME_OUTPUT_DIRECTORY on Windows in order to
+    # control where the .dll gets written.
+    set_target_properties(
+      ${libname} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/python
+    )
+  endif()
+
   # pybind11 requires binding code to be compiled with -fvisibility=hidden
   # For static linkage, better code can be generated if the entire project
   # compiles that way, but that is not enforced here. Instead, include a linker

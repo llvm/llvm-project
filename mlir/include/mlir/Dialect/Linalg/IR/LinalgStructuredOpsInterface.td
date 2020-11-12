@@ -555,7 +555,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the position of the shaped operand in the operand list.
+        Return the first position of the shaped operand in the operand list.
       }],
       /*retTy=*/"Optional<unsigned>",
       /*methodName=*/"getIndexOfShapedOperand",
@@ -571,6 +571,67 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         if (initTensorIndex.hasValue())
           return $_op.getNumInputs() + $_op.getNumOutputBuffers() + initTensorIndex.getValue();
         return llvm::None;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the operand index given the input index. Returns None
+        of the input index is invalid.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getOperandIndexForInputIndex",
+      /*args=*/(ins "unsigned":$input_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        if (input_index >= $_op.getNumInputs())
+          return llvm::None;
+        return input_index;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the operand index given the output index. Returns None
+        of the output index is invalid.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getOperandIndexForOutputIndex",
+      /*args=*/(ins "unsigned":$output_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        if (output_index >= $_op.getNumOutputs())
+          return llvm::None;
+        return output_index + $_op.getNumInputs();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the input index given the operand index. Return None
+        if the operand index doesnt corresponding to an input.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getInputIndex",
+      /*args=*/(ins "unsigned":$operand_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+         if (operand_index >= $_op.getNumInputs())
+           return llvm::None;
+         return operand_index;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the output index given the operand index. Return None
+        if the operand index doesnt corresponding to an output.
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getOutputIndex",
+      /*args=*/(ins "unsigned":$operand_index),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+         if (operand_index < $_op.getNumInputs() ||
+             operand_index >= $_op.getNumInputs() + $_op.getNumOutputs())
+           return llvm::None;
+         return operand_index - $_op.getNumInputs();
       }]
     >,
 
@@ -676,6 +737,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         };
         return llvm::all_of(getInputs(), isTensorType) &&
                llvm::all_of(this->getOperation()->getResults(), isTensorType);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return whether the op has sparse tensor semantics.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasSparseSemantics",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getAttr(getSparseAttrName()).template dyn_cast_or_null<ArrayAttr>() != nullptr;
       }]
     >,
     InterfaceMethod<

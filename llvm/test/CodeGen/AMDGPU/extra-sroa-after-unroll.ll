@@ -1,14 +1,14 @@
-; RUN: opt -instnamer -O1 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=ALL,O1 %s
-; RUN: opt -instnamer -O2 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=ALL,O2 %s
-; RUN: opt -instnamer -O3 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=ALL,O3 %s
+; RUN: opt -instnamer -O1 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O1 %s
+; RUN: opt -instnamer -O2 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O2 %s
+; RUN: opt -instnamer -O3 -mtriple=amdgcn-- -S -o - %s | FileCheck -check-prefixes=GCN,O3 %s
 target datalayout = "A5"
 
-; ALL-LABEL: t0
+; GCN-LABEL: t0
 ; O1-NOT: alloca
 ; O2-NOT: alloca
 ; O3-NOT: alloca
-; ALL-COUNT-27: = load
-; ALL-COUNT-26: = add
+; GCN-COUNT-27: = load
+; GCN-COUNT-26: = add
 define protected amdgpu_kernel void @t0(i32 addrspace(1)* %p.coerce) #0 {
 entry:
   %p = alloca i32*, align 8, addrspace(5)

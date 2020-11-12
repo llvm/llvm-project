@@ -43,7 +43,7 @@ static void fillFusionPatterns(MLIRContext *context,
       LinalgTilingOptions()
           .setTileSizes({32, 64, 16})
           .setLoopType(LinalgTilingLoopType::ParallelLoops),
-      LinalgFusionOptions(),
+      LinalgFusionOptions().setIndicesToFuse({2}),
       LinalgMarker(Identifier::get("basic_fusion", context),
                    Identifier::get("after_basic_fusion", context)),
       LinalgMarker(ArrayRef<Identifier>(),
@@ -91,6 +91,19 @@ static void fillFusionPatterns(MLIRContext *context,
       LinalgMarker(
           ArrayRef<Identifier>(),
           Identifier::get("after_two_operand_fusion_original", context)));
+
+  patterns.insert<LinalgTileAndFusePattern<GenericOp>>(
+      context, dependenceGraph,
+      LinalgTilingOptions().setTileSizes({32, 64}).setLoopType(
+          LinalgTilingLoopType::ParallelLoops),
+      LinalgFusionOptions().setIndicesToFuse({0, 1}),
+      LinalgMarker(Identifier::get("transpose_fusion", context),
+                   Identifier::get("after_transpose_fusion", context)),
+      LinalgMarker(ArrayRef<Identifier>(),
+                   Identifier::get("after_transpose_fusion_producer", context)),
+      LinalgMarker(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_transpose_fusion_original", context)));
 }
 
 static void applyFusionPatterns(MLIRContext *context, FuncOp funcOp) {

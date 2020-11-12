@@ -129,6 +129,7 @@ accepted if enabled by command-line options.
 * A `RETURN` statement may appear in a main program.
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
+* Nonstandard intrinsic functions: ISNAN
 
 ### Extensions supported when enabled by options
 

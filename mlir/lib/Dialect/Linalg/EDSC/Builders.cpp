@@ -69,6 +69,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
               builder.getStrArrayAttr(iteratorStrTypes),
               StringAttr() /*doc*/,
               StringAttr() /*library_call*/,
+              ArrayAttr() /*sparse*/,
               IntegerAttr() /*symbol_source*/
               /* TODO: other attributes in op */
               )
