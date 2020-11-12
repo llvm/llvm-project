@@ -9446,15 +9446,19 @@ bool ScalarEvolution::isKnownOnEveryIteration(ICmpInst::Predicate Pred,
 
 Optional<ScalarEvolution::MonotonicPredicateType>
 ScalarEvolution::getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
-                                           ICmpInst::Predicate Pred) {
-  auto Result = getMonotonicPredicateTypeImpl(LHS, Pred);
+                                           ICmpInst::Predicate Pred,
+                                           Optional<const SCEV *> NumIter,
+                                           const Instruction *Context) {
+  assert((!NumIter || !isa<SCEVCouldNotCompute>(*NumIter)) &&
+         "provided number of iterations must be computable!");
+  auto Result = getMonotonicPredicateTypeImpl(LHS, Pred, NumIter, Context);
 
 #ifndef NDEBUG
   // Verify an invariant: inverting the predicate should turn a monotonically
   // increasing change to a monotonically decreasing one, and vice versa.
   if (Result) {
-    auto ResultSwapped =
-        getMonotonicPredicateTypeImpl(LHS, ICmpInst::getSwappedPredicate(Pred));
+    auto ResultSwapped = getMonotonicPredicateTypeImpl(
+        LHS, ICmpInst::getSwappedPredicate(Pred), NumIter, Context);
 
     assert(ResultSwapped.hasValue() && "should be able to analyze both!");
     assert(ResultSwapped.getValue() != Result.getValue() &&
@@ -9467,7 +9471,9 @@ ScalarEvolution::getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
 
 Optional<ScalarEvolution::MonotonicPredicateType>
 ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
-                                               ICmpInst::Predicate Pred) {
+                                               ICmpInst::Predicate Pred,
+                                               Optional<const SCEV *> NumIter,
+                                               const Instruction *Context) {
   // A zero step value for LHS means the induction variable is essentially a
   // loop invariant value. We don't really depend on the predicate actually
   // flipping from false to true (for increasing predicates, and the other way
@@ -9486,23 +9492,60 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   assert((IsGreater || ICmpInst::isLE(Pred) || ICmpInst::isLT(Pred)) &&
          "Should be greater or less!");
 
-  // Check that AR does not wrap.
-  if (ICmpInst::isUnsigned(Pred)) {
-    if (!LHS->hasNoUnsignedWrap())
-      return None;
+  bool IsUnsigned = ICmpInst::isUnsigned(Pred);
+  assert((IsUnsigned || ICmpInst::isSigned(Pred)) &&
+         "Should be either signed or unsigned!");
+  // Check if we can prove no-wrap in the relevant range.
+
+  const SCEV *Step = LHS->getStepRecurrence(*this);
+  bool IsStepNonNegative = isKnownNonNegative(Step);
+  bool IsStepNonPositive = isKnownNonPositive(Step);
+  // We need to know which direction the iteration is going.
+  if (!IsStepNonNegative && !IsStepNonPositive)
+    return None;
+
+  auto ProvedNoWrap = [&]() {
+    // If the AddRec already has the flag, we are done.
+    if (IsUnsigned ? LHS->hasNoUnsignedWrap() : LHS->hasNoSignedWrap())
+      return true;
+
+    if (!NumIter)
+      return false;
+    // We could not prove no-wrap on all iteration space. Can we prove it for
+    // first iterations? In order to achieve it, check that:
+    // 1. The addrec does not self-wrap;
+    // 2. start <= end for non-negative step and start >= end for non-positive
+    // step.
+    bool HasNoSelfWrap = LHS->hasNoSelfWrap();
+    if (!HasNoSelfWrap)
+      // If num iter has same type as the AddRec, and step is +/- 1, even max
+      // possible number of iterations is not enough to self-wrap.
+      if (NumIter.getValue()->getType() == LHS->getType())
+        if (Step == getOne(LHS->getType()) ||
+            Step == getMinusOne(LHS->getType()))
+          HasNoSelfWrap = true;
+    if (!HasNoSelfWrap)
+      return false;
+    const SCEV *Start = LHS->getStart();
+    const SCEV *End = LHS->evaluateAtIteration(*NumIter, *this);
+    ICmpInst::Predicate NoOverflowPred =
+        IsStepNonNegative ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_SGE;
+    if (IsUnsigned)
+      NoOverflowPred = ICmpInst::getUnsignedPredicate(NoOverflowPred);
+    return isKnownPredicateAt(NoOverflowPred, Start, End, Context);
+  };
+
+  // If nothing worked, bail.
+  if (!ProvedNoWrap())
+    return None;
+
+  if (IsUnsigned)
     return IsGreater ? MonotonicallyIncreasing : MonotonicallyDecreasing;
-  } else {
-    assert(ICmpInst::isSigned(Pred) &&
-           "Relational predicate is either signed or unsigned!");
-    if (!LHS->hasNoSignedWrap())
-      return None;
-
-    const SCEV *Step = LHS->getStepRecurrence(*this);
-
-    if (isKnownNonNegative(Step))
+  else {
+    if (IsStepNonNegative)
       return IsGreater ? MonotonicallyIncreasing : MonotonicallyDecreasing;
 
-    if (isKnownNonPositive(Step))
+    if (IsStepNonPositive)
       return !IsGreater ? MonotonicallyIncreasing : MonotonicallyDecreasing;
 
     return None;
@@ -9565,9 +9608,8 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
     ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
     const SCEV *&InvariantRHS) {
   // Try to prove the following set of facts:
-  // - The predicate is monotonic.
+  // - The predicate is monotonic in the iteration space.
   // - If the check does not fail on the 1st iteration:
-  //   - No overflow will happen during first MaxIter iterations;
   //   - It will not fail on the MaxIter'th iteration.
   // If the check does fail on the 1st iteration, we leave the loop and no
   // other checks matter.
@@ -9585,23 +9627,7 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
   if (!AR || AR->getLoop() != L)
     return false;
 
-  // The predicate must be relational (i.e. <, <=, >=, >).
-  if (!ICmpInst::isRelational(Pred))
-    return false;
-
-  const SCEV *Step = AR->getStepRecurrence(*this);
-  bool IsStepNonPositive = isKnownNonPositive(Step);
-  if (!IsStepNonPositive && !isKnownNonNegative(Step))
-    return false;
-  bool HasNoSelfWrap = AR->hasNoSelfWrap();
-  if (!HasNoSelfWrap)
-    // If num iter has same type as the AddRec, and step is +/- 1, even max
-    // possible number of iterations is not enough to self-wrap.
-    if (MaxIter->getType() == AR->getType())
-      if (Step == getOne(AR->getType()) || Step == getMinusOne(AR->getType()))
-        HasNoSelfWrap = true;
-  // Only proceed with non-self-wrapping ARs.
-  if (!HasNoSelfWrap)
+  if (!getMonotonicPredicateType(AR, Pred, MaxIter, Context))
     return false;
 
   // Value of IV on suggested last iteration.
@@ -9609,21 +9635,10 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
   // Does it still meet the requirement?
   if (!isKnownPredicateAt(Pred, Last, RHS, Context))
     return false;
-  // We know that the addrec does not have a self-wrap. To prove that there is
-  // no signed/unsigned wrap, we need to check that
-  // Start <= Last for positive step or Start >= Last for negative step. Either
-  // works for zero step.
-  ICmpInst::Predicate NoOverflowPred =
-      CmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-  if (IsStepNonPositive)
-    NoOverflowPred = CmpInst::getSwappedPredicate(NoOverflowPred);
-  const SCEV *Start = AR->getStart();
-  if (!isKnownPredicateAt(NoOverflowPred, Start, Last, Context))
-    return false;
 
   // Everything is fine.
   InvariantPred = Pred;
-  InvariantLHS = Start;
+  InvariantLHS = AR->getStart();
   InvariantRHS = RHS;
   return true;
 }
