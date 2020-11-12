@@ -21,10 +21,7 @@
 namespace llvm {
 namespace elfabi {
 
-enum class FileFormat {
-  TBE,
-  ELF
-};
+enum class FileFormat { TBE, ELF };
 
 } // end namespace elfabi
 } // end namespace llvm
@@ -35,20 +32,20 @@ using namespace llvm::elfabi;
 // Command line flags:
 cl::opt<FileFormat> InputFileFormat(
     cl::desc("Force input file format:"),
-    cl::values(clEnumValN(FileFormat::TBE,
-                          "tbe", "Read `input` as text-based ELF stub"),
-               clEnumValN(FileFormat::ELF,
-                          "elf", "Read `input` as ELF binary")));
+    cl::values(clEnumValN(FileFormat::TBE, "tbe",
+                          "Read `input` as text-based ELF stub"),
+               clEnumValN(FileFormat::ELF, "elf",
+                          "Read `input` as ELF binary")));
 cl::opt<std::string> InputFilePath(cl::Positional, cl::desc("input"),
                                    cl::Required);
 cl::opt<std::string>
     EmitTBE("emit-tbe",
             cl::desc("Emit a text-based ELF stub (.tbe) from the input file"),
             cl::value_desc("path"));
-cl::opt<std::string> SOName(
-    "soname",
-    cl::desc("Manually set the DT_SONAME entry of any emitted files"),
-    cl::value_desc("name"));
+cl::opt<std::string>
+    SOName("soname",
+           cl::desc("Manually set the DT_SONAME entry of any emitted files"),
+           cl::value_desc("name"));
 
 /// writeTBE() writes a Text-Based ELF stub to a file using the latest version
 /// of the YAML parser.
