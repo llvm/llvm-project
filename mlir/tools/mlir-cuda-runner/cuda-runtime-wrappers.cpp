@@ -34,6 +34,7 @@
 
 // Static initialization of CUDA context for device ordinal 0.
 static auto InitializeCtx = [] {
+  CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
   CUdevice device;
   CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/0));
   CUcontext context;
