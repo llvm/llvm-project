@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=mipsel -mcpu=mips32   -relocation-model=pic  | FileCheck %s -check-prefixes=ALL,FCC,32-FCC
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic  | FileCheck %s -check-prefixes=ALL,FCC,32-FCC
+; RUN: llc < %s -march=mipsel -mcpu=mips32   -relocation-model=pic  | FileCheck %s -check-prefixes=ALL,32-FCC
+; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic  | FileCheck %s -check-prefixes=ALL,32-FCC
 ; RUN: llc < %s -march=mipsel -mcpu=mips32r6 -relocation-model=pic  | FileCheck %s -check-prefixes=ALL,GPR,32-GPR
-; RUN: llc < %s -march=mips64el -mcpu=mips64   | FileCheck %s -check-prefixes=ALL,FCC,64-FCC
-; RUN: llc < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,FCC,64-FCC
+; RUN: llc < %s -march=mips64el -mcpu=mips64   | FileCheck %s -check-prefixes=ALL,64-FCC
+; RUN: llc < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,64-FCC
 ; RUN: llc < %s -march=mips64el -mcpu=mips64r6 | FileCheck %s -check-prefixes=ALL,GPR,64-GPR
 
 define void @func0(float %f2, float %f3) nounwind {
