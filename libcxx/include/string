@@ -666,8 +666,26 @@ struct __padding<_CharT, 1>
 
 #endif  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef basic_string<char8_t> u8string;
+#endif
+
+#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+typedef basic_string<char16_t> u16string;
+typedef basic_string<char32_t> u32string;
+#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+
 template<class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_string
+class
+    _LIBCPP_TEMPLATE_VIS
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+    _LIBCPP_PREFERRED_NAME(u8string)
+#endif
+#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+    _LIBCPP_PREFERRED_NAME(u16string)
+    _LIBCPP_PREFERRED_NAME(u32string)
+#endif
+    basic_string
     : private __basic_string_common<true>
 {
 public:
@@ -4326,15 +4344,6 @@ swap(basic_string<_CharT, _Traits, _Allocator>& __lhs,
 {
     __lhs.swap(__rhs);
 }
-
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
-typedef basic_string<char8_t> u8string;
-#endif
-
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-typedef basic_string<char16_t> u16string;
-typedef basic_string<char32_t> u32string;
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
 
 _LIBCPP_FUNC_VIS int                stoi  (const string& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_FUNC_VIS long               stol  (const string& __str, size_t* __idx = nullptr, int __base = 10);

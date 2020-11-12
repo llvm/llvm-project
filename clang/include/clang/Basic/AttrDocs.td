@@ -4471,6 +4471,30 @@ the old mangled name and the new code will use the new mangled name with tags.
   }];
 }
 
+def PreferredNameDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``preferred_name`` attribute can be applied to a class template, and
+specifies a preferred way of naming a specialization of the template. The
+preferred name will be used whenever the corresponding template specialization
+would otherwise be printed in a diagnostic or similar context.
+
+The preferred name must be a typedef or type alias declaration that refers to a
+specialization of the class template (not including any type qualifiers). In
+general this requires the template to be declared at least twice. For example:
+
+.. code-block:: c++
+
+  template<typename T> struct basic_string;
+  using string = basic_string<char>;
+  using wstring = basic_string<wchar_t>;
+  template<typename T> struct [[clang::preferred_name(string),
+                                clang::preferred_name(wstring)]] basic_string {
+    // ...
+  };
+  }];
+}
+
 def PreserveMostDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
