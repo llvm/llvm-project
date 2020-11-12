@@ -122,8 +122,7 @@ public:
       // this method tries to get the interpretation (the actual value) from
       // the solver, which is currently not cached.
 
-      llvm::SMTExprRef Exp =
-          SMTConv::fromData(Solver, SD->getSymbolID(), Ty, Ctx.getTypeSize(Ty));
+      llvm::SMTExprRef Exp = SMTConv::fromData(Solver, Ctx, SD);
 
       Solver->reset();
       addStateConstraints(State);

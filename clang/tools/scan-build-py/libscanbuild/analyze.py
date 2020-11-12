@@ -207,10 +207,14 @@ def merge_ctu_extdef_maps(ctudir):
 def run_analyzer_parallel(args):
     """ Runs the analyzer against the given compilation database. """
 
-    def exclude(filename):
+    def exclude(filename, directory):
         """ Return true when any excluded directory prefix the filename. """
-        return any(re.match(r'^' + directory, filename)
-                   for directory in args.excludes)
+        if not os.path.isabs(filename):
+            # filename is either absolute or relative to directory. Need to turn
+            # it to absolute since 'args.excludes' are absolute paths.
+            filename = os.path.normpath(os.path.join(directory, filename))
+        return any(re.match(r'^' + exclude_directory, filename)
+                   for exclude_directory in args.excludes)
 
     consts = {
         'clang': args.clang,
@@ -225,7 +229,8 @@ def run_analyzer_parallel(args):
     logging.debug('run analyzer against compilation database')
     with open(args.cdb, 'r') as handle:
         generator = (dict(cmd, **consts)
-                     for cmd in json.load(handle) if not exclude(cmd['file']))
+                     for cmd in json.load(handle) if not exclude(
+                            cmd['file'], cmd['directory']))
         # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
         for current in pool.imap_unordered(run, generator):

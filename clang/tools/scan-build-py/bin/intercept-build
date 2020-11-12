@@ -5,12 +5,13 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import multiprocessing
-multiprocessing.freeze_support()
-
 import sys
 import os.path
 this_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 
 from libscanbuild.intercept import intercept_build
-sys.exit(intercept_build())
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
+    sys.exit(intercept_build())

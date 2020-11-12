@@ -582,9 +582,6 @@ bool ScanReachableSymbols::scan(SVal val) {
   if (SymbolRef Sym = val.getAsSymbol())
     return scan(Sym);
 
-  if (const SymExpr *Sym = val.getAsSymbolicExpression())
-    return scan(Sym);
-
   if (Optional<nonloc::CompoundVal> X = val.getAs<nonloc::CompoundVal>())
     return scan(*X);
 
