@@ -36,13 +36,13 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
 }
 
 void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor & /*from*/) {
-  INTERNAL_CHECK(!"AllocatableAssign is not yet implemented");
+  INTERNAL_CHECK(false); // AllocatableAssign is not yet implemented
 }
 
 int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor & /*from*/,
     bool /*hasStat*/, Descriptor * /*errMsg*/, const char * /*sourceFile*/,
     int /*sourceLine*/) {
-  INTERNAL_CHECK(!"MoveAlloc is not yet implemented");
+  INTERNAL_CHECK(false); // MoveAlloc is not yet implemented
   return StatOk;
 }
 
