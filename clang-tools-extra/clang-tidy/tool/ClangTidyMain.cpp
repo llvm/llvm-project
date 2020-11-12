@@ -319,7 +319,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
     if (ParsedConfig)
       return std::make_unique<ConfigOptionsProvider>(
           GlobalOptions,
-          ClangTidyOptions::getDefaults().mergeWith(DefaultOptions, 0),
+          ClangTidyOptions::getDefaults().merge(DefaultOptions, 0),
           *ParsedConfig, OverrideOptions, std::move(FS));
     llvm::errs() << "Error: invalid configuration specified.\n"
                  << ParsedConfig.getError().message() << "\n";
@@ -455,9 +455,8 @@ int clangTidyMain(int argc, const char **argv) {
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
         getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
-    llvm::outs() << configurationAsText(
-                        ClangTidyOptions::getDefaults().mergeWith(
-                            EffectiveOptions, 0))
+    llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
+                        EffectiveOptions, 0))
                  << "\n";
     return 0;
   }

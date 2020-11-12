@@ -205,7 +205,7 @@ const ClangTidyOptions &ClangTidyContext::getOptions() const {
 ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
   // Merge options on top of getDefaults() as a safeguard against options with
   // unset values.
-  return ClangTidyOptions::getDefaults().mergeWith(
+  return ClangTidyOptions::getDefaults().merge(
       OptionsProvider->getOptions(File), 0);
 }
 
