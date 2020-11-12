@@ -915,6 +915,36 @@ template<> template<> void ExportedClassTemplate2<int>::baz<int>() {}
 // M32-DAG: define dso_local x86_thiscallcc void @"??$baz@H@?$ExportedClassTemplate2@H@pr34849@@QAEXXZ"
 }
 
+namespace pr47683 {
+struct X { X() {} };
+
+template <typename> struct S {
+  S() = default;
+  X x;
+};
+template struct __declspec(dllexport) S<int>;
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.pr47683::S"* @"??0?$S@H@pr47683@@QAE@XZ"
+
+template <typename> struct T {
+  T() = default;
+  X x;
+};
+extern template struct T<int>;
+template struct __declspec(dllexport) T<int>;
+// Don't assert about multiple codegen for explicitly defaulted method in explicit instantiation def.
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.pr47683::T"* @"??0?$T@H@pr47683@@QAE@XZ"
+
+template <typename> struct U {
+  U();
+  X x;
+};
+template <typename T> U<T>::U() = default;
+extern template struct U<int>;
+template struct __declspec(dllexport) U<int>;
+// Same as T, but with out-of-line ctor.
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.pr47683::U"* @"??0?$U@H@pr47683@@QAE@XZ"
+}
+
 //===----------------------------------------------------------------------===//
 // Classes with template base classes
 //===----------------------------------------------------------------------===//
