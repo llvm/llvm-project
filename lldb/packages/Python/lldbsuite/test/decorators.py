@@ -391,13 +391,6 @@ def llgs_test(func):
     return skipTestIfFn(should_skip_llgs_tests)(func)
 
 
-def not_remote_testsuite_ready(func):
-    """Decorate the item as a test which is not ready yet for remote testsuite."""
-    def is_remote():
-        return "Not ready for remote testsuite" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
-
-
 def expectedFailureOS(
         oslist,
         bugnumber=None,
