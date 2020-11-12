@@ -1307,7 +1307,8 @@ defm rewrite_includes : OptInFFlag<"rewrite-includes", "">;
 
 defm delete_null_pointer_checks : OptOutFFlag<"delete-null-pointer-checks",
   "Treat usage of null pointers as undefined behavior (default)",
-  "Do not treat usage of null pointers as undefined behavior">;
+  "Do not treat usage of null pointers as undefined behavior",
+  "", [CoreOption]>;
 
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
