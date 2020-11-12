@@ -18,6 +18,7 @@
 #ifndef LLVM_ANALYSIS_CFGPRINTER_H
 #define LLVM_ANALYSIS_CFGPRINTER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/HeatUtils.h"
@@ -141,8 +142,18 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     return OS.str();
   }
 
-  static std::string getCompleteNodeLabel(const BasicBlock *Node,
-                                          DOTFuncInfo *) {
+  static void eraseComment(std::string &OutStr, unsigned &I, unsigned Idx) {
+    OutStr.erase(OutStr.begin() + I, OutStr.begin() + Idx);
+    --I;
+  }
+
+  static std::string getCompleteNodeLabel(
+      const BasicBlock *Node, DOTFuncInfo *,
+      llvm::function_ref<void(raw_string_ostream &, const BasicBlock &)>
+          HandleBasicBlock = [](raw_string_ostream &OS,
+                                const BasicBlock &Node) -> void { OS << Node; },
+      llvm::function_ref<void(std::string &, unsigned &, unsigned)>
+          HandleComment = eraseComment) {
     enum { MaxColumns = 80 };
     std::string Str;
     raw_string_ostream OS(Str);
@@ -152,7 +163,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
       OS << ":";
     }
 
-    OS << *Node;
+    HandleBasicBlock(OS, *Node);
     std::string OutStr = OS.str();
     if (OutStr[0] == '\n')
       OutStr.erase(OutStr.begin());
@@ -168,8 +179,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
         LastSpace = 0;
       } else if (OutStr[i] == ';') {             // Delete comments!
         unsigned Idx = OutStr.find('\n', i + 1); // Find end of line
-        OutStr.erase(OutStr.begin() + i, OutStr.begin() + Idx);
-        --i;
+        HandleComment(OutStr, i, Idx);
       } else if (ColNum == MaxColumns) { // Wrap lines.
         // Wrap very long names even though we can't find a space.
         if (!LastSpace)
