@@ -153,7 +153,9 @@ public:
     Stmt *StmtToTraverse = StmtNode;
     if (auto *ExprNode = dyn_cast_or_null<Expr>(StmtNode)) {
       auto *LambdaNode = dyn_cast_or_null<LambdaExpr>(StmtNode);
-      if (LambdaNode && !Finder->isTraversalAsIs())
+      if (LambdaNode &&
+          Finder->getASTContext().getParentMapContext().getTraversalKind() ==
+              TK_IgnoreUnlessSpelledInSource)
         StmtToTraverse = LambdaNode;
       else
         StmtToTraverse =
@@ -230,7 +232,8 @@ public:
     return traverse(TAL);
   }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
-    if (!Finder->isTraversalAsIs())
+    if (Finder->getASTContext().getParentMapContext().getTraversalKind() !=
+        TK_IgnoreUnlessSpelledInSource)
       return VisitorBase::TraverseLambdaExpr(Node);
     if (!Node)
       return true;
