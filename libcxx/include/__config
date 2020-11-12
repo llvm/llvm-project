@@ -943,6 +943,8 @@ typedef unsigned int   char32_t;
    // We're deferring to Microsoft's STL to provide aligned new et al. We don't
    // have it unless the language feature test macro is defined.
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+#elif defined(__MVS__)
+#  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #endif
 
 #if defined(__APPLE__)
