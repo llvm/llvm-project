@@ -664,7 +664,8 @@ public:
 
   std::string getSpecificModuleCachePath(StringRef ModuleHash);
   std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().getModuleHash());
+    return getSpecificModuleCachePath(
+        getInvocation().getModuleHash(getDiagnostics()));
   }
 
   /// Create the AST context.
