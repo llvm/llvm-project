@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Pass.h"
@@ -1739,6 +1740,17 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
     LLVM_DEBUG(dbgs() << "Failed to select G_PTRTOINT in convertPtrAddToAdd");
     return false;
   }
+
+  // Also take the opportunity here to try to do some optimization.
+  // Try to convert this into a G_SUB if the offset is a 0-x negate idiom.
+  Register NegatedReg;
+  int64_t Cst;
+  if (!mi_match(I.getOperand(2).getReg(), MRI,
+                m_GSub(m_ICst(Cst), m_Reg(NegatedReg))) ||
+      Cst != 0)
+    return true;
+  I.getOperand(2).setReg(NegatedReg);
+  I.setDesc(TII.get(TargetOpcode::G_SUB));
   return true;
 }
 
