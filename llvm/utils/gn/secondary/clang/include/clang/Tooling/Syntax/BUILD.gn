@@ -1,5 +1,0 @@
-import("//clang/utils/TableGen/clang_tablegen.gni")
-
-clang_tablegen("Nodes") {
-  args = [ "-gen-clang-syntax-node-list" ]
-}
