@@ -10,66 +10,85 @@
 // EXP classes
 //===----------------------------------------------------------------------===//
 
-class EXPCommon<dag outs, dag ins, string asm, list<dag> pattern> :
-  InstSI<outs, ins, asm, pattern> {
-  let EXP = 1;
-  let EXP_CNT = 1;
-  let mayLoad = 0; // Set to 1 if done bit is set.
-  let mayStore = 1;
-  let UseNamedOperandTable = 1;
-  let Uses = [EXEC];
-  let SchedRW = [WriteExport];
-}
-
-class EXP_Helper<bit done> : EXPCommon<
+class EXPCommon<bit done, string asm = ""> : InstSI<
   (outs),
   (ins exp_tgt:$tgt,
        ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
        exp_vm:$vm, exp_compr:$compr, i32imm:$en),
-  "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm", []> {
-  let AsmMatchConverter = "cvtExp";
+  asm> {
+  let EXP = 1;
+  let EXP_CNT = 1;
+  let mayLoad = done;
+  let mayStore = 1;
+  let UseNamedOperandTable = 1;
+  let Uses = [EXEC];
+  let SchedRW = [WriteExport];
+  let DisableWQM = 1;
 }
 
-// Split EXP instruction into EXP and EXP_DONE so we can set
-// mayLoad for done=1.
-multiclass EXP_m<bit done> {
-  let mayLoad = done, DisableWQM = 1 in {
-    let isPseudo = 1, isCodeGenOnly = 1 in {
-      def "" : EXP_Helper<done>,
-               SIMCInstr <NAME, SIEncodingFamily.NONE>;
-    }
+class EXP_Pseudo<bit done> : EXPCommon<done>,
+                             SIMCInstr <NAME, SIEncodingFamily.NONE> {
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+}
 
-    let done = done in {
-      def _si : EXP_Helper<done>,
-                SIMCInstr <NAME, SIEncodingFamily.SI>,
-                EXPe {
-        let AssemblerPredicate = isGFX6GFX7;
-        let DecoderNamespace = "GFX6GFX7";
-      }
-
-      def _vi : EXP_Helper<done>,
-                SIMCInstr <NAME, SIEncodingFamily.VI>,
-                EXPe_vi {
-        let AssemblerPredicate = isGFX8GFX9;
-        let DecoderNamespace = "GFX8";
-      }
-
-      def _gfx10 : EXP_Helper<done>,
-                   SIMCInstr <NAME, SIEncodingFamily.GFX10>,
-                   EXPe {
-        let AssemblerPredicate = isGFX10Plus;
-        let DecoderNamespace = "GFX10";
-      }
-    }
-  }
+class EXP_Real<bit done, string pseudo, int subtarget>
+  : EXPCommon<done, "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")
+                    #"$compr$vm">,
+    SIMCInstr <pseudo, subtarget> {
+  let AsmMatchConverter = "cvtExp";
 }
 
 //===----------------------------------------------------------------------===//
 // EXP Instructions
 //===----------------------------------------------------------------------===//
 
-defm EXP : EXP_m<0>;
-defm EXP_DONE : EXP_m<1>;
+// Split EXP instruction into EXP and EXP_DONE so we can set
+// mayLoad for done=1.
+def EXP : EXP_Pseudo<0>;
+def EXP_DONE : EXP_Pseudo<1>;
+
+//===----------------------------------------------------------------------===//
+// SI
+//===----------------------------------------------------------------------===//
+
+class EXP_Real_si<bit _done, string pseudo>
+  : EXP_Real<_done, pseudo, SIEncodingFamily.SI>, EXPe {
+  let AssemblerPredicate = isGFX6GFX7;
+  let DecoderNamespace = "GFX6GFX7";
+  let done = _done;
+}
+
+def EXP_si      : EXP_Real_si<0, "EXP">;
+def EXP_DONE_si : EXP_Real_si<1, "EXP_DONE">;
+
+//===----------------------------------------------------------------------===//
+// VI
+//===----------------------------------------------------------------------===//
+
+class EXP_Real_vi<bit _done, string pseudo>
+  : EXP_Real<_done, pseudo, SIEncodingFamily.VI>, EXPe_vi {
+  let AssemblerPredicate = isGFX8GFX9;
+  let DecoderNamespace = "GFX8";
+  let done = _done;
+}
+
+def EXP_vi      : EXP_Real_vi<0, "EXP">;
+def EXP_DONE_vi : EXP_Real_vi<1, "EXP_DONE">;
+
+//===----------------------------------------------------------------------===//
+// GFX10+
+//===----------------------------------------------------------------------===//
+
+class EXP_Real_gfx10<bit _done, string pseudo>
+  : EXP_Real<_done, pseudo, SIEncodingFamily.GFX10>, EXPe {
+  let AssemblerPredicate = isGFX10Plus;
+  let DecoderNamespace = "GFX10";
+  let done = _done;
+}
+
+def EXP_gfx10      : EXP_Real_gfx10<0, "EXP">;
+def EXP_DONE_gfx10 : EXP_Real_gfx10<1, "EXP_DONE">;
 
 //===----------------------------------------------------------------------===//
 // EXP Patterns
