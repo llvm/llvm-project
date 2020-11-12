@@ -11,6 +11,7 @@ static_library("Passes") {
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/InstCombine",
     "//llvm/lib/Transforms/Instrumentation",
+    "//llvm/lib/Transforms/ObjCARC",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",
     "//llvm/lib/Transforms/Vectorize",
