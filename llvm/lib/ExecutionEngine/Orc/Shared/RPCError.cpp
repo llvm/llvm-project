@@ -14,8 +14,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <system_error>
 #include <string>
+#include <system_error>
 
 char llvm::orc::rpc::RPCFatalError::ID = 0;
 char llvm::orc::rpc::ConnectionClosed::ID = 0;
@@ -52,7 +52,6 @@ std::error_code CouldNotNegotiate::convertToErrorCode() const {
 void CouldNotNegotiate::log(raw_ostream &OS) const {
   OS << "Could not negotiate RPC function " << Signature;
 }
-
 
 } // end namespace rpc
 } // end namespace orc

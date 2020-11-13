@@ -15,9 +15,9 @@
 #include "llvm-jitlink.h"
 
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/TPCEHFrameRegistrar.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -40,6 +40,13 @@
 
 #include <list>
 #include <string>
+
+#ifdef LLVM_ON_UNIX
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif // LLVM_ON_UNIX
 
 #define DEBUG_TYPE "llvm_jitlink"
 
@@ -137,6 +144,14 @@ static cl::opt<bool> PhonyExternals(
     "phony-externals",
     cl::desc("resolve all otherwise unresolved externals to null"),
     cl::init(false));
+
+static cl::opt<std::string> OutOfProcessExecutor(
+    "oop-executor", cl::desc("Launch an out-of-process executor to run code"),
+    cl::ValueOptional);
+
+static cl::opt<std::string> OutOfProcessExecutorConnect(
+    "oop-executor-connect",
+    cl::desc("Connect to an out-of-process executor via TCP"));
 
 ExitOnError ExitOnErr;
 
@@ -561,6 +576,165 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
   return JD.define(std::move(MU), std::move(RT));
 }
 
+Expected<std::unique_ptr<TargetProcessControl>>
+LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add support for Windows.
+  return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#else
+
+  rpc::registerStringError<LLVMJITLinkChannel>();
+
+  constexpr int ReadEnd = 0;
+  constexpr int WriteEnd = 1;
+
+  // Pipe FDs.
+  int ToExecutor[2];
+  int FromExecutor[2];
+
+  pid_t ChildPID;
+
+  // Create pipes to/from the executor..
+  if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
+    return make_error<StringError>("Unable to create pipe for executor",
+                                   inconvertibleErrorCode());
+
+  ChildPID = fork();
+
+  if (ChildPID == 0) {
+    // In the child...
+
+    // Close the parent ends of the pipes
+    close(ToExecutor[WriteEnd]);
+    close(FromExecutor[ReadEnd]);
+
+    // Execute the child process.
+    std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
+    {
+      ExecutorPath = std::make_unique<char[]>(OutOfProcessExecutor.size() + 1);
+      strcpy(ExecutorPath.get(), OutOfProcessExecutor.data());
+
+      std::string FDSpecifierStr("filedescs=");
+      FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
+      FDSpecifierStr += ',';
+      FDSpecifierStr += utostr(FromExecutor[WriteEnd]);
+      FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
+      strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
+    }
+
+    char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
+    int RC = execvp(ExecutorPath.get(), Args);
+    if (RC != 0) {
+      errs() << "unable to launch out-of-process executor \""
+             << ExecutorPath.get() << "\"\n";
+      exit(1);
+    }
+  }
+  // else we're the parent...
+
+  // Close the child ends of the pipes
+  close(ToExecutor[ReadEnd]);
+  close(FromExecutor[WriteEnd]);
+
+  // Return an RPC channel connected to our end of the pipes.
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto Channel = std::make_unique<rpc::FDRawByteChannel>(FromExecutor[ReadEnd],
+                                                         ToExecutor[WriteEnd]);
+  auto Endpoint = std::make_unique<LLVMJITLinkRPCEndpoint>(*Channel, true);
+
+  auto ReportError = [](Error Err) {
+    logAllUnhandledErrors(std::move(Err), errs(), "");
+  };
+
+  Error Err = Error::success();
+  std::unique_ptr<LLVMJITLinkRemoteTargetProcessControl> RTPC(
+      new LLVMJITLinkRemoteTargetProcessControl(
+          std::move(SSP), std::move(Channel), std::move(Endpoint),
+          std::move(ReportError), Err));
+  if (Err)
+    return std::move(Err);
+  return std::move(RTPC);
+#endif
+}
+
+Expected<std::unique_ptr<TargetProcessControl>>
+LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add TCP support for Windows.
+  return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#else
+
+  rpc::registerStringError<LLVMJITLinkChannel>();
+
+  StringRef HostNameStr, PortStr;
+  std::tie(HostNameStr, PortStr) =
+      StringRef(OutOfProcessExecutorConnect).split(':');
+
+  if (HostNameStr.empty())
+    return make_error<StringError>("host name for -" +
+                                       OutOfProcessExecutorConnect.ArgStr +
+                                       " can not be empty",
+                                   inconvertibleErrorCode());
+  if (PortStr.empty())
+    return make_error<StringError>(
+        "port for -" + OutOfProcessExecutorConnect.ArgStr + " can not be empty",
+        inconvertibleErrorCode());
+
+  std::string HostName = HostNameStr.str();
+  int Port = 0;
+  if (PortStr.getAsInteger(10, Port))
+    return make_error<StringError>("port number " + PortStr +
+                                       " is not a valid integer",
+                                   inconvertibleErrorCode());
+
+  int SockFD = socket(PF_INET, SOCK_STREAM, 0);
+  hostent *Server = gethostbyname(HostName.c_str());
+  sockaddr_in ServAddr;
+  memset(&ServAddr, 0, sizeof(ServAddr));
+  ServAddr.sin_family = PF_INET;
+  memmove(&Server->h_addr, &ServAddr.sin_addr.s_addr, Server->h_length);
+  ServAddr.sin_port = htons(Port);
+  if (connect(SockFD, reinterpret_cast<sockaddr *>(&ServAddr),
+              sizeof(ServAddr)) < 0)
+    return make_error<StringError>("Failed to connect to " + HostName + ":" +
+                                       Twine(Port),
+                                   inconvertibleErrorCode());
+
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto Channel = std::make_unique<rpc::FDRawByteChannel>(SockFD, SockFD);
+  auto Endpoint = std::make_unique<LLVMJITLinkRPCEndpoint>(*Channel, true);
+
+  auto ReportError = [](Error Err) {
+    logAllUnhandledErrors(std::move(Err), errs(), "");
+  };
+
+  Error Err = Error::success();
+  std::unique_ptr<LLVMJITLinkRemoteTargetProcessControl> RTPC(
+      new LLVMJITLinkRemoteTargetProcessControl(
+          std::move(SSP), std::move(Channel), std::move(Endpoint),
+          std::move(ReportError), Err));
+  if (Err)
+    return std::move(Err);
+  return std::move(RTPC);
+#endif
+}
+
+Error LLVMJITLinkRemoteTargetProcessControl::disconnect() {
+  std::promise<MSVCPError> P;
+  auto F = P.get_future();
+  auto Err = closeConnection([&](Error Err) -> Error {
+    P.set_value(std::move(Err));
+    Finished = true;
+    return Error::success();
+  });
+  ListenerThread.join();
+  return joinErrors(std::move(Err), F.get());
+};
+
 class PhonyExternalsGenerator : public DefinitionGenerator {
 public:
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
@@ -574,13 +748,30 @@ public:
 };
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
-  Error Err = Error::success();
 
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
     return PageSize.takeError();
 
-  std::unique_ptr<Session> S(new Session(std::move(TT), *PageSize, Err));
+  /// If -oop-executor is passed then launch the executor.
+  std::unique_ptr<TargetProcessControl> TPC;
+  if (OutOfProcessExecutor.getNumOccurrences()) {
+    if (auto RTPC = LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor())
+      TPC = std::move(*RTPC);
+    else
+      return RTPC.takeError();
+  } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
+    if (auto RTPC = LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor())
+      TPC = std::move(*RTPC);
+    else
+      return RTPC.takeError();
+  } else
+    TPC = std::make_unique<SelfTargetProcessControl>(
+        std::make_shared<SymbolStringPool>(), std::move(TT), *PageSize,
+        createMemoryManager());
+
+  Error Err = Error::success();
+  std::unique_ptr<Session> S(new Session(std::move(TPC), Err));
   if (Err)
     return std::move(Err);
   return std::move(S);
@@ -593,10 +784,8 @@ Session::~Session() {
 
 // FIXME: Move to createJITDylib if/when we start using Platform support in
 // llvm-jitlink.
-Session::Session(Triple TT, uint64_t PageSize, Error &Err)
-    : TPC(std::make_unique<SelfTargetProcessControl>(std::move(TT), PageSize,
-                                                     createMemoryManager())),
-      ObjLayer(*this, TPC->getMemMgr()) {
+Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
+    : TPC(std::move(TPC)), ObjLayer(*this, this->TPC->getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -630,9 +819,9 @@ Session::Session(Triple TT, uint64_t PageSize, Error &Err)
     return;
   }
 
-  if (!NoExec && !TT.isOSWindows())
+  if (!NoExec && !this->TPC->getTargetTriple().isOSWindows())
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-        ES, std::make_unique<InProcessEHFrameRegistrar>()));
+        ES, ExitOnErr(TPCEHFrameRegistrar::Create(*this->TPC))));
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 
@@ -785,22 +974,28 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 } // end namespace llvm
 
 static Triple getFirstFileTriple() {
-  assert(!InputFiles.empty() && "InputFiles can not be empty");
-  auto ObjBuffer =
-      ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
-  auto Obj = ExitOnErr(
-      object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-  return Obj->makeTriple();
+  static Triple FirstTT = []() {
+    assert(!InputFiles.empty() && "InputFiles can not be empty");
+    auto ObjBuffer =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
+    auto Obj = ExitOnErr(
+        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
+    return Obj->makeTriple();
+  }();
+
+  return FirstTT;
 }
 
-static Error sanitizeArguments(const Session &S) {
+static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
+  // Set the entry point name if not specified.
   if (EntryPointName.empty()) {
-    if (S.TPC->getTargetTriple().getObjectFormat() == Triple::MachO)
+    if (TT.getObjectFormat() == Triple::MachO)
       EntryPointName = "_main";
     else
       EntryPointName = "main";
   }
 
+  // -noexec and --args should not be used together.
   if (NoExec && !InputArgv.empty())
     outs() << "Warning: --args passed to -noexec run will be ignored.\n";
 
@@ -812,14 +1007,35 @@ static Error sanitizeArguments(const Session &S) {
           inconvertibleErrorCode());
   }
 
+  // Only one of -oop-executor and -oop-executor-connect can be used.
+  if (!!OutOfProcessExecutor.getNumOccurrences() &&
+      !!OutOfProcessExecutorConnect.getNumOccurrences())
+    return make_error<StringError>(
+        "Only one of -" + OutOfProcessExecutor.ArgStr + " and -" +
+            OutOfProcessExecutorConnect.ArgStr + " can be specified",
+        inconvertibleErrorCode());
+
+  // If -oop-executor was used but no value was specified then use a sensible
+  // default.
+  if (!!OutOfProcessExecutor.getNumOccurrences() &&
+      OutOfProcessExecutor.empty()) {
+    SmallString<256> OOPExecutorPath(sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
+    sys::path::remove_filename(OOPExecutorPath);
+    if (OOPExecutorPath.back() != '/')
+      OOPExecutorPath += '/';
+    OOPExecutorPath += "llvm-jitlink-executor";
+    OutOfProcessExecutor = OOPExecutorPath.str().str();
+  }
+
   return Error::success();
 }
 
 static Error loadProcessSymbols(Session &S) {
-  auto InternedEntryPointName = S.ES.intern(EntryPointName);
-  auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
-    return Name != InternedEntryPointName;
-  };
+  auto FilterMainEntryPoint =
+      [EPName = S.ES.intern(EntryPointName)](SymbolStringPtr Name) {
+        return Name != EPName;
+      };
   S.MainJD->addGenerator(
       ExitOnErr(orc::TPCDynamicLibrarySearchGenerator::GetForTargetProcess(
           *S.TPC, std::move(FilterMainEntryPoint))));
@@ -827,15 +1043,12 @@ static Error loadProcessSymbols(Session &S) {
   return Error::success();
 }
 
-static Error loadDylibs() {
-  // FIXME: This should all be handled inside DynamicLibrary.
+static Error loadDylibs(Session &S) {
   for (const auto &Dylib : Dylibs) {
-    if (!sys::fs::is_regular_file(Dylib))
-      return make_error<StringError>("\"" + Dylib + "\" is not a regular file",
-                                     inconvertibleErrorCode());
-    std::string ErrMsg;
-    if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
-      return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
+    auto G = orc::TPCDynamicLibrarySearchGenerator::Load(*S.TPC, Dylib.c_str());
+    if (!G)
+      return G.takeError();
+    S.MainJD->addGenerator(std::move(*G));
   }
 
   return Error::success();
@@ -1072,9 +1285,9 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<JITLinkTimers> Timers =
       ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
 
-  auto S = ExitOnErr(Session::Create(getFirstFileTriple()));
+  ExitOnErr(sanitizeArguments(getFirstFileTriple(), argv[0]));
 
-  ExitOnErr(sanitizeArguments(*S));
+  auto S = ExitOnErr(Session::Create(getFirstFileTriple()));
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
@@ -1083,7 +1296,7 @@ int main(int argc, char *argv[]) {
 
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*S));
-  ExitOnErr(loadDylibs());
+  ExitOnErr(loadDylibs(*S));
 
   if (PhonyExternals)
     addPhonyExternalsGenerator(*S);
@@ -1110,11 +1323,12 @@ int main(int argc, char *argv[]) {
 
   int Result = 0;
   {
-    using MainTy = int (*)(int, char *[]);
-    auto EntryFn = jitTargetAddressToFunction<MainTy>(EntryPoint.getAddress());
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
-    Result = runAsMain(EntryFn, InputArgv, StringRef(InputFiles.front()));
+    Result = ExitOnErr(S->TPC->runAsMain(EntryPoint.getAddress(), InputArgv));
   }
+
+  ExitOnErr(S->ES.endSession());
+  ExitOnErr(S->TPC->disconnect());
 
   return Result;
 }

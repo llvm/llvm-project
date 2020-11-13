@@ -1,3 +1,7 @@
+if ( LLVM_INCLUDE_UTILS )
+  add_subdirectory(llvm-jitlink-executor)
+endif()
+
 set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsDisassemblers
@@ -8,6 +12,8 @@ set(LLVM_LINK_COMPONENTS
   MC
   Object
   OrcJIT
+  OrcShared
+  OrcTargetProcess
   RuntimeDyld
   Support
   )

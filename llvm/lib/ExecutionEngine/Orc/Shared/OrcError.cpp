@@ -71,7 +71,7 @@ public:
 };
 
 static ManagedStatic<OrcErrorCategory> OrcErrCat;
-}
+} // namespace
 
 namespace llvm {
 namespace orc {
@@ -84,9 +84,8 @@ std::error_code orcError(OrcErrorCode ErrCode) {
   return std::error_code(static_cast<UT>(ErrCode), *OrcErrCat);
 }
 
-
 DuplicateDefinition::DuplicateDefinition(std::string SymbolName)
-  : SymbolName(std::move(SymbolName)) {}
+    : SymbolName(std::move(SymbolName)) {}
 
 std::error_code DuplicateDefinition::convertToErrorCode() const {
   return orcError(OrcErrorCode::DuplicateDefinition);
@@ -101,7 +100,7 @@ const std::string &DuplicateDefinition::getSymbolName() const {
 }
 
 JITSymbolNotFound::JITSymbolNotFound(std::string SymbolName)
-  : SymbolName(std::move(SymbolName)) {}
+    : SymbolName(std::move(SymbolName)) {}
 
 std::error_code JITSymbolNotFound::convertToErrorCode() const {
   typedef std::underlying_type<OrcErrorCode>::type UT;
@@ -117,5 +116,5 @@ const std::string &JITSymbolNotFound::getSymbolName() const {
   return SymbolName;
 }
 
-}
-}
+} // namespace orc
+} // namespace llvm
