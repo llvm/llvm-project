@@ -1432,6 +1432,9 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     Rewriter.setInsertPoint(BI);
     auto *LHSV = Rewriter.expandCodeFor(InvariantLHS);
     auto *RHSV = Rewriter.expandCodeFor(InvariantRHS);
+    bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+    if (ExitIfTrue)
+      InvariantPred = ICmpInst::getInversePredicate(InvariantPred);
     IRBuilder<> Builder(BI);
     auto *NewCond = Builder.CreateICmp(InvariantPred, LHSV, RHSV,
                                        BI->getCondition()->getName());
