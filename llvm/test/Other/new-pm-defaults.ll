@@ -283,6 +283,7 @@
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
+; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 ;

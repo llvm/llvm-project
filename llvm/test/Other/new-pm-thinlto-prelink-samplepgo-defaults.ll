@@ -182,6 +182,7 @@
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
+; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass

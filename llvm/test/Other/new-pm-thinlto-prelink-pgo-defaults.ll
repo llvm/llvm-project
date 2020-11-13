@@ -230,6 +230,7 @@
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar
 ; CHECK-O-NEXT: Running analysis: PassInstrumentationAnalysis on bar
 ; CHECK-EXT: Running pass: {{.*}}::Bye
+; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass

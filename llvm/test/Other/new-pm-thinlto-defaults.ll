@@ -253,6 +253,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-POSTLINK-O-NEXT: Finished llvm::Module pass manager run.
+; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass

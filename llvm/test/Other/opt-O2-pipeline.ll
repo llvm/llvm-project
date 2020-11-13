@@ -307,6 +307,7 @@
 ; CHECK-NEXT:       Remove redundant instructions
 ; CHECK-NEXT:       Hoist/decompose integer division and remainder
 ; CHECK-NEXT:       Simplify the CFG
+; CHECK-NEXT:       Annotation Remarks
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
 ; CHECK-NEXT: Pass Arguments:
