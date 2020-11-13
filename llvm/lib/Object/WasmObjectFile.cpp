@@ -855,6 +855,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_I32:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
       if (!isValidDataSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation data index",
                                               object_error::parse_failed);

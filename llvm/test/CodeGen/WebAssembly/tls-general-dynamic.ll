@@ -12,7 +12,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .functype  address_of_tls () -> (i32)
 define i32 @address_of_tls() {
   ; TLS-DAG: global.get __tls_base
-  ; TLS-DAG: i32.const tls
+  ; TLS-DAG: i32.const tls@TLSREL
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
@@ -25,7 +25,7 @@ define i32 @address_of_tls() {
 ; CHECK-NEXT: .functype ptr_to_tls () -> (i32)
 define i32* @ptr_to_tls() {
   ; TLS-DAG: global.get __tls_base
-  ; TLS-DAG: i32.const tls
+  ; TLS-DAG: i32.const tls@TLSREL
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
@@ -38,7 +38,7 @@ define i32* @ptr_to_tls() {
 ; CHECK-NEXT: .functype tls_load () -> (i32)
 define i32 @tls_load() {
   ; TLS-DAG: global.get __tls_base
-  ; TLS-DAG: i32.const tls
+  ; TLS-DAG: i32.const tls@TLSREL
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: i32.load 0
   ; TLS-NEXT: return
@@ -54,7 +54,7 @@ define i32 @tls_load() {
 ; CHECK-NEXT: .functype tls_store (i32) -> ()
 define void @tls_store(i32 %x) {
   ; TLS-DAG: global.get __tls_base
-  ; TLS-DAG: i32.const tls
+  ; TLS-DAG: i32.const tls@TLSREL
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: i32.store 0
   ; TLS-NEXT: return

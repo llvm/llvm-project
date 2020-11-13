@@ -6981,6 +6981,26 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
   return Signed ? isInt<13>(Offset) :isUInt<12>(Offset);
 }
 
+std::pair<int64_t, int64_t> SIInstrInfo::splitFlatOffset(int64_t COffsetVal,
+                                                         unsigned AddrSpace,
+                                                         bool IsSigned) const {
+  int64_t RemainderOffset = COffsetVal;
+  int64_t ImmField = 0;
+  const unsigned NumBits = getNumFlatOffsetBits(IsSigned);
+  if (IsSigned) {
+    // Use signed division by a power of two to truncate towards 0.
+    int64_t D = 1LL << (NumBits - 1);
+    RemainderOffset = (COffsetVal / D) * D;
+    ImmField = COffsetVal - RemainderOffset;
+  } else if (COffsetVal >= 0) {
+    ImmField = COffsetVal & maskTrailingOnes<uint64_t>(NumBits);
+    RemainderOffset = COffsetVal - ImmField;
+  }
+
+  assert(isLegalFLATOffset(ImmField, AddrSpace, IsSigned));
+  assert(RemainderOffset + ImmField == COffsetVal);
+  return {ImmField, RemainderOffset};
+}
 
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
 enum SIEncodingFamily {
