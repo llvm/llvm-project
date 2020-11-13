@@ -1223,7 +1223,8 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::ppc_vsx_lxvd2x_be:
   case Intrinsic::ppc_vsx_lxvw4x_be:
   case Intrinsic::ppc_vsx_lxvl:
-  case Intrinsic::ppc_vsx_lxvll: {
+  case Intrinsic::ppc_vsx_lxvll:
+  case Intrinsic::ppc_mma_lxvp: {
     Info.PtrVal = Inst->getArgOperand(0);
     Info.ReadMem = true;
     Info.WriteMem = false;
@@ -1239,7 +1240,8 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::ppc_vsx_stxvd2x_be:
   case Intrinsic::ppc_vsx_stxvw4x_be:
   case Intrinsic::ppc_vsx_stxvl:
-  case Intrinsic::ppc_vsx_stxvll: {
+  case Intrinsic::ppc_vsx_stxvll:
+  case Intrinsic::ppc_mma_stxvp: {
     Info.PtrVal = Inst->getArgOperand(1);
     Info.ReadMem = false;
     Info.WriteMem = true;
