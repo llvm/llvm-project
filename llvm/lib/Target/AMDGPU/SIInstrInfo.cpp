@@ -1379,18 +1379,12 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0_XEXECRegClass);
     }
 
-    Register ScratchRSrc =
-      ST.enableFlatScratch() ? AMDGPU::TTMP0_TTMP1_TTMP2_TTMP3 // Dummy
-                             : MFI->getScratchRSrcReg();
     BuildMI(MBB, MI, DL, OpDesc)
       .addReg(SrcReg, getKillRegState(isKill)) // data
       .addFrameIndex(FrameIndex)               // addr
       .addMemOperand(MMO)
-      .addReg(ScratchRSrc, RegState::Implicit)
       .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
-    // Add the scratch resource registers as implicit uses because we may end up
-    // needing them, and need to ensure that the reserved registers are
-    // correctly handled.
+
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     return;
@@ -1400,13 +1394,9 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                     : getVGPRSpillSaveOpcode(SpillSize);
   MFI->setHasSpilledVGPRs();
 
-  Register ScratchRSrc =
-    ST.enableFlatScratch() ? AMDGPU::TTMP0_TTMP1_TTMP2_TTMP3 // Dummy
-                           : MFI->getScratchRSrcReg();
   BuildMI(MBB, MI, DL, get(Opcode))
     .addReg(SrcReg, getKillRegState(isKill)) // data
     .addFrameIndex(FrameIndex)               // addr
-    .addReg(ScratchRSrc)                     // scratch_rsrc
     .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
     .addImm(0)                               // offset
     .addMemOperand(MMO);
@@ -1519,27 +1509,20 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0_XEXECRegClass);
     }
 
-    Register ScratchRSrc =
-      ST.enableFlatScratch() ? AMDGPU::TTMP0_TTMP1_TTMP2_TTMP3 // Dummy
-                             : MFI->getScratchRSrcReg();
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO)
-      .addReg(ScratchRSrc, RegState::Implicit)
       .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+
     return;
   }
 
   unsigned Opcode = RI.hasAGPRs(RC) ? getAGPRSpillRestoreOpcode(SpillSize)
                                     : getVGPRSpillRestoreOpcode(SpillSize);
-  Register ScratchRSrc =
-    ST.enableFlatScratch() ? AMDGPU::TTMP0_TTMP1_TTMP2_TTMP3 // Dummy
-                           : MFI->getScratchRSrcReg();
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
     .addFrameIndex(FrameIndex)        // vaddr
-    .addReg(ScratchRSrc)              // scratch_rsrc
     .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
     .addImm(0)                           // offset
     .addMemOperand(MMO);
