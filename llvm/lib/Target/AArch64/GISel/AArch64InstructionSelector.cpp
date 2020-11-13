@@ -1089,19 +1089,6 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
   return &*SelectInst;
 }
 
-/// Returns true if \p P is an unsigned integer comparison predicate.
-static bool isUnsignedICMPPred(const CmpInst::Predicate P) {
-  switch (P) {
-  default:
-    return false;
-  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_UGE:
-  case CmpInst::ICMP_ULT:
-  case CmpInst::ICMP_ULE:
-    return true;
-  }
-}
-
 static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
   switch (P) {
   default:
@@ -4379,7 +4366,7 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   // Produce this if the compare is signed:
   //
   // tst x, y
-  if (!isUnsignedICMPPred(P) && LHSDef &&
+  if (!CmpInst::isUnsigned(P) && LHSDef &&
       LHSDef->getOpcode() == TargetOpcode::G_AND) {
     // Make sure that the RHS is 0.
     auto ValAndVReg = getConstantVRegValWithLookThrough(RHS.getReg(), MRI);
