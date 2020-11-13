@@ -62,6 +62,8 @@
 // RUN: %clang -target arm64-none-linux-gnu -mcrc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // CHECK-CRC32: __ARM_FEATURE_CRC32 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -fno-math-errno -fno-signed-zeros\
@@ -447,3 +449,10 @@
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=2048 %s
 // CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_BITS [[#VBITS:]]
 // CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_VECTOR_OPERATORS 1
+
+// ================== Check Largse System Extensions (LSE)
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// CHECK-LSE: __ARM_FEATURE_ATOMICS 1
