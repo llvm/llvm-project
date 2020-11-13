@@ -325,60 +325,6 @@ public:
     return success();
   }
 };
-
-/// TensorConstantOp conversion inserts a linearized 1-D vector constant that is
-/// stored in memory. A linalg.reshape is introduced to convert to the desired
-/// n-D buffer form.
-class TensorConstantOpConverter : public OpConversionPattern<ConstantOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const final {
-
-    RankedTensorType rankedTensorType =
-        op.getType().dyn_cast<RankedTensorType>();
-    if (!rankedTensorType)
-      return failure();
-    if (llvm::any_of(rankedTensorType.getShape(), [](int64_t s) {
-          return s == 0 || ShapedType::isDynamic(s);
-        }))
-      return failure();
-
-    int64_t nElements = 1;
-    for (int64_t s : rankedTensorType.getShape())
-      nElements *= s;
-    Type elementType = rankedTensorType.getElementType();
-    MemRefType memrefType =
-        getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
-    VectorType flatVectorType = VectorType::get({nElements}, elementType);
-    MemRefType memrefOfFlatVectorType = MemRefType::get({}, flatVectorType);
-    MemRefType flatMemrefType = MemRefType::get({nElements}, elementType);
-
-    Location loc = op.getLoc();
-    auto attr = op.getValue().cast<DenseElementsAttr>();
-    Value alloc =
-        rewriter.create<AllocOp>(loc, memrefOfFlatVectorType, ValueRange{});
-    Value cstVec = rewriter.create<ConstantOp>(loc, flatVectorType,
-                                               attr.reshape(flatVectorType));
-    rewriter.create<StoreOp>(loc, cstVec, alloc);
-
-    Value memref =
-        rewriter.create<vector::TypeCastOp>(loc, flatMemrefType, alloc);
-    if (rankedTensorType.getRank() > 1) {
-      // Introduce a linalg.reshape to flatten the memref.
-      AffineMap collapseAllDims = AffineMap::getMultiDimIdentityMap(
-          /*numDims=*/rankedTensorType.getRank(), op.getContext());
-      memref = rewriter.create<linalg::ReshapeOp>(
-          loc, memrefType, memref,
-          rewriter.getAffineMapArrayAttr(collapseAllDims));
-    }
-    rewriter.replaceOp(op, memref);
-
-    return success();
-  }
-};
 } // namespace
 
 namespace {
@@ -391,7 +337,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
-    target.addLegalDialect<StandardOpsDialect, vector::VectorDialect>();
+    target.addLegalDialect<StandardOpsDialect>();
     target.addIllegalOp<SubTensorOp, SubTensorInsertOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
@@ -422,8 +368,7 @@ void mlir::linalg::populateLinalgBufferizePatterns(
   patterns.insert<
       // clang-format off
       SubTensorOpConverter,
-      SubTensorInsertOpConverter,
-      TensorConstantOpConverter
+      SubTensorInsertOpConverter
       // clang-format on
       >(typeConverter, context);
 }

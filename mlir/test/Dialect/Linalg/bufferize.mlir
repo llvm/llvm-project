@@ -94,24 +94,6 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
 
 // -----
 
-// Check lowering of tensor-valued std.constant's
-// TODO: Move this to std-bufferize.
-
-// CHECK-LABEL:   func @constant() -> tensor<2x3xf32> {
-// CHECK:           %[[VECTOR_MEMREF:.*]] = alloc() : memref<vector<6xf32>>
-// CHECK:           %[[VECTOR_CONST:.*]] = constant dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00]> : vector<6xf32>
-// CHECK:           store %[[VECTOR_CONST]], %[[VECTOR_MEMREF]][] : memref<vector<6xf32>>
-// CHECK:           %[[MEMREF:.*]] = vector.type_cast %[[VECTOR_MEMREF]] : memref<vector<6xf32>> to memref<6xf32>
-// CHECK:           %[[FINAL_SHAPE:.*]] = linalg.reshape %[[MEMREF]] [#map] : memref<6xf32> into memref<2x3xf32>
-// CHECK:           %[[RESULT:.*]] = tensor_load %[[FINAL_SHAPE]] : memref<2x3xf32>
-// CHECK:           return %[[RESULT]] : tensor<2x3xf32>
-func @constant() -> tensor<2x3xf32> {
-  %0 = constant dense<[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]> : tensor<2x3xf32>
-  return %0: tensor<2x3xf32>
-}
-
-// -----
-
 #accesses = [
   affine_map<(i, j, k) -> (j, i, k)>,
   affine_map<(i, j, k) -> (i, j)>
