@@ -1581,6 +1581,27 @@ TEST_F(PatternMatchTest, ConstantPredicateType) {
       match(CF32NaNWithUndef, cstfp_pred_ty<always_false_pred<APFloat>>()));
 }
 
+TEST_F(PatternMatchTest, InsertValue) {
+  Type *StructTy = StructType::create(IRB.getContext(),
+                                      {IRB.getInt32Ty(), IRB.getInt64Ty()});
+  Value *Ins0 =
+      IRB.CreateInsertValue(UndefValue::get(StructTy), IRB.getInt32(20), 0);
+  Value *Ins1 = IRB.CreateInsertValue(Ins0, IRB.getInt64(90), 1);
+
+  EXPECT_TRUE(match(Ins0, m_InsertValue<0>(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Ins0, m_InsertValue<1>(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Ins1, m_InsertValue<0>(m_Value(), m_Value())));
+  EXPECT_TRUE(match(Ins1, m_InsertValue<1>(m_Value(), m_Value())));
+
+  EXPECT_TRUE(match(Ins0, m_InsertValue<0>(m_Undef(), m_SpecificInt(20))));
+  EXPECT_FALSE(match(Ins0, m_InsertValue<0>(m_Undef(), m_SpecificInt(0))));
+
+  EXPECT_TRUE(
+      match(Ins1, m_InsertValue<1>(m_InsertValue<0>(m_Value(), m_Value()),
+                                   m_SpecificInt(90))));
+  EXPECT_FALSE(match(IRB.getInt64(99), m_InsertValue<0>(m_Value(), m_Value())));
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,
