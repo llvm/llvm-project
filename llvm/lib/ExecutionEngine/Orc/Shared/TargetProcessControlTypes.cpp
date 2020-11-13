@@ -17,7 +17,8 @@ namespace orc {
 namespace tpctypes {
 
 WrapperFunctionResult WrapperFunctionResult::from(StringRef S) {
-  CWrapperFunctionResult R = {0, {.ValuePtr = nullptr}, nullptr};
+  CWrapperFunctionResult R;
+  zeroInit(R);
   R.Size = S.size();
   if (R.Size > sizeof(uint64_t)) {
     R.Data.ValuePtr = new uint8_t[R.Size];
