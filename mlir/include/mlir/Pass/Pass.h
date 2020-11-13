@@ -118,7 +118,7 @@ public:
 
   /// Prints out the pass in the textual representation of pipelines. If this is
   /// an adaptor pass, print with the op_name(sub_pass,...) format.
-  void printAsTextualPipeline(raw_ostream &os, bool filterVerifier = true);
+  void printAsTextualPipeline(raw_ostream &os);
 
   //===--------------------------------------------------------------------===//
   // Statistics

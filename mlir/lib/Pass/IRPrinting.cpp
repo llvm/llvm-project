@@ -95,11 +95,6 @@ private:
 };
 } // end anonymous namespace
 
-/// Returns true if the given pass is hidden from IR printing.
-static bool isHiddenPass(Pass *pass) {
-  return isa<OpToOpPassAdaptor, VerifierPass>(pass);
-}
-
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
   // Check to see if we are printing the top-level module.
@@ -133,7 +128,7 @@ static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
 
 /// Instrumentation hooks.
 void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
-  if (isHiddenPass(pass))
+  if (isa<OpToOpPassAdaptor>(pass))
     return;
   // If the config asked to detect changes, record the current fingerprint.
   if (config->shouldPrintAfterOnlyOnChange())
@@ -148,7 +143,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
 }
 
 void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
-  if (isHiddenPass(pass))
+  if (isa<OpToOpPassAdaptor>(pass))
     return;
   // If the config asked to detect changes, compare the current fingerprint with
   // the previous.
