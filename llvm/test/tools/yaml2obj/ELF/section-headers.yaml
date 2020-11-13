@@ -174,7 +174,7 @@ SectionHeaderTable: [[VAL]]
 ## Test that we are still able to override e_shoff, e_shnum and e_shstrndx
 ## fields even when we do not produce section headers.
 # RUN: yaml2obj %s --docnum=6 -o %t4
-# RUN: llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
+# RUN: not llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
 
 # NO-HEADERS-OVERRIDE: Start of section headers:          2 (bytes into file)
 # NO-HEADERS-OVERRIDE: Number of section headers:         3
@@ -188,9 +188,6 @@ FileHeader:
   EShOff:    0x2
   EShNum:    0x3
   EShStrNdx: 0x4
-Sections:
-  - Name: .foo
-    Type: SHT_PROGBITS
 SectionHeaderTable:
   NoHeaders: true
 
@@ -250,3 +247,33 @@ Symbols:
     Section: .foo
   - Name:    bar
     Section: .bar
+
+## Check that when "NoHeaders" is set to "true" then we don't emit
+## the .shstrtab section implicitly and don't write the data of the
+## section header table to the file.
+
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: wc -c < %t8 | FileCheck %s --check-prefix=SIZE
+
+# SIZE: 511{{$}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+## We don't want any implicit sections to be added after the .foo section,
+## so add them here explicitly.
+  - Name: .strtab
+    Type: SHT_STRTAB
+## Nothing should be emitted after the following section.
+## So we know that the expected file size is 0x100 + 0xFF == 0x1FF == 511.
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+## Unaligned size. Used to make sure that we don't try to align the file offset
+## for writing the section header table.
+    Size:   0xFF
+    Offset: 0x100
+SectionHeaderTable:
+  NoHeaders: true

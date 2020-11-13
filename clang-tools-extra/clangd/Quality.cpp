@@ -257,6 +257,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   OS << llvm::formatv("\tReferences: {0}\n", S.References);
   OS << llvm::formatv("\tDeprecated: {0}\n", S.Deprecated);
   OS << llvm::formatv("\tReserved name: {0}\n", S.ReservedName);
+  OS << llvm::formatv("\tImplementation detail: {0}\n", S.ImplementationDetail);
   OS << llvm::formatv("\tCategory: {0}\n", static_cast<int>(S.Category));
   return OS;
 }
@@ -455,6 +456,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   OS << llvm::formatv("\tForbidden: {0}\n", S.Forbidden);
   OS << llvm::formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
   OS << llvm::formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
+  OS << llvm::formatv("\tInBaseClass: {0}\n", S.InBaseClass);
   OS << llvm::formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
   OS << llvm::formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));
   OS << llvm::formatv("\tScope: {0}\n", static_cast<int>(S.Scope));
@@ -487,8 +489,9 @@ float evaluateSymbolAndRelevance(float SymbolQuality, float SymbolRelevance) {
   return SymbolQuality * SymbolRelevance;
 }
 
-float evaluateDecisionForest(const SymbolQualitySignals &Quality,
-                             const SymbolRelevanceSignals &Relevance) {
+DecisionForestScores
+evaluateDecisionForest(const SymbolQualitySignals &Quality,
+                       const SymbolRelevanceSignals &Relevance, float Base) {
   Example E;
   E.setIsDeprecated(Quality.Deprecated);
   E.setIsReservedName(Quality.ReservedName);
@@ -512,7 +515,19 @@ float evaluateDecisionForest(const SymbolQualitySignals &Quality,
   E.setHadSymbolType(Relevance.HadSymbolType);
   E.setTypeMatchesPreferred(Relevance.TypeMatchesPreferred);
   E.setFilterLength(Relevance.FilterLength);
-  return Evaluate(E);
+
+  DecisionForestScores Scores;
+  // Exponentiating DecisionForest prediction makes the score of each tree a
+  // multiplciative boost (like NameMatch). This allows us to weigh the
+  // prediciton score and NameMatch appropriately.
+  Scores.ExcludingName = pow(Base, Evaluate(E));
+  // NeedsFixIts is not part of the DecisionForest as generating training
+  // data that needs fixits is not-feasible.
+  if (Relevance.NeedsFixIts)
+    Scores.ExcludingName *= 0.5;
+  // NameMatch should be a multiplier on total score to support rescoring.
+  Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
+  return Scores;
 }
 
 // Produces an integer that sorts in the same order as F.

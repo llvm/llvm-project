@@ -33,6 +33,7 @@
 
 // Static initialization of HIP context for device ordinal 0.
 static auto InitializeCtx = [] {
+  HIP_REPORT_IF_ERROR(hipInit(/*flags=*/0));
   hipDevice_t device;
   HIP_REPORT_IF_ERROR(hipDeviceGet(&device, /*ordinal=*/0));
   hipContext_t context;
@@ -44,6 +45,10 @@ extern "C" hipModule_t mgpuModuleLoad(void *data) {
   hipModule_t module = nullptr;
   HIP_REPORT_IF_ERROR(hipModuleLoadData(&module, data));
   return module;
+}
+
+extern "C" void mgpuModuleUnload(hipModule_t module) {
+  HIP_REPORT_IF_ERROR(hipModuleUnload(module));
 }
 
 extern "C" hipFunction_t mgpuModuleGetFunction(hipModule_t module,

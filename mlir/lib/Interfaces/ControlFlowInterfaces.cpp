@@ -73,13 +73,19 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
+// A constant value to represent unknown number of region invocations.
+const int64_t mlir::kUnknownNumRegionInvocations = -1;
+
 /// Verify that types match along all region control flow edges originating from
 /// `sourceNo` (region # if source is a region, llvm::None if source is parent
 /// op). `getInputsTypesForRegion` is a function that returns the types of the
-/// inputs that flow from `sourceIndex' to the given region.
-static LogicalResult verifyTypesAlongAllEdges(
-    Operation *op, Optional<unsigned> sourceNo,
-    function_ref<TypeRange(Optional<unsigned>)> getInputsTypesForRegion) {
+/// inputs that flow from `sourceIndex' to the given region, or llvm::None if
+/// the exact type match verification is not necessary (e.g., if the Op verifies
+/// the match itself).
+static LogicalResult
+verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
+                         function_ref<Optional<TypeRange>(Optional<unsigned>)>
+                             getInputsTypesForRegion) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
@@ -113,17 +119,20 @@ static LogicalResult verifyTypesAlongAllEdges(
       return diag;
     };
 
-    TypeRange sourceTypes = getInputsTypesForRegion(succRegionNo);
+    Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
+    if (!sourceTypes.hasValue())
+      continue;
+
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
-    if (sourceTypes.size() != succInputsTypes.size()) {
+    if (sourceTypes->size() != succInputsTypes.size()) {
       InFlightDiagnostic diag = op->emitOpError(" region control flow edge ");
-      return printEdgeName(diag) << ": source has " << sourceTypes.size()
+      return printEdgeName(diag) << ": source has " << sourceTypes->size()
                                  << " operands, but target successor needs "
                                  << succInputsTypes.size();
     }
 
     for (auto typesIdx :
-         llvm::enumerate(llvm::zip(sourceTypes, succInputsTypes))) {
+         llvm::enumerate(llvm::zip(*sourceTypes, succInputsTypes))) {
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
       if (sourceType != inputType) {
@@ -167,7 +176,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   for (unsigned regionNo : llvm::seq(0U, op->getNumRegions())) {
     Region &region = op->getRegion(regionNo);
 
-    // Since the interface cannnot distinguish between different ReturnLike
+    // Since the interface cannot distinguish between different ReturnLike
     // ops within the region branching to different successors, all ReturnLike
     // ops in this region should have the same operand types. We will then use
     // one of them as the representative for type matching.
@@ -191,10 +200,15 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
                << " operands mismatch between return-like terminators";
     }
 
-    auto inputTypesFromRegion = [&](Optional<unsigned> regionNo) -> TypeRange {
+    auto inputTypesFromRegion =
+        [&](Optional<unsigned> regionNo) -> Optional<TypeRange> {
+      // If there is no return-like terminator, the op itself should verify
+      // type consistency.
+      if (!regionReturn)
+        return llvm::None;
+
       // All successors get the same set of operands.
-      return regionReturn ? TypeRange(regionReturn->getOperands().getTypes())
-                          : TypeRange();
+      return TypeRange(regionReturn->getOperands().getTypes());
     };
 
     if (failed(verifyTypesAlongAllEdges(op, regionNo, inputTypesFromRegion)))

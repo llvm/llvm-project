@@ -3,9 +3,9 @@
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t
 # RUN: %lldb %t -o "image lookup -v -s lookup_ranges" -o exit | FileCheck %s
 
-# CHECK:  Function: id = {0x7fffffff0000002b}, name = "ranges", range = [0x0000000000000000-0x0000000000000004)
-# CHECK:    Blocks: id = {0x7fffffff0000002b}, range = [0x00000000-0x00000004)
-# CHECK-NEXT:       id = {0x7fffffff0000003f}, ranges = [0x00000001-0x00000002)[0x00000003-0x00000004)
+# CHECK:  Function: id = {0x0000002b}, name = "ranges", range = [0x0000000000000000-0x0000000000000004)
+# CHECK:    Blocks: id = {0x0000002b}, range = [0x00000000-0x00000004)
+# CHECK-NEXT:       id = {0x0000003f}, ranges = [0x00000001-0x00000002)[0x00000003-0x00000004)
 
         .text
         .p2align 12

@@ -1,13 +1,8 @@
 if (CLANGD_ENABLE_REMOTE)
-  generate_protos(RemoteIndexServiceProto "Service.proto" GRPC)
   generate_protos(RemoteIndexProto "Index.proto")
-  # Ensure dependency headers are generated before dependent protos are built.
-  # FIXME: this should be encapsulated in generate_protos.
-  # FIXME: CMake docs say OBJECT_DEPENDS isn't needed, but I can't get the
-  #        recommended add_dependencies() approach to work.
-  set_source_files_properties(
-    ${CMAKE_CURRENT_BINARY_DIR}/Service.pb.cc
-    PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Index.pb.h)
+  generate_protos(RemoteIndexServiceProto "Service.proto"
+    DEPENDS "Index.proto"
+    GRPC)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
@@ -23,10 +18,8 @@ if (CLANGD_ENABLE_REMOTE)
     RemoteIndexProto
     RemoteIndexServiceProto
     clangdRemoteMarshalling
-
     protobuf
     grpc++
-    clangDaemon
     clangdSupport
 
     DEPENDS

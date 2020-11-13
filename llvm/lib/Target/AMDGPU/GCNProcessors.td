@@ -184,6 +184,10 @@ def : ProcessorModel<"gfx909", SIQuarterSpeedModel,
   FeatureISAVersion9_0_9.Features
 >;
 
+def : ProcessorModel<"gfx90c", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_C.Features
+>;
+
 //===----------------------------------------------------------------------===//
 // GCN GFX10.
 //===----------------------------------------------------------------------===//
@@ -209,5 +213,9 @@ def : ProcessorModel<"gfx1031", GFX10SpeedModel,
 >;
 
 def : ProcessorModel<"gfx1032", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features
+>;
+
+def : ProcessorModel<"gfx1033", GFX10SpeedModel,
   FeatureISAVersion10_3_0.Features
 >;

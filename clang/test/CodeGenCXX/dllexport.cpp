@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M32 -check-prefix=MSVC2015 -check-prefix=M32MSVC2015 %s
+// RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M32 -check-prefix=MSVC2015 %s
 // RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases -disable-llvm-passes -o - %s -w -fms-compatibility-version=18.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M32 -check-prefix=MSVC2013 -check-prefix=M32MSVC2013 %s
 
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w -fms-compatibility-version=19.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M64 -check-prefix=MSVC2015 -check-prefix=M64MSVC2015 %s
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w -fms-compatibility-version=18.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M64 -check-prefix=MSVC2013 -check-prefix=M64MSVC2013 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w -fms-compatibility-version=19.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M64 -check-prefix=MSVC2015 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w -fms-compatibility-version=18.00 | FileCheck -allow-deprecated-dag-overlap --check-prefix=MSC --check-prefix=M64 -check-prefix=MSVC2013 %s
 
 // RUN: %clang_cc1 -triple i686-windows-gnu    -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=GNU --check-prefix=G32 %s
-// RUN: %clang_cc1 -triple x86_64-windows-gnu  -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=GNU --check-prefix=G64 %s
+// RUN: %clang_cc1 -triple x86_64-windows-gnu  -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck -allow-deprecated-dag-overlap --check-prefix=GNU %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -913,6 +913,36 @@ template<> void ExportedClass::bar<int>() {}
 template <typename> struct __declspec(dllexport) ExportedClassTemplate2 { template <typename> void baz(); };
 template<> template<> void ExportedClassTemplate2<int>::baz<int>() {}
 // M32-DAG: define dso_local x86_thiscallcc void @"??$baz@H@?$ExportedClassTemplate2@H@pr34849@@QAEXXZ"
+}
+
+namespace pr47683 {
+struct X { X() {} };
+
+template <typename> struct S {
+  S() = default;
+  X x;
+};
+template struct __declspec(dllexport) S<int>;
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.pr47683::S"* @"??0?$S@H@pr47683@@QAE@XZ"
+
+template <typename> struct T {
+  T() = default;
+  X x;
+};
+extern template struct T<int>;
+template struct __declspec(dllexport) T<int>;
+// Don't assert about multiple codegen for explicitly defaulted method in explicit instantiation def.
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.pr47683::T"* @"??0?$T@H@pr47683@@QAE@XZ"
+
+template <typename> struct U {
+  U();
+  X x;
+};
+template <typename T> U<T>::U() = default;
+extern template struct U<int>;
+template struct __declspec(dllexport) U<int>;
+// Same as T, but with out-of-line ctor.
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.pr47683::U"* @"??0?$U@H@pr47683@@QAE@XZ"
 }
 
 //===----------------------------------------------------------------------===//

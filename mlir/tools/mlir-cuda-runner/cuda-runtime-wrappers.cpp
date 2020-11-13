@@ -34,6 +34,7 @@
 
 // Static initialization of CUDA context for device ordinal 0.
 static auto InitializeCtx = [] {
+  CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
   CUdevice device;
   CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/0));
   CUcontext context;
@@ -45,6 +46,10 @@ extern "C" CUmodule mgpuModuleLoad(void *data) {
   CUmodule module = nullptr;
   CUDA_REPORT_IF_ERROR(cuModuleLoadData(&module, data));
   return module;
+}
+
+extern "C" void mgpuModuleUnload(CUmodule module) {
+  CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
 }
 
 extern "C" CUfunction mgpuModuleGetFunction(CUmodule module, const char *name) {

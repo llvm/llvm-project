@@ -564,9 +564,9 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSCSEpilogue(MF, MBB, MBBI, DL);
 }
 
-int RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                               int FI,
-                                               Register &FrameReg) const {
+StackOffset
+RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                           Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
@@ -618,7 +618,7 @@ int RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF,
         Offset += RVFI->getLibCallStackSize();
     }
   }
-  return Offset;
+  return StackOffset::getFixed(Offset);
 }
 
 void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,

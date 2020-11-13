@@ -41,8 +41,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'LLVM OpenMP'
-copyright = u'2013-%d, LLVM OpenMP' % date.today().year
+project = u'LLVM/OpenMP'
+copyright = u'2013-%d, LLVM/OpenMP' % date.today().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -94,7 +94,7 @@ pygments_style = 'friendly'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'llvm-theme'
+html_theme = 'llvm-openmp-theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -189,8 +189,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'OpenMP.tex', u'LLVM OpenMP Documentation',
-   u'LLVM OpenMP', 'manual'),
+  ('index', 'OpenMP.tex', u'LLVM/OpenMP Documentation',
+   u'LLVM/OpenMP', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -230,8 +230,8 @@ latex_documents = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'LLVM OpenMP', u'LLVM OpenMP Documentation',
-   u'LLVM OpenMP', 'LLVM OpenMP', 'One line description of project.',
+  ('index', 'LLVM/OpenMP', u'LLVM/OpenMP Documentation',
+   u'LLVM/OpenMP', 'LLVM/OpenMP', 'One line description of project.',
    'Miscellaneous'),
 ]
 

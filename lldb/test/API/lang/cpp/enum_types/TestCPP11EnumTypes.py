@@ -37,7 +37,6 @@ class CPP11EnumTypesTestCase(TestBase):
             self.expect_expr("var_below_" + suffix, result_type=enum_name, result_value="-3")
             self.expect_expr("var_above_" + suffix, result_type=enum_name, result_value="1")
 
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr36527')
     @skipIf(dwarf_version=['<', '4'])
     def test(self):
         self.build()

@@ -40,7 +40,7 @@ def header_guard(filename):
 
 def boost_node(n, label, next_label):
     """Returns code snippet for a leaf/boost node."""
-    return "%s: return %s;" % (label, n['score'])
+    return "%s: return %sf;" % (label, n['score'])
 
 
 def if_greater_node(n, label, next_label):

@@ -302,6 +302,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasLocalStorage);
   REGISTER_MATCHER(hasLoopInit);
   REGISTER_MATCHER(hasLoopVariable);
+  REGISTER_MATCHER(hasMemberName);
   REGISTER_MATCHER(hasMethod);
   REGISTER_MATCHER(hasName);
   REGISTER_MATCHER(hasNullSelector);
@@ -443,6 +444,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(materializeTemporaryExpr);
   REGISTER_MATCHER(member);
   REGISTER_MATCHER(memberExpr);
+  REGISTER_MATCHER(memberHasSameNameAsBoundNode);
   REGISTER_MATCHER(memberPointerType);
   REGISTER_MATCHER(namedDecl);
   REGISTER_MATCHER(namesType);

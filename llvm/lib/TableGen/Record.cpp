@@ -878,6 +878,34 @@ static StringInit *ConcatStringInits(const StringInit *I0,
   return StringInit::get(Concat);
 }
 
+static StringInit *interleaveStringList(const ListInit *List,
+                                        const StringInit *Delim) {
+  if (List->size() == 0)
+    return StringInit::get("");
+  SmallString<80> Result(dyn_cast<StringInit>(List->getElement(0))->getValue());
+  
+  for (unsigned I = 1, E = List->size(); I < E; ++I) {
+    Result.append(Delim->getValue());
+    Result.append(dyn_cast<StringInit>(List->getElement(I))->getValue());
+  }
+  return StringInit::get(Result);
+}
+
+static StringInit *interleaveIntList(const ListInit *List,
+                                     const StringInit *Delim) {
+  if (List->size() == 0)
+    return StringInit::get("");
+  SmallString<80> Result(dyn_cast<IntInit>(List->getElement(0)->
+                             getCastTo(IntRecTy::get()))->getAsString());
+  
+  for (unsigned I = 1, E = List->size(); I < E; ++I) {
+    Result.append(Delim->getValue());
+    Result.append(dyn_cast<IntInit>(List->getElement(I)->
+                      getCastTo(IntRecTy::get()))->getAsString());
+  }
+  return StringInit::get(Result);
+}
+
 Init *BinOpInit::getStrConcat(Init *I0, Init *I1) {
   // Shortcut for the common case of concatenating two strings.
   if (const StringInit *I0s = dyn_cast<StringInit>(I0))
@@ -902,10 +930,6 @@ Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
      if (const ListInit *RHSList = dyn_cast<ListInit>(RHS))
        return ConcatListInits(LHSList, RHSList);
    return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
-}
-
-Init *BinOpInit::getListSplat(TypedInit *LHS, Init *RHS) {
-  return BinOpInit::get(BinOpInit::LISTSPLAT, LHS, RHS, LHS->getType());
 }
 
 Init *BinOpInit::Fold(Record *CurRec) const {
@@ -969,6 +993,17 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       return ConcatStringInits(LHSs, RHSs);
     break;
   }
+  case INTERLEAVE: {
+    ListInit *List = dyn_cast<ListInit>(LHS);
+    StringInit *Delim = dyn_cast<StringInit>(RHS);
+    if (List && Delim) {
+      if (isa<StringRecTy>(List->getElementType()))
+        return interleaveStringList(List, Delim);
+      else
+        return interleaveIntList(List, Delim);
+    }
+    break;
+  }
   case EQ:
   case NE:
   case LE:
@@ -1024,6 +1059,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     break;
   }
   case ADD:
+  case SUB:
   case MUL:
   case AND:
   case OR:
@@ -1040,9 +1076,10 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       int64_t Result;
       switch (getOpcode()) {
       default: llvm_unreachable("Bad opcode!");
-      case ADD: Result = LHSv +  RHSv; break;
-      case MUL: Result = LHSv *  RHSv; break;
-      case AND: Result = LHSv &  RHSv; break;
+      case ADD: Result = LHSv + RHSv; break;
+      case SUB: Result = LHSv - RHSv; break;
+      case MUL: Result = LHSv * RHSv; break;
+      case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
       case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
@@ -1072,6 +1109,7 @@ std::string BinOpInit::getAsString() const {
   switch (getOpcode()) {
   case CONCAT: Result = "!con"; break;
   case ADD: Result = "!add"; break;
+  case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
@@ -1088,6 +1126,7 @@ std::string BinOpInit::getAsString() const {
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
   case STRCONCAT: Result = "!strconcat"; break;
+  case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
   }
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
@@ -1123,7 +1162,7 @@ void TernOpInit::Profile(FoldingSetNodeID &ID) const {
   ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
-static Init *ForeachApply(Init *LHS, Init *MHSe, Init *RHS, Record *CurRec) {
+static Init *ItemApply(Init *LHS, Init *MHSe, Init *RHS, Record *CurRec) {
   MapResolver R(CurRec);
   R.set(LHS, MHSe);
   return RHS->resolveReferences(R);
@@ -1132,7 +1171,7 @@ static Init *ForeachApply(Init *LHS, Init *MHSe, Init *RHS, Record *CurRec) {
 static Init *ForeachDagApply(Init *LHS, DagInit *MHSd, Init *RHS,
                              Record *CurRec) {
   bool Change = false;
-  Init *Val = ForeachApply(LHS, MHSd->getOperator(), RHS, CurRec);
+  Init *Val = ItemApply(LHS, MHSd->getOperator(), RHS, CurRec);
   if (Val != MHSd->getOperator())
     Change = true;
 
@@ -1145,7 +1184,7 @@ static Init *ForeachDagApply(Init *LHS, DagInit *MHSd, Init *RHS,
     if (DagInit *Argd = dyn_cast<DagInit>(Arg))
       NewArg = ForeachDagApply(LHS, Argd, RHS, CurRec);
     else
-      NewArg = ForeachApply(LHS, Arg, RHS, CurRec);
+      NewArg = ItemApply(LHS, Arg, RHS, CurRec);
 
     NewArgs.push_back(std::make_pair(NewArg, ArgName));
     if (Arg != NewArg)
@@ -1167,9 +1206,34 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
     SmallVector<Init *, 8> NewList(MHSl->begin(), MHSl->end());
 
     for (Init *&Item : NewList) {
-      Init *NewItem = ForeachApply(LHS, Item, RHS, CurRec);
+      Init *NewItem = ItemApply(LHS, Item, RHS, CurRec);
       if (NewItem != Item)
         Item = NewItem;
+    }
+    return ListInit::get(NewList, cast<ListRecTy>(Type)->getElementType());
+  }
+
+  return nullptr;
+}
+
+// Evaluates RHS for all elements of MHS, using LHS as a temp variable.
+// Creates a new list with the elements that evaluated to true.
+static Init *FilterHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
+                          Record *CurRec) {
+  if (ListInit *MHSl = dyn_cast<ListInit>(MHS)) {
+    SmallVector<Init *, 8> NewList;
+
+    for (Init *Item : MHSl->getValues()) {
+      Init *Include = ItemApply(LHS, Item, RHS, CurRec);
+      if (!Include)
+        return nullptr;
+      if (IntInit *IncludeInt = dyn_cast_or_null<IntInit>(
+                                    Include->convertInitializerTo(IntRecTy::get()))) {
+        if (IncludeInt->getValue())          
+          NewList.push_back(Item);
+      } else {
+        return nullptr;
+      }
     }
     return ListInit::get(NewList, cast<ListRecTy>(Type)->getElementType());
   }
@@ -1229,6 +1293,12 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     break;
   }
 
+  case FILTER: {
+    if (Init *Result = FilterHelper(LHS, MHS, RHS, getType(), CurRec))
+      return Result;
+    break;
+  }
+
   case IF: {
     if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
                             LHS->convertInitializerTo(IntRecTy::get()))) {
@@ -1283,7 +1353,7 @@ Init *TernOpInit::resolveReferences(Resolver &R) const {
   Init *mhs = MHS->resolveReferences(R);
   Init *rhs;
 
-  if (getOpcode() == FOREACH) {
+  if (getOpcode() == FOREACH || getOpcode() == FILTER) {
     ShadowResolver SR(R);
     SR.addShadow(lhs);
     rhs = RHS->resolveReferences(SR);
@@ -1303,6 +1373,7 @@ std::string TernOpInit::getAsString() const {
   switch (getOpcode()) {
   case SUBST: Result = "!subst"; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
+  case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case IF: Result = "!if"; break;
   case DAG: Result = "!dag"; break;
   }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/assert/assert.h"
+#include "src/assert/__assert_fail.h"
 #include "src/stdlib/abort.h"
 
 // These includes are temporary.

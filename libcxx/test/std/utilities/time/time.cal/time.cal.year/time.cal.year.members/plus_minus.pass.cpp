@@ -42,9 +42,9 @@ int main(int, char**)
 
     for (int i = 10000; i <= 10020; ++i)
     {
-        year year(i);
-        assert(static_cast<int>(+year) ==  i);
-        assert(static_cast<int>(-year) == -i);
+        year yr(i);
+        assert(static_cast<int>(+yr) ==  i);
+        assert(static_cast<int>(-yr) == -i);
     }
 
   return 0;

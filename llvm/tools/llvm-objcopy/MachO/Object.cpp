@@ -134,9 +134,9 @@ uint64_t Object::nextAvailableSegmentAddress() const {
 }
 
 template <typename SegmentType>
-static void constructSegment(SegmentType &Seg,
-                             llvm::MachO::LoadCommandType CmdType,
-                             StringRef SegName, uint64_t SegVMAddr) {
+static void
+constructSegment(SegmentType &Seg, llvm::MachO::LoadCommandType CmdType,
+                 StringRef SegName, uint64_t SegVMAddr, uint64_t SegVMSize) {
   assert(SegName.size() <= sizeof(Seg.segname) && "too long segment name");
   memset(&Seg, 0, sizeof(SegmentType));
   Seg.cmd = CmdType;
@@ -146,17 +146,18 @@ static void constructSegment(SegmentType &Seg,
   Seg.initprot |=
       (MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE);
   Seg.vmaddr = SegVMAddr;
+  Seg.vmsize = SegVMSize;
 }
 
-LoadCommand &Object::addSegment(StringRef SegName) {
+LoadCommand &Object::addSegment(StringRef SegName, uint64_t SegVMSize) {
   LoadCommand LC;
   const uint64_t SegVMAddr = nextAvailableSegmentAddress();
   if (is64Bit())
     constructSegment(LC.MachOLoadCommand.segment_command_64_data,
-                     MachO::LC_SEGMENT_64, SegName, SegVMAddr);
+                     MachO::LC_SEGMENT_64, SegName, SegVMAddr, SegVMSize);
   else
     constructSegment(LC.MachOLoadCommand.segment_command_data,
-                     MachO::LC_SEGMENT, SegName, SegVMAddr);
+                     MachO::LC_SEGMENT, SegName, SegVMAddr, SegVMSize);
 
   LoadCommands.push_back(std::move(LC));
   return LoadCommands.back();

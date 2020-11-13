@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -145,7 +146,7 @@ namespace {
     }
 
     // Track 'estimated' register pressure.
-    SmallSet<unsigned, 32> RegSeen;
+    SmallSet<Register, 32> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
 
     // Register pressure "limit" per register pressure set. If the pressure
@@ -212,7 +213,7 @@ namespace {
                    BitVector &PhysRegClobbers, SmallSet<int, 32> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates);
 
-    void AddToLiveIns(unsigned Reg);
+    void AddToLiveIns(MCRegister Reg);
 
     bool IsLICMCandidate(MachineInstr &I);
 
@@ -221,7 +222,7 @@ namespace {
     bool HasLoopPHIUse(const MachineInstr *MI) const;
 
     bool HasHighOperandLatency(MachineInstr &MI, unsigned DefIdx,
-                               unsigned Reg) const;
+                               Register Reg) const;
 
     bool IsCheapInstruction(MachineInstr &MI) const;
 
@@ -606,7 +607,7 @@ void MachineLICMBase::HoistRegionPostRA() {
 
 /// Add register 'Reg' to the livein sets of BBs in the current loop, and make
 /// sure it is not killed by any instructions in the loop.
-void MachineLICMBase::AddToLiveIns(unsigned Reg) {
+void MachineLICMBase::AddToLiveIns(MCRegister Reg) {
   for (MachineBasicBlock *BB : CurLoop->getBlocks()) {
     if (!BB->isLiveIn(Reg))
       BB->addLiveIn(Reg);
@@ -978,7 +979,7 @@ static bool isInvariantStore(const MachineInstr &MI,
         Reg = TRI->lookThruCopyLike(MO.getReg(), MRI);
       if (Register::isVirtualRegister(Reg))
         return false;
-      if (!TRI->isCallerPreservedPhysReg(Reg, *MI.getMF()))
+      if (!TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *MI.getMF()))
         return false;
       else
         FoundCallerPresReg = true;
@@ -1008,7 +1009,7 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
   if (Register::isVirtualRegister(CopySrcReg))
     return false;
 
-  if (!TRI->isCallerPreservedPhysReg(CopySrcReg, *MF))
+  if (!TRI->isCallerPreservedPhysReg(CopySrcReg.asMCReg(), *MF))
     return false;
 
   Register CopyDstReg = MI.getOperand(0).getReg();
@@ -1043,6 +1044,13 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
       !IsGuaranteedToExecute(I.getParent()))
     return false;
 
+  // Convergent attribute has been used on operations that involve inter-thread
+  // communication which results are implicitly affected by the enclosing
+  // control flows. It is not safe to hoist or sink such operations across
+  // control flow.
+  if (I.isConvergent())
+    return false;
+
   return true;
 }
 
@@ -1071,7 +1079,7 @@ bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I) {
         // However, if the physreg is known to always be caller saved/restored
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
-            !(TRI->isCallerPreservedPhysReg(Reg, *I.getMF())))
+            !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())))
           return false;
         // Otherwise it's safe to move.
         continue;
@@ -1138,9 +1146,8 @@ bool MachineLICMBase::HasLoopPHIUse(const MachineInstr *MI) const {
 
 /// Compute operand latency between a def of 'Reg' and an use in the current
 /// loop, return true if the target considered it high.
-bool MachineLICMBase::HasHighOperandLatency(MachineInstr &MI,
-                                            unsigned DefIdx,
-                                            unsigned Reg) const {
+bool MachineLICMBase::HasHighOperandLatency(MachineInstr &MI, unsigned DefIdx,
+                                            Register Reg) const {
   if (MRI->use_nodbg_empty(Reg))
     return false;
 

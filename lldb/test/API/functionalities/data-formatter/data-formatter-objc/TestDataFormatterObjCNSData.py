@@ -14,7 +14,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 class ObjCDataFormatterNSData(ObjCDataFormatterTestCase):
 
-    @skipUnlessDarwin
     def test_nsdata_with_run_command(self):
         """Test formatters for  NSData."""
         self.appkit_tester_impl(self.nsdata_data_formatter_commands)

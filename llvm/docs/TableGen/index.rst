@@ -11,7 +11,6 @@ TableGen Overview
    BackEnds
    BackGuide
    ProgRef
-   Deficiencies
 
 Introduction
 ============
@@ -23,10 +22,12 @@ for common features of these records to be factored out.  This reduces the
 amount of duplication in the description, reduces the chance of error, and makes
 it easier to structure domain specific information.
 
-The core part of TableGen parses a file, instantiates the declarations, and
-hands the result off to a domain-specific `backend`_ for processing.
-See the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
-description of TableGen.
+The TableGen front end parses a file, instantiates the declarations, and
+hands the result off to a domain-specific `backend`_ for processing.  See
+the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
+description of TableGen. See :doc:`xxx-tblgen - Target Description to C++
+Code <../CommandGuide/tblgen>` for details on the various
+``xxx-tblgen`` commands that invoke TableGen.
 
 The current major users of TableGen are :doc:`The LLVM Target-Independent
 Code Generator <../CodeGenerator>` and the `Clang diagnostics and attributes
@@ -286,7 +287,7 @@ TableGen Deficiencies
 
 Despite being very generic, TableGen has some deficiencies that have been
 pointed out numerous times. The common theme is that, while TableGen allows
-you to build Domain-Specific-Languages, the final languages that you create
+you to build domain specific languages, the final languages that you create
 lack the power of other DSLs, which in turn increase considerably the size
 and complexity of TableGen files.
 
@@ -295,10 +296,7 @@ the basic concepts via custom-made backends, which can pervert the original
 design and make it very hard for newcomers to understand the evil TableGen
 file.
 
-There are some in favour of extending the semantics even more, but making sure
+There are some in favor of extending the semantics even more, but making sure
 backends adhere to strict rules. Others are suggesting we should move to less,
-more powerful DSLs designed with specific purposes, or even re-using existing
+more powerful DSLs designed with specific purposes, or even reusing existing
 DSLs.
-
-Either way, this is a discussion that will likely span across several years,
-if not decades. You can read more in :doc:`TableGen Deficiencies <./Deficiencies>`.

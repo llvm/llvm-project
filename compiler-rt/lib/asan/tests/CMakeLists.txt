@@ -31,9 +31,7 @@ set(ASAN_UNITTEST_COMMON_CFLAGS
   -fno-rtti
   -O2
   -Wno-format
-  -Werror=sign-compare
-  -Wno-non-virtual-dtor
-  )
+  -Werror=sign-compare)
 append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros ASAN_UNITTEST_COMMON_CFLAGS)
 
 # This will ensure the target linker is used
@@ -288,6 +286,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
       $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ${COMPILER_RT_GTEST_SOURCE}

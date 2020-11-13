@@ -14,9 +14,7 @@
 
 using FPBits = __llvm_libc::fputil::FPBits<double>;
 
-double nan = FPBits::buildNaN(1);
-double inf = FPBits::inf();
-double negInf = FPBits::negInf();
+DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(FmaxTest, NaNArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fmax(nan, inf));

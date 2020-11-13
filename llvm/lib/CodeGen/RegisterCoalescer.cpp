@@ -143,7 +143,7 @@ namespace {
     /// To avoid repeatedly merging sets of DbgValueLocs, instead record
     /// which vregs have been coalesced, and where to. This map is from
     /// vreg => {set of vregs merged in}.
-    DenseMap<Register, SmallVector<unsigned, 4>> DbgMergedVRegNums;
+    DenseMap<Register, SmallVector<Register, 4>> DbgMergedVRegNums;
 
     /// A LaneMask to remember on which subregister live ranges we need to call
     /// shrinkToUses() later.
@@ -178,11 +178,11 @@ namespace {
     /// The collection of live intervals which should have been updated
     /// immediately after rematerialiation but delayed until
     /// lateLiveIntervalUpdate is called.
-    DenseSet<unsigned> ToBeUpdated;
+    DenseSet<Register> ToBeUpdated;
 
     /// Record how many times the large live interval with many valnos
     /// has been tried to join with other live interval.
-    DenseMap<unsigned, unsigned long> LargeLIVisitCounter;
+    DenseMap<Register, unsigned long> LargeLIVisitCounter;
 
     /// Recursively eliminate dead defs in DeadDefs.
     void eliminateDeadDefs();
@@ -424,7 +424,7 @@ static bool isSplitEdge(const MachineBasicBlock *MBB) {
 }
 
 bool CoalescerPair::setRegisters(const MachineInstr *MI) {
-  SrcReg = DstReg = 0;
+  SrcReg = DstReg = Register();
   SrcIdx = DstIdx = 0;
   NewRC = nullptr;
   Flipped = CrossClass = false;
@@ -1231,8 +1231,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
 /// Returns true if @p MI defines the full vreg @p Reg, as opposed to just
 /// defining a subregister.
 static bool definesFullReg(const MachineInstr &MI, Register Reg) {
-  assert(!Register::isPhysicalRegister(Reg) &&
-         "This code cannot handle physreg aliasing");
+  assert(!Reg.isPhysical() && "This code cannot handle physreg aliasing");
+
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.isDef() || Op.getReg() != Reg)
       continue;
@@ -1297,7 +1297,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
-    if (Register::isPhysicalRegister(DstReg)) {
+    if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
 
       unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(),
@@ -1384,7 +1384,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  if (Register::isVirtualRegister(DstReg)) {
+  if (DstReg.isVirtual()) {
     unsigned NewIdx = NewMI.getOperand(0).getSubReg();
 
     if (DefRC != nullptr) {
@@ -2481,7 +2481,7 @@ JoinVals::followCopyChain(const VNInfo *VNI) const {
     if (!MI->isFullCopy())
       return std::make_pair(VNI, TrackReg);
     Register SrcReg = MI->getOperand(1).getReg();
-    if (!Register::isVirtualRegister(SrcReg))
+    if (!SrcReg.isVirtual())
       return std::make_pair(VNI, TrackReg);
 
     const LiveInterval &LI = LIS->getInterval(SrcReg);
@@ -3537,7 +3537,7 @@ void RegisterCoalescer::checkMergingChangesDbgValues(CoalescerPair &CP,
 
   // Scan for potentially unsound DBG_VALUEs: examine first the register number
   // Reg, and then any other vregs that may have been merged into  it.
-  auto PerformScan = [this](Register Reg, std::function<void(unsigned)> Func) {
+  auto PerformScan = [this](Register Reg, std::function<void(Register)> Func) {
     Func(Reg);
     if (DbgMergedVRegNums.count(Reg))
       for (Register X : DbgMergedVRegNums[Reg])
@@ -3675,7 +3675,7 @@ static bool isLocalCopy(MachineInstr *Copy, const LiveIntervals *LIS) {
 }
 
 void RegisterCoalescer::lateLiveIntervalUpdate() {
-  for (unsigned reg : ToBeUpdated) {
+  for (Register reg : ToBeUpdated) {
     if (!LIS->hasInterval(reg))
       continue;
     LiveInterval &LI = LIS->getInterval(reg);
@@ -3728,11 +3728,11 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
   if (!isMoveInstr(*TRI, &Copy, SrcReg, DstReg, SrcSubReg, DstSubReg))
     return false;
   // Check if the destination of this copy has any other affinity.
-  if (Register::isPhysicalRegister(DstReg) ||
+  if (DstReg.isPhysical() ||
       // If SrcReg is a physical register, the copy won't be coalesced.
       // Ignoring it may have other side effect (like missing
       // rematerialization). So keep it.
-      Register::isPhysicalRegister(SrcReg) || !isTerminalReg(DstReg, Copy, MRI))
+      SrcReg.isPhysical() || !isTerminalReg(DstReg, Copy, MRI))
     return false;
 
   // DstReg is a terminal node. Check if it interferes with any other

@@ -116,9 +116,30 @@ TARGET_BUILTIN(__builtin_wasm_avgr_u_i16x8, "V8UsV8UsV8Us", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_popcnt_i8x16, "V16ScV16Sc", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_q15mulr_saturate_s_i8x16, "V8sV8sV8s", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_q15mulr_saturate_s_i16x8, "V8sV8sV8s", "nc", "simd128")
+
+TARGET_BUILTIN(__builtin_wasm_extmul_low_i8x16_s_i16x8, "V8sV16ScV16Sc", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_high_i8x16_s_i16x8, "V8sV16ScV16Sc", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_low_i8x16_u_i16x8, "V8UsV16UcV16Uc", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_high_i8x16_u_i16x8, "V8UsV16UcV16Uc", "nc", "simd128")
+
+TARGET_BUILTIN(__builtin_wasm_extmul_low_i16x8_s_i32x4, "V4iV8sV8s", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_high_i16x8_s_i32x4, "V4iV8sV8s", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_low_i16x8_u_i32x4, "V4UiV8UsV8Us", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_high_i16x8_u_i32x4, "V4UiV8UsV8Us", "nc", "simd128")
+
+TARGET_BUILTIN(__builtin_wasm_extmul_low_i32x4_s_i64x2, "V2LLiV4iV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_high_i32x4_s_i64x2, "V2LLiV4iV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_low_i32x4_u_i64x2, "V2ULLiV4UiV4Ui", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_extmul_high_i32x4_u_i64x2, "V2ULLiV4UiV4Ui", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_bitselect, "V4iV4iV4iV4i", "nc", "simd128")
+
+TARGET_BUILTIN(__builtin_wasm_signselect_i8x16, "V16ScV16ScV16ScV16Sc", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_signselect_i16x8, "V8sV8sV8sV8s", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_signselect_i32x4, "V4iV4iV4iV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_signselect_i64x2, "V2LLiV2LLiV2LLiV2LLi", "nc", "simd128")
+
 TARGET_BUILTIN(__builtin_wasm_shuffle_v8x16, "V16ScV16ScV16ScIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIi", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_any_true_i8x16, "iV16Sc", "nc", "simd128")
@@ -133,6 +154,7 @@ TARGET_BUILTIN(__builtin_wasm_all_true_i64x2, "iV2LLi", "nc", "unimplemented-sim
 TARGET_BUILTIN(__builtin_wasm_bitmask_i8x16, "iV16Sc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_bitmask_i16x8, "iV8s", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_bitmask_i32x4, "iV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_bitmask_i64x2, "iV2LLi", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_abs_f32x4, "V4fV4f", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_abs_f64x2, "V2dV2d", "nc", "simd128")
@@ -173,6 +195,11 @@ TARGET_BUILTIN(__builtin_wasm_narrow_u_i8x16_i16x8, "V16UcV8UsV8Us", "nc", "simd
 TARGET_BUILTIN(__builtin_wasm_narrow_s_i16x8_i32x4, "V8sV4iV4i", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_narrow_u_i16x8_i32x4, "V8UsV4UiV4Ui", "nc", "simd128")
 
+TARGET_BUILTIN(__builtin_wasm_widen_low_s_i32x4_i64x2, "V2LLiV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_widen_high_s_i32x4_i64x2, "V2LLiV4i", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_widen_low_u_i32x4_i64x2, "V2LLUiV4Ui", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_widen_high_u_i32x4_i64x2, "V2LLUiV4Ui", "nc", "simd128")
+
 TARGET_BUILTIN(__builtin_wasm_load32_zero, "V4ii*", "n", "simd128")
 TARGET_BUILTIN(__builtin_wasm_load64_zero, "V2LLiLLi*", "n", "simd128")
 
@@ -184,6 +211,8 @@ TARGET_BUILTIN(__builtin_wasm_store8_lane, "vSc*V16ScIi", "n", "simd128")
 TARGET_BUILTIN(__builtin_wasm_store16_lane, "vs*V8sIi", "n", "simd128")
 TARGET_BUILTIN(__builtin_wasm_store32_lane, "vi*V4iIi", "n", "simd128")
 TARGET_BUILTIN(__builtin_wasm_store64_lane, "vLLi*V2LLiIi", "n", "simd128")
+
+TARGET_BUILTIN(__builtin_wasm_eq_i64x2, "V2LLiV2LLiV2LLi", "nc", "simd128")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

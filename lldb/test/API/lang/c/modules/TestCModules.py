@@ -14,9 +14,8 @@ class CModulesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD
     @expectedFailureAll(
-        oslist=["linux"],
+        oslist=["freebsd", "linux"],
         bugnumber="http://llvm.org/pr23456 'fopen' has unknown return type")
     @expectedFailureAll(
         oslist=["windows"],

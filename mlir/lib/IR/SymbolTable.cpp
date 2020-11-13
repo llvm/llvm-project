@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -17,7 +19,7 @@ using namespace mlir;
 /// Return true if the given operation is unknown and may potentially define a
 /// symbol table.
 static bool isPotentiallyUnknownSymbolTable(Operation *op) {
-  return !op->getDialect() && op->getNumRegions() == 1;
+  return op->getNumRegions() == 1 && !op->getDialect();
 }
 
 /// Returns the string name of the given symbol, or None if this is not a
@@ -442,9 +444,9 @@ static WalkResult walkSymbolRefs(
     Operation *op,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   // Check to see if the operation has any attributes.
-  if (op->getMutableAttrDict().empty())
+  DictionaryAttr attrDict = op->getMutableAttrDict().getDictionaryOrNull();
+  if (!attrDict)
     return WalkResult::advance();
-  DictionaryAttr attrDict = op->getAttrDictionary();
 
   // A worklist of a container attribute and the current index into the held
   // attribute list.
@@ -984,6 +986,22 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
   if (it.second)
     it.first->second = std::make_unique<SymbolTable>(op);
   return *it.first->second;
+}
+
+//===----------------------------------------------------------------------===//
+// Visibility parsing implementation.
+//===----------------------------------------------------------------------===//
+
+ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
+                                                 NamedAttrList &attrs) {
+  StringRef visibility;
+  if (parser.parseOptionalKeyword(&visibility, {"public", "private", "nested"}))
+    return failure();
+
+  StringAttr visibilityAttr = parser.getBuilder().getStringAttr(visibility);
+  attrs.push_back(parser.getBuilder().getNamedAttr(
+      SymbolTable::getVisibilityAttrName(), visibilityAttr));
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

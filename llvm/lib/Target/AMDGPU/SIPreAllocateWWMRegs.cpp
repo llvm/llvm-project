@@ -92,11 +92,10 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
     return false;
 
   Register Reg = MO.getReg();
-
-  if (!TRI->isVGPR(*MRI, Reg))
+  if (Reg.isPhysical())
     return false;
 
-  if (Reg.isPhysical())
+  if (!TRI->isVGPR(*MRI, Reg))
     return false;
 
   if (VRM->hasPhys(Reg))

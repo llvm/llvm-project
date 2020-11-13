@@ -11,7 +11,7 @@
 // CHECK-EXECUTE-ONLY-LONG-CALLS: error: option '-mexecute-only' cannot be specified with '-mlong-calls'
 
 // RUN: %clang -target armv7m-eabi -x assembler -mexecute-only %s -c -### 2>&1 \
-// RUN:    | FileCheck %s -check-prefix CHECK-NO-EXECUTE-ONLY -check-prefix CHECK-NO-EXECUTE-ONLY-ASM
+// RUN:    | FileCheck %s --check-prefix=CHECK-NO-EXECUTE-ONLY-ASM
 // CHECK-NO-EXECUTE-ONLY-ASM: warning: argument unused during compilation: '-mexecute-only'
 
 // -mpure-code flag for GCC compatibility

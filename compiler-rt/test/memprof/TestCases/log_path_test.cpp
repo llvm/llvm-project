@@ -3,8 +3,8 @@
 //
 // RUN: %clangxx_memprof  %s -o %t
 
-// Regular run.
-// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-GOOD --dump-input=always
+// stderr log_path
+// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-GOOD --dump-input=always
 
 // Good log_path.
 // RUN: rm -f %t.log.*
@@ -19,11 +19,13 @@
 // RUN:   not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-LONG --dump-input=always
 
 // Specifying the log name via the __memprof_profile_filename variable.
-// TODO: Temporarily disabled due to llvm-avr-linux bot failure
-// %clangxx_memprof  %s -o %t -DPROFILE_NAME_VAR="%t.log2"
-// rm -f %t.log2.*
-// %run %t
-// FileCheck %s --check-prefix=CHECK-GOOD --dump-input=always < %t.log2.*
+// Note we use an invalid path since that is sufficient for checking that the
+// specified __memprof_profile_filename value is passed through to the runtime.
+// Using an automatically generated name via %t can cause weird issues with
+// unexpected macro expansion if the path includes tokens that match a build
+// system macro (e.g. "linux").
+// RUN: %clangxx_memprof  %s -o %t -DPROFILE_NAME_VAR="/dev/null/INVALID"
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID --dump-input=always
 
 #ifdef PROFILE_NAME_VAR
 #define xstr(s) str(s)

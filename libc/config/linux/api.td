@@ -144,6 +144,9 @@ def MathAPI : PublicAPI<"math.h"> {
     SimpleMacroDef<"INFINITY", "__builtin_inff()">,
     SimpleMacroDef<"NAN", "__builtin_nanf(\"\")">,
 
+    SimpleMacroDef<"FP_ILOGB0", "(-__INT_MAX__ - 1)">, // INT_MIN
+    SimpleMacroDef<"FP_ILOGBNAN", "__INT_MAX__">,
+
     IsFiniteMacro,
     IsInfMacro,
     IsNanMacro,

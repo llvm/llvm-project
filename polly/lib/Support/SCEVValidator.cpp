@@ -161,6 +161,10 @@ public:
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
 
+  class ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
+    return visit(Expr->getOperand());
+  }
+
   class ValidatorResult visitTruncateExpr(const SCEVTruncateExpr *Expr) {
     return visitZeroExtendOrTruncateExpr(Expr, Expr->getOperand());
   }
@@ -443,8 +447,6 @@ public:
     if (Instruction *I = dyn_cast<Instruction>(Expr->getValue())) {
       switch (I->getOpcode()) {
       case Instruction::IntToPtr:
-        return visit(SE.getSCEVAtScope(I->getOperand(0), Scope));
-      case Instruction::PtrToInt:
         return visit(SE.getSCEVAtScope(I->getOperand(0), Scope));
       case Instruction::Load:
         return visitLoadInstruction(I, Expr);

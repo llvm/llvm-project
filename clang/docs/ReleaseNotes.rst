@@ -205,6 +205,8 @@ X86 Support in Clang
 
 - Support for ``UINTR`` instructions has been added.
 
+- Support for ``AVXVNNI`` instructions has been added.
+
 Internal API Changes
 --------------------
 

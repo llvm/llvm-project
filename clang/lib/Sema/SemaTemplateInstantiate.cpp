@@ -141,7 +141,12 @@ Sema::getTemplateInstantiationArgs(NamedDecl *D,
               TSK_ExplicitSpecialization)
         break;
 
-      if (const TemplateArgumentList *TemplateArgs
+      if (!RelativeToPrimary && Function->getTemplateSpecializationKind() ==
+                                    TSK_ExplicitSpecialization) {
+        // This is an implicit instantiation of an explicit specialization. We
+        // don't get any template arguments from this function but might get
+        // some from an enclosing template.
+      } else if (const TemplateArgumentList *TemplateArgs
             = Function->getTemplateSpecializationArgs()) {
         // Add the template arguments for this specialization.
         Result.addOuterTemplateArguments(TemplateArgs);
@@ -1593,7 +1598,7 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
   ExprResult SubstReplacement = TransformExpr(E->getReplacement());
   if (SubstReplacement.isInvalid())
     return true;
-  QualType SubstType = TransformType(E->getType());
+  QualType SubstType = TransformType(E->getParameterType(getSema().Context));
   if (SubstType.isNull())
     return true;
   // The type may have been previously dependent and not now, which means we

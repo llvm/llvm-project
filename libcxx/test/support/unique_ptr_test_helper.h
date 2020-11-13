@@ -27,7 +27,7 @@ int A::count = 0;
 struct B : public A {
   static int count;
   B() { ++count; }
-  B(const B&) { ++count; }
+  B(const B& other) : A(other) { ++count; }
   virtual ~B() { --count; }
 };
 

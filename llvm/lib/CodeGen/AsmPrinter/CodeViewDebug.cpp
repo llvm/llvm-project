@@ -137,28 +137,7 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
 }
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
-    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {
-  // If module doesn't have named metadata anchors or COFF debug section
-  // is not available, skip any debug info related stuff.
-  if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
-      !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
-    Asm = nullptr;
-    MMI->setDebugInfoAvailability(false);
-    return;
-  }
-  // Tell MMI that we have debug info.
-  MMI->setDebugInfoAvailability(true);
-
-  TheCPU =
-      mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
-
-  collectGlobalVariableInfo();
-
-  // Check if we should emit type record hashes.
-  ConstantInt *GH = mdconst::extract_or_null<ConstantInt>(
-      MMI->getModule()->getModuleFlag("CodeViewGHash"));
-  EmitDebugGlobalHashes = GH && !GH->isZero();
-}
+    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {}
 
 StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   std::string &Filepath = FileToFilepathMap[File];
@@ -562,11 +541,30 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
+void CodeViewDebug::beginModule(Module *M) {
+  // If module doesn't have named metadata anchors or COFF debug section
+  // is not available, skip any debug info related stuff.
+  if (!M->getNamedMetadata("llvm.dbg.cu") ||
+      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+    Asm = nullptr;
+    return;
+  }
+  // Tell MMI that we have and need debug info.
+  MMI->setDebugInfoAvailability(true);
+
+  TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
+
+  collectGlobalVariableInfo();
+
+  // Check if we should emit type record hashes.
+  ConstantInt *GH =
+      mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("CodeViewGHash"));
+  EmitDebugGlobalHashes = GH && !GH->isZero();
+}
+
 void CodeViewDebug::endModule() {
   if (!Asm || !MMI->hasDebugInfo())
     return;
-
-  assert(Asm != nullptr);
 
   // The COFF .debug$S section consists of several subsections, each starting
   // with a 4-byte control code (e.g. 0xF1, 0xF2, etc) and then a 4-byte length
@@ -588,12 +586,17 @@ void CodeViewDebug::endModule() {
     if (!P.first->isDeclarationForLinker())
       emitDebugInfoForFunction(P.first, *P.second);
 
-  // Emit global variable debug information.
-  setCurrentSubprogram(nullptr);
-  emitDebugInfoForGlobals();
+  // Get types used by globals without emitting anything.
+  // This is meant to collect all static const data members so they can be
+  // emitted as globals.
+  collectDebugInfoForGlobals();
 
   // Emit retained types.
   emitDebugInfoForRetainedTypes();
+
+  // Emit global variable debug information.
+  setCurrentSubprogram(nullptr);
+  emitDebugInfoForGlobals();
 
   // Switch back to the generic .debug$S section after potentially processing
   // comdat symbol sections.
@@ -1183,12 +1186,15 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
 
     // Get the frame register used and the offset.
     Register FrameReg;
-    int FrameOffset = TFI->getFrameIndexReference(*Asm->MF, VI.Slot, FrameReg);
+    StackOffset FrameOffset = TFI->getFrameIndexReference(*Asm->MF, VI.Slot, FrameReg);
     uint16_t CVReg = TRI->getCodeViewRegNum(FrameReg);
+
+    assert(!FrameOffset.getScalable() &&
+           "Frame offsets with a scalable component are not supported");
 
     // Calculate the label ranges.
     LocalVarDefRange DefRange =
-        createDefRangeMem(CVReg, FrameOffset + ExprOffset);
+        createDefRangeMem(CVReg, FrameOffset.getFixed() + ExprOffset);
 
     for (const InsnRange &Range : Scope->getRanges()) {
       const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
@@ -2143,6 +2149,12 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
                                       const DIDerivedType *DDTy) {
   if (!DDTy->getName().empty()) {
     Info.Members.push_back({DDTy, 0});
+
+    // Collect static const data members.
+    if ((DDTy->getFlags() & DINode::FlagStaticMember) ==
+        DINode::FlagStaticMember)
+      StaticConstMembers.push_back(DDTy);
+
     return;
   }
 
@@ -3045,15 +3057,32 @@ void CodeViewDebug::collectGlobalVariableInfo() {
   }
 }
 
+void CodeViewDebug::collectDebugInfoForGlobals() {
+  for (const CVGlobalVariable &CVGV : GlobalVariables) {
+    const DIGlobalVariable *DIGV = CVGV.DIGV;
+    const DIScope *Scope = DIGV->getScope();
+    getCompleteTypeIndex(DIGV->getType());
+    getFullyQualifiedName(Scope, DIGV->getName());
+  }
+
+  for (const CVGlobalVariable &CVGV : ComdatVariables) {
+    const DIGlobalVariable *DIGV = CVGV.DIGV;
+    const DIScope *Scope = DIGV->getScope();
+    getCompleteTypeIndex(DIGV->getType());
+    getFullyQualifiedName(Scope, DIGV->getName());
+  }
+}
+
 void CodeViewDebug::emitDebugInfoForGlobals() {
   // First, emit all globals that are not in a comdat in a single symbol
   // substream. MSVC doesn't like it if the substream is empty, so only open
   // it if we have at least one global to emit.
   switchToDebugSectionForSymbol(nullptr);
-  if (!GlobalVariables.empty()) {
+  if (!GlobalVariables.empty() || !StaticConstMembers.empty()) {
     OS.AddComment("Symbol subsection for globals");
     MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
     emitGlobalVariableList(GlobalVariables);
+    emitStaticConstMemberList();
     endCVSubsection(EndLabel);
   }
 
@@ -3092,6 +3121,61 @@ void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
   }
 }
 
+void CodeViewDebug::emitStaticConstMemberList() {
+  for (const DIDerivedType *DTy : StaticConstMembers) {
+    const DIScope *Scope = DTy->getScope();
+
+    APSInt Value;
+    if (const ConstantInt *CI =
+            dyn_cast_or_null<ConstantInt>(DTy->getConstant()))
+      Value = APSInt(CI->getValue(),
+                     DebugHandlerBase::isUnsignedDIType(DTy->getBaseType()));
+    else if (const ConstantFP *CFP =
+                 dyn_cast_or_null<ConstantFP>(DTy->getConstant()))
+      Value = APSInt(CFP->getValueAPF().bitcastToAPInt(), true);
+    else
+      continue;
+
+    std::string QualifiedName = getFullyQualifiedName(Scope, DTy->getName());
+
+    MCSymbol *SConstantEnd = beginSymbolRecord(SymbolKind::S_CONSTANT);
+    OS.AddComment("Type");
+    OS.emitInt32(getTypeIndex(DTy->getBaseType()).getIndex());
+    OS.AddComment("Value");
+
+    // Encoded integers shouldn't need more than 10 bytes.
+    uint8_t Data[10];
+    BinaryStreamWriter Writer(Data, llvm::support::endianness::little);
+    CodeViewRecordIO IO(Writer);
+    cantFail(IO.mapEncodedInteger(Value));
+    StringRef SRef((char *)Data, Writer.getOffset());
+    OS.emitBinaryData(SRef);
+
+    OS.AddComment("Name");
+    emitNullTerminatedSymbolName(OS, QualifiedName);
+    endSymbolRecord(SConstantEnd);
+  }
+}
+
+static bool isFloatDIType(const DIType *Ty) {
+  if (isa<DICompositeType>(Ty))
+    return false;
+
+  if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    dwarf::Tag T = (dwarf::Tag)Ty->getTag();
+    if (T == dwarf::DW_TAG_pointer_type ||
+        T == dwarf::DW_TAG_ptr_to_member_type ||
+        T == dwarf::DW_TAG_reference_type ||
+        T == dwarf::DW_TAG_rvalue_reference_type)
+      return false;
+    assert(DTy->getBaseType() && "Expected valid base type");
+    return isFloatDIType(DTy->getBaseType());
+  }
+
+  auto *BTy = cast<DIBasicType>(Ty);
+  return (BTy->getEncoding() == dwarf::DW_ATE_float);
+}
+
 void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   const DIGlobalVariable *DIGV = CVGV.DIGV;
 
@@ -3127,7 +3211,12 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
     assert(DIE->isConstant() &&
            "Global constant variables must contain a constant expression.");
-    uint64_t Val = DIE->getElement(1);
+
+    // Use unsigned for floats.
+    bool isUnsigned = isFloatDIType(DIGV->getType())
+                          ? true
+                          : DebugHandlerBase::isUnsignedDIType(DIGV->getType());
+    APSInt Value(APInt(/*BitWidth=*/64, DIE->getElement(1)), isUnsigned);
 
     MCSymbol *SConstantEnd = beginSymbolRecord(SymbolKind::S_CONSTANT);
     OS.AddComment("Type");
@@ -3138,7 +3227,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     uint8_t data[10];
     BinaryStreamWriter Writer(data, llvm::support::endianness::little);
     CodeViewRecordIO IO(Writer);
-    cantFail(IO.mapEncodedInteger(Val));
+    cantFail(IO.mapEncodedInteger(Value));
     StringRef SRef((char *)data, Writer.getOffset());
     OS.emitBinaryData(SRef);
 

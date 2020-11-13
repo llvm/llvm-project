@@ -5,23 +5,17 @@
 
 ; CHECK-INTERESTINGNESS: define void @fn3
 
-; CHECK-FINAL: @g1 = global
-; CHECK-FINAL: @g2 = global
+; CHECK-FINAL-NOT: global
 
-; CHECK-FINAL: $a1
-; CHECK-FINAL: $a2
-; CHECK-FINAL: $a3
-; CHECK-FINAL: $a4
-; CHECK-FINAL: $a5
-; CHECK-FINAL: $a6
+; CHECK-FINAL-NOT: = alias
 
 ; CHECK-FINAL-NOT: @llvm.used
 ; CHECK-FINAL-NOT: @llvm.compiler.used
 
-; CHECK-FINAL: define void @fn1
-; CHECK-FINAL: define void @fn2
+; CHECK-FINAL-NOT: define void @fn1
+; CHECK-FINAL-NOT: define void @fn2
 ; CHECK-FINAL: define void @fn3
-; CHECK-FINAL: define void @fn4
+; CHECK-FINAL-NOT: define void @fn4
 
 @g1 = global [ 4 x i32 ] zeroinitializer
 @g2 = global [ 4 x i32 ] zeroinitializer

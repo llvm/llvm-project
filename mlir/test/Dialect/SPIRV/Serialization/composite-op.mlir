@@ -11,4 +11,14 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : vector<3xf32>
     spv.ReturnValue %0: vector<3xf32>
   }
+  spv.func @vector_dynamic_extract(%vec: vector<4xf32>, %id : i32) -> f32 "None" {
+    // CHECK: spv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xf32>, i32
+    %0 = spv.VectorExtractDynamic %vec[%id] : vector<4xf32>, i32
+    spv.ReturnValue %0: f32
+  }
+  spv.func @vector_dynamic_insert(%val: f32, %vec: vector<4xf32>, %id : i32) -> vector<4xf32> "None" {
+    // CHECK: spv.VectorInsertDynamic %{{.*}}, %{{.*}}[%{{.*}}] : vector<4xf32>, i32
+    %0 = spv.VectorInsertDynamic %val, %vec[%id] : vector<4xf32>, i32
+    spv.ReturnValue %0: vector<4xf32>
+  }
 }

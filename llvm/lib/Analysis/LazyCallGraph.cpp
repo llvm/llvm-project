@@ -1729,10 +1729,7 @@ void LazyCallGraph::buildRefSCCs() {
   for (Edge &E : *this)
     Roots.push_back(&E.getNode());
 
-  // The roots will be popped of a stack, so use reverse to get a less
-  // surprising order. This doesn't change any of the semantics anywhere.
-  std::reverse(Roots.begin(), Roots.end());
-
+  // The roots will be iterated in order.
   buildGenericSCCs(
       Roots,
       [](Node &N) {

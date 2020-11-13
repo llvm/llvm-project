@@ -27,6 +27,21 @@ struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
     OwningRewritePatternList patterns;
     ConversionTarget target(*context);
 
+    // TODO: Move this to BufferizeTypeConverter's constructor.
+    //
+    // This doesn't currently play well with "finalizing" bufferizations (ones
+    // that expect all materializations to be gone). In particular, there seems
+    // to at least be a double-free in the dialect conversion framework
+    // when this materialization gets inserted and then folded away because
+    // it is marked as illegal.
+    typeConverter.addArgumentMaterialization(
+        [](OpBuilder &builder, RankedTensorType type, ValueRange inputs,
+           Location loc) -> Value {
+          assert(inputs.size() == 1);
+          assert(inputs[0].getType().isa<BaseMemRefType>());
+          return builder.create<TensorLoadOp>(loc, type, inputs[0]);
+        });
+
     populateBufferizeMaterializationLegality(target);
     populateSCFStructuralTypeConversionsAndLegality(context, typeConverter,
                                                     patterns, target);

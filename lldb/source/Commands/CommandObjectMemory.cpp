@@ -33,8 +33,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/StreamString.h"
-
-
+#include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>
 
@@ -1281,29 +1280,6 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  bool UIntValueIsValidForSize(uint64_t uval64, size_t total_byte_size) {
-    if (total_byte_size > 8)
-      return false;
-
-    if (total_byte_size == 8)
-      return true;
-
-    const uint64_t max = ((uint64_t)1 << (uint64_t)(total_byte_size * 8)) - 1;
-    return uval64 <= max;
-  }
-
-  bool SIntValueIsValidForSize(int64_t sval64, size_t total_byte_size) {
-    if (total_byte_size > 8)
-      return false;
-
-    if (total_byte_size == 8)
-      return true;
-
-    const int64_t max = ((int64_t)1 << (uint64_t)(total_byte_size * 8 - 1)) - 1;
-    const int64_t min = ~(max);
-    return min <= sval64 && sval64 <= max;
-  }
-
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "process" for validity as eCommandRequiresProcess
@@ -1449,7 +1425,7 @@ protected:
               "'%s' is not a valid hex string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
-        } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
+        } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value 0x%" PRIx64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
@@ -1477,7 +1453,7 @@ protected:
               "'%s' is not a valid binary string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
-        } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
+        } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value 0x%" PRIx64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
@@ -1516,7 +1492,7 @@ protected:
               "'%s' is not a valid signed decimal value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
-        } else if (!SIntValueIsValidForSize(sval64, item_byte_size)) {
+        } else if (!llvm::isIntN(item_byte_size * 8, sval64)) {
           result.AppendErrorWithFormat(
               "Value %" PRIi64 " is too large or small to fit in a %" PRIu64
               " byte signed integer value.\n",
@@ -1535,7 +1511,7 @@ protected:
               entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
-        } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
+        } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIu64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
@@ -1552,7 +1528,7 @@ protected:
               "'%s' is not a valid octal string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
-        } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
+        } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIo64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",

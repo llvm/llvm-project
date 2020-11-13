@@ -17,7 +17,7 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; ENABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; ENABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; ENABLED-NEXT:    @ Child Loop BB0_3 Depth 2
-; ENABLED-NEXT:    mov r8, r0
+; ENABLED-NEXT:    mov r12, r0
 ; ENABLED-NEXT:    mov r4, r2
 ; ENABLED-NEXT:    mov r5, r1
 ; ENABLED-NEXT:    mov r6, r3
@@ -28,7 +28,7 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; ENABLED-NEXT:    vldrw.u32 q0, [r5], #16
 ; ENABLED-NEXT:    vldrw.u32 q1, [r4], #16
 ; ENABLED-NEXT:    vadd.i32 q0, q1, q0
-; ENABLED-NEXT:    vstrw.32 q0, [r8], #16
+; ENABLED-NEXT:    vstrw.32 q0, [r12], #16
 ; ENABLED-NEXT:    letp lr, .LBB0_3
 ; ENABLED-NEXT:    b .LBB0_2
 ; ENABLED-NEXT:  .LBB0_4: @ %for.cond.cleanup
@@ -40,20 +40,20 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; DISABLED-NEXT:    cmp r3, #1
 ; DISABLED-NEXT:    blt .LBB0_4
 ; DISABLED-NEXT:  @ %bb.1: @ %vector.ph.preheader
-; DISABLED-NEXT:    adds r6, r3, #3
-; DISABLED-NEXT:    movs r5, #1
-; DISABLED-NEXT:    bic r6, r6, #3
-; DISABLED-NEXT:    subs r6, #4
-; DISABLED-NEXT:    add.w r12, r5, r6, lsr #2
+; DISABLED-NEXT:    adds r7, r3, #3
+; DISABLED-NEXT:    movs r6, #1
+; DISABLED-NEXT:    bic r7, r7, #3
+; DISABLED-NEXT:    subs r7, #4
+; DISABLED-NEXT:    add.w r8, r6, r7, lsr #2
 ; DISABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; DISABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; DISABLED-NEXT:    @ Child Loop BB0_3 Depth 2
-; DISABLED-NEXT:    mov r7, r12
-; DISABLED-NEXT:    mov r8, r0
+; DISABLED-NEXT:    mov r7, r8
+; DISABLED-NEXT:    mov r12, r0
 ; DISABLED-NEXT:    mov r4, r2
 ; DISABLED-NEXT:    mov r5, r1
 ; DISABLED-NEXT:    mov r6, r3
-; DISABLED-NEXT:    dls lr, r12
+; DISABLED-NEXT:    dls lr, r8
 ; DISABLED-NEXT:  .LBB0_3: @ %vector.body
 ; DISABLED-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; DISABLED-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -66,7 +66,7 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; DISABLED-NEXT:    vldrwt.u32 q1, [r4], #16
 ; DISABLED-NEXT:    vadd.i32 q0, q1, q0
 ; DISABLED-NEXT:    vpst
-; DISABLED-NEXT:    vstrwt.32 q0, [r8], #16
+; DISABLED-NEXT:    vstrwt.32 q0, [r12], #16
 ; DISABLED-NEXT:    le lr, .LBB0_3
 ; DISABLED-NEXT:    b .LBB0_2
 ; DISABLED-NEXT:  .LBB0_4: @ %for.cond.cleanup
@@ -83,7 +83,7 @@ entry:
 
 vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
-  call void @llvm.set.loop.iterations.i32(i32 %5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -91,7 +91,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %C, %vector.ph ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
+  %6 = phi i32 [ %start, %vector.ph ], [ %8, %vector.body ]
 
   %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
@@ -118,6 +118,6 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
-declare void @llvm.set.loop.iterations.i32(i32)
+declare i32 @llvm.start.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

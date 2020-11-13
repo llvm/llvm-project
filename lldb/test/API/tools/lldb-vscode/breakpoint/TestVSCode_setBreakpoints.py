@@ -25,6 +25,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureAll(oslist=["freebsd"])
     def test_source_map(self):
         self.build_and_create_debug_adaptor()
 
@@ -89,6 +90,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureAll(oslist=["freebsd"])
     def test_set_and_clear(self):
         '''Tests setting and clearing source file and line breakpoints.
            This packet is a bit tricky on the debug adaptor side since there
@@ -221,6 +223,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureAll(oslist=["freebsd"])
     def test_clear_breakpoints_unset_breakpoints(self):
         '''Test clearing breakpoints like test_set_and_clear, but clear
            breakpoints by omitting the breakpoints array instead of sending an
@@ -263,6 +266,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureAll(oslist=["freebsd"])
     def test_functionality(self):
         '''Tests hitting breakpoints and the functionality of a single
            breakpoint, like 'conditions' and 'hitCondition' settings.'''

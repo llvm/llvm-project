@@ -123,22 +123,18 @@ DynamicSymbols:
     Section: .data
     Value:   0x200
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0
-    Sections:
-      - Section: .text
-      - Section: .data
-  - Type:  PT_LOAD
-    VAddr: 0x400
-    Sections:
-      - Section: .dynsym
-      - Section: .hash
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type:  PT_DYNAMIC
-    VAddr: 0xA00
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0
+    FirstSec: .text
+    LastSec:  .data
+  - Type:     PT_LOAD
+    VAddr:    0x400
+    FirstSec: .dynsym
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0xA00
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 2: Table size from DT_HASH does not match size from section header.
 # RUN: yaml2obj --docnum=2 %s -o %t2-smaller -DCHAIN="[1, 2]"
@@ -290,22 +286,18 @@ DynamicSymbols:
     Section: .data
     Value:   0x300
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0
-    Sections:
-      - Section: .text
-      - Section: .data
-  - Type:  PT_LOAD
-    VAddr: 0x400
-    Sections:
-      - Section: .dynsym
-      - Section: .hash
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type:  PT_DYNAMIC
-    VAddr: 0xA00
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0
+    FirstSec: .text
+    LastSec:  .data
+  - Type:     PT_LOAD
+    VAddr:    0x400
+    FirstSec: .dynsym
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0xA00
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 3: DT_HASH is missing.
 ## Show that no warning occurs if there are section headers.
@@ -409,9 +401,7 @@ Sections:
     NChain: 0xFFFFFFFF
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .rela.plt
-      - Section: .dynamic
-      - Section: .hash
+  - Type:     PT_LOAD
+    FirstSec: .rela.plt
+    LastSec:  .hash
     VAddr: 0x1000

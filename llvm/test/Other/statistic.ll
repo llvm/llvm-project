@@ -1,7 +1,7 @@
 ; RUN: opt < %s -o /dev/null -instsimplify -stats -stats-json 2>&1 | FileCheck %s --check-prefix=JSON
 ; RUN: opt < %s -o /dev/null -instsimplify -stats -stats-json -info-output-file %t && FileCheck %s < %t --check-prefix=JSON
-; RUN: opt < %s -o /dev/null -instsimplify -stats -stats-json -time-passes 2>&1 | FileCheck %s --check-prefixes=JSON,JSONTIME
-; RUN: opt < %s -o /dev/null -instsimplify -stats -stats-json -time-passes -info-output-file %t && FileCheck %s < %t --check-prefixes=JSON,JSONTIME
+; RUN: opt < %s -o /dev/null -instsimplify -stats -stats-json -time-passes -enable-new-pm=0 2>&1 | FileCheck %s --check-prefixes=JSON,JSONTIME
+; RUN: opt < %s -o /dev/null -instsimplify -stats -stats-json -time-passes -info-output-file %t -enable-new-pm=0 && FileCheck %s < %t --check-prefixes=JSON,JSONTIME
 ; RUN: opt < %s -o /dev/null -instsimplify -stats 2>&1 | FileCheck %s --check-prefix=DEFAULT
 ; RUN: opt < %s -o /dev/null -instsimplify -stats -info-output-file %t && FileCheck %s < %t --check-prefix=DEFAULT
 ; REQUIRES: asserts

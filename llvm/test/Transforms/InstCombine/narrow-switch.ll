@@ -104,14 +104,14 @@ return:
 
 define void @trunc64to59(i64 %a) {
 ; ALL-LABEL: @trunc64to59(
-; ALL-CHECK32:         switch i59
-; ALL-CHECK32-NEXT:    i59 0, label %sw.bb1
-; ALL-CHECK32-NEXT:    i59 18717182647723699, label %sw.bb2
-; ALL-CHECK32-NEXT:    ]
-; ALL-CHECK64:         switch i64
-; ALL-CHECK64-NEXT:    i64 0, label %sw.bb1
-; ALL-CHECK64-NEXT:    i64 18717182647723699, label %sw.bb2
-; ALL-CHECK64-NEXT:    ]
+; CHECK32:         switch i59
+; CHECK32-NEXT:    i59 0, label %sw.bb1
+; CHECK32-NEXT:    i59 18717182647723699, label %sw.bb2
+; CHECK32-NEXT:    ]
+; CHECK64:         switch i64
+; CHECK64-NEXT:    i64 0, label %sw.bb1
+; CHECK64-NEXT:    i64 18717182647723699, label %sw.bb2
+; CHECK64-NEXT:    ]
 ;
 entry:
   %tmp0 = and i64 %a, 15

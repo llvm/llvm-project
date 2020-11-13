@@ -37,7 +37,6 @@
 #include <cinttypes>
 #include <ciso646>
 #include <climits>
-#include <clocale>
 #include <cmath>
 #include <compare>
 #include <complex>
@@ -76,7 +75,6 @@
 #include <limits>
 #include <limits.h>
 #include <list>
-#include <locale.h>
 #include <map>
 #include <math.h>
 #include <memory>
@@ -126,6 +124,7 @@
 #include <wctype.h>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#   include <clocale>
 #   include <codecvt>
 #   include <fstream>
 #   include <iomanip>
@@ -133,6 +132,7 @@
 #   include <iostream>
 #   include <istream>
 #   include <locale>
+#   include <locale.h>
 #   include <ostream>
 #   include <regex>
 #   include <sstream>

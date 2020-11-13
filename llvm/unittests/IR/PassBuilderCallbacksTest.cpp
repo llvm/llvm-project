@@ -330,9 +330,10 @@ struct MockPassInstrumentationCallbacks {
   MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
 
   void registerPassInstrumentation() {
-    Callbacks.registerBeforePassCallback([this](StringRef P, llvm::Any IR) {
-      return this->runBeforePass(P, IR);
-    });
+    Callbacks.registerShouldRunOptionalPassCallback(
+        [this](StringRef P, llvm::Any IR) {
+          return this->runBeforePass(P, IR);
+        });
     Callbacks.registerBeforeSkippedPassCallback(
         [this](StringRef P, llvm::Any IR) {
           this->runBeforeSkippedPass(P, IR);
@@ -439,8 +440,8 @@ protected:
                   "exit:\n"
                   "  ret void\n"
                   "}\n")),
-        CallbacksHandle(),
-        PB(nullptr, PipelineTuningOptions(), None, &CallbacksHandle.Callbacks),
+        CallbacksHandle(), PB(false, nullptr, PipelineTuningOptions(), None,
+                              &CallbacksHandle.Callbacks),
         PM(true), LAM(true), FAM(true), CGAM(true), AM(true) {
 
     EXPECT_TRUE(&CallbacksHandle.Callbacks ==

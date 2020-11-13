@@ -27,6 +27,9 @@ void VESubtarget::anchor() {}
 
 VESubtarget &VESubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                           StringRef FS) {
+  // Default feature settings
+  EnableVPU = false;
+
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())

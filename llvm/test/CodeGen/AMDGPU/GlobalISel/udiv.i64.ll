@@ -3385,34 +3385,34 @@ define <2 x i64> @v_udiv_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; CGP:       ; %bb.0:
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    s_mov_b32 s6, 0xffffff
-; CGP-NEXT:    v_mov_b32_e32 v1, 0
 ; CGP-NEXT:    v_and_b32_e32 v0, s6, v0
-; CGP-NEXT:    v_and_b32_e32 v2, s6, v2
-; CGP-NEXT:    v_and_b32_e32 v3, s6, v4
-; CGP-NEXT:    v_and_b32_e32 v4, s6, v6
+; CGP-NEXT:    v_and_b32_e32 v1, s6, v2
+; CGP-NEXT:    v_and_b32_e32 v2, s6, v4
+; CGP-NEXT:    v_and_b32_e32 v3, s6, v6
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v0, v0
-; CGP-NEXT:    v_cvt_f32_u32_e32 v3, v3
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v2, v2
-; CGP-NEXT:    v_cvt_f32_u32_e32 v4, v4
+; CGP-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; CGP-NEXT:    v_cvt_f32_u32_e32 v3, v3
+; CGP-NEXT:    v_rcp_f32_e32 v4, v2
 ; CGP-NEXT:    v_rcp_f32_e32 v5, v3
-; CGP-NEXT:    v_rcp_f32_e32 v6, v4
-; CGP-NEXT:    v_mul_f32_e32 v5, v0, v5
-; CGP-NEXT:    v_mul_f32_e32 v6, v2, v6
+; CGP-NEXT:    v_mul_f32_e32 v4, v0, v4
+; CGP-NEXT:    v_mul_f32_e32 v5, v1, v5
+; CGP-NEXT:    v_trunc_f32_e32 v4, v4
 ; CGP-NEXT:    v_trunc_f32_e32 v5, v5
-; CGP-NEXT:    v_trunc_f32_e32 v6, v6
-; CGP-NEXT:    v_mad_f32 v0, -v5, v3, v0
+; CGP-NEXT:    v_mad_f32 v0, -v4, v2, v0
+; CGP-NEXT:    v_cvt_u32_f32_e32 v4, v4
+; CGP-NEXT:    v_mad_f32 v1, -v5, v3, v1
 ; CGP-NEXT:    v_cvt_u32_f32_e32 v5, v5
-; CGP-NEXT:    v_mad_f32 v2, -v6, v4, v2
-; CGP-NEXT:    v_cvt_u32_f32_e32 v6, v6
-; CGP-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v0|, v3
+; CGP-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v0|, v2
 ; CGP-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; CGP-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, v4
-; CGP-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
-; CGP-NEXT:    v_add_i32_e32 v0, vcc, v5, v0
-; CGP-NEXT:    v_add_i32_e32 v2, vcc, v6, v2
+; CGP-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v1|, v3
+; CGP-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; CGP-NEXT:    v_add_i32_e32 v0, vcc, v4, v0
+; CGP-NEXT:    v_add_i32_e32 v1, vcc, v5, v1
 ; CGP-NEXT:    v_and_b32_e32 v0, s6, v0
-; CGP-NEXT:    v_and_b32_e32 v2, s6, v2
-; CGP-NEXT:    v_mov_b32_e32 v3, v1
+; CGP-NEXT:    v_and_b32_e32 v2, s6, v1
+; CGP-NEXT:    v_mov_b32_e32 v1, 0
+; CGP-NEXT:    v_mov_b32_e32 v3, 0
 ; CGP-NEXT:    s_setpc_b64 s[30:31]
   %num.mask = and <2 x i64> %num, <i64 16777215, i64 16777215>
   %den.mask = and <2 x i64> %den, <i64 16777215, i64 16777215>

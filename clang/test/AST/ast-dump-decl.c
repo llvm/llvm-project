@@ -53,7 +53,7 @@ typedef int TestTypedefDecl;
 // CHECK:      TypedefDecl{{.*}} TestTypedefDecl 'int'
 
 __module_private__ typedef int TestTypedefDeclPrivate;
-// CHECK-MODULE:      TypedefDecl{{.*}} TestTypedefDeclPrivate 'int' __module_private__
+// CHECK-MODULES:      TypedefDecl{{.*}} TestTypedefDeclPrivate 'int' __module_private__
 
 enum TestEnumDecl {
   testEnumDecl

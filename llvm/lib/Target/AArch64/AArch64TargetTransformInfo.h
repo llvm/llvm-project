@@ -141,11 +141,13 @@ public:
   int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         CmpInst::Predicate VecPred,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
 
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
+  bool useNeonVector(const Type *Ty) const;
 
   int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
                       unsigned AddressSpace,
@@ -220,26 +222,7 @@ public:
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
 
-  bool shouldExpandReduction(const IntrinsicInst *II) const {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::vector_reduce_fadd: {
-      Value *VecOp = II->getArgOperand(1);
-      EVT VT = TLI->getValueType(getDataLayout(), VecOp->getType());
-      if (ST->hasSVE() &&
-          TLI->useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
-        return false;
-
-      return !II->getFastMathFlags().allowReassoc();
-    }
-    case Intrinsic::vector_reduce_fmul:
-      // We don't have legalization support for ordered FP reductions.
-      return !II->getFastMathFlags().allowReassoc();
-
-    default:
-      // Don't expand anything else, let legalization deal with it.
-      return false;
-    }
-  }
+  bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
 
   unsigned getGISelRematGlobalCost() const {
     return 2;

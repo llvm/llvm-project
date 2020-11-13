@@ -96,11 +96,11 @@ void template_test(double *List, int Length) {
   for_template_define_test<double>(List, Length, Value);
 }
 
-// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[UNROLL_ENABLE:.*]]}
+// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[UNROLL_ENABLE:.*]]}
 // CHECK: ![[UNROLL_ENABLE]] = !{!"llvm.loop.unroll.enable"}
 // CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2:.*]], ![[UNROLL_DISABLE:.*]]}
 // CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
-// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[UNROLL_8:.*]]}
+// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], [[MP]], ![[UNROLL_8:.*]]}
 // CHECK: ![[UNROLL_8]] = !{!"llvm.loop.unroll.count", i32 8}
 // CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[UNROLL_4:.*]]}
 // CHECK: ![[UNROLL_4]] = !{!"llvm.loop.unroll.count", i32 4}

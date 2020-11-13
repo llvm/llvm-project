@@ -57,4 +57,7 @@ subroutine checkC7115()
   !ERROR: Implied DO index is active in surrounding implied DO loop and may not have the same name
   !ERROR: 'i' is already declared in this scoping unit
   real, dimension(100), parameter :: bad = [((88.8, i = 1, 10), i = 1, 10)]
+
+  !ERROR: The stride of an implied DO loop must not be zero
+  integer, parameter :: bad2(*) = [(j, j=1,1,0)]
 end subroutine checkC7115

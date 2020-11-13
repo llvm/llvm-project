@@ -438,10 +438,15 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   auto kernelSymbol = builder.getSymbolRefAttr(
       kernelModule.getName(), {builder.getSymbolRefAttr(kernelFunc.getName())});
   result.addAttribute(getKernelAttrName(), kernelSymbol);
+  SmallVector<int32_t, 8> segmentSizes(8, 1);
+  segmentSizes.front() = 0; // Initially no async dependencies.
+  segmentSizes.back() = static_cast<int32_t>(kernelOperands.size());
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getI32VectorAttr(segmentSizes));
 }
 
 unsigned LaunchFuncOp::getNumKernelOperands() {
-  return getNumOperands() - kNumConfigOperands;
+  return getNumOperands() - asyncDependencies().size() - kNumConfigOperands;
 }
 
 StringRef LaunchFuncOp::getKernelModuleName() {
@@ -451,15 +456,17 @@ StringRef LaunchFuncOp::getKernelModuleName() {
 StringRef LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
 
 Value LaunchFuncOp::getKernelOperand(unsigned i) {
-  return getOperation()->getOperand(i + kNumConfigOperands);
+  return getOperand(asyncDependencies().size() + kNumConfigOperands + i);
 }
 
 KernelDim3 LaunchFuncOp::getGridSizeOperandValues() {
-  return KernelDim3{getOperand(0), getOperand(1), getOperand(2)};
+  auto operands = getOperands().drop_front(asyncDependencies().size());
+  return KernelDim3{operands[0], operands[1], operands[2]};
 }
 
 KernelDim3 LaunchFuncOp::getBlockSizeOperandValues() {
-  return KernelDim3{getOperand(3), getOperand(4), getOperand(5)};
+  auto operands = getOperands().drop_front(asyncDependencies().size());
+  return KernelDim3{operands[3], operands[4], operands[5]};
 }
 
 static LogicalResult verify(LaunchFuncOp op) {

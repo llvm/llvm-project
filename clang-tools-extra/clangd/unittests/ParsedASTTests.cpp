@@ -59,7 +59,7 @@ MATCHER_P(DeclNamed, Name, "") {
 
 MATCHER_P(DeclKind, Kind, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
-    if (ND->getDeclKindName() == Kind)
+    if (ND->getDeclKindName() == llvm::StringRef(Kind))
       return true;
   if (auto *Stream = result_listener->stream()) {
     llvm::raw_os_ostream OS(*Stream);
@@ -104,8 +104,7 @@ MATCHER(EqInc, "") {
          std::tie(Expected.HashLine, Expected.Written);
 }
 
-// FIXME: figure out why it fails on clang-ppc64le-rhel buildbot.
-TEST(ParsedASTTest, DISABLED_TopLevelDecls) {
+TEST(ParsedASTTest, TopLevelDecls) {
   TestTU TU;
   TU.HeaderCode = R"(
     int header1();

@@ -13,11 +13,11 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-std::tuple<Register, unsigned, MachineInstr *>
+std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (!Def)
-    return std::make_tuple(Reg, 0, nullptr);
+    return std::make_pair(Reg, 0);
 
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT) {
     unsigned Offset;
@@ -27,21 +27,21 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
     else
       Offset = Op.getCImm()->getZExtValue();
 
-    return std::make_tuple(Register(), Offset, Def);
+    return std::make_pair(Register(), Offset);
   }
 
   int64_t Offset;
   if (Def->getOpcode() == TargetOpcode::G_ADD) {
     // TODO: Handle G_OR used for add case
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(Offset)))
-      return std::make_tuple(Def->getOperand(1).getReg(), Offset, Def);
+      return std::make_pair(Def->getOperand(1).getReg(), Offset);
 
     // FIXME: matcher should ignore copies
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return std::make_tuple(Def->getOperand(1).getReg(), Offset, Def);
+      return std::make_pair(Def->getOperand(1).getReg(), Offset);
   }
 
-  return std::make_tuple(Reg, 0, Def);
+  return std::make_pair(Reg, 0);
 }
 
 bool AMDGPU::isLegalVOP3PShuffleMask(ArrayRef<int> Mask) {

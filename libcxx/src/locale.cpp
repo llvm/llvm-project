@@ -1149,7 +1149,7 @@ ctype<char>::__classic_upper_table() _NOEXCEPT
 {
     return _LIBCPP_GET_C_LOCALE->__ctype_toupper;
 }
-#elif __NetBSD__
+#elif defined(__NetBSD__)
 const short*
 ctype<char>::__classic_lower_table() _NOEXCEPT
 {
@@ -5128,7 +5128,7 @@ __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct)
         mb = mbstate_t();
         const char* bb = buf;
         size_t j = __libcpp_mbsrtowcs_l(wbuf, &bb, countof(wbuf), &mb, __loc_);
-        if (j == size_t(-1))
+        if (j == size_t(-1) || j == 0)
             __throw_runtime_error("locale not supported");
         wbe = wbuf + j;
         __weeks_[i].assign(wbuf, wbe);
@@ -5136,7 +5136,7 @@ __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct)
         mb = mbstate_t();
         bb = buf;
         j = __libcpp_mbsrtowcs_l(wbuf, &bb, countof(wbuf), &mb, __loc_);
-        if (j == size_t(-1))
+        if (j == size_t(-1) || j == 0)
             __throw_runtime_error("locale not supported");
         wbe = wbuf + j;
         __weeks_[i+7].assign(wbuf, wbe);
@@ -5149,7 +5149,7 @@ __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct)
         mb = mbstate_t();
         const char* bb = buf;
         size_t j = __libcpp_mbsrtowcs_l(wbuf, &bb, countof(wbuf), &mb, __loc_);
-        if (j == size_t(-1))
+        if (j == size_t(-1) || j == 0)
             __throw_runtime_error("locale not supported");
         wbe = wbuf + j;
         __months_[i].assign(wbuf, wbe);
@@ -5157,7 +5157,7 @@ __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct)
         mb = mbstate_t();
         bb = buf;
         j = __libcpp_mbsrtowcs_l(wbuf, &bb, countof(wbuf), &mb, __loc_);
-        if (j == size_t(-1))
+        if (j == size_t(-1) || j == 0)
             __throw_runtime_error("locale not supported");
         wbe = wbuf + j;
         __months_[i+12].assign(wbuf, wbe);

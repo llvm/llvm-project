@@ -68,13 +68,15 @@ public:
     });
   }
 };
-} // end namespace
+} // namespace
 
 namespace mlir {
+namespace test {
 void registerTestSCFUtilsPass() {
   PassRegistration<TestSCFForUtilsPass>("test-scf-for-utils",
                                         "test scf.for utils");
   PassRegistration<TestSCFIfUtilsPass>("test-scf-if-utils",
                                        "test scf.if utils");
 }
+} // namespace test
 } // namespace mlir

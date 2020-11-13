@@ -159,7 +159,7 @@ public:
   bool DidReadTopLevelSubmodule = false;
 
   /// The file entry for the module file.
-  const FileEntry *File = nullptr;
+  OptionalFileEntryRefDegradesToFileEntryPtr File;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.

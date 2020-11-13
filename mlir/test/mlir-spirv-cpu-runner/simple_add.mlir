@@ -47,10 +47,9 @@ module attributes {
     call @fillF32Buffer3D(%output_casted, %0) : (memref<?x?x?xf32>, f32) -> ()
 
     %one = constant 1 : index
-    "gpu.launch_func"(%one, %one, %one,
-                      %one, %one, %one,
-                      %input1, %input2, %output) { kernel = @kernels::@sum }
-        : (index, index, index, index, index, index, memref<3xf32>, memref<3x3xf32>, memref<3x3x3xf32>) -> ()
+    gpu.launch_func @kernels::@sum
+        blocks in (%one, %one, %one) threads in (%one, %one, %one)
+        args(%input1 : memref<3xf32>, %input2 : memref<3x3xf32>, %output : memref<3x3x3xf32>)
     %result = memref_cast %output : memref<3x3x3xf32> to memref<*xf32>
     call @print_memref_f32(%result) : (memref<*xf32>) -> ()
     return

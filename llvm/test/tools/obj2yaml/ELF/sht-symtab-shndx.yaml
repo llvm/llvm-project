@@ -143,7 +143,7 @@ Symbols: []
 # RUN: yaml2obj --docnum=6 %s -o %t6
 # RUN: not obj2yaml %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=CASE6
 
-# CASE6: Error reading file: [[FILE]]: SHT_SYMTAB_SHNDX section is linked with SHT_PROGBITS section (expected SHT_SYMTAB/SHT_DYNSYM)
+# CASE6: Error reading file: [[FILE]]: only SHT_SYMTAB_SHNDX associated with SHT_SYMTAB are supported
 
 --- !ELF
 FileHeader:

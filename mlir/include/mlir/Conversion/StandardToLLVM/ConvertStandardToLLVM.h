@@ -164,12 +164,20 @@ private:
   /// Convert a memref type into an LLVM type that captures the relevant data.
   Type convertMemRefType(MemRefType type);
 
-  /// Convert a memref type into a list of non-aggregate LLVM IR types that
-  /// contain all the relevant data. In particular, the list will contain:
+  /// Convert a memref type into a list of LLVM IR types that will form the
+  /// memref descriptor. If `unpackAggregates` is true the `sizes` and `strides`
+  /// arrays in the descriptors are unpacked to individual index-typed elements,
+  /// else they are are kept as rank-sized arrays of index type. In particular,
+  /// the list will contain:
   /// - two pointers to the memref element type, followed by
-  /// - an integer offset, followed by
-  /// - one integer size per dimension of the memref, followed by
-  /// - one integer stride per dimension of the memref.
+  /// - an index-typed offset, followed by
+  /// - (if unpackAggregates = true)
+  ///    - one index-typed size per dimension of the memref, followed by
+  ///    - one index-typed stride per dimension of the memref.
+  /// - (if unpackArrregates = false)
+  ///   - one rank-sized array of index-type for the size of each dimension
+  ///   - one rank-sized array of index-type for the stride of each dimension
+  ///
   /// For example, memref<?x?xf32> is converted to the following list:
   /// - `!llvm<"float*">` (allocated pointer),
   /// - `!llvm<"float*">` (aligned pointer),
@@ -177,17 +185,19 @@ private:
   /// - `!llvm.i64`, `!llvm.i64` (sizes),
   /// - `!llvm.i64`, `!llvm.i64` (strides).
   /// These types can be recomposed to a memref descriptor struct.
-  SmallVector<Type, 5> convertMemRefSignature(MemRefType type);
+  SmallVector<LLVM::LLVMType, 5>
+  getMemRefDescriptorFields(MemRefType type, bool unpackAggregates);
 
   /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
-  /// that contain all the relevant data. In particular, this list contains:
+  /// that will form the unranked memref descriptor. In particular, this list
+  /// contains:
   /// - an integer rank, followed by
   /// - a pointer to the memref descriptor struct.
   /// For example, memref<*xf32> is converted to the following list:
   /// !llvm.i64 (rank)
   /// !llvm<"i8*"> (type-erased pointer).
   /// These types can be recomposed to a unranked memref descriptor struct.
-  SmallVector<Type, 2> convertUnrankedMemRefSignature();
+  SmallVector<LLVM::LLVMType, 2> getUnrankedMemRefDescriptorFields();
 
   // Convert an unranked memref type to an LLVM type that captures the
   // runtime rank and a pointer to the static ranked memref desc
@@ -399,6 +409,65 @@ public:
                            LLVMTypeConverter &typeConverter,
                            ArrayRef<UnrankedMemRefDescriptor> values,
                            SmallVectorImpl<Value> &sizes);
+
+  /// TODO: The following accessors don't take alignment rules between elements
+  /// of the descriptor struct into account. For some architectures, it might be
+  /// necessary to extend them and to use `llvm::DataLayout` contained in
+  /// `LLVMTypeConverter`.
+
+  /// Builds IR extracting the allocated pointer from the descriptor.
+  static Value allocatedPtr(OpBuilder &builder, Location loc,
+                            Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR inserting the allocated pointer into the descriptor.
+  static void setAllocatedPtr(OpBuilder &builder, Location loc,
+                              Value memRefDescPtr,
+                              LLVM::LLVMType elemPtrPtrType,
+                              Value allocatedPtr);
+
+  /// Builds IR extracting the aligned pointer from the descriptor.
+  static Value alignedPtr(OpBuilder &builder, Location loc,
+                          LLVMTypeConverter &typeConverter, Value memRefDescPtr,
+                          LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR inserting the aligned pointer into the descriptor.
+  static void setAlignedPtr(OpBuilder &builder, Location loc,
+                            LLVMTypeConverter &typeConverter,
+                            Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType,
+                            Value alignedPtr);
+
+  /// Builds IR extracting the offset from the descriptor.
+  static Value offset(OpBuilder &builder, Location loc,
+                      LLVMTypeConverter &typeConverter, Value memRefDescPtr,
+                      LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR inserting the offset into the descriptor.
+  static void setOffset(OpBuilder &builder, Location loc,
+                        LLVMTypeConverter &typeConverter, Value memRefDescPtr,
+                        LLVM::LLVMType elemPtrPtrType, Value offset);
+
+  /// Builds IR extracting the pointer to the first element of the size array.
+  static Value sizeBasePtr(OpBuilder &builder, Location loc,
+                           LLVMTypeConverter &typeConverter,
+                           Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType);
+  /// Builds IR extracting the size[index] from the descriptor.
+  static Value size(OpBuilder &builder, Location loc,
+                    LLVMTypeConverter typeConverter, Value sizeBasePtr,
+                    Value index);
+  /// Builds IR inserting the size[index] into the descriptor.
+  static void setSize(OpBuilder &builder, Location loc,
+                      LLVMTypeConverter typeConverter, Value sizeBasePtr,
+                      Value index, Value size);
+
+  /// Builds IR extracting the pointer to the first element of the stride array.
+  static Value strideBasePtr(OpBuilder &builder, Location loc,
+                             LLVMTypeConverter &typeConverter,
+                             Value sizeBasePtr, Value rank);
+  /// Builds IR extracting the stride[index] from the descriptor.
+  static Value stride(OpBuilder &builder, Location loc,
+                      LLVMTypeConverter typeConverter, Value strideBasePtr,
+                      Value index, Value stride);
+  /// Builds IR inserting the stride[index] into the descriptor.
+  static void setStride(OpBuilder &builder, Location loc,
+                        LLVMTypeConverter typeConverter, Value strideBasePtr,
+                        Value index, Value stride);
 };
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
@@ -452,6 +521,9 @@ protected:
                              Value descriptor, ValueRange indices,
                              ArrayRef<int64_t> strides, int64_t offset,
                              ConversionPatternRewriter &rewriter) const;
+
+  /// Returns if the givem memref type is supported.
+  bool isSupportedMemRefType(MemRefType type) const;
 
   Value getDataPtr(Location loc, MemRefType type, Value memRefDesc,
                    ValueRange indices,

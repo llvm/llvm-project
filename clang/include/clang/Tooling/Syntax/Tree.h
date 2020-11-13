@@ -118,6 +118,8 @@ public:
 
   const Node *getNextSibling() const { return NextSibling; }
   Node *getNextSibling() { return NextSibling; }
+  const Node *getPreviousSibling() const { return PreviousSibling; }
+  Node *getPreviousSibling() { return PreviousSibling; }
 
   /// Dumps the structure of a subtree. For debugging and testing purposes.
   std::string dump(const SourceManager &SM) const;
@@ -144,6 +146,7 @@ private:
 
   Tree *Parent;
   Node *NextSibling;
+  Node *PreviousSibling;
   unsigned Kind : 16;
   unsigned Role : 8;
   unsigned Original : 1;
@@ -197,6 +200,8 @@ public:
 
   Node *getFirstChild() { return FirstChild; }
   const Node *getFirstChild() const { return FirstChild; }
+  Node *getLastChild() { return LastChild; }
+  const Node *getLastChild() const { return LastChild; }
 
   const Leaf *findFirstLeaf() const;
   Leaf *findFirstLeaf() {
@@ -215,6 +220,7 @@ public:
   struct ConstChildIterator
       : ChildIteratorBase<ConstChildIterator, const Node> {
     using Base::ChildIteratorBase;
+    ConstChildIterator() = default;
     ConstChildIterator(const ChildIterator &I) : Base(I.asPointer()) {}
   };
 
@@ -235,25 +241,32 @@ protected:
   using Node::Node;
 
 private:
-  /// Prepend \p Child to the list of children and and sets the parent pointer.
+  /// Append \p Child to the list of children and sets the parent pointer.
   /// A very low-level operation that does not check any invariants, only used
   /// by TreeBuilder and FactoryImpl.
   /// EXPECTS: Role != Detached.
+  void appendChildLowLevel(Node *Child, NodeRole Role);
+  /// Similar but prepends.
   void prependChildLowLevel(Node *Child, NodeRole Role);
-  /// Like the previous overload, but does not set role for \p Child.
+
+  /// Like the previous overloads, but does not set role for \p Child.
   /// EXPECTS: Child->Role != Detached
+  void appendChildLowLevel(Node *Child);
   void prependChildLowLevel(Node *Child);
   friend class TreeBuilder;
   friend class FactoryImpl;
 
-  /// Replace a range of children [BeforeBegin->NextSibling, End) with a list of
+  /// Replace a range of children [Begin, End) with a list of
   /// new nodes starting at \p New.
   /// Only used by MutationsImpl to implement higher-level mutation operations.
   /// (!) \p New can be null to model removal of the child range.
-  void replaceChildRangeLowLevel(Node *BeforeBegin, Node *End, Node *New);
+  /// (!) \p End can be null to model one past the end.
+  /// (!) \p Begin can be null to model an append.
+  void replaceChildRangeLowLevel(Node *Begin, Node *End, Node *New);
   friend class MutationsImpl;
 
   Node *FirstChild = nullptr;
+  Node *LastChild = nullptr;
 };
 
 // Provide missing non_const == const overload.

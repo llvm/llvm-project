@@ -1596,6 +1596,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
        if ((Err = checkTwoLevelHintsCommand(*this, Load, I,
                                             &TwoLevelHintsLoadCmd, Elements)))
          return;
+    } else if (Load.C.cmd == MachO::LC_IDENT) {
+      // Note: LC_IDENT is ignored.
+      continue;
     } else if (isLoadCommandObsolete(Load.C.cmd)) {
       Err = malformedError("load command " + Twine(I) + " for cmd value of: " +
                            Twine(Load.C.cmd) + " is obsolete and not "
@@ -2032,7 +2035,9 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
 
 bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
   return SectionName.startswith("__debug") ||
-         SectionName.startswith("__zdebug") || SectionName == "__gdb_index";
+         SectionName.startswith("__zdebug") ||
+         SectionName.startswith("__apple") || SectionName == "__gdb_index" ||
+         SectionName == "__swift_ast";
 }
 
 unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {

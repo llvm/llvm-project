@@ -27,16 +27,16 @@ struct A
 {
     typedef T value_type;
 
-    TEST_CONSTEXPR_CXX20 A(int& called) : called(called) {}
+    TEST_CONSTEXPR_CXX20 A(int& called) : called_(called) {}
 
     TEST_CONSTEXPR_CXX20 void deallocate(value_type* p, std::size_t n)
     {
         assert(p == &storage);
         assert(n == 10);
-        ++called;
+        ++called_;
     }
 
-    int& called;
+    int& called_;
 
     value_type storage;
 };

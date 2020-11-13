@@ -24,7 +24,7 @@ namespace __tsan {
 
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r);
 
-struct Callback : DDCallback {
+struct Callback final : public DDCallback {
   ThreadState *thr;
   uptr pc;
 

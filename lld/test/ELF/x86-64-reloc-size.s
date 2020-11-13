@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=NORELOC %s
-# RUN: llvm-readelf -x .data %t | FileCheck --check-prefix=DATA %s
+# RUN: llvm-readelf -x .data -x nonalloc %t | FileCheck --check-prefix=DATA %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
 
 # RUN: ld.lld -shared %t.o -o %t.so
@@ -18,6 +18,9 @@
 # DATA-NEXT: 0x002031bc 00000000 00000000 00001900 00000000
 # DATA-NEXT: 0x002031cc 00001b00 00000000 00001900 00000000
 # DATA-NEXT: 0x002031dc 00001b00 00000000 0000
+
+# DATA:      section 'nonalloc':
+# DATA-NEXT: 0x00000000 1a000000 00000000
 
 # DISASM:      <_start>:
 # DISASM-NEXT:   movl 25, %eax
@@ -71,3 +74,6 @@ _start:
   movl foo@SIZE+1,%eax
   movl foohidden@SIZE-1,%eax
   movl foohidden@SIZE+1,%eax
+
+.section nonalloc
+  .quad foo@SIZE

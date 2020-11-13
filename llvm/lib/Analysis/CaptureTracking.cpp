@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -28,6 +29,13 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "capture-tracking"
+
+STATISTIC(NumCaptured,          "Number of pointers maybe captured");
+STATISTIC(NumNotCaptured,       "Number of pointers not captured");
+STATISTIC(NumCapturedBefore,    "Number of pointers maybe captured before");
+STATISTIC(NumNotCapturedBefore, "Number of pointers not captured before");
 
 /// The default value for MaxUsesToExplore argument. It's relatively small to
 /// keep the cost of analysis reasonable for clients like BasicAliasAnalysis,
@@ -159,9 +167,6 @@ namespace {
       if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
         return false;
 
-      if (!shouldExplore(U))
-        return false;
-
       Captured = true;
       return true;
     }
@@ -197,6 +202,10 @@ bool llvm::PointerMayBeCaptured(const Value *V,
 
   SimpleCaptureTracker SCT(ReturnCaptures);
   PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
+  if (SCT.Captured)
+    ++NumCaptured;
+  else
+    ++NumNotCaptured;
   return SCT.Captured;
 }
 
@@ -225,6 +234,10 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
 
   CapturesBefore CB(ReturnCaptures, I, DT, IncludeI);
   PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
+  if (CB.Captured)
+    ++NumCapturedBefore;
+  else
+    ++NumNotCapturedBefore;
   return CB.Captured;
 }
 
@@ -243,21 +256,24 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     for (const Use &U : V->uses()) {
       // If there are lots of uses, conservatively say that the value
       // is captured to avoid taking too much compile time.
-      if (Count++ >= MaxUsesToExplore)
-        return Tracker->tooManyUses();
+      if (Count++ >= MaxUsesToExplore) {
+        Tracker->tooManyUses();
+        return false;
+      }
       if (!Visited.insert(&U).second)
         continue;
       if (!Tracker->shouldExplore(&U))
         continue;
       Worklist.push_back(&U);
     }
+    return true;
   };
-  AddUses(V);
+  if (!AddUses(V))
+    return;
 
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
-    V = U->get();
 
     switch (I->getOpcode()) {
     case Instruction::Call:
@@ -277,7 +293,8 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // in BasicAA also need to know about this property.
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call,
                                                                       true)) {
-        AddUses(Call);
+        if (!AddUses(Call))
+          return;
         break;
       }
 
@@ -295,13 +312,11 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // that loading a value from a pointer does not cause the pointer to be
       // captured, even though the loaded value might be the pointer itself
       // (think of self-referential objects).
-      for (auto IdxOpPair : enumerate(Call->data_ops())) {
-        int Idx = IdxOpPair.index();
-        Value *A = IdxOpPair.value();
-        if (A == V && !Call->doesNotCapture(Idx))
-          // The parameter is not marked 'nocapture' - captured.
-          if (Tracker->captured(U))
-            return;
+      if (Call->isDataOperand(U) &&
+          !Call->doesNotCapture(Call->getDataOperandNo(U))) {
+        // The parameter is not marked 'nocapture' - captured.
+        if (Tracker->captured(U))
+          return;
       }
       break;
     }
@@ -315,9 +330,9 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // "va-arg" from a pointer does not cause it to be captured.
       break;
     case Instruction::Store:
-        // Stored the pointer - conservatively assume it may be captured.
-        // Volatile stores make the address observable.
-      if (V == I->getOperand(0) || cast<StoreInst>(I)->isVolatile())
+      // Stored the pointer - conservatively assume it may be captured.
+      // Volatile stores make the address observable.
+      if (U->getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
         if (Tracker->captured(U))
           return;
       break;
@@ -328,7 +343,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // but the value being stored is.
       // Volatile stores make the address observable.
       auto *ARMWI = cast<AtomicRMWInst>(I);
-      if (ARMWI->getValOperand() == V || ARMWI->isVolatile())
+      if (U->getOperandNo() == 1 || ARMWI->isVolatile())
         if (Tracker->captured(U))
           return;
       break;
@@ -340,7 +355,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // but the value being stored is.
       // Volatile stores make the address observable.
       auto *ACXI = cast<AtomicCmpXchgInst>(I);
-      if (ACXI->getCompareOperand() == V || ACXI->getNewValOperand() == V ||
+      if (U->getOperandNo() == 1 || U->getOperandNo() == 2 ||
           ACXI->isVolatile())
         if (Tracker->captured(U))
           return;
@@ -352,17 +367,18 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     case Instruction::Select:
     case Instruction::AddrSpaceCast:
       // The original value is not captured via this if the new value isn't.
-      AddUses(I);
+      if (!AddUses(I))
+        return;
       break;
     case Instruction::ICmp: {
-      unsigned Idx = (I->getOperand(0) == V) ? 0 : 1;
+      unsigned Idx = U->getOperandNo();
       unsigned OtherIdx = 1 - Idx;
       if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(OtherIdx))) {
         // Don't count comparisons of a no-alias return value against null as
         // captures. This allows us to ignore comparisons of malloc results
         // with null, for example.
         if (CPN->getType()->getAddressSpace() == 0)
-          if (isNoAliasCall(V->stripPointerCasts()))
+          if (isNoAliasCall(U->get()->stripPointerCasts()))
             break;
         if (!I->getFunction()->nullPointerIsDefined()) {
           auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();

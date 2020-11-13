@@ -396,11 +396,6 @@ class LLVMConfig(object):
 
         self.with_environment('LD_LIBRARY_PATH', paths, append_path=True)
 
-        # Discover the 'clang' and 'clangcc' to use.
-
-        self.config.clang = self.use_llvm_tool(
-            'clang', search_env='CLANG', required=required)
-
         shl = getattr(self.config, 'llvm_shlib_dir', None)
         pext = getattr(self.config, 'llvm_plugin_ext', None)
         if shl:
@@ -408,23 +403,28 @@ class LLVMConfig(object):
         if pext:
             self.config.substitutions.append(('%pluginext', pext))
 
-        builtin_include_dir = self.get_clang_builtin_include_dir(self.config.clang)
-        tool_substitutions = [
-            ToolSubst('%clang', command=self.config.clang, extra_args=additional_flags),
-            ToolSubst('%clang_analyze_cc1', command='%clang_cc1', extra_args=['-analyze', '%analyze', '-setup-static-analyzer']+additional_flags),
-            ToolSubst('%clang_cc1', command=self.config.clang, extra_args=['-cc1', '-internal-isystem', builtin_include_dir, '-nostdsysteminc']+additional_flags),
-            ToolSubst('%clang_cpp', command=self.config.clang, extra_args=['--driver-mode=cpp']+additional_flags),
-            ToolSubst('%clang_cl', command=self.config.clang, extra_args=['--driver-mode=cl']+additional_flags),
-            ToolSubst('%clangxx', command=self.config.clang, extra_args=['--driver-mode=g++']+additional_flags),
-            ]
-        self.add_tool_substitutions(tool_substitutions)
+        # Discover the 'clang' and 'clangcc' to use.
+        self.config.clang = self.use_llvm_tool(
+            'clang', search_env='CLANG', required=required)
+        if self.config.clang:
+          self.config.available_features.add('clang')
+          builtin_include_dir = self.get_clang_builtin_include_dir(self.config.clang)
+          tool_substitutions = [
+              ToolSubst('%clang', command=self.config.clang, extra_args=additional_flags),
+              ToolSubst('%clang_analyze_cc1', command='%clang_cc1', extra_args=['-analyze', '%analyze', '-setup-static-analyzer']+additional_flags),
+              ToolSubst('%clang_cc1', command=self.config.clang, extra_args=['-cc1', '-internal-isystem', builtin_include_dir, '-nostdsysteminc']+additional_flags),
+              ToolSubst('%clang_cpp', command=self.config.clang, extra_args=['--driver-mode=cpp']+additional_flags),
+              ToolSubst('%clang_cl', command=self.config.clang, extra_args=['--driver-mode=cl']+additional_flags),
+              ToolSubst('%clangxx', command=self.config.clang, extra_args=['--driver-mode=g++']+additional_flags),
+              ]
+          self.add_tool_substitutions(tool_substitutions)
+          self.config.substitutions.append(
+              ('%resource_dir', builtin_include_dir))
 
         self.config.substitutions.append(('%itanium_abi_triple',
                                           self.make_itanium_abi_triple(self.config.target_triple)))
         self.config.substitutions.append(('%ms_abi_triple',
                                           self.make_msabi_triple(self.config.target_triple)))
-        self.config.substitutions.append(
-            ('%resource_dir', builtin_include_dir))
 
         # The host triple might not be set, at least if we're compiling clang from
         # an already installed llvm.

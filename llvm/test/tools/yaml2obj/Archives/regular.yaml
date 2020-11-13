@@ -21,10 +21,14 @@ Members: [[MEMBERS=<none>]]
 
 ## BOTH: error: "Content" and "Members" cannot be used together
 
+## Check we can use the "Content" key alone.
+
 # RUN: yaml2obj --docnum=1 -DCONTENT="12" %s -o %t.content.a
+# RUN: wc -c < %t.content.a | FileCheck %s --check-prefix=CONTENT-SIZE
 # RUN: od -t x1 -v %t.content.a | FileCheck %s --ignore-case --check-prefix=CONTENT
 
-# CONTENT: 21 3c 61 72 63 68 3e 0a 12{{$}}
+# CONTENT-SIZE: 9{{$}}
+#      CONTENT: 21 3c 61 72 63 68 3e 0a 12
 
 ## Check we can specify magic bytes of size greater than the normal size (size of "!<arch>\n").
 

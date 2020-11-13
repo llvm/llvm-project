@@ -168,9 +168,6 @@ bool ValueObjectMemory::UpdateValue() {
     Value::ValueType value_type = m_value.GetValueType();
 
     switch (value_type) {
-    default:
-      llvm_unreachable("Unhandled expression result value kind...");
-
     case Value::eValueTypeScalar:
       // The variable value is in the Scalar value inside the m_value. We can
       // point our m_data right to it.

@@ -101,10 +101,10 @@ namespace {
 
     // These functions are temporary abstractions around LiveVariables and
     // LiveIntervals, so they can go away when LiveVariables does.
-    bool isLiveIn(unsigned Reg, const MachineBasicBlock *MBB);
-    bool isLiveOutPastPHIs(unsigned Reg, const MachineBasicBlock *MBB);
+    bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
+    bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
 
-    using BBVRegPair = std::pair<unsigned, unsigned>;
+    using BBVRegPair = std::pair<unsigned, Register>;
     using VRegPHIUse = DenseMap<BBVRegPair, unsigned>;
 
     VRegPHIUse VRegPHIUseCount;
@@ -692,7 +692,7 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
   return Changed;
 }
 
-bool PHIElimination::isLiveIn(unsigned Reg, const MachineBasicBlock *MBB) {
+bool PHIElimination::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {
   assert((LV || LIS) &&
          "isLiveIn() requires either LiveVariables or LiveIntervals");
   if (LIS)
@@ -701,7 +701,7 @@ bool PHIElimination::isLiveIn(unsigned Reg, const MachineBasicBlock *MBB) {
     return LV->isLiveIn(Reg, *MBB);
 }
 
-bool PHIElimination::isLiveOutPastPHIs(unsigned Reg,
+bool PHIElimination::isLiveOutPastPHIs(Register Reg,
                                        const MachineBasicBlock *MBB) {
   assert((LV || LIS) &&
          "isLiveOutPastPHIs() requires either LiveVariables or LiveIntervals");

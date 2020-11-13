@@ -89,8 +89,8 @@ enum : uint64_t {
   // Is a D16 buffer instruction.
   D16Buf = UINT64_C(1) << 50,
 
-  // FLAT instruction accesses FLAT_GLBL or FLAT_SCRATCH segment.
-  IsNonFlatSeg = UINT64_C(1) << 51,
+  // FLAT instruction accesses FLAT_GLBL segment.
+  IsFlatGlobal = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
   FPDPRounding = UINT64_C(1) << 52,
@@ -102,7 +102,10 @@ enum : uint64_t {
   IsMAI = UINT64_C(1) << 54,
 
   // Is a DOT instruction.
-  IsDOT = UINT64_C(1) << 55
+  IsDOT = UINT64_C(1) << 55,
+
+  // FLAT instruction accesses FLAT_SCRATCH segment.
+  IsFlatScratch = UINT64_C(1) << 56
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -685,19 +688,58 @@ enum DppFiMode {
 };
 
 } // namespace DPP
+
+namespace Exp {
+
+enum Target {
+  ET_MRT0 = 0,
+  ET_MRT7 = 7,
+  ET_MRTZ = 8,
+  ET_NULL = 9,
+  ET_POS0 = 12,
+  ET_POS3 = 15,
+  ET_POS4 = 16,          // GFX10+
+  ET_POS_LAST = ET_POS4, // Highest pos used on any subtarget
+  ET_PRIM = 20,          // GFX10+
+  ET_PARAM0 = 32,
+  ET_PARAM31 = 63,
+};
+
+} // namespace Exp
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
+#define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
+#define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
+#define   S_00B028_MEM_ORDERED(x)                                     (((x) & 0x1) << 25)
+#define   G_00B028_MEM_ORDERED(x)                                     (((x) >> 25) & 0x1)
+#define   C_00B028_MEM_ORDERED                                        0xFDFFFFFF
+
 #define R_00B02C_SPI_SHADER_PGM_RSRC2_PS                                0x00B02C
 #define   S_00B02C_EXTRA_LDS_SIZE(x)                                  (((x) & 0xFF) << 8)
 #define R_00B128_SPI_SHADER_PGM_RSRC1_VS                                0x00B128
+#define   S_00B128_MEM_ORDERED(x)                                     (((x) & 0x1) << 27)
+#define   G_00B128_MEM_ORDERED(x)                                     (((x) >> 27) & 0x1)
+#define   C_00B128_MEM_ORDERED                                        0xF7FFFFFF
+
 #define R_00B228_SPI_SHADER_PGM_RSRC1_GS                                0x00B228
+#define   S_00B228_WGP_MODE(x)                                        (((x) & 0x1) << 27)
+#define   G_00B228_WGP_MODE(x)                                        (((x) >> 27) & 0x1)
+#define   C_00B228_WGP_MODE                                           0xF7FFFFFF
+#define   S_00B228_MEM_ORDERED(x)                                     (((x) & 0x1) << 25)
+#define   G_00B228_MEM_ORDERED(x)                                     (((x) >> 25) & 0x1)
+#define   C_00B228_MEM_ORDERED                                        0xFDFFFFFF
+
 #define R_00B328_SPI_SHADER_PGM_RSRC1_ES                                0x00B328
 #define R_00B428_SPI_SHADER_PGM_RSRC1_HS                                0x00B428
+#define   S_00B428_WGP_MODE(x)                                        (((x) & 0x1) << 26)
+#define   G_00B428_WGP_MODE(x)                                        (((x) >> 26) & 0x1)
+#define   C_00B428_WGP_MODE                                           0xFBFFFFFF
+#define   S_00B428_MEM_ORDERED(x)                                     (((x) & 0x1) << 24)
+#define   G_00B428_MEM_ORDERED(x)                                     (((x) >> 24) & 0x1)
+#define   C_00B428_MEM_ORDERED                                        0xFEFFFFFF
+
 #define R_00B528_SPI_SHADER_PGM_RSRC1_LS                                0x00B528
-#define R_00B848_COMPUTE_PGM_RSRC1                                      0x00B848
-#define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
-#define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
 
 #define R_00B84C_COMPUTE_PGM_RSRC2                                      0x00B84C
 #define   S_00B84C_SCRATCH_EN(x)                                      (((x) & 0x1) << 0)

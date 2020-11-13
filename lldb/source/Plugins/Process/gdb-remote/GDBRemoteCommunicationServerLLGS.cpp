@@ -191,6 +191,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jTraceConfigRead,
       &GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jLLDBTraceSupportedType,
+      &GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceSupportedType);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -1227,6 +1230,33 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStop(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceSupportedType(
+    StringExtractorGDBRemote &packet) {
+
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_up ||
+      (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(Status("Process not running."));
+
+  llvm::Expected<TraceTypeInfo> supported_trace_type =
+      m_debugged_process_up->GetSupportedTraceType();
+  if (!supported_trace_type)
+    return SendErrorResponse(supported_trace_type.takeError());
+
+  StreamGDBRemote escaped_response;
+  StructuredData::Dictionary json_packet;
+
+  json_packet.AddStringItem("name", supported_trace_type->name);
+  json_packet.AddStringItem("description", supported_trace_type->description);
+
+  StreamString json_string;
+  json_packet.Dump(json_string, false);
+  escaped_response.PutEscapedBytes(json_string.GetData(),
+                                   json_string.GetSize());
+  return SendPacketNoLock(escaped_response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead(
     StringExtractorGDBRemote &packet) {
 
@@ -1728,6 +1758,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
   case eStateSuspended:
   case eStateStopped:
   case eStateCrashed: {
+    assert(m_debugged_process_up != nullptr);
     lldb::tid_t tid = m_debugged_process_up->GetCurrentThreadID();
     // Make sure we set the current thread so g and p packets return the data
     // the gdb will expect.
@@ -2090,7 +2121,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   StreamGDBRemote response;
 
   RegisterValue reg_value(
-      reg_bytes, reg_size,
+      makeArrayRef(reg_bytes, reg_size),
       m_debugged_process_up->GetArchitecture().GetByteOrder());
   Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {

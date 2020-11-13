@@ -538,7 +538,9 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   default:
     break;
   case RISCV::ADDI:
-    if (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0)
+    // Operand 1 can be a frameindex but callers expect registers
+    if (MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
+        MI.getOperand(2).getImm() == 0)
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     break;
   case RISCV::FSGNJ_D:

@@ -110,7 +110,8 @@ void h3(float *c, float *a, float *b, int size)
     }
 // CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_13:[0-9]+]]
   }
-// CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H3_HEADER:![0-9]+]]
+  // CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H3_HEADER_INNER:![0-9]+]]
+  // CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H3_HEADER:![0-9]+]]
 }
 
 // Metadata for h1:

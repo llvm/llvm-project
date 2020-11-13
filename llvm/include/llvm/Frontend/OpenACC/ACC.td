@@ -415,9 +415,15 @@ def ACC_Routine : Directive<"routine"> {
 // 2.14.3
 def ACC_Set : Directive<"set"> {
   let allowedOnceClauses = [
+    VersionedClause<ACCC_DefaultAsync>,
+    VersionedClause<ACCC_DeviceNum>,
+    VersionedClause<ACCC_DeviceType>,
     VersionedClause<ACCC_If>
   ];
   let requiredClauses = [
+    // The three following clauses are also in allowedOnceClauses list due to
+    // restriction 2255 - Two instances of the same clause may not appear on the
+    // same directive.
     VersionedClause<ACCC_DefaultAsync>,
     VersionedClause<ACCC_DeviceNum>,
     VersionedClause<ACCC_DeviceType>
@@ -517,7 +523,6 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Default>,
     VersionedClause<ACCC_Gang>,
     VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Independent>,
     VersionedClause<ACCC_NumGangs>,
     VersionedClause<ACCC_NumWorkers>,
     VersionedClause<ACCC_Reduction>,

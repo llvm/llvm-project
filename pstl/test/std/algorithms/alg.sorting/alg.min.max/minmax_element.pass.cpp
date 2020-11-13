@@ -14,7 +14,6 @@
 #include <execution>
 #include <algorithm>
 #include <set>
-#include <cassert>
 #include <cmath>
 
 #include "support/utils.h"

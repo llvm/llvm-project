@@ -16,6 +16,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <regex>
@@ -63,6 +64,10 @@ void lld::exitLld(int val) {
   if (errorHandler().outputBuffer)
     errorHandler().outputBuffer->discard();
 
+  // Re-throw a possible signal or exception once/if it was catched by
+  // safeLldMain().
+  CrashRecoveryContext::throwIfCrash(val);
+
   // Dealloc/destroy ManagedStatic variables before calling _exit().
   // In an LTO build, allows us to get the output of -time-passes.
   // Ensures that the thread pool for the parallel algorithms is stopped to
@@ -75,7 +80,10 @@ void lld::exitLld(int val) {
     lld::outs().flush();
     lld::errs().flush();
   }
-  llvm::sys::Process::Exit(val);
+  // When running inside safeLldMain(), restore the control flow back to the
+  // CrashRecoveryContext. Otherwise simply use _exit(), meanning no cleanup,
+  // since we want to avoid further crashes on shutdown.
+  llvm::sys::Process::Exit(val, /*NoCleanup=*/true);
 }
 
 void lld::diagnosticHandler(const DiagnosticInfo &di) {
@@ -224,6 +232,51 @@ void ErrorHandler::error(const Twine &msg) {
 
   if (exit)
     exitLld(1);
+}
+
+void ErrorHandler::error(const Twine &msg, ErrorTag tag,
+                         ArrayRef<StringRef> args) {
+  if (errorHandlingScript.empty()) {
+    error(msg);
+    return;
+  }
+  SmallVector<StringRef, 4> scriptArgs;
+  scriptArgs.push_back(errorHandlingScript);
+  switch (tag) {
+  case ErrorTag::LibNotFound:
+    scriptArgs.push_back("missing-lib");
+    break;
+  case ErrorTag::SymbolNotFound:
+    scriptArgs.push_back("undefined-symbol");
+    break;
+  }
+  scriptArgs.insert(scriptArgs.end(), args.begin(), args.end());
+  int res = llvm::sys::ExecuteAndWait(errorHandlingScript, scriptArgs);
+  if (res == 0) {
+    return error(msg);
+  } else {
+    // Temporarily disable error limit to make sure the two calls to error(...)
+    // only count as one.
+    uint64_t currentErrorLimit = errorLimit;
+    errorLimit = 0;
+    error(msg);
+    errorLimit = currentErrorLimit;
+    --errorCount;
+
+    switch (res) {
+    case -1:
+      error("error handling script '" + errorHandlingScript +
+            "' failed to execute");
+      break;
+    case -2:
+      error("error handling script '" + errorHandlingScript +
+            "' crashed or timeout");
+      break;
+    default:
+      error("error handling script '" + errorHandlingScript +
+            "' exited with code " + Twine(res));
+    }
+  }
 }
 
 void ErrorHandler::fatal(const Twine &msg) {

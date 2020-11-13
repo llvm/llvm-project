@@ -337,9 +337,8 @@ Type Parser::parseNonFunctionType() {
     if (Optional<bool> signedness = getToken().getIntTypeSignedness())
       signSemantics = *signedness ? IntegerType::Signed : IntegerType::Unsigned;
 
-    auto loc = getEncodedSourceLocation(getToken().getLoc());
     consumeToken(Token::inttype);
-    return IntegerType::getChecked(width.getValue(), signSemantics, loc);
+    return IntegerType::get(width.getValue(), signSemantics, getContext());
   }
 
   // float-type

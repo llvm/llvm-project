@@ -578,7 +578,9 @@ public:
       symbol->attrs() |= attrs;
       return *symbol;
     } else {
-      SayAlreadyDeclared(name, *symbol);
+      if (!CheckPossibleBadForwardRef(*symbol)) {
+        SayAlreadyDeclared(name, *symbol);
+      }
       // replace the old symbol with a new one with correct details
       EraseSymbol(*symbol);
       auto &result{MakeSymbol(name, attrs, std::move(details))};
@@ -592,7 +594,7 @@ public:
 protected:
   // Apply the implicit type rules to this symbol.
   void ApplyImplicitRules(Symbol &);
-  const DeclTypeSpec *GetImplicitType(Symbol &);
+  const DeclTypeSpec *GetImplicitType(Symbol &, const Scope &);
   bool ConvertToObjectEntity(Symbol &);
   bool ConvertToProcEntity(Symbol &);
 
@@ -600,8 +602,13 @@ protected:
       TypeCategory, const std::optional<parser::KindSelector> &);
   const DeclTypeSpec &MakeLogicalType(
       const std::optional<parser::KindSelector> &);
+  void NotePossibleBadForwardRef(const parser::Name &);
+  std::optional<SourceName> HadForwardRef(const Symbol &) const;
+  bool CheckPossibleBadForwardRef(const Symbol &);
 
   bool inExecutionPart_{false};
+  bool inSpecificationPart_{false};
+  std::set<SourceName> specPartForwardRefs_;
 
 private:
   Scope *currScope_{nullptr};
@@ -982,7 +989,7 @@ private:
         SayWithDecl(
             name, symbol, "'%s' is already declared as an object"_err_en_US);
       }
-    } else {
+    } else if (!CheckPossibleBadForwardRef(symbol)) {
       SayAlreadyDeclared(name, symbol);
     }
     context().SetError(symbol);
@@ -1880,15 +1887,17 @@ void ScopeHandler::SayAlreadyDeclared(const parser::Name &name, Symbol &prev) {
 void ScopeHandler::SayAlreadyDeclared(const SourceName &name, Symbol &prev) {
   if (context().HasError(prev)) {
     // don't report another error about prev
-  } else if (const auto *details{prev.detailsIf<UseDetails>()}) {
-    Say(name, "'%s' is already declared in this scoping unit"_err_en_US)
-        .Attach(details->location(),
-            "It is use-associated with '%s' in module '%s'"_err_en_US,
-            details->symbol().name(), GetUsedModule(*details).name());
   } else {
-    SayAlreadyDeclared(name, prev.name());
+    if (const auto *details{prev.detailsIf<UseDetails>()}) {
+      Say(name, "'%s' is already declared in this scoping unit"_err_en_US)
+          .Attach(details->location(),
+              "It is use-associated with '%s' in module '%s'"_err_en_US,
+              details->symbol().name(), GetUsedModule(*details).name());
+    } else {
+      SayAlreadyDeclared(name, prev.name());
+    }
+    context().SetError(prev);
   }
-  context().SetError(prev);
 }
 void ScopeHandler::SayAlreadyDeclared(
     const SourceName &name1, const SourceName &name2) {
@@ -2102,7 +2111,12 @@ static bool NeedsType(const Symbol &symbol) {
 
 void ScopeHandler::ApplyImplicitRules(Symbol &symbol) {
   if (NeedsType(symbol)) {
-    if (const DeclTypeSpec * type{GetImplicitType(symbol)}) {
+    const Scope *scope{&symbol.owner()};
+    if (scope->IsGlobal()) {
+      scope = &currScope();
+    }
+    if (const DeclTypeSpec *
+        type{GetImplicitType(symbol, GetInclusiveScope(*scope))}) {
       symbol.set(Symbol::Flag::Implicit);
       symbol.SetType(*type);
       return;
@@ -2128,9 +2142,9 @@ void ScopeHandler::ApplyImplicitRules(Symbol &symbol) {
   }
 }
 
-const DeclTypeSpec *ScopeHandler::GetImplicitType(Symbol &symbol) {
-  const auto *type{implicitRulesMap_->at(&GetInclusiveScope(symbol.owner()))
-                       .GetType(symbol.name())};
+const DeclTypeSpec *ScopeHandler::GetImplicitType(
+    Symbol &symbol, const Scope &scope) {
+  const auto *type{implicitRulesMap_->at(&scope).GetType(symbol.name())};
   if (type) {
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
       // Resolve any forward-referenced derived type; a quick no-op else.
@@ -2192,6 +2206,44 @@ const DeclTypeSpec &ScopeHandler::MakeLogicalType(
   } else {
     return currScope_->MakeLogicalType(std::move(value));
   }
+}
+
+void ScopeHandler::NotePossibleBadForwardRef(const parser::Name &name) {
+  if (inSpecificationPart_ && name.symbol) {
+    auto kind{currScope().kind()};
+    if ((kind == Scope::Kind::Subprogram && !currScope().IsStmtFunction()) ||
+        kind == Scope::Kind::Block) {
+      bool isHostAssociated{&name.symbol->owner() == &currScope()
+              ? name.symbol->has<HostAssocDetails>()
+              : name.symbol->owner().Contains(currScope())};
+      if (isHostAssociated) {
+        specPartForwardRefs_.insert(name.source);
+      }
+    }
+  }
+}
+
+std::optional<SourceName> ScopeHandler::HadForwardRef(
+    const Symbol &symbol) const {
+  auto iter{specPartForwardRefs_.find(symbol.name())};
+  if (iter != specPartForwardRefs_.end()) {
+    return *iter;
+  }
+  return std::nullopt;
+}
+
+bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
+  if (!context().HasError(symbol)) {
+    if (auto fwdRef{HadForwardRef(symbol)}) {
+      Say(*fwdRef,
+          "Forward reference to '%s' is not allowed in the same specification part"_err_en_US,
+          *fwdRef)
+          .Attach(symbol.name(), "Later declaration of '%s'"_en_US, *fwdRef);
+      context().SetError(symbol);
+      return true;
+    }
+  }
+  return false;
 }
 
 void ScopeHandler::MakeExternal(Symbol &symbol) {
@@ -4686,6 +4738,8 @@ void DeclarationVisitor::SetType(
     symbol.SetType(type);
   } else if (symbol.has<UseDetails>()) {
     // error recovery case, redeclaration of use-associated name
+  } else if (HadForwardRef(symbol)) {
+    // error recovery after use of host-associated name
   } else if (!symbol.test(Symbol::Flag::Implicit)) {
     SayWithDecl(
         name, symbol, "The type of '%s' has already been declared"_err_en_US);
@@ -5466,12 +5520,14 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
 const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
   FindSymbol(name);
   if (CheckForHostAssociatedImplicit(name)) {
+    NotePossibleBadForwardRef(name);
     return &name;
   }
   if (Symbol * symbol{name.symbol}) {
     if (CheckUseError(name)) {
       return nullptr; // reported an error
     }
+    NotePossibleBadForwardRef(name);
     symbol->set(Symbol::Flag::ImplicitOrError, false);
     if (IsUplevelReference(*symbol)) {
       MakeHostAssocSymbol(name, *symbol);
@@ -5496,6 +5552,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
   }
   ConvertToObjectEntity(*symbol);
   ApplyImplicitRules(*symbol);
+  NotePossibleBadForwardRef(name);
   return &name;
 }
 
@@ -5518,7 +5575,8 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
   Scope *host{GetHostProcedure()};
   if (!host || isImplicitNoneType(*host)) {
     return false;
-  } else if (!name.symbol) {
+  }
+  if (!name.symbol) {
     hostSymbol = &MakeSymbol(*host, name.source, Attrs{});
     ConvertToObjectEntity(*hostSymbol);
     ApplyImplicitRules(*hostSymbol);
@@ -5989,12 +6047,15 @@ static bool NeedsExplicitType(const Symbol &symbol) {
 bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   const auto &[accDecls, ompDecls, compilerDirectives, useStmts, importStmts,
       implicitPart, decls] = x.t;
+  auto flagRestorer{common::ScopedSet(inSpecificationPart_, true)};
   Walk(accDecls);
   Walk(ompDecls);
   Walk(compilerDirectives);
   Walk(useStmts);
   Walk(importStmts);
   Walk(implicitPart);
+  auto setRestorer{
+      common::ScopedSet(specPartForwardRefs_, std::set<SourceName>{})};
   for (const auto &decl : decls) {
     if (const auto *spec{
             std::get_if<parser::SpecificationConstruct>(&decl.u)}) {
@@ -6095,6 +6156,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       // in a module, external proc without return type is subroutine
       symbol.set(
           symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+    }
+    if (!symbol.has<HostAssocDetails>()) {
+      CheckPossibleBadForwardRef(symbol);
     }
   }
   currScope().InstantiateDerivedTypes(context());

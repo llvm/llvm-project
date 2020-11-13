@@ -15,7 +15,6 @@
 #include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
-#include "AArch64StackOffset.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitVector.h"
@@ -525,7 +524,7 @@ bool AArch64RegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                              Register BaseReg,
                                              int64_t Offset) const {
   assert(MI && "Unable to get the legal offset for nil instruction.");
-  StackOffset SaveOffset(Offset, MVT::i8);
+  StackOffset SaveOffset = StackOffset::getFixed(Offset);
   return isAArch64FrameOffsetLegal(*MI, SaveOffset) & AArch64FrameOffsetIsLegal;
 }
 
@@ -556,7 +555,7 @@ void AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 void AArch64RegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                             int64_t Offset) const {
   // ARM doesn't need the general 64-bit offsets
-  StackOffset Off(Offset, MVT::i8);
+  StackOffset Off = StackOffset::getFixed(Offset);
 
   unsigned i = 0;
 
@@ -619,16 +618,18 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         TFI->resolveFrameIndexReference(MF, FrameIndex, FrameReg,
                                         /*PreferFP=*/true,
                                         /*ForSimm=*/false);
-    Offset += StackOffset(MI.getOperand(FIOperandNum + 1).getImm(), MVT::i8);
+    Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false /*isDef*/);
-    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getBytes());
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
     return;
   }
 
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
-    int Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
-    FI.ChangeToImmediate(Offset);
+    StackOffset Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
+    assert(!Offset.getScalable() &&
+           "Frame offsets with a scalable component are not supported");
+    FI.ChangeToImmediate(Offset.getFixed());
     return;
   }
 
@@ -637,12 +638,11 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // TAGPstack must use the virtual frame register in its 3rd operand.
     const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     FrameReg = MI.getOperand(3).getReg();
-    Offset = {MFI.getObjectOffset(FrameIndex) +
-                  AFI->getTaggedBasePointerOffset(),
-              MVT::i8};
+    Offset = StackOffset::getFixed(MFI.getObjectOffset(FrameIndex) +
+                                      AFI->getTaggedBasePointerOffset());
   } else if (Tagged) {
-    StackOffset SPOffset = {
-        MFI.getObjectOffset(FrameIndex) + (int64_t)MFI.getStackSize(), MVT::i8};
+    StackOffset SPOffset = StackOffset::getFixed(
+        MFI.getObjectOffset(FrameIndex) + (int64_t)MFI.getStackSize());
     if (MFI.hasVarSizedObjects() ||
         isAArch64FrameOffsetLegal(MI, SPOffset, nullptr, nullptr, nullptr) !=
             (AArch64FrameOffsetCanUpdate | AArch64FrameOffsetIsLegal)) {
@@ -663,8 +663,8 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       return;
     }
     FrameReg = AArch64::SP;
-    Offset = {MFI.getObjectOffset(FrameIndex) + (int64_t)MFI.getStackSize(),
-              MVT::i8};
+    Offset = StackOffset::getFixed(MFI.getObjectOffset(FrameIndex) +
+                                   (int64_t)MFI.getStackSize());
   } else {
     Offset = TFI->resolveFrameIndexReference(
         MF, FrameIndex, FrameReg, /*PreferFP=*/false, /*ForSimm=*/true);

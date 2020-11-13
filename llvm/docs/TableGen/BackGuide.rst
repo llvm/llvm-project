@@ -27,8 +27,8 @@ header file (``record.h``) and/or the Doxygen documentation.
 
 This document assumes that you have read the :doc:`TableGen Programmer's
 Reference <./ProgRef>`, which provides a detailed reference for coding
-TableGen source files. This document and the data structure comments will be
-improved over time.
+TableGen source files. For a description of the existing backends, see
+:doc:`TableGen BackEnds <./BackEnds>`.
 
 Data Structures
 ===============
@@ -738,7 +738,9 @@ The ``PrintRecords`` Backend
 
 The TableGen command option ``--print-records`` invokes a simple backend
 that prints all the classes and records defined in the source files. This is
-the default backend option. The output looks like this:
+the default backend option. The format of the output is guaranteed to be
+constant over time, so that the output can be compared in tests. The output
+looks like this:
 
 .. code-block:: text
 
@@ -776,7 +778,8 @@ The ``PrintDetailedRecords`` Backend
 
 The TableGen command option ``--print-detailed-records`` invokes a backend
 that prints all the global variables, classes, and records defined in the
-source files. The output looks like this.
+source files. The format of the output is *not* guaranteed to be constant
+over time. The output looks like this.
 
 .. code-block:: text
 

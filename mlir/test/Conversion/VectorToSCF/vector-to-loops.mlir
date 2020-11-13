@@ -54,7 +54,7 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
 
 // -----
 
-// CHECK: #[[$ADD:map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK: #[[$ADD:map.*]] = affine_map<(d0, d1) -> (d0 + d1)>
 
 // CHECK-LABEL: func @materialize_read(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
@@ -113,7 +113,7 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
 
 // -----
 
-// CHECK: #[[$ADD:map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK: #[[$ADD:map.*]] = affine_map<(d0, d1) -> (d0 + d1)>
 
 // CHECK-LABEL:func @materialize_write(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
@@ -174,9 +174,7 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 
-// FULL-UNROLL-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1)>
 // FULL-UNROLL-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 + 1)>
 // FULL-UNROLL-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 + 2)>
 
@@ -253,9 +251,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 
-// FULL-UNROLL-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1)>
 // FULL-UNROLL-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 + 1)>
 // FULL-UNROLL-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 + 2)>
 
@@ -309,9 +305,7 @@ func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vecto
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 
-// FULL-UNROLL-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1)>
 // FULL-UNROLL-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 + 1)>
 // FULL-UNROLL-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 + 2)>
 

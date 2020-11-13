@@ -99,8 +99,6 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
       storage.assign({value[0]});
     break;
   case 2: {
-    assert(value[0].first != value[1].first &&
-           "DictionaryAttr element names must be unique");
     bool isSorted = value[0] < value[1];
     if (inPlace) {
       if (!isSorted)
@@ -122,25 +120,49 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
       llvm::array_pod_sort(storage.begin(), storage.end());
       value = storage;
     }
-
-    // Ensure that the attribute elements are unique.
-    assert(std::adjacent_find(value.begin(), value.end(),
-                              [](NamedAttribute l, NamedAttribute r) {
-                                return l.first == r.first;
-                              }) == value.end() &&
-           "DictionaryAttr element names must be unique");
     return !isSorted;
   }
   return false;
 }
 
+/// Returns an entry with a duplicate name from the given sorted array of named
+/// attributes. Returns llvm::None if all elements have unique names.
+static Optional<NamedAttribute>
+findDuplicateElement(ArrayRef<NamedAttribute> value) {
+  const Optional<NamedAttribute> none{llvm::None};
+  if (value.size() < 2)
+    return none;
+
+  if (value.size() == 2)
+    return value[0].first == value[1].first ? value[0] : none;
+
+  auto it = std::adjacent_find(
+      value.begin(), value.end(),
+      [](NamedAttribute l, NamedAttribute r) { return l.first == r.first; });
+  return it != value.end() ? *it : none;
+}
+
 bool DictionaryAttr::sort(ArrayRef<NamedAttribute> value,
                           SmallVectorImpl<NamedAttribute> &storage) {
-  return dictionaryAttrSort</*inPlace=*/false>(value, storage);
+  bool isSorted = dictionaryAttrSort</*inPlace=*/false>(value, storage);
+  assert(!findDuplicateElement(storage) &&
+         "DictionaryAttr element names must be unique");
+  return isSorted;
 }
 
 bool DictionaryAttr::sortInPlace(SmallVectorImpl<NamedAttribute> &array) {
-  return dictionaryAttrSort</*inPlace=*/true>(array, array);
+  bool isSorted = dictionaryAttrSort</*inPlace=*/true>(array, array);
+  assert(!findDuplicateElement(array) &&
+         "DictionaryAttr element names must be unique");
+  return isSorted;
+}
+
+Optional<NamedAttribute>
+DictionaryAttr::findDuplicate(SmallVectorImpl<NamedAttribute> &array,
+                              bool isSorted) {
+  if (!isSorted)
+    dictionaryAttrSort</*inPlace=*/true>(array, array);
+  return findDuplicateElement(array);
 }
 
 DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
@@ -155,7 +177,8 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
   SmallVector<NamedAttribute, 8> storage;
   if (dictionaryAttrSort</*inPlace=*/false>(value, storage))
     value = storage;
-
+  assert(!findDuplicateElement(value) &&
+         "DictionaryAttr element names must be unique");
   return Base::get(context, value);
 }
 /// Construct a dictionary with an array of values that is known to already be
@@ -170,10 +193,7 @@ DictionaryAttr DictionaryAttr::getWithSorted(ArrayRef<NamedAttribute> value,
                            return l.first.strref() < r.first.strref();
                          }) &&
          "expected attribute values to be sorted");
-  assert(std::adjacent_find(value.begin(), value.end(),
-                            [](NamedAttribute l, NamedAttribute r) {
-                              return l.first == r.first;
-                            }) == value.end() &&
+  assert(!findDuplicateElement(value) &&
          "DictionaryAttr element names must be unique");
   return Base::get(context, value);
 }
@@ -1116,6 +1136,65 @@ DenseIntOrFPElementsAttr::getRawIntOrFloat(ShapedType type, ArrayRef<char> data,
   int64_t numElements = data.size() / dataEltSize;
   assert(numElements == 1 || numElements == type.getNumElements());
   return getRaw(type, data, /*isSplat=*/numElements == 1);
+}
+
+void DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
+    const char *inRawData, char *outRawData, size_t elementBitWidth,
+    size_t numElements) {
+  using llvm::support::ulittle16_t;
+  using llvm::support::ulittle32_t;
+  using llvm::support::ulittle64_t;
+
+  assert(llvm::support::endian::system_endianness() == // NOLINT
+         llvm::support::endianness::big);              // NOLINT
+  // NOLINT to avoid warning message about replacing by static_assert()
+
+  // Following std::copy_n always converts endianness on BE machine.
+  switch (elementBitWidth) {
+  case 16: {
+    const ulittle16_t *inRawDataPos =
+        reinterpret_cast<const ulittle16_t *>(inRawData);
+    uint16_t *outDataPos = reinterpret_cast<uint16_t *>(outRawData);
+    std::copy_n(inRawDataPos, numElements, outDataPos);
+    break;
+  }
+  case 32: {
+    const ulittle32_t *inRawDataPos =
+        reinterpret_cast<const ulittle32_t *>(inRawData);
+    uint32_t *outDataPos = reinterpret_cast<uint32_t *>(outRawData);
+    std::copy_n(inRawDataPos, numElements, outDataPos);
+    break;
+  }
+  case 64: {
+    const ulittle64_t *inRawDataPos =
+        reinterpret_cast<const ulittle64_t *>(inRawData);
+    uint64_t *outDataPos = reinterpret_cast<uint64_t *>(outRawData);
+    std::copy_n(inRawDataPos, numElements, outDataPos);
+    break;
+  }
+  default: {
+    size_t nBytes = elementBitWidth / CHAR_BIT;
+    for (size_t i = 0; i < nBytes; i++)
+      std::copy_n(inRawData + (nBytes - 1 - i), numElements, outRawData + i);
+    break;
+  }
+  }
+}
+
+void DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
+    ArrayRef<char> inRawData, MutableArrayRef<char> outRawData,
+    ShapedType type) {
+  size_t numElements = type.getNumElements();
+  Type elementType = type.getElementType();
+  if (ComplexType complexTy = elementType.dyn_cast<ComplexType>()) {
+    elementType = complexTy.getElementType();
+    numElements = numElements * 2;
+  }
+  size_t elementBitWidth = getDenseElementStorageWidth(elementType);
+  assert(numElements * elementBitWidth == inRawData.size() * CHAR_BIT &&
+         inRawData.size() <= outRawData.size());
+  convertEndianOfCharForBEmachine(inRawData.begin(), outRawData.begin(),
+                                  elementBitWidth, numElements);
 }
 
 //===----------------------------------------------------------------------===//

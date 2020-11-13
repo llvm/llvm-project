@@ -15,7 +15,6 @@ class PythonSynthDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD  # llvm.org/pr20545 bogus output confuses buildbot parser
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()

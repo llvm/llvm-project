@@ -86,22 +86,53 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     MaxSplitBytes += BytesInChar;
   }
 
+  // In JavaScript, some @tags can be followed by {, and machinery that parses
+  // these comments will fail to understand the comment if followed by a line
+  // break. So avoid ever breaking before a {.
+  if (Style.Language == FormatStyle::LK_JavaScript) {
+    StringRef::size_type SpaceOffset =
+        Text.find_first_of(Blanks, MaxSplitBytes);
+    if (SpaceOffset != StringRef::npos && SpaceOffset + 1 < Text.size() &&
+        Text[SpaceOffset + 1] == '{') {
+      MaxSplitBytes = SpaceOffset + 1;
+    }
+  }
+
   StringRef::size_type SpaceOffset = Text.find_last_of(Blanks, MaxSplitBytes);
 
   static const auto kNumberedListRegexp = llvm::Regex("^[1-9][0-9]?\\.");
+  // Some spaces are unacceptable to break on, rewind past them.
   while (SpaceOffset != StringRef::npos) {
+    // If a line-comment ends with `\`, the next line continues the comment,
+    // whether or not it starts with `//`. This is confusing and triggers
+    // -Wcomment.
+    // Avoid introducing multiline comments by not allowing a break right
+    // after '\'.
+    if (Style.isCpp()) {
+      StringRef::size_type LastNonBlank =
+          Text.find_last_not_of(Blanks, SpaceOffset);
+      if (LastNonBlank != StringRef::npos && Text[LastNonBlank] == '\\') {
+        SpaceOffset = Text.find_last_of(Blanks, LastNonBlank);
+        continue;
+      }
+    }
+
     // Do not split before a number followed by a dot: this would be interpreted
     // as a numbered list, which would prevent re-flowing in subsequent passes.
-    if (kNumberedListRegexp.match(Text.substr(SpaceOffset).ltrim(Blanks)))
+    if (kNumberedListRegexp.match(Text.substr(SpaceOffset).ltrim(Blanks))) {
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
-    // In JavaScript, some @tags can be followed by {, and machinery that parses
-    // these comments will fail to understand the comment if followed by a line
-    // break. So avoid ever breaking before a {.
-    else if (Style.Language == FormatStyle::LK_JavaScript &&
-             SpaceOffset + 1 < Text.size() && Text[SpaceOffset + 1] == '{')
+      continue;
+    }
+
+    // Avoid ever breaking before a @tag or a { in JavaScript.
+    if (Style.Language == FormatStyle::LK_JavaScript &&
+        SpaceOffset + 1 < Text.size() &&
+        (Text[SpaceOffset + 1] == '{' || Text[SpaceOffset + 1] == '@')) {
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
-    else
-      break;
+      continue;
+    }
+
+    break;
   }
 
   if (SpaceOffset == StringRef::npos ||

@@ -48,31 +48,31 @@ public:
   /// @name Compiler Instance Access
   /// @{
 
-  CompilerInstance &GetCompilerInstance() const {
+  CompilerInstance &instance() const {
     assert(instance_ && "Compiler instance not registered!");
     return *instance_;
   }
 
-  void SetCompilerInstance(CompilerInstance *value) { instance_ = value; }
+  void set_instance(CompilerInstance *value) { instance_ = value; }
 
   /// @}
   /// @name Current File Information
   /// @{
 
-  const FrontendInputFile &GetCurrentInput() const { return currentInput_; }
+  const FrontendInputFile &currentInput() const { return currentInput_; }
 
   llvm::StringRef GetCurrentFile() const {
     assert(!currentInput_.IsEmpty() && "No current file!");
-    return currentInput_.GetFile();
+    return currentInput_.file();
   }
 
   llvm::StringRef GetCurrentFileOrBufferName() const {
     assert(!currentInput_.IsEmpty() && "No current file!");
     return currentInput_.IsFile()
-        ? currentInput_.GetFile()
-        : currentInput_.GetBuffer()->getBufferIdentifier();
+        ? currentInput_.file()
+        : currentInput_.buffer()->getBufferIdentifier();
   }
-  void SetCurrentInput(const FrontendInputFile &currentInput);
+  void set_currentInput(const FrontendInputFile &currentInput);
 
   /// @}
   /// @name Public Action Interface

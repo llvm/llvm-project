@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s | FileCheck %s
 
-// CHECK: #map0 = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
+// CHECK: #map = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
 
 // CHECK-LABEL: func @alloc() {
 func @alloc() {
@@ -17,11 +17,11 @@ func @alloc() {
   %1 = alloc(%c0, %c1) : memref<?x?xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
 
   // Test alloc with no dynamic dimensions and one symbol.
-  // CHECK: %2 = alloc()[%c0] : memref<2x4xf32, #map0, 1>
+  // CHECK: %2 = alloc()[%c0] : memref<2x4xf32, #map, 1>
   %2 = alloc()[%c0] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
 
   // Test alloc with dynamic dimensions and one symbol.
-  // CHECK: %3 = alloc(%c1)[%c0] : memref<2x?xf32, #map0, 1>
+  // CHECK: %3 = alloc(%c1)[%c0] : memref<2x?xf32, #map, 1>
   %3 = alloc(%c1)[%c0] : memref<2x?xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>, 1>
 
   // Alloc with no mappings.
@@ -48,11 +48,11 @@ func @alloca() {
   %1 = alloca(%c0, %c1) : memref<?x?xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
 
   // Test alloca with no dynamic dimensions and one symbol.
-  // CHECK: %2 = alloca()[%c0] : memref<2x4xf32, #map0, 1>
+  // CHECK: %2 = alloca()[%c0] : memref<2x4xf32, #map, 1>
   %2 = alloca()[%c0] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
 
   // Test alloca with dynamic dimensions and one symbol.
-  // CHECK: %3 = alloca(%c1)[%c0] : memref<2x?xf32, #map0, 1>
+  // CHECK: %3 = alloca(%c1)[%c0] : memref<2x?xf32, #map, 1>
   %3 = alloca(%c1)[%c0] : memref<2x?xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>, 1>
 
   // Alloca with no mappings, but with alignment.

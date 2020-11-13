@@ -96,7 +96,7 @@ TEST(CollectMainFileMacros, SelectedMacros) {
       auto SID = getSymbolID(Macro->Name, Macro->Info, SM);
 
       EXPECT_THAT(ExpectedRefs,
-                  UnorderedElementsAreArray(ActualMacroRefs.MacroRefs[*SID]))
+                  UnorderedElementsAreArray(ActualMacroRefs.MacroRefs[SID]))
           << "Annotation=" << I << ", MacroName=" << Macro->Name
           << ", Test = " << Test;
     }

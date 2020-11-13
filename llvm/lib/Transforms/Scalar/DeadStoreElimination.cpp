@@ -501,28 +501,40 @@ isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
   if (BP1 != BP2)
     return OW_Unknown;
 
-  // The later store completely overlaps the earlier store if:
-  //
-  // 1. Both start at the same offset and the later one's size is greater than
-  //    or equal to the earlier one's, or
-  //
-  //      |--earlier--|
-  //      |--   later   --|
-  //
-  // 2. The earlier store has an offset greater than the later offset, but which
-  //    still lies completely within the later store.
-  //
-  //        |--earlier--|
-  //    |-----  later  ------|
+  // The later access completely overlaps the earlier store if and only if
+  // both start and end of the earlier one is "inside" the later one:
+  //    |<->|--earlier--|<->|
+  //    |-------later-------|
+  // Accesses may overlap if and only if start of one of them is "inside"
+  // another one:
+  //    |<->|--earlier--|<----->|
+  //    |-------later-------|
+  //           OR
+  //    |----- earlier -----|
+  //    |<->|---later---|<----->|
   //
   // We have to be careful here as *Off is signed while *.Size is unsigned.
-  if (EarlierOff >= LaterOff &&
-      LaterSize >= EarlierSize &&
-      uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
-    return OW_Complete;
 
-  // Later may overwrite earlier completely with other partial writes.
-  return OW_MaybePartial;
+  // Check if the earlier access starts "not before" the later one.
+  if (EarlierOff >= LaterOff) {
+    // If the earlier access ends "not after" the later access then the earlier
+    // one is completely overwritten by the later one.
+    if (uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
+      return OW_Complete;
+    // If start of the earlier access is "before" end of the later access then
+    // accesses overlap.
+    else if ((uint64_t)(EarlierOff - LaterOff) < LaterSize)
+      return OW_MaybePartial;
+  }
+  // If start of the later access is "before" end of the earlier access then
+  // accesses overlap.
+  else if ((uint64_t)(LaterOff - EarlierOff) < EarlierSize) {
+    return OW_MaybePartial;
+  }
+
+  // Can reach here only if accesses are known not to overlap. There is no
+  // dedicated code to indicate no overlap so signal "unknown".
+  return OW_Unknown;
 }
 
 /// Return 'OW_Complete' if a store to the 'Later' location completely
@@ -1845,9 +1857,13 @@ struct DSEState {
         getUnderlyingObject(MaybeTermLoc->first.Ptr))
       return false;
 
+    auto TermLoc = MaybeTermLoc->first;
+    if (MaybeTermLoc->second) {
+      const Value *LocUO = getUnderlyingObject(Loc.Ptr);
+      return BatchAA.isMustAlias(TermLoc.Ptr, LocUO);
+    }
     int64_t InstWriteOffset, DepWriteOffset;
-    return MaybeTermLoc->second ||
-           isOverwrite(MaybeTerm, AccessI, MaybeTermLoc->first, Loc, DL, TLI,
+    return isOverwrite(MaybeTerm, AccessI, TermLoc, Loc, DL, TLI,
                        DepWriteOffset, InstWriteOffset, BatchAA,
                        &F) == OW_Complete;
   }
@@ -2504,15 +2520,6 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     assert(SILoc.Ptr && "SILoc should not be null");
     const Value *SILocUnd = getUnderlyingObject(SILoc.Ptr);
 
-    // Check if the store is a no-op.
-    if (isRemovable(SI) && State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
-      LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
-      State.deleteDeadInstruction(SI);
-      NumRedundantStores++;
-      MadeChange = true;
-      continue;
-    }
-
     MemoryAccess *Current = KillingDef;
     LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by "
                       << *KillingDef << " (" << *SI << ")\n");
@@ -2522,10 +2529,11 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
     SetVector<MemoryAccess *> ToCheck;
-    ToCheck.insert(KillingDef->getDefiningAccess());
 
-    if (!SILocUnd)
-      continue;
+    if (SILocUnd)
+      ToCheck.insert(KillingDef->getDefiningAccess());
+
+    bool Shortend = false;
     bool IsMemTerm = State.isMemTerminatorInst(SI);
     DSEState::CheckCache Cache;
     // Check if MemoryAccesses in the worklist are killed by KillingDef.
@@ -2561,7 +2569,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         }
         continue;
       }
-      MemoryDef *NextDef = dyn_cast<MemoryDef>(EarlierAccess);
+      auto *NextDef = cast<MemoryDef>(EarlierAccess);
       Instruction *NI = NextDef->getMemoryInst();
       LLVM_DEBUG(dbgs() << " (" << *NI << ")\n");
       ToCheck.insert(NextDef->getDefiningAccess());
@@ -2612,6 +2620,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
               ++NumModifiedStores;
               MadeChange = true;
 
+              Shortend = true;
               // Remove later store and remove any outstanding overlap intervals
               // for the updated store.
               State.deleteDeadInstruction(Later);
@@ -2631,6 +2640,16 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
           MadeChange = true;
         }
       }
+    }
+
+    // Check if the store is a no-op.
+    if (!Shortend && isRemovable(SI) &&
+        State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
+      LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
+      State.deleteDeadInstruction(SI);
+      NumRedundantStores++;
+      MadeChange = true;
+      continue;
     }
   }
 

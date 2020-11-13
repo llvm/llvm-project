@@ -61,11 +61,13 @@ public:
   Option<unsigned> loopDepth{*this, "loop-depth", llvm::cl::desc("Loop depth."),
                              llvm::cl::init(0)};
 };
-} // end namespace
+} // namespace
 
 namespace mlir {
+namespace test {
 void registerTestLoopUnrollingPass() {
   PassRegistration<TestLoopUnrollingPass>(
       "test-loop-unrolling", "Tests loop unrolling transformation");
 }
+} // namespace test
 } // namespace mlir

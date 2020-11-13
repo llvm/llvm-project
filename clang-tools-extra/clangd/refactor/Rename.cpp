@@ -63,7 +63,7 @@ llvm::Optional<std::string> getOtherRefFile(const Decl &D, StringRef MainFile,
   // tradeoff. We expect the number of symbol references in the current file
   // is smaller than the limit.
   Req.Limit = 100;
-  Req.IDs.insert(*getSymbolID(&D));
+  Req.IDs.insert(getSymbolID(&D));
   llvm::Optional<std::string> OtherFile;
   Index.refs(Req, [&](const Ref &R) {
     if (OtherFile)
@@ -123,6 +123,7 @@ enum class ReasonToReject {
 
   // name validation.
   RenameToKeywords,
+  SameName,
 };
 
 llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
@@ -213,6 +214,8 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "there are multiple symbols at the given location";
     case ReasonToReject::RenameToKeywords:
       return "the chosen name is a keyword";
+    case ReasonToReject::SameName:
+      return "new name is the same as the old name";
     }
     llvm_unreachable("unhandled reason kind");
   };
@@ -222,7 +225,7 @@ llvm::Error makeError(ReasonToReject Reason) {
 // Return all rename occurrences in the main file.
 std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
                                                       const NamedDecl &ND) {
-  trace::Span Tracer("FindOccurrenceeWithinFile");
+  trace::Span Tracer("FindOccurrencesWithinFile");
   // If the cursor is at the underlying CXXRecordDecl of the
   // ClassTemplateDecl, ND will be the CXXRecordDecl. In this case, we need to
   // get the primary template manually.
@@ -244,7 +247,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
         return;
       for (const auto *Target : Ref.Targets) {
         auto ID = getSymbolID(Target);
-        if (!ID || TargetIDs.find(*ID) == TargetIDs.end())
+        if (!ID || TargetIDs.find(ID) == TargetIDs.end())
           return;
       }
       Results.push_back(Ref.NameLoc);
@@ -252,6 +255,84 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
   }
 
   return Results;
+}
+
+// Lookup the declarations (if any) with the given Name in the context of
+// RenameDecl.
+const NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
+                                       const NamedDecl &RenamedDecl,
+                                       llvm::StringRef Name) {
+  const auto &II = Ctx.Idents.get(Name);
+  DeclarationName LookupName(&II);
+  DeclContextLookupResult LookupResult;
+  const auto *DC = RenamedDecl.getDeclContext();
+  while (DC && DC->isTransparentContext())
+    DC = DC->getParent();
+  switch (DC->getDeclKind()) {
+  // The enclosing DeclContext may not be the enclosing scope, it might have
+  // false positives and negatives, so we only choose "confident" DeclContexts
+  // that don't have any subscopes that are neither DeclContexts nor
+  // transparent.
+  //
+  // Notably, FunctionDecl is excluded -- because local variables are not scoped
+  // to the function, but rather to the CompoundStmt that is its body. Lookup
+  // will not find function-local variables.
+  case Decl::TranslationUnit:
+  case Decl::Namespace:
+  case Decl::Record:
+  case Decl::Enum:
+  case Decl::CXXRecord:
+    LookupResult = DC->lookup(LookupName);
+    break;
+  default:
+    break;
+  }
+  // Lookup may contain the RenameDecl itself, exclude it.
+  for (const auto *D : LookupResult)
+    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl())
+      return D;
+  return nullptr;
+}
+
+struct InvalidName {
+  enum Kind {
+    Keywords,
+    Conflict,
+  };
+  Kind K;
+  std::string Details;
+};
+
+llvm::Error makeError(InvalidName Reason) {
+  auto Message = [](InvalidName Reason) {
+    switch (Reason.K) {
+    case InvalidName::Keywords:
+      return llvm::formatv("the chosen name \"{0}\" is a keyword",
+                           Reason.Details);
+    case InvalidName::Conflict:
+      return llvm::formatv("conflict with the symbol in {0}", Reason.Details);
+    }
+    llvm_unreachable("unhandled InvalidName kind");
+  };
+  return error("invalid name: {0}", Message(Reason));
+}
+
+// Check if we can rename the given RenameDecl into NewName.
+// Return details if the rename would produce a conflict.
+llvm::Optional<InvalidName> checkName(const NamedDecl &RenameDecl,
+                                      llvm::StringRef NewName) {
+  auto &ASTCtx = RenameDecl.getASTContext();
+  if (isKeyword(NewName, ASTCtx.getLangOpts()))
+    return InvalidName{InvalidName::Keywords, NewName.str()};
+  // Name conflict detection.
+  // Function conflicts are subtle (overloading), so ignore them.
+  if (RenameDecl.getKind() != Decl::Function) {
+    if (auto *Conflict = lookupSiblingWithName(ASTCtx, RenameDecl, NewName))
+      return InvalidName{
+          InvalidName::Conflict,
+          Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
+  }
+  return llvm::None;
 }
 
 // AST-based rename, it renames all occurrences in the main file.
@@ -304,7 +385,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
                            size_t MaxLimitFiles) {
   trace::Span Tracer("FindOccurrencesOutsideFile");
   RefsRequest RQuest;
-  RQuest.IDs.insert(*getSymbolID(&RenameDecl));
+  RQuest.IDs.insert(getSymbolID(&RenameDecl));
 
   // Absolute file path => rename occurrences in that file.
   llvm::StringMap<std::vector<Range>> AffectedFiles;
@@ -476,11 +557,14 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
-  if (isKeyword(RInputs.NewName, AST.getLangOpts()))
-    return makeError(ReasonToReject::RenameToKeywords);
-
   const auto &RenameDecl =
       llvm::cast<NamedDecl>(*(*DeclsUnderCursor.begin())->getCanonicalDecl());
+  if (RenameDecl.getName() == RInputs.NewName)
+    return makeError(ReasonToReject::SameName);
+  auto Invalid = checkName(RenameDecl, RInputs.NewName);
+  if (Invalid)
+    return makeError(*Invalid);
+
   auto Reject = renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index,
                            Opts.AllowCrossFile);
   if (Reject)

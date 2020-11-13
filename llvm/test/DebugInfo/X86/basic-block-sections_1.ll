@@ -1,15 +1,16 @@
-; RUN: llc -O0 %s -mtriple=x86_64-* -filetype=obj -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=NO-SECTIONS %s
-; RUN: llc -O0 %s --basic-block-sections=all --unique-basic-block-section-names -mtriple=x86_64-* -filetype=obj -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
-; RUN: llc -O0 %s --basic-block-sections=all --unique-basic-block-section-names -mtriple=x86_64-* -filetype=obj -split-dwarf-file=%t.dwo -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
-; RUN: llc -O0 %s --basic-block-sections=all -mtriple=x86_64-* -filetype=asm -o - | FileCheck --check-prefix=BB-SECTIONS-ASM %s
+; RUN: llc -O0 %s -mtriple=x86_64 -filetype=obj -o %t && llvm-dwarfdump -debug-info -v %t | FileCheck --check-prefix=NO-SECTIONS %s
+; RUN: llc -O0 %s --basic-block-sections=all --unique-basic-block-section-names -mtriple=x86_64 -filetype=obj -o %t && llvm-dwarfdump -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
+; RUN: llc -O0 %s --basic-block-sections=all --unique-basic-block-section-names -mtriple=x86_64 -filetype=obj -split-dwarf-file=%t.dwo -o %t && llvm-dwarfdump -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
+; RUN: llc -O0 %s --basic-block-sections=all -mtriple=x86_64 -o - | FileCheck --check-prefix=BB-SECTIONS-ASM %s
+; RUN: llc -O0 %s -mtriple=x86_64 -filetype=obj -o %t && llvm-dwarfdump  -debug-line %t | FileCheck --check-prefix=BB-SECTIONS-LINE-TABLE %s
 
 ; From:
-; int foo(int a) {
-;   if (a > 20)
-;     return 2;
-;   else
-;     return 0;
-; }
+; 1  int foo(int a) {
+; 2    if (a > 20)
+; 3      return 2;
+; 4    else
+; 5      return 0;
+; 6  }
 
 ; NO-SECTIONS: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000 ".text")
 ; NO-SECTIONS: DW_AT_high_pc [DW_FORM_data4] ({{.*}})
@@ -47,6 +48,13 @@
 ; BB-SECTIONS-ASM-NEXT:	.quad	.Lfunc_end0
 ; BB-SECTIONS-ASM-NEXT:	.quad	0
 ; BB-SECTIONS-ASM-NEXT:	.quad	0
+; BB-SECTIONS-LINE-TABLE:      0x0000000000000000 1 0 1 0 0 is_stmt
+; BB-SECTIONS-LINE-TABLE-NEXT: 0x0000000000000004 2 9 1 0 0 is_stmt prologue_end
+; BB-SECTIONS-LINE-TABLE-NEXT: 0x0000000000000009 2 7 1 0 0
+; BB-SECTIONS-LINE-TABLE-NEXT: 0x000000000000000b 3 5 1 0 0 is_stmt
+; BB-SECTIONS-LINE-TABLE-NEXT: 0x0000000000000015 5 5 1 0 0 is_stmt
+; BB-SECTIONS-LINE-TABLE-NEXT: 0x000000000000001d 6 1 1 0 0 is_stmt
+; BB-SECTIONS-LINE-TABLE-NEXT: 0x0000000000000022 6 1 1 0 0 is_stmt end_sequence
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @_Z3fooi(i32 %0) !dbg !7 {

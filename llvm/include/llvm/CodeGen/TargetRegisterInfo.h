@@ -87,22 +87,21 @@ public:
 
   /// Return true if the specified register is included in this register class.
   /// This does not include virtual registers.
-  bool contains(unsigned Reg) const {
+  bool contains(Register Reg) const {
     /// FIXME: Historically this function has returned false when given vregs
     ///        but it should probably only receive physical registers
-    if (!Register::isPhysicalRegister(Reg))
+    if (!Reg.isPhysical())
       return false;
-    return MC->contains(Reg);
+    return MC->contains(Reg.asMCReg());
   }
 
   /// Return true if both registers are in this class.
-  bool contains(unsigned Reg1, unsigned Reg2) const {
+  bool contains(Register Reg1, Register Reg2) const {
     /// FIXME: Historically this function has returned false when given a vregs
     ///        but it should probably only receive physical registers
-    if (!Register::isPhysicalRegister(Reg1) ||
-        !Register::isPhysicalRegister(Reg2))
+    if (!Reg1.isPhysical() || !Reg2.isPhysical())
       return false;
-    return MC->contains(Reg1, Reg2);
+    return MC->contains(Reg1.asMCReg(), Reg2.asMCReg());
   }
 
   /// Return the cost of copying a value between two registers in this class.
@@ -401,9 +400,9 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(MCRegister Reg, unsigned RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
     for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units)
-      if (*Units == RegUnit)
+      if (Register(*Units) == RegUnit)
         return true;
     return false;
   }
@@ -1183,8 +1182,8 @@ public:
 
 // This is useful when building IndexedMaps keyed on virtual registers
 struct VirtReg2IndexFunctor {
-  using argument_type = unsigned;
-  unsigned operator()(unsigned Reg) const {
+  using argument_type = Register;
+  unsigned operator()(Register Reg) const {
     return Register::virtReg2Index(Reg);
   }
 };

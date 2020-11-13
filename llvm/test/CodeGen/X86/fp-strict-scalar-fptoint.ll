@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -O3 | FileCheck %s --check-prefixes=AVX-X64,AVX1-X64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=AVX-X86,AVX512-X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=AVX-X64,AVX512-X64
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=-sse -O3 | FileCheck %s --check-prefixes=CHECK,X87
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=-sse -O3 | FileCheck %s --check-prefixes=X87
 
 declare i1  @llvm.experimental.constrained.fptosi.i1.f32(float, metadata)
 declare i8  @llvm.experimental.constrained.fptosi.i8.f32(float, metadata)
@@ -54,23 +54,23 @@ define i1 @fptosi_f32toi1(float %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f32toi1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f32toi1:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i1 @llvm.experimental.constrained.fptosi.i1.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i1 %result
@@ -101,23 +101,23 @@ define i8 @fptosi_f32toi8(float %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f32toi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f32toi8:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i8 @llvm.experimental.constrained.fptosi.i8.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i8 %result
@@ -148,23 +148,23 @@ define i16 @fptosi_f32toi16(float %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f32toi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f32toi16:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i16 @llvm.experimental.constrained.fptosi.i16.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i16 %result
@@ -191,23 +191,23 @@ define i32 @fptosi_f32toi32(float %x) #0 {
 ; AVX-X64-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f32toi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw (%esp)
-; CHECK-NEXT:    movzwl (%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f32toi32:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i32 %result
@@ -272,30 +272,30 @@ define i64 @fptosi_f32toi64(float %x) #0 {
 ; AVX-X64-NEXT:    vcvttss2si %xmm0, %rax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f32toi64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    flds 8(%ebp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f32toi64:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    flds 8(%ebp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
+; X87-NEXT:    retl
   %result = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
@@ -326,23 +326,23 @@ define i1 @fptoui_f32toi1(float %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f32toi1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f32toi1:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i1 @llvm.experimental.constrained.fptoui.i1.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i1 %result
@@ -373,23 +373,23 @@ define i8 @fptoui_f32toi8(float %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f32toi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f32toi8:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i8 @llvm.experimental.constrained.fptoui.i8.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i8 %result
@@ -420,24 +420,24 @@ define i16 @fptoui_f32toi16(float %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f32toi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw (%esp)
-; CHECK-NEXT:    movzwl (%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f32toi16:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i16 @llvm.experimental.constrained.fptoui.i16.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i16 %result
@@ -504,29 +504,29 @@ define i32 @fptoui_f32toi32(float %x) #0 {
 ; AVX512-X64-NEXT:    vcvttss2usi %xmm0, %eax
 ; AVX512-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f32toi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    flds 8(%ebp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f32toi32:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    flds 8(%ebp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
+; X87-NEXT:    retl
   %result = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i32 %result
@@ -543,12 +543,11 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $16, %esp
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    comiss %xmm0, %xmm2
-; SSE-X86-NEXT:    xorps %xmm1, %xmm1
-; SSE-X86-NEXT:    ja .LBB9_2
+; SSE-X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-X86-NEXT:    comiss %xmm0, %xmm1
+; SSE-X86-NEXT:    jbe .LBB9_2
 ; SSE-X86-NEXT:  # %bb.1:
-; SSE-X86-NEXT:    movaps %xmm2, %xmm1
+; SSE-X86-NEXT:    xorps %xmm1, %xmm1
 ; SSE-X86-NEXT:  .LBB9_2:
 ; SSE-X86-NEXT:    subss %xmm1, %xmm0
 ; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -600,12 +599,11 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; AVX1-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX1-X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX1-X86-NEXT:    vcomiss %xmm0, %xmm1
-; AVX1-X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-X86-NEXT:    ja .LBB9_2
+; AVX1-X86-NEXT:    jbe .LBB9_2
 ; AVX1-X86-NEXT:  # %bb.1:
-; AVX1-X86-NEXT:    vmovaps %xmm1, %xmm2
+; AVX1-X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-X86-NEXT:  .LBB9_2:
-; AVX1-X86-NEXT:    vsubss %xmm2, %xmm0, %xmm0
+; AVX1-X86-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX1-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX1-X86-NEXT:    flds (%esp)
 ; AVX1-X86-NEXT:    fisttpll (%esp)
@@ -650,16 +648,14 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; AVX512-X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX512-X86-NEXT:    xorl %edx, %edx
 ; AVX512-X86-NEXT:    vcomiss %xmm0, %xmm1
-; AVX512-X86-NEXT:    seta %al
-; AVX512-X86-NEXT:    kmovw %eax, %k1
-; AVX512-X86-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512-X86-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512-X86-NEXT:    setbe %dl
+; AVX512-X86-NEXT:    kmovw %edx, %k1
+; AVX512-X86-NEXT:    vmovss %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512-X86-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512-X86-NEXT:    flds (%esp)
 ; AVX512-X86-NEXT:    fisttpll (%esp)
 ; AVX512-X86-NEXT:    wait
-; AVX512-X86-NEXT:    setbe %dl
 ; AVX512-X86-NEXT:    shll $31, %edx
 ; AVX512-X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; AVX512-X86-NEXT:    movl (%esp), %eax
@@ -673,49 +669,48 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; AVX512-X64-NEXT:    vcvttss2usi %xmm0, %rax
 ; AVX512-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f32toi64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    flds 8(%ebp)
-; CHECK-NEXT:    flds {{\.LCPI.*}}
-; CHECK-NEXT:    fcom %st(1)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
-; CHECK-NEXT:    setbe %al
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    ja .LBB9_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fsubrp %st, %st(1)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00
-; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb %al, %dl
-; CHECK-NEXT:    shll $31, %edx
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f32toi64:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    flds 8(%ebp)
+; X87-NEXT:    flds {{\.LCPI.*}}
+; X87-NEXT:    fcom %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    xorl %edx, %edx
+; X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X87-NEXT:    sahf
+; X87-NEXT:    setbe %al
+; X87-NEXT:    fldz
+; X87-NEXT:    jbe .LBB9_2
+; X87-NEXT:  # %bb.1:
+; X87-NEXT:    fstp %st(1)
+; X87-NEXT:    fldz
+; X87-NEXT:  .LBB9_2:
+; X87-NEXT:    fstp %st(0)
+; X87-NEXT:    fsubrp %st, %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb %al, %dl
+; X87-NEXT:    shll $31, %edx
+; X87-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
+; X87-NEXT:    retl
   %result = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
@@ -746,23 +741,23 @@ define i8 @fptosi_f64toi8(double %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f64toi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f64toi8:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i8 @llvm.experimental.constrained.fptosi.i8.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i8 %result
@@ -793,23 +788,23 @@ define i16 @fptosi_f64toi16(double %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f64toi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f64toi16:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i16 @llvm.experimental.constrained.fptosi.i16.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i16 %result
@@ -836,23 +831,23 @@ define i32 @fptosi_f64toi32(double %x) #0 {
 ; AVX-X64-NEXT:    vcvttsd2si %xmm0, %eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f64toi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw (%esp)
-; CHECK-NEXT:    movzwl (%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f64toi32:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i32 %result
@@ -917,30 +912,30 @@ define i64 @fptosi_f64toi64(double %x) #0 {
 ; AVX-X64-NEXT:    vcvttsd2si %xmm0, %rax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptosi_f64toi64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    fldl 8(%ebp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptosi_f64toi64:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
+; X87-NEXT:    retl
   %result = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
@@ -971,23 +966,23 @@ define i1 @fptoui_f64toi1(double %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f64toi1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f64toi1:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i1 @llvm.experimental.constrained.fptoui.i1.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i1 %result
@@ -1018,23 +1013,23 @@ define i8 @fptoui_f64toi8(double %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f64toi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f64toi8:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i8 @llvm.experimental.constrained.fptoui.i8.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i8 %result
@@ -1065,24 +1060,24 @@ define i16 @fptoui_f64toi16(double %x) #0 {
 ; AVX-X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f64toi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw (%esp)
-; CHECK-NEXT:    movzwl (%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f64toi16:
+; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
   %result = call i16 @llvm.experimental.constrained.fptoui.i16.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i16 %result
@@ -1149,29 +1144,29 @@ define i32 @fptoui_f64toi32(double %x) #0 {
 ; AVX512-X64-NEXT:    vcvttsd2usi %xmm0, %eax
 ; AVX512-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f64toi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    fldl 8(%ebp)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f64toi32:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
+; X87-NEXT:    retl
   %result = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i32 %result
@@ -1188,12 +1183,11 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $16, %esp
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-X86-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-X86-NEXT:    comisd %xmm0, %xmm2
-; SSE-X86-NEXT:    xorpd %xmm1, %xmm1
-; SSE-X86-NEXT:    ja .LBB18_2
+; SSE-X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-X86-NEXT:    comisd %xmm0, %xmm1
+; SSE-X86-NEXT:    jbe .LBB18_2
 ; SSE-X86-NEXT:  # %bb.1:
-; SSE-X86-NEXT:    movapd %xmm2, %xmm1
+; SSE-X86-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-X86-NEXT:  .LBB18_2:
 ; SSE-X86-NEXT:    subsd %xmm1, %xmm0
 ; SSE-X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
@@ -1245,12 +1239,11 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; AVX1-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX1-X86-NEXT:    vcomisd %xmm0, %xmm1
-; AVX1-X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX1-X86-NEXT:    ja .LBB18_2
+; AVX1-X86-NEXT:    jbe .LBB18_2
 ; AVX1-X86-NEXT:  # %bb.1:
-; AVX1-X86-NEXT:    vmovapd %xmm1, %xmm2
+; AVX1-X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-X86-NEXT:  .LBB18_2:
-; AVX1-X86-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
+; AVX1-X86-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX1-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX1-X86-NEXT:    fldl (%esp)
 ; AVX1-X86-NEXT:    fisttpll (%esp)
@@ -1295,16 +1288,14 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; AVX512-X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-X86-NEXT:    xorl %edx, %edx
 ; AVX512-X86-NEXT:    vcomisd %xmm0, %xmm1
-; AVX512-X86-NEXT:    seta %al
-; AVX512-X86-NEXT:    kmovw %eax, %k1
-; AVX512-X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512-X86-NEXT:    vmovsd %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512-X86-NEXT:    setbe %dl
+; AVX512-X86-NEXT:    kmovw %edx, %k1
+; AVX512-X86-NEXT:    vmovsd %xmm1, %xmm1, %xmm1 {%k1} {z}
 ; AVX512-X86-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX512-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX512-X86-NEXT:    fldl (%esp)
 ; AVX512-X86-NEXT:    fisttpll (%esp)
 ; AVX512-X86-NEXT:    wait
-; AVX512-X86-NEXT:    setbe %dl
 ; AVX512-X86-NEXT:    shll $31, %edx
 ; AVX512-X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; AVX512-X86-NEXT:    movl (%esp), %eax
@@ -1318,49 +1309,48 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; AVX512-X64-NEXT:    vcvttsd2usi %xmm0, %rax
 ; AVX512-X64-NEXT:    retq
 ;
-; CHECK-LABEL: fptoui_f64toi64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    fldl 8(%ebp)
-; CHECK-NEXT:    flds {{\.LCPI.*}}
-; CHECK-NEXT:    fcom %st(1)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstsw %ax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
-; CHECK-NEXT:    sahf
-; CHECK-NEXT:    setbe %al
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    ja .LBB18_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:  .LBB18_2:
-; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fsubrp %st, %st(1)
-; CHECK-NEXT:    wait
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00
-; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb %al, %dl
-; CHECK-NEXT:    shll $31, %edx
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
-; CHECK-NEXT:    retl
+; X87-LABEL: fptoui_f64toi64:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    flds {{\.LCPI.*}}
+; X87-NEXT:    fcom %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    xorl %edx, %edx
+; X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X87-NEXT:    sahf
+; X87-NEXT:    setbe %al
+; X87-NEXT:    fldz
+; X87-NEXT:    jbe .LBB18_2
+; X87-NEXT:  # %bb.1:
+; X87-NEXT:    fstp %st(1)
+; X87-NEXT:    fldz
+; X87-NEXT:  .LBB18_2:
+; X87-NEXT:    fstp %st(0)
+; X87-NEXT:    fsubrp %st, %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb %al, %dl
+; X87-NEXT:    shll $31, %edx
+; X87-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
+; X87-NEXT:    retl
   %result = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result

@@ -46,22 +46,22 @@ int main(int, char**)
 
     for (unsigned i = 1; i <= 10; ++i)
     {
-        month month(i);
+        month m(i);
         int exp = i + 10;
         while (exp > 12)
             exp -= 12;
-        assert(static_cast<unsigned>(month += months{10}) == static_cast<unsigned>(exp));
-        assert(static_cast<unsigned>(month)               == static_cast<unsigned>(exp));
+        assert(static_cast<unsigned>(m += months{10}) == static_cast<unsigned>(exp));
+        assert(static_cast<unsigned>(m)               == static_cast<unsigned>(exp));
     }
 
     for (unsigned i = 1; i <= 10; ++i)
     {
-        month month(i);
+        month m(i);
         int exp = i - 9;
         while (exp < 1)
             exp += 12;
-        assert(static_cast<unsigned>(month -= months{ 9}) == static_cast<unsigned>(exp));
-        assert(static_cast<unsigned>(month)               == static_cast<unsigned>(exp));
+        assert(static_cast<unsigned>(m -= months{ 9}) == static_cast<unsigned>(exp));
+        assert(static_cast<unsigned>(m)               == static_cast<unsigned>(exp));
     }
 
   return 0;

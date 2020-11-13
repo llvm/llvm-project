@@ -132,7 +132,8 @@ Triple ObjectFile::makeTriple() const {
 }
 
 Expected<std::unique_ptr<ObjectFile>>
-ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
+ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
+                             bool InitContent) {
   StringRef Data = Object.getBuffer();
   if (Type == file_magic::unknown)
     Type = identify_magic(Data);
@@ -154,7 +155,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
-    return createELFObjectFile(Object);
+    return createELFObjectFile(Object, InitContent);
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:

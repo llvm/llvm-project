@@ -120,10 +120,9 @@ def AffineParallelize : FunctionPass<"affine-parallelize"> {
   let constructor = "mlir::createAffineParallelizePass()";
 }
 
-def AffineParallelNormalize : FunctionPass<"affine-parallel-normalize"> {
-  let summary = "Normalize affine.parallel ops so that lower bounds are 0 and "
-                "steps are 1";
-  let constructor = "mlir::createAffineParallelNormalizePass()";
+def AffineLoopNormalize : FunctionPass<"affine-loop-normalize"> {
+  let summary = "Apply normalization transformations to affine loop-like ops";
+  let constructor = "mlir::createAffineLoopNormalizePass()";
 }
 
 def SimplifyAffineStructures : FunctionPass<"simplify-affine-structures"> {

@@ -30,7 +30,7 @@
 // CHECK-DEFAULT-UBSAN-BLACKLIST: -fsanitize-system-blacklist={{.*}}ubsan_blacklist.txt
 
 // Check that combining ubsan and another sanitizer results in both blacklists being used.
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined,address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --check-prefix=CHECK-DEFAULT-ASAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined,address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --check-prefix=CHECK-DEFAULT-BLACKLIST-ASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 
 // Ignore -fsanitize-blacklist flag if there is no -fsanitize flag.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-blacklist=%t.good %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SANITIZE --check-prefix=DELIMITERS

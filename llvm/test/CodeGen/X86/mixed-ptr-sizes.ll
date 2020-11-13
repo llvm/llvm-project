@@ -135,6 +135,8 @@ define dso_local void @test_null_arg(%struct.Foo* %f) {
 ; ALL-NEXT:    nop
 ; ALL-NEXT:    addq $40, %rsp
 ; ALL-NEXT:    retq
+; ALL-NEXT:    .seh_handlerdata
+; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
 entry:
   call void @test_noop1(%struct.Foo* %f, i32 addrspace(270)* null)

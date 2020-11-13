@@ -19,7 +19,6 @@ void mlirDiagnosticPrint(MlirDiagnostic diagnostic, MlirStringCallback callback,
                          void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(diagnostic).print(stream);
-  stream.flush();
 }
 
 MlirLocation mlirDiagnosticGetLocation(MlirDiagnostic diagnostic) {

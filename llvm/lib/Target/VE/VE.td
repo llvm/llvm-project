@@ -18,6 +18,9 @@ include "llvm/Target/Target.td"
 //===----------------------------------------------------------------------===//
 // VE Subtarget features.
 //
+def FeatureEnableVPU
+  : SubtargetFeature<"vpu", "EnableVPU", "true",
+                     "Enable the VPU">;
 
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions

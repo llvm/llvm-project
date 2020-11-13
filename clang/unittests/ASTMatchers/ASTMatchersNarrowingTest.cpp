@@ -142,6 +142,22 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_NotMatchesDifferentInstances) {
   EXPECT_TRUE(notMatches(input, binaryOperator(isExpandedFromMacro("FOUR"))));
 }
 
+TEST(IsExpandedFromMacro, IsExpandedFromMacro_MatchesDecls) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) int i = a;
+    void Test() { MY_MACRO(4); }
+  )cc";
+  EXPECT_TRUE(matches(input, varDecl(isExpandedFromMacro("MY_MACRO"))));
+}
+
+TEST(IsExpandedFromMacro, IsExpandedFromMacro_MatchesTypelocs) {
+  StringRef input = R"cc(
+#define MY_TYPE int
+    void Test() { MY_TYPE i = 4; }
+  )cc";
+  EXPECT_TRUE(matches(input, typeLoc(isExpandedFromMacro("MY_TYPE"))));
+}
+
 TEST_P(ASTMatchersTest, AllOf) {
   const char Program[] = "struct T { };"
                          "int f(int, struct T*, int, int);"
@@ -1611,6 +1627,115 @@ TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
   EXPECT_TRUE(
       notMatches("class X { public: X(int, int); }; void x() { X x(0, 0); }",
                  Constructor1Arg));
+}
+
+TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
+
+  // Member functions:
+  {
+    auto Code = "template <typename T> struct S{ void mem(); }; template "
+                "<typename T> void x() { S<T> s; s.mem(); }";
+
+    EXPECT_TRUE(matches(
+        Code,
+        cxxDependentScopeMemberExpr(
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
+            memberHasSameNameAsBoundNode("templMem"))));
+
+    EXPECT_TRUE(
+        matches(Code, cxxDependentScopeMemberExpr(hasMemberName("mem"))));
+  }
+
+  // Member variables:
+  {
+    auto Code = "template <typename T> struct S{ int mem; }; template "
+                "<typename T> void x() { S<T> s; s.mem; }";
+
+    EXPECT_TRUE(
+        matches(Code, cxxDependentScopeMemberExpr(hasMemberName("mem"))));
+
+    EXPECT_TRUE(matches(
+        Code,
+        cxxDependentScopeMemberExpr(
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
+            memberHasSameNameAsBoundNode("templMem"))));
+  }
+
+  // static member variables:
+  {
+    auto Code = "template <typename T> struct S{ static int mem; }; template "
+                "<typename T> void x() { S<T> s; s.mem; }";
+
+    EXPECT_TRUE(
+        matches(Code, cxxDependentScopeMemberExpr(hasMemberName("mem"))));
+
+    EXPECT_TRUE(matches(
+        Code,
+        cxxDependentScopeMemberExpr(
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
+            memberHasSameNameAsBoundNode("templMem"))));
+  }
+  {
+    auto Code = R"cpp(
+template <typename T>
+struct S {
+  bool operator==(int) const { return true; }
+};
+
+template <typename T>
+void func(T t) {
+  S<T> s;
+  s.operator==(1);
+}
+)cpp";
+
+    EXPECT_TRUE(matches(
+        Code, cxxDependentScopeMemberExpr(hasMemberName("operator=="))));
+  }
+
+  // other named decl:
+  {
+    auto Code = "template <typename T> struct S{ static int mem; }; struct "
+                "mem{}; template "
+                "<typename T> void x() { S<T> s; s.mem; }";
+
+    EXPECT_TRUE(matches(
+        Code,
+        translationUnitDecl(has(cxxRecordDecl(hasName("mem"))),
+                            hasDescendant(cxxDependentScopeMemberExpr()))));
+
+    EXPECT_FALSE(matches(
+        Code,
+        translationUnitDecl(has(cxxRecordDecl(hasName("mem")).bind("templMem")),
+                            hasDescendant(cxxDependentScopeMemberExpr(
+                                memberHasSameNameAsBoundNode("templMem"))))));
+  }
+}
+
+TEST(ASTMatchersTest, ArgumentCountIs_CXXUnresolvedConstructExpr) {
+  const auto *Code =
+      "template <typename T> struct S{}; template <typename T> void "
+      "x() { auto s = S<T>(); }";
+
+  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(argumentCountIs(0))));
+  EXPECT_TRUE(notMatches(Code, cxxUnresolvedConstructExpr(argumentCountIs(1))));
+}
+
+TEST(ASTMatchersTest, HasArgument_CXXUnresolvedConstructExpr) {
+  const auto *Code =
+      "template <typename T> struct S{ S(int){} }; template <typename "
+      "T> void x() { int y; auto s = S<T>(y); }";
+  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(hasArgument(
+                                0, declRefExpr(to(varDecl(hasName("y"))))))));
+  EXPECT_TRUE(
+      notMatches(Code, cxxUnresolvedConstructExpr(hasArgument(
+                           0, declRefExpr(to(varDecl(hasName("x"))))))));
 }
 
 TEST_P(ASTMatchersTest, IsListInitialization) {

@@ -68,17 +68,6 @@ void AlarmHandler(int Seconds) {
   }
 }
 
-void InterruptHandler() {
-  fd_set readfds;
-  // Ctrl-C sends ETX in Zircon.
-  do {
-    FD_ZERO(&readfds);
-    FD_SET(STDIN_FILENO, &readfds);
-    select(STDIN_FILENO + 1, &readfds, nullptr, nullptr, nullptr);
-  } while(!FD_ISSET(STDIN_FILENO, &readfds) || getchar() != 0x03);
-  Fuzzer::StaticInterruptCallback();
-}
-
 // CFAOffset is used to reference the stack pointer before entering the
 // trampoline (Stack Pointer + CFAOffset = prev Stack Pointer). Before jumping
 // to the trampoline we copy all the registers onto the stack. We need to make
@@ -359,11 +348,7 @@ void SetSignalHandler(const FuzzingOptions &Options) {
     T.detach();
   }
 
-  // Set up interrupt handler if needed.
-  if (Options.HandleInt || Options.HandleTerm) {
-    std::thread T(InterruptHandler);
-    T.detach();
-  }
+  // Options.HandleInt and Options.HandleTerm are not supported on Fuchsia
 
   // Early exit if no crash handler needed.
   if (!Options.HandleSegv && !Options.HandleBus && !Options.HandleIll &&

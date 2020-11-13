@@ -1,36 +1,36 @@
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=SINGLE --check-prefix=SINGLE-64 --check-prefix=GNUOP %s
+; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-64,GNUOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=i386-linux-gnu \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=SINGLE --check-prefix=SINGLE-32 --check-prefix=GNUOP %s
+; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-32,GNUOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -split-dwarf-file=foo.dwo \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=FISSION --check-prefix=GNUOP %s
+; RUN:   | FileCheck --check-prefixes=FISSION,GNUOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-scei-ps4 \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=SINGLE --check-prefix=SINGLE-64 --check-prefix=STDOP %s
+; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-64,STDOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-apple-darwin \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=DARWIN --check-prefix=STDOP %s
+; RUN:   | FileCheck --check-prefixes=DARWIN,STDOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-freebsd \
-; RUN:   | FileCheck --check-prefix=NOEMU --check-prefix=SINGLE --check-prefix=SINGLE-64 --check-prefix=GNUOP %s
+; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-64,GNUOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -emulated-tls \
-; RUN:   | FileCheck --check-prefix=SINGLE --check-prefix=EMUSINGLE-64 \
-; RUN:     --check-prefix=EMUGNUOP --check-prefix=EMU %s
+; RUN:   | FileCheck --check-prefix=SINGLE --check-prefix=EMUSINGLE-64 %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=i386-linux-gnu -emulated-tls \
-; RUN:   | FileCheck --check-prefix=SINGLE --check-prefix=EMUSINGLE-32 \
-; RUN:     --check-prefix=EMUGNUOP --check-prefix=EMU %s
+; RUN:   | FileCheck --check-prefix=SINGLE --check-prefix=EMUSINGLE-32 %s
 
 ; TODO: Add expected output for -emulated-tls tests.
+; EMUSINGLE-32: {{^}}
+; EMUSINGLE-64: {{^}}
 
 ; FIXME: add relocation and DWARF expression support to llvm-dwarfdump & use
 ; that here instead of raw assembly printing
 
 ; FISSION: .section    .debug_info.dwo,
-; 3 bytes of data in this DW_FORM_block1 representation of the location of 'tls'
+; 3 bytes of data in this DW_FORM_exprloc representation of the location of 'tls'
 ; FISSION: .byte 3{{ *}}# DW_AT_location
 ; DW_OP_GNU_const_index (0xfx == 252) to refer to the debug_addr table
 ; FISSION-NEXT: .byte 252
@@ -40,7 +40,7 @@
 ; SINGLE: .section     .debug_info,
 ; DARWIN: .section     {{.*}}debug_info,
 
-; 10 bytes of data in this DW_FORM_block1 representation of the location of 'tls'
+; 10 bytes of data in this DW_FORM_exprloc representation of the location of 'tls'
 ; SINGLE-64: .byte     10 # DW_AT_location
 ; DW_OP_const8u (0x0e == 14) of address
 ; SINGLE-64-NEXT: .byte        14

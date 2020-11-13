@@ -8,8 +8,13 @@
 
 #include "TestAsmPrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -365,6 +370,60 @@ TEST_F(AsmPrinterEmitDwarfUnitLengthAsHiLoDiffTest, DWARF64) {
   EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(Hi, Lo, 8));
 
   TestPrinter->getAP()->emitDwarfUnitLength(Hi, Lo, "");
+}
+
+class AsmPrinterHandlerTest : public AsmPrinterFixtureBase {
+  class TestHandler : public AsmPrinterHandler {
+    AsmPrinterHandlerTest &Test;
+
+  public:
+    TestHandler(AsmPrinterHandlerTest &Test) : Test(Test) {}
+    virtual ~TestHandler() {}
+    virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
+    virtual void beginModule(Module *M) override { Test.BeginCount++; }
+    virtual void endModule() override { Test.EndCount++; }
+    virtual void beginFunction(const MachineFunction *MF) override {}
+    virtual void endFunction(const MachineFunction *MF) override {}
+    virtual void beginInstruction(const MachineInstr *MI) override {}
+    virtual void endInstruction() override {}
+  };
+
+protected:
+  bool init(const std::string &TripleStr, unsigned DwarfVersion,
+            dwarf::DwarfFormat DwarfFormat) {
+    if (!AsmPrinterFixtureBase::init(TripleStr, DwarfVersion, DwarfFormat))
+      return false;
+
+    auto *AP = TestPrinter->getAP();
+    AP->addAsmPrinterHandler(AsmPrinter::HandlerInfo(
+        std::unique_ptr<AsmPrinterHandler>(new TestHandler(*this)),
+        "TestTimerName", "TestTimerDesc", "TestGroupName", "TestGroupDesc"));
+    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
+    legacy::PassManager PM;
+    PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
+    PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
+    LLVMContext Context;
+    std::unique_ptr<Module> M(new Module("TestModule", Context));
+    M->setDataLayout(LLVMTM->createDataLayout());
+    PM.run(*M);
+    // Now check that we can run it twice.
+    AP->addAsmPrinterHandler(AsmPrinter::HandlerInfo(
+        std::unique_ptr<AsmPrinterHandler>(new TestHandler(*this)),
+        "TestTimerName", "TestTimerDesc", "TestGroupName", "TestGroupDesc"));
+    PM.run(*M);
+    return true;
+  }
+
+  int BeginCount = 0;
+  int EndCount = 0;
+};
+
+TEST_F(AsmPrinterHandlerTest, Basic) {
+  if (!init("x86_64-pc-linux", /*DwarfVersion=*/4, dwarf::DWARF32))
+    return;
+
+  ASSERT_EQ(BeginCount, 3);
+  ASSERT_EQ(EndCount, 3);
 }
 
 } // end namespace

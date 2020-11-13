@@ -152,7 +152,7 @@ body:             |
     $q5 = MVE_VDUP32 $r3, 0, $noreg, $q5
     $q4 = MVE_VDUP32 $r4, 0, $noreg, $q4
     $q0 = MVE_VADDf32 $q4, $q5, 0, $noreg, $q0
-    t2DoLoopStart $r4
+    $lr = t2DoLoopStart $r4
     $r0 = MVE_VMOV_from_lane_32 renamable $q0, 1, 14, $noreg
     tBL 14, $noreg, @z
   bb.1:
@@ -160,7 +160,7 @@ body:             |
     $q5 = MVE_VDUP32 $r3, 0, $noreg, $q5
     $q4 = MVE_VDUP32 $r4, 0, $noreg, $q4
     $q0 = MVE_VADDf32 $q4, $q5, 0, $noreg, $q0
-    t2DoLoopStart $r4
+    $lr = t2DoLoopStart $r4
     $r0 = MVE_VMOV_from_lane_32 renamable $q0, 1, 14, $noreg
     tBL 14, $noreg, @z
   bb.2:

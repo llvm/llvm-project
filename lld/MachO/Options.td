@@ -453,6 +453,9 @@ def dependency_info : Separate<["-"], "dependency_info">,
      HelpText<"Dump dependency info">,
      Flags<[HelpHidden]>,
      Group<grp_introspect>;
+def save_temps : Flag<["-"], "save-temps">,
+     HelpText<"Save temporary files instead of deleting them">,
+     Group<grp_introspect>;
 
 def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE OPTIMIZATIONS">;
 
@@ -1230,10 +1233,6 @@ def pause : Flag<["-"], "pause">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def random_uuid : Flag<["-"], "random_uuid">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def save_temps : Flag<["-"], "save-temps">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;

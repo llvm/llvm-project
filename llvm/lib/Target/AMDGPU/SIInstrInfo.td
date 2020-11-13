@@ -1041,6 +1041,12 @@ class NamedOperandBit_0<string Name, AsmOperandClass MatchClass> :
   let ParserMatchClass = MatchClass;
 }
 
+class NamedOperandBit_1<string Name, AsmOperandClass MatchClass> :
+  OperandWithDefaultOps<i1, (ops (i1 1))> {
+  let PrintMethod = "print"#Name;
+  let ParserMatchClass = MatchClass;
+}
+
 class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
   let PrintMethod = "print"#Name;
   let ParserMatchClass = MatchClass;
@@ -1096,6 +1102,7 @@ def DLC_0 : NamedOperandBit_0<"DLC", NamedMatchClass<"DLC">>;
 
 def GLC : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
 def GLC_0 : NamedOperandBit_0<"GLC", NamedMatchClass<"GLC">>;
+def GLC_1 : NamedOperandBit_1<"GLC", NamedMatchClass<"GLC_1">>;
 
 def SLC : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
 def SLC_0 : NamedOperandBit_0<"SLC", NamedMatchClass<"SLC">>;
@@ -1410,56 +1417,6 @@ class getHwRegImm<int Reg, int Offset = 0, int Size = 32> {
 class SIMCInstr <string pseudo, int subtarget> {
   string PseudoInstr = pseudo;
   int Subtarget = subtarget;
-}
-
-//===----------------------------------------------------------------------===//
-// EXP classes
-//===----------------------------------------------------------------------===//
-
-class EXP_Helper<bit done> : EXPCommon<
-  (outs),
-  (ins exp_tgt:$tgt,
-       ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
-       exp_vm:$vm, exp_compr:$compr, i32imm:$en),
-  "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm", []> {
-  let AsmMatchConverter = "cvtExp";
-}
-
-// Split EXP instruction into EXP and EXP_DONE so we can set
-// mayLoad for done=1.
-multiclass EXP_m<bit done> {
-  let mayLoad = done, DisableWQM = 1 in {
-    let isPseudo = 1, isCodeGenOnly = 1 in {
-      def "" : EXP_Helper<done>,
-               SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.NONE>;
-    }
-
-    let done = done in {
-      def _si : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
-                EXPe {
-        let AssemblerPredicate = isGFX6GFX7;
-        let DecoderNamespace = "GFX6GFX7";
-        let DisableDecoder = DisableSIDecoder;
-      }
-
-      def _vi : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
-                EXPe_vi {
-        let AssemblerPredicate = isGFX8GFX9;
-        let DecoderNamespace = "GFX8";
-        let DisableDecoder = DisableVIDecoder;
-      }
-
-      def _gfx10 : EXP_Helper<done>,
-                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX10>,
-                EXPe {
-        let AssemblerPredicate = isGFX10Plus;
-        let DecoderNamespace = "GFX10";
-        let DisableDecoder = DisableSIDecoder;
-      }
-    }
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2022,7 +1979,7 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
   string args = !if(!not(HasModifiers),
                      getAsm32<0, NumSrcArgs, DstVT>.ret,
                      ", "#src0#src1);
-  string ret = dst#args#"$dpp8$fi";
+  string ret = dst#args#" $dpp8$fi";
 }
 
 class getAsmSDWA <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
@@ -2372,7 +2329,6 @@ class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe <op>,
   SIMCInstr<opName, encodingFamily> {
-  let DisableDecoder = DisableSIDecoder;
 }
 
 class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
@@ -2382,7 +2338,6 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   SIMCInstr<opName, SIEncodingFamily.VI> {
   let AssemblerPredicate = VIAssemblerPredicate;
   let DecoderNamespace = "GFX8";
-  let DisableDecoder = DisableVIDecoder;
 }
 
 // FIXME-GFX10: WIP.

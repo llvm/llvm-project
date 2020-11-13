@@ -130,6 +130,13 @@
        use _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR instead
 #endif
 
+#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
+// Enable additional explicit instantiations of iostreams components. This
+// reduces the number of weak definitions generated in programs that use
+// iostreams by providing a single strong definition in the shared library.
+# define _LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+#endif
+
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
 #define _LIBCPP_CONCAT(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y)
 
@@ -936,6 +943,8 @@ typedef unsigned int   char32_t;
    // We're deferring to Microsoft's STL to provide aligned new et al. We don't
    // have it unless the language feature test macro is defined.
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+#elif defined(__MVS__)
+#  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #endif
 
 #if defined(__APPLE__)
@@ -1219,8 +1228,9 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  endif
 #endif
 
-#if defined(__BIONIC__) || defined(__CloudABI__) ||                            \
-    defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC)
+#if defined(__BIONIC__) || defined(__CloudABI__) || \
+    defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC) || \
+    defined(__MVS__)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 
@@ -1357,105 +1367,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #if !defined(__cpp_impl_three_way_comparison) || __cpp_impl_three_way_comparison < 201907L
 #define _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-#endif
-
-// Decide whether to use availability macros.
-#if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
-    !defined(_LIBCXXABI_BUILDING_LIBRARY) &&                                   \
-    !defined(_LIBCPP_DISABLE_AVAILABILITY) &&                                  \
-    __has_feature(attribute_availability_with_strict) &&                       \
-    __has_feature(attribute_availability_in_templates) &&                      \
-    __has_extension(pragma_clang_attribute_external_declaration)
-#  ifdef __APPLE__
-#    define _LIBCPP_USE_AVAILABILITY_APPLE
-#  endif
-#endif
-
-// Define availability macros.
-#if defined(_LIBCPP_USE_AVAILABILITY_APPLE)
-#  define _LIBCPP_AVAILABILITY_SHARED_MUTEX                                    \
-     __attribute__((availability(macosx,strict,introduced=10.12)))             \
-     __attribute__((availability(ios,strict,introduced=10.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=10.0)))                \
-     __attribute__((availability(watchos,strict,introduced=3.0)))
-#  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS                             \
-     __attribute__((availability(macosx,strict,introduced=10.13)))             \
-     __attribute__((availability(ios,strict,introduced=11.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=11.0)))                \
-     __attribute__((availability(watchos,strict,introduced=4.0)))
-#  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS                              \
-     _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST                                    \
-     _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS                             \
-     __attribute__((availability(macosx,strict,introduced=10.12)))             \
-     __attribute__((availability(ios,strict,introduced=10.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=10.0)))                \
-     __attribute__((availability(watchos,strict,introduced=3.0)))
-#  define _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE                                \
-     __attribute__((availability(macosx,strict,introduced=10.12)))             \
-     __attribute__((availability(ios,strict,introduced=10.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=10.0)))                \
-     __attribute__((availability(watchos,strict,introduced=3.0)))
-#  define _LIBCPP_AVAILABILITY_FUTURE_ERROR                                    \
-     __attribute__((availability(ios,strict,introduced=6.0)))
-#  define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE                                 \
-     __attribute__((availability(macosx,strict,introduced=10.9)))              \
-     __attribute__((availability(ios,strict,introduced=7.0)))
-#  define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY                                 \
-     __attribute__((availability(macosx,strict,introduced=10.9)))              \
-     __attribute__((availability(ios,strict,introduced=7.0)))
-#  define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR                               \
-     __attribute__((availability(macosx,strict,introduced=10.9)))              \
-     __attribute__((availability(ios,strict,introduced=7.0)))
-#  define _LIBCPP_AVAILABILITY_FILESYSTEM                                      \
-     __attribute__((availability(macosx,strict,introduced=10.15)))             \
-     __attribute__((availability(ios,strict,introduced=13.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=13.0)))                \
-     __attribute__((availability(watchos,strict,introduced=6.0)))
-#  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH                                 \
-     _Pragma("clang attribute push(__attribute__((availability(macosx,strict,introduced=10.15))), apply_to=any(function,record))") \
-     _Pragma("clang attribute push(__attribute__((availability(ios,strict,introduced=13.0))), apply_to=any(function,record))")     \
-     _Pragma("clang attribute push(__attribute__((availability(tvos,strict,introduced=13.0))), apply_to=any(function,record))")    \
-     _Pragma("clang attribute push(__attribute__((availability(watchos,strict,introduced=6.0))), apply_to=any(function,record))")
-#  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP                                  \
-     _Pragma("clang attribute pop")                                            \
-     _Pragma("clang attribute pop")                                            \
-     _Pragma("clang attribute pop")                                            \
-     _Pragma("clang attribute pop")
-#  define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
-     _LIBCPP_AVAILABILITY_FILESYSTEM
-#  define _LIBCPP_AVAILABILITY_SYNC                                            \
-     __attribute__((unavailable))
-#else
-#  define _LIBCPP_AVAILABILITY_SHARED_MUTEX
-#  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
-#  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS
-#  define _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE
-#  define _LIBCPP_AVAILABILITY_FUTURE_ERROR
-#  define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
-#  define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
-#  define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-#  define _LIBCPP_AVAILABILITY_FILESYSTEM
-#  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
-#  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP
-#  define _LIBCPP_AVAILABILITY_TO_CHARS
-#  define _LIBCPP_AVAILABILITY_SYNC
-#endif
-
-// Define availability that depends on _LIBCPP_NO_EXCEPTIONS.
-#ifdef _LIBCPP_NO_EXCEPTIONS
-#  define _LIBCPP_AVAILABILITY_FUTURE
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-#else
-#  define _LIBCPP_AVAILABILITY_FUTURE                    _LIBCPP_AVAILABILITY_FUTURE_ERROR
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST        _LIBCPP_AVAILABILITY_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS  _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
 #endif
 
 #if defined(_LIBCPP_COMPILER_IBM)

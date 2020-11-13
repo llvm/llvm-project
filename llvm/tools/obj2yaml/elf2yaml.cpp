@@ -100,6 +100,8 @@ class ELFDumper {
   Expected<ELFYAML::MipsABIFlags *> dumpMipsABIFlags(const Elf_Shdr *Shdr);
   Expected<ELFYAML::StackSizesSection *>
   dumpStackSizesSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::BBAddrMapSection *>
+  dumpBBAddrMapSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
   dumpPlaceholderSection(const Elf_Shdr *Shdr);
 
@@ -203,9 +205,8 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   if (DWARF && DWARF->getNonEmptySectionNames().count(SecName)) {
     if (const ELFYAML::RawContentSection *RawSec =
             dyn_cast<const ELFYAML::RawContentSection>(&S)) {
-      if (RawSec->Type != ELF::SHT_PROGBITS || !RawSec->Link.empty() ||
-          RawSec->Info || RawSec->AddressAlign != 1 || RawSec->Address ||
-          RawSec->EntSize)
+      if (RawSec->Type != ELF::SHT_PROGBITS || RawSec->Link || RawSec->Info ||
+          RawSec->AddressAlign != 1 || RawSec->Address || RawSec->EntSize)
         return true;
 
       ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));
@@ -392,8 +393,11 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     // obj2yaml does not create Fill chunks.
     for (const std::unique_ptr<ELFYAML::Chunk> &C : Chunks) {
       ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
-      if (isInSegment<ELFT>(S, Sections[S.OriginalSecNdx], Phdr))
-        PH.Sections.push_back({S.Name});
+      if (isInSegment<ELFT>(S, Sections[S.OriginalSecNdx], Phdr)) {
+        if (!PH.FirstSec)
+          PH.FirstSec = S.Name;
+        PH.LastSec = S.Name;
+      }
     }
 
     Ret.push_back(PH);
@@ -506,6 +510,8 @@ ELFDumper<ELFT>::dumpSections() {
     case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
       return
           [this](const Elf_Shdr *S) { return dumpCallGraphProfileSection(S); };
+    case ELF::SHT_LLVM_BB_ADDR_MAP:
+      return [this](const Elf_Shdr *S) { return dumpBBAddrMapSection(S); };
     case ELF::SHT_STRTAB:
     case ELF::SHT_SYMTAB:
     case ELF::SHT_DYNSYM:
@@ -754,6 +760,50 @@ ELFDumper<ELFT>::dumpStackSizesSection(const Elf_Shdr *Shdr) {
 
   if (Content.empty() || !Cur) {
     // If .stack_sizes cannot be decoded, we dump it as an array of bytes.
+    consumeError(Cur.takeError());
+    S->Content = yaml::BinaryRef(Content);
+  } else {
+    S->Entries = std::move(Entries);
+  }
+
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::BBAddrMapSection *>
+ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::BBAddrMapSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(*Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  if (Content.empty())
+    return S.release();
+
+  DataExtractor Data(Content, Obj.isLE(), ELFT::Is64Bits ? 8 : 4);
+
+  std::vector<ELFYAML::BBAddrMapEntry> Entries;
+  DataExtractor::Cursor Cur(0);
+  while (Cur && Cur.tell() < Content.size()) {
+    uint64_t Address = Data.getAddress(Cur);
+    uint32_t NumBlocks = Data.getULEB128(Cur);
+    std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
+    // Read the specified number of BB entries, or until decoding fails.
+    for (uint32_t BlockID = 0; Cur && BlockID < NumBlocks; ++BlockID) {
+      uint32_t Offset = Data.getULEB128(Cur);
+      uint32_t Size = Data.getULEB128(Cur);
+      uint32_t Metadata = Data.getULEB128(Cur);
+      BBEntries.push_back({Offset, Size, Metadata});
+    }
+    Entries.push_back({Address, BBEntries});
+  }
+
+  if (!Cur) {
+    // If the section cannot be decoded, we dump it as an array of bytes.
     consumeError(Cur.takeError());
     S->Content = yaml::BinaryRef(Content);
   } else {

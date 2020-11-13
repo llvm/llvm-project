@@ -106,6 +106,8 @@ VPValue *VPRecipeBase::toVPValue() {
     return V;
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
     return V;
+  if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
+    return V;
   return nullptr;
 }
 
@@ -113,6 +115,8 @@ const VPValue *VPRecipeBase::toVPValue() const {
   if (auto *V = dyn_cast<VPInstruction>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
     return V;
   return nullptr;
 }
@@ -213,11 +217,10 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
 
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
-  while (It != end() &&
-         (It->getVPRecipeID() == VPRecipeBase::VPWidenPHISC ||
-          It->getVPRecipeID() == VPRecipeBase::VPWidenIntOrFpInductionSC ||
-          It->getVPRecipeID() == VPRecipeBase::VPPredInstPHISC ||
-          It->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC))
+  while (It != end() && (isa<VPWidenPHIRecipe>(&*It) ||
+                         isa<VPWidenIntOrFpInductionRecipe>(&*It) ||
+                         isa<VPPredInstPHIRecipe>(&*It) ||
+                         isa<VPWidenCanonicalIVRecipe>(&*It)))
     It++;
   return It;
 }
@@ -823,7 +826,19 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, const Value *V) {
 
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-CALL " << VPlanIngredient(&Ingredient);
+  O << "\"WIDEN-CALL ";
+
+  auto *CI = cast<CallInst>(getUnderlyingInstr());
+  if (CI->getType()->isVoidTy())
+    O << "void ";
+  else {
+    printAsOperand(O, SlotTracker);
+    O << " = ";
+  }
+
+  O << "call @" << CI->getCalledFunction()->getName() << "(";
+  printOperands(O, SlotTracker);
+  O << ")";
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -913,16 +928,15 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN "
-    << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
+  O << "\"WIDEN ";
 
-  bool First = true;
-  for (VPValue *Op : operands()) {
-    if (!First)
-      O << ", ";
-    Op->printAsOperand(O, SlotTracker);
-    First = false;
+  if (!isStore()) {
+    printAsOperand(O, SlotTracker);
+    O << " = ";
   }
+  O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
+
+  printOperands(O, SlotTracker);
 }
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
@@ -987,6 +1001,16 @@ void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
     OS << "<badref>";
   else
     OS << "vp<%" << Tracker.getSlot(this) << ">";
+}
+
+void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
+  bool First = true;
+  for (VPValue *Op : operands()) {
+    if (!First)
+      O << ", ";
+    Op->printAsOperand(O, SlotTracker);
+    First = false;
+  }
 }
 
 void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,

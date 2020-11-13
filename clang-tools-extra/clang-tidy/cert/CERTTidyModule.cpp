@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
+#include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
@@ -109,6 +110,8 @@ public:
     // POS
     CheckFactories.registerCheck<bugprone::BadSignalToKillThreadCheck>(
         "cert-pos44-c");
+    // SIG
+    CheckFactories.registerCheck<bugprone::SignalHandlerCheck>("cert-sig30-c");
     // STR
     CheckFactories.registerCheck<bugprone::SignedCharMisuseCheck>(
         "cert-str34-c");

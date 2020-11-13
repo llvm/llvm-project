@@ -1361,7 +1361,8 @@ public:
                           ISD::MemIndexType IndexType);
   SDValue getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
                            ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
-                           ISD::MemIndexType IndexType);
+                           ISD::MemIndexType IndexType,
+                           bool IsTruncating = false);
 
   /// Construct a node to track a Value* through the backend.
   SDValue getSrcValue(const Value *v);
@@ -1999,6 +2000,10 @@ public:
   }
 
   bool shouldOptForSize() const;
+
+  /// Get the (commutative) neutral element for the given opcode, if it exists.
+  SDValue getNeutralElement(unsigned Opcode, const SDLoc &DL, EVT VT,
+                            SDNodeFlags Flags);
 
 private:
   void InsertNode(SDNode *N);

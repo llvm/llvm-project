@@ -170,7 +170,7 @@ static void generatePsEndPgm(MachineBasicBlock &MBB,
                              const SIInstrInfo *TII) {
   // Generate "null export; s_endpgm".
   BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
-      .addImm(0x09) // V_008DFC_SQ_EXP_NULL
+      .addImm(AMDGPU::Exp::ET_NULL)
       .addReg(AMDGPU::VGPR0, RegState::Undef)
       .addReg(AMDGPU::VGPR0, RegState::Undef)
       .addReg(AMDGPU::VGPR0, RegState::Undef)

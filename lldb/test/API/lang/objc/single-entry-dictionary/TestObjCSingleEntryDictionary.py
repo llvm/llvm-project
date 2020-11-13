@@ -21,7 +21,6 @@ class ObjCSingleEntryDictionaryTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// break here')
 
-    @skipUnlessDarwin
     @expectedFailureAll(oslist=['watchos'], bugnumber="rdar://problem/34642736") # bug in NSDictionary formatting on watchos
     def test_single_entry_dict(self):
         self.build()

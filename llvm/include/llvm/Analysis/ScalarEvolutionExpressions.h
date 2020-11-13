@@ -40,7 +40,7 @@ class Type;
     // folders simpler.
     scConstant, scTruncate, scZeroExtend, scSignExtend, scAddExpr, scMulExpr,
     scUDivExpr, scAddRecExpr, scUMaxExpr, scSMaxExpr, scUMinExpr, scSMinExpr,
-    scUnknown, scCouldNotCompute
+    scPtrToInt, scUnknown, scCouldNotCompute
   };
 
   /// This class represents a constant integer value.
@@ -72,13 +72,13 @@ class Type;
   }
 
   /// This is the base class for unary cast operator classes.
-  class SCEVIntegralCastExpr : public SCEV {
+  class SCEVCastExpr : public SCEV {
   protected:
     std::array<const SCEV *, 1> Operands;
     Type *Ty;
 
-    SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
-                         const SCEV *op, Type *ty);
+    SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy, const SCEV *op,
+                 Type *ty);
 
   public:
     const SCEV *getOperand() const { return Operands[0]; }
@@ -95,6 +95,35 @@ class Type;
     size_t getNumOperands() const { return 1; }
     Type *getType() const { return Ty; }
 
+    /// Methods for support type inquiry through isa, cast, and dyn_cast:
+    static bool classof(const SCEV *S) {
+      return S->getSCEVType() == scPtrToInt || S->getSCEVType() == scTruncate ||
+             S->getSCEVType() == scZeroExtend ||
+             S->getSCEVType() == scSignExtend;
+    }
+  };
+
+  /// This class represents a cast from a pointer to a pointer-sized integer
+  /// value.
+  class SCEVPtrToIntExpr : public SCEVCastExpr {
+    friend class ScalarEvolution;
+
+    SCEVPtrToIntExpr(const FoldingSetNodeIDRef ID, const SCEV *Op, Type *ITy);
+
+  public:
+    /// Methods for support type inquiry through isa, cast, and dyn_cast:
+    static bool classof(const SCEV *S) {
+      return S->getSCEVType() == scPtrToInt;
+    }
+  };
+
+  /// This is the base class for unary integral cast operator classes.
+  class SCEVIntegralCastExpr : public SCEVCastExpr {
+  protected:
+    SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
+                         const SCEV *op, Type *ty);
+
+  public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {
       return S->getSCEVType() == scTruncate ||
@@ -541,6 +570,8 @@ class Type;
       switch (S->getSCEVType()) {
       case scConstant:
         return ((SC*)this)->visitConstant((const SCEVConstant*)S);
+      case scPtrToInt:
+        return ((SC *)this)->visitPtrToIntExpr((const SCEVPtrToIntExpr *)S);
       case scTruncate:
         return ((SC*)this)->visitTruncateExpr((const SCEVTruncateExpr*)S);
       case scZeroExtend:
@@ -606,10 +637,11 @@ class Type;
         case scConstant:
         case scUnknown:
           continue;
+        case scPtrToInt:
         case scTruncate:
         case scZeroExtend:
         case scSignExtend:
-          push(cast<SCEVIntegralCastExpr>(S)->getOperand());
+          push(cast<SCEVCastExpr>(S)->getOperand());
           continue;
         case scAddExpr:
         case scMulExpr:
@@ -696,6 +728,13 @@ class Type;
 
     const SCEV *visitConstant(const SCEVConstant *Constant) {
       return Constant;
+    }
+
+    const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
+      const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+      return Operand == Expr->getOperand()
+                 ? Expr
+                 : SE.getPtrToIntExpr(Operand, Expr->getType());
     }
 
     const SCEV *visitTruncateExpr(const SCEVTruncateExpr *Expr) {

@@ -440,6 +440,13 @@ public:
     return false;
   }
 
+  WebAssembly::HeapType parseHeapType(StringRef Id) {
+    return StringSwitch<WebAssembly::HeapType>(Id)
+        .Case("extern", WebAssembly::HeapType::Externref)
+        .Case("func", WebAssembly::HeapType::Funcref)
+        .Default(WebAssembly::HeapType::Invalid);
+  }
+
   void addBlockTypeOperand(OperandVector &Operands, SMLoc NameLoc,
                            WebAssembly::BlockType BT) {
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
@@ -482,6 +489,7 @@ public:
     // proper nesting.
     bool ExpectBlockType = false;
     bool ExpectFuncType = false;
+    bool ExpectHeapType = false;
     if (Name == "block") {
       push(Block);
       ExpectBlockType = true;
@@ -521,6 +529,8 @@ public:
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
       ExpectFuncType = true;
+    } else if (Name == "ref.null") {
+      ExpectHeapType = true;
     }
 
     if (ExpectFuncType || (ExpectBlockType && Lexer.is(AsmToken::LParen))) {
@@ -561,6 +571,15 @@ public:
           if (BT == WebAssembly::BlockType::Invalid)
             return error("Unknown block type: ", Id);
           addBlockTypeOperand(Operands, NameLoc, BT);
+          Parser.Lex();
+        } else if (ExpectHeapType) {
+          auto HeapType = parseHeapType(Id.getString());
+          if (HeapType == WebAssembly::HeapType::Invalid) {
+            return error("Expected a heap type: ", Id);
+          }
+          Operands.push_back(std::make_unique<WebAssemblyOperand>(
+              WebAssemblyOperand::Integer, Id.getLoc(), Id.getEndLoc(),
+              WebAssemblyOperand::IntOp{static_cast<int64_t>(HeapType)}));
           Parser.Lex();
         } else {
           // Assume this identifier is a label.

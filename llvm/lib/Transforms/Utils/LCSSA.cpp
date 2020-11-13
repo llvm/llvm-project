@@ -111,6 +111,10 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     for (Use &U : I->uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
+
+      // For practical purposes, we consider that the use in a PHI
+      // occurs in the respective predecessor block. For more info,
+      // see the `phi` doc in LangRef and the LCSSA doc.
       if (auto *PN = dyn_cast<PHINode>(User))
         UserBB = PN->getIncomingBlock(U);
 
@@ -160,7 +164,12 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                       I->getName() + ".lcssa");
       // Get the debug location from the original instruction.
       PN->setDebugLoc(I->getDebugLoc());
-      // Add inputs from inside the loop for this PHI.
+
+      // Add inputs from inside the loop for this PHI. This is valid
+      // because `I` dominates `ExitBB` (checked above).  This implies
+      // that every incoming block/edge is dominated by `I` as well,
+      // i.e. we can add uses of `I` to those incoming edges/append to the incoming
+      // blocks without violating the SSA dominance property.
       for (BasicBlock *Pred : PredCache.get(ExitBB)) {
         PN->addIncoming(I, Pred);
 
@@ -194,15 +203,19 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     // Rewrite all uses outside the loop in terms of the new PHIs we just
     // inserted.
     for (Use *UseToRewrite : UsesToRewrite) {
+      Instruction *User = cast<Instruction>(UseToRewrite->getUser());
+      BasicBlock *UserBB = User->getParent();
+
+      // For practical purposes, we consider that the use in a PHI
+      // occurs in the respective predecessor block. For more info,
+      // see the `phi` doc in LangRef and the LCSSA doc.
+      if (auto *PN = dyn_cast<PHINode>(User))
+        UserBB = PN->getIncomingBlock(*UseToRewrite);
+
       // If this use is in an exit block, rewrite to use the newly inserted PHI.
       // This is required for correctness because SSAUpdate doesn't handle uses
       // in the same block.  It assumes the PHI we inserted is at the end of the
       // block.
-      Instruction *User = cast<Instruction>(UseToRewrite->getUser());
-      BasicBlock *UserBB = User->getParent();
-      if (auto *PN = dyn_cast<PHINode>(User))
-        UserBB = PN->getIncomingBlock(*UseToRewrite);
-
       if (isa<PHINode>(UserBB->begin()) && isExitBlock(UserBB, ExitBlocks)) {
         UseToRewrite->set(&UserBB->front());
         continue;

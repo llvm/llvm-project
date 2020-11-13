@@ -9,7 +9,7 @@
 #define HEADER
 
 // Check for the data transfer medium in shared memory to transfer the reduction list to the first warp.
-// CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = common addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
+// CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = weak addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
 
 // Check that the execution mode of all 3 target regions is set to Spmd Mode.
 // CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak constant i8 0

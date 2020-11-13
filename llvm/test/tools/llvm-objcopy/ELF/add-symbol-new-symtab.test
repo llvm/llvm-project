@@ -18,6 +18,12 @@
 # CHECK-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
 # CHECK-NEXT:     1: 00000000000004d2     0 NOTYPE  GLOBAL DEFAULT   ABS newsym
 
+## --set-section-flags works for newly created .symtab, which GNU objcopy does not do.
+# RUN: llvm-objcopy -R .symtab --add-symbol newsym=1234 --set-section-flags .symtab=readonly,exclude %t %t3
+# RUN: llvm-readelf -S %t3 | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:     [ 4] .symtab   SYMTAB   0000000000000000 {{.+}} 000030 18  E   3  1   8
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -59,10 +60,18 @@ private:
 
 class OptNoneInstrumentation {
 public:
+  OptNoneInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
-  bool skip(StringRef PassID, Any IR);
+  bool DebugLogging;
+  bool shouldRun(StringRef PassID, Any IR);
+};
+
+class OptBisectInstrumentation : public OptBisect {
+public:
+  OptBisectInstrumentation() {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
 // Debug logging for transformation and analysis passes.
@@ -228,6 +237,7 @@ class StandardInstrumentations {
   PrintPassInstrumentation PrintPass;
   TimePassesHandler TimePasses;
   OptNoneInstrumentation OptNone;
+  OptBisectInstrumentation OptBisect;
   PreservedCFGCheckerInstrumentation PreservedCFGChecker;
   IRChangePrinter PrintChangedIR;
   VerifyInstrumentation Verify;
@@ -236,7 +246,8 @@ class StandardInstrumentations {
 
 public:
   StandardInstrumentations(bool DebugLogging, bool VerifyEach = false)
-      : PrintPass(DebugLogging), Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      : PrintPass(DebugLogging), OptNone(DebugLogging), Verify(DebugLogging),
+        VerifyEach(VerifyEach) {}
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 

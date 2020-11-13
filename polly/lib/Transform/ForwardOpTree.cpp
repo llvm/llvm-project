@@ -166,11 +166,14 @@ struct ForwardingAction {
   }
 
   /// Named ctor: The value can just be used without any preparation.
-  static ForwardingAction triviallyForwardable(bool IsProfitable) {
+  static ForwardingAction triviallyForwardable(bool IsProfitable, Value *Val) {
     ForwardingAction Result;
     Result.Decision =
         IsProfitable ? FD_CanForwardProfitably : FD_CanForwardLeaf;
-    Result.Execute = []() { return true; };
+    Result.Execute = [=]() {
+      LLVM_DEBUG(dbgs() << "    trivially forwarded: " << *Val << "\n");
+      return true;
+    };
     return Result;
   }
 
@@ -487,6 +490,7 @@ public:
         LLVM_DEBUG(
             dbgs() << "    forwarded known load with preexisting MemoryAccess"
                    << Access << "\n");
+        (void)Access;
 
         NumKnownLoadsForwarded++;
         TotalKnownLoadsForwarded++;
@@ -574,6 +578,7 @@ public:
       MemoryAccess *Access = makeReadArrayAccess(TargetStmt, LI, SameVal);
       LLVM_DEBUG(dbgs() << "    forwarded known load with new MemoryAccess"
                         << Access << "\n");
+      (void)Access;
 
       if (LocalTranslator)
         Translator = Translator.add_map(LocalTranslator);
@@ -635,6 +640,8 @@ public:
         Access = TargetStmt->ensureValueRead(Inst);
       Access->setNewAccessRelation(SameVal);
 
+      LLVM_DEBUG(dbgs() << "    forwarded known content of " << *Inst
+                        << " which is " << SameVal << "\n");
       TotalReloads++;
       NumReloads++;
       return false;
@@ -701,6 +708,9 @@ public:
       // operands. This ensures that its operands are inserted before the
       // instruction using them.
       TargetStmt->prependInstruction(UseInst);
+
+      LLVM_DEBUG(dbgs() << "    forwarded speculable instruction: " << *UseInst
+                        << "\n");
       NumInstructionsCopied++;
       TotalInstructionsCopied++;
       return true;
@@ -734,7 +744,7 @@ public:
     case VirtualUse::Block:
     case VirtualUse::Hoisted:
       // These can be used anywhere without special considerations.
-      return ForwardingAction::triviallyForwardable(false);
+      return ForwardingAction::triviallyForwardable(false, UseVal);
 
     case VirtualUse::Synthesizable: {
       // Check if the value is synthesizable at the new location as well. This
@@ -750,7 +760,7 @@ public:
       VirtualUse TargetUse = VirtualUse::create(
           S, TargetStmt, TargetStmt->getSurroundingLoop(), UseVal, true);
       if (TargetUse.getKind() == VirtualUse::Synthesizable)
-        return ForwardingAction::triviallyForwardable(false);
+        return ForwardingAction::triviallyForwardable(false, UseVal);
 
       LLVM_DEBUG(
           dbgs() << "    Synthesizable would not be synthesizable anymore: "
@@ -759,11 +769,15 @@ public:
     }
 
     case VirtualUse::ReadOnly: {
+      if (!ModelReadOnlyScalars)
+        return ForwardingAction::triviallyForwardable(false, UseVal);
+
       // If we model read-only scalars, we need to create a MemoryAccess for it.
       auto ExecAction = [this, TargetStmt, UseVal]() {
-        if (ModelReadOnlyScalars)
-          TargetStmt->ensureValueRead(UseVal);
+        TargetStmt->ensureValueRead(UseVal);
 
+        LLVM_DEBUG(dbgs() << "    forwarded read-only value " << *UseVal
+                          << "\n");
         NumReadOnlyCopied++;
         TotalReadOnlyCopied++;
 
@@ -965,17 +979,14 @@ public:
 
       // Because we are modifying the MemoryAccess list, collect them first to
       // avoid iterator invalidation.
-      SmallVector<MemoryAccess *, 16> Accs;
-      for (MemoryAccess *RA : Stmt) {
+      SmallVector<MemoryAccess *, 16> Accs(Stmt.begin(), Stmt.end());
+
+      for (MemoryAccess *RA : Accs) {
         if (!RA->isRead())
           continue;
         if (!RA->isLatestScalarKind())
           continue;
 
-        Accs.push_back(RA);
-      }
-
-      for (MemoryAccess *RA : Accs) {
         if (tryForwardTree(RA)) {
           Modified = true;
           StmtModified = true;

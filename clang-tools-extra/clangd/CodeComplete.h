@@ -154,14 +154,21 @@ struct CodeCompleteOptions {
     DecisionForest,
   } RankingModel = Heuristics;
 
+  /// Callback used to score a CompletionCandidate if DecisionForest ranking
+  /// model is enabled.
+  /// This allows us to inject experimental models and compare them with
+  /// baseline model using A/B testing.
+  std::function<DecisionForestScores(
+      const SymbolQualitySignals &, const SymbolRelevanceSignals &, float Base)>
+      DecisionForestScorer = &evaluateDecisionForest;
   /// Weight for combining NameMatch and Prediction of DecisionForest.
   /// CompletionScore is NameMatch * pow(Base, Prediction).
   /// The optimal value of Base largely depends on the semantics of the model
   /// and prediction score (e.g. algorithm used during training, number of
   /// trees, etc.). Usually if the range of Prediciton is [-20, 20] then a Base
   /// in [1.2, 1.7] works fine.
-  /// Semantics: E.g. the completion score reduces by 50% if the Prediciton
-  /// score is reduced by 2.6 points for Base = 1.3.
+  /// Semantics: E.g. For Base = 1.3, if the Prediciton score reduces by 2.6
+  /// points then completion score reduces by 50% or 1.3^(-2.6).
   float DecisionForestBase = 1.3f;
 };
 

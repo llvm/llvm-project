@@ -23,8 +23,19 @@ class SBBreakpointCallbackCase(TestBase):
         self.generateSource('test_listener_event_description.cpp')
         self.generateSource('test_listener_event_process_state.cpp')
         self.generateSource('test_listener_resume.cpp')
+        self.generateSource('test_stop-hook.cpp')
 
     mydir = TestBase.compute_mydir(__file__)
+
+    @skipIfRemote
+    @skipIfNoSBHeaders
+    # clang-cl does not support throw or catch (llvm.org/pr24538)
+    @skipIfWindows
+    @expectedFailureAll(oslist=['freebsd'])
+    def test_python_stop_hook(self):
+        """Test that you can run a python command in a stop-hook when stdin is File based. """
+        self.build_and_test('driver.cpp test_stop-hook.cpp',
+                            'test_python_stop_hook')
 
     @skipIfRemote
     @skipIfNoSBHeaders

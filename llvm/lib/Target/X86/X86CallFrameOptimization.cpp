@@ -105,7 +105,7 @@ private:
   void adjustCallSequence(MachineFunction &MF, const CallContext &Context);
 
   MachineInstr *canFoldIntoRegPush(MachineBasicBlock::iterator FrameSetup,
-                                   unsigned Reg);
+                                   Register Reg);
 
   enum InstClassification { Convert, Skip, Exit };
 
@@ -336,7 +336,7 @@ X86CallFrameOptimization::classifyInstruction(
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isPhysicalRegister(Reg))
+    if (!Reg.isPhysical())
       continue;
     if (RegInfo.regsOverlap(Reg, RegInfo.getStackRegister()))
       return Exit;
@@ -454,7 +454,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       if (!MO.isReg())
         continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg))
+      if (Reg.isPhysical())
         UsedRegs.insert(Reg);
     }
   }
@@ -563,8 +563,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
           Push->addOperand(DefMov->getOperand(i));
-        Push->cloneMergedMemRefs(MF, {&*DefMov, &*Store});
-
+        Push->cloneMergedMemRefs(MF, {DefMov, &*Store});
         DefMov->eraseFromParent();
       } else {
         PushOpcode = Is64Bit ? X86::PUSH64r : X86::PUSH32r;
@@ -600,7 +599,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 }
 
 MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
-    MachineBasicBlock::iterator FrameSetup, unsigned Reg) {
+    MachineBasicBlock::iterator FrameSetup, Register Reg) {
   // Do an extremely restricted form of load folding.
   // ISel will often create patterns like:
   // movl    4(%edi), %eax
@@ -611,7 +610,7 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
   // movl    %eax, (%esp)
   // call
   // Get rid of those with prejudice.
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return nullptr;
 
   // Make sure this is the only use of Reg.

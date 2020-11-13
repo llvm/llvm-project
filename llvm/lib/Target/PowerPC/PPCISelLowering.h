@@ -265,11 +265,11 @@ namespace llvm {
     /// is VCMPGTSH.
     VCMP,
 
-    /// RESVEC, OUTFLAG = VCMPo(LHS, RHS, OPC) - Represents one of the
-    /// altivec VCMP*o instructions.  For lack of better number, we use the
+    /// RESVEC, OUTFLAG = VCMP_rec(LHS, RHS, OPC) - Represents one of the
+    /// altivec VCMP*_rec instructions.  For lack of better number, we use the
     /// opcode number encoding for the OPC field to identify the compare.  For
     /// example, 838 is VCMPGTSH.
-    VCMPo,
+    VCMP_rec,
 
     /// CHAIN = COND_BRANCH CHAIN, CRRC, OPC, DESTBB [, INFLAG] - This
     /// corresponds to the COND_BRANCH pseudo instruction.  CRRC is the

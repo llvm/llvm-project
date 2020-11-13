@@ -694,13 +694,13 @@ static void setInterTileBoundsParametric(OpBuilder &b, AffineForOp origLoop,
                                          AffineForOp newLoop, Value tileSize) {
   OperandRange newLbOperands = origLoop.getLowerBoundOperands();
 
-  // The lower bounds for inter-tile loops are same as the correspondig lower
+  // The lower bounds for inter-tile loops are same as the corresponding lower
   // bounds of original loops.
   newLoop.setLowerBound(newLbOperands, origLoop.getLowerBoundMap());
 
   // The new upper bound map for inter-tile loops, assuming constant lower
-  // bounds, are now originalLowerBound + ceildiv((orignalUpperBound -
-  // originalLowerBound), tiling paramter); where tiling parameter is the
+  // bounds, are now originalLowerBound + ceildiv((originalUpperBound -
+  // originalLowerBound), tiling parameter); where tiling parameter is the
   // respective tile size for that loop. For e.g. if the original ubmap was
   // ()->(1024), the new map will be
   // ()[s0]->(ceildiv((1024 -lb) % s0)), where s0 is the tiling parameter.
@@ -757,7 +757,7 @@ static void setInterTileBoundsParametric(OpBuilder &b, AffineForOp origLoop,
     // ubmap has only one result expression. For e.g.
     //    affine.for %i = 5 to %ub
     //
-    // A symbol operand is added which represents the tiling paramater. The
+    // A symbol operand is added which represents the tiling parameter. The
     // new loop bounds here will be like ()[s0, s1] -> ((s0 - 5) ceildiv s1 + 5)
     // where 's0' is the original upper bound and 's1' is the tiling
     // parameter. 2.) When ubMap has more than one result expression. For e.g.

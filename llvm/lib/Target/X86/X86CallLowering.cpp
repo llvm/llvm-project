@@ -134,9 +134,10 @@ struct X86OutgoingValueHandler : public CallLowering::IncomingValueHandler {
     unsigned ValSize = VA.getValVT().getSizeInBits();
     unsigned LocSize = VA.getLocVT().getSizeInBits();
     if (PhysRegSize > ValSize && LocSize == ValSize) {
-      assert((PhysRegSize == 128 || PhysRegSize == 80)  && "We expect that to be 128 bit");
-      auto MIB = MIRBuilder.buildAnyExt(LLT::scalar(PhysRegSize), ValVReg);
-      ExtReg = MIB.getReg(0);
+      assert((PhysRegSize == 128 || PhysRegSize == 80) &&
+             "We expect that to be 128 bit");
+      ExtReg =
+          MIRBuilder.buildAnyExt(LLT::scalar(PhysRegSize), ValVReg).getReg(0);
     } else
       ExtReg = extendRegister(ValVReg, VA);
 

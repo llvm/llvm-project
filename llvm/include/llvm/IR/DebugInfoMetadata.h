@@ -201,6 +201,7 @@ public:
     case DIObjCPropertyKind:
     case DIImportedEntityKind:
     case DIModuleKind:
+    case DIGenericSubrangeKind:
       return true;
     }
   }
@@ -348,6 +349,52 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubrangeKind;
+  }
+};
+
+class DIGenericSubrange : public DINode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DIGenericSubrange(LLVMContext &C, StorageType Storage,
+                    ArrayRef<Metadata *> Ops)
+      : DINode(C, DIGenericSubrangeKind, Storage,
+               dwarf::DW_TAG_generic_subrange, Ops) {}
+
+  ~DIGenericSubrange() = default;
+
+  static DIGenericSubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
+                                    Metadata *LowerBound, Metadata *UpperBound,
+                                    Metadata *Stride, StorageType Storage,
+                                    bool ShouldCreate = true);
+
+  TempDIGenericSubrange cloneImpl() const {
+    return getTemporary(getContext(), getRawCountNode(), getRawLowerBound(),
+                        getRawUpperBound(), getRawStride());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIGenericSubrange,
+                    (Metadata * CountNode, Metadata *LowerBound,
+                     Metadata *UpperBound, Metadata *Stride),
+                    (CountNode, LowerBound, UpperBound, Stride))
+
+  TempDIGenericSubrange clone() const { return cloneImpl(); }
+
+  Metadata *getRawCountNode() const { return getOperand(0).get(); }
+  Metadata *getRawLowerBound() const { return getOperand(1).get(); }
+  Metadata *getRawUpperBound() const { return getOperand(2).get(); }
+  Metadata *getRawStride() const { return getOperand(3).get(); }
+
+  using BoundType = PointerUnion<DIVariable *, DIExpression *>;
+
+  BoundType getCount() const;
+  BoundType getLowerBound() const;
+  BoundType getUpperBound() const;
+  BoundType getStride() const;
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIGenericSubrangeKind;
   }
 };
 
@@ -2523,6 +2570,9 @@ public:
 
   /// Determine whether this represents a standalone constant value.
   bool isConstant() const;
+
+  /// Determine whether this represents a standalone signed constant value.
+  bool isSignedConstant() const;
 
   using element_iterator = ArrayRef<uint64_t>::iterator;
 

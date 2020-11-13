@@ -20,7 +20,6 @@ using namespace mlir;
 #define DEBUG_TYPE "test-affine-parametric-tile"
 
 namespace {
-
 struct TestAffineLoopParametricTiling
     : public PassWrapper<TestAffineLoopParametricTiling, FunctionPass> {
   void runOnFunction() override;
@@ -82,9 +81,11 @@ void TestAffineLoopParametricTiling::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestAffineLoopParametricTilingPass() {
   PassRegistration<TestAffineLoopParametricTiling>(
       "test-affine-parametric-tile",
       "Tile affine loops using SSA values as tile sizes");
 }
+} // namespace test
 } // namespace mlir

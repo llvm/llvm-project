@@ -423,7 +423,7 @@ func @fold_empty_loop() {
 
 // -----
 
-// CHECK-DAG: [[$SET:#set[0-9]+]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
+// CHECK-DAG: [[$SET:#set[0-9]*]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
 
 // CHECK-LABEL: func @canonicalize_affine_if
 // CHECK-SAME: [[M:%.*]]: index,
@@ -476,8 +476,6 @@ func @canonicalize_bounds(%M : index, %N : index) {
 // -----
 
 // Compose maps into affine load and store ops.
-
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0) -> (d0 + 1)>
 
 // CHECK-LABEL: @compose_into_affine_load_store
 func @compose_into_affine_load_store(%A : memref<1024xf32>, %u : index) {
@@ -594,7 +592,7 @@ func @rep(%arg0 : index, %arg1 : index) -> index {
 }
 
 // -----
-// CHECK-DAG: #[[lb:.*]] = affine_map<()[s0] -> (s0)>
+
 // CHECK-DAG: #[[ub:.*]] = affine_map<()[s0] -> (s0 + 2)>
 
 func @drop_duplicate_bounds(%N : index) {

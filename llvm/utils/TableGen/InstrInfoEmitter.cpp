@@ -280,7 +280,7 @@ void InstrInfoEmitter::emitOperandNameMappings(raw_ostream &OS,
   for (const auto &Op : Operands)
     OS << "  " << Op.first << " = " << Op.second << ",\n";
 
-  OS << "OPERAND_LAST";
+  OS << "  OPERAND_LAST";
   OS << "\n};\n";
   OS << "} // end namespace OpName\n";
   OS << "} // end namespace " << Namespace << "\n";
@@ -316,7 +316,7 @@ void InstrInfoEmitter::emitOperandNameMappings(raw_ostream &OS,
 
       OS << "    return OperandMap[" << TableIndex++ << "][NamedIdx];\n";
     }
-    OS << "    default: return -1;\n";
+    OS << "  default: return -1;\n";
     OS << "  }\n";
   } else {
     // There are no operands, so no need to emit anything

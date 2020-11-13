@@ -22,13 +22,13 @@
 # WARN1-GNU-NEXT:   0x0000000000000000 (NULL) 0x0
 
 ## Case A.2: in this case we drop section headers. The dynamic table is not dumped.
-# RUN: yaml2obj %s -DFILESIZE=0x119 -DNOHEADERS=true -o %t1.noheaders
+# RUN: yaml2obj %s -DFILESIZE=0x12 -DNOHEADERS=true -o %t1.noheaders
 # RUN: llvm-readobj %t1.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t1.noheaders %s \
 # RUN:   --check-prefix=WARN1-NOHEADERS --implicit-check-not="DynamicSection ["
 # RUN: llvm-readelf %t1.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t1.noheaders %s \
 # RUN:   --check-prefix=WARN1-NOHEADERS --implicit-check-not="Dynamic section"
 
-# WARN1-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x119) exceeds the size of the file (0x1118)
+# WARN1-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x12) exceeds the size of the file (0x1011)
 
 ## Case B: Test case where the offset of the PT_DYNAMIC header is too large to be in the file.
 
@@ -45,13 +45,13 @@
 # WARN2: warning: '[[FILE]]': no valid dynamic table was found
 
 ## Case B.2: in this case we drop section headers. The dynamic table is not dumped.
-# RUN: yaml2obj %s -DOFFSET=0x1119 -DNOHEADERS=true -o %t2.noheaders
+# RUN: yaml2obj %s -DOFFSET=0x1112 -DNOHEADERS=true -o %t2.noheaders
 # RUN: llvm-readobj %t2.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t2.noheaders %s \
 # RUN:   --check-prefix=WARN2-NOHEADERS --implicit-check-not="DynamicSection ["
 # RUN: llvm-readelf %t2.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t2.noheaders %s \
 # RUN:   --check-prefix=WARN2-NOHEADERS --implicit-check-not="Dynamic section"
 
-# WARN2-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1119) + file size (0x10) exceeds the size of the file (0x1118)
+# WARN2-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1112) + file size (0x10) exceeds the size of the file (0x1011)
 
 ## Case C: test we report a warning when the offset + the file size of the PT_DYNAMIC is so large a
 ##         value that it overflows the platform address size type. Check we also report a warning about
@@ -73,7 +73,7 @@
 # RUN: llvm-readelf %t3.noheaders --dynamic-table 2>&1 | \
 # RUN:   FileCheck -DFILE=%t3.noheaders %s --check-prefix=WARN3-NOHEADERS
 
-# WARN3-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1118)
+# WARN3-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1011)
 
 # RUN: yaml2obj %s -DFILESIZE=0xffffffffffffffff -o %t4
 # RUN: llvm-readobj %t4 --dynamic-table 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=WARN4
@@ -87,7 +87,7 @@
 # RUN: llvm-readelf %t4.noheaders --dynamic-table 2>&1 | \
 # RUN:   FileCheck -DFILE=%t4.noheaders %s --check-prefix=WARN4-NOHEADERS
 
-# WARN4-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffffffffffff) exceeds the size of the file (0x1118)
+# WARN4-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffffffffffff) exceeds the size of the file (0x1011)
 
 ## Case D: the same as "Case C", but for a 32-bit object.
 
@@ -107,7 +107,7 @@
 # RUN: llvm-readelf %t5.noheaders --dynamic-table 2>&1 | \
 # RUN:   FileCheck -DFILE=%t5.noheaders %s --check-prefix=WARN5-NOHEADERS
 
-# WARN5-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x10ac)
+# WARN5-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x1009)
 
 # RUN: yaml2obj %s -DBITS=32 -DFILESIZE=0xffffffff -o %t6
 # RUN: llvm-readobj %t6 --dynamic-table 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=WARN6
@@ -121,7 +121,7 @@
 # RUN: llvm-readelf %t6.noheaders --dynamic-table 2>&1 | \
 # RUN:   FileCheck -DFILE=%t6.noheaders %s --check-prefix=WARN6-NOHEADERS
 
-# WARN6-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffff) exceeds the size of the file (0x10ac)
+# WARN6-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffff) exceeds the size of the file (0x1009)
 
 --- !ELF
 FileHeader:
@@ -140,7 +140,7 @@ Sections:
 ProgramHeaders:
   - Type:     PT_DYNAMIC
     FileSize: [[FILESIZE=<none>]]
-    Sections:
-      - Section: .dynamic
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 SectionHeaderTable:
   NoHeaders: [[NOHEADERS=false]]

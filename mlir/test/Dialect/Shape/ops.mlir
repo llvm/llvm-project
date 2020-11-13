@@ -260,3 +260,17 @@ func @any_on_extent_tensors(%a : tensor<?xindex>,
       : tensor<?xindex>, tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
+
+func @is_broadcastable_on_extent_tensors(%a : tensor<?xindex>,
+                                         %b : tensor<?xindex>) -> i1 {
+  %result = shape.is_broadcastable %a, %b
+      : tensor<?xindex>, tensor<?xindex>
+  return %result : i1
+}
+
+func @is_broadcastable_on_shapes(%a : !shape.shape,
+                                 %b : !shape.shape) -> i1 {
+  %result = shape.is_broadcastable %a, %b
+      : !shape.shape, !shape.shape
+  return %result : i1
+}

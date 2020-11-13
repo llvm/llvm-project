@@ -42,8 +42,8 @@ struct test
     typedef typename base::container_type container_type;
 
     explicit test(const allocator_type& a) : base(a) {}
-    test(const container_type& c, const allocator_type& a) : base(c, a) {}
-    test(container_type&& c, const allocator_type& a) : base(std::move(c), a) {}
+    test(const container_type& container, const allocator_type& a) : base(container, a) {}
+    test(container_type&& container, const allocator_type& a) : base(std::move(container), a) {}
     test(test&& q, const allocator_type& a) : base(std::move(q), a) {}
     allocator_type get_allocator() {return this->c.get_allocator();}
 };

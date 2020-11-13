@@ -558,72 +558,74 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
              dbgs() << "\n");
   SDValue Res = SDValue();
 
-  if (!Res.getNode()) {
-    switch (N->getOpcode()) {
-    default:
+  switch (N->getOpcode()) {
+  default:
 #ifndef NDEBUG
-      dbgs() << "ScalarizeVectorOperand Op #" << OpNo << ": ";
-      N->dump(&DAG);
-      dbgs() << "\n";
+    dbgs() << "ScalarizeVectorOperand Op #" << OpNo << ": ";
+    N->dump(&DAG);
+    dbgs() << "\n";
 #endif
-      report_fatal_error("Do not know how to scalarize this operator's "
-                         "operand!\n");
-    case ISD::BITCAST:
-      Res = ScalarizeVecOp_BITCAST(N);
-      break;
-    case ISD::ANY_EXTEND:
-    case ISD::ZERO_EXTEND:
-    case ISD::SIGN_EXTEND:
-    case ISD::TRUNCATE:
-    case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT:
-    case ISD::SINT_TO_FP:
-    case ISD::UINT_TO_FP:
-      Res = ScalarizeVecOp_UnaryOp(N);
-      break;
-    case ISD::STRICT_SINT_TO_FP:
-    case ISD::STRICT_UINT_TO_FP:
-    case ISD::STRICT_FP_TO_SINT:
-    case ISD::STRICT_FP_TO_UINT:
-      Res = ScalarizeVecOp_UnaryOp_StrictFP(N);
-      break;
-    case ISD::CONCAT_VECTORS:
-      Res = ScalarizeVecOp_CONCAT_VECTORS(N);
-      break;
-    case ISD::EXTRACT_VECTOR_ELT:
-      Res = ScalarizeVecOp_EXTRACT_VECTOR_ELT(N);
-      break;
-    case ISD::VSELECT:
-      Res = ScalarizeVecOp_VSELECT(N);
-      break;
-    case ISD::SETCC:
-      Res = ScalarizeVecOp_VSETCC(N);
-      break;
-    case ISD::STORE:
-      Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
-      break;
-    case ISD::STRICT_FP_ROUND:
-      Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
-      break;
-    case ISD::FP_ROUND:
-      Res = ScalarizeVecOp_FP_ROUND(N, OpNo);
-      break;
-    case ISD::VECREDUCE_FADD:
-    case ISD::VECREDUCE_FMUL:
-    case ISD::VECREDUCE_ADD:
-    case ISD::VECREDUCE_MUL:
-    case ISD::VECREDUCE_AND:
-    case ISD::VECREDUCE_OR:
-    case ISD::VECREDUCE_XOR:
-    case ISD::VECREDUCE_SMAX:
-    case ISD::VECREDUCE_SMIN:
-    case ISD::VECREDUCE_UMAX:
-    case ISD::VECREDUCE_UMIN:
-    case ISD::VECREDUCE_FMAX:
-    case ISD::VECREDUCE_FMIN:
-      Res = ScalarizeVecOp_VECREDUCE(N);
-      break;
-    }
+    report_fatal_error("Do not know how to scalarize this operator's "
+                       "operand!\n");
+  case ISD::BITCAST:
+    Res = ScalarizeVecOp_BITCAST(N);
+    break;
+  case ISD::ANY_EXTEND:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::TRUNCATE:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    Res = ScalarizeVecOp_UnaryOp(N);
+    break;
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+    Res = ScalarizeVecOp_UnaryOp_StrictFP(N);
+    break;
+  case ISD::CONCAT_VECTORS:
+    Res = ScalarizeVecOp_CONCAT_VECTORS(N);
+    break;
+  case ISD::EXTRACT_VECTOR_ELT:
+    Res = ScalarizeVecOp_EXTRACT_VECTOR_ELT(N);
+    break;
+  case ISD::VSELECT:
+    Res = ScalarizeVecOp_VSELECT(N);
+    break;
+  case ISD::SETCC:
+    Res = ScalarizeVecOp_VSETCC(N);
+    break;
+  case ISD::STORE:
+    Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
+    break;
+  case ISD::STRICT_FP_ROUND:
+    Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
+    break;
+  case ISD::FP_ROUND:
+    Res = ScalarizeVecOp_FP_ROUND(N, OpNo);
+    break;
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    Res = ScalarizeVecOp_VECREDUCE(N);
+    break;
+  case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
+    Res = ScalarizeVecOp_VECREDUCE_SEQ(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -801,6 +803,17 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE(SDNode *N) {
   if (Res.getValueType() != N->getValueType(0))
     Res = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), N->getValueType(0), Res);
   return Res;
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N) {
+  SDValue AccOp = N->getOperand(0);
+  SDValue VecOp = N->getOperand(1);
+
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(N->getOpcode());
+
+  SDValue Op = GetScalarizedVector(VecOp);
+  return DAG.getNode(BaseOpc, SDLoc(N), N->getValueType(0),
+                     AccOp, Op, N->getFlags());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1994,88 +2007,90 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))
     return false;
 
-  if (!Res.getNode()) {
-    switch (N->getOpcode()) {
-    default:
+  switch (N->getOpcode()) {
+  default:
 #ifndef NDEBUG
-      dbgs() << "SplitVectorOperand Op #" << OpNo << ": ";
-      N->dump(&DAG);
-      dbgs() << "\n";
+    dbgs() << "SplitVectorOperand Op #" << OpNo << ": ";
+    N->dump(&DAG);
+    dbgs() << "\n";
 #endif
-      report_fatal_error("Do not know how to split this operator's "
-                         "operand!\n");
+    report_fatal_error("Do not know how to split this operator's "
+                       "operand!\n");
 
-    case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
-    case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
-    case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
-    case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
-    case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
-    case ISD::TRUNCATE:
+  case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
+  case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
+  case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
+  case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
+  case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
+  case ISD::TRUNCATE:
+    Res = SplitVecOp_TruncateHelper(N);
+    break;
+  case ISD::STRICT_FP_ROUND:
+  case ISD::FP_ROUND:          Res = SplitVecOp_FP_ROUND(N); break;
+  case ISD::FCOPYSIGN:         Res = SplitVecOp_FCOPYSIGN(N); break;
+  case ISD::STORE:
+    Res = SplitVecOp_STORE(cast<StoreSDNode>(N), OpNo);
+    break;
+  case ISD::MSTORE:
+    Res = SplitVecOp_MSTORE(cast<MaskedStoreSDNode>(N), OpNo);
+    break;
+  case ISD::MSCATTER:
+    Res = SplitVecOp_MSCATTER(cast<MaskedScatterSDNode>(N), OpNo);
+    break;
+  case ISD::MGATHER:
+    Res = SplitVecOp_MGATHER(cast<MaskedGatherSDNode>(N), OpNo);
+    break;
+  case ISD::VSELECT:
+    Res = SplitVecOp_VSELECT(N, OpNo);
+    break;
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    if (N->getValueType(0).bitsLT(
+            N->getOperand(N->isStrictFPOpcode() ? 1 : 0).getValueType()))
       Res = SplitVecOp_TruncateHelper(N);
-      break;
-    case ISD::STRICT_FP_ROUND:
-    case ISD::FP_ROUND:          Res = SplitVecOp_FP_ROUND(N); break;
-    case ISD::FCOPYSIGN:         Res = SplitVecOp_FCOPYSIGN(N); break;
-    case ISD::STORE:
-      Res = SplitVecOp_STORE(cast<StoreSDNode>(N), OpNo);
-      break;
-    case ISD::MSTORE:
-      Res = SplitVecOp_MSTORE(cast<MaskedStoreSDNode>(N), OpNo);
-      break;
-    case ISD::MSCATTER:
-      Res = SplitVecOp_MSCATTER(cast<MaskedScatterSDNode>(N), OpNo);
-      break;
-    case ISD::MGATHER:
-      Res = SplitVecOp_MGATHER(cast<MaskedGatherSDNode>(N), OpNo);
-      break;
-    case ISD::VSELECT:
-      Res = SplitVecOp_VSELECT(N, OpNo);
-      break;
-    case ISD::STRICT_SINT_TO_FP:
-    case ISD::STRICT_UINT_TO_FP:
-    case ISD::SINT_TO_FP:
-    case ISD::UINT_TO_FP:
-      if (N->getValueType(0).bitsLT(
-              N->getOperand(N->isStrictFPOpcode() ? 1 : 0).getValueType()))
-        Res = SplitVecOp_TruncateHelper(N);
-      else
-        Res = SplitVecOp_UnaryOp(N);
-      break;
-    case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT:
-    case ISD::STRICT_FP_TO_SINT:
-    case ISD::STRICT_FP_TO_UINT:
-    case ISD::STRICT_FP_EXTEND:
-    case ISD::FP_EXTEND:
-    case ISD::SIGN_EXTEND:
-    case ISD::ZERO_EXTEND:
-    case ISD::ANY_EXTEND:
-    case ISD::FTRUNC:
+    else
       Res = SplitVecOp_UnaryOp(N);
-      break;
+    break;
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::FP_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+  case ISD::ANY_EXTEND:
+  case ISD::FTRUNC:
+    Res = SplitVecOp_UnaryOp(N);
+    break;
 
-    case ISD::ANY_EXTEND_VECTOR_INREG:
-    case ISD::SIGN_EXTEND_VECTOR_INREG:
-    case ISD::ZERO_EXTEND_VECTOR_INREG:
-      Res = SplitVecOp_ExtVecInRegOp(N);
-      break;
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    Res = SplitVecOp_ExtVecInRegOp(N);
+    break;
 
-    case ISD::VECREDUCE_FADD:
-    case ISD::VECREDUCE_FMUL:
-    case ISD::VECREDUCE_ADD:
-    case ISD::VECREDUCE_MUL:
-    case ISD::VECREDUCE_AND:
-    case ISD::VECREDUCE_OR:
-    case ISD::VECREDUCE_XOR:
-    case ISD::VECREDUCE_SMAX:
-    case ISD::VECREDUCE_SMIN:
-    case ISD::VECREDUCE_UMAX:
-    case ISD::VECREDUCE_UMIN:
-    case ISD::VECREDUCE_FMAX:
-    case ISD::VECREDUCE_FMIN:
-      Res = SplitVecOp_VECREDUCE(N, OpNo);
-      break;
-    }
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+    Res = SplitVecOp_VECREDUCE(N, OpNo);
+    break;
+  case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
+    Res = SplitVecOp_VECREDUCE_SEQ(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2143,29 +2158,33 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
   EVT LoOpVT, HiOpVT;
   std::tie(LoOpVT, HiOpVT) = DAG.GetSplitDestVTs(VecVT);
 
-  unsigned CombineOpc = 0;
-  switch (N->getOpcode()) {
-  case ISD::VECREDUCE_FADD: CombineOpc = ISD::FADD; break;
-  case ISD::VECREDUCE_FMUL: CombineOpc = ISD::FMUL; break;
-  case ISD::VECREDUCE_ADD:  CombineOpc = ISD::ADD; break;
-  case ISD::VECREDUCE_MUL:  CombineOpc = ISD::MUL; break;
-  case ISD::VECREDUCE_AND:  CombineOpc = ISD::AND; break;
-  case ISD::VECREDUCE_OR:   CombineOpc = ISD::OR; break;
-  case ISD::VECREDUCE_XOR:  CombineOpc = ISD::XOR; break;
-  case ISD::VECREDUCE_SMAX: CombineOpc = ISD::SMAX; break;
-  case ISD::VECREDUCE_SMIN: CombineOpc = ISD::SMIN; break;
-  case ISD::VECREDUCE_UMAX: CombineOpc = ISD::UMAX; break;
-  case ISD::VECREDUCE_UMIN: CombineOpc = ISD::UMIN; break;
-  case ISD::VECREDUCE_FMAX: CombineOpc = ISD::FMAXNUM; break;
-  case ISD::VECREDUCE_FMIN: CombineOpc = ISD::FMINNUM; break;
-  default:
-    llvm_unreachable("Unexpected reduce ISD node");
-  }
-
   // Use the appropriate scalar instruction on the split subvectors before
   // reducing the now partially reduced smaller vector.
+  unsigned CombineOpc = ISD::getVecReduceBaseOpcode(N->getOpcode());
   SDValue Partial = DAG.getNode(CombineOpc, dl, LoOpVT, Lo, Hi, N->getFlags());
   return DAG.getNode(N->getOpcode(), dl, ResVT, Partial, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE_SEQ(SDNode *N) {
+  EVT ResVT = N->getValueType(0);
+  SDValue Lo, Hi;
+  SDLoc dl(N);
+
+  SDValue AccOp = N->getOperand(0);
+  SDValue VecOp = N->getOperand(1);
+  SDNodeFlags Flags = N->getFlags();
+
+  EVT VecVT = VecOp.getValueType();
+  assert(VecVT.isVector() && "Can only split reduce vector operand");
+  GetSplitVector(VecOp, Lo, Hi);
+  EVT LoOpVT, HiOpVT;
+  std::tie(LoOpVT, HiOpVT) = DAG.GetSplitDestVTs(VecVT);
+
+  // Reduce low half.
+  SDValue Partial = DAG.getNode(N->getOpcode(), dl, ResVT, AccOp, Lo, Flags);
+
+  // Reduce high half, using low half result as initial value.
+  return DAG.getNode(N->getOpcode(), dl, ResVT, Partial, Hi, Flags);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_UnaryOp(SDNode *N) {
@@ -2477,10 +2496,14 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSCATTER(MaskedScatterSDNode *N,
   SDValue Index = N->getIndex();
   SDValue Scale = N->getScale();
   SDValue Data = N->getValue();
+  EVT MemoryVT = N->getMemoryVT();
   Align Alignment = N->getOriginalAlign();
   SDLoc DL(N);
 
   // Split all operands
+
+  EVT LoMemVT, HiMemVT;
+  std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
 
   SDValue DataLo, DataHi;
   if (getTypeAction(Data.getValueType()) == TargetLowering::TypeSplitVector)
@@ -2512,15 +2535,17 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSCATTER(MaskedScatterSDNode *N,
       MemoryLocation::UnknownSize, Alignment, N->getAAInfo(), N->getRanges());
 
   SDValue OpsLo[] = {Ch, DataLo, MaskLo, Ptr, IndexLo, Scale};
-  Lo = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataLo.getValueType(),
-                            DL, OpsLo, MMO, N->getIndexType());
+  Lo = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), LoMemVT,
+                            DL, OpsLo, MMO, N->getIndexType(),
+                            N->isTruncatingStore());
 
   // The order of the Scatter operation after split is well defined. The "Hi"
   // part comes after the "Lo". So these two operations should be chained one
   // after another.
   SDValue OpsHi[] = {Lo, DataHi, MaskHi, Ptr, IndexHi, Scale};
-  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataHi.getValueType(),
-                              DL, OpsHi, MMO, N->getIndexType());
+  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), HiMemVT,
+                              DL, OpsHi, MMO, N->getIndexType(),
+                              N->isTruncatingStore());
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
@@ -4336,6 +4361,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_FMIN:
     Res = WidenVecOp_VECREDUCE(N);
     break;
+  case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
+    Res = WidenVecOp_VECREDUCE_SEQ(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -4694,7 +4723,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSCATTER(SDNode *N, unsigned OpNo) {
                    Scale};
   return DAG.getMaskedScatter(DAG.getVTList(MVT::Other),
                               MSC->getMemoryVT(), SDLoc(N), Ops,
-                              MSC->getMemOperand(), MSC->getIndexType());
+                              MSC->getMemOperand(), MSC->getIndexType(),
+                              MSC->isTruncatingStore());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
@@ -4775,48 +4805,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   EVT ElemVT = OrigVT.getVectorElementType();
   SDNodeFlags Flags = N->getFlags();
 
-  SDValue NeutralElem;
-  switch (N->getOpcode()) {
-  case ISD::VECREDUCE_ADD:
-  case ISD::VECREDUCE_OR:
-  case ISD::VECREDUCE_XOR:
-  case ISD::VECREDUCE_UMAX:
-    NeutralElem = DAG.getConstant(0, dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_MUL:
-    NeutralElem = DAG.getConstant(1, dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_AND:
-  case ISD::VECREDUCE_UMIN:
-    NeutralElem = DAG.getAllOnesConstant(dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_SMAX:
-    NeutralElem = DAG.getConstant(
-        APInt::getSignedMinValue(ElemVT.getSizeInBits()), dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_SMIN:
-    NeutralElem = DAG.getConstant(
-        APInt::getSignedMaxValue(ElemVT.getSizeInBits()), dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_FADD:
-    NeutralElem = DAG.getConstantFP(0.0, dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_FMUL:
-    NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
-    break;
-  case ISD::VECREDUCE_FMIN:
-  case ISD::VECREDUCE_FMAX: {
-    // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
-    const fltSemantics &Semantics = DAG.EVTToAPFloatSemantics(ElemVT);
-    APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
-                        !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
-                        APFloat::getLargest(Semantics);
-    if (N->getOpcode() == ISD::VECREDUCE_FMAX)
-      NeutralAF.changeSign();
-
-    NeutralElem = DAG.getConstantFP(NeutralAF, dl, ElemVT);
-  }
-  }
+  unsigned Opc = N->getOpcode();
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
+  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  assert(NeutralElem && "Neutral element must exist");
 
   // Pad the vector with the neutral element.
   unsigned OrigElts = OrigVT.getVectorNumElements();
@@ -4825,7 +4817,32 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
 
-  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, Flags);
+  return DAG.getNode(Opc, dl, N->getValueType(0), Op, Flags);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
+  SDLoc dl(N);
+  SDValue AccOp = N->getOperand(0);
+  SDValue VecOp = N->getOperand(1);
+  SDValue Op = GetWidenedVector(VecOp);
+
+  EVT OrigVT = VecOp.getValueType();
+  EVT WideVT = Op.getValueType();
+  EVT ElemVT = OrigVT.getVectorElementType();
+  SDNodeFlags Flags = N->getFlags();
+
+  unsigned Opc = N->getOpcode();
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
+  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+
+  // Pad the vector with the neutral element.
+  unsigned OrigElts = OrigVT.getVectorNumElements();
+  unsigned WideElts = WideVT.getVectorNumElements();
+  for (unsigned Idx = OrigElts; Idx < WideElts; Idx++)
+    Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
+                     DAG.getVectorIdxConstant(Idx, dl));
+
+  return DAG.getNode(Opc, dl, N->getValueType(0), AccOp, Op, Flags);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {

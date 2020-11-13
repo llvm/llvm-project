@@ -85,7 +85,7 @@
 
 namespace __sanitizer {
 
-class SuspendedThreadsListLinux : public SuspendedThreadsList {
+class SuspendedThreadsListLinux final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListLinux() { thread_ids_.reserve(1024); }
 

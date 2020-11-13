@@ -218,6 +218,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIPostRABundler.cpp",
     "SIPreAllocateWWMRegs.cpp",
     "SIPreEmitPeephole.cpp",
+    "SIProgramInfo.cpp",
     "SIRegisterInfo.cpp",
     "SIRemoveShortExecBranches.cpp",
     "SIShrinkInstructions.cpp",

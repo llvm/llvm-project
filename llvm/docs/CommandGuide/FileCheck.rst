@@ -64,6 +64,16 @@ and from the command line.
  comment style. In that case, consider proposing a change to the default
  comment prefixes instead.
 
+.. option:: --allow-unused-prefixes
+
+ This option controls the behavior when using more than one prefix as specified
+ by :option:`--check-prefix` or :option:`--check-prefixes`, and some of these
+ prefixes are missing in the test file. If true, this is allowed, if false,
+ FileCheck will report an error, listing the missing prefixes.
+
+ It is currently, temporarily, true by default, and will be subsequently
+ switched to false.
+
 .. option:: --input-file filename
 
   File to check (defaults to stdin).

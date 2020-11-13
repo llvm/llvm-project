@@ -1,9 +1,10 @@
 set(files
+  __availability
   __bit_reference
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
-  __errc
   __debug
+  __errc
   __functional_03
   __functional_base
   __functional_base_03
@@ -144,6 +145,22 @@ set(files
   string.h
   string_view
   strstream
+  support/android/locale_bionic.h
+  support/fuchsia/xlocale.h
+  support/ibm/limits.h
+  support/ibm/locale_mgmt_aix.h
+  support/ibm/support.h
+  support/ibm/xlocale.h
+  support/musl/xlocale.h
+  support/newlib/xlocale.h
+  support/solaris/floatingpoint.h
+  support/solaris/wchar.h
+  support/solaris/xlocale.h
+  support/win32/limits_msvc_win32.h
+  support/win32/locale_win32.h
+  support/xlocale/__nop_locale_mgmt.h
+  support/xlocale/__posix_l_fallback.h
+  support/xlocale/__strtonum_fallback.h
   system_error
   tgmath.h
   thread
@@ -161,28 +178,6 @@ set(files
   wchar.h
   wctype.h
   )
-
-if(LIBCXX_INSTALL_SUPPORT_HEADERS)
-  set(files
-    ${files}
-    support/android/locale_bionic.h
-    support/fuchsia/xlocale.h
-    support/ibm/limits.h
-    support/ibm/locale_mgmt_aix.h
-    support/ibm/support.h
-    support/ibm/xlocale.h
-    support/musl/xlocale.h
-    support/newlib/xlocale.h
-    support/solaris/floatingpoint.h
-    support/solaris/wchar.h
-    support/solaris/xlocale.h
-    support/win32/limits_msvc_win32.h
-    support/win32/locale_win32.h
-    support/xlocale/__nop_locale_mgmt.h
-    support/xlocale/__posix_l_fallback.h
-    support/xlocale/__strtonum_fallback.h
-    )
-endif()
 
 configure_file("__config_site.in"
                "${LIBCXX_BINARY_DIR}/__config_site"
@@ -224,7 +219,7 @@ if(LIBCXX_HEADER_DIR)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
       COMMENT "Copying CXX __config")
   list(APPEND out_files ${dst})
-  add_custom_target(generate-cxx-headers DEPENDS ${out_files})
+  add_custom_target(generate-cxx-headers ALL DEPENDS ${out_files})
 
   add_library(cxx-headers INTERFACE)
   add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})

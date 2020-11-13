@@ -10,26 +10,23 @@
 
 // istream cerr;
 
+// FILE_DEPENDENCIES: ../check-stderr.sh
 // RUN: %{build}
-// RUN: %{exec} %t.exe 2> %t.err
-// RUN: grep -e 'Hello World!' %t.err
+// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
 
 #include <iostream>
 #include <cassert>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-
-    std::cerr << "Hello World!\n";
+int main(int, char**) {
+    std::cerr << "1234";
+    assert(std::cerr.flags() & std::ios_base::unitbuf);
 
 #ifdef _LIBCPP_HAS_NO_STDOUT
     assert(std::cerr.tie() == NULL);
 #else
     assert(std::cerr.tie() == &std::cout);
 #endif
-    assert(std::cerr.flags() & std::ios_base::unitbuf);
-
-  return 0;
+    return 0;
 }

@@ -110,14 +110,14 @@ def EXd2 : EX<0, E1d, E2d>;
 // CHECK: Result2d = "OK"
 
 def Not1 {
-  bit true = 1;
-  string Result1a = !if(true, "OK", "not OK");
-  string Result1b = !if(!not(true), "not OK", "OK");
+  bit True = 1;
+  string Result1a = !if(True, "OK", "not OK");
+  string Result1b = !if(!not(True), "not OK", "OK");
 
-  bit false = 0;
-  string Result1c = !if(false, "not OK", "OK");
-  string Result1d = !if(!not(false), "OK", "not OK");
-  string Result1e = !if(!not(!not(false)), "not OK", "OK");
+  bit False = 0;
+  string Result1c = !if(False, "not OK", "OK");
+  string Result1d = !if(!not(False), "OK", "not OK");
+  string Result1e = !if(!not(!not(False)), "not OK", "OK");
 }
 
 def Not2 {

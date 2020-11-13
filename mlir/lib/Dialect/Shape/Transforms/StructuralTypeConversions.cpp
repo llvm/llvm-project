@@ -32,10 +32,9 @@ public:
 
     auto newAssumingOp =
         rewriter.create<AssumingOp>(op.getLoc(), newResultTypes, op.witness());
-
-    rewriter.replaceOp(op, newAssumingOp.getResults());
     rewriter.inlineRegionBefore(op.doRegion(), newAssumingOp.doRegion(),
                                 newAssumingOp.doRegion().end());
+    rewriter.replaceOp(op, newAssumingOp.getResults());
 
     return success();
   }

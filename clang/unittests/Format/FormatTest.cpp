@@ -4992,6 +4992,60 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
                Style);
 }
 
+TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
+  // Check that AllowAllArgumentsOnNextLine is respected for both BAS_DontAlign
+  // and BAS_Align.
+  auto Style = getLLVMStyle();
+  Style.ColumnLimit = 35;
+  StringRef Input = "functionCall(paramA, paramB, paramC);\n"
+                    "void functionDecl(int A, int B, int C);";
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  EXPECT_EQ(StringRef("functionCall(paramA, paramB,\n"
+                      "    paramC);\n"
+                      "void functionDecl(int A, int B,\n"
+                      "    int C);"),
+            format(Input, Style));
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  EXPECT_EQ(StringRef("functionCall(paramA, paramB,\n"
+                      "             paramC);\n"
+                      "void functionDecl(int A, int B,\n"
+                      "                  int C);"),
+            format(Input, Style));
+  // However, BAS_AlwaysBreak should take precedence over
+  // AllowAllArgumentsOnNextLine.
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  EXPECT_EQ(StringRef("functionCall(\n"
+                      "    paramA, paramB, paramC);\n"
+                      "void functionDecl(\n"
+                      "    int A, int B, int C);"),
+            format(Input, Style));
+
+  // When AllowAllArgumentsOnNextLine is set, we prefer breaking before the
+  // first argument.
+  Style.AllowAllArgumentsOnNextLine = true;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  EXPECT_EQ(StringRef("functionCall(\n"
+                      "    paramA, paramB, paramC);\n"
+                      "void functionDecl(\n"
+                      "    int A, int B, int C);"),
+            format(Input, Style));
+  // It wouldn't fit on one line with aligned parameters so this setting
+  // doesn't change anything for BAS_Align.
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  EXPECT_EQ(StringRef("functionCall(paramA, paramB,\n"
+                      "             paramC);\n"
+                      "void functionDecl(int A, int B,\n"
+                      "                  int C);"),
+            format(Input, Style));
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  EXPECT_EQ(StringRef("functionCall(\n"
+                      "    paramA, paramB, paramC);\n"
+                      "void functionDecl(\n"
+                      "    int A, int B, int C);"),
+            format(Input, Style));
+}
+
 TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;

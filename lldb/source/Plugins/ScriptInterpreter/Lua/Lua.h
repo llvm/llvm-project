@@ -25,16 +25,8 @@ int luaopen_lldb(lua_State *L);
 
 class Lua {
 public:
-  Lua() : m_lua_state(luaL_newstate()) {
-    assert(m_lua_state);
-    luaL_openlibs(m_lua_state);
-    luaopen_lldb(m_lua_state);
-  }
-
-  ~Lua() {
-    assert(m_lua_state);
-    luaL_openlibs(m_lua_state);
-  }
+  Lua();
+  ~Lua();
 
   llvm::Error Run(llvm::StringRef buffer);
   llvm::Error LoadModule(llvm::StringRef filename);

@@ -110,6 +110,9 @@ public:
     DiagOpts->ShowColors = Context.getOptions().UseColor.getValueOr(
         llvm::sys::Process::StandardOutHasColors());
     DiagPrinter->BeginSourceFile(LangOpts);
+    if (DiagOpts->ShowColors && !llvm::sys::Process::StandardOutIsDisplayed()) {
+      llvm::sys::Process::UseANSIEscapeCodes(true);
+    }
   }
 
   SourceManager &getSourceManager() { return SourceMgr; }

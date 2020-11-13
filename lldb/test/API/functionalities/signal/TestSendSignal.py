@@ -18,9 +18,6 @@ class SendSignalTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', 'Put breakpoint here')
 
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr23318: does not report running state")
     @expectedFailureNetBSD(bugnumber='llvm.org/pr43959')
     @skipIfWindows  # Windows does not support signals
     @skipIfReproducer # FIXME: Unexpected packet during (active) replay

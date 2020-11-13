@@ -21,7 +21,7 @@ void foo1() {
   f1();
   ::f1();
   X::f1();
-  Y::f1(); // expected-error {{no member named 'f1' in namespace 'X::Y'; did you mean simply 'f1'?}}
+  Y::f1(); // expected-error {{no member named 'f1' in namespace 'Y'; did you mean simply 'f1'?}}
 
   f2();
   ::f2();

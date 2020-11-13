@@ -17,6 +17,7 @@ setup(
     author_email = lit.__email__,
     url = 'http://llvm.org',
     license = 'Apache-2.0 with LLVM exception',
+    license_files = ['LICENSE.TXT'],
 
     description = "A Software Testing Tool",
     keywords = 'test C++ automatic discovery',

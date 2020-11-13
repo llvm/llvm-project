@@ -52,8 +52,10 @@ void TestLinalgHoisting::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestLinalgHoisting() {
   PassRegistration<TestLinalgHoisting> testTestLinalgHoistingPass(
       "test-linalg-hoisting", "Test Linalg hoisting functions.");
 }
+} // namespace test
 } // namespace mlir

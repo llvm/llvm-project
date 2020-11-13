@@ -375,6 +375,18 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
     .addImm(8);
 }
 
+// Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
+// memory. They should have been removed by now.
+static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
+  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
+       I != E; ++I) {
+    if (!MFI.isDeadObjectIndex(I))
+      return false;
+  }
+
+  return true;
+}
+
 // Shift down registers reserved for the scratch RSRC.
 Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
     MachineFunction &MF) const {
@@ -389,7 +401,8 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
 
   Register ScratchRsrcReg = MFI->getScratchRSrcReg();
 
-  if (!ScratchRsrcReg || !MRI.isPhysRegUsed(ScratchRsrcReg))
+  if (!ScratchRsrcReg || (!MRI.isPhysRegUsed(ScratchRsrcReg) &&
+                          allStackObjectsAreDead(MF.getFrameInfo())))
     return Register();
 
   if (ST.hasSGPRInitBug() ||
@@ -467,7 +480,9 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   //
   // This will return `Register()` in cases where there are no actual
   // uses of the SRSRC.
-  Register ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
+  Register ScratchRsrcReg;
+  if (!ST.enableFlatScratch())
+    ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
 
   // Make the selected register live throughout the function.
   if (ScratchRsrcReg) {
@@ -907,8 +922,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save FP before setting it up.
     // FIXME: This should respect spillSGPRToVGPR;
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            Spill[0].VGPR)
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(FramePtrReg)
         .addImm(Spill[0].Lane)
         .addReg(Spill[0].VGPR, RegState::Undef);
@@ -926,8 +940,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save BP before setting it up.
     // FIXME: This should respect spillSGPRToVGPR;
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            Spill[0].VGPR)
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(BasePtrReg)
         .addImm(Spill[0].Lane)
         .addReg(Spill[0].VGPR, RegState::Undef);
@@ -1078,8 +1091,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(FI);
       assert(Spill.size() == 1);
-      BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
-              FramePtrReg)
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), FramePtrReg)
           .addReg(Spill[0].VGPR)
           .addImm(Spill[0].Lane);
     }
@@ -1104,8 +1116,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(BasePtrFI);
       assert(Spill.size() == 1);
-      BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
-              BasePtrReg)
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), BasePtrReg)
           .addReg(Spill[0].VGPR)
           .addImm(Spill[0].Lane);
     }
@@ -1133,18 +1144,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-// Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
-// memory. They should have been removed by now.
-static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
-  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
-       I != E; ++I) {
-    if (!MFI.isDeadObjectIndex(I))
-      return false;
-  }
-
-  return true;
-}
-
 #ifndef NDEBUG
 static bool allSGPRSpillsAreDead(const MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1163,12 +1162,13 @@ static bool allSGPRSpillsAreDead(const MachineFunction &MF) {
 }
 #endif
 
-int SIFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                            Register &FrameReg) const {
+StackOffset SIFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                    int FI,
+                                                    Register &FrameReg) const {
   const SIRegisterInfo *RI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
 
   FrameReg = RI->getFrameRegister(MF);
-  return MF.getFrameInfo().getObjectOffset(FI);
+  return StackOffset::getFixed(MF.getFrameInfo().getObjectOffset(FI));
 }
 
 void SIFrameLowering::processFunctionBeforeFrameFinalized(

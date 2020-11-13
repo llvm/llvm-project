@@ -317,6 +317,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
     break;
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::aarch64:
+  case Triple::aarch64_be:
   case Triple::x86_64:
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
                      (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
@@ -752,11 +754,6 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                          COFF::IMAGE_SCN_MEM_READ,
                                      SectionKind::getMetadata());
 
-  GIATsSection = Ctx->getCOFFSection(".giats$y",
-                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                         COFF::IMAGE_SCN_MEM_READ,
-                                     SectionKind::getMetadata());
-
   GLJMPSection = Ctx->getCOFFSection(".gljmp$y",
                                      COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                          COFF::IMAGE_SCN_MEM_READ,
@@ -862,17 +859,17 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // get placed into this csect. The choice of csect name is not a property of
   // the ABI or object file format. For example, the XL compiler uses an unnamed
   // csect for program code.
-  TextSection =
-      Ctx->getXCOFFSection(".text", XCOFF::StorageMappingClass::XMC_PR,
-                           XCOFF::XTY_SD, SectionKind::getText());
+  TextSection = Ctx->getXCOFFSection(
+      ".text", XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD,
+      SectionKind::getText(), /* MultiSymbolsAllowed*/ true);
 
-  DataSection =
-      Ctx->getXCOFFSection(".data", XCOFF::StorageMappingClass::XMC_RW,
-                           XCOFF::XTY_SD, SectionKind::getData());
+  DataSection = Ctx->getXCOFFSection(
+      ".data", XCOFF::StorageMappingClass::XMC_RW, XCOFF::XTY_SD,
+      SectionKind::getData(), /* MultiSymbolsAllowed*/ true);
 
-  ReadOnlySection =
-      Ctx->getXCOFFSection(".rodata", XCOFF::StorageMappingClass::XMC_RO,
-                           XCOFF::XTY_SD, SectionKind::getReadOnly());
+  ReadOnlySection = Ctx->getXCOFFSection(
+      ".rodata", XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD,
+      SectionKind::getReadOnly(), /* MultiSymbolsAllowed*/ true);
 
   TOCBaseSection =
       Ctx->getXCOFFSection("TOC", XCOFF::StorageMappingClass::XMC_TC0,
@@ -963,9 +960,14 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::ELF:
     return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
                               utostr(Hash));
+  case Triple::Wasm:
+    // FIXME: When using dwarf 5, the .debug_info section is used for type units
+    // but that section already exists, so attempting to get it as a comdate
+    // section triggers an assert.
+    return Ctx->getWasmSection(Name, SectionKind::getMetadata(), utostr(Hash),
+                               MCContext::GenericSectionID);
   case Triple::MachO:
   case Triple::COFF:
-  case Triple::Wasm:
   case Triple::GOFF:
   case Triple::XCOFF:
   case Triple::UnknownObjectFormat:

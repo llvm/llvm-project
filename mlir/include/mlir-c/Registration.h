@@ -1,11 +1,11 @@
-/*===-- mlir-c/Registration.h - Registration functions for MLIR ---*- C -*-===*\
-|*                                                                            *|
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
-|* Exceptions.                                                                *|
-|* See https://llvm.org/LICENSE.txt for license information.                  *|
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    *|
-|*                                                                            *|
-\*===----------------------------------------------------------------------===*/
+//===-- mlir-c/Registration.h - Registration functions for MLIR ---*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_C_REGISTRATION_H
 #define MLIR_C_REGISTRATION_H
@@ -19,7 +19,7 @@ extern "C" {
 /** Registers all dialects known to core MLIR with the provided Context.
  * This is needed before creating IR for these Dialects.
  */
-void mlirRegisterAllDialects(MlirContext context);
+MLIR_CAPI_EXPORTED void mlirRegisterAllDialects(MlirContext context);
 
 #ifdef __cplusplus
 }

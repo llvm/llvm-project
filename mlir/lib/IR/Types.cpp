@@ -10,6 +10,8 @@
 #include "TypeDetail.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Twine.h"
 
 using namespace mlir;
@@ -44,6 +46,48 @@ unsigned FunctionType::getNumResults() const { return getImpl()->numResults; }
 
 ArrayRef<Type> FunctionType::getResults() const {
   return getImpl()->getResults();
+}
+
+/// Helper to call a callback once on each index in the range
+/// [0, `totalIndices`), *except* for the indices given in `indices`.
+/// `indices` is allowed to have duplicates and can be in any order.
+inline void iterateIndicesExcept(unsigned totalIndices,
+                                 ArrayRef<unsigned> indices,
+                                 function_ref<void(unsigned)> callback) {
+  llvm::BitVector skipIndices(totalIndices);
+  for (unsigned i : indices)
+    skipIndices.set(i);
+
+  for (unsigned i = 0; i < totalIndices; ++i)
+    if (!skipIndices.test(i))
+      callback(i);
+}
+
+/// Returns a new function type without the specified arguments and results.
+FunctionType
+FunctionType::getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
+                                       ArrayRef<unsigned> resultIndices) {
+  ArrayRef<Type> newInputTypes = getInputs();
+  SmallVector<Type, 4> newInputTypesBuffer;
+  if (!argIndices.empty()) {
+    unsigned originalNumArgs = getNumInputs();
+    iterateIndicesExcept(originalNumArgs, argIndices, [&](unsigned i) {
+      newInputTypesBuffer.emplace_back(getInput(i));
+    });
+    newInputTypes = newInputTypesBuffer;
+  }
+
+  ArrayRef<Type> newResultTypes = getResults();
+  SmallVector<Type, 4> newResultTypesBuffer;
+  if (!resultIndices.empty()) {
+    unsigned originalNumResults = getNumResults();
+    iterateIndicesExcept(originalNumResults, resultIndices, [&](unsigned i) {
+      newResultTypesBuffer.emplace_back(getResult(i));
+    });
+    newResultTypes = newResultTypesBuffer;
+  }
+
+  return get(newInputTypes, newResultTypes, getContext());
 }
 
 //===----------------------------------------------------------------------===//

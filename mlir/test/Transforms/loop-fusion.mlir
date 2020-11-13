@@ -462,7 +462,7 @@ func @should_not_fuse_if_inst_in_loop_nest() {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.if #set0(%{{.*}}) {
+  // CHECK-NEXT:   affine.if #set(%{{.*}}) {
   // CHECK-NEXT:   }
   // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT: }
@@ -785,7 +785,7 @@ func @should_fuse_at_src_depth1_and_dst_depth1() {
 }
 
 // -----
-// CHECK: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 10 + d1)>
+// CHECK: [[$MAP0:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 10 + d1)>
 
 // CHECK-LABEL: func @should_fuse_src_depth1_at_dst_depth2
 func @should_fuse_src_depth1_at_dst_depth2() {
@@ -1935,16 +1935,16 @@ func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9x
   }
   return
 }
-// MAXIMAL:      #map0 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// MAXIMAL:      #map = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // MAXIMAL-LABEL: func @fuse_across_dim_mismatch
 // MAXIMAL:        alloc() : memref<1x1xf32>
 // MAXIMAL:        affine.for %{{.*}} = 0 to 9 {
 // MAXIMAL-NEXT:    affine.for %{{.*}} = 0 to 9 {
 // MAXIMAL-NEXT:      affine.for %{{.*}} = 0 to 4 {
 // MAXIMAL-NEXT:        affine.for %{{.*}} = 0 to 16 {
-// MAXIMAL-NEXT:          affine.apply #map0(%{{.*}}, %{{.*}})
+// MAXIMAL-NEXT:          affine.apply #map(%{{.*}}, %{{.*}})
 // MAXIMAL-NEXT:          affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xf32>
-// MAXIMAL-NEXT:          affine.apply #map0(%{{.*}}, %{{.*}})
+// MAXIMAL-NEXT:          affine.apply #map(%{{.*}}, %{{.*}})
 // MAXIMAL-NEXT:          affine.load %{{.*}}[0, 0] : memref<1x1xf32>
 // MAXIMAL-NEXT:        }
 // MAXIMAL-NEXT:      }

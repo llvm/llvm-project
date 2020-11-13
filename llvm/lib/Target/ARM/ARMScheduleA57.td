@@ -270,7 +270,11 @@ def : ReadAdvance<ReadMUL, 0>;
 // from similar μops, allowing a typical sequence of multiply-accumulate μops
 // to issue one every 1 cycle (sched advance = 2).
 def A57WriteMLA : SchedWriteRes<[A57UnitM]> { let Latency = 3; }
-def A57WriteMLAL : SchedWriteRes<[A57UnitM]> { let Latency = 4; }
+def A57WriteMLAL : SchedWriteVariant<[
+  SchedVar<IsCPSRDefinedPred, [A57Write_5cyc_1I_1M]>,
+  SchedVar<NoSchedPred,       [A57Write_4cyc_1M]>
+]>;
+
 def A57ReadMLA  : SchedReadAdvance<2, [A57WriteMLA, A57WriteMLAL]>;
 
 def : InstRW<[A57WriteMLA],

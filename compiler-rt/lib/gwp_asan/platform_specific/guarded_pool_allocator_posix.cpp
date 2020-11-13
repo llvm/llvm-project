@@ -38,7 +38,7 @@ void MaybeSetMappingName(void *Mapping, size_t Size, const char *Name) {
 namespace gwp_asan {
 
 void GuardedPoolAllocator::initPRNG() {
-  ThreadLocals.RandomState =
+  getThreadLocals()->RandomState =
       static_cast<uint32_t>(time(nullptr) + getThreadID());
 }
 

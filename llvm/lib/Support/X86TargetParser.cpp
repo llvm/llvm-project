@@ -205,10 +205,10 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureAVX512BF16 | FeatureAVX512VP2INTERSECT | FeatureCLDEMOTE |
     FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
-    FeatureWAITPKG;
+    FeatureWAITPKG | FeatureAVXVNNI;
 constexpr FeatureBitset FeaturesAlderlake =
     FeaturesSkylakeClient | FeatureCLDEMOTE | FeatureHRESET | FeaturePTWRITE |
-    FeatureSERIALIZE | FeatureWAITPKG;
+    FeatureSERIALIZE | FeatureWAITPKG | FeatureAVXVNNI;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -574,6 +574,9 @@ constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 // Key Locker Features
 constexpr FeatureBitset ImpliedFeaturesKL = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
+
+// AVXVNNI Features
+constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{STR}, ImpliedFeatures##ENUM},

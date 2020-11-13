@@ -37,16 +37,20 @@ namespace {
 // referenced by users outside this translation unit, in order to avoid
 // init-order-fiasco.
 GuardedPoolAllocator *SingletonPtr = nullptr;
+
+size_t roundUpTo(size_t Size, size_t Boundary) {
+  return (Size + Boundary - 1) & ~(Boundary - 1);
+}
+
+uintptr_t getPageAddr(uintptr_t Ptr, uintptr_t PageSize) {
+  return Ptr & ~(PageSize - 1);
+}
 } // anonymous namespace
 
 // Gets the singleton implementation of this class. Thread-compatible until
 // init() is called, thread-safe afterwards.
 GuardedPoolAllocator *GuardedPoolAllocator::getSingleton() {
   return SingletonPtr;
-}
-
-static size_t roundUpTo(size_t Size, size_t Boundary) {
-  return (Size + Boundary - 1) & ~(Boundary - 1);
 }
 
 void GuardedPoolAllocator::init(const options::Options &Opts) {
@@ -99,7 +103,7 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
     AdjustedSampleRatePlusOne = 2;
 
   initPRNG();
-  ThreadLocals.NextSampleCounter =
+  getThreadLocals()->NextSampleCounter =
       ((getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1) &
       ThreadLocalPackedVariables::NextSampleCounterMask;
 
@@ -146,22 +150,18 @@ void GuardedPoolAllocator::uninitTestOnly() {
   }
 }
 
-static uintptr_t getPageAddr(uintptr_t Ptr, uintptr_t PageSize) {
-  return Ptr & ~(PageSize - 1);
-}
-
 void *GuardedPoolAllocator::allocate(size_t Size) {
   // GuardedPagePoolEnd == 0 when GWP-ASan is disabled. If we are disabled, fall
   // back to the supporting allocator.
   if (State.GuardedPagePoolEnd == 0) {
-    ThreadLocals.NextSampleCounter =
+    getThreadLocals()->NextSampleCounter =
         (AdjustedSampleRatePlusOne - 1) &
         ThreadLocalPackedVariables::NextSampleCounterMask;
     return nullptr;
   }
 
   // Protect against recursivity.
-  if (ThreadLocals.RecursiveGuard)
+  if (getThreadLocals()->RecursiveGuard)
     return nullptr;
   ScopedRecursiveGuard SRG;
 
@@ -212,7 +212,7 @@ void GuardedPoolAllocator::trapOnAddress(uintptr_t Address, Error E) {
 }
 
 void GuardedPoolAllocator::stop() {
-  ThreadLocals.RecursiveGuard = true;
+  getThreadLocals()->RecursiveGuard = true;
   PoolMutex.tryLock();
 }
 
@@ -243,7 +243,7 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
 
     // Ensure that the unwinder is not called if the recursive flag is set,
     // otherwise non-reentrant unwinders may deadlock.
-    if (!ThreadLocals.RecursiveGuard) {
+    if (!getThreadLocals()->RecursiveGuard) {
       ScopedRecursiveGuard SRG;
       Meta->DeallocationTrace.RecordBacktrace(Backtrace);
     }
@@ -290,15 +290,11 @@ void GuardedPoolAllocator::freeSlot(size_t SlotIndex) {
 }
 
 uint32_t GuardedPoolAllocator::getRandomUnsigned32() {
-  uint32_t RandomState = ThreadLocals.RandomState;
+  uint32_t RandomState = getThreadLocals()->RandomState;
   RandomState ^= RandomState << 13;
   RandomState ^= RandomState >> 17;
   RandomState ^= RandomState << 5;
-  ThreadLocals.RandomState = RandomState;
+  getThreadLocals()->RandomState = RandomState;
   return RandomState;
 }
-
-GWP_ASAN_TLS_INITIAL_EXEC
-GuardedPoolAllocator::ThreadLocalPackedVariables
-    GuardedPoolAllocator::ThreadLocals;
 } // namespace gwp_asan

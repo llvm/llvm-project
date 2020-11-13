@@ -124,6 +124,21 @@ std::string Token::getStringValue() const {
   return result;
 }
 
+/// Given a token containing a hex string literal, return its value or None if
+/// the token does not contain a valid hex string.
+Optional<std::string> Token::getHexStringValue() const {
+  assert(getKind() == string);
+
+  // Get the internal string data, without the quotes.
+  StringRef bytes = getSpelling().drop_front().drop_back();
+
+  // Try to extract the binary data from the hex string.
+  std::string hex;
+  if (!bytes.consume_front("0x") || !llvm::tryGetFromHex(bytes, hex))
+    return llvm::None;
+  return hex;
+}
+
 /// Given a token containing a symbol reference, return the unescaped string
 /// value.
 std::string Token::getSymbolReference() const {

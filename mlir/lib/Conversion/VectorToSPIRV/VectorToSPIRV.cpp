@@ -78,13 +78,51 @@ struct VectorInsertOpConvert final : public SPIRVOpLowering<vector::InsertOp> {
     return success();
   }
 };
+
+struct VectorExtractElementOpConvert final
+    : public SPIRVOpLowering<vector::ExtractElementOp> {
+  using SPIRVOpLowering<vector::ExtractElementOp>::SPIRVOpLowering;
+  LogicalResult
+  matchAndRewrite(vector::ExtractElementOp extractElementOp,
+                  ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!spirv::CompositeType::isValid(extractElementOp.getVectorType()))
+      return failure();
+    vector::ExtractElementOp::Adaptor adaptor(operands);
+    Value newExtractElement = rewriter.create<spirv::VectorExtractDynamicOp>(
+        extractElementOp.getLoc(), extractElementOp.getType(), adaptor.vector(),
+        extractElementOp.position());
+    rewriter.replaceOp(extractElementOp, newExtractElement);
+    return success();
+  }
+};
+
+struct VectorInsertElementOpConvert final
+    : public SPIRVOpLowering<vector::InsertElementOp> {
+  using SPIRVOpLowering<vector::InsertElementOp>::SPIRVOpLowering;
+  LogicalResult
+  matchAndRewrite(vector::InsertElementOp insertElementOp,
+                  ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!spirv::CompositeType::isValid(insertElementOp.getDestVectorType()))
+      return failure();
+    vector::InsertElementOp::Adaptor adaptor(operands);
+    Value newInsertElement = rewriter.create<spirv::VectorInsertDynamicOp>(
+        insertElementOp.getLoc(), insertElementOp.getType(),
+        insertElementOp.dest(), adaptor.source(), insertElementOp.position());
+    rewriter.replaceOp(insertElementOp, newInsertElement);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToSPIRVPatterns(MLIRContext *context,
                                          SPIRVTypeConverter &typeConverter,
                                          OwningRewritePatternList &patterns) {
   patterns.insert<VectorBroadcastConvert, VectorExtractOpConvert,
-                  VectorInsertOpConvert>(context, typeConverter);
+                  VectorInsertOpConvert, VectorExtractElementOpConvert,
+                  VectorInsertElementOpConvert>(context, typeConverter);
 }
 
 namespace {

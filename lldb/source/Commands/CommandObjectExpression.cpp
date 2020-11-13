@@ -304,11 +304,8 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
     return;
 
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
-
-  Target *target = exe_ctx.GetTargetPtr();
-
-  if (!target)
-    target = &GetDummyTarget();
+  Target *exe_target = exe_ctx.GetTargetPtr();
+  Target &target = exe_target ? *exe_target : GetDummyTarget();
 
   unsigned cursor_pos = request.GetRawCursorPos();
   // Get the full user input including the suffix. The suffix is necessary
@@ -342,7 +339,7 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   auto language = exe_ctx.GetFrameRef().GetLanguage();
 
   Status error;
-  lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(
+  lldb::UserExpressionSP expr(target.GetUserExpressionForLanguage(
       code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
       options, nullptr, error));
   if (error.Fail())
@@ -411,22 +408,19 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   // command object DoExecute has finished when doing multi-line expression
   // that use an input reader...
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
-
-  Target *target = exe_ctx.GetTargetPtr();
-
-  if (!target)
-    target = &GetDummyTarget();
+  Target *exe_target = exe_ctx.GetTargetPtr();
+  Target &target = exe_target ? *exe_target : GetDummyTarget();
 
   lldb::ValueObjectSP result_valobj_sp;
   StackFrame *frame = exe_ctx.GetFramePtr();
 
-  const EvaluateExpressionOptions options = GetEvalOptions(*target);
-  ExpressionResults success = target->EvaluateExpression(
+  const EvaluateExpressionOptions options = GetEvalOptions(target);
+  ExpressionResults success = target.EvaluateExpression(
       expr, frame, result_valobj_sp, options, &m_fixed_expression);
 
   // We only tell you about the FixIt if we applied it.  The compiler errors
   // will suggest the FixIt if it parsed.
-  if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
+  if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
     if (success == eExpressionCompleted)
       error_stream.Printf("  Fix-it applied, fixed expression was: \n    %s\n",
                           m_fixed_expression.c_str());

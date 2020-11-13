@@ -28,9 +28,9 @@ extern "C" void followup_inner(int n, int *x) {
 // CHECK-DAG: ![[LOOP_7:[0-9]+]] = distinct !{![[LOOP_7:[0-9]+]], ![[PARALLEL_ACCESSES_4:[0-9]+]], ![[VECTORIZE_8:[0-9]+]]}
 // CHECK-DAG: ![[VECTORIZE_8:[0-9]+]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
-// CHECK-DAG: ![[OUTERLOOP_9:[0-9]+]] = distinct !{![[OUTERLOOP_9:[0-9]+]], ![[UNROLLANDJAM_COUNT_10:[0-9]+]], ![[UNROLLANDJAM_FOLLOWUPINNER_11:[0-9]+]]}
+// CHECK-DAG: ![[OUTERLOOP_9:[0-9]+]] = distinct !{![[OUTERLOOP_9:[0-9]+]], [[MP:![0-9]+]], ![[UNROLLANDJAM_COUNT_10:[0-9]+]], ![[UNROLLANDJAM_FOLLOWUPINNER_11:[0-9]+]]}
 // CHECK-DAG: ![[UNROLLANDJAM_COUNT_10:[0-9]+]] = !{!"llvm.loop.unroll_and_jam.count", i32 4}
-// CHECK-DAG: ![[UNROLLANDJAM_FOLLOWUPINNER_11:[0-9]+]] = !{!"llvm.loop.unroll_and_jam.followup_inner", !12}
+// CHECK-DAG: ![[UNROLLANDJAM_FOLLOWUPINNER_11:[0-9]+]] = !{!"llvm.loop.unroll_and_jam.followup_inner", !13}
 
 // CHECK-DAG: ![[LOOP_12:[0-9]+]] = distinct !{![[LOOP_12:[0-9]+]], ![[PARALLEL_ACCESSES_4:[0-9]+]], ![[ISVECTORIZED_13:[0-9]+]], ![[UNROLL_COUNT_13:[0-9]+]], ![[UNROLL_FOLLOWUP_14:[0-9]+]]}
 // CHECK-DAG: ![[ISVECTORIZED_13:[0-9]+]] = !{!"llvm.loop.isvectorized"}

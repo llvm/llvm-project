@@ -941,6 +941,16 @@ bool DWARFExpression::Evaluate(
   Value pieces; // Used for DW_OP_piece
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  // A generic type is "an integral type that has the size of an address and an
+  // unspecified signedness". For now, just use the signedness of the operand.
+  // TODO: Implement a real typed stack, and store the genericness of the value
+  // there.
+  auto to_generic = [&](auto v) {
+    bool is_signed = std::is_signed<decltype(v)>::value;
+    return Scalar(llvm::APSInt(
+        llvm::APInt(8 * opcodes.GetAddressByteSize(), v, is_signed),
+        !is_signed));
+  };
 
   while (opcodes.ValidOffset(offset)) {
     const lldb::offset_t op_offset = offset;
@@ -1251,37 +1261,42 @@ bool DWARFExpression::Evaluate(
     // All DW_OP_constXXX opcodes have a single operand as noted below:
     //
     // Opcode           Operand 1
-    // DW_OP_const1u    1-byte unsigned integer constant DW_OP_const1s
-    // 1-byte signed integer constant DW_OP_const2u    2-byte unsigned integer
-    // constant DW_OP_const2s    2-byte signed integer constant DW_OP_const4u
-    // 4-byte unsigned integer constant DW_OP_const4s    4-byte signed integer
-    // constant DW_OP_const8u    8-byte unsigned integer constant DW_OP_const8s
-    // 8-byte signed integer constant DW_OP_constu     unsigned LEB128 integer
-    // constant DW_OP_consts     signed LEB128 integer constant
+    // DW_OP_const1u    1-byte unsigned integer constant
+    // DW_OP_const1s    1-byte signed integer constant
+    // DW_OP_const2u    2-byte unsigned integer constant
+    // DW_OP_const2s    2-byte signed integer constant
+    // DW_OP_const4u    4-byte unsigned integer constant
+    // DW_OP_const4s    4-byte signed integer constant
+    // DW_OP_const8u    8-byte unsigned integer constant
+    // DW_OP_const8s    8-byte signed integer constant
+    // DW_OP_constu     unsigned LEB128 integer constant
+    // DW_OP_consts     signed LEB128 integer constant
     case DW_OP_const1u:
-      stack.push_back(Scalar((uint8_t)opcodes.GetU8(&offset)));
+      stack.push_back(to_generic(opcodes.GetU8(&offset)));
       break;
     case DW_OP_const1s:
-      stack.push_back(Scalar((int8_t)opcodes.GetU8(&offset)));
+      stack.push_back(to_generic((int8_t)opcodes.GetU8(&offset)));
       break;
     case DW_OP_const2u:
-      stack.push_back(Scalar((uint16_t)opcodes.GetU16(&offset)));
+      stack.push_back(to_generic(opcodes.GetU16(&offset)));
       break;
     case DW_OP_const2s:
-      stack.push_back(Scalar((int16_t)opcodes.GetU16(&offset)));
+      stack.push_back(to_generic((int16_t)opcodes.GetU16(&offset)));
       break;
     case DW_OP_const4u:
-      stack.push_back(Scalar((uint32_t)opcodes.GetU32(&offset)));
+      stack.push_back(to_generic(opcodes.GetU32(&offset)));
       break;
     case DW_OP_const4s:
-      stack.push_back(Scalar((int32_t)opcodes.GetU32(&offset)));
+      stack.push_back(to_generic((int32_t)opcodes.GetU32(&offset)));
       break;
     case DW_OP_const8u:
-      stack.push_back(Scalar((uint64_t)opcodes.GetU64(&offset)));
+      stack.push_back(to_generic(opcodes.GetU64(&offset)));
       break;
     case DW_OP_const8s:
-      stack.push_back(Scalar((int64_t)opcodes.GetU64(&offset)));
+      stack.push_back(to_generic((int64_t)opcodes.GetU64(&offset)));
       break;
+    // These should also use to_generic, but we can't do that due to a
+    // producer-side bug in llvm. See llvm.org/pr48087.
     case DW_OP_constu:
       stack.push_back(Scalar(opcodes.GetULEB128(&offset)));
       break;
@@ -1888,7 +1903,7 @@ bool DWARFExpression::Evaluate(
     case DW_OP_lit29:
     case DW_OP_lit30:
     case DW_OP_lit31:
-      stack.push_back(Scalar((uint64_t)(op - DW_OP_lit0)));
+      stack.push_back(to_generic(op - DW_OP_lit0));
       break;
 
     // OPCODE: DW_OP_regN
@@ -2153,20 +2168,6 @@ bool DWARFExpression::Evaluate(
                                          ap_int.getNumWords()};
             curr_piece.GetScalar() = Scalar(llvm::APInt(bit_size, buf));
           } break;
-
-          case Value::eValueTypeVector: {
-            if (curr_piece_source_value.GetVector().length >= piece_byte_size)
-              curr_piece_source_value.GetVector().length = piece_byte_size;
-            else {
-              if (error_ptr)
-                error_ptr->SetErrorStringWithFormat(
-                    "unable to extract %" PRIu64 " bytes from a %" PRIu64
-                    " byte vector value.",
-                    piece_byte_size,
-                    (uint64_t)curr_piece_source_value.GetVector().length);
-              return false;
-            }
-          } break;
           }
 
           // Check if this is the first piece?
@@ -2232,15 +2233,6 @@ bool DWARFExpression::Evaluate(
             error_ptr->SetErrorStringWithFormat(
                 "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
                 ", bit_offset = %" PRIu64 ") from an address value.",
-                piece_bit_size, piece_bit_offset);
-          }
-          return false;
-
-        case Value::eValueTypeVector:
-          if (error_ptr) {
-            error_ptr->SetErrorStringWithFormat(
-                "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
-                ", bit_offset = %" PRIu64 ") from a vector value.",
                 piece_bit_size, piece_bit_offset);
           }
           return false;

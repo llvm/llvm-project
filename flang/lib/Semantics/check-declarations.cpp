@@ -85,6 +85,7 @@ private:
   void CheckBlockData(const Scope &);
   void CheckGenericOps(const Scope &);
   bool CheckConflicting(const Symbol &, Attr, Attr);
+  void WarnMissingFinal(const Symbol &);
   bool InPure() const {
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
@@ -412,6 +413,7 @@ void CheckHelper::CheckObjectEntity(
   Check(details.shape());
   Check(details.coshape());
   CheckAssumedTypeEntity(symbol, details);
+  WarnMissingFinal(symbol);
   if (!details.coshape().empty()) {
     bool isDeferredShape{details.coshape().IsDeferredShape()};
     if (IsAllocatable(symbol)) {
@@ -1239,6 +1241,38 @@ bool CheckHelper::CheckConflicting(const Symbol &symbol, Attr a1, Attr a2) {
     return true;
   } else {
     return false;
+  }
+}
+
+void CheckHelper::WarnMissingFinal(const Symbol &symbol) {
+  const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object || IsPointer(symbol)) {
+    return;
+  }
+  const DeclTypeSpec *type{object->type()};
+  const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+  const Symbol *derivedSym{derived ? &derived->typeSymbol() : nullptr};
+  int rank{object->shape().Rank()};
+  const Symbol *initialDerivedSym{derivedSym};
+  while (const auto *derivedDetails{
+      derivedSym ? derivedSym->detailsIf<DerivedTypeDetails>() : nullptr}) {
+    if (!derivedDetails->finals().empty() &&
+        !derivedDetails->GetFinalForRank(rank)) {
+      if (auto *msg{derivedSym == initialDerivedSym
+                  ? messages_.Say(symbol.name(),
+                        "'%s' of derived type '%s' does not have a FINAL subroutine for its rank (%d)"_en_US,
+                        symbol.name(), derivedSym->name(), rank)
+                  : messages_.Say(symbol.name(),
+                        "'%s' of derived type '%s' extended from '%s' does not have a FINAL subroutine for its rank (%d)"_en_US,
+                        symbol.name(), initialDerivedSym->name(),
+                        derivedSym->name(), rank)}) {
+        msg->Attach(derivedSym->name(),
+            "Declaration of derived type '%s'"_en_US, derivedSym->name());
+      }
+      return;
+    }
+    derived = derivedSym->GetParentTypeSpec();
+    derivedSym = derived ? &derived->typeSymbol() : nullptr;
   }
 }
 

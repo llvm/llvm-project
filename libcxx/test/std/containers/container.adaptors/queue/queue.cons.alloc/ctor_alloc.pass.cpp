@@ -23,9 +23,9 @@ struct test
     typedef std::queue<int, std::deque<int, test_allocator<int> > > base;
 
     explicit test(const test_allocator<int>& a) : base(a) {}
-    test(const container_type& c, const test_allocator<int>& a) : base(c, a) {}
+    test(const container_type& container, const test_allocator<int>& a) : base(container, a) {}
 #if TEST_STD_VER >= 11
-    test(container_type&& c, const test_allocator<int>& a) : base(std::move(c), a) {}
+    test(container_type&& container, const test_allocator<int>& a) : base(std::move(container), a) {}
     test(test&& q, const test_allocator<int>& a) : base(std::move(q), a) {}
 #endif
     test_allocator<int> get_allocator() {return c.get_allocator();}

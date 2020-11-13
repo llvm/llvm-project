@@ -2,7 +2,7 @@
 ; RUN: opt -indvars -S < %s | FileCheck %s
 ; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
-; TODO: should be able to remove the range check basing on the following facts:
+; Check that we are able to remove the range check basing on the following facts:
 ; 0 <= len <= MAX_INT [1];
 ; iv starts from len and goes down stopping at zero and [1], therefore
 ;   0 <= iv <= len [2];
@@ -21,8 +21,7 @@ define void @test_predicated_simple_unsigned(i32* %p, i32* %arr) {
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
 ; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
-; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[FAIL:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, i32* [[P]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i32, i32* [[EL_PTR]], align 4

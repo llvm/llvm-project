@@ -172,8 +172,17 @@ bool CompositeType::classof(Type type) {
 }
 
 bool CompositeType::isValid(VectorType type) {
-  return type.getRank() == 1 && type.getElementType().isa<ScalarType>() &&
-         type.getNumElements() >= 2 && type.getNumElements() <= 4;
+  switch (type.getNumElements()) {
+  case 2:
+  case 3:
+  case 4:
+  case 8:
+  case 16:
+    break;
+  default:
+    return false;
+  }
+  return type.getRank() == 1 && type.getElementType().isa<ScalarType>();
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -233,6 +242,12 @@ void CompositeType::getCapabilities(
             StructType>(
           [&](auto type) { type.getCapabilities(capabilities, storage); })
       .Case<VectorType>([&](VectorType type) {
+        auto vecSize = getNumElements();
+        if (vecSize == 8 || vecSize == 16) {
+          static const Capability caps[] = {Capability::Vector16};
+          ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
+          capabilities.push_back(ref);
+        }
         return type.getElementType().cast<ScalarType>().getCapabilities(
             capabilities, storage);
       })
@@ -810,7 +825,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
       std::tuple<StringRef, ArrayRef<Type>, ArrayRef<StructType::OffsetInfo>,
                  ArrayRef<StructType::MemberDecorationInfo>>;
 
-  /// For idetified structs, return true if the given key contains the same
+  /// For identified structs, return true if the given key contains the same
   /// identifier.
   ///
   /// For literal structs, return true if the given key contains a matching list

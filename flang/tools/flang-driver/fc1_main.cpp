@@ -46,9 +46,9 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
       new clang::DiagnosticOptions();
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
   bool success =
-      CompilerInvocation::CreateFromArgs(flang->GetInvocation(), argv, diags);
+      CompilerInvocation::CreateFromArgs(flang->invocation(), argv, diags);
 
-  diagsBuffer->FlushDiagnostics(flang->getDiagnostics());
+  diagsBuffer->FlushDiagnostics(flang->diagnostics());
 
   if (!success)
     return 1;

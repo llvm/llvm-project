@@ -10,6 +10,7 @@ add_mlir_library(MLIRIR
   Dominance.cpp
   Function.cpp
   FunctionImplementation.cpp
+  FunctionSupport.cpp
   IntegerSet.cpp
   Location.cpp
   MLIRContext.cpp

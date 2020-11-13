@@ -33,8 +33,10 @@
 using namespace mlir;
 
 namespace mlir {
+namespace test {
 void registerTestDialect(DialectRegistry &);
-}
+} // namespace test
+} // namespace mlir
 
 static llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional,
                                                 llvm::cl::Required,
@@ -90,7 +92,7 @@ int main(int argc, char **argv) {
   mlir::MLIRContext context;
   registerAllDialects(context.getDialectRegistry());
 #ifdef MLIR_INCLUDE_TESTS
-  mlir::registerTestDialect(context.getDialectRegistry());
+  mlir::test::registerTestDialect(context.getDialectRegistry());
 #endif
 
   mlir::OwningModuleRef moduleRef;

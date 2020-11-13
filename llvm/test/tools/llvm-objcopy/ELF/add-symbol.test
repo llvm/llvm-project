@@ -44,18 +44,18 @@ Sections:
     AddressAlign:    0x0000000000001000
     Size:            64
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x1000
-    Align: 0x1000
-    Sections:
-      - Section: .text
-  - Type: PT_LOAD
-    Flags: [ PF_R, PF_W ]
-    VAddr: 0x2000
-    Align: 0x1000
-    Sections:
-      - Section: .data
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1000
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x2000
+    Align:    0x1000
+    FirstSec: .data
+    LastSec:  .data
 ## TODO (grimar): llvm-objcopy seems produce a broken output without
 ## the following line, i.e. when there is no symbol table in the input.
 Symbols: []

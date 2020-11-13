@@ -827,7 +827,10 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
 
   emitFilename(PLoc.getFilename(), Loc.getManager());
   switch (DiagOpts->getFormat()) {
-  case DiagnosticOptions::Clang: OS << ':'  << LineNo; break;
+  case DiagnosticOptions::Clang:
+    if (DiagOpts->ShowLine)
+      OS << ':' << LineNo;
+    break;
   case DiagnosticOptions::MSVC:  OS << '('  << LineNo; break;
   case DiagnosticOptions::Vi:    OS << " +" << LineNo; break;
   }

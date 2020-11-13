@@ -26,7 +26,6 @@ set(MSAN_UNITTEST_HEADERS
   )
 set(MSAN_UNITTEST_COMMON_CFLAGS
   -nostdinc++
-  -isystem ${COMPILER_RT_LIBCXX_PATH}/include
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/include
@@ -67,7 +66,8 @@ macro(msan_compile obj_list source arch kind cflags)
     KIND ${kind}
     COMPILE_DEPS ${MSAN_UNITTEST_HEADERS}
     DEPS gtest msan
-    CFLAGS ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
+    CFLAGS -isystem ${CMAKE_CURRENT_BINARY_DIR}/../libcxx_msan_${arch}/include/c++/v1
+           ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
   )
 endmacro()
 

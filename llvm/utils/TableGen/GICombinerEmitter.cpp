@@ -906,7 +906,6 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  bool isRuleDisabled(unsigned ID) const;\n"
      << "  bool setRuleEnabled(StringRef RuleIdentifier);\n"
      << "  bool setRuleDisabled(StringRef RuleIdentifier);\n"
-     << "\n"
      << "};\n"
      << "\n"
      << "class " << getClassName();
@@ -914,10 +913,10 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   if (!StateClass.empty())
     OS << " : public " << StateClass;
   OS << " {\n"
-     << " const " << getClassName() << "RuleConfig *RuleConfig;\n"
+     << "  const " << getClassName() << "RuleConfig *RuleConfig;\n"
      << "\n"
      << "public:\n"
-     << "  template<typename ... Args>" << getClassName() << "(const "
+     << "  template <typename... Args>" << getClassName() << "(const "
      << getClassName() << "RuleConfig &RuleConfig, Args &&... args) : ";
   if (!StateClass.empty())
     OS << StateClass << "(std::forward<Args>(args)...), ";
@@ -947,9 +946,9 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "    if (First >= Last)\n"
      << "      report_fatal_error(\"Beginning of range should be before "
         "end of range\");\n"
-     << "    return {{ *First, *Last + 1 }};\n"
+     << "    return {{*First, *Last + 1}};\n"
      << "  } else if (RangePair.first == \"*\") {\n"
-     << "    return {{ 0, " << Rules.size() << " }};\n"
+     << "    return {{0, " << Rules.size() << "}};\n"
      << "  } else {\n"
      << "    const auto I = getRuleIdxForIdentifier(RangePair.first);\n"
      << "    if (!I.hasValue())\n"
@@ -963,7 +962,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     OS << "bool " << getClassName() << "RuleConfig::setRule"
        << (Enabled ? "Enabled" : "Disabled") << "(StringRef RuleIdentifier) {\n"
        << "  auto MaybeRange = getRuleRangeForIdentifier(RuleIdentifier);\n"
-       << "  if(!MaybeRange.hasValue())\n"
+       << "  if (!MaybeRange.hasValue())\n"
        << "    return false;\n"
        << "  for (auto I = MaybeRange->first; I < MaybeRange->second; ++I)\n"
        << "    DisabledRules." << (Enabled ? "reset" : "set") << "(I);\n"
@@ -1026,7 +1025,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  MachineBasicBlock *MBB = MI.getParent();\n"
      << "  MachineFunction *MF = MBB->getParent();\n"
      << "  MachineRegisterInfo &MRI = MF->getRegInfo();\n"
-     << "  SmallVector<MachineInstr *, 8> MIs = { &MI };\n\n"
+     << "  SmallVector<MachineInstr *, 8> MIs = {&MI};\n\n"
      << "  (void)MBB; (void)MF; (void)MRI; (void)RuleConfig;\n\n";
 
   OS << "  // Match data\n";

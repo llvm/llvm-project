@@ -54,10 +54,9 @@ module attributes {
     call @fillI32Buffer(%output_casted, %zero) : (memref<?xi32>, i32) -> ()
 
     %one = constant 1 : index
-    "gpu.launch_func"(%one, %one, %one,
-                      %one, %one, %one,
-                      %input, %output) { kernel = @kernels::@double }
-        : (index, index, index, index, index, index, memref<6xi32>, memref<6xi32>) -> ()
+    gpu.launch_func @kernels::@double
+        blocks in (%one, %one, %one) threads in (%one, %one, %one)
+        args(%input : memref<6xi32>, %output : memref<6xi32>)
     %result = memref_cast %output : memref<6xi32> to memref<*xi32>
     call @print_memref_i32(%result) : (memref<*xi32>) -> ()
     return

@@ -1,12 +1,12 @@
 // Test flags inserted by -fsanitize=fuzzer.
 
-// RUN: %clang -fsanitize=fuzzer %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-FUZZER-LIB,CHECK-COVERAGE-FLAGS %s
+// RUN: %clang -fsanitize=fuzzer %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-FUZZER-LIB,CHECK-COVERAGE %s
 //
-// CHECK-FUZZER-LIB: libclang_rt.fuzzer
-// CHECK-COVERAGE: -fsanitize-coverage-inline-8bit-counters
-// CHECK-COVERAGE-SAME: -fsanitize-coverage-indirect-calls
+// CHECK-COVERAGE:      -fsanitize-coverage-indirect-calls
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-trace-cmp
+// CHECK-COVERAGE-SAME: -fsanitize-coverage-inline-8bit-counters
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-pc-table
+// CHECK-FUZZER-LIB: libclang_rt.fuzzer
 
 // RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=platform %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-LINUX %s
 //

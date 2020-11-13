@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
+#include <list>
 #include <optional>
 #include <string>
 #include <utility>
@@ -213,43 +214,22 @@ private:
 class Messages {
 public:
   Messages() {}
-  Messages(Messages &&that) : messages_{std::move(that.messages_)} {
-    if (!messages_.empty()) {
-      last_ = that.last_;
-      that.ResetLastPointer();
-    }
-  }
+  Messages(Messages &&that) : messages_{std::move(that.messages_)} {}
   Messages &operator=(Messages &&that) {
     messages_ = std::move(that.messages_);
-    if (messages_.empty()) {
-      ResetLastPointer();
-    } else {
-      last_ = that.last_;
-      that.ResetLastPointer();
-    }
     return *this;
   }
 
-  std::forward_list<Message> &messages() { return messages_; }
+  std::list<Message> &messages() { return messages_; }
   bool empty() const { return messages_.empty(); }
-  void clear();
+  void clear() { messages_.clear(); }
 
   template <typename... A> Message &Say(A &&...args) {
-    last_ = messages_.emplace_after(last_, std::forward<A>(args)...);
-    return *last_;
+    return messages_.emplace_back(std::forward<A>(args)...);
   }
 
   void Annex(Messages &&that) {
-    if (!that.messages_.empty()) {
-      messages_.splice_after(last_, that.messages_);
-      last_ = that.last_;
-      that.ResetLastPointer();
-    }
-  }
-
-  void Restore(Messages &&that) {
-    that.Annex(std::move(*this));
-    *this = std::move(that);
+    messages_.splice(messages_.end(), that.messages_);
   }
 
   bool Merge(const Message &);
@@ -262,10 +242,7 @@ public:
   bool AnyFatalError() const;
 
 private:
-  void ResetLastPointer() { last_ = messages_.before_begin(); }
-
-  std::forward_list<Message> messages_;
-  std::forward_list<Message>::iterator last_{messages_.before_begin()};
+  std::list<Message> messages_;
 };
 
 class ContextualMessages {
@@ -293,7 +270,7 @@ public:
   common::Restorer<Messages *> SetMessages(Messages &buffer) {
     return common::ScopedSet(messages_, &buffer);
   }
-  // Discard messages; destination restored when the returned value is deleted.
+  // Discard future messages until the returned value is deleted.
   common::Restorer<Messages *> DiscardMessages() {
     return common::ScopedSet(messages_, nullptr);
   }

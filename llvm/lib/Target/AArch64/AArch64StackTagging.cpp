@@ -658,7 +658,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IntrinsicInst *End = Info.LifetimeEnd[0];
       uint64_t Size =
-          dyn_cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
+          cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
       tagAlloca(AI, Start->getNextNode(), Start->getArgOperand(1), Size);
       // We need to ensure that if we tag some object, we certainly untag it

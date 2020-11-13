@@ -8,21 +8,21 @@ define void @foo(%struct.SpeexPreprocessState_* nocapture readonly %st, i16* %x)
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    ldrd r12, r4, [r0]
-; CHECK-NEXT:    ldrd r3, r2, [r0, #8]
+; CHECK-NEXT:    ldrd r2, r3, [r0, #8]
 ; CHECK-NEXT:    rsb r12, r12, r4, lsl #1
 ; CHECK-NEXT:    mov r4, r12
-; CHECK-NEXT:    dlstp.16 lr, r4
+; CHECK-NEXT:    dlstp.16 lr, r12
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r2], #16
-; CHECK-NEXT:    vstrh.16 q0, [r3], #16
+; CHECK-NEXT:    vldrh.u16 q0, [r3], #16
+; CHECK-NEXT:    vstrh.16 q0, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
-; CHECK-NEXT:    ldr r3, [r0]
+; CHECK-NEXT:    ldr r2, [r0]
 ; CHECK-NEXT:    ldr r0, [r0, #8]
 ; CHECK-NEXT:    vmov.i16 q0, #0x1800
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
-; CHECK-NEXT:    dlstp.16 lr, r3
+; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB0_3: @ %do.body6
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16

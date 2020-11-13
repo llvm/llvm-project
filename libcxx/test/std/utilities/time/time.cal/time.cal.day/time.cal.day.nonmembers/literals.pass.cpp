@@ -30,7 +30,7 @@ int main(int, char**)
     static_assert( 7d == day(7), "");
     day d1 = 4d;
     assert (d1 == day(4));
-}
+    }
 
     {
     using namespace std::literals;

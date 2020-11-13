@@ -18,6 +18,8 @@
 ! CHECK:USAGE: flang-new
 ! CHECK-EMPTY:
 ! CHECK-NEXT:OPTIONS:
+! CHECK-NEXT: -###      Print (but do not run) the commands to run for this compilation
+! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! CHECK-NEXT: -help     Display available options

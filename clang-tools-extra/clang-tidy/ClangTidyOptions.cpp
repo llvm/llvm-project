@@ -116,7 +116,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.User = llvm::None;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
-    Options = Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
+    Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
   return Options;
 }
 
@@ -142,27 +142,31 @@ static void overrideValue(Optional<T> &Dest, const Optional<T> &Src) {
     Dest = Src;
 }
 
-ClangTidyOptions ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
-                                             unsigned Priority) const {
-  ClangTidyOptions Result = *this;
-
-  mergeCommaSeparatedLists(Result.Checks, Other.Checks);
-  mergeCommaSeparatedLists(Result.WarningsAsErrors, Other.WarningsAsErrors);
-  overrideValue(Result.HeaderFilterRegex, Other.HeaderFilterRegex);
-  overrideValue(Result.SystemHeaders, Other.SystemHeaders);
-  overrideValue(Result.FormatStyle, Other.FormatStyle);
-  overrideValue(Result.User, Other.User);
-  overrideValue(Result.UseColor, Other.UseColor);
-  mergeVectors(Result.ExtraArgs, Other.ExtraArgs);
-  mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
+ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
+                                              unsigned Order) {
+  mergeCommaSeparatedLists(Checks, Other.Checks);
+  mergeCommaSeparatedLists(WarningsAsErrors, Other.WarningsAsErrors);
+  overrideValue(HeaderFilterRegex, Other.HeaderFilterRegex);
+  overrideValue(SystemHeaders, Other.SystemHeaders);
+  overrideValue(FormatStyle, Other.FormatStyle);
+  overrideValue(User, Other.User);
+  overrideValue(UseColor, Other.UseColor);
+  mergeVectors(ExtraArgs, Other.ExtraArgs);
+  mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
 
   for (const auto &KeyValue : Other.CheckOptions) {
-    Result.CheckOptions.insert_or_assign(
+    CheckOptions.insert_or_assign(
         KeyValue.getKey(),
         ClangTidyValue(KeyValue.getValue().Value,
-                       KeyValue.getValue().Priority + Priority));
+                       KeyValue.getValue().Priority + Order));
   }
+  return *this;
+}
 
+ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
+                                         unsigned Order) const {
+  ClangTidyOptions Result = *this;
+  Result.mergeWith(Other, Order);
   return Result;
 }
 
@@ -178,8 +182,8 @@ ClangTidyOptions
 ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
-  for (const auto &Source : getRawOptions(FileName))
-    Result = Result.mergeWith(Source.first, ++Priority);
+  for (auto &Source : getRawOptions(FileName))
+    Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
 
@@ -325,7 +329,9 @@ llvm::Optional<OptionsSource>
 FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   assert(!Directory.empty());
 
-  if (!llvm::sys::fs::is_directory(Directory)) {
+  llvm::ErrorOr<llvm::vfs::Status> DirectoryStatus = FS->status(Directory);
+
+  if (!DirectoryStatus || !DirectoryStatus->isDirectory()) {
     llvm::errs() << "Error reading configuration from " << Directory
                  << ": directory doesn't exist.\n";
     return llvm::None;
@@ -336,15 +342,13 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
     llvm::sys::path::append(ConfigFile, ConfigHandler.first);
     LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
-    bool IsFile = false;
-    // Ignore errors from is_regular_file: we only need to know if we can read
-    // the file or not.
-    llvm::sys::fs::is_regular_file(Twine(ConfigFile), IsFile);
-    if (!IsFile)
+    llvm::ErrorOr<llvm::vfs::Status> FileStatus = FS->status(ConfigFile);
+
+    if (!FileStatus || !FileStatus->isRegularFile())
       continue;
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        llvm::MemoryBuffer::getFile(ConfigFile.c_str());
+        FS->getBufferForFile(ConfigFile);
     if (std::error_code EC = Text.getError()) {
       llvm::errs() << "Can't read " << ConfigFile << ": " << EC.message()
                    << "\n";
@@ -363,7 +367,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
                      << ParsedOptions.getError().message() << "\n";
       continue;
     }
-    return OptionsSource(*ParsedOptions, ConfigFile.c_str());
+    return OptionsSource(*ParsedOptions, std::string(ConfigFile));
   }
   return llvm::None;
 }

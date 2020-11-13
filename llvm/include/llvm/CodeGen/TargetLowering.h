@@ -605,6 +605,12 @@ public:
     return false;
   }
 
+  /// Return the maximum number of "x & (x - 1)" operations that can be done
+  /// instead of deferring to a custom CTPOP.
+  virtual unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const {
+    return 1;
+  }
+
   /// Return true if instruction generated for equality comparison is folded
   /// with instruction generated for signed comparison.
   virtual bool isEqualityCmpFoldedWithSignedCmp() const { return true; }
@@ -4447,6 +4453,9 @@ public:
   /// only the first Count elements of the vector are used.
   SDValue expandVecReduce(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand a VECREDUCE_SEQ_* into an explicit ordered calculation.
+  SDValue expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand an SREM or UREM using SDIV/UDIV or SDIVREM/UDIVREM, if legal.
   /// Returns true if the expansion was successful.
   bool expandREM(SDNode *Node, SDValue &Result, SelectionDAG &DAG) const;
@@ -4500,6 +4509,10 @@ public:
   // fact that this can be implemented as a ctlz/srl pair, so that the dag
   // combiner can fold the new nodes.
   SDValue lowerCmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) const;
+
+  /// Give targets the chance to reduce the number of distinct addresing modes.
+  ISD::MemIndexType getCanonicalIndexType(ISD::MemIndexType IndexType,
+                                          EVT MemVT, SDValue Offsets) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

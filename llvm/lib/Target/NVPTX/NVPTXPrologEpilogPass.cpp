@@ -69,7 +69,8 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
                            "operand of a DBG_VALUE machine instruction");
           Register Reg;
           int64_t Offset =
-              TFI.getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
+              TFI.getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg)
+                  .getFixed();
           MI.getOperand(0).ChangeToRegister(Reg, /*isDef=*/false);
           MI.getOperand(0).setIsDebug();
           auto *DIExpr = DIExpression::prepend(

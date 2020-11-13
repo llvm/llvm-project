@@ -22,9 +22,11 @@
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/sysctl.h>
+#include <sys/user.h>
 // clang-format on
 
 #include <sstream>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -146,7 +148,37 @@ void NativeThreadFreeBSD::SetStepping() {
   m_stop_info.reason = StopReason::eStopReasonNone;
 }
 
-std::string NativeThreadFreeBSD::GetName() { return ""; }
+std::string NativeThreadFreeBSD::GetName() {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+
+  std::vector<struct kinfo_proc> kp;
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
+                static_cast<int>(GetProcess().GetID())};
+
+  while (1) {
+    size_t len = kp.size() * sizeof(struct kinfo_proc);
+    void *ptr = len == 0 ? nullptr : kp.data();
+    int error = ::sysctl(mib, 4, ptr, &len, nullptr, 0);
+    if (ptr == nullptr || (error != 0 && errno == ENOMEM)) {
+      kp.resize(len / sizeof(struct kinfo_proc));
+      continue;
+    }
+    if (error != 0) {
+      len = 0;
+      LLDB_LOG(log, "tid = {0} in state {1} failed to get thread name: {2}",
+               GetID(), m_state, strerror(errno));
+    }
+    kp.resize(len / sizeof(struct kinfo_proc));
+    break;
+  }
+
+  for (auto &procinfo : kp) {
+    if (procinfo.ki_tid == static_cast<lwpid_t>(GetID()))
+      return procinfo.ki_tdname;
+  }
+
+  return "";
+}
 
 lldb::StateType NativeThreadFreeBSD::GetState() { return m_state; }
 
@@ -240,4 +272,15 @@ Status NativeThreadFreeBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   }
 
   return Status("Clearing hardware breakpoint failed.");
+}
+
+llvm::Error
+NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
+  llvm::Error s = GetRegisterContext().CopyHardwareWatchpointsFrom(
+      source.GetRegisterContext());
+  if (!s) {
+    m_watchpoint_index_map = source.m_watchpoint_index_map;
+    m_hw_break_index_map = source.m_hw_break_index_map;
+  }
+  return s;
 }

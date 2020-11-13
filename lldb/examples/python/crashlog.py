@@ -34,7 +34,6 @@ import optparse
 import os
 import platform
 import plistlib
-import pprint  # pp = pprint.PrettyPrinter(indent=4); pp.pprint(command_args)
 import re
 import shlex
 import string
@@ -43,82 +42,36 @@ import sys
 import time
 import uuid
 
+try:
+    # First try for LLDB in case PYTHONPATH is already correctly setup.
+    import lldb
+except ImportError:
+    # Ask the command line driver for the path to the lldb module. Copy over
+    # the environment so that SDKROOT is propagated to xcrun.
+    env = os.environ.copy()
+    env['LLDB_DEFAULT_PYTHON_VERSION'] = str(sys.version_info.major)
+    command =  ['xcrun', 'lldb', '-P'] if platform.system() == 'Darwin' else ['lldb', '-P']
+    # Extend the PYTHONPATH if the path exists and isn't already there.
+    lldb_python_path = subprocess.check_output(command, env=env).decode("utf-8").strip()
+    if os.path.exists(lldb_python_path) and not sys.path.__contains__(lldb_python_path):
+        sys.path.append(lldb_python_path)
+    # Try importing LLDB again.
+    try:
+        import lldb
+    except ImportError:
+        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
+        sys.exit(1)
+
+from lldb.utils import symbolication
+
+
 def read_plist(s):
     if sys.version_info.major == 3:
         return plistlib.loads(s)
     else:
         return plistlib.readPlistFromString(s)
 
-try:
-    # Just try for LLDB in case PYTHONPATH is already correctly setup
-    import lldb
-except ImportError:
-    lldb_python_dirs = list()
-    # lldb is not in the PYTHONPATH, try some defaults for the current platform
-    platform_system = platform.system()
-    if platform_system == 'Darwin':
-        # On Darwin, try the currently selected Xcode directory
-        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True).decode("utf-8")
-        if xcode_dir:
-            lldb_python_dirs.append(
-                os.path.realpath(
-                    xcode_dir +
-                    '/../SharedFrameworks/LLDB.framework/Resources/Python'))
-            lldb_python_dirs.append(
-                xcode_dir + '/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
-        lldb_python_dirs.append(
-            '/System/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
-    success = False
-    for lldb_python_dir in lldb_python_dirs:
-        if os.path.exists(lldb_python_dir):
-            if not (sys.path.__contains__(lldb_python_dir)):
-                sys.path.append(lldb_python_dir)
-                try:
-                    import lldb
-                except ImportError:
-                    pass
-                else:
-                    print('imported lldb from: "%s"' % (lldb_python_dir))
-                    success = True
-                    break
-    if not success:
-        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
-        sys.exit(1)
-
-from lldb.utils import symbolication
-
-PARSE_MODE_NORMAL = 0
-PARSE_MODE_THREAD = 1
-PARSE_MODE_IMAGES = 2
-PARSE_MODE_THREGS = 3
-PARSE_MODE_SYSTEM = 4
-
-
 class CrashLog(symbolication.Symbolicator):
-    """Class that does parses darwin crash logs"""
-    parent_process_regex = re.compile('^Parent Process:\s*(.*)\[(\d+)\]')
-    thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
-    thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
-    app_backtrace_regex = re.compile(
-        '^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
-    version = r'(\(.+\)|(arm|x86_)[0-9a-z]+)\s+'
-    frame_regex = re.compile(r'^([0-9]+)' r'\s'                # id
-                             r'+(.+?)'    r'\s+'               # img_name
-                             r'(' +version+ r')?'              # img_version
-                             r'(0x[0-9a-fA-F]{7}[0-9a-fA-F]+)' # addr
-                             r' +(.*)'                         # offs
-                            )
-    null_frame_regex = re.compile(r'^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
-    image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'            # img_lo
-                                  r'\s+' '-' r'\s+'              #   -
-                                  r'(0x[0-9a-fA-F]+)'     r'\s+' # img_hi
-                                  r'[+]?(.+?)'            r'\s+' # img_name
-                                  r'(' +version+ ')?'            # img_version
-                                  r'(<([-0-9a-fA-F]+)>\s+)?'     # img_uuid
-                                  r'(/.*)'                       # img_path
-                                 )
-    empty_line_regex = re.compile('^$')
-
     class Thread:
         """Class that represents a thread in a darwin crash log"""
 
@@ -153,7 +106,6 @@ class CrashLog(symbolication.Symbolicator):
                     return
 
             print("%s" % self)
-            #prev_frame_index = -1
             display_frame_idx = -1
             for frame_idx, frame in enumerate(self.frames):
                 disassemble = (
@@ -179,7 +131,7 @@ class CrashLog(symbolication.Symbolicator):
                             if line_entry.IsValid():
                                 strm = lldb.SBStream()
                                 if line_entry:
-                                    lldb.debugger.GetSourceManager().DisplaySourceLinesWithLineNumbers(
+                                    crash_log.debugger.GetSourceManager().DisplaySourceLinesWithLineNumbers(
                                         line_entry.file, line_entry.line, source_context, source_context, "->", strm)
                                 source_text = strm.GetData()
                                 if source_text:
@@ -358,9 +310,9 @@ class CrashLog(symbolication.Symbolicator):
                 self.unavailable = True
             return False
 
-    def __init__(self, path, verbose):
+    def __init__(self, debugger, path, verbose):
         """CrashLog constructor that take a path to a darwin crash log file"""
-        symbolication.Symbolicator.__init__(self)
+        symbolication.Symbolicator.__init__(self, debugger)
         self.path = os.path.expanduser(path)
         self.info_lines = list()
         self.system_profile = list()
@@ -369,177 +321,8 @@ class CrashLog(symbolication.Symbolicator):
         self.idents = list()  # A list of the required identifiers for doing all stack backtraces
         self.crashed_thread_idx = -1
         self.version = -1
-        self.error = None
         self.target = None
         self.verbose = verbose
-        # With possible initial component of ~ or ~user replaced by that user's
-        # home directory.
-        try:
-            f = open(self.path)
-        except IOError:
-            self.error = 'error: cannot open "%s"' % self.path
-            return
-
-        self.file_lines = f.read().splitlines()
-        parse_mode = PARSE_MODE_NORMAL
-        thread = None
-        app_specific_backtrace = False
-        for line in self.file_lines:
-            # print line
-            line_len = len(line)
-            if line_len == 0:
-                if thread:
-                    if parse_mode == PARSE_MODE_THREAD:
-                        if thread.index == self.crashed_thread_idx:
-                            thread.reason = ''
-                            if self.thread_exception:
-                                thread.reason += self.thread_exception
-                            if self.thread_exception_data:
-                                thread.reason += " (%s)" % self.thread_exception_data
-                        if app_specific_backtrace:
-                            self.backtraces.append(thread)
-                        else:
-                            self.threads.append(thread)
-                    thread = None
-                else:
-                    # only append an extra empty line if the previous line
-                    # in the info_lines wasn't empty
-                    if len(self.info_lines) > 0 and len(self.info_lines[-1]):
-                        self.info_lines.append(line)
-                parse_mode = PARSE_MODE_NORMAL
-                # print 'PARSE_MODE_NORMAL'
-            elif parse_mode == PARSE_MODE_NORMAL:
-                if line.startswith('Process:'):
-                    (self.process_name, pid_with_brackets) = line[
-                        8:].strip().split(' [')
-                    self.process_id = pid_with_brackets.strip('[]')
-                elif line.startswith('Path:'):
-                    self.process_path = line[5:].strip()
-                elif line.startswith('Identifier:'):
-                    self.process_identifier = line[11:].strip()
-                elif line.startswith('Version:'):
-                    version_string = line[8:].strip()
-                    matched_pair = re.search("(.+)\((.+)\)", version_string)
-                    if matched_pair:
-                        self.process_version = matched_pair.group(1)
-                        self.process_compatability_version = matched_pair.group(
-                            2)
-                    else:
-                        self.process = version_string
-                        self.process_compatability_version = version_string
-                elif self.parent_process_regex.search(line):
-                    parent_process_match = self.parent_process_regex.search(
-                        line)
-                    self.parent_process_name = parent_process_match.group(1)
-                    self.parent_process_id = parent_process_match.group(2)
-                elif line.startswith('Exception Type:'):
-                    self.thread_exception = line[15:].strip()
-                    continue
-                elif line.startswith('Exception Codes:'):
-                    self.thread_exception_data = line[16:].strip()
-                    continue
-                elif line.startswith('Exception Subtype:'): # iOS
-                    self.thread_exception_data = line[18:].strip()
-                    continue                                                          
-                elif line.startswith('Crashed Thread:'):
-                    self.crashed_thread_idx = int(line[15:].strip().split()[0])
-                    continue
-                elif line.startswith('Triggered by Thread:'): # iOS
-                    self.crashed_thread_idx = int(line[20:].strip().split()[0])
-                    continue                    
-                elif line.startswith('Report Version:'):
-                    self.version = int(line[15:].strip())
-                    continue
-                elif line.startswith('System Profile:'):
-                    parse_mode = PARSE_MODE_SYSTEM
-                    continue
-                elif (line.startswith('Interval Since Last Report:') or
-                      line.startswith('Crashes Since Last Report:') or
-                      line.startswith('Per-App Interval Since Last Report:') or
-                      line.startswith('Per-App Crashes Since Last Report:') or
-                      line.startswith('Sleep/Wake UUID:') or
-                      line.startswith('Anonymous UUID:')):
-                    # ignore these
-                    continue
-                elif line.startswith('Thread'):
-                    thread_state_match = self.thread_state_regex.search(line)
-                    if thread_state_match:
-                        app_specific_backtrace = False
-                        thread_state_match = self.thread_regex.search(line)
-                        thread_idx = int(thread_state_match.group(1))
-                        parse_mode = PARSE_MODE_THREGS
-                        thread = self.threads[thread_idx]
-                    else:
-                        thread_match = self.thread_regex.search(line)
-                        if thread_match:
-                            app_specific_backtrace = False
-                            parse_mode = PARSE_MODE_THREAD
-                            thread_idx = int(thread_match.group(1))
-                            thread = CrashLog.Thread(thread_idx, False)
-                    continue
-                elif line.startswith('Binary Images:'):
-                    parse_mode = PARSE_MODE_IMAGES
-                    continue
-                elif line.startswith('Application Specific Backtrace'):
-                    app_backtrace_match = self.app_backtrace_regex.search(line)
-                    if app_backtrace_match:
-                        parse_mode = PARSE_MODE_THREAD
-                        app_specific_backtrace = True
-                        idx = int(app_backtrace_match.group(1))
-                        thread = CrashLog.Thread(idx, True)
-                elif line.startswith('Last Exception Backtrace:'): # iOS
-                    parse_mode = PARSE_MODE_THREAD
-                    app_specific_backtrace = True
-                    idx = 1
-                    thread = CrashLog.Thread(idx, True)
-                self.info_lines.append(line.strip())
-            elif parse_mode == PARSE_MODE_THREAD:
-                if line.startswith('Thread'):
-                    continue
-                if self.null_frame_regex.search(line):
-                    print('warning: thread parser ignored null-frame: "%s"' % line)
-                    continue
-                frame_match = self.frame_regex.search(line)
-                if frame_match:
-                    (frame_id, frame_img_name, _, frame_img_version, _,
-                     frame_addr, frame_ofs) = frame_match.groups()
-                    ident = frame_img_name
-                    thread.add_ident(ident)
-                    if ident not in self.idents:
-                        self.idents.append(ident)
-                    thread.frames.append(CrashLog.Frame(int(frame_id), int(
-                        frame_addr, 0), frame_ofs))
-                else:
-                    print('error: frame regex failed for line: "%s"' % line)
-            elif parse_mode == PARSE_MODE_IMAGES:
-                image_match = self.image_regex_uuid.search(line)
-                if image_match:
-                    (img_lo, img_hi, img_name, _, img_version, _,
-                     _, img_uuid, img_path) = image_match.groups()
-                    image = CrashLog.DarwinImage(int(img_lo, 0), int(img_hi, 0),
-                                                 img_name.strip(),
-                                                 img_version.strip()
-                                                 if img_version else "",
-                                                 uuid.UUID(img_uuid), img_path,
-                                                 self.verbose)
-                    self.images.append(image)
-                else:
-                    print("error: image regex failed for: %s" % line)
-
-            elif parse_mode == PARSE_MODE_THREGS:
-                stripped_line = line.strip()
-                # "r12: 0x00007fff6b5939c8  r13: 0x0000000007000006  r14: 0x0000000000002a03  r15: 0x0000000000000c00"
-                reg_values = re.findall(
-                    '([a-zA-Z0-9]+: 0[Xx][0-9a-fA-F]+) *', stripped_line)
-                for reg_value in reg_values:
-                    # print 'reg_value = "%s"' % reg_value
-                    (reg, value) = reg_value.split(': ')
-                    # print 'reg = "%s"' % reg
-                    # print 'value = "%s"' % value
-                    thread.registers[reg.strip()] = int(value, 0)
-            elif parse_mode == PARSE_MODE_SYSTEM:
-                self.system_profile.append(line)
-        f.close()
 
     def dump(self):
         print("Crash Log File: %s" % (self.path))
@@ -566,7 +349,6 @@ class CrashLog(symbolication.Symbolicator):
         return None
 
     def create_target(self):
-        # print 'crashlog.create_target()...'
         if self.target is None:
             self.target = symbolication.Symbolicator.create_target(self)
             if self.target:
@@ -578,12 +360,12 @@ class CrashLog(symbolication.Symbolicator):
                 for ident in self.idents:
                     image = self.find_image_with_identifier(ident)
                     if image:
-                        self.target = image.create_target()
+                        self.target = image.create_target(self.debugger)
                         if self.target:
                             return self.target  # success
             print('crashlog.create_target()...3')
             for image in self.images:
-                self.target = image.create_target()
+                self.target = image.create_target(self.debugger)
                 if self.target:
                     return self.target  # success
             print('crashlog.create_target()...4')
@@ -594,6 +376,229 @@ class CrashLog(symbolication.Symbolicator):
 
     def get_target(self):
         return self.target
+
+
+class CrashLogParseMode:
+    NORMAL = 0
+    THREAD = 1
+    IMAGES = 2
+    THREGS = 3
+    SYSTEM = 4
+    INSTRS = 5
+
+
+class CrashLogParser:
+    parent_process_regex = re.compile('^Parent Process:\s*(.*)\[(\d+)\]')
+    thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
+    thread_instrs_regex = re.compile('^Thread ([0-9]+) instruction stream')
+    thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
+    app_backtrace_regex = re.compile('^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
+    version = r'(\(.+\)|(arm|x86_)[0-9a-z]+)\s+'
+    frame_regex = re.compile(r'^([0-9]+)' r'\s'                # id
+                             r'+(.+?)'    r'\s+'               # img_name
+                             r'(' +version+ r')?'              # img_version
+                             r'(0x[0-9a-fA-F]{7}[0-9a-fA-F]+)' # addr
+                             r' +(.*)'                         # offs
+                            )
+    null_frame_regex = re.compile(r'^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
+    image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'            # img_lo
+                                  r'\s+' '-' r'\s+'              #   -
+                                  r'(0x[0-9a-fA-F]+)'     r'\s+' # img_hi
+                                  r'[+]?(.+?)'            r'\s+' # img_name
+                                  r'(' +version+ ')?'            # img_version
+                                  r'(<([-0-9a-fA-F]+)>\s+)?'     # img_uuid
+                                  r'(/.*)'                       # img_path
+                                 )
+
+
+    def __init__(self, debugger, path, verbose):
+        self.path = os.path.expanduser(path)
+        self.verbose = verbose
+        self.thread = None
+        self.app_specific_backtrace = False
+        self.crashlog = CrashLog(debugger, self.path, self.verbose)
+        self.parse_mode = CrashLogParseMode.NORMAL
+        self.parsers = {
+            CrashLogParseMode.NORMAL : self.parse_normal,
+            CrashLogParseMode.THREAD : self.parse_thread,
+            CrashLogParseMode.IMAGES : self.parse_images,
+            CrashLogParseMode.THREGS : self.parse_thread_registers,
+            CrashLogParseMode.SYSTEM : self.parse_system,
+            CrashLogParseMode.INSTRS : self.parse_instructions,
+        }
+
+    def parse(self):
+        with open(self.path,'r') as f:
+            lines = f.read().splitlines()
+
+        for line in lines:
+            line_len = len(line)
+            if line_len == 0:
+                if self.thread:
+                    if self.parse_mode == CrashLogParseMode.THREAD:
+                        if self.thread.index == self.crashlog.crashed_thread_idx:
+                            self.thread.reason = ''
+                            if self.crashlog.thread_exception:
+                                self.thread.reason += self.crashlog.thread_exception
+                            if self.crashlog.thread_exception_data:
+                                self.thread.reason += " (%s)" % self.crashlog.thread_exception_data
+                        if self.app_specific_backtrace:
+                            self.crashlog.backtraces.append(self.thread)
+                        else:
+                            self.crashlog.threads.append(self.thread)
+                    self.thread = None
+                else:
+                    # only append an extra empty line if the previous line
+                    # in the info_lines wasn't empty
+                    if len(self.crashlog.info_lines) > 0 and len(self.crashlog.info_lines[-1]):
+                        self.crashlog.info_lines.append(line)
+                self.parse_mode = CrashLogParseMode.NORMAL
+            else:
+                self.parsers[self.parse_mode](line)
+
+        return self.crashlog
+
+
+    def parse_normal(self, line):
+        if line.startswith('Process:'):
+            (self.crashlog.process_name, pid_with_brackets) = line[
+                8:].strip().split(' [')
+            self.crashlog.process_id = pid_with_brackets.strip('[]')
+        elif line.startswith('Path:'):
+            self.crashlog.process_path = line[5:].strip()
+        elif line.startswith('Identifier:'):
+            self.crashlog.process_identifier = line[11:].strip()
+        elif line.startswith('Version:'):
+            version_string = line[8:].strip()
+            matched_pair = re.search("(.+)\((.+)\)", version_string)
+            if matched_pair:
+                self.crashlog.process_version = matched_pair.group(1)
+                self.crashlog.process_compatability_version = matched_pair.group(
+                    2)
+            else:
+                self.crashlog.process = version_string
+                self.crashlog.process_compatability_version = version_string
+        elif self.parent_process_regex.search(line):
+            parent_process_match = self.parent_process_regex.search(
+                line)
+            self.crashlog.parent_process_name = parent_process_match.group(1)
+            self.crashlog.parent_process_id = parent_process_match.group(2)
+        elif line.startswith('Exception Type:'):
+            self.crashlog.thread_exception = line[15:].strip()
+            return
+        elif line.startswith('Exception Codes:'):
+            self.crashlog.thread_exception_data = line[16:].strip()
+            return
+        elif line.startswith('Exception Subtype:'): # iOS
+            self.crashlog.thread_exception_data = line[18:].strip()
+            return
+        elif line.startswith('Crashed Thread:'):
+            self.crashlog.crashed_thread_idx = int(line[15:].strip().split()[0])
+            return
+        elif line.startswith('Triggered by Thread:'): # iOS
+            self.crashlog.crashed_thread_idx = int(line[20:].strip().split()[0])
+            return
+        elif line.startswith('Report Version:'):
+            self.crashlog.version = int(line[15:].strip())
+            return
+        elif line.startswith('System Profile:'):
+            self.parse_mode = CrashLogParseMode.SYSTEM
+            return
+        elif (line.startswith('Interval Since Last Report:') or
+                line.startswith('Crashes Since Last Report:') or
+                line.startswith('Per-App Interval Since Last Report:') or
+                line.startswith('Per-App Crashes Since Last Report:') or
+                line.startswith('Sleep/Wake UUID:') or
+                line.startswith('Anonymous UUID:')):
+            # ignore these
+            return
+        elif line.startswith('Thread'):
+            thread_state_match = self.thread_state_regex.search(line)
+            if thread_state_match:
+                self.app_specific_backtrace = False
+                thread_state_match = self.thread_regex.search(line)
+                thread_idx = int(thread_state_match.group(1))
+                self.parse_mode = CrashLogParseMode.THREGS
+                self.thread = self.crashlog.threads[thread_idx]
+                return
+            thread_insts_match  = self.thread_instrs_regex.search(line)
+            if thread_insts_match:
+                self.parse_mode = CrashLogParseMode.INSTRS
+                return
+            thread_match = self.thread_regex.search(line)
+            if thread_match:
+                self.app_specific_backtrace = False
+                self.parse_mode = CrashLogParseMode.THREAD
+                thread_idx = int(thread_match.group(1))
+                self.thread = self.crashlog.Thread(thread_idx, False)
+                return
+            return
+        elif line.startswith('Binary Images:'):
+            self.parse_mode = CrashLogParseMode.IMAGES
+            return
+        elif line.startswith('Application Specific Backtrace'):
+            app_backtrace_match = self.app_backtrace_regex.search(line)
+            if app_backtrace_match:
+                self.parse_mode = CrashLogParseMode.THREAD
+                self.app_specific_backtrace = True
+                idx = int(app_backtrace_match.group(1))
+                self.thread = self.crashlog.Thread(idx, True)
+        elif line.startswith('Last Exception Backtrace:'): # iOS
+            self.parse_mode = CrashLogParseMode.THREAD
+            self.app_specific_backtrace = True
+            idx = 1
+            self.thread = self.crashlog.Thread(idx, True)
+        self.crashlog.info_lines.append(line.strip())
+
+    def parse_thread(self, line):
+        if line.startswith('Thread'):
+            return
+        if self.null_frame_regex.search(line):
+            print('warning: thread parser ignored null-frame: "%s"' % line)
+            return
+        frame_match = self.frame_regex.search(line)
+        if frame_match:
+            (frame_id, frame_img_name, _, frame_img_version, _,
+                frame_addr, frame_ofs) = frame_match.groups()
+            ident = frame_img_name
+            self.thread.add_ident(ident)
+            if ident not in self.crashlog.idents:
+                self.crashlog.idents.append(ident)
+            self.thread.frames.append(self.crashlog.Frame(int(frame_id), int(
+                frame_addr, 0), frame_ofs))
+        else:
+            print('error: frame regex failed for line: "%s"' % line)
+
+    def parse_images(self, line):
+        image_match = self.image_regex_uuid.search(line)
+        if image_match:
+            (img_lo, img_hi, img_name, _, img_version, _,
+                _, img_uuid, img_path) = image_match.groups()
+            image = self.crashlog.DarwinImage(int(img_lo, 0), int(img_hi, 0),
+                                            img_name.strip(),
+                                            img_version.strip()
+                                            if img_version else "",
+                                            uuid.UUID(img_uuid), img_path,
+                                            self.verbose)
+            self.crashlog.images.append(image)
+        else:
+            print("error: image regex failed for: %s" % line)
+
+
+    def parse_thread_registers(self, line):
+        stripped_line = line.strip()
+        # "r12: 0x00007fff6b5939c8  r13: 0x0000000007000006  r14: 0x0000000000002a03  r15: 0x0000000000000c00"
+        reg_values = re.findall(
+            '([a-zA-Z0-9]+: 0[Xx][0-9a-fA-F]+) *', stripped_line)
+        for reg_value in reg_values:
+            (reg, value) = reg_value.split(': ')
+            self.thread.registers[reg.strip()] = int(value, 0)
+
+    def parse_system(self, line):
+        self.crashlog.system_profile.append(line)
+
+    def parse_instructions(self, line):
+        pass
 
 
 def usage():
@@ -706,7 +711,7 @@ class Interactive(cmd.Cmd):
         return False
 
 
-def interactive_crashlogs(options, args):
+def interactive_crashlogs(debugger, options, args):
     crash_log_files = list()
     for arg in args:
         for resolved_path in glob.glob(arg):
@@ -714,10 +719,10 @@ def interactive_crashlogs(options, args):
 
     crash_logs = list()
     for crash_log_file in crash_log_files:
-        # print 'crash_log_file = "%s"' % crash_log_file
-        crash_log = CrashLog(crash_log_file, options.verbose)
-        if crash_log.error:
-            print(crash_log.error)
+        try:
+            crash_log = CrashLogParser(debugger, crash_log_file, options.verbose).parse()
+        except Exception as e:
+            print(e)
             continue
         if options.debug:
             crash_log.dump()
@@ -843,15 +848,12 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
 
 def Symbolicate(debugger, command, result, dict):
     try:
-        SymbolicateCrashLogs(shlex.split(command))
-    except:
-        result.PutCString("error: python exception %s" % sys.exc_info()[0])
+        SymbolicateCrashLogs(debugger, shlex.split(command))
+    except Exception as e:
+        result.PutCString("error: python exception: %s" % e)
 
 
 def SymbolicateCrashLog(crash_log, options):
-    if crash_log.error:
-        print(crash_log.error)
-        return
     if options.debug:
         crash_log.dump()
     if not crash_log.images:
@@ -903,7 +905,6 @@ def SymbolicateCrashLog(crash_log, options):
             if err:
                 print(err)
             else:
-                # print 'loaded %s' % image
                 loaded_images.append(image)
 
     if crash_log.backtraces:
@@ -1023,7 +1024,7 @@ def CreateSymbolicateCrashLogOptions(
     return option_parser
 
 
-def SymbolicateCrashLogs(command_args):
+def SymbolicateCrashLogs(debugger, command_args):
     description = '''Symbolicate one or more darwin crash log files to provide source file and line information,
 inlined stack frames back to the concrete functions, and disassemble the location of the crash
 for the first frame of the crashed thread.
@@ -1051,19 +1052,19 @@ be disassembled and lookups can be performed using the addresses found in the cr
 
     if args:
         if options.interactive:
-            interactive_crashlogs(options, args)
+            interactive_crashlogs(debugger, options, args)
         else:
             for crash_log_file in args:
-                crash_log = CrashLog(crash_log_file, options.verbose)
+                crash_log_parser = CrashLogParser(debugger, crash_log_file, options.verbose)
+                crash_log = crash_log_parser.parse()
                 SymbolicateCrashLog(crash_log, options)
 if __name__ == '__main__':
     # Create a new debugger instance
-    lldb.debugger = lldb.SBDebugger.Create()
-    SymbolicateCrashLogs(sys.argv[1:])
-    lldb.SBDebugger.Destroy(lldb.debugger)
+    debugger = lldb.SBDebugger.Create()
+    SymbolicateCrashLogs(debugger, sys.argv[1:])
+    lldb.SBDebugger.Destroy(debugger)
 elif getattr(lldb, 'debugger', None):
     lldb.debugger.HandleCommand(
         'command script add -f lldb.macosx.crashlog.Symbolicate crashlog')
     lldb.debugger.HandleCommand(
         'command script add -f lldb.macosx.crashlog.save_crashlog save_crashlog')
-    print('"crashlog" and "save_crashlog" command installed, use the "--help" option for detailed help')

@@ -54,9 +54,11 @@ auto bad_init_7 = [a{{1}}] {}; // expected-error {{cannot deduce type for lambda
 template<typename...T> void pack_1(T...t) { (void)[a(t...)] {}; } // expected-error {{initializer missing for lambda capture 'a'}}
 template void pack_1<>(); // expected-note {{instantiation of}}
 
-// FIXME: Might need lifetime extension for the temporary here.
-// See DR1695.
-auto a = [a(4), b = 5, &c = static_cast<const int&&>(0)] {
+// No lifetime-extension of the temporary here.
+auto a_copy = [&c = static_cast<const int&&>(0)] {}; // expected-warning {{temporary whose address is used as value of local variable 'a_copy' will be destroyed at the end of the full-expression}} expected-note {{via initialization of lambda capture 'c'}}
+
+// But there is lifetime extension here.
+auto &&a = [a(4), b = 5, &c = static_cast<const int&&>(0)] {
   static_assert(sizeof(a) == sizeof(int), "");
   static_assert(sizeof(b) == sizeof(int), "");
   using T = decltype(c);

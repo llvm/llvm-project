@@ -160,20 +160,20 @@ func @extract_strided_fold_negative(%a: vector<4x4xf32>, %b: vector<8x16xf32>)
 
 // Case where we need to go through 2 level of insert element.
 // CHECK-LABEL: extract_strided_fold_insert
-//  CHECK-SAME: (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<1x4xf32>,
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<2x8xf32>, %[[ARG1:.*]]: vector<1x4xf32>,
 //  CHECK-NEXT:   %[[EXT:.*]] = vector.extract_strided_slice %[[ARG1]]
-//  CHECK-SAME:     {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
+//  CHECK-SAME:     {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]}
 //  CHECK-SAME:       : vector<1x4xf32> to vector<1x1xf32>
 //  CHECK-NEXT:   return %[[EXT]] : vector<1x1xf32>
-func @extract_strided_fold_insert(%a: vector<2x4xf32>, %b: vector<1x4xf32>,
+func @extract_strided_fold_insert(%a: vector<2x8xf32>, %b: vector<1x4xf32>,
                                   %c : vector<1x4xf32>) -> (vector<1x1xf32>) {
-  %0 = vector.insert_strided_slice %b, %a {offsets = [0, 0], strides = [1, 1]}
-    : vector<1x4xf32> into vector<2x4xf32>
+  %0 = vector.insert_strided_slice %b, %a {offsets = [0, 1], strides = [1, 1]}
+    : vector<1x4xf32> into vector<2x8xf32>
   %1 = vector.insert_strided_slice %c, %0 {offsets = [1, 0], strides = [1, 1]}
-    : vector<1x4xf32> into vector<2x4xf32>
+    : vector<1x4xf32> into vector<2x8xf32>
   %2 = vector.extract_strided_slice %1
       {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
-        : vector<2x4xf32> to vector<1x1xf32>
+        : vector<2x8xf32> to vector<1x1xf32>
   return %2 : vector<1x1xf32>
 }
 
@@ -580,3 +580,37 @@ func @broadcast_folding2() -> vector<4x16xi32> {
   %2 = vector.broadcast %1 : vector<16xi32> to vector<4x16xi32>
   return %2 : vector<4x16xi32>
 }
+
+// -----
+
+// CHECK-LABEL: shape_cast_constant
+//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
+//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK: return %[[CST0]], %[[CST1]] : vector<20x2xf32>, vector<3x4x2xi32>
+func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
+  %cst = constant dense<2.000000e+00> : vector<5x4x2xf32>
+  %cst_1 = constant dense<1> : vector<12x2xi32>
+  %0 = vector.shape_cast %cst : vector<5x4x2xf32> to vector<20x2xf32>
+  %1 = vector.shape_cast %cst_1 : vector<12x2xi32> to vector<3x4x2xi32>
+  return %0, %1 : vector<20x2xf32>, vector<3x4x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_strided_constant
+//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
+//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK: return %[[CST0]], %[[CST1]] : vector<12x2xf32>, vector<2x13x3xi32>
+func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) {
+  %cst = constant dense<2.000000e+00> : vector<29x7xf32>
+  %cst_1 = constant dense<1> : vector<4x37x9xi32>
+  %0 = vector.extract_strided_slice %cst
+    {offsets = [2, 3], sizes = [12, 2], strides = [1, 1]}
+      : vector<29x7xf32> to vector<12x2xf32>
+  %1 = vector.extract_strided_slice %cst_1
+    {offsets = [1, 2, 5], sizes = [2, 13, 3], strides = [1, 1, 1]}
+      : vector<4x37x9xi32> to vector<2x13x3xi32>
+  return %0, %1 : vector<12x2xf32>, vector<2x13x3xi32>
+}
+
+

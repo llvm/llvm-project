@@ -85,7 +85,7 @@ attributes #1 = { nounwind readnone speculatable }
 
 
 ; CHECK: CodeViewTypes [
-; CHECK:   Section: .debug$T (6)
+; CHECK:   Section: .debug$T (7)
 ; CHECK:   Magic: 0x4
 ; CHECK:   Pointer (0x1005) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)

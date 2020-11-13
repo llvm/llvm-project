@@ -40,7 +40,7 @@
 
 
 ; CHECK: CodeViewTypes [
-; CHECK:   Section: .debug$T (6)
+; CHECK:   Section: .debug$T (7)
 ; CHECK:   Magic: 0x4
 ; CHECK:   Modifier (0x1000) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
@@ -367,7 +367,7 @@
 ; CHECK: ]
 
 ; CHECK-LABEL: CodeViewDebugInfo [
-; CHECK-NEXT:   Section: .debug$S (5)
+; CHECK-NEXT:   Section: .debug$S (6)
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
 ; CHECK:     GlobalProcIdSym {

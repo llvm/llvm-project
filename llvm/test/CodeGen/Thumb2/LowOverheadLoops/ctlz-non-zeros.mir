@@ -10,11 +10,11 @@
     br i1 %cmp, label %exit, label %loop.ph
 
   loop.ph:                                          ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %iters)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %iters)
     br label %loop.body
 
   loop.body:                                        ; preds = %loop.body, %loop.ph
-    %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %iters, %loop.ph ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %start, %loop.ph ]
     %count = phi i32 [ %elts, %loop.ph ], [ %elts.rem, %loop.body ]
     %addr.a = phi <8 x i16>* [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
     %addr.b = phi <8 x i16>* [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
@@ -46,11 +46,11 @@
     br i1 %cmp, label %exit, label %loop.ph
 
   loop.ph:                                          ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %iters)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %iters)
     br label %loop.body
 
   loop.body:                                        ; preds = %loop.body, %loop.ph
-    %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %iters, %loop.ph ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %start, %loop.ph ]
     %count = phi i32 [ %elts, %loop.ph ], [ %elts.rem, %loop.body ]
     %addr.a = phi <4 x i32>* [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
     %addr.b = phi <4 x i32>* [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
@@ -82,11 +82,11 @@
     br i1 %cmp, label %exit, label %loop.ph
 
   loop.ph:                                          ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %iters)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %iters)
     br label %loop.body
 
   loop.body:                                        ; preds = %loop.body, %loop.ph
-    %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %iters, %loop.ph ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %loop.body ], [ %start, %loop.ph ]
     %count = phi i32 [ %elts, %loop.ph ], [ %elts.rem, %loop.body ]
     %addr.a = phi <4 x i32>* [ %a, %loop.ph ], [ %addr.a.next, %loop.body ]
     %addr.b = phi <4 x i32>* [ %b, %loop.ph ], [ %addr.b.next, %loop.body ]
@@ -115,7 +115,7 @@
   declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1 immarg)
   declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>, i1 immarg)
   declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1 immarg)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
@@ -166,23 +166,23 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
   ; CHECK:   tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2IT 11, 8, implicit-def $itstate
-  ; CHECK:   tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
+  ; CHECK:   frame-destroy tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
   ; CHECK: bb.1.loop.ph:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r12 = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-  ; CHECK:   dead $lr = t2DLS renamable $r12
-  ; CHECK:   $r4 = tMOVr killed $r12, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK:   $r4 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.loop.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4
+  ; CHECK:   $lr = tMOVr $r4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $vpr = MVE_VCTP16 renamable $r3, 0, $noreg
   ; CHECK:   MVE_VPST 4, implicit $vpr
   ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRHU16_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.addr.b, align 2)
   ; CHECK:   renamable $q1 = MVE_VLDRHU16 killed renamable $r0, 0, 1, renamable $vpr :: (load 16 from %ir.addr.a, align 2)
-  ; CHECK:   $lr = tMOVr $r4, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r4, dead $cpsr = tSUBi8 killed $r4, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r4, dead $cpsr = tSUBi8 killed $r4, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q1 = MVE_VCLZs8 killed renamable $q1, 0, $noreg, undef renamable $q1
   ; CHECK:   $r0 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q1 = MVE_VQSHRUNs16th killed renamable $q1, killed renamable $q0, 1, 0, $noreg
@@ -190,7 +190,7 @@ body:             |
   ; CHECK:   renamable $r2 = MVE_VSTRHU16_post killed renamable $q1, killed renamable $r2, 16, 1, killed renamable $vpr :: (store 16 into %ir.addr.c, align 2)
   ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.exit:
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
     liveins: $r0, $r1, $r2, $r3, $r4, $lr
@@ -201,27 +201,27 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r4, -8
     tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2IT 11, 8, implicit-def $itstate
-    tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
+    frame-destroy tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
 
   bb.1.loop.ph:
     successors: %bb.2(0x80000000)
-    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+    liveins: $r0, $r1, $r2, $r3
 
-    renamable $r12 = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-    t2DoLoopStart renamable $r12
-    $r4 = tMOVr killed $r12, 14 /* CC::al */, $noreg
+    renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+    renamable $lr = t2DoLoopStart killed renamable $lr
+    $r4 = tMOVr killed $lr, 14 /* CC::al */, $noreg
 
   bb.2.loop.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $r0, $r1, $r2, $r3, $r4
 
+    $lr = tMOVr $r4, 14 /* CC::al */, $noreg
     renamable $vpr = MVE_VCTP16 renamable $r3, 0, $noreg
     MVE_VPST 4, implicit $vpr
     renamable $r1, renamable $q0 = MVE_VLDRHU16_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.addr.b, align 2)
     renamable $q1 = MVE_VLDRHU16 killed renamable $r0, 0, 1, renamable $vpr :: (load 16 from %ir.addr.a, align 2)
-    $lr = tMOVr $r4, 14 /* CC::al */, $noreg
-    renamable $r4, dead $cpsr = tSUBi8 killed $r4, 1, 14 /* CC::al */, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 8, 14 /* CC::al */, $noreg
+    renamable $r4, dead $cpsr = tSUBi8 killed $r4, 1, 14 /* CC::al */, $noreg
     renamable $q1 = MVE_VCLZs8 killed renamable $q1, 0, $noreg, undef renamable $q1
     renamable $lr = t2LoopDec killed renamable $lr, 1
     $r0 = tMOVr $r1, 14 /* CC::al */, $noreg
@@ -232,7 +232,7 @@ body:             |
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.exit:
-    tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
 
 ...
 ---
@@ -267,68 +267,69 @@ body:             |
   ; CHECK-LABEL: name: test_ctlz_i16
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r7
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2IT 11, 8, implicit-def $itstate
-  ; CHECK:   tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
+  ; CHECK:   frame-destroy tPOP_RET 11 /* CC::lt */, killed $cpsr, def dead $r7, def $pc, implicit killed $itstate
   ; CHECK: bb.1.loop.ph:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r4 = tLDRspi $sp, 2, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-  ; CHECK:   dead $lr = t2DLS renamable $r4
-  ; CHECK:   $r12 = tMOVr killed $r4, 14 /* CC::al */, $noreg
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4
+  ; CHECK:   renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.loop.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r12
-  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4, $r12
   ; CHECK:   $lr = tMOVr $r12, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
   ; CHECK:   MVE_VPST 4, implicit $vpr
   ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.addr.b, align 4)
   ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.addr.a, align 4)
-  ; CHECK:   renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $q1 = MVE_VCLZs16 killed renamable $q1, 0, $noreg, undef renamable $q1
   ; CHECK:   renamable $q1 = MVE_VQSHRUNs32th killed renamable $q1, killed renamable $q0, 3, 0, $noreg
   ; CHECK:   MVE_VPST 8, implicit $vpr
   ; CHECK:   renamable $r2 = MVE_VSTRWU32_post killed renamable $q1, killed renamable $r2, 16, 1, killed renamable $vpr :: (store 16 into %ir.addr.c, align 4)
   ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.exit:
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+  ; CHECK:   liveins: $r4
+  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def dead $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
-    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+    liveins: $r0, $r1, $r2, $r3, $r7, $lr
 
-    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
-    frame-setup CFI_INSTRUCTION offset $r4, -8
+    frame-setup CFI_INSTRUCTION offset $r7, -8
     tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2IT 11, 8, implicit-def $itstate
-    tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
+    frame-destroy tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r7, def $pc, implicit killed $itstate
 
   bb.1.loop.ph:
     successors: %bb.2(0x80000000)
-    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+    liveins: $r0, $r1, $r2, $r3
 
-    renamable $r4 = tLDRspi $sp, 2, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-    t2DoLoopStart renamable $r4
-    $r12 = tMOVr killed $r4, 14 /* CC::al */, $noreg
+    renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+    renamable $lr = t2DoLoopStart killed renamable $lr
+    $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
 
   bb.2.loop.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $r0, $r1, $r2, $r3, $r12
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
     $lr = tMOVr $r12, 14 /* CC::al */, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
     MVE_VPST 4, implicit $vpr
     renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.addr.b, align 4)
     renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.addr.a, align 4)
-    renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
+    renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
     renamable $q1 = MVE_VCLZs16 killed renamable $q1, 0, $noreg, undef renamable $q1
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $q1 = MVE_VQSHRUNs32th killed renamable $q1, killed renamable $q0, 3, 0, $noreg
@@ -338,7 +339,7 @@ body:             |
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.exit:
-    tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
 
 ...
 ---
@@ -373,68 +374,69 @@ body:             |
   ; CHECK-LABEL: name: test_ctlz_i32
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r7
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2IT 11, 8, implicit-def $itstate
-  ; CHECK:   tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
+  ; CHECK:   frame-destroy tPOP_RET 11 /* CC::lt */, killed $cpsr, def dead $r7, def $pc, implicit killed $itstate
   ; CHECK: bb.1.loop.ph:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r4 = tLDRspi $sp, 2, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-  ; CHECK:   dead $lr = t2DLS renamable $r4
-  ; CHECK:   $r12 = tMOVr killed $r4, 14 /* CC::al */, $noreg
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4
+  ; CHECK:   renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.loop.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r12
-  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4, $r12
   ; CHECK:   $lr = tMOVr $r12, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
   ; CHECK:   MVE_VPST 4, implicit $vpr
   ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.addr.a, align 4)
   ; CHECK:   renamable $r1, renamable $q1 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.addr.b, align 4)
-  ; CHECK:   renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $q1 = MVE_VCLZs32 killed renamable $q1, 0, $noreg, undef renamable $q1
   ; CHECK:   renamable $q0 = MVE_VQSHRUNs32th killed renamable $q0, killed renamable $q1, 3, 0, $noreg
   ; CHECK:   MVE_VPST 8, implicit $vpr
   ; CHECK:   renamable $r2 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r2, 16, 1, killed renamable $vpr :: (store 16 into %ir.addr.c, align 4)
   ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.exit:
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+  ; CHECK:   liveins: $r4
+  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def dead $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
-    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+    liveins: $r0, $r1, $r2, $r3, $r7, $lr
 
-    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
-    frame-setup CFI_INSTRUCTION offset $r4, -8
+    frame-setup CFI_INSTRUCTION offset $r7, -8
     tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2IT 11, 8, implicit-def $itstate
-    tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
+    frame-destroy tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r7, def $pc, implicit killed $itstate
 
   bb.1.loop.ph:
     successors: %bb.2(0x80000000)
-    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+    liveins: $r0, $r1, $r2, $r3
 
-    renamable $r4 = tLDRspi $sp, 2, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-    t2DoLoopStart renamable $r4
-    $r12 = tMOVr killed $r4, 14 /* CC::al */, $noreg
+    renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+    renamable $lr = t2DoLoopStart killed renamable $lr
+    $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
 
   bb.2.loop.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $r0, $r1, $r2, $r3, $r12
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
     $lr = tMOVr $r12, 14 /* CC::al */, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
     MVE_VPST 4, implicit $vpr
     renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.addr.a, align 4)
     renamable $r1, renamable $q1 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.addr.b, align 4)
-    renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
+    renamable $r12 = t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
     renamable $q1 = MVE_VCLZs32 killed renamable $q1, 0, $noreg, undef renamable $q1
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $q0 = MVE_VQSHRUNs32th killed renamable $q0, killed renamable $q1, 3, 0, $noreg
@@ -444,6 +446,6 @@ body:             |
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.exit:
-    tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
 
 ...

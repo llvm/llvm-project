@@ -27,6 +27,84 @@ template <typename C, std::size_t ClauseEnumSize> struct DirectiveClauses {
   const common::EnumSet<C, ClauseEnumSize> requiredOneOf;
 };
 
+// Generic branching checker for invalid branching out of OpenMP/OpenACC
+// directive.
+// typename D is the directive enumeration.
+template <typename D> class NoBranchingEnforce {
+public:
+  NoBranchingEnforce(SemanticsContext &context,
+      parser::CharBlock sourcePosition, D directive,
+      std::string &&upperCaseDirName)
+      : context_{context}, sourcePosition_{sourcePosition},
+        upperCaseDirName_{std::move(upperCaseDirName)}, currentDirective_{
+                                                            directive} {}
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  template <typename T> bool Pre(const parser::Statement<T> &statement) {
+    currentStatementSourcePosition_ = statement.source;
+    return true;
+  }
+
+  void Post(const parser::ReturnStmt &) { EmitBranchOutError("RETURN"); }
+  void Post(const parser::ExitStmt &exitStmt) {
+    if (const auto &exitName{exitStmt.v}) {
+      CheckConstructNameBranching("EXIT", exitName.value());
+    }
+  }
+  void Post(const parser::StopStmt &) { EmitBranchOutError("STOP"); }
+
+private:
+  parser::MessageFormattedText GetEnclosingMsg() const {
+    return {"Enclosing %s construct"_en_US, upperCaseDirName_};
+  }
+
+  void EmitBranchOutError(const char *stmt) const {
+    context_
+        .Say(currentStatementSourcePosition_,
+            "%s statement is not allowed in a %s construct"_err_en_US, stmt,
+            upperCaseDirName_)
+        .Attach(sourcePosition_, GetEnclosingMsg());
+  }
+
+  void EmitBranchOutErrorWithName(
+      const char *stmt, const parser::Name &toName) const {
+    const std::string branchingToName{toName.ToString()};
+    context_
+        .Say(currentStatementSourcePosition_,
+            "%s to construct '%s' outside of %s construct is not allowed"_err_en_US,
+            stmt, branchingToName, upperCaseDirName_)
+        .Attach(sourcePosition_, GetEnclosingMsg());
+  }
+
+  // Current semantic checker is not following OpenACC/OpenMP constructs as they
+  // are not Fortran constructs. Hence the ConstructStack doesn't capture
+  // OpenACC/OpenMP constructs. Apply an inverse way to figure out if a
+  // construct-name is branching out of an OpenACC/OpenMP construct. The control
+  // flow goes out of an OpenACC/OpenMP construct, if a construct-name from
+  // statement is found in ConstructStack.
+  void CheckConstructNameBranching(
+      const char *stmt, const parser::Name &stmtName) {
+    const ConstructStack &stack{context_.constructStack()};
+    for (auto iter{stack.cend()}; iter-- != stack.cbegin();) {
+      const ConstructNode &construct{*iter};
+      const auto &constructName{MaybeGetNodeName(construct)};
+      if (constructName) {
+        if (stmtName.source == constructName->source) {
+          EmitBranchOutErrorWithName(stmt, stmtName);
+          return;
+        }
+      }
+    }
+  }
+
+  SemanticsContext &context_;
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock sourcePosition_;
+  std::string upperCaseDirName_;
+  D currentDirective_;
+};
+
 // Generic structure checker for directives/clauses language such as OpenMP
 // and OpenACC.
 // typename D is the directive enumeration.
@@ -148,6 +226,8 @@ protected:
       SayNotMatching(beginDir.source, endDir.source);
     }
   }
+  void CheckNoBranching(const parser::Block &block, D directive,
+      const parser::CharBlock &directiveSource);
 
   // Check that only clauses in set are after the specific clauses.
   void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
@@ -168,8 +248,8 @@ protected:
   void RequiresConstantPositiveParameter(
       const C &clause, const parser::ScalarIntConstantExpr &i);
 
-  void RequiresPositiveParameter(
-      const C &clause, const parser::ScalarIntExpr &i);
+  void RequiresPositiveParameter(const C &clause,
+      const parser::ScalarIntExpr &i, llvm::StringRef paramName = "parameter");
 
   void OptionalConstantPositiveParameter(
       const C &clause, const std::optional<parser::ScalarIntConstantExpr> &o);
@@ -185,6 +265,15 @@ protected:
 
   std::string ClauseSetToString(const common::EnumSet<C, ClauseEnumSize> set);
 };
+
+template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
+    const parser::Block &block, D directive,
+    const parser::CharBlock &directiveSource) {
+  NoBranchingEnforce<D> noBranchingEnforce{
+      context_, directiveSource, directive, ContextDirectiveAsFortran()};
+  parser::Walk(block, noBranchingEnforce);
+}
 
 // Check that only clauses included in the given set are present after the given
 // clause.
@@ -373,12 +462,13 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckRequired(C c) {
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
     ClauseEnumSize>::RequiresPositiveParameter(const C &clause,
-    const parser::ScalarIntExpr &i) {
+    const parser::ScalarIntExpr &i, llvm::StringRef paramName) {
   if (const auto v{GetIntValue(i)}) {
     if (*v <= 0) {
       context_.Say(GetContext().clauseSource,
-          "The parameter of the %s clause must be "
+          "The %s of the %s clause must be "
           "a positive integer expression"_err_en_US,
+          paramName.str(),
           parser::ToUpperCaseLetters(getClauseName(clause).str()));
     }
   }

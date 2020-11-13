@@ -138,15 +138,10 @@ int main(int, char**)
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        struct Z {
-            Z(int) {}
-            Z(Z&&) {throw 6;}
-        };
-        typedef Z T;
         try
         {
-            T t(3);
-            optional<T> opt(std::move(t));
+            Z z(3);
+            optional<Z> opt(std::move(z));
             assert(false);
         }
         catch (int i)

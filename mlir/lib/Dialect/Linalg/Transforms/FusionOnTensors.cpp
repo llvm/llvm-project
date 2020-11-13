@@ -147,7 +147,7 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
     }
 
     // If consumer is an indexed_generic op, map the indices to the block
-    // arguments directly. Otherwise, add the same type of arugment and map to
+    // arguments directly. Otherwise, add the same type of argument and map to
     // it.
     if (consumerArg.index() < numConsumerIndices) {
       mapper.map(consumerArg.value(),
@@ -177,8 +177,7 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
 
 static Optional<SmallVector<Value, 1>>
 fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
-                  PatternRewriter &rewriter,
-                  OperationFolder *folder = nullptr) {
+                  PatternRewriter &rewriter) {
   if (!areTensorOpsFusable(producer, consumer, consumerIdx))
     return llvm::None;
 
@@ -228,6 +227,7 @@ fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
                                      consumer.iterator_types(),
                                      /*doc=*/nullptr,
                                      /*library_call=*/nullptr,
+                                     /*sparse=*/nullptr,
                                      /*symbol_source=*/nullptr)
                   .getOperation();
   } else {
@@ -242,6 +242,7 @@ fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
                                       consumer.iterator_types(),
                                       /*doc=*/nullptr,
                                       /*library_call=*/nullptr,
+                                      /*sparse=*/nullptr,
                                       /*symbol_source=*/nullptr)
             .getOperation();
   }
@@ -440,8 +441,8 @@ static bool isFusableWithReshapeByDimExpansion(LinalgOp linalgOp,
 /// conditions have been satisfied.
 static Optional<SmallVector<Value, 1>>
 fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
-                           unsigned fusedTensorIndex, PatternRewriter &rewriter,
-                           OperationFolder *folder = nullptr) {
+                           unsigned fusedTensorIndex,
+                           PatternRewriter &rewriter) {
   assert(isFusableWithReshapeByDimExpansion(linalgOp, fusedTensorIndex) &&
          "preconditions for fuse operation failed");
   // Check if reshape is expanding or collapsing.
@@ -821,6 +822,7 @@ struct FoldConsumerReshapeOpByLinearization
         producer.iterator_types(),
         /*doc=*/nullptr,
         /*library_call=*/nullptr,
+        /*sparse=*/nullptr,
         /*symbol_source=*/nullptr);
     auto &fusedRegion = fusedOp.getOperation()->getRegion(0);
     rewriter.cloneRegionBefore(producer.getOperation()->getRegion(0),
@@ -904,6 +906,7 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
           linalgOp.iterator_types(),
           /*doc=*/nullptr,
           /*library_call=*/nullptr,
+          /*sparse=*/nullptr,
           /*symbol_source=*/nullptr);
 
       // Map the block argument corresponding to the replaced argument with the
@@ -929,7 +932,7 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
 
 Optional<SmallVector<Value, 1>>
 mlir::linalg::fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
-                            unsigned consumerIdx, OperationFolder *folder) {
+                            unsigned consumerIdx) {
   if (consumerIdx >= consumer->getNumOperands())
     return llvm::None;
   Operation *producer = consumer->getOperand(consumerIdx).getDefiningOp();
@@ -942,7 +945,7 @@ mlir::linalg::fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
     return llvm::None;
 
   return fuseTensorOpsImpl(cast<LinalgOp>(producer), cast<LinalgOp>(consumer),
-                           consumerIdx, rewriter, folder);
+                           consumerIdx, rewriter);
 }
 
 namespace {

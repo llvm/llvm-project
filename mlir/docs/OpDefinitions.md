@@ -645,14 +645,14 @@ The generated code will use default value in the declaration, but not in the
 definition, as required by C++.
 
 ```c++
-/* Header file. */
+/// Header file.
 class MyOp : /*...*/ {
   /*...*/
   static void build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
                     float val = 0.5f);
 };
 
-/* Source file. */
+/// Source file.
 MyOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
             float val) {
   state.addAttribute("attr", builder.getF32FloatAttr(val));
@@ -768,7 +768,7 @@ A literal is either a keyword or punctuation surrounded by \`\`.
 
 The following are the set of valid punctuation:
 
-`:`, `,`, `=`, `<`, `>`, `(`, `)`, `{`, `}`, `[`, `]`, `->`
+`:`, `,`, `=`, `<`, `>`, `(`, `)`, `{`, `}`, `[`, `]`, `->`, `?`, `+`, `*`
 
 #### Variables
 
@@ -797,7 +797,7 @@ A custom directive has two main parts: The `UserDirective` and the `Params`. A
 custom directive is transformed into a call to a `print*` and a `parse*` method
 when generating the C++ code for the format. The `UserDirective` is an
 identifier used as a suffix to these two calls, i.e., `custom<MyDirective>(...)`
-would result in calls to `parseMyDirective` and `printMyDirective` wihtin the
+would result in calls to `parseMyDirective` and `printMyDirective` within the
 parser and printer respectively. `Params` may be any combination of variables
 (i.e. Attribute, Operand, Successor, etc.), type directives, and `attr-dict`.
 The type directives must refer to a variable, but that variable need not also
@@ -1515,7 +1515,7 @@ def IntegerType : Test_Type<"TestInteger"> {
 
 The name of the C++ class which gets generated defaults to
 `<classParamName>Type` (e.g. `TestIntegerType` in the above example). This
-can be overridden via the the `cppClassName` field. The field `mnemonic` is
+can be overridden via the `cppClassName` field. The field `mnemonic` is
 to specify the asm name for parsing. It is optional and not specifying it
 will imply that no parser or printer methods are attached to this class.
 
@@ -1554,7 +1554,7 @@ The default storage constructor blindly copies fields by value. It does not
 know anything about the types. In this case, the ArrayRef<int> requires
 allocation with `dims = allocator.copyInto(dims)`.
 
-You can specify the necessary constuctor by specializing the `TypeParameter`
+You can specify the necessary constructor by specializing the `TypeParameter`
 tblgen class:
 
 ```tablegen

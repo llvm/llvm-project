@@ -74,6 +74,7 @@ namespace std {
 */
 
 #include <__config>
+#include <__availability>
 #include <__errc>
 #include <type_traits>
 #include <limits>

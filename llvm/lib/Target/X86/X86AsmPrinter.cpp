@@ -404,7 +404,7 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   O << ']';
 }
 
-static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
+static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
                               char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
   bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
@@ -446,8 +446,8 @@ static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
   return false;
 }
 
-static bool printAsmVRegister(X86AsmPrinter &P, const MachineOperand &MO,
-                              char Mode, raw_ostream &O) {
+static bool printAsmVRegister(const MachineOperand &MO, char Mode,
+                              raw_ostream &O) {
   Register Reg = MO.getReg();
   bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
 
@@ -560,7 +560,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 't': // Print V8SFmode register
     case 'g': // Print V16SFmode register
       if (MO.isReg())
-        return printAsmVRegister(*this, MO, ExtraCode[0], O);
+        return printAsmVRegister(MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 

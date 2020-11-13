@@ -473,11 +473,11 @@ body: |
     ; GCN-LABEL: name: break_clause_atomic_rtn_into_ptr_flat4
     ; GCN: $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; XNACK-NEXT: S_NOP 0
-    ; GCN-NEXT: $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr5_vgpr6, $vgpr7, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr5_vgpr6, $vgpr7, 0, 1, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
 
     $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr5_vgpr6, $vgpr7, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr5_vgpr6, $vgpr7, 0, 1, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
 ---
@@ -503,11 +503,11 @@ body: |
     ; GCN-LABEL: name: break_clause_atomic_rtn_into_ptr_mubuf4
     ; GCN: $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     ; XNACK-NEXT: S_NOP 0
-    ; GCN-NEXT: $vgpr2 = BUFFER_ATOMIC_ADD_OFFEN_RTN $vgpr2, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = BUFFER_ATOMIC_ADD_OFFEN_RTN $vgpr2, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 1, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
 
     $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr2 = BUFFER_ATOMIC_ADD_OFFEN_RTN $vgpr2, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, implicit $exec
+    $vgpr2 = BUFFER_ATOMIC_ADD_OFFEN_RTN $vgpr2, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 1, 0, implicit $exec
     S_ENDPGM 0
 ...
 ---

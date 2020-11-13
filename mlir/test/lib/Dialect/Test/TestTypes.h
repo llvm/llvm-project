@@ -23,6 +23,7 @@
 #include "mlir/IR/Types.h"
 
 namespace mlir {
+namespace test {
 
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
@@ -36,12 +37,14 @@ struct FieldInfo {
   }
 };
 
+} // namespace test
 } // namespace mlir
 
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.h.inc"
 
 namespace mlir {
+namespace test {
 
 #include "TestTypeInterfaces.h.inc"
 
@@ -104,6 +107,7 @@ public:
   StringRef getName() { return getImpl()->name; }
 };
 
-} // end namespace mlir
+} // namespace test
+} // namespace mlir
 
 #endif // MLIR_TESTTYPES_H

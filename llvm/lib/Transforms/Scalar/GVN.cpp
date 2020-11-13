@@ -1042,7 +1042,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {
     // Reject loads and stores that are to the same address but are of
-    // different types if we have to. If the stored value is larger or equal to
+    // different types if we have to. If the stored value is convertable to
     // the loaded value, we can reuse it.
     if (!canCoerceMustAliasedValueToLoad(S->getValueOperand(), LI->getType(),
                                          DL))
@@ -1605,12 +1605,35 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
                                  Constant::getNullValue(Int8Ty->getPointerTo()),
                                  IntrinsicI);
       if (MSSAU) {
+        const MemoryUseOrDef *FirstNonDom = nullptr;
+        const auto *AL =
+            MSSAU->getMemorySSA()->getBlockAccesses(IntrinsicI->getParent());
+
+        // If there are accesses in the current basic block, find the first one
+        // that does not come before NewS. The new memory access is inserted
+        // after the found access or before the terminator if no such access is
+        // found.
+        if (AL) {
+          for (auto &Acc : *AL) {
+            if (auto *Current = dyn_cast<MemoryUseOrDef>(&Acc))
+              if (!Current->getMemoryInst()->comesBefore(NewS)) {
+                FirstNonDom = Current;
+                break;
+              }
+          }
+        }
+
         // This added store is to null, so it will never executed and we can
         // just use the LiveOnEntry def as defining access.
-        auto *NewDef = MSSAU->createMemoryAccessInBB(
-            NewS, MSSAU->getMemorySSA()->getLiveOnEntryDef(), NewS->getParent(),
-            MemorySSA::BeforeTerminator);
-        MSSAU->insertDef(cast<MemoryDef>(NewDef), /*RenameUses=*/true);
+        auto *NewDef =
+            FirstNonDom ? MSSAU->createMemoryAccessBefore(
+                              NewS, MSSAU->getMemorySSA()->getLiveOnEntryDef(),
+                              const_cast<MemoryUseOrDef *>(FirstNonDom))
+                        : MSSAU->createMemoryAccessInBB(
+                              NewS, MSSAU->getMemorySSA()->getLiveOnEntryDef(),
+                              NewS->getParent(), MemorySSA::BeforeTerminator);
+
+        MSSAU->insertDef(cast<MemoryDef>(NewDef), /*RenameUses=*/false);
       }
     }
     if (isAssumeWithEmptyBundle(*IntrinsicI))
@@ -2460,10 +2483,14 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   if (isa<GetElementPtrInst>(CurInst))
     return false;
 
-  // We don't currently value number ANY inline asm calls.
-  if (auto *CallB = dyn_cast<CallBase>(CurInst))
+  if (auto *CallB = dyn_cast<CallBase>(CurInst)) {
+    // We don't currently value number ANY inline asm calls.
     if (CallB->isInlineAsm())
       return false;
+    // Don't do PRE on convergent calls.
+    if (CallB->isConvergent())
+      return false;
+  }
 
   uint32_t ValNo = VN.lookup(CurInst);
 

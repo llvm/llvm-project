@@ -694,6 +694,17 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
     Invalid = true;
   }
 
+  // C++11 [temp.friend]p4 (DR329):
+  //   When a function is defined in a friend function declaration in a class
+  //   template, the function is instantiated when the function is odr-used.
+  //   The same restrictions on multiple declarations and definitions that
+  //   apply to non-template function declarations and definitions also apply
+  //   to these implicit definitions.
+  const FunctionDecl *OldDefinition = nullptr;
+  if (New->isThisDeclarationInstantiatedFromAFriendDefinition() &&
+      Old->isDefined(OldDefinition, true))
+    CheckForFunctionRedefinition(New, OldDefinition);
+
   return Invalid;
 }
 
@@ -723,7 +734,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   Diag(Decomp.getLSquareLoc(),
        !getLangOpts().CPlusPlus17
            ? diag::ext_decomp_decl
-           : D.getContext() == DeclaratorContext::ConditionContext
+           : D.getContext() == DeclaratorContext::Condition
                  ? diag::ext_decomp_decl_cond
                  : diag::warn_cxx14_compat_decomp_decl)
       << Decomp.getSourceRange();
@@ -5884,13 +5895,22 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
 
         // The function will be passed to the consumer when its definition is
         // encountered.
-      } else if (!MD->isTrivial() || MD->isExplicitlyDefaulted() ||
+      } else if (MD->isExplicitlyDefaulted()) {
+        // Synthesize and instantiate explicitly defaulted methods.
+        S.MarkFunctionReferenced(Class->getLocation(), MD);
+
+        if (TSK != TSK_ExplicitInstantiationDefinition) {
+          // Except for explicit instantiation defs, we will not see the
+          // definition again later, so pass it to the consumer now.
+          S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
+        }
+      } else if (!MD->isTrivial() ||
                  MD->isCopyAssignmentOperator() ||
                  MD->isMoveAssignmentOperator()) {
-        // Synthesize and instantiate non-trivial implicit methods, explicitly
-        // defaulted methods, and the copy and move assignment operators. The
-        // latter are exported even if they are trivial, because the address of
-        // an operator can be taken and should compare equal across libraries.
+        // Synthesize and instantiate non-trivial implicit methods, and the copy
+        // and move assignment operators. The latter are exported even if they
+        // are trivial, because the address of an operator can be taken and
+        // should compare equal across libraries.
         S.MarkFunctionReferenced(Class->getLocation(), MD);
 
         // There is no later point when we will see the definition of this
@@ -14811,9 +14831,13 @@ void Sema::DefineImplicitLambdaToFunctionPointerConversion(
   SynthesizedFunctionScope Scope(*this, Conv);
   assert(!Conv->getReturnType()->isUndeducedType());
 
+  QualType ConvRT = Conv->getType()->getAs<FunctionType>()->getReturnType();
+  CallingConv CC =
+      ConvRT->getPointeeType()->getAs<FunctionType>()->getCallConv();
+
   CXXRecordDecl *Lambda = Conv->getParent();
   FunctionDecl *CallOp = Lambda->getLambdaCallOperator();
-  FunctionDecl *Invoker = Lambda->getLambdaStaticInvoker();
+  FunctionDecl *Invoker = Lambda->getLambdaStaticInvoker(CC);
 
   if (auto *TemplateArgs = Conv->getTemplateSpecializationArgs()) {
     CallOp = InstantiateFunctionDeclaration(
@@ -16316,7 +16340,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // Try to convert the decl specifier to a type.  This works for
   // friend templates because ActOnTag never produces a ClassTemplateDecl
   // for a TUK_Friend.
-  Declarator TheDeclarator(DS, DeclaratorContext::MemberContext);
+  Declarator TheDeclarator(DS, DeclaratorContext::Member);
   TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator, S);
   QualType T = TSI->getType();
   if (TheDeclarator.isInvalidType())

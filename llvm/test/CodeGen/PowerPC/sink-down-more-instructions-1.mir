@@ -370,14 +370,12 @@ body:             |
   ; CHECK:   [[PHI5:%[0-9]+]]:gprc = PHI [[LI2]], %bb.2, %27, %bb.17
   ; CHECK:   [[PHI6:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_]], %bb.2, %55, %bb.17
   ; CHECK:   [[PHI7:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_1]], %bb.2, %15, %bb.17
-  ; CHECK:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 8, [[PHI6]] :: (load 4 from %ir.46, !tbaa !2)
   ; CHECK:   [[COPY10:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[PHI4]].sub_32
   ; CHECK:   [[MULHWU1:%[0-9]+]]:gprc = MULHWU [[COPY10]], [[ORI]]
   ; CHECK:   [[RLWINM2:%[0-9]+]]:gprc = RLWINM [[MULHWU1]], 28, 4, 31
   ; CHECK:   [[MULLI1:%[0-9]+]]:gprc = nsw MULLI killed [[RLWINM2]], -30
   ; CHECK:   [[INSERT_SUBREG1:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF1]], killed [[MULLI1]], %subreg.sub_32
   ; CHECK:   [[RLDICL2:%[0-9]+]]:g8rc = RLDICL killed [[INSERT_SUBREG1]], 0, 32
-  ; CHECK:   [[ADD4_2:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZU]], [[PHI5]]
   ; CHECK:   BCC 76, [[CMPLWI1]], %bb.11
   ; CHECK:   B %bb.10
   ; CHECK: bb.10 (%ir-block.38):
@@ -396,11 +394,11 @@ body:             |
   ; CHECK:   successors: %bb.15(0x2aaaaaab), %bb.13(0x55555555)
   ; CHECK:   [[PHI8:%[0-9]+]]:gprc = PHI [[ADDI2]], %bb.11, [[ISEL1]], %bb.10
   ; CHECK:   [[ADDI8_4:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI7]], 8
-  ; CHECK:   [[COPY13:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY [[ADDI8_4]]
+  ; CHECK:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 8, [[PHI6]] :: (load 4 from %ir.46, !tbaa !2)
+  ; CHECK:   [[ADD4_2:%[0-9]+]]:gprc = nsw ADD4 [[LWZU]], [[PHI5]]
   ; CHECK:   [[ADD4_3:%[0-9]+]]:gprc = nsw ADD4 [[PHI8]], [[ADD4_2]]
   ; CHECK:   STW killed [[ADD4_3]], 0, [[ADDI8_4]] :: (store 4 into %ir.44, !tbaa !2)
   ; CHECK:   [[LWZ:%[0-9]+]]:gprc = LWZ 4, [[LWZU1]] :: (load 4 from %ir.uglygep1112.cast, !tbaa !2)
-  ; CHECK:   [[ADD4_4:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[ADD4_2]]
   ; CHECK:   BCC 76, [[CMPLWI2]], %bb.15
   ; CHECK:   B %bb.13
   ; CHECK: bb.13 (%ir-block.60):
@@ -414,19 +412,21 @@ body:             |
   ; CHECK: bb.15 (%ir-block.69):
   ; CHECK:   successors: %bb.17(0x80000000)
   ; CHECK:   [[ORI8_:%[0-9]+]]:g8rc = ORI8 [[PHI4]], 1
-  ; CHECK:   [[COPY14:%[0-9]+]]:gprc = COPY [[ORI8_]].sub_32
-  ; CHECK:   [[RLWINM4:%[0-9]+]]:gprc = RLWINM [[COPY14]], 1, 0, 30
+  ; CHECK:   [[COPY13:%[0-9]+]]:gprc = COPY [[ORI8_]].sub_32
+  ; CHECK:   [[RLWINM4:%[0-9]+]]:gprc = RLWINM [[COPY13]], 1, 0, 30
   ; CHECK:   B %bb.17
   ; CHECK: bb.16 (%ir-block.72):
   ; CHECK:   successors: %bb.17(0x80000000)
   ; CHECK:   [[ORI8_1:%[0-9]+]]:g8rc = ORI8 [[RLDICL2]], 1
   ; CHECK:   [[ADD8_1:%[0-9]+]]:g8rc = ADD8 [[PHI4]], [[ORI8_1]]
-  ; CHECK:   [[COPY15:%[0-9]+]]:gprc = COPY [[ADD8_1]].sub_32
+  ; CHECK:   [[COPY14:%[0-9]+]]:gprc = COPY [[ADD8_1]].sub_32
   ; CHECK: bb.17 (%ir-block.74):
   ; CHECK:   successors: %bb.9(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   [[PHI9:%[0-9]+]]:gprc = PHI [[ADDI3]], %bb.14, [[RLWINM4]], %bb.15, [[COPY15]], %bb.16
+  ; CHECK:   [[PHI9:%[0-9]+]]:gprc = PHI [[ADDI3]], %bb.14, [[RLWINM4]], %bb.15, [[COPY14]], %bb.16
+  ; CHECK:   [[COPY15:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY [[ADDI8_4]]
+  ; CHECK:   [[ADD4_4:%[0-9]+]]:gprc = nsw ADD4 [[LWZ]], [[ADD4_2]]
   ; CHECK:   [[ADD4_5:%[0-9]+]]:gprc = nsw ADD4 [[PHI9]], [[ADD4_4]]
-  ; CHECK:   STW killed [[ADD4_5]], 4, [[COPY13]] :: (store 4 into %ir.uglygep78.cast, !tbaa !2)
+  ; CHECK:   STW killed [[ADD4_5]], 4, [[COPY15]] :: (store 4 into %ir.uglygep78.cast, !tbaa !2)
   ; CHECK:   [[ADDI8_5:%[0-9]+]]:g8rc = nuw nsw ADDI8 [[PHI4]], 2
   ; CHECK:   BDNZ8 %bb.9, implicit-def dead $ctr8, implicit $ctr8
   ; CHECK:   B %bb.3

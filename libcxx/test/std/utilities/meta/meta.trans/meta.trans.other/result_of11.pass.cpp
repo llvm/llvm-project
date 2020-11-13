@@ -17,6 +17,12 @@
 #include <utility>
 #include "test_macros.h"
 
+// Ignore warnings about volatile in parameters being deprecated.
+// We know it is, but we still have to test it.
+#if defined(__GNUC__) && !defined(__clang__)
+#   pragma GCC diagnostic ignored "-Wvolatile"
+#endif
+
 struct wat
 {
     wat& operator*() { return *this; }

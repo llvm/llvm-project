@@ -63,8 +63,13 @@ define half @fadda_v32f16(half %start, <32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-COUNT-32: fadd
-; VBITS_EQ_256: ret
+; VBITS_EQ_256: add x8, x0, #32
+; VBITS_EQ_256-NEXT: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: ld1h { [[LO:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[HI:z[0-9]+]].h }, [[PG]]/z, [x8]
+; VBITS_EQ_256-NEXT: fadda h0, [[PG]], h0, [[LO]].h
+; VBITS_EQ_256-NEXT: fadda h0, [[PG]], h0, [[HI]].h
+; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call half @llvm.vector.reduce.fadd.v32f16(half %start, <32 x half> %op)
   ret half %res
@@ -131,8 +136,13 @@ define float @fadda_v16f32(float %start, <16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-COUNT-16: fadd
-; VBITS_EQ_256: ret
+; VBITS_EQ_256: add x8, x0, #32
+; VBITS_EQ_256-NEXT: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG]]/z, [x8]
+; VBITS_EQ_256-NEXT: fadda s0, [[PG]], s0, [[LO]].s
+; VBITS_EQ_256-NEXT: fadda s0, [[PG]], s0, [[HI]].s
+; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call float @llvm.vector.reduce.fadd.v16f32(float %start, <16 x float> %op)
   ret float %res
@@ -199,8 +209,13 @@ define double @fadda_v8f64(double %start, <8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256-COUNT-8: fadd
-; VBITS_EQ_256: ret
+; VBITS_EQ_256: add x8, x0, #32
+; VBITS_EQ_256-NEXT: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG]]/z, [x8]
+; VBITS_EQ_256-NEXT: fadda d0, [[PG]], d0, [[LO]].d
+; VBITS_EQ_256-NEXT: fadda d0, [[PG]], d0, [[HI]].d
+; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call double @llvm.vector.reduce.fadd.v8f64(double %start, <8 x double> %op)
   ret double %res

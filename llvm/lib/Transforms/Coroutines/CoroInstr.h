@@ -99,9 +99,9 @@ public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     auto ID = I->getIntrinsicID();
-    return ID == Intrinsic::coro_id ||
-           ID == Intrinsic::coro_id_retcon ||
-           ID == Intrinsic::coro_id_retcon_once;
+    return ID == Intrinsic::coro_id || ID == Intrinsic::coro_id_retcon ||
+           ID == Intrinsic::coro_id_retcon_once ||
+           ID == Intrinsic::coro_id_async;
   }
 
   static bool classof(const Value *V) {
@@ -273,6 +273,109 @@ public:
   }
 };
 
+/// This represents the llvm.coro.id.async instruction.
+class LLVM_LIBRARY_VISIBILITY CoroIdAsyncInst : public AnyCoroIdInst {
+  enum { SizeArg, AlignArg, StorageArg, AsyncFuncPtrArg };
+
+public:
+  void checkWellFormed() const;
+
+  /// The initial async function context size. The fields of which are reserved
+  /// for use by the frontend. The frame will be allocated as a tail of this
+  /// context.
+  uint64_t getStorageSize() const {
+    return cast<ConstantInt>(getArgOperand(SizeArg))->getZExtValue();
+  }
+
+  /// The alignment of the initial async function context.
+  Align getStorageAlignment() const {
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getAlignValue();
+  }
+
+  /// The async context parameter.
+  Value *getStorage() const {
+    return getParent()->getParent()->getArg(getStorageArgumentIndex());
+  }
+
+  unsigned getStorageArgumentIndex() const {
+    auto *Arg = cast<ConstantInt>(getArgOperand(StorageArg));
+    return Arg->getZExtValue();
+  }
+
+  /// Return the async function pointer address. This should be the address of
+  /// a async function pointer struct for the current async function.
+  /// struct async_function_pointer {
+  ///   uint32_t context_size;
+  ///   uint32_t relative_async_function_pointer;
+  ///  };
+  GlobalVariable *getAsyncFunctionPointer() const {
+    return cast<GlobalVariable>(
+        getArgOperand(AsyncFuncPtrArg)->stripPointerCasts());
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    auto ID = I->getIntrinsicID();
+    return ID == Intrinsic::coro_id_async;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.context.alloc instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAsyncContextAllocInst : public IntrinsicInst {
+  enum { AsyncFuncPtrArg };
+
+public:
+  GlobalVariable *getAsyncFunctionPointer() const {
+    return cast<GlobalVariable>(
+        getArgOperand(AsyncFuncPtrArg)->stripPointerCasts());
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_async_context_alloc;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.context.dealloc instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAsyncContextDeallocInst
+    : public IntrinsicInst {
+  enum { AsyncContextArg };
+
+public:
+  Value *getAsyncContext() const {
+    return getArgOperand(AsyncContextArg)->stripPointerCasts();
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_async_context_dealloc;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.async.resume instruction.
+/// During lowering this is replaced by the resume function of a suspend point
+/// (the continuation function).
+class LLVM_LIBRARY_VISIBILITY CoroAsyncResumeInst : public IntrinsicInst {
+public:
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_async_resume;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This represents the llvm.coro.frame instruction.
 class LLVM_LIBRARY_VISIBILITY CoroFrameInst : public IntrinsicInst {
 public:
@@ -366,6 +469,7 @@ public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_suspend ||
+           I->getIntrinsicID() == Intrinsic::coro_suspend_async ||
            I->getIntrinsicID() == Intrinsic::coro_suspend_retcon;
   }
   static bool classof(const Value *V) {
@@ -404,6 +508,37 @@ inline CoroSaveInst *AnyCoroSuspendInst::getCoroSave() const {
     return Suspend->getCoroSave();
   return nullptr;
 }
+
+/// This represents the llvm.coro.suspend.async instruction.
+class LLVM_LIBRARY_VISIBILITY CoroSuspendAsyncInst : public AnyCoroSuspendInst {
+  enum { ResumeFunctionArg, AsyncContextProjectionArg, MustTailCallFuncArg };
+
+public:
+  void checkWellFormed() const;
+
+  Function *getAsyncContextProjectionFunction() const {
+    return cast<Function>(
+        getArgOperand(AsyncContextProjectionArg)->stripPointerCasts());
+  }
+
+  CoroAsyncResumeInst *getResumeFunction() const {
+    return cast<CoroAsyncResumeInst>(
+        getArgOperand(ResumeFunctionArg)->stripPointerCasts());
+  }
+
+  Function *getMustTailCallFunction() const {
+    return cast<Function>(
+        getArgOperand(MustTailCallFuncArg)->stripPointerCasts());
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_suspend_async;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
 
 /// This represents the llvm.coro.suspend.retcon instruction.
 class LLVM_LIBRARY_VISIBILITY CoroSuspendRetconInst : public AnyCoroSuspendInst {

@@ -405,14 +405,9 @@ std::optional<DummyArgument> DummyArgument::FromActual(
             }
           },
           [&](const auto &) {
-            if (auto type{expr.GetType()}) {
-              if (auto shape{GetShape(context, expr)}) {
-                return std::make_optional<DummyArgument>(std::move(name),
-                    DummyDataObject{TypeAndShape{*type, std::move(*shape)}});
-              } else {
-                return std::make_optional<DummyArgument>(
-                    std::move(name), DummyDataObject{TypeAndShape{*type}});
-              }
+            if (auto type{TypeAndShape::Characterize(expr, context)}) {
+              return std::make_optional<DummyArgument>(
+                  std::move(name), DummyDataObject{std::move(*type)});
             } else {
               return std::optional<DummyArgument>{};
             }

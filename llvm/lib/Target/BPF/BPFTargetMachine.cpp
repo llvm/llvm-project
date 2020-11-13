@@ -125,12 +125,13 @@ void BPFTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                                     bool DebugPassManager) {
-  PB.registerPipelineStartEPCallback([=](ModulePassManager &MPM) {
-    FunctionPassManager FPM(DebugPassManager);
-    FPM.addPass(BPFAbstractMemberAccessPass(this));
-    FPM.addPass(BPFPreserveDITypePass());
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  });
+  PB.registerPipelineStartEPCallback(
+      [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel) {
+        FunctionPassManager FPM(DebugPassManager);
+        FPM.addPass(BPFAbstractMemberAccessPass(this));
+        FPM.addPass(BPFPreserveDITypePass());
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
   PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
                                     PassBuilder::OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));

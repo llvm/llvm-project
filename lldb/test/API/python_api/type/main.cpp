@@ -56,5 +56,8 @@ int main (int argc, char const *argv[])
     // This corresponds to an empty task list.
     Task *empty_task_head = new Task(-1, NULL);
 
+    typedef int myint;
+    myint myint_arr[] = {1, 2, 3};
+
     return 0; // Break at this line
 }

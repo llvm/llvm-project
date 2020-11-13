@@ -16,12 +16,12 @@
 // RUN: clang-tidy %s -checks="-*,modernize-replace-disallow-copy-and-assign-macro" \
 // RUN:   -config="{CheckOptions: [ \
 // RUN:    {key: modernize-replace-disallow-copy-and-assign-macro.MacroName, \
-// RUN:     value: DISALLOW_COPY_AND_ASSIGN_MORE_AGUMENTS}]}" | count 0
+// RUN:     value: DISALLOW_COPY_AND_ASSIGN_MORE_AGUMENTS}]}" -- -Wno-extra-semi | count 0
 
 // RUN: clang-tidy %s -checks="-*,modernize-replace-disallow-copy-and-assign-macro" \
 // RUN:   -config="{CheckOptions: [ \
 // RUN:    {key: modernize-replace-disallow-copy-and-assign-macro.MacroName, \
-// RUN:     value: DISALLOW_COPY_AND_ASSIGN_NEEDS_PREEXPANSION}]}" | count 0
+// RUN:     value: DISALLOW_COPY_AND_ASSIGN_NEEDS_PREEXPANSION}]}" -- -Wno-extra-semi | count 0
 
 // Note: the last two tests expect no diagnostics, but FileCheck cannot handle
 // that, hence the use of | count 0.

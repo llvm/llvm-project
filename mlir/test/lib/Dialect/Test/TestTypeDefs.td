@@ -55,7 +55,7 @@ def IntegerType : Test_Type<"TestInteger"> {
   let parameters = (
     ins
     // SignednessSemantics is defined below.
-    "::mlir::TestIntegerType::SignednessSemantics":$signedness,
+    "::mlir::test::TestIntegerType::SignednessSemantics":$signedness,
     "unsigned":$width
   );
 
@@ -108,7 +108,7 @@ class FieldInfo_Type<string name> : Test_Type<name> {
     // An ArrayRef of something which requires allocation in the storage
     // constructor.
     ArrayRefOfSelfAllocationParameter<
-      "::mlir::FieldInfo", // FieldInfo is defined/declared in TestTypes.h.
+      "::mlir::test::FieldInfo", // FieldInfo is defined/declared in TestTypes.h.
       "Models struct fields">: $fields
   );
 

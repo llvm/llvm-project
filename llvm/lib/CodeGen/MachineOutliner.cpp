@@ -654,6 +654,8 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       OriginalMF->getFrameInstructions();
   for (auto I = FirstCand.front(), E = std::next(FirstCand.back()); I != E;
        ++I) {
+    if (I->isDebugInstr())
+      continue;
     MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
     if (I->isCFIInstruction()) {
       unsigned CFIIndex = NewMI->getOperand(0).getCFIIndex();

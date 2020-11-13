@@ -1,3 +1,16 @@
+//===-- RISCVBaseInfo.cpp - Top level definitions for RISCV MC ------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains small standalone enum definitions for the RISCV target
+// useful for the compiler back-end and the MC libraries.
+//
+//===----------------------------------------------------------------------===//
+
 #include "RISCVBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Triple.h"
@@ -65,10 +78,10 @@ ABI getTargetABI(StringRef ABIName) {
 // To avoid the BP value clobbered by a function call, we need to choose a
 // callee saved register to save the value. RV32E only has X8 and X9 as callee
 // saved registers and X8 will be used as fp. So we choose X9 as bp.
-Register getBPReg() { return RISCV::X9; }
+MCRegister getBPReg() { return RISCV::X9; }
 
 // Returns the register holding shadow call stack pointer.
-Register getSCSPReg() { return RISCV::X18; }
+MCRegister getSCSPReg() { return RISCV::X18; }
 
 } // namespace RISCVABI
 

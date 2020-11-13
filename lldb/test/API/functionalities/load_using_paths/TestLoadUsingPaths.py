@@ -36,8 +36,7 @@ class LoadUsingPathsTestCase(TestBase):
         self.hidden_dir = os.path.join(self.wd, 'hidden')
         self.hidden_lib = os.path.join(self.hidden_dir, self.lib_name)
 
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @not_remote_testsuite_ready
+    @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @expectedFlakeyNetBSD
     @expectedFailureAll(oslist=["linux"], archs=['arm'], bugnumber="llvm.org/pr45894")

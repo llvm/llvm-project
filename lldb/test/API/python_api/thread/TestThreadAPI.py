@@ -40,7 +40,6 @@ class ThreadAPITestCase(TestBase):
     @skipIfAsan # The output looks different under ASAN.
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["linux"], archs=['arm'], bugnumber="llvm.org/pr45892")
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])
     @expectedFailureNetBSD
     def test_step_out_of_malloc_into_function_b(self):

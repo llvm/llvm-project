@@ -77,6 +77,7 @@ template <class E> void rethrow_if_nested(const E& e);
 */
 
 #include <__config>
+#include <__availability>
 #include <cstddef>
 #include <cstdlib>
 #include <type_traits>

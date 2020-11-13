@@ -15,13 +15,9 @@
 
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+DECLARE_SPECIAL_CONSTANTS(float)
 
-static const float zero = FPBits::zero();
-static const float negZero = FPBits::negZero();
-static const float nan = FPBits::buildNaN(1);
-static const float inf = FPBits::inf();
-static const float negInf = FPBits::negInf();
+namespace mpfr = __llvm_libc::testing::mpfr;
 
 TEST(FloorfTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::floorf(zero));

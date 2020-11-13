@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +amx-int8 -target-feature +amx-bf16 -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s --check-prefixes=CHECK,X86_64
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +amx-int8 -target-feature +amx-bf16 -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
 
 void f_tilemul(short a)
 {

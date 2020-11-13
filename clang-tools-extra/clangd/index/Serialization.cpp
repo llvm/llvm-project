@@ -16,6 +16,7 @@
 #include "support/Trace.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -103,6 +104,20 @@ public:
   SymbolID consumeID() {
     llvm::StringRef Raw = consume(SymbolID::RawSize); // short if truncated.
     return LLVM_UNLIKELY(err()) ? SymbolID() : SymbolID::fromRaw(Raw);
+  }
+
+  // Read a varint (as consumeVar) and resize the container accordingly.
+  // If the size is invalid, return false and mark an error.
+  // (The caller should abort in this case).
+  template <typename T> LLVM_NODISCARD bool consumeSize(T &Container) {
+    auto Size = consumeVar();
+    // Conservatively assume each element is at least one byte.
+    if (Size > (End - Begin)) {
+      Err = true;
+      return false;
+    }
+    Container.resize(Size);
+    return true;
   }
 };
 
@@ -257,7 +272,8 @@ IncludeGraphNode readIncludeGraphNode(Reader &Data,
   IGN.URI = Data.consumeString(Strings);
   llvm::StringRef Digest = Data.consume(IGN.Digest.size());
   std::copy(Digest.bytes_begin(), Digest.bytes_end(), IGN.Digest.begin());
-  IGN.DirectIncludes.resize(Data.consumeVar());
+  if (!Data.consumeSize(IGN.DirectIncludes))
+    return IGN;
   for (llvm::StringRef &Include : IGN.DirectIncludes)
     Include = Data.consumeString(Strings);
   return IGN;
@@ -323,7 +339,8 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   Sym.Documentation = Data.consumeString(Strings);
   Sym.ReturnType = Data.consumeString(Strings);
   Sym.Type = Data.consumeString(Strings);
-  Sym.IncludeHeaders.resize(Data.consumeVar());
+  if (!Data.consumeSize(Sym.IncludeHeaders))
+    return Sym;
   for (auto &I : Sym.IncludeHeaders) {
     I.IncludeHeader = Data.consumeString(Strings);
     I.References = Data.consumeVar();
@@ -345,6 +362,7 @@ void writeRefs(const SymbolID &ID, llvm::ArrayRef<Ref> Refs,
   for (const auto &Ref : Refs) {
     OS.write(static_cast<unsigned char>(Ref.Kind));
     writeLocation(Ref.Location, Strings, OS);
+    OS << Ref.Container.raw();
   }
 }
 
@@ -352,10 +370,12 @@ std::pair<SymbolID, std::vector<Ref>>
 readRefs(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   std::pair<SymbolID, std::vector<Ref>> Result;
   Result.first = Data.consumeID();
-  Result.second.resize(Data.consumeVar());
+  if (!Data.consumeSize(Result.second))
+    return Result;
   for (auto &Ref : Result.second) {
     Ref.Kind = static_cast<RefKind>(Data.consume8());
     Ref.Location = readLocation(Data, Strings);
+    Ref.Container = Data.consumeID();
   }
   return Result;
 }
@@ -398,7 +418,8 @@ InternedCompileCommand
 readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
   InternedCompileCommand Cmd;
   Cmd.Directory = CmdReader.consumeString(Strings);
-  Cmd.CommandLine.resize(CmdReader.consumeVar());
+  if (!CmdReader.consumeSize(Cmd.CommandLine))
+    return Cmd;
   for (llvm::StringRef &C : Cmd.CommandLine)
     C = CmdReader.consumeString(Strings);
   return Cmd;
@@ -416,7 +437,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 13;
+constexpr static uint32_t Version = 14;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   auto RIFF = riff::readFile(Data);
@@ -487,20 +508,18 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   if (Chunks.count("rela")) {
     Reader RelationsReader(Chunks.lookup("rela"));
     RelationSlab::Builder Relations;
-    while (!RelationsReader.eof()) {
-      auto Relation = readRelation(RelationsReader);
-      Relations.insert(Relation);
-    }
+    while (!RelationsReader.eof())
+      Relations.insert(readRelation(RelationsReader));
     if (RelationsReader.err())
       return error("malformed or truncated relations");
     Result.Relations = std::move(Relations).build();
   }
   if (Chunks.count("cmdl")) {
     Reader CmdReader(Chunks.lookup("cmdl"));
-    if (CmdReader.err())
-      return error("malformed or truncated commandline section");
     InternedCompileCommand Cmd =
         readCompileCommand(CmdReader, Strings->Strings);
+    if (CmdReader.err())
+      return error("malformed or truncated commandline section");
     Result.Cmd.emplace();
     Result.Cmd->Directory = std::string(Cmd.Directory);
     Result.Cmd->CommandLine.reserve(Cmd.CommandLine.size());

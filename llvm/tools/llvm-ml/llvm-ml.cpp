@@ -184,6 +184,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
   Lexer.setLexMasmIntegers(true);
   Lexer.useMasmDefaultRadix(true);
   Lexer.setLexMasmHexFloats(true);
+  Lexer.setLexMasmStrings(true);
 
   bool Error = false;
   while (Lexer.Lex().isNot(AsmToken::Eof)) {
@@ -216,6 +217,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   Parser->getLexer().setLexMasmIntegers(true);
   Parser->getLexer().useMasmDefaultRadix(true);
   Parser->getLexer().setLexMasmHexFloats(true);
+  Parser->getLexer().setLexMasmStrings(true);
 
   int Res = Parser->Run(/*NoInitialTextSection=*/true);
 

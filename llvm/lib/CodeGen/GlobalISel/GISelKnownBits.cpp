@@ -110,8 +110,7 @@ void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
   computeKnownBitsImpl(Src0, Known2, DemandedElts, Depth);
 
   // Only known if known in both the LHS and RHS.
-  Known.Zero &= Known2.Zero;
-  Known.One &= Known2.One;
+  Known = KnownBits::commonBits(Known, Known2);
 }
 
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
@@ -201,8 +200,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
+        Known = KnownBits::commonBits(Known, Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.
         if (Known.One == 0 && Known.Zero == 0)
@@ -287,20 +285,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    // If low bits are zero in either operand, output low known-0 bits.
-    // Also compute a conservative estimate for high known-0 bits.
-    // More trickiness is possible, but this is sufficient for the
-    // interesting case of alignment computation.
-    unsigned TrailZ =
-        Known.countMinTrailingZeros() + Known2.countMinTrailingZeros();
-    unsigned LeadZ =
-        std::max(Known.countMinLeadingZeros() + Known2.countMinLeadingZeros(),
-                 BitWidth) -
-        BitWidth;
-
-    Known.resetAll();
-    Known.Zero.setLowBits(std::min(TrailZ, BitWidth));
-    Known.Zero.setHighBits(std::min(LeadZ, BitWidth));
+    Known = KnownBits::computeForMul(Known, Known2);
     break;
   }
   case TargetOpcode::G_SELECT: {
@@ -382,44 +367,31 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
     break;
   }
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_SHL: {
-    KnownBits RHSKnown;
+  case TargetOpcode::G_ASHR: {
+    KnownBits LHSKnown, RHSKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
                          Depth + 1);
-    if (!RHSKnown.isConstant()) {
-      LLVM_DEBUG(
-          MachineInstr *RHSMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-          dbgs() << '[' << Depth << "] Shift not known constant: " << *RHSMI);
-      break;
-    }
-    uint64_t Shift = RHSKnown.getConstant().getZExtValue();
-    LLVM_DEBUG(dbgs() << '[' << Depth << "] Shift is " << Shift << '\n');
-
-    // Guard against oversized shift amounts
-    if (Shift >= MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits())
-      break;
-
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+    Known = KnownBits::ashr(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_LSHR: {
+    KnownBits LHSKnown, RHSKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
                          Depth + 1);
-
-    switch (Opcode) {
-    case TargetOpcode::G_ASHR:
-      Known.Zero = Known.Zero.ashr(Shift);
-      Known.One = Known.One.ashr(Shift);
-      break;
-    case TargetOpcode::G_LSHR:
-      Known.Zero = Known.Zero.lshr(Shift);
-      Known.One = Known.One.lshr(Shift);
-      Known.Zero.setBitsFrom(Known.Zero.getBitWidth() - Shift);
-      break;
-    case TargetOpcode::G_SHL:
-      Known.Zero = Known.Zero.shl(Shift);
-      Known.One = Known.One.shl(Shift);
-      Known.Zero.setBits(0, Shift);
-      break;
-    }
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::lshr(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_SHL: {
+    KnownBits LHSKnown, RHSKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::shl(LHSKnown, RHSKnown);
     break;
   }
   case TargetOpcode::G_INTTOPTR:
@@ -442,7 +414,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
-    Register NumOps = MI.getNumOperands();
+    unsigned NumOps = MI.getNumOperands();
     unsigned OpSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
 
     for (unsigned I = 0; I != NumOps - 1; ++I) {
@@ -454,7 +426,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    Register NumOps = MI.getNumOperands();
+    unsigned NumOps = MI.getNumOperands();
     Register SrcReg = MI.getOperand(NumOps - 1).getReg();
     if (MRI.getType(SrcReg).isVector())
       return; // TODO: Handle vectors.

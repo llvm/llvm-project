@@ -208,8 +208,6 @@ define void @test44(i32* %Q) {
 
 define void @test45(i32* %Q) {
 ; CHECK-LABEL: @test45(
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store i32 [[A]], i32* [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = load i32, i32* %Q
@@ -252,16 +250,13 @@ bb2:
   ret i32 0
 }
 
-; TODO: Remove both redundant stores if loaded value is in another block inside a loop.
 define i32 @test47(i1 %c, i32* %p, i32 %i) {
 ; CHECK-LABEL: @test47(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 4
 ; CHECK-NEXT:    br i1 [[C]], label [[BB3:%.*]], label [[BB1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -299,9 +294,7 @@ entry:
 define void @test_noalias_store_between_load_and_store_elimin_order(i32* noalias %x, i32* noalias %y) {
 ; CHECK-LABEL: @test_noalias_store_between_load_and_store_elimin_order(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[X:%.*]], align 4
 ; CHECK-NEXT:    store i32 0, i32* [[Y:%.*]], align 4
-; CHECK-NEXT:    store i32 [[LV]], i32* [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

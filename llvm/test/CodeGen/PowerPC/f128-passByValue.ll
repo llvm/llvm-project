@@ -266,3 +266,32 @@ entry:
   store double %conv1, double* %d1, align 8
   ret void
 }
+
+; Function Attrs: noinline optnone
+define signext i32 @noopt_call_crash() #0 {
+; CHECK-LABEL: noopt_call_crash:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -96(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl in
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    bl out
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    addi r1, r1, 96
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+entry:
+  %call = call fp128 @in()
+  call void @out(fp128 %call)
+  ret i32 0
+}
+
+declare void @out(fp128)
+declare fp128 @in()
+
+attributes #0 = { noinline optnone }

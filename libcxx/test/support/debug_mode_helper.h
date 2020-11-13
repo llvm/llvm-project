@@ -43,8 +43,8 @@ struct DebugInfoMatcher {
   static constexpr const char* any_msg = "*";
 
   constexpr DebugInfoMatcher() : is_empty(true), msg(any_msg, __builtin_strlen(any_msg)), file(any_file, __builtin_strlen(any_file)), line(any_line) { }
-  constexpr DebugInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
-    : is_empty(false), msg(msg, __builtin_strlen(msg)), file(file, __builtin_strlen(file)), line(line) {}
+  constexpr DebugInfoMatcher(const char* msg_, const char* file_ = any_file, int line_ = any_line)
+    : is_empty(false), msg(msg_, __builtin_strlen(msg_)), file(file_, __builtin_strlen(file_)), line(line_) {}
 
   bool Matches(std::__libcpp_debug_info const& got) const {
     assert(!empty() && "empty matcher");

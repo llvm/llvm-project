@@ -21,7 +21,6 @@ entry:
 }
 
 define internal void @bar() noinline nounwind readnone {
-; CHECK-NOT: bar
 entry:
   ret void
 }

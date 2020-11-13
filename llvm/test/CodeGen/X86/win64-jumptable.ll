@@ -53,6 +53,7 @@ declare void @g(i32)
 ; CHECK: .quad .LBB0_
 ; CHECK: .quad .LBB0_
 ; CHECK: .quad .LBB0_
+; CHECK: .seh_handlerdata
 
 ; It's important that we switch back to .text here, not .rdata.
 ; CHECK: .text

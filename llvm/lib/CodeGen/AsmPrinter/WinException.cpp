@@ -258,11 +258,11 @@ void WinException::endFuncletImpl() {
     if (F.hasPersonalityFn())
       Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
+    // Emit an UNWIND_INFO struct describing the prologue.
+    Asm->OutStreamer->EmitWinEHHandlerData();
+
     if (Per == EHPersonality::MSVC_CXX && shouldEmitPersonality &&
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
-      // Emit an UNWIND_INFO struct describing the prologue.
-      Asm->OutStreamer->EmitWinEHHandlerData();
-
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
       StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
@@ -271,22 +271,9 @@ void WinException::endFuncletImpl() {
       Asm->OutStreamer->emitValue(create32bitRef(FuncInfoXData), 4);
     } else if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
-      // Emit an UNWIND_INFO struct describing the prologue.
-      Asm->OutStreamer->EmitWinEHHandlerData();
-
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
       emitCSpecificHandlerTable(MF);
-    } else if (shouldEmitPersonality || shouldEmitLSDA) {
-      // Emit an UNWIND_INFO struct describing the prologue.
-      Asm->OutStreamer->EmitWinEHHandlerData();
-      // In these cases, no further info is written to the .xdata section
-      // right here, but is written by e.g. emitExceptionTable in endFunction()
-      // above.
-    } else {
-      // No need to emit the EH handler data right here if nothing needs
-      // writing to the .xdata section; it will be emitted for all
-      // functions that need it in the end anyway.
     }
 
     // Switch back to the funclet start .text section now that we are done
@@ -343,22 +330,24 @@ int WinException::getFrameIndexOffset(int FrameIndex,
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   Register UnusedReg;
   if (Asm->MAI->usesWindowsCFI()) {
-    int Offset =
+    StackOffset Offset =
         TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
                                            /*IgnoreSPUpdates*/ true);
     assert(UnusedReg ==
            Asm->MF->getSubtarget()
                .getTargetLowering()
                ->getStackPointerRegisterToSaveRestore());
-    return Offset;
+    return Offset.getFixed();
   }
 
   // For 32-bit, offsets should be relative to the end of the EH registration
   // node. For 64-bit, it's relative to SP at the end of the prologue.
   assert(FuncInfo.EHRegNodeEndOffset != INT_MAX);
-  int Offset = TFI.getFrameIndexReference(*Asm->MF, FrameIndex, UnusedReg);
-  Offset += FuncInfo.EHRegNodeEndOffset;
-  return Offset;
+  StackOffset Offset = TFI.getFrameIndexReference(*Asm->MF, FrameIndex, UnusedReg);
+  Offset += StackOffset::getFixed(FuncInfo.EHRegNodeEndOffset);
+  assert(!Offset.getScalable() &&
+         "Frame offsets with a scalable component are not supported");
+  return Offset.getFixed();
 }
 
 namespace {
@@ -955,7 +944,7 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   int FI = FuncInfo.EHRegNodeFrameIndex;
   if (FI != INT_MAX) {
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-    Offset = TFI->getNonLocalFrameIndexReference(*Asm->MF, FI);
+    Offset = TFI->getNonLocalFrameIndexReference(*Asm->MF, FI).getFixed();
   }
 
   MCContext &Ctx = Asm->OutContext;
@@ -1019,7 +1008,8 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
       Register UnusedReg;
       const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
       int SSPIdx = MFI.getStackProtectorIndex();
-      GSCookieOffset = TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg);
+      GSCookieOffset =
+          TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg).getFixed();
     }
 
     // Retrieve the EH Guard slot.
@@ -1029,7 +1019,8 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
       Register UnusedReg;
       const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
       int EHGuardIdx = FuncInfo.EHGuardFrameIndex;
-      EHCookieOffset = TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg);
+      EHCookieOffset =
+          TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg).getFixed();
     }
 
     AddComment("GSCookieOffset");

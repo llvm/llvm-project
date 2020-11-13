@@ -51,7 +51,7 @@ struct Y2
     Y2& operator=(const int&) { return *this; }
 };
 
-class B {};
+struct B { virtual ~B() = default; };
 class D : public B {};
 
 

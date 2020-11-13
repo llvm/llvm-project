@@ -565,6 +565,25 @@ const Symbol *DerivedTypeDetails::GetParentComponent(const Scope &scope) const {
   return nullptr;
 }
 
+const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
+  for (const auto &pair : finals_) {
+    const Symbol &symbol{*pair.second};
+    if (const auto *details{symbol.detailsIf<SubprogramDetails>()}) {
+      if (details->dummyArgs().size() == 1) {
+        if (const Symbol * arg{details->dummyArgs().at(0)}) {
+          if (const auto *object{arg->detailsIf<ObjectEntityDetails>()}) {
+            if (rank == object->shape().Rank() || object->IsAssumedRank() ||
+                symbol.attrs().test(Attr::ELEMENTAL)) {
+              return &symbol;
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 void TypeParamDetails::set_type(const DeclTypeSpec &type) {
   CHECK(!type_);
   type_ = &type;

@@ -411,10 +411,14 @@ MDNode *LoopInfo::createMetadata(
       LoopProperties.push_back(EndLoc.getAsMDNode());
   }
 
+  LLVMContext &Ctx = Header->getContext();
+  if (Attrs.MustProgress)
+    LoopProperties.push_back(
+        MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.mustprogress")));
+
   assert(!!AccGroup == Attrs.IsParallel &&
          "There must be an access group iff the loop is parallel");
   if (Attrs.IsParallel) {
-    LLVMContext &Ctx = Header->getContext();
     LoopProperties.push_back(MDNode::get(
         Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccGroup}));
   }
@@ -431,7 +435,7 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizePredicateEnable(LoopAttributes::Unspecified), VectorizeWidth(0),
       InterleaveCount(0), UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0) {}
+      PipelineInitiationInterval(0), MustProgress(false) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -446,6 +450,7 @@ void LoopAttributes::clear() {
   DistributeEnable = LoopAttributes::Unspecified;
   PipelineDisabled = false;
   PipelineInitiationInterval = 0;
+  MustProgress = false;
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
@@ -469,7 +474,7 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollAndJamEnable == LoopAttributes::Unspecified &&
       Attrs.DistributeEnable == LoopAttributes::Unspecified && !StartLoc &&
-      !EndLoc)
+      !EndLoc && !Attrs.MustProgress)
     return;
 
   TempLoopID = MDNode::getTemporary(Header->getContext(), None);
@@ -570,8 +575,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
                          const clang::CodeGenOptions &CGOpts,
                          ArrayRef<const clang::Attr *> Attrs,
                          const llvm::DebugLoc &StartLoc,
-                         const llvm::DebugLoc &EndLoc) {
-
+                         const llvm::DebugLoc &EndLoc, bool MustProgress) {
   // Identify loop hint attributes from Attrs.
   for (const auto *Attr : Attrs) {
     const LoopHintAttr *LH = dyn_cast<LoopHintAttr>(Attr);
@@ -747,6 +751,8 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       break;
     }
   }
+
+  setMustProgress(MustProgress);
 
   if (CGOpts.OptimizationLevel > 0)
     // Disable unrolling for the loop, if unrolling is disabled (via

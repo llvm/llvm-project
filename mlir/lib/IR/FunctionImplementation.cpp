@@ -170,9 +170,12 @@ mlir::impl::parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
   SmallVector<Type, 4> resultTypes;
   auto &builder = parser.getBuilder();
 
+  // Parse visibility.
+  impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the name as a symbol.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes))
     return failure();
 
@@ -306,14 +309,18 @@ void mlir::impl::printFunctionLikeOp(OpAsmPrinter &p, Operation *op,
                                      ArrayRef<Type> resultTypes) {
   // Print the operation and the function name.
   auto funcName =
-      op->getAttrOfType<StringAttr>(::mlir::SymbolTable::getSymbolAttrName())
+      op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
           .getValue();
   p << op->getName() << ' ';
+
+  StringRef visibilityAttrName = SymbolTable::getVisibilityAttrName();
+  if (auto visibility = op->getAttrOfType<StringAttr>(visibilityAttrName))
+    p << visibility.getValue() << ' ';
   p.printSymbolName(funcName);
 
   printFunctionSignature(p, op, argTypes, isVariadic, resultTypes);
-  printFunctionAttributes(p, op, argTypes.size(), resultTypes.size());
-
+  printFunctionAttributes(p, op, argTypes.size(), resultTypes.size(),
+                          {visibilityAttrName});
   // Print the body if this is not an external function.
   Region &body = op->getRegion(0);
   if (!body.empty())

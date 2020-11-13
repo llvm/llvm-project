@@ -51,19 +51,19 @@ def ptx : PTX;
 // Generates list of n sequential register names.
 // E.g. RegNames<3,"r">.ret -> ["r0", "r1", "r2" ]
 class RegSeq<int n, string prefix> {
-  list<string> ret = !if(n, !listconcat(RegSeq<!add(n,-1), prefix>.ret,
-                                        [prefix # !add(n, -1)]),
+  list<string> ret = !if(n, !listconcat(RegSeq<!sub(n, 1), prefix>.ret,
+                                        [prefix # !sub(n, 1)]),
                             []);
 }
 
 class THREADMASK_INFO<bit sync> {
-  list<bit> ret = !if(sync, [0,1], [0]);
+  list<bit> ret = !if(sync, [0, 1], [0]);
 }
 
 //-----------------------------------
 // Synchronization and shuffle functions
 //-----------------------------------
-let isConvergent = 1 in {
+let isConvergent = true in {
 def INT_BARRIER0 : NVPTXInst<(outs), (ins),
                   "bar.sync \t0;",
       [(int_nvvm_barrier0)]>;
@@ -173,12 +173,12 @@ class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
   )];
 }
 
-foreach sync = [0, 1] in {
+foreach sync = [false, true] in {
   foreach mode = ["up", "down", "bfly", "idx"] in {
     foreach regclass = ["i32", "f32"] in {
-      foreach return_pred = [0, 1] in {
-        foreach offset_imm = [0, 1] in {
-          foreach mask_imm = [0, 1] in {
+      foreach return_pred = [false, true] in {
+        foreach offset_imm = [false, true] in {
+          foreach mask_imm = [false, true] in {
             foreach threadmask_imm = THREADMASK_INFO<sync>.ret in {
               def : SHFL_INSTR<sync, mode, regclass, return_pred,
                                offset_imm, mask_imm, threadmask_imm>,
@@ -274,7 +274,7 @@ defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<Int32Regs, "b32", int_nvvm_match_all_s
 defm MATCH_ALLP_SYNC_64 : MATCH_ALLP_SYNC<Int64Regs, "b64", int_nvvm_match_all_sync_i64p,
                                          i64imm>;
 
-} // isConvergent = 1
+} // isConvergent = true
 
 //-----------------------------------
 // Explicit Memory Fence Functions
@@ -1548,7 +1548,7 @@ multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
                      !cast<Intrinsic>(
                             "int_nvvm_atomic_" # OpStr
                             # "_" # SpaceStr # "_" # IntTypeStr
-                            # !if(!eq(ScopeStr,""), "", "_" # ScopeStr)),
+                            # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
                      regclass, ImmType, Imm, ImmTy, Preds>;
 }
 multiclass ATOM3N_impl<string OpStr, string IntTypeStr, string TypeStr,
@@ -1562,7 +1562,7 @@ multiclass ATOM3N_impl<string OpStr, string IntTypeStr, string TypeStr,
                      !cast<Intrinsic>(
                             "int_nvvm_atomic_" # OpStr
                             # "_" # SpaceStr # "_" # IntTypeStr
-                            # !if(!eq(ScopeStr,""), "", "_" # ScopeStr)),
+                            # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
                      regclass, ImmType, Imm, ImmTy, Preds>;
 }
 
@@ -2131,7 +2131,7 @@ def : Pat<(int_nvvm_rotate_b32 Int32Regs:$src, Int32Regs:$amt),
           (ROTL32reg_sw Int32Regs:$src, Int32Regs:$amt)>,
       Requires<[noHWROT32]> ;
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def GET_LO_INT64 : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
     !strconcat("{{\n\t",
                ".reg .b32 %dummy;\n\t",
@@ -2147,7 +2147,7 @@ let hasSideEffects = 0 in {
           []> ;
 }
 
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def PACK_TWO_INT32
     : NVPTXInst<(outs Int64Regs:$dst), (ins Int32Regs:$lo, Int32Regs:$hi),
                 "mov.b64 \t$dst, {{$lo, $hi}};", []> ;
@@ -2159,7 +2159,7 @@ def : Pat<(int_nvvm_swap_lo_hi_b64 Int64Regs:$src),
 
 // Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
 // no side effects.
-let hasSideEffects = 0 in {
+let hasSideEffects = false in {
   def SHF_L_WRAP_B32_IMM
     : NVPTXInst<(outs Int32Regs:$dst),
                 (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
@@ -2242,7 +2242,7 @@ def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, Int32Regs:$amt),
 // also defined in NVPTXReplaceImageHandles.cpp
 
 // texmode_independent
-let IsTex = 1, IsTexModeUnified = 0 in {
+let IsTex = true, IsTexModeUnified = false in {
 // Texture fetch instructions using handles
 def TEX_1D_F32_S32
   : NVPTXInst<(outs Float32Regs:$r, Float32Regs:$g,
@@ -2925,7 +2925,7 @@ def TLD4_A_2D_U32_F32
 
 
 // texmode_unified
-let IsTex = 1, IsTexModeUnified = 1 in {
+let IsTex = true, IsTexModeUnified = true in {
 // Texture fetch instructions using handles
 def TEX_UNIFIED_1D_F32_S32
   : NVPTXInst<(outs Float32Regs:$r, Float32Regs:$g,
@@ -3610,7 +3610,7 @@ def TLD4_UNIFIED_A_2D_U32_F32
 
 //=== Surface load instructions
 // .clamp variant
-let IsSuld = 1 in {
+let IsSuld = true in {
 def SULD_1D_I8_CLAMP
   : NVPTXInst<(outs Int16Regs:$r),
               (ins Int64Regs:$s, Int32Regs:$x),
@@ -3922,7 +3922,7 @@ def SULD_3D_V4I32_CLAMP
 
 
 // .trap variant
-let IsSuld = 1 in {
+let IsSuld = true in {
 def SULD_1D_I8_TRAP
   : NVPTXInst<(outs Int16Regs:$r),
               (ins Int64Regs:$s, Int32Regs:$x),
@@ -4233,7 +4233,7 @@ def SULD_3D_V4I32_TRAP
 }
 
 // .zero variant
-let IsSuld = 1 in {
+let IsSuld = true in {
 def SULD_1D_I8_ZERO
   : NVPTXInst<(outs Int16Regs:$r),
               (ins Int64Regs:$s, Int32Regs:$x),
@@ -4547,7 +4547,7 @@ def SULD_3D_V4I32_ZERO
 // Texture Query Intrinsics
 //-----------------------------------
 
-let IsSurfTexQuery = 1 in {
+let IsSurfTexQuery = true in {
 def TXQ_CHANNEL_ORDER
   : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
               "txq.channel_order.b32 \t$d, [$a];",
@@ -4604,7 +4604,7 @@ def : Pat<(int_nvvm_txq_num_mipmap_levels Int64Regs:$a),
 // Surface Query Intrinsics
 //-----------------------------------
 
-let IsSurfTexQuery = 1 in {
+let IsSurfTexQuery = true in {
 def SUQ_CHANNEL_ORDER
   : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
               "suq.channel_order.b32 \t$d, [$a];",
@@ -4663,7 +4663,7 @@ def ISTYPEP_TEXTURE
 
 //===- Surface Stores -----------------------------------------------------===//
 
-let IsSust = 1 in {
+let IsSust = true in {
 // Unformatted
 // .clamp variant
 def SUST_B_1D_B8_CLAMP
@@ -7361,16 +7361,13 @@ class WMMA_REGINFO<WMMA_REGS r>
     !eq(ptx_elt_type, "b1") : Int32Regs);
 
   // Instruction input/output arguments for the fragment.
-  list<NVPTXRegClass> ptx_regs = !foreach(tmp, regs, regclass);
+  list<NVPTXRegClass> ptx_regs = !listsplat(regclass, !size(regs));
 
   // List of register names for the fragment -- ["ra0", "ra1",...]
   list<string> reg_names = RegSeq<!size(ptx_regs), "r"#frag>.ret;
 
   // Generates "{{$r0, $r1,.... $rN-1}}" for use in asm string construction.
-  string regstring = "{{$" # !head(reg_names)
-                           # !foldl("", !tail(reg_names), a, b,
-                                    !strconcat(a, ", $", b))
-                     # "}}";
+  string regstring = "{{$" # !interleave(reg_names, ", $") # "}}";
 
   // Predicates for particular fragment variant. Technically those are
   // per-instruction predicates, but currently all fragments that can be used in
@@ -7453,12 +7450,13 @@ class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride,
   // To match the right intrinsic, we need to build AS-constrained PatFrag.
   // Operands is a dag equivalent in shape to Args, but using (ops node:$name, .....).
   dag PFOperands = !if(WithStride, (ops node:$src, node:$ldm), (ops node:$src));
+  dag PFOperandsIntr = !if(WithStride, (Intr node:$src, node:$ldm), (Intr node:$src));
   // Build PatFrag that only matches particular address space.
   PatFrag IntrFrag = PatFrag<PFOperands,
-                             !foreach(tmp, PFOperands, !subst(ops, Intr, tmp)),
+                             PFOperandsIntr,
                              !cond(!eq(Space, ".shared"): AS_match.shared,
                                    !eq(Space, ".global"): AS_match.global,
-                                   1: AS_match.generic)>;
+                                   true: AS_match.generic)>;
   // Build AS-constrained pattern.
   let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
 
@@ -7493,14 +7491,14 @@ class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
   // To match the right intrinsic, we need to build AS-constrained PatFrag.
   // Operands is a dag equivalent in shape to Args, but using (ops node:$name, .....).
   dag PFOperands = !con((ops node:$dst),
-                        !dag(ops, !foreach(tmp, Frag.regs, node), Frag.reg_names),
+                        !dag(ops, !listsplat(node, !size(Frag.regs)), Frag.reg_names),
                         !if(WithStride, (ops node:$ldm), (ops)));
   // Build PatFrag that only matches particular address space.
   PatFrag IntrFrag = PatFrag<PFOperands,
                              !foreach(tmp, PFOperands, !subst(ops, Intr, tmp)),
                              !cond(!eq(Space, ".shared"): AS_match.shared,
                                    !eq(Space, ".global"): AS_match.global,
-                                   1: AS_match.generic)>;
+                                   true: AS_match.generic)>;
   // Build AS-constrained pattern.
   let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
 
@@ -7521,7 +7519,7 @@ class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
 // Create all load/store variants
 defset list<WMMA_INSTR> MMA_LDSTs  = {
   foreach layout = ["row", "col"] in {
-    foreach stride = [0, 1] in {
+    foreach stride = [false, true] in {
       foreach space = [".global", ".shared", ""] in {
         foreach addr = [imem, Int32Regs, Int64Regs, MEMri, MEMri64] in {
           foreach frag = NVVM_MMA_OPS.all_ld_ops in

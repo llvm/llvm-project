@@ -15,6 +15,19 @@
 #include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
+
+/// This struct represents a tracing technology.
+struct TraceTypeInfo {
+  /// The name of the technology, e.g. intel-pt or arm-coresight.
+  ///
+  /// In order for a Trace plug-in (see \a lldb_private::Trace.h) to support the
+  /// trace technology given by this struct, it should match its name with this
+  /// field.
+  std::string name;
+  /// A description for the technology.
+  std::string description;
+};
+
 class TraceOptions {
 public:
   TraceOptions() : m_trace_params(new StructuredData::Dictionary()) {}
@@ -56,5 +69,13 @@ private:
   StructuredData::DictionarySP m_trace_params;
 };
 }
+
+namespace llvm {
+namespace json {
+
+bool fromJSON(const Value &value, lldb_private::TraceTypeInfo &info, Path path);
+
+} // namespace json
+} // namespace llvm
 
 #endif // LLDB_UTILITY_TRACEOPTIONS_H

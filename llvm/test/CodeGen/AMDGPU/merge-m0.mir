@@ -231,21 +231,21 @@ body:             |
 # GCN-LABEL: name: move-m0-avoid-hazard
 # GCN: $m0 = S_MOV_B32 -1
 # GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
 ---
 name: move-m0-avoid-hazard
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1
-    DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
 ...
 
 # GCN-LABEL: name: move-m0-with-prologue
 # GCN: $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
 # GCN: $m0 = S_MOV_B32 -1
 # GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
 ---
 name: move-m0-with-prologue
 body:             |
@@ -255,7 +255,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1
-    DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
 ...
 
 # GCN-LABEL: name: move-m0-different-initializer

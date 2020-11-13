@@ -20,7 +20,7 @@
 
   vector.ph:                                        ; preds = %entry
     %7 = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 %0, i32 0, !dbg !32
-    call void @llvm.set.loop.iterations.i32(i32 %6), !dbg !32
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %6), !dbg !32
     %8 = shl i32 %5, 2, !dbg !32
     %9 = sub i32 %N, %8, !dbg !32
     br label %vector.body, !dbg !32
@@ -28,7 +28,7 @@
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %b, %vector.ph ], !dbg !33
     %vec.phi = phi <4 x i32> [ %7, %vector.ph ], [ %15, %vector.body ]
-    %10 = phi i32 [ %6, %vector.ph ], [ %16, %vector.body ]
+    %10 = phi i32 [ %start, %vector.ph ], [ %16, %vector.body ]
     %11 = phi i32 [ %N, %vector.ph ], [ %13, %vector.body ]
     %lsr.iv14 = bitcast i16* %lsr.iv to <4 x i16>*
     %12 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %11), !dbg !34
@@ -59,7 +59,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
 
@@ -261,7 +261,7 @@ body:             |
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, renamable $r3, 19, 14, $noreg, $noreg, debug-location !32
     renamable $r3, dead $cpsr = tLSRri killed renamable $r3, 2, 14, $noreg, debug-location !32
     renamable $r3 = t2SUBrs renamable $r2, killed renamable $r3, 18, 14, $noreg, $noreg, debug-location !32
-    t2DoLoopStart renamable $lr, debug-location !32
+    $lr = t2DoLoopStart renamable $lr, debug-location !32
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)

@@ -1,4 +1,4 @@
-; RUN: opt -S -O2 -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t
+; RUN: opt -S -instcombine < %s 2>%t
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
 ; This regression test is verifying that the optimization defined by

@@ -107,9 +107,9 @@ Symbols:
 ## Check we can set a custom sh_entsize for SHT_SYMTAB_SHNDX section.
 
 # RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: not llvm-readelf -S 2>&1 %t5 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
+# RUN: llvm-readelf -S 2>&1 %t5 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
 
-# CASE5: error: '[[FILE]]': section [index 1] has an invalid sh_entsize: 2
+# CASE5: warning: '[[FILE]]': section [index 1] has an invalid sh_entsize: 2
 
 --- !ELF
 FileHeader:

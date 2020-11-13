@@ -65,7 +65,7 @@ bool DlAddrSymbolizer::SymbolizeData(uptr addr, DataInfo *datainfo) {
 // kAsanInternalHeapMagic.
 static char kAtosMachPortEnvEntry[] = K_ATOS_ENV_VAR "=000000000000000";
 
-class AtosSymbolizerProcess : public SymbolizerProcess {
+class AtosSymbolizerProcess final : public SymbolizerProcess {
  public:
   explicit AtosSymbolizerProcess(const char *path)
       : SymbolizerProcess(path, /*use_posix_spawn*/ true) {

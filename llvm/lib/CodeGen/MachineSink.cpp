@@ -34,6 +34,8 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -94,6 +96,7 @@ namespace {
     MachineBlockFrequencyInfo *MBFI;
     const MachineBranchProbabilityInfo *MBPI;
     AliasAnalysis *AA;
+    RegisterClassInfo RegClassInfo;
 
     // Remember which edges have been considered for breaking.
     SmallSet<std::pair<MachineBasicBlock*, MachineBasicBlock*>, 8>
@@ -127,6 +130,15 @@ namespace {
     /// current block.
     DenseSet<DebugVariable> SeenDbgVars;
 
+    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
+        HasStoreCache;
+    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
+             std::vector<MachineInstr *>>
+        StoreInstrCache;
+
+    /// Cached BB's register pressure.
+    std::map<MachineBasicBlock *, std::vector<unsigned>> CachedRegisterPressure;
+
   public:
     static char ID; // Pass identification
 
@@ -158,6 +170,9 @@ namespace {
     bool isWorthBreakingCriticalEdge(MachineInstr &MI,
                                      MachineBasicBlock *From,
                                      MachineBasicBlock *To);
+
+    bool hasStoreBetween(MachineBasicBlock *From, MachineBasicBlock *To,
+                         MachineInstr &MI);
 
     /// Postpone the splitting of the given critical
     /// edge (\p From, \p To).
@@ -200,6 +215,8 @@ namespace {
     SmallVector<MachineBasicBlock *, 4> &
     GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
                            AllSuccsCache &AllSuccessors) const;
+
+    std::vector<unsigned> &getBBRegisterPressure(MachineBasicBlock &MBB);
   };
 
 } // end anonymous namespace
@@ -326,6 +343,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  RegClassInfo.runOnMachineFunction(MF);
 
   bool EverMadeChange = false;
 
@@ -358,6 +376,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
     if (!MadeChange) break;
     EverMadeChange = true;
   }
+
+  HasStoreCache.clear();
+  StoreInstrCache.clear();
 
   // Now clear any kill flags for recorded registers.
   for (auto I : RegsToClearKillFlags)
@@ -416,6 +437,8 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
 
   SeenDbgUsers.clear();
   SeenDbgVars.clear();
+  // recalculate the bb register pressure after sinking one BB.
+  CachedRegisterPressure.clear();
 
   return MadeChange;
 }
@@ -558,6 +581,42 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
   return true;
 }
 
+std::vector<unsigned> &
+MachineSinking::getBBRegisterPressure(MachineBasicBlock &MBB) {
+  // Currently to save compiling time, MBB's register pressure will not change
+  // in one ProcessBlock iteration because of CachedRegisterPressure. but MBB's
+  // register pressure is changed after sinking any instructions into it.
+  // FIXME: need a accurate and cheap register pressure estiminate model here.
+  auto RP = CachedRegisterPressure.find(&MBB);
+  if (RP != CachedRegisterPressure.end())
+    return RP->second;
+
+  RegionPressure Pressure;
+  RegPressureTracker RPTracker(Pressure);
+
+  // Initialize the register pressure tracker.
+  RPTracker.init(MBB.getParent(), &RegClassInfo, nullptr, &MBB, MBB.end(),
+                 /*TrackLaneMasks*/ false, /*TrackUntiedDefs=*/true);
+
+  for (MachineBasicBlock::iterator MII = MBB.instr_end(),
+                                   MIE = MBB.instr_begin();
+       MII != MIE; --MII) {
+    MachineInstr &MI = *std::prev(MII);
+    if (MI.isDebugValue() || MI.isDebugLabel())
+      continue;
+    RegisterOperands RegOpers;
+    RegOpers.collect(MI, *TRI, *MRI, false, false);
+    RPTracker.recedeSkipDebugValues();
+    assert(&*RPTracker.getPos() == &MI && "RPTracker sync error!");
+    RPTracker.recede(RegOpers);
+  }
+
+  RPTracker.closeRegion();
+  auto It = CachedRegisterPressure.insert(
+      std::make_pair(&MBB, RPTracker.getPressure().MaxSetPressure));
+  return It.first->second;
+}
+
 /// isProfitableToSinkTo - Return true if it is profitable to sink MI.
 bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
                                           MachineBasicBlock *MBB,
@@ -602,6 +661,21 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
   if (!ML)
     return false;
 
+  auto isRegisterPressureSetExceedLimit = [&](const TargetRegisterClass *RC) {
+    unsigned Weight = TRI->getRegClassWeight(RC).RegWeight;
+    const int *PS = TRI->getRegClassPressureSets(RC);
+    // Get register pressure for block SuccToSinkTo.
+    std::vector<unsigned> BBRegisterPressure =
+        getBBRegisterPressure(*SuccToSinkTo);
+    for (; *PS != -1; PS++)
+      // check if any register pressure set exceeds limit in block SuccToSinkTo
+      // after sinking.
+      if (Weight + BBRegisterPressure[*PS] >=
+          TRI->getRegPressureSetLimit(*MBB->getParent(), *PS))
+        return true;
+    return false;
+  };
+
   // If this instruction is inside a loop and sinking this instruction can make
   // more registers live range shorten, it is still prifitable.
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
@@ -633,16 +707,19 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       if (LI->getLoopFor(DefMI->getParent()) != ML ||
           (DefMI->isPHI() && LI->isLoopHeader(DefMI->getParent())))
         continue;
-      // DefMI is inside the loop. Mark it as not profitable as sinking MI will
-      // enlarge DefMI live range.
-      // FIXME: check the register pressure in block SuccToSinkTo, if it is
-      // smaller than the limit after sinking, it is still profitable to sink.
-      return false;
+      // The DefMI is defined inside the loop.
+      // If sinking this operand makes some register pressure set exceed limit,
+      // it is not profitable.
+      if (isRegisterPressureSetExceedLimit(MRI->getRegClass(Reg))) {
+        LLVM_DEBUG(dbgs() << "register pressure exceed limit, not profitable.");
+        return false;
+      }
     }
   }
 
-  // If MI is in loop and all its operands are alive across the whole loop, it
-  // is profitable to sink MI.
+  // If MI is in loop and all its operands are alive across the whole loop or if
+  // no operand sinking make register pressure set exceed limit, it is
+  // profitable to sink MI.
   return true;
 }
 
@@ -919,6 +996,73 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   }
 }
 
+/// hasStoreBetween - check if there is store betweeen straight line blocks From
+/// and To.
+bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
+                                     MachineBasicBlock *To, MachineInstr &MI) {
+  // Make sure From and To are in straight line which means From dominates To
+  // and To post dominates From.
+  if (!DT->dominates(From, To) || !PDT->dominates(To, From))
+    return true;
+
+  auto BlockPair = std::make_pair(From, To);
+
+  // Does these two blocks pair be queried before and have a definite cached
+  // result?
+  if (HasStoreCache.find(BlockPair) != HasStoreCache.end())
+    return HasStoreCache[BlockPair];
+
+  if (StoreInstrCache.find(BlockPair) != StoreInstrCache.end())
+    return std::any_of(
+        StoreInstrCache[BlockPair].begin(), StoreInstrCache[BlockPair].end(),
+        [&](MachineInstr *I) { return I->mayAlias(AA, MI, false); });
+
+  bool SawStore = false;
+  bool HasAliasedStore = false;
+  DenseSet<MachineBasicBlock *> HandledBlocks;
+  // Go through all reachable blocks from From.
+  for (MachineBasicBlock *BB : depth_first(From)) {
+    // We insert the instruction at the start of block To, so no need to worry
+    // about stores inside To.
+    // Store in block From should be already considered when just enter function
+    // SinkInstruction.
+    if (BB == To || BB == From)
+      continue;
+
+    // We already handle this BB in previous iteration.
+    if (HandledBlocks.count(BB))
+      continue;
+
+    HandledBlocks.insert(BB);
+    // To post dominates BB, it must be a path from block From.
+    if (PDT->dominates(To, BB)) {
+      for (MachineInstr &I : *BB) {
+        // Treat as alias conservatively for a call or an ordered memory
+        // operation.
+        if (I.isCall() || I.hasOrderedMemoryRef()) {
+          HasStoreCache[BlockPair] = true;
+          return true;
+        }
+
+        if (I.mayStore()) {
+          SawStore = true;
+          // We still have chance to sink MI if all stores between are not
+          // aliased to MI.
+          // Cache all store instructions, so that we don't need to go through
+          // all From reachable blocks for next load instruction.
+          if (I.mayAlias(AA, MI, false))
+            HasAliasedStore = true;
+          StoreInstrCache[BlockPair].push_back(&I);
+        }
+      }
+    }
+  }
+  // If there is no store at all, cache the result.
+  if (!SawStore)
+    HasStoreCache[BlockPair] = false;
+  return HasAliasedStore;
+}
+
 /// SinkInstruction - Determine whether it is safe to sink the specified machine
 /// instruction out of its current block into a successor.
 bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
@@ -979,8 +1123,9 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     // We cannot sink a load across a critical edge - there may be stores in
     // other code paths.
     bool TryBreak = false;
-    bool store = true;
-    if (!MI.isSafeToMove(AA, store)) {
+    bool Store =
+        MI.mayLoad() ? hasStoreBetween(ParentBlock, SuccToSinkTo, MI) : true;
+    if (!MI.isSafeToMove(AA, Store)) {
       LLVM_DEBUG(dbgs() << " *** NOTE: Won't sink load along critical edge.\n");
       TryBreak = true;
     }

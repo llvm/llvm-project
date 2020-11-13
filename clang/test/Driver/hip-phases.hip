@@ -98,7 +98,7 @@
 //
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc 2>&1 \
-// RUN: | FileCheck -check-prefixes=RDC2,CL2,RCL2 %s
+// RUN: | FileCheck -check-prefixes=RDC2,RCL2 %s
 
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc -c 2>&1 \

@@ -74,9 +74,9 @@ public:
     m_scalar = value;
   }
 
-  explicit RegisterValue(uint8_t *bytes, size_t length,
+  explicit RegisterValue(llvm::ArrayRef<uint8_t> bytes,
                          lldb::ByteOrder byte_order) {
-    SetBytes(bytes, length, byte_order);
+    SetBytes(bytes.data(), bytes.size(), byte_order);
   }
 
   RegisterValue::Type GetType() const { return m_type; }

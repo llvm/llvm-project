@@ -28,7 +28,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Option
   )
-  
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/quality/CompletionModel.cmake)
 gen_decision_forest(${CMAKE_CURRENT_SOURCE_DIR}/quality/model CompletionModel clang::clangd::Example)
 
@@ -111,12 +111,6 @@ add_clang_library(clangDaemon
   refactor/Rename.cpp
   refactor/Tweak.cpp
 
-  LINK_LIBS
-  clangdSupport
-  clangTidy
-  ${LLVM_PTHREAD_LIB}
-  ${ALL_CLANG_TIDY_CHECKS}
-
   DEPENDS
   omp_gen
   )
@@ -143,6 +137,16 @@ clang_target_link_libraries(clangDaemon
   clangToolingInclusions
   clangToolingRefactoring
   clangToolingSyntax
+  )
+
+target_link_libraries(clangDaemon
+  PRIVATE
+  ${LLVM_PTHREAD_LIB}
+
+  clangTidy
+  ${ALL_CLANG_TIDY_CHECKS}
+
+  clangdSupport
   )
 
 add_subdirectory(refactor/tweaks)

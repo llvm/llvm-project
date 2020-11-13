@@ -80,7 +80,7 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
   }
 }
 
-/// Return true if we can prove that the transfer operations access dijoint
+/// Return true if we can prove that the transfer operations access disjoint
 /// memory.
 static bool isDisjoint(VectorTransferOpInterface transferA,
                        VectorTransferOpInterface transferB) {

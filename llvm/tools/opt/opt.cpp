@@ -209,16 +209,6 @@ static cl::opt<bool> EnableDebugify(
     cl::desc(
         "Start the pipeline with debugify and end it with check-debugify"));
 
-static cl::opt<bool> DebugifyEach(
-    "debugify-each",
-    cl::desc(
-        "Start each pass with debugify and end it with check-debugify"));
-
-static cl::opt<std::string>
-    DebugifyExport("debugify-export",
-                   cl::desc("Export per-pass debugify statistics to this file"),
-                   cl::value_desc("filename"), cl::init(""));
-
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
@@ -445,28 +435,6 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 #ifdef BUILD_EXAMPLES
 void initializeExampleIRTransforms(llvm::PassRegistry &Registry);
 #endif
-
-static void exportDebugifyStats(llvm::StringRef Path,
-                                const DebugifyStatsMap &Map) {
-  std::error_code EC;
-  raw_fd_ostream OS{Path, EC};
-  if (EC) {
-    errs() << "Could not open file: " << EC.message() << ", " << Path << '\n';
-    return;
-  }
-
-  OS << "Pass Name" << ',' << "# of missing debug values" << ','
-     << "# of missing locations" << ',' << "Missing/Expected value ratio" << ','
-     << "Missing/Expected location ratio" << '\n';
-  for (const auto &Entry : Map) {
-    StringRef Pass = Entry.first;
-    DebugifyStatistics Stats = Entry.second;
-
-    OS << Pass << ',' << Stats.NumDbgValuesMissing << ','
-       << Stats.NumDbgLocsMissing << ',' << Stats.getMissingValueRatio() << ','
-       << Stats.getEmptyLocationRatio() << '\n';
-  }
-}
 
 struct TimeTracerRAII {
   TimeTracerRAII(StringRef ProgramName) {

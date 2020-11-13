@@ -44,12 +44,23 @@ tools detailed below. There is a strong expectation that authors respond
 promptly to post-commit feedback and address it. Failure to do so is cause for
 the patch to be reverted.
 
-In addition, if substantial problems are identified, it is expected that the
-patch is reverted and fixed offline. Before being recommitted, the patch
-generally undergoes further review, including by the community member who
-identified the problem and, in cases where the patch triggered a
-hardware-specific buildbot failure, a community member with access to hardware
-similar to that on the buildbot that the patch previously caused to fail.
+If a community member expresses a concern about a recent commit, and this
+concern would have been significant enough to warrant a conversation during
+pre-commit review (including around the need for more design discussions),
+they may ask for a revert to the original author who is responsible to revert
+the patch promptly. Developers often disagree, and erring on the side of the
+developer asking for more review prevents any lingering disagreement over
+code in the tree. This does not indicate any fault from the patch author,
+this is inherent to our post-commit review practices.
+Reverting a patch ensures that design discussions can happen without blocking
+other development; it's entirely possible the patch will end up being reapplied
+essentially as-is once concerns have been resolved.
+
+Before being recommitted, the patch generally should undergo further review.
+The community member who identified the problem is expected to engage
+actively in the review. In cases where the problem is identified by a buildbot,
+a community member with access to hardware similar to that on the buildbot is
+expected to engage in the review.
 
 Please note: The bar for post-commit feedback is not higher than for pre-commit
 feedback. Don't delay unnecessarily in providing feedback. However, if you see

@@ -1294,6 +1294,18 @@ let Predicates = [MMA] in {
     XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
                      "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  let mayStore = 1 in {
+    def SPILL_ACC: PPCEmitTimePseudo<(outs), (ins acc:$AT, memrix16:$dst),
+                                     "#SPILL_ACC", []>;
+    def SPILL_UACC: PPCEmitTimePseudo<(outs), (ins uacc:$AT, memrix16:$dst),
+                                     "#SPILL_UACC", []>;
+  }
+  let mayLoad = 1, hasSideEffects = 0 in {
+    def RESTORE_ACC: PPCEmitTimePseudo<(outs acc:$AT), (ins memrix16:$src),
+                                       "#RESTORE_ACC", []>;
+    def RESTORE_UACC: PPCEmitTimePseudo<(outs uacc:$AT), (ins memrix16:$src),
+                                       "#RESTORE_UACC", []>;
+  }
 }
 
 let Predicates = [MMA, PrefixInstrs] in {
@@ -2316,9 +2328,9 @@ let Predicates = [IsISA3_1] in {
   def VCMPEQUQ : VCMP <455, "vcmpequq $vD, $vA, $vB" , v1i128>;
   def VCMPGTSQ : VCMP <903, "vcmpgtsq $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ : VCMP <647, "vcmpgtuq $vD, $vA, $vB" , v1i128>;
-  def VCMPEQUQ_rec : VCMPo <455, "vcmpequq. $vD, $vA, $vB" , v1i128>;
-  def VCMPGTSQ_rec : VCMPo <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
-  def VCMPGTUQ_rec : VCMPo <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
+  def VCMPEQUQ_rec : VCMP_rec <455, "vcmpequq. $vD, $vA, $vB" , v1i128>;
+  def VCMPGTSQ_rec : VCMP_rec <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
+  def VCMPGTUQ_rec : VCMP_rec <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
   def VMODSQ : VXForm_1<1803, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                         "vmodsq $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v1i128:$vD, (srem v1i128:$vA, v1i128:$vB))]>;

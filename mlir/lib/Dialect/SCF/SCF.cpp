@@ -10,6 +10,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -24,13 +25,13 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
   // We don't have any special restrictions on what can be inlined into
   // destination regions (e.g. while/conditional bodies). Always allow it.
-  bool isLegalToInline(Region *dest, Region *src,
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                        BlockAndValueMapping &valueMapping) const final {
     return true;
   }
   // Operations in scf dialect are always legal to inline since they are
   // pure.
-  bool isLegalToInline(Operation *, Region *,
+  bool isLegalToInline(Operation *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }
@@ -140,26 +141,37 @@ static LogicalResult verify(ForOp op) {
   return RegionBranchOpInterface::verifyTypes(op);
 }
 
+/// Prints the initialization list in the form of
+///   <prefix>(%inner = %outer, %inner2 = %outer2, <...>)
+/// where 'inner' values are assumed to be region arguments and 'outer' values
+/// are regular SSA values.
+static void printInitializationList(OpAsmPrinter &p,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  p << prefix << '(';
+  llvm::interleaveComma(llvm::zip(blocksArgs, initializers), p, [&](auto it) {
+    p << std::get<0>(it) << " = " << std::get<1>(it);
+  });
+  p << ")";
+}
+
 static void print(OpAsmPrinter &p, ForOp op) {
-  bool printBlockTerminators = false;
   p << op.getOperationName() << " " << op.getInductionVar() << " = "
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
 
-  if (op.hasIterOperands()) {
-    p << " iter_args(";
-    auto regionArgs = op.getRegionIterArgs();
-    auto operands = op.getIterOperands();
-
-    llvm::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
-      p << std::get<0>(it) << " = " << std::get<1>(it);
-    });
-    p << ")";
-    p << " -> (" << op.getResultTypes() << ")";
-    printBlockTerminators = true;
-  }
+  printInitializationList(p, op.getRegionIterArgs(), op.getIterOperands(),
+                          " iter_args");
+  if (!op.getIterOperands().empty())
+    p << " -> (" << op.getIterOperands().getTypes() << ')';
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+                /*printBlockTerminators=*/op.hasIterOperands());
   p.printOptionalAttrDict(op.getAttrs());
 }
 
@@ -273,6 +285,26 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
+void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<int64_t> &countPerRegion) {
+  assert(countPerRegion.empty());
+  countPerRegion.resize(1);
+
+  auto lb = operands[0].dyn_cast_or_null<IntegerAttr>();
+  auto ub = operands[1].dyn_cast_or_null<IntegerAttr>();
+  auto step = operands[2].dyn_cast_or_null<IntegerAttr>();
+
+  // Loop bounds are not known statically.
+  if (!lb || !ub || !step || step.getValue().getSExtValue() == 0) {
+    countPerRegion[0] = -1;
+    return;
+  }
+
+  countPerRegion[0] =
+      ceilDiv(ub.getValue().getSExtValue() - lb.getValue().getSExtValue(),
+              step.getValue().getSExtValue());
+}
+
 ValueVector mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ValueRange iterArgs,
@@ -357,6 +389,120 @@ ValueVector mlir::scf::buildLoopNest(
                            bodyBuilder(nestedBuilder, nestedLoc, ivs);
                          return {};
                        });
+}
+
+namespace {
+// Fold away ForOp iter arguments that are also yielded by the op.
+// These arguments must be defined outside of the ForOp region and can just be
+// forwarded after simplifying the op inits, yields and returns.
+//
+// The implementation uses `mergeBlockBefore` to steal the content of the
+// original ForOp and avoid cloning.
+struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
+  using OpRewritePattern<scf::ForOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::ForOp forOp,
+                                PatternRewriter &rewriter) const final {
+    bool canonicalize = false;
+    Block &block = forOp.region().front();
+    auto yieldOp = cast<scf::YieldOp>(block.getTerminator());
+
+    // An internal flat vector of block transfer
+    // arguments `newBlockTransferArgs` keeps the 1-1 mapping of original to
+    // transformed block argument mappings. This plays the role of a
+    // BlockAndValueMapping for the particular use case of calling into
+    // `mergeBlockBefore`.
+    SmallVector<bool, 4> keepMask;
+    keepMask.reserve(yieldOp.getNumOperands());
+    SmallVector<Value, 4> newBlockTransferArgs, newIterArgs, newYieldValues,
+        newResultValues;
+    newBlockTransferArgs.reserve(1 + forOp.getNumIterOperands());
+    newBlockTransferArgs.push_back(Value()); // iv placeholder with null value
+    newIterArgs.reserve(forOp.getNumIterOperands());
+    newYieldValues.reserve(yieldOp.getNumOperands());
+    newResultValues.reserve(forOp.getNumResults());
+    for (auto it : llvm::zip(forOp.getIterOperands(),   // iter from outside
+                             forOp.getRegionIterArgs(), // iter inside region
+                             yieldOp.getOperands()      // iter yield
+                             )) {
+      // Forwarded is `true` when the region `iter` argument is yielded.
+      bool forwarded = (std::get<1>(it) == std::get<2>(it));
+      keepMask.push_back(!forwarded);
+      canonicalize |= forwarded;
+      if (forwarded) {
+        newBlockTransferArgs.push_back(std::get<0>(it));
+        newResultValues.push_back(std::get<0>(it));
+        continue;
+      }
+      newIterArgs.push_back(std::get<0>(it));
+      newYieldValues.push_back(std::get<2>(it));
+      newBlockTransferArgs.push_back(Value()); // placeholder with null value
+      newResultValues.push_back(Value());      // placeholder with null value
+    }
+
+    if (!canonicalize)
+      return failure();
+
+    scf::ForOp newForOp = rewriter.create<scf::ForOp>(
+        forOp.getLoc(), forOp.lowerBound(), forOp.upperBound(), forOp.step(),
+        newIterArgs);
+    Block &newBlock = newForOp.region().front();
+
+    // Replace the null placeholders with newly constructed values.
+    newBlockTransferArgs[0] = newBlock.getArgument(0); // iv
+    for (unsigned idx = 0, collapsedIdx = 0, e = newResultValues.size();
+         idx != e; ++idx) {
+      Value &blockTransferArg = newBlockTransferArgs[1 + idx];
+      Value &newResultVal = newResultValues[idx];
+      assert((blockTransferArg && newResultVal) ||
+             (!blockTransferArg && !newResultVal));
+      if (!blockTransferArg) {
+        blockTransferArg = newForOp.getRegionIterArgs()[collapsedIdx];
+        newResultVal = newForOp.getResult(collapsedIdx++);
+      }
+    }
+
+    Block &oldBlock = forOp.region().front();
+    assert(oldBlock.getNumArguments() == newBlockTransferArgs.size() &&
+           "unexpected argument size mismatch");
+
+    // No results case: the scf::ForOp builder already created a zero
+    // reult terminator. Merge before this terminator and just get rid of the
+    // original terminator that has been merged in.
+    if (newIterArgs.empty()) {
+      auto newYieldOp = cast<scf::YieldOp>(newBlock.getTerminator());
+      rewriter.mergeBlockBefore(&oldBlock, newYieldOp, newBlockTransferArgs);
+      rewriter.eraseOp(newBlock.getTerminator()->getPrevNode());
+      rewriter.replaceOp(forOp, newResultValues);
+      return success();
+    }
+
+    // No terminator case: merge and rewrite the merged terminator.
+    auto cloneFilteredTerminator = [&](scf::YieldOp mergedTerminator) {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(mergedTerminator);
+      SmallVector<Value, 4> filteredOperands;
+      filteredOperands.reserve(newResultValues.size());
+      for (unsigned idx = 0, e = keepMask.size(); idx < e; ++idx)
+        if (keepMask[idx])
+          filteredOperands.push_back(mergedTerminator.getOperand(idx));
+      rewriter.create<scf::YieldOp>(mergedTerminator.getLoc(),
+                                    filteredOperands);
+    };
+
+    rewriter.mergeBlocks(&oldBlock, &newBlock, newBlockTransferArgs);
+    auto mergedYieldOp = cast<scf::YieldOp>(newBlock.getTerminator());
+    cloneFilteredTerminator(mergedYieldOp);
+    rewriter.eraseOp(mergedYieldOp);
+    rewriter.replaceOp(forOp, newResultValues);
+    return success();
+  }
+};
+} // namespace
+
+void ForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                        MLIRContext *context) {
+  results.insert<ForOpIterArgsFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -931,6 +1077,158 @@ static LogicalResult verify(ReduceReturnOp op) {
     return op.emitOpError() << "needs to have type " << reduceType
                             << " (the type of the enclosing ReduceOp)";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WhileOp
+//===----------------------------------------------------------------------===//
+
+OperandRange WhileOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index == 0 &&
+         "WhileOp is expected to branch only to the first region");
+
+  return inits();
+}
+
+void WhileOp::getSuccessorRegions(Optional<unsigned> index,
+                                  ArrayRef<Attribute> operands,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  (void)operands;
+
+  if (!index.hasValue()) {
+    regions.emplace_back(&before(), before().getArguments());
+    return;
+  }
+
+  assert(*index < 2 && "there are only two regions in a WhileOp");
+  if (*index == 0) {
+    regions.emplace_back(&after(), after().getArguments());
+    regions.emplace_back(getResults());
+    return;
+  }
+
+  regions.emplace_back(&before(), before().getArguments());
+}
+
+/// Parses a `while` op.
+///
+/// op ::= `scf.while` assignments `:` function-type region `do` region
+///         `attributes` attribute-dict
+/// initializer ::= /* empty */ | `(` assignment-list `)`
+/// assignment-list ::= assignment | assignment `,` assignment-list
+/// assignment ::= ssa-value `=` ssa-value
+static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
+  Region *before = result.addRegion();
+  Region *after = result.addRegion();
+
+  OptionalParseResult listResult =
+      parser.parseOptionalAssignmentList(regionArgs, operands);
+  if (listResult.hasValue() && failed(listResult.getValue()))
+    return failure();
+
+  FunctionType functionType;
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  if (failed(parser.parseColonType(functionType)))
+    return failure();
+
+  result.addTypes(functionType.getResults());
+
+  if (functionType.getNumInputs() != operands.size()) {
+    return parser.emitError(typeLoc)
+           << "expected as many input types as operands "
+           << "(expected " << operands.size() << " got "
+           << functionType.getNumInputs() << ")";
+  }
+
+  // Resolve input operands.
+  if (failed(parser.resolveOperands(operands, functionType.getInputs(),
+                                    parser.getCurrentLocation(),
+                                    result.operands)))
+    return failure();
+
+  return failure(
+      parser.parseRegion(*before, regionArgs, functionType.getInputs()) ||
+      parser.parseKeyword("do") || parser.parseRegion(*after) ||
+      parser.parseOptionalAttrDictWithKeyword(result.attributes));
+}
+
+/// Prints a `while` op.
+static void print(OpAsmPrinter &p, scf::WhileOp op) {
+  p << op.getOperationName();
+  printInitializationList(p, op.before().front().getArguments(), op.inits(),
+                          " ");
+  p << " : ";
+  p.printFunctionalType(op.inits().getTypes(), op.results().getTypes());
+  p.printRegion(op.before(), /*printEntryBlockArgs=*/false);
+  p << " do";
+  p.printRegion(op.after());
+  p.printOptionalAttrDictWithKeyword(op.getAttrs());
+}
+
+/// Verifies that two ranges of types match, i.e. have the same number of
+/// entries and that types are pairwise equals. Reports errors on the given
+/// operation in case of mismatch.
+template <typename OpTy>
+static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
+                                           TypeRange right, StringRef message) {
+  if (left.size() != right.size())
+    return op.emitOpError("expects the same number of ") << message;
+
+  for (unsigned i = 0, e = left.size(); i < e; ++i) {
+    if (left[i] != right[i]) {
+      InFlightDiagnostic diag = op.emitOpError("expects the same types for ")
+                                << message;
+      diag.attachNote() << "for argument " << i << ", found " << left[i]
+                        << " and " << right[i];
+      return diag;
+    }
+  }
+
+  return success();
+}
+
+/// Verifies that the first block of the given `region` is terminated by a
+/// YieldOp. Reports errors on the given operation if it is not the case.
+template <typename TerminatorTy>
+static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
+                                           StringRef errorMessage) {
+  Operation *terminatorOperation = region.front().getTerminator();
+  if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
+    return yield;
+
+  auto diag = op.emitOpError(errorMessage);
+  if (terminatorOperation)
+    diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
+  return nullptr;
+}
+
+static LogicalResult verify(scf::WhileOp op) {
+  if (failed(RegionBranchOpInterface::verifyTypes(op)))
+    return failure();
+
+  auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
+      op, op.before(),
+      "expects the 'before' region to terminate with 'scf.condition'");
+  if (!beforeTerminator)
+    return failure();
+
+  TypeRange trailingTerminatorOperands = beforeTerminator.args().getTypes();
+  if (failed(verifyTypeRangesMatch(op, trailingTerminatorOperands,
+                                   op.after().getArgumentTypes(),
+                                   "trailing operands of the 'before' block "
+                                   "terminator and 'after' region arguments")))
+    return failure();
+
+  if (failed(verifyTypeRangesMatch(
+          op, trailingTerminatorOperands, op.getResultTypes(),
+          "trailing operands of the 'before' block terminator and op results")))
+    return failure();
+
+  auto afterTerminator = verifyAndGetTerminator<scf::YieldOp>(
+      op, op.after(),
+      "expects the 'after' region to terminate with 'scf.yield'");
+  return success(afterTerminator != nullptr);
 }
 
 //===----------------------------------------------------------------------===//

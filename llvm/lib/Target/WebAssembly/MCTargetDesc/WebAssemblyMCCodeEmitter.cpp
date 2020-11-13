@@ -62,12 +62,16 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   uint64_t Start = OS.tell();
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  if (Binary <= UINT8_MAX) {
+  if (Binary < (1 << 8)) {
     OS << uint8_t(Binary);
-  } else {
-    assert(Binary <= UINT16_MAX && "Several-byte opcodes not supported yet");
+  } else if (Binary < (1 << 16)) {
     OS << uint8_t(Binary >> 8);
     encodeULEB128(uint8_t(Binary), OS);
+  } else if (Binary < (1 << 24)) {
+    OS << uint8_t(Binary >> 16);
+    encodeULEB128(uint16_t(Binary), OS);
+  } else {
+    llvm_unreachable("Very large (prefix + 3 byte) opcodes not supported");
   }
 
   // For br_table instructions, encode the size of the table. In the MCInst,
@@ -102,6 +106,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeSLEB128(int64_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_SIGNATURE:
+        case WebAssembly::OPERAND_HEAPTYPE:
           OS << uint8_t(MO.getImm());
           break;
         case WebAssembly::OPERAND_VEC_I8IMM:

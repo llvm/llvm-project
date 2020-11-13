@@ -180,6 +180,7 @@ typedef basic_fstream<wchar_t> wfstream;
 */
 
 #include <__config>
+#include <__availability>
 #include <ostream>
 #include <istream>
 #include <__locale>
@@ -240,7 +241,7 @@ public:
       return open(__p.c_str(), __mode);
     }
 #endif
-    _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_INLINE_VISIBILITY
     basic_filebuf* __open(int __fd, ios_base::openmode __mode);
 #endif
     basic_filebuf* close();
@@ -570,7 +571,8 @@ basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode)
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY basic_filebuf<_CharT, _Traits>*
+inline _LIBCPP_INLINE_VISIBILITY
+basic_filebuf<_CharT, _Traits>*
 basic_filebuf<_CharT, _Traits>::__open(int __fd, ios_base::openmode __mode) {
   basic_filebuf<_CharT, _Traits>* __rt = 0;
   if (__file_ == 0) {
@@ -1755,6 +1757,12 @@ basic_fstream<_CharT, _Traits>::close()
     if (__sb_.close() == 0)
         this->setstate(ios_base::failbit);
 }
+
+#if defined(_LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ifstream<char>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ofstream<char>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>)
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

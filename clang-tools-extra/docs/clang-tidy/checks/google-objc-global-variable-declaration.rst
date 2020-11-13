@@ -44,4 +44,4 @@ However for code that prefixed with non-alphabetical characters like:
   static NSString* __anotherString = @"world";
 
 The check will give a warning message but will not be able to suggest a fix. The
-user need to fix it on his own.
+user needs to fix it on their own.

@@ -18,8 +18,7 @@ set(INTERCEPTION_TEST_CFLAGS_COMMON
   -I${COMPILER_RT_SOURCE_DIR}/lib/interception
   -fno-rtti
   -O2
-  -Werror=sign-compare
-  -Wno-non-virtual-dtor)
+  -Werror=sign-compare)
 
 set(INTERCEPTION_TEST_LINK_FLAGS_COMMON
   ${COMPILER_RT_UNITTEST_LINK_FLAGS})

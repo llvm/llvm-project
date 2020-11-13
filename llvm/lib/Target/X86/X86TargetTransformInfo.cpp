@@ -2084,11 +2084,13 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 }
 
 int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                   CmpInst::Predicate VecPred,
                                    TTI::TargetCostKind CostKind,
                                    const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
 
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
@@ -2272,7 +2274,7 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
       return LT.first * (ExtraCost + Entry->Cost);
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
@@ -2286,6 +2288,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
   // CTLZ: llvm\test\CodeGen\X86\vector-lzcnt-*.ll
   // CTPOP: llvm\test\CodeGen\X86\vector-popcnt-*.ll
   // CTTZ: llvm\test\CodeGen\X86\vector-tzcnt-*.ll
+
+  // TODO: Overflow intrinsics (*ADDO, *SUBO, *MULO) with vector types are not
+  //       specialized in these tables yet.
   static const CostTblEntry AVX512CDCostTbl[] = {
     { ISD::CTLZ,       MVT::v8i64,   1 },
     { ISD::CTLZ,       MVT::v16i32,  1 },
@@ -2468,6 +2473,8 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::USUBSAT,    MVT::v16i16,  1 },
     { ISD::USUBSAT,    MVT::v32i8,   1 },
     { ISD::USUBSAT,    MVT::v8i32,   2 }, // pmaxud + psubd
+    { ISD::FMAXNUM,    MVT::v8f32,   3 }, // MAXPS + CMPUNORDPS + BLENDVPS
+    { ISD::FMAXNUM,    MVT::v4f64,   3 }, // MAXPD + CMPUNORDPD + BLENDVPD
     { ISD::FSQRT,      MVT::f32,     7 }, // Haswell from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,   7 }, // Haswell from http://www.agner.org/
     { ISD::FSQRT,      MVT::v8f32,  14 }, // Haswell from http://www.agner.org/
@@ -2521,12 +2528,12 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::USUBSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
     { ISD::USUBSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
     { ISD::USUBSAT,    MVT::v8i32,   6 }, // 2 x 128-bit Op + extract/insert
-    { ISD::FMAXNUM,    MVT::f32,     3 },
-    { ISD::FMAXNUM,    MVT::v4f32,   3 },
-    { ISD::FMAXNUM,    MVT::v8f32,   5 },
-    { ISD::FMAXNUM,    MVT::f64,     3 },
-    { ISD::FMAXNUM,    MVT::v2f64,   3 },
-    { ISD::FMAXNUM,    MVT::v4f64,   5 },
+    { ISD::FMAXNUM,    MVT::f32,     3 }, // MAXSS + CMPUNORDSS + BLENDVPS
+    { ISD::FMAXNUM,    MVT::v4f32,   3 }, // MAXPS + CMPUNORDPS + BLENDVPS
+    { ISD::FMAXNUM,    MVT::v8f32,   5 }, // MAXPS + CMPUNORDPS + BLENDVPS + ?
+    { ISD::FMAXNUM,    MVT::f64,     3 }, // MAXSD + CMPUNORDSD + BLENDVPD
+    { ISD::FMAXNUM,    MVT::v2f64,   3 }, // MAXPD + CMPUNORDPD + BLENDVPD
+    { ISD::FMAXNUM,    MVT::v4f64,   5 }, // MAXPD + CMPUNORDPD + BLENDVPD + ?
     { ISD::FSQRT,      MVT::f32,    14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v8f32,  28 }, // SNB from http://www.agner.org/
@@ -2667,6 +2674,7 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::CTPOP,      MVT::i64,    10 },
     { ISD::SADDO,      MVT::i64,     1 },
     { ISD::UADDO,      MVT::i64,     1 },
+    { ISD::UMULO,      MVT::i64,     2 }, // mulq + seto
   };
   static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::BITREVERSE, MVT::i32,    14 },
@@ -2687,6 +2695,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::UADDO,      MVT::i32,     1 },
     { ISD::UADDO,      MVT::i16,     1 },
     { ISD::UADDO,      MVT::i8,      1 },
+    { ISD::UMULO,      MVT::i32,     2 }, // mul + seto
+    { ISD::UMULO,      MVT::i16,     2 },
+    { ISD::UMULO,      MVT::i8,      2 },
   };
 
   Type *RetTy = ICA.getReturnType();
@@ -2756,6 +2767,12 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
   case Intrinsic::usub_with_overflow:
     // USUBO has same costs so don't duplicate.
     ISD = ISD::UADDO;
+    OpTy = RetTy->getContainedType(0);
+    break;
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
+    // SMULO has same costs so don't duplicate.
+    ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
   }
@@ -2860,9 +2877,6 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
 
 int X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-
   if (ICA.isTypeBasedOnly())
     return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
@@ -3226,7 +3240,7 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
     int ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
-        CostKind);
+        CmpInst::BAD_ICMP_PREDICATE, CostKind);
     int BranchCost = getCFInstrCost(Instruction::Br, CostKind);
     int MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
     int ValueSplitCost =
@@ -3647,8 +3661,10 @@ int X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned) {
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   // Otherwise fall back to cmp+select.
-  return getCmpSelInstrCost(CmpOpcode, Ty, CondTy, CostKind) +
-         getCmpSelInstrCost(Instruction::Select, Ty, CondTy, CostKind);
+  return getCmpSelInstrCost(CmpOpcode, Ty, CondTy, CmpInst::BAD_ICMP_PREDICATE,
+                            CostKind) +
+         getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                            CmpInst::BAD_ICMP_PREDICATE, CostKind);
 }
 
 int X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
@@ -4126,9 +4142,9 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
         FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
     MaskUnpackCost =
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
-    int ScalarCompareCost =
-      getCmpSelInstrCost(Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()),
-                         nullptr, CostKind);
+    int ScalarCompareCost = getCmpSelInstrCost(
+        Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()), nullptr,
+        CmpInst::BAD_ICMP_PREDICATE, CostKind);
     int BranchCost = getCFInstrCost(Instruction::Br, CostKind);
     MaskUnpackCost += VF * (BranchCost + ScalarCompareCost);
   }

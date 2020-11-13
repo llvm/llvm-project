@@ -43,7 +43,7 @@
 #define PTX60 "ptx60|" PTX61
 
 #pragma push_macro("AND")
-#define AND(a, b) a "," b
+#define AND(a, b) "(" a "),(" b ")"
 
 // Special Registers
 

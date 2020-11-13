@@ -39,8 +39,8 @@ int main(int, char**)
 
     for (unsigned i = 0; i <= 255; ++i)
     {
-        day day(i);
-        assert(static_cast<unsigned>(day) == i);
+        day d(i);
+        assert(static_cast<unsigned>(d) == i);
     }
 
   return 0;

@@ -25,12 +25,12 @@ vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
   %broadcast.splatinsert10 = insertelement <16 x i32> undef, i32 %trip.count.minus.1, i32 0
   %broadcast.splat11 = shufflevector <16 x i32> %broadcast.splatinsert10, <16 x i32> undef, <16 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %tmp14 = phi i32 [ %start, %vector.ph ], [ %tmp15, %vector.body ]
   %broadcast.splatinsert = insertelement <16 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <16 x i32> %broadcast.splatinsert, <16 x i32> undef, <16 x i32> zeroinitializer
   %induction = or <16 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -82,12 +82,12 @@ vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
   %broadcast.splatinsert10 = insertelement <8 x i32> undef, i32 %trip.count.minus.1, i32 0
   %broadcast.splat11 = shufflevector <8 x i32> %broadcast.splatinsert10, <8 x i32> undef, <8 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %tmp14 = phi i32 [ %start, %vector.ph ], [ %tmp15, %vector.body ]
   %broadcast.splatinsert = insertelement <8 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <8 x i32> %broadcast.splatinsert, <8 x i32> undef, <8 x i32> zeroinitializer
   %induction = add <8 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -138,12 +138,12 @@ vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
   %broadcast.splatinsert10 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
   %broadcast.splat11 = shufflevector <4 x i32> %broadcast.splatinsert10, <4 x i32> undef, <4 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %tmp14 = phi i32 [ %start, %vector.ph ], [ %tmp15, %vector.body ]
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = or <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
@@ -193,12 +193,12 @@ vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
   %broadcast.splatinsert10 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
   %broadcast.splat11 = shufflevector <4 x i32> %broadcast.splatinsert10, <4 x i32> undef, <4 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %tmp14 = phi i32 [ %start, %vector.ph ], [ %tmp15, %vector.body ]
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
@@ -252,12 +252,12 @@ vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
   %broadcast.splatinsert10 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
   %broadcast.splat11 = shufflevector <4 x i32> %broadcast.splatinsert10, <4 x i32> undef, <4 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %tmp14 = phi i32 [ %start, %vector.ph ], [ %tmp15, %vector.body ]
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
@@ -311,12 +311,12 @@ vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
   %broadcast.splatinsert10 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
   %broadcast.splat11 = shufflevector <4 x i32> %broadcast.splatinsert10, <4 x i32> undef, <4 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %tmp14 = phi i32 [ %start, %vector.ph ], [ %tmp15, %vector.body ]
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
@@ -374,7 +374,7 @@ vector.ph:
   %scevgep = getelementptr i32, i32* %A, i32 8
   %scevgep30 = getelementptr i32, i32* %C, i32 8
   %scevgep37 = getelementptr i32, i32* %B, i32 8
-  call void @llvm.set.loop.iterations.i32(i32 %v5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %v5)
   br label %vector.body
 
 vector.body:
@@ -382,7 +382,7 @@ vector.body:
   %lsr.iv31 = phi i32* [ %scevgep32, %vector.body ], [ %scevgep30, %vector.ph ]
   %lsr.iv = phi i32* [ %scevgep25, %vector.body ], [ %scevgep, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %v14, %vector.body ]
-  %v6 = phi i32 [ %v5, %vector.ph ], [ %v15, %vector.body ]
+  %v6 = phi i32 [ %start, %vector.ph ], [ %v15, %vector.body ]
   %lsr.iv3840 = bitcast i32* %lsr.iv38 to <4 x i32>*
   %lsr.iv3133 = bitcast i32* %lsr.iv31 to <4 x i32>*
   %lsr.iv26 = bitcast i32* %lsr.iv to <4 x i32>*
@@ -447,7 +447,7 @@ entry:
   br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
 
 vector.ph:
-  call void @llvm.set.loop.iterations.i32(i32 %5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -455,7 +455,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %C, %vector.ph ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
+  %6 = phi i32 [ %start, %vector.ph ], [ %8, %vector.body ]
   %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1719 = bitcast i32* %lsr.iv17 to <4 x i32>*
@@ -496,7 +496,7 @@ entry:
 
 vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
-  call void @llvm.set.loop.iterations.i32(i32 %5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -504,7 +504,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %C, %vector.ph ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
+  %6 = phi i32 [ %start, %vector.ph ], [ %8, %vector.body ]
 
   %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
@@ -547,7 +547,7 @@ entry:
 
 vector.ph:                                        ; preds = %entry
   %trip.count.minus.1 = add i32 %N, -1
-  call void @llvm.set.loop.iterations.i32(i32 %5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -558,7 +558,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 ; AddRec base is not 0:
   %index = phi i32 [ 1, %vector.ph ], [ %index.next, %vector.body ]
 
-  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
+  %6 = phi i32 [ %start, %vector.ph ], [ %8, %vector.body ]
   %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1719 = bitcast i32* %lsr.iv17 to <4 x i32>*
@@ -589,7 +589,7 @@ declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i
 declare void @llvm.masked.store.v2i64.p0v2i64(<2 x i64>, <2 x i64>*, i32 immarg, <2 x i1>)
 declare <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>*, i32 immarg, <2 x i1>, <2 x i64>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
-declare void @llvm.set.loop.iterations.i32(i32)
+declare i32 @llvm.start.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)

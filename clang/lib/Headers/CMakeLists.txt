@@ -35,6 +35,7 @@ set(files
   avx512vnniintrin.h
   avx512vlvnniintrin.h
   avxintrin.h
+  avxvnniintrin.h
   bmi2intrin.h
   bmiintrin.h
   __clang_cuda_builtin_vars.h

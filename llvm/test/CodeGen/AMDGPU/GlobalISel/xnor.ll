@@ -154,15 +154,15 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) {
 ; GCN-LABEL: scalar_xnor_i64_mul_use:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s4, s0
-; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    s_xor_b64 s[2:3], s[4:5], s[2:3]
-; GCN-NEXT:    s_not_b64 s[0:1], s[2:3]
-; GCN-NEXT:    s_add_u32 s2, s2, s4
-; GCN-NEXT:    s_cselect_b32 s4, 1, 0
-; GCN-NEXT:    s_and_b32 s4, s4, 1
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
-; GCN-NEXT:    s_addc_u32 s3, s3, s5
+; GCN-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
+; GCN-NEXT:    s_not_b64 s[4:5], s[2:3]
+; GCN-NEXT:    s_add_u32 s2, s2, s0
+; GCN-NEXT:    s_cselect_b32 s0, 1, 0
+; GCN-NEXT:    s_and_b32 s0, s0, 1
+; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_addc_u32 s3, s3, s1
+; GCN-NEXT:    s_mov_b32 s0, s4
+; GCN-NEXT:    s_mov_b32 s1, s5
 ; GCN-NEXT:    ; return to shader part epilog
   %xor = xor i64 %a, %b
   %r0.val = xor i64 %xor, -1

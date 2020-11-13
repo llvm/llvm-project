@@ -11,8 +11,8 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUN
 set(CLANGD_TEST_DEPS
   clangd
   ClangdTests
-  # No tests for these, but we should still make sure they build.
   clangd-indexer
+  # No tests for it, but we should still make sure they build.
   dexp
   )
 

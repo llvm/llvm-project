@@ -353,7 +353,8 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
       if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO)
         continue;
 
-      for (MCRegUnitIterator RegUnit(Reg, TRI); RegUnit.isValid(); ++RegUnit) {
+      for (MCRegUnitIterator RegUnit(Reg.asMCReg(), TRI); RegUnit.isValid();
+           ++RegUnit) {
         LiveRange &LR = LIS->getRegUnit(*RegUnit);
         const VNInfo *Value = LR.Query(LIS->getInstructionIndex(MI)).valueIn();
         if (!Value)
@@ -630,7 +631,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
   if (!SaveSCC)
     return PreferLast ? Last : First;
 
-  LiveRange &LR = LIS->getRegUnit(*MCRegUnitIterator(AMDGPU::SCC, TRI));
+  LiveRange &LR =
+      LIS->getRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
   auto MBBE = MBB.end();
   SlotIndex FirstIdx = First != MBBE ? LIS->getInstructionIndex(*First)
                                      : LIS->getMBBEndIdx(&MBB);
@@ -653,6 +655,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
       MachineInstr *EndMI = LIS->getInstructionFromIndex(S->end.getBaseIndex());
       assert(EndMI && "Segment does not end on valid instruction");
       auto NextI = std::next(EndMI->getIterator());
+      if (NextI == MBB.end())
+        break;
       SlotIndex Next = LIS->getInstructionIndex(*NextI);
       if (Next > LastIdx)
         break;
@@ -1060,7 +1064,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   // Physical registers like SCC aren't tracked by default anyway, so just
   // removing the ranges we computed is the simplest option for maintaining
   // the analysis results.
-  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::SCC, TRI));
+  LIS->removeRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
 
   return true;
 }

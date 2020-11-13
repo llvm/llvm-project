@@ -147,6 +147,8 @@ const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
   return *Found->PCI;
 }
 
+ExegesisTarget::SavedState::~SavedState() {} // anchor.
+
 namespace {
 
 // Default implementation.

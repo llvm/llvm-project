@@ -122,7 +122,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     FOO.pass.cpp            - Compiles, links and runs successfully
     FOO.pass.mm             - Same as .pass.cpp, but for Objective-C++
-    FOO.run.fail.cpp        - Compiles and links successfully, but fails at runtime
 
     FOO.compile.pass.cpp    - Compiles successfully, link and run not attempted
     FOO.compile.fail.cpp    - Does not compile successfully
@@ -196,7 +195,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             in conjunction with the %{build} substitution.
     """
     def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
-        SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$', '[.]run[.]fail[.]cpp$',
+        SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$',
                               '[.]compile[.]pass[.]cpp$', '[.]compile[.]fail[.]cpp$',
                               '[.]link[.]pass[.]cpp$', '[.]link[.]fail[.]cpp$',
                               '[.]sh[.][^.]+$',
@@ -253,12 +252,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -o %t.o",
                 "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe"
-            ]
-            return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.run.fail.cpp'):
-            steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
-                "%dbg(EXECUTED AS) %{exec} ! %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.verify.cpp'):

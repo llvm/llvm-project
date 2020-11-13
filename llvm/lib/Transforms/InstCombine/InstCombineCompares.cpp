@@ -1614,15 +1614,13 @@ Instruction *InstCombinerImpl::foldICmpXorConstant(ICmpInst &Cmp,
   if (Xor->hasOneUse()) {
     // (icmp u/s (xor X SignMask), C) -> (icmp s/u X, (xor C SignMask))
     if (!Cmp.isEquality() && XorC->isSignMask()) {
-      Pred = Cmp.isSigned() ? Cmp.getUnsignedPredicate()
-                            : Cmp.getSignedPredicate();
+      Pred = Cmp.getFlippedSignednessPredicate();
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), C ^ *XorC));
     }
 
     // (icmp u/s (xor X ~SignMask), C) -> (icmp s/u X, (xor C ~SignMask))
     if (!Cmp.isEquality() && XorC->isMaxSignedValue()) {
-      Pred = Cmp.isSigned() ? Cmp.getUnsignedPredicate()
-                            : Cmp.getSignedPredicate();
+      Pred = Cmp.getFlippedSignednessPredicate();
       Pred = Cmp.getSwappedPredicate(Pred);
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), C ^ *XorC));
     }
@@ -4053,15 +4051,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       if (match(BO0->getOperand(1), m_APInt(C))) {
         // icmp u/s (a ^ signmask), (b ^ signmask) --> icmp s/u a, b
         if (C->isSignMask()) {
-          ICmpInst::Predicate NewPred =
-              I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
+          ICmpInst::Predicate NewPred = I.getFlippedSignednessPredicate();
           return new ICmpInst(NewPred, BO0->getOperand(0), BO1->getOperand(0));
         }
 
         // icmp u/s (a ^ maxsignval), (b ^ maxsignval) --> icmp s/u' a, b
         if (BO0->getOpcode() == Instruction::Xor && C->isMaxSignedValue()) {
-          ICmpInst::Predicate NewPred =
-              I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
+          ICmpInst::Predicate NewPred = I.getFlippedSignednessPredicate();
           NewPred = I.getSwappedPredicate(NewPred);
           return new ICmpInst(NewPred, BO0->getOperand(0), BO1->getOperand(0));
         }
@@ -4591,9 +4587,13 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
   // compare.
   Builder.SetInsertPoint(&OrigI);
 
+  Type *OverflowTy = Type::getInt1Ty(LHS->getContext());
+  if (auto *LHSTy = dyn_cast<VectorType>(LHS->getType()))
+    OverflowTy = VectorType::get(OverflowTy, LHSTy->getElementCount());
+
   if (isNeutralValue(BinaryOp, RHS)) {
     Result = LHS;
-    Overflow = Builder.getFalse();
+    Overflow = ConstantInt::getFalse(OverflowTy);
     return true;
   }
 
@@ -4604,12 +4604,12 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
     case OverflowResult::AlwaysOverflowsHigh:
       Result = Builder.CreateBinOp(BinaryOp, LHS, RHS);
       Result->takeName(&OrigI);
-      Overflow = Builder.getTrue();
+      Overflow = ConstantInt::getTrue(OverflowTy);
       return true;
     case OverflowResult::NeverOverflows:
       Result = Builder.CreateBinOp(BinaryOp, LHS, RHS);
       Result->takeName(&OrigI);
-      Overflow = Builder.getFalse();
+      Overflow = ConstantInt::getFalse(OverflowTy);
       if (auto *Inst = dyn_cast<Instruction>(Result)) {
         if (IsSigned)
           Inst->setHasNoSignedWrap();

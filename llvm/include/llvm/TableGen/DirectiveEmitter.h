@@ -10,7 +10,11 @@ namespace llvm {
 // DirectiveBase.td and provides helper methods for accessing it.
 class DirectiveLanguage {
 public:
-  explicit DirectiveLanguage(const llvm::Record *Def) : Def(Def) {}
+  explicit DirectiveLanguage(const llvm::RecordKeeper &Records)
+      : Records(Records) {
+    const auto &DirectiveLanguages = getDirectiveLanguages();
+    Def = DirectiveLanguages[0];
+  }
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
@@ -46,8 +50,23 @@ public:
     return Def->getValueAsBit("enableBitmaskEnumInNamespace");
   }
 
+  const std::vector<Record *> getDirectives() const {
+    return Records.getAllDerivedDefinitions("Directive");
+  }
+
+  const std::vector<Record *> getClauses() const {
+    return Records.getAllDerivedDefinitions("Clause");
+  }
+
+  bool HasValidityErrors() const;
+
 private:
   const llvm::Record *Def;
+  const llvm::RecordKeeper &Records;
+
+  const std::vector<Record *> getDirectiveLanguages() const {
+    return Records.getAllDerivedDefinitions("DirectiveLanguage");
+  }
 };
 
 // Base record class used for Directive and Clause class defined in
@@ -72,6 +91,9 @@ public:
   }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
+
+  // Returns the record name.
+  const StringRef getRecordName() const { return Def->getName(); }
 
 protected:
   const llvm::Record *Def;

@@ -397,6 +397,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                          AMDGPU::OpName::src2_modifiers);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags &
+                        (SIInstrFlags::MUBUF | SIInstrFlags::FLAT)) &&
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::glc1) != -1) {
+    insertNamedMCOperand(MI, MCOperand::createImm(1), AMDGPU::OpName::glc1);
+  }
+
   if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::MIMG)) {
     int VAddr0Idx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);

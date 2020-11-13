@@ -649,7 +649,10 @@ public:
   /// and replace any existing one with it.
   void createPreprocessor(TranslationUnitKind TUKind);
 
-  std::string getSpecificModuleCachePath();
+  std::string getSpecificModuleCachePath(StringRef ModuleHash);
+  std::string getSpecificModuleCachePath() {
+    return getSpecificModuleCachePath(getInvocation().getModuleHash());
+  }
 
   /// Create the AST context.
   void createASTContext();

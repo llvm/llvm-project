@@ -255,7 +255,7 @@ define float @fadd_v4i32(float* %p) #0 {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[BIN_RDX5:%.*]] = fadd fast float 0.000000e+00, [[TMP2]]
+; CHECK-NEXT:    [[BIN_RDX5:%.*]] = fadd fast float -0.000000e+00, [[TMP2]]
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[BIN_RDX5]], 4.200000e+01
 ; CHECK-NEXT:    ret float [[OP_EXTRA]]
 ;

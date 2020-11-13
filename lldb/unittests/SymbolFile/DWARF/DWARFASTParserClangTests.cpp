@@ -39,59 +39,63 @@ TEST_F(DWARFASTParserClangTests,
        EnsureAllDIEsInDeclContextHaveBeenParsedParsesOnlyMatchingEntries) {
 
   /// Auxiliary debug info.
-  const char *yamldata =
-      "debug_abbrev:\n"
-      "  - Table:\n"
-      "      - Code:            0x00000001\n"
-      "        Tag:             DW_TAG_compile_unit\n"
-      "        Children:        DW_CHILDREN_yes\n"
-      "        Attributes:\n"
-      "          - Attribute:       DW_AT_language\n"
-      "            Form:            DW_FORM_data2\n"
-      "      - Code:            0x00000002\n"
-      "        Tag:             DW_TAG_base_type\n"
-      "        Children:        DW_CHILDREN_no\n"
-      "        Attributes:\n"
-      "          - Attribute:       DW_AT_encoding\n"
-      "            Form:            DW_FORM_data1\n"
-      "          - Attribute:       DW_AT_byte_size\n"
-      "            Form:            DW_FORM_data1\n"
-      "debug_info:\n"
-      "  - Version:         4\n"
-      "    AddrSize:        8\n"
-      "    Entries:\n"
-      "      - AbbrCode:        0x00000001\n"
-      "        Values:\n"
-      "          - Value:           0x000000000000000C\n"
-      // 0x0000000e:
-      "      - AbbrCode:        0x00000002\n"
-      "        Values:\n"
-      "          - Value:           0x0000000000000007\n" // DW_ATE_unsigned
-      "          - Value:           0x0000000000000004\n"
-      // 0x00000011:
-      "      - AbbrCode:        0x00000002\n"
-      "        Values:\n"
-      "          - Value:           0x0000000000000007\n" // DW_ATE_unsigned
-      "          - Value:           0x0000000000000008\n"
-      // 0x00000014:
-      "      - AbbrCode:        0x00000002\n"
-      "        Values:\n"
-      "          - Value:           0x0000000000000005\n" // DW_ATE_signed
-      "          - Value:           0x0000000000000008\n"
-      // 0x00000017:
-      "      - AbbrCode:        0x00000002\n"
-      "        Values:\n"
-      "          - Value:           0x0000000000000008\n" // DW_ATE_unsigned_char
-      "          - Value:           0x0000000000000001\n"
-      "      - AbbrCode:        0x00000000\n";
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000007 # DW_ATE_unsigned
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000007 # DW_ATE_unsigned
+            - Value:           0x0000000000000008
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000005 # DW_ATE_signed
+            - Value:           0x0000000000000008
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000008 # DW_ATE_unsigned_char
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000000
+)";
 
-  YAMLModuleTester t(yamldata, "i386-unknown-linux");
+  YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
   TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
-  DWARFUnit *unit = t.GetDwarfUnit().get();
+  DWARFUnit *unit = t.GetDwarfUnit();
   const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
   const DWARFDebugInfoEntry *die_child0 = die_first->GetFirstChild();
   const DWARFDebugInfoEntry *die_child1 = die_child0->GetSibling();

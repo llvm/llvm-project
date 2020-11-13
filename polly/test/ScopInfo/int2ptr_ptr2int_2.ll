@@ -13,7 +13,7 @@
 ;
 ; CHECK:        ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_B[9 + val] };
-; CHECK-NEXT:   Execution Context: [val, ptr] -> {  : val <= 32766 }
+; CHECK-NEXT:   Execution Context: [val, ptr] -> {  : -4097 <= val <= 4086 }
 ;
 ; CHECK:   ReadAccess :=	[Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
@@ -21,18 +21,19 @@
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
 ;
 ; IR:      polly.stmt.for.body:
-; IR-NEXT:  %p_tmp = ptrtoint i64* %scevgep to i16
-; IR-NEXT:  %p_add = add nsw i16 %p_tmp, 1
-; IR-NEXT:  %p_arrayidx3 = getelementptr inbounds i64, i64* %A, i16 %p_add
-; IR-NEXT:  %tmp4_p_scalar_ = load i64, i64* %p_arrayidx3
-; IR-NEXT:  %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge
-; IR-NEXT:  store i64 %p_add4, i64* %p_arrayidx3
-;
+; IR-NEXT:   %tmp4_p_scalar_ = load i64, i64* %scevgep, align 8, !alias.scope !3, !noalias !4
+; IR-NEXT:   %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge
+; IR-NEXT:   store i64 %p_add4, i64* %scevgep, align 8, !alias.scope !3, !noalias !4
+; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
+; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, 99
+; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
+
 ; IR:      polly.loop_preheader:
-; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i16 1
-; IR-NEXT:   %35 = add i16 %val, 1
+; IR-NEXT:   %41 = add i16 %val, 1
+; IR-NEXT:   %42 = ptrtoint i64* %ptr to i16
+; IR-NEXT:   %43 = add i16 %42, 9
+; IR-NEXT:   %scevgep = getelementptr i64, i64* %A, i16 %43
 ; IR-NEXT:   br label %polly.loop_header
-;
 ;
 target datalayout = "e-p:16:16:16-m:e-i64:64-f80:128-n8:16:16:64-S128"
 

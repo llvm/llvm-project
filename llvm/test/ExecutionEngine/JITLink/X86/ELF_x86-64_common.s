@@ -16,8 +16,8 @@ load_common:
 # jitlink-check: *{8}(got_addr(elf_common.o, common_data)) = common_data
         movl    common_data@GOTPCREL(%rip), %eax
         ret
-.Lfunc_end0:
-        .size   load_common, .Lfunc_end0-load_common
+
+        .size   load_common, .-load_common
 
 # Check that common is zero-filled.
 # jitlink-check: *{4}(common_data) = 0

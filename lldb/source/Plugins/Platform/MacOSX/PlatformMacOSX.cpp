@@ -306,10 +306,10 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
     const lldb_private::ModuleSpec &module_spec, Process *process,
     lldb::ModuleSP &module_sp,
     const lldb_private::FileSpecList *module_search_paths_ptr,
-    lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
-  Status error = GetSharedModuleWithLocalCache(
-      module_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
-      did_create_ptr);
+    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
+  Status error = GetSharedModuleWithLocalCache(module_spec, module_sp,
+                                               module_search_paths_ptr,
+                                               old_modules, did_create_ptr);
 
   if (module_sp) {
     if (module_spec.GetArchitecture().GetCore() ==
@@ -320,15 +320,16 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
         ModuleSpec module_spec_x86_64(module_spec);
         module_spec_x86_64.GetArchitecture() = ArchSpec("x86_64-apple-macosx");
         lldb::ModuleSP x86_64_module_sp;
-        lldb::ModuleSP old_x86_64_module_sp;
+        llvm::SmallVector<lldb::ModuleSP, 1> old_x86_64_modules;
         bool did_create = false;
         Status x86_64_error = GetSharedModuleWithLocalCache(
             module_spec_x86_64, x86_64_module_sp, module_search_paths_ptr,
-            &old_x86_64_module_sp, &did_create);
+            &old_x86_64_modules, &did_create);
         if (x86_64_module_sp && x86_64_module_sp->GetObjectFile()) {
           module_sp = x86_64_module_sp;
-          if (old_module_sp_ptr)
-            *old_module_sp_ptr = old_x86_64_module_sp;
+          if (old_modules)
+            old_modules->append(old_x86_64_modules.begin(),
+                                old_x86_64_modules.end());
           if (did_create_ptr)
             *did_create_ptr = did_create;
           return x86_64_error;
@@ -338,7 +339,9 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   }
 
   if (!module_sp) {
-      error = FindBundleBinaryInExecSearchPaths (module_spec, process, module_sp, module_search_paths_ptr, old_module_sp_ptr, did_create_ptr);
+    error = FindBundleBinaryInExecSearchPaths(module_spec, process, module_sp,
+                                              module_search_paths_ptr,
+                                              old_modules, did_create_ptr);
   }
   return error;
 }

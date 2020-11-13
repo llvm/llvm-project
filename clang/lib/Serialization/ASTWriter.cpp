@@ -1320,6 +1320,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Record.push_back(HSOpts.DisableModuleHash);
   Record.push_back(HSOpts.ImplicitModuleMaps);
   Record.push_back(HSOpts.ModuleMapFileHomeIsCwd);
+  Record.push_back(HSOpts.EnablePrebuiltImplicitModules);
   Record.push_back(HSOpts.UseBuiltinIncludes);
   Record.push_back(HSOpts.UseStandardSystemIncludes);
   Record.push_back(HSOpts.UseStandardCXXIncludes);
@@ -6695,6 +6696,7 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
     Record.push_back(N);
   for (auto &M : C->all_components()) {
     Record.AddStmt(M.getAssociatedExpression());
+    Record.writeBool(M.isNonContiguous());
     Record.AddDeclRef(M.getAssociatedDeclaration());
   }
 }
@@ -6724,6 +6726,7 @@ void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
     Record.push_back(N);
   for (auto &M : C->all_components()) {
     Record.AddStmt(M.getAssociatedExpression());
+    Record.writeBool(M.isNonContiguous());
     Record.AddDeclRef(M.getAssociatedDeclaration());
   }
 }

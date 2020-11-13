@@ -1177,10 +1177,10 @@ define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK:       pred.load.continue14:
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x float> [ [[TMP38]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP42]], [[PRED_LOAD_IF13]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP23]], <4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP45:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP44]])
+; CHECK-NEXT:    [[TMP45:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP44]])
 ; CHECK-NEXT:    [[TMP46:%.*]] = fadd float [[TMP45]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP43]], <4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP48:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP47]])
+; CHECK-NEXT:    [[TMP48:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP47]])
 ; CHECK-NEXT:    [[TMP49]] = fadd float [[TMP48]], [[TMP46]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
@@ -1555,7 +1555,7 @@ define float @reduction_conditional(float* %A, float* %B, float* %C, float %S) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP28:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP15:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI3]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PREDPHI3]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]

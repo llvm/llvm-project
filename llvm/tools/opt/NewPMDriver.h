@@ -21,6 +21,7 @@
 #define LLVM_TOOLS_OPT_NEWPMDRIVER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class StringRef;
@@ -28,6 +29,9 @@ class Module;
 class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
+
+extern cl::opt<bool> DebugifyEach;
+extern cl::opt<std::string> DebugifyExport;
 
 namespace opt_tool {
 enum OutputKind {

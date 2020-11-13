@@ -42,7 +42,7 @@
 ;
 
 ; CHECK: CodeViewDebugInfo [
-; CHECK:   Section: .debug$S (8)
+; CHECK:   Section: .debug$S (9)
 
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
@@ -96,7 +96,7 @@
 ; CHECK:   ]
 ; CHECK: ]
 ; CHECK: CodeViewDebugInfo [
-; CHECK:   Section: .debug$S (12)
+; CHECK:   Section: .debug$S (16)
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
 ; CHECK:     GlobalData {
@@ -107,7 +107,7 @@
 ; CHECK:   ]
 ; CHECK: ]
 ; CHECK: CodeViewDebugInfo [
-; CHECK:   Section: .debug$S (15)
+; CHECK:   Section: .debug$S (17)
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
 ; CHECK:     GlobalData {

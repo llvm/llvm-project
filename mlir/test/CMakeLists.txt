@@ -43,6 +43,7 @@ set(MLIR_TEST_DEPENDS
   FileCheck count not
   MLIRUnitTests
   mlir-capi-ir-test
+  mlir-capi-pass-test
   mlir-cpu-runner
   mlir-edsc-builder-api-test
   mlir-linalg-ods-gen
@@ -99,6 +100,7 @@ endif()
 if(MLIR_BINDINGS_PYTHON_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRBindingsPythonExtension
+    MLIRTransformsBindingsPythonExtension
   )
 endif()
 

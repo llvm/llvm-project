@@ -1,4 +1,8 @@
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
+; WARN-NOT: warning
 
 ; ld2b
 define <vscale x 32 x i8> @ld2.nxv32i8(<vscale x 16 x i1> %Pg, i8 *%addr, i64 %a) {

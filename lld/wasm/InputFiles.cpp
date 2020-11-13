@@ -40,6 +40,18 @@ std::string toString(const wasm::InputFile *file) {
 }
 
 namespace wasm {
+
+void InputFile::checkArch(Triple::ArchType arch) const {
+  bool is64 = arch == Triple::wasm64;
+  if (is64 && !config->is64.hasValue()) {
+    fatal(toString(this) +
+          ": must specify -mwasm64 to process wasm64 object files");
+  } else if (config->is64.getValueOr(false) != is64) {
+    fatal(toString(this) +
+          ": wasm32 object file can't be linked in wasm64 mode");
+  }
+}
+
 std::unique_ptr<llvm::TarWriter> tar;
 
 Optional<MemoryBufferRef> readFile(StringRef path) {
@@ -285,6 +297,8 @@ void ObjFile::parse(bool ignoreComdats) {
 
   bin.release();
   wasmObj.reset(obj);
+
+  checkArch(obj->getArch());
 
   // Build up a map of function indices to table indices for use when
   // verifying the existing table index relocations
@@ -583,12 +597,7 @@ void BitcodeFile::parse() {
     error(toString(this) + ": machine type must be wasm32 or wasm64");
     return;
   }
-  bool is64 = t.getArch() == Triple::wasm64;
-  if (config->is64.hasValue() && *config->is64 != is64) {
-    error(toString(this) + ": machine type for all bitcode files must match");
-    return;
-  }
-  config->is64 = is64;
+  checkArch(t.getArch());
   std::vector<bool> keptComdats;
   for (StringRef s : obj->getComdatTable())
     keptComdats.push_back(symtab->addComdat(s));

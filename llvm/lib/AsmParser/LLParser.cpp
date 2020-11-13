@@ -2134,6 +2134,7 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_hhvm_ccc:       CC = CallingConv::HHVM_C; break;
   case lltok::kw_cxx_fast_tlscc: CC = CallingConv::CXX_FAST_TLS; break;
   case lltok::kw_amdgpu_vs:      CC = CallingConv::AMDGPU_VS; break;
+  case lltok::kw_amdgpu_gfx:     CC = CallingConv::AMDGPU_Gfx; break;
   case lltok::kw_amdgpu_ls:      CC = CallingConv::AMDGPU_LS; break;
   case lltok::kw_amdgpu_hs:      CC = CallingConv::AMDGPU_HS; break;
   case lltok::kw_amdgpu_es:      CC = CallingConv::AMDGPU_ES; break;
@@ -4665,6 +4666,39 @@ bool LLParser::parseDISubrange(MDNode *&Result, bool IsDistinct) {
   Stride = convToMetadata(stride);
 
   Result = GET_OR_DISTINCT(DISubrange,
+                           (Context, Count, LowerBound, UpperBound, Stride));
+
+  return false;
+}
+
+/// parseDIGenericSubrange:
+///   ::= !DIGenericSubrange(lowerBound: !node1, upperBound: !node2, stride:
+///   !node3)
+bool LLParser::parseDIGenericSubrange(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(count, MDSignedOrMDField, );                                        \
+  OPTIONAL(lowerBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(upperBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(stride, MDSignedOrMDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  auto ConvToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+    if (Bound.isMDSignedField())
+      return DIExpression::get(
+          Context, {dwarf::DW_OP_consts,
+                    static_cast<uint64_t>(Bound.getMDSignedValue())});
+    if (Bound.isMDField())
+      return Bound.getMDFieldValue();
+    return nullptr;
+  };
+
+  Metadata *Count = ConvToMetadata(count);
+  Metadata *LowerBound = ConvToMetadata(lowerBound);
+  Metadata *UpperBound = ConvToMetadata(upperBound);
+  Metadata *Stride = ConvToMetadata(stride);
+
+  Result = GET_OR_DISTINCT(DIGenericSubrange,
                            (Context, Count, LowerBound, UpperBound, Stride));
 
   return false;

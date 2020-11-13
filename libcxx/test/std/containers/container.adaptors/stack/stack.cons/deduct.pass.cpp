@@ -78,14 +78,14 @@ int main(int, char**)
 //  This one is odd - you can pass an allocator in to use, but the allocator
 //  has to match the type of the one used by the underlying container
     typedef short T;
-    typedef test_allocator<T> A;
-    typedef std::deque<T, A> C;
+    typedef test_allocator<T> Alloc;
+    typedef std::deque<T, Alloc> Container;
 
-    C c{0,1,2,3};
-    std::stack<T, C> source(c);
-    std::stack stk(source, A(2)); // stack(stack &, allocator)
+    Container c{0,1,2,3};
+    std::stack<T, Container> source(c);
+    std::stack stk(source, Alloc(2)); // stack(stack &, allocator)
     static_assert(std::is_same_v<decltype(stk)::value_type, T>, "");
-    static_assert(std::is_same_v<decltype(stk)::container_type, C>, "");
+    static_assert(std::is_same_v<decltype(stk)::container_type, Container>, "");
     assert(stk.size() == 4);
     assert(stk.top() == 3);
     }

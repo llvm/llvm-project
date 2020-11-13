@@ -11,7 +11,7 @@ struct ST {
   struct RT Z;
 };
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noinline nounwind optnone mustprogress
 // CHECK-LABEL: @_Z3fooP2ST(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_ADDR:%.*]] = alloca %struct.ST*, align 8

@@ -1,4 +1,4 @@
-; RUN: opt < %s -prune-eh -S | FileCheck %s
+; RUN: opt < %s -prune-eh -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='function-attrs,function(simplify-cfg)' -S | FileCheck %s
 
 ; CHECK-LABEL: define internal i32 @foo()

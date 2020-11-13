@@ -58,6 +58,7 @@ if(CLANG_TEST_USE_VG)
 endif ()
 
 list(APPEND CLANG_TEST_DEPS
+  apinotes-test
   c-index-test
   clang
   clang-resource-headers

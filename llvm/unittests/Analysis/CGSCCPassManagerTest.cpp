@@ -219,21 +219,13 @@ public:
             // |/
             // x
             //
-            "define void @f() {\n"
+            "define void @x() {\n"
             "entry:\n"
-            "  call void @g()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @h3() {\n"
+            "entry:\n"
             "  call void @h1()\n"
-            "  ret void\n"
-            "}\n"
-            "define void @g() {\n"
-            "entry:\n"
-            "  call void @g()\n"
-            "  call void @x()\n"
-            "  ret void\n"
-            "}\n"
-            "define void @h1() {\n"
-            "entry:\n"
-            "  call void @h2()\n"
             "  ret void\n"
             "}\n"
             "define void @h2() {\n"
@@ -242,13 +234,21 @@ public:
             "  call void @x()\n"
             "  ret void\n"
             "}\n"
-            "define void @h3() {\n"
+            "define void @h1() {\n"
             "entry:\n"
-            "  call void @h1()\n"
+            "  call void @h2()\n"
             "  ret void\n"
             "}\n"
-            "define void @x() {\n"
+            "define void @g() {\n"
             "entry:\n"
+            "  call void @g()\n"
+            "  call void @x()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @f() {\n"
+            "entry:\n"
+            "  call void @g()\n"
+            "  call void @h1()\n"
             "  ret void\n"
             "}\n")) {
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
@@ -1836,6 +1836,71 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewRefSCCMutuallyRecursive) {
   ModulePassManager MPM(/*DebugLogging*/ true);
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
   MPM.run(*M, MAM);
+}
+
+TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
+  std::unique_ptr<Module> M = parseIR("define void @f1() {\n"
+                                      "entry:\n"
+                                      "  %a = bitcast void ()* @f4 to i8*\n"
+                                      "  %b = bitcast void ()* @f2 to i8*\n"
+                                      "  ret void\n"
+                                      "}\n"
+                                      "define void @f2() {\n"
+                                      "entry:\n"
+                                      "  %a = bitcast void ()* @f1 to i8*\n"
+                                      "  %b = bitcast void ()* @f3 to i8*\n"
+                                      "  ret void\n"
+                                      "}\n"
+                                      "define void @f3() {\n"
+                                      "entry:\n"
+                                      "  %a = bitcast void ()* @f2 to i8*\n"
+                                      "  %b = bitcast void ()* @f4 to i8*\n"
+                                      "  ret void\n"
+                                      "}\n"
+                                      "define void @f4() {\n"
+                                      "entry:\n"
+                                      "  %a = bitcast void ()* @f3 to i8*\n"
+                                      "  %b = bitcast void ()* @f1 to i8*\n"
+                                      "  ret void\n"
+                                      "}\n");
+
+  bool Ran = false;
+  CGSCCPassManager CGPM(/*DebugLogging*/ true);
+  CGPM.addPass(LambdaSCCPassNoPreserve([&](LazyCallGraph::SCC &C,
+                                           CGSCCAnalysisManager &AM,
+                                           LazyCallGraph &CG,
+                                           CGSCCUpdateResult &UR) {
+    if (Ran)
+      return;
+
+    auto &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
+    for (auto &N : C) {
+      auto &F = N.getFunction();
+      if (F.getName() != "f1")
+        continue;
+
+      Function *F3 = F.getParent()->getFunction("f3");
+      ASSERT_TRUE(F3 != nullptr);
+
+      // Create call from f1 to f3.
+      (void)CallInst::Create(F3, {}, "", F.getEntryBlock().getTerminator());
+
+      ASSERT_NO_FATAL_FAILURE(
+          updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM))
+          << "Updating the call graph with mutually recursive g1 <-> g2, h1 "
+             "<-> h2 caused a fatal failure";
+
+      Ran = true;
+    }
+  }));
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.run(*M, MAM);
+
+  ASSERT_TRUE(Ran);
 }
 
 #endif

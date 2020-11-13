@@ -14,3 +14,4 @@
 	.machine "any"
 	.machine "pop"
 
+	.machine ppc64

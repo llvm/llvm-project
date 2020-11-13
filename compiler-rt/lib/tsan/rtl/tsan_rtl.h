@@ -477,7 +477,7 @@ inline void cur_thread_finalize() { }
 #endif  // SANITIZER_MAC || SANITIZER_ANDROID
 #endif  // SANITIZER_GO
 
-class ThreadContext : public ThreadContextBase {
+class ThreadContext final : public ThreadContextBase {
  public:
   explicit ThreadContext(int tid);
   ~ThreadContext();

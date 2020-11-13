@@ -419,16 +419,15 @@ entry:
 
 define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-LABEL: conditionally_forward_swifterror:
-; CHECK-APPLE:  pushq %rax
 ; CHECK-APPLE:	testl %edi, %edi
 ; CHECK-APPLE:  je
 
+; CHECK-APPLE:  pushq %rax
 ; CHECK-APPLE:  callq _moo
 ; CHECK-APPLE:  popq %rax
 ; CHECK-APPLE:  retq
 
 ; CHECK-APPLE:  xorps %xmm0, %xmm0
-; CHECK-APPLE:  popq %rax
 ; CHECK-APPLE:  retq
 
 ; CHECK-O0-LABEL: conditionally_forward_swifterror:
@@ -488,13 +487,14 @@ entry:
 
 ; Make sure we can handle the case when isel generates new machine basic blocks.
 ; CHECK-APPLE-LABEL: dont_crash_on_new_isel_blocks:
-; CHECK-APPLE: pushq   %rax
 ; CHECK-APPLE: xorl    %eax, %eax
 ; CHECK-APPLE: testb   %al, %al
 ; CHECK-APPLE: jne
-; CHECK-APPLE: callq   *%rax
-; CHECK-APPLE: popq    %rax
-; CHECK-APPLE: ret
+; CHECK-APPLE:         pushq   %rax
+; CHECK-APPLE-NEXT:  .cfi_def_cfa_offset 16
+; CHECK-APPLE-NEXT:    callq   *%rax
+; CHECK-APPLE-NEXT:    popq    %rax
+; CHECK-APPLE-NEXT:    ret
 
 define swiftcc void @dont_crash_on_new_isel_blocks(%swift_error** nocapture swifterror, i1, i8**) {
 entry:

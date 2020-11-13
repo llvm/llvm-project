@@ -61,15 +61,15 @@ ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
 
 template <class ELFT>
 static Expected<std::unique_ptr<ELFObjectFile<ELFT>>>
-createPtr(MemoryBufferRef Object) {
-  auto Ret = ELFObjectFile<ELFT>::create(Object);
+createPtr(MemoryBufferRef Object, bool InitContent) {
+  auto Ret = ELFObjectFile<ELFT>::create(Object, InitContent);
   if (Error E = Ret.takeError())
     return std::move(E);
   return std::make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
 }
 
 Expected<std::unique_ptr<ObjectFile>>
-ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
+ObjectFile::createELFObjectFile(MemoryBufferRef Obj, bool InitContent) {
   std::pair<unsigned char, unsigned char> Ident =
       getElfArchType(Obj.getBuffer());
   std::size_t MaxAlignment =
@@ -80,16 +80,16 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
 
   if (Ident.first == ELF::ELFCLASS32) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      return createPtr<ELF32LE>(Obj);
+      return createPtr<ELF32LE>(Obj, InitContent);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      return createPtr<ELF32BE>(Obj);
+      return createPtr<ELF32BE>(Obj, InitContent);
     else
       return createError("Invalid ELF data");
   } else if (Ident.first == ELF::ELFCLASS64) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      return createPtr<ELF64LE>(Obj);
+      return createPtr<ELF64LE>(Obj, InitContent);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      return createPtr<ELF64BE>(Obj);
+      return createPtr<ELF64BE>(Obj, InitContent);
     else
       return createError("Invalid ELF data");
   }
@@ -456,6 +456,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx908";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:
     return "gfx909";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
+    return "gfx90c";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -470,6 +472,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1031";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032:
     return "gfx1032";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1033:
+    return "gfx1033";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }

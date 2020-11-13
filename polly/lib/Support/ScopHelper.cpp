@@ -341,6 +341,9 @@ private:
   ///
   ///{
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
+  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
+    return SE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
+  }
   const SCEV *visitTruncateExpr(const SCEVTruncateExpr *E) {
     return SE.getTruncateExpr(visit(E->getOperand()), E->getType());
   }

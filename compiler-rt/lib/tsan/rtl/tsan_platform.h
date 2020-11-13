@@ -461,7 +461,7 @@ struct Mapping47 {
 
 #elif SANITIZER_GO && defined(__aarch64__)
 
-/* Go on linux/aarch64 (48-bit VMA)
+/* Go on linux/aarch64 (48-bit VMA) and darwin/aarch64 (47-bit VMA)
 0000 0000 1000 - 0000 1000 0000: executable
 0000 1000 0000 - 00c0 0000 0000: -
 00c0 0000 0000 - 00e0 0000 0000: heap

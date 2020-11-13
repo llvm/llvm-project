@@ -1,19 +1,19 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
-import mlir
+from mlir.ir import *
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
   gc.collect()
-  assert mlir.ir.Context._get_live_count() == 0
+  assert Context._get_live_count() == 0
 
 
 # CHECK-LABEL: TEST: testUnknown
 def testUnknown():
-  ctx = mlir.ir.Context()
-  loc = ctx.get_unknown_location()
+  with Context() as ctx:
+    loc = Location.unknown()
   assert loc.context is ctx
   ctx = None
   gc.collect()
@@ -27,8 +27,8 @@ run(testUnknown)
 
 # CHECK-LABEL: TEST: testFileLineCol
 def testFileLineCol():
-  ctx = mlir.ir.Context()
-  loc = ctx.get_file_location("foo.txt", 123, 56)
+  with Context() as ctx:
+    loc = Location.file("foo.txt", 123, 56)
   ctx = None
   gc.collect()
   # CHECK: file str: loc("foo.txt":123:56)

@@ -133,7 +133,7 @@ void RegisterBankEmitter::emitHeader(raw_ostream &OS,
      << "namespace " << TargetName << " {\n"
      << "enum : unsigned {\n";
 
-  OS << "InvalidRegBankID = ~0u,\n";
+  OS << "  InvalidRegBankID = ~0u,\n";
   unsigned ID = 0;
   for (const auto &Bank : Banks)
     OS << "  " << Bank.getEnumeratorName() << " = " << ID++ << ",\n";

@@ -90,8 +90,11 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     case clang::driver::options::OPT_test_io:
       opts.programAction_ = InputOutputTest;
       break;
+    case clang::driver::options::OPT_E:
+      opts.programAction_ = PrintPreprocessedInput;
+      break;
+
       // TODO:
-      // case clang::driver::options::OPT_E:
       // case clang::driver::options::OPT_emit_obj:
       // case calng::driver::options::OPT_emit_llvm:
       // case clang::driver::options::OPT_emit_llvm_only:
@@ -176,7 +179,16 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   }
 
   // Parse the frontend args
-  ParseFrontendArgs(res.GetFrontendOpts(), args, diags);
+  ParseFrontendArgs(res.frontendOpts(), args, diags);
 
   return success;
+}
+
+void CompilerInvocation::SetDefaultFortranOpts() {
+  auto fortranOptions = fortranOpts();
+
+  // These defaults are based on the defaults in f18/f18.cpp.
+  std::vector<std::string> searchDirectories{"."s};
+  fortranOptions.searchDirectories = searchDirectories;
+  fortranOptions.isFixedForm = false;
 }

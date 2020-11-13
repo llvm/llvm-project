@@ -39,18 +39,16 @@ Sections:
     Content:         "FFFFFFFF"
     Size:            0x1000
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
-      - Section: .text2
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x3000
-    Sections:
-      - Section: .text3
-      - Section: .text4
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text2
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x3000
+    FirstSec: .text3
+    LastSec:  .text4
 
 # CHECK: 000000 c3 c3 c3 c3
 # CHECK: 001000 de ad be ef

@@ -11,7 +11,6 @@
 #include "Client.h"
 #include "Service.grpc.pb.h"
 #include "index/Index.h"
-#include "index/Serialization.h"
 #include "marshalling/Marshalling.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
@@ -84,26 +83,28 @@ public:
   }
 
   void lookup(const clangd::LookupRequest &Request,
-              llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
+              llvm::function_ref<void(const clangd::Symbol &)> Callback)
+      const override {
     streamRPC(Request, &remote::v1::SymbolIndex::Stub::Lookup, Callback);
   }
 
-  bool
-  fuzzyFind(const clangd::FuzzyFindRequest &Request,
-            llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
+  bool fuzzyFind(const clangd::FuzzyFindRequest &Request,
+                 llvm::function_ref<void(const clangd::Symbol &)> Callback)
+      const override {
     return streamRPC(Request, &remote::v1::SymbolIndex::Stub::FuzzyFind,
                      Callback);
   }
 
-  bool refs(const clangd::RefsRequest &Request,
-            llvm::function_ref<void(const clangd::Ref &)> Callback) const {
+  bool
+  refs(const clangd::RefsRequest &Request,
+       llvm::function_ref<void(const clangd::Ref &)> Callback) const override {
     return streamRPC(Request, &remote::v1::SymbolIndex::Stub::Refs, Callback);
   }
 
   void
   relations(const clangd::RelationsRequest &Request,
             llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
-                Callback) const {
+                Callback) const override {
     streamRPC(Request, &remote::v1::SymbolIndex::Stub::Relations,
               // Unpack protobuf Relation.
               [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
@@ -113,7 +114,7 @@ public:
 
   // IndexClient does not take any space since the data is stored on the
   // server.
-  size_t estimateMemoryUsage() const { return 0; }
+  size_t estimateMemoryUsage() const override { return 0; }
 
 private:
   std::unique_ptr<remote::v1::SymbolIndex::Stub> Stub;

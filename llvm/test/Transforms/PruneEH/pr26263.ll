@@ -2,7 +2,7 @@
 ; so it leaves some of the unreachable stuff hanging around.
 ; Checking it with CHECK-OLD.
 ;
-; RUN: opt -prune-eh -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OLD
+; RUN: opt -prune-eh -enable-new-pm=0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OLD
 ; RUN: opt -passes='function-attrs,function(simplify-cfg)' -S < %s | FileCheck %s  --check-prefix=CHECK --check-prefix=CHECK-NEW
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"

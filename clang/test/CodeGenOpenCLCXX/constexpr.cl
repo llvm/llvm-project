@@ -52,3 +52,13 @@ const int2 fromConstexprFunc = addOne(int2(2));
 kernel void vecEval2(global int2 *x) {
   *x = fromConstexprFunc;
 }
+
+// Test evaluation of vec_step
+// CHECK-LABEL: define spir_kernel void @vec_step_test
+// CHECK: store i32 6
+constexpr int vsize1 = vec_step(fromConstexprFunc);
+constexpr int vsize2 = vec_step(int4);
+
+kernel void vec_step_test(global int *x) {
+  *x = vsize1 + vsize2;
+}

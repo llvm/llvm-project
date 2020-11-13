@@ -1363,6 +1363,10 @@ struct DeclaratorChunk {
     /// type specified.
     UnionParsedType TrailingReturnType;
 
+    /// If HasTrailingReturnType is true, this is the location of the trailing
+    /// return type.
+    unsigned TrailingReturnTypeLoc;
+
     /// Reset the parameter list to having zero parameters.
     ///
     /// This is used in various places for error recovery.
@@ -1498,7 +1502,16 @@ struct DeclaratorChunk {
     bool hasTrailingReturnType() const { return HasTrailingReturnType; }
 
     /// Get the trailing-return-type for this function declarator.
-    ParsedType getTrailingReturnType() const { return TrailingReturnType; }
+    ParsedType getTrailingReturnType() const {
+      assert(HasTrailingReturnType);
+      return TrailingReturnType;
+    }
+
+    /// Get the trailing-return-type location for this function declarator.
+    SourceLocation getTrailingReturnTypeLoc() const {
+      assert(HasTrailingReturnType);
+      return SourceLocation::getFromRawEncoding(TrailingReturnTypeLoc);
+    }
   };
 
   struct BlockPointerTypeInfo {
@@ -1633,6 +1646,8 @@ struct DeclaratorChunk {
                                      Declarator &TheDeclarator,
                                      TypeResult TrailingReturnType =
                                                     TypeResult(),
+                                     SourceLocation TrailingReturnTypeLoc =
+                                                    SourceLocation(),
                                      DeclSpec *MethodQualifiers = nullptr);
 
   /// Return a DeclaratorChunk for a block.
@@ -1746,35 +1761,34 @@ enum FunctionDefinitionKind {
 };
 
 enum class DeclaratorContext {
-    FileContext,         // File scope declaration.
-    PrototypeContext,    // Within a function prototype.
-    ObjCResultContext,   // An ObjC method result type.
-    ObjCParameterContext,// An ObjC method parameter type.
-    KNRTypeListContext,  // K&R type definition list for formals.
-    TypeNameContext,     // Abstract declarator for types.
-    FunctionalCastContext, // Type in a C++ functional cast expression.
-    MemberContext,       // Struct/Union field.
-    BlockContext,        // Declaration within a block in a function.
-    ForContext,          // Declaration within first part of a for loop.
-    InitStmtContext,     // Declaration within optional init stmt of if/switch.
-    ConditionContext,    // Condition declaration in a C++ if/switch/while/for.
-    TemplateParamContext,// Within a template parameter list.
-    CXXNewContext,       // C++ new-expression.
-    CXXCatchContext,     // C++ catch exception-declaration
-    ObjCCatchContext,    // Objective-C catch exception-declaration
-    BlockLiteralContext, // Block literal declarator.
-    LambdaExprContext,   // Lambda-expression declarator.
-    LambdaExprParameterContext, // Lambda-expression parameter declarator.
-    ConversionIdContext, // C++ conversion-type-id.
-    TrailingReturnContext, // C++11 trailing-type-specifier.
-    TrailingReturnVarContext, // C++11 trailing-type-specifier for variable.
-    TemplateArgContext,  // Any template argument (in template argument list).
-    TemplateTypeArgContext, // Template type argument (in default argument).
-    AliasDeclContext,    // C++11 alias-declaration.
-    AliasTemplateContext, // C++11 alias-declaration template.
-    RequiresExprContext   // C++2a requires-expression.
+  File,                // File scope declaration.
+  Prototype,           // Within a function prototype.
+  ObjCResult,          // An ObjC method result type.
+  ObjCParameter,       // An ObjC method parameter type.
+  KNRTypeList,         // K&R type definition list for formals.
+  TypeName,            // Abstract declarator for types.
+  FunctionalCast,      // Type in a C++ functional cast expression.
+  Member,              // Struct/Union field.
+  Block,               // Declaration within a block in a function.
+  ForInit,             // Declaration within first part of a for loop.
+  SelectionInit,       // Declaration within optional init stmt of if/switch.
+  Condition,           // Condition declaration in a C++ if/switch/while/for.
+  TemplateParam,       // Within a template parameter list.
+  CXXNew,              // C++ new-expression.
+  CXXCatch,            // C++ catch exception-declaration
+  ObjCCatch,           // Objective-C catch exception-declaration
+  BlockLiteral,        // Block literal declarator.
+  LambdaExpr,          // Lambda-expression declarator.
+  LambdaExprParameter, // Lambda-expression parameter declarator.
+  ConversionId,        // C++ conversion-type-id.
+  TrailingReturn,      // C++11 trailing-type-specifier.
+  TrailingReturnVar,   // C++11 trailing-type-specifier for variable.
+  TemplateArg,         // Any template argument (in template argument list).
+  TemplateTypeArg,     // Template type argument (in default argument).
+  AliasDecl,           // C++11 alias-declaration.
+  AliasTemplate,       // C++11 alias-declaration template.
+  RequiresExpr         // C++2a requires-expression.
 };
-
 
 /// Information about one declarator, including the parsed type
 /// information and the identifier.
@@ -1919,10 +1933,10 @@ public:
   DeclaratorContext getContext() const { return Context; }
 
   bool isPrototypeContext() const {
-    return (Context == DeclaratorContext::PrototypeContext ||
-            Context == DeclaratorContext::ObjCParameterContext ||
-            Context == DeclaratorContext::ObjCResultContext ||
-            Context == DeclaratorContext::LambdaExprParameterContext);
+    return (Context == DeclaratorContext::Prototype ||
+            Context == DeclaratorContext::ObjCParameter ||
+            Context == DeclaratorContext::ObjCResult ||
+            Context == DeclaratorContext::LambdaExprParameter);
   }
 
   /// Get the source range that spans this declarator.
@@ -1977,35 +1991,35 @@ public:
   /// parameter lists.
   bool mayOmitIdentifier() const {
     switch (Context) {
-    case DeclaratorContext::FileContext:
-    case DeclaratorContext::KNRTypeListContext:
-    case DeclaratorContext::MemberContext:
-    case DeclaratorContext::BlockContext:
-    case DeclaratorContext::ForContext:
-    case DeclaratorContext::InitStmtContext:
-    case DeclaratorContext::ConditionContext:
+    case DeclaratorContext::File:
+    case DeclaratorContext::KNRTypeList:
+    case DeclaratorContext::Member:
+    case DeclaratorContext::Block:
+    case DeclaratorContext::ForInit:
+    case DeclaratorContext::SelectionInit:
+    case DeclaratorContext::Condition:
       return false;
 
-    case DeclaratorContext::TypeNameContext:
-    case DeclaratorContext::FunctionalCastContext:
-    case DeclaratorContext::AliasDeclContext:
-    case DeclaratorContext::AliasTemplateContext:
-    case DeclaratorContext::PrototypeContext:
-    case DeclaratorContext::LambdaExprParameterContext:
-    case DeclaratorContext::ObjCParameterContext:
-    case DeclaratorContext::ObjCResultContext:
-    case DeclaratorContext::TemplateParamContext:
-    case DeclaratorContext::CXXNewContext:
-    case DeclaratorContext::CXXCatchContext:
-    case DeclaratorContext::ObjCCatchContext:
-    case DeclaratorContext::BlockLiteralContext:
-    case DeclaratorContext::LambdaExprContext:
-    case DeclaratorContext::ConversionIdContext:
-    case DeclaratorContext::TemplateArgContext:
-    case DeclaratorContext::TemplateTypeArgContext:
-    case DeclaratorContext::TrailingReturnContext:
-    case DeclaratorContext::TrailingReturnVarContext:
-    case DeclaratorContext::RequiresExprContext:
+    case DeclaratorContext::TypeName:
+    case DeclaratorContext::FunctionalCast:
+    case DeclaratorContext::AliasDecl:
+    case DeclaratorContext::AliasTemplate:
+    case DeclaratorContext::Prototype:
+    case DeclaratorContext::LambdaExprParameter:
+    case DeclaratorContext::ObjCParameter:
+    case DeclaratorContext::ObjCResult:
+    case DeclaratorContext::TemplateParam:
+    case DeclaratorContext::CXXNew:
+    case DeclaratorContext::CXXCatch:
+    case DeclaratorContext::ObjCCatch:
+    case DeclaratorContext::BlockLiteral:
+    case DeclaratorContext::LambdaExpr:
+    case DeclaratorContext::ConversionId:
+    case DeclaratorContext::TemplateArg:
+    case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::TrailingReturn:
+    case DeclaratorContext::TrailingReturnVar:
+    case DeclaratorContext::RequiresExpr:
       return true;
     }
     llvm_unreachable("unknown context kind!");
@@ -2016,35 +2030,35 @@ public:
   /// typenames.
   bool mayHaveIdentifier() const {
     switch (Context) {
-    case DeclaratorContext::FileContext:
-    case DeclaratorContext::KNRTypeListContext:
-    case DeclaratorContext::MemberContext:
-    case DeclaratorContext::BlockContext:
-    case DeclaratorContext::ForContext:
-    case DeclaratorContext::InitStmtContext:
-    case DeclaratorContext::ConditionContext:
-    case DeclaratorContext::PrototypeContext:
-    case DeclaratorContext::LambdaExprParameterContext:
-    case DeclaratorContext::TemplateParamContext:
-    case DeclaratorContext::CXXCatchContext:
-    case DeclaratorContext::ObjCCatchContext:
-    case DeclaratorContext::RequiresExprContext:
+    case DeclaratorContext::File:
+    case DeclaratorContext::KNRTypeList:
+    case DeclaratorContext::Member:
+    case DeclaratorContext::Block:
+    case DeclaratorContext::ForInit:
+    case DeclaratorContext::SelectionInit:
+    case DeclaratorContext::Condition:
+    case DeclaratorContext::Prototype:
+    case DeclaratorContext::LambdaExprParameter:
+    case DeclaratorContext::TemplateParam:
+    case DeclaratorContext::CXXCatch:
+    case DeclaratorContext::ObjCCatch:
+    case DeclaratorContext::RequiresExpr:
       return true;
 
-    case DeclaratorContext::TypeNameContext:
-    case DeclaratorContext::FunctionalCastContext:
-    case DeclaratorContext::CXXNewContext:
-    case DeclaratorContext::AliasDeclContext:
-    case DeclaratorContext::AliasTemplateContext:
-    case DeclaratorContext::ObjCParameterContext:
-    case DeclaratorContext::ObjCResultContext:
-    case DeclaratorContext::BlockLiteralContext:
-    case DeclaratorContext::LambdaExprContext:
-    case DeclaratorContext::ConversionIdContext:
-    case DeclaratorContext::TemplateArgContext:
-    case DeclaratorContext::TemplateTypeArgContext:
-    case DeclaratorContext::TrailingReturnContext:
-    case DeclaratorContext::TrailingReturnVarContext:
+    case DeclaratorContext::TypeName:
+    case DeclaratorContext::FunctionalCast:
+    case DeclaratorContext::CXXNew:
+    case DeclaratorContext::AliasDecl:
+    case DeclaratorContext::AliasTemplate:
+    case DeclaratorContext::ObjCParameter:
+    case DeclaratorContext::ObjCResult:
+    case DeclaratorContext::BlockLiteral:
+    case DeclaratorContext::LambdaExpr:
+    case DeclaratorContext::ConversionId:
+    case DeclaratorContext::TemplateArg:
+    case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::TrailingReturn:
+    case DeclaratorContext::TrailingReturnVar:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2053,41 +2067,41 @@ public:
   /// Return true if the context permits a C++17 decomposition declarator.
   bool mayHaveDecompositionDeclarator() const {
     switch (Context) {
-    case DeclaratorContext::FileContext:
+    case DeclaratorContext::File:
       // FIXME: It's not clear that the proposal meant to allow file-scope
       // structured bindings, but it does.
-    case DeclaratorContext::BlockContext:
-    case DeclaratorContext::ForContext:
-    case DeclaratorContext::InitStmtContext:
-    case DeclaratorContext::ConditionContext:
+    case DeclaratorContext::Block:
+    case DeclaratorContext::ForInit:
+    case DeclaratorContext::SelectionInit:
+    case DeclaratorContext::Condition:
       return true;
 
-    case DeclaratorContext::MemberContext:
-    case DeclaratorContext::PrototypeContext:
-    case DeclaratorContext::TemplateParamContext:
-    case DeclaratorContext::RequiresExprContext:
+    case DeclaratorContext::Member:
+    case DeclaratorContext::Prototype:
+    case DeclaratorContext::TemplateParam:
+    case DeclaratorContext::RequiresExpr:
       // Maybe one day...
       return false;
 
     // These contexts don't allow any kind of non-abstract declarator.
-    case DeclaratorContext::KNRTypeListContext:
-    case DeclaratorContext::TypeNameContext:
-    case DeclaratorContext::FunctionalCastContext:
-    case DeclaratorContext::AliasDeclContext:
-    case DeclaratorContext::AliasTemplateContext:
-    case DeclaratorContext::LambdaExprParameterContext:
-    case DeclaratorContext::ObjCParameterContext:
-    case DeclaratorContext::ObjCResultContext:
-    case DeclaratorContext::CXXNewContext:
-    case DeclaratorContext::CXXCatchContext:
-    case DeclaratorContext::ObjCCatchContext:
-    case DeclaratorContext::BlockLiteralContext:
-    case DeclaratorContext::LambdaExprContext:
-    case DeclaratorContext::ConversionIdContext:
-    case DeclaratorContext::TemplateArgContext:
-    case DeclaratorContext::TemplateTypeArgContext:
-    case DeclaratorContext::TrailingReturnContext:
-    case DeclaratorContext::TrailingReturnVarContext:
+    case DeclaratorContext::KNRTypeList:
+    case DeclaratorContext::TypeName:
+    case DeclaratorContext::FunctionalCast:
+    case DeclaratorContext::AliasDecl:
+    case DeclaratorContext::AliasTemplate:
+    case DeclaratorContext::LambdaExprParameter:
+    case DeclaratorContext::ObjCParameter:
+    case DeclaratorContext::ObjCResult:
+    case DeclaratorContext::CXXNew:
+    case DeclaratorContext::CXXCatch:
+    case DeclaratorContext::ObjCCatch:
+    case DeclaratorContext::BlockLiteral:
+    case DeclaratorContext::LambdaExpr:
+    case DeclaratorContext::ConversionId:
+    case DeclaratorContext::TemplateArg:
+    case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::TrailingReturn:
+    case DeclaratorContext::TrailingReturnVar:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2102,7 +2116,7 @@ public:
       return false;
 
     if (getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_extern &&
-        Context != DeclaratorContext::FileContext)
+        Context != DeclaratorContext::File)
       return false;
 
     // Special names can't have direct initializers.
@@ -2110,40 +2124,40 @@ public:
       return false;
 
     switch (Context) {
-    case DeclaratorContext::FileContext:
-    case DeclaratorContext::BlockContext:
-    case DeclaratorContext::ForContext:
-    case DeclaratorContext::InitStmtContext:
-    case DeclaratorContext::TrailingReturnVarContext:
+    case DeclaratorContext::File:
+    case DeclaratorContext::Block:
+    case DeclaratorContext::ForInit:
+    case DeclaratorContext::SelectionInit:
+    case DeclaratorContext::TrailingReturnVar:
       return true;
 
-    case DeclaratorContext::ConditionContext:
+    case DeclaratorContext::Condition:
       // This may not be followed by a direct initializer, but it can't be a
       // function declaration either, and we'd prefer to perform a tentative
       // parse in order to produce the right diagnostic.
       return true;
 
-    case DeclaratorContext::KNRTypeListContext:
-    case DeclaratorContext::MemberContext:
-    case DeclaratorContext::PrototypeContext:
-    case DeclaratorContext::LambdaExprParameterContext:
-    case DeclaratorContext::ObjCParameterContext:
-    case DeclaratorContext::ObjCResultContext:
-    case DeclaratorContext::TemplateParamContext:
-    case DeclaratorContext::CXXCatchContext:
-    case DeclaratorContext::ObjCCatchContext:
-    case DeclaratorContext::TypeNameContext:
-    case DeclaratorContext::FunctionalCastContext: // FIXME
-    case DeclaratorContext::CXXNewContext:
-    case DeclaratorContext::AliasDeclContext:
-    case DeclaratorContext::AliasTemplateContext:
-    case DeclaratorContext::BlockLiteralContext:
-    case DeclaratorContext::LambdaExprContext:
-    case DeclaratorContext::ConversionIdContext:
-    case DeclaratorContext::TemplateArgContext:
-    case DeclaratorContext::TemplateTypeArgContext:
-    case DeclaratorContext::TrailingReturnContext:
-    case DeclaratorContext::RequiresExprContext:
+    case DeclaratorContext::KNRTypeList:
+    case DeclaratorContext::Member:
+    case DeclaratorContext::Prototype:
+    case DeclaratorContext::LambdaExprParameter:
+    case DeclaratorContext::ObjCParameter:
+    case DeclaratorContext::ObjCResult:
+    case DeclaratorContext::TemplateParam:
+    case DeclaratorContext::CXXCatch:
+    case DeclaratorContext::ObjCCatch:
+    case DeclaratorContext::TypeName:
+    case DeclaratorContext::FunctionalCast: // FIXME
+    case DeclaratorContext::CXXNew:
+    case DeclaratorContext::AliasDecl:
+    case DeclaratorContext::AliasTemplate:
+    case DeclaratorContext::BlockLiteral:
+    case DeclaratorContext::LambdaExpr:
+    case DeclaratorContext::ConversionId:
+    case DeclaratorContext::TemplateArg:
+    case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::TrailingReturn:
+    case DeclaratorContext::RequiresExpr:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2337,35 +2351,35 @@ public:
       return false;
 
     switch (Context) {
-    case DeclaratorContext::FileContext:
-    case DeclaratorContext::MemberContext:
-    case DeclaratorContext::BlockContext:
-    case DeclaratorContext::ForContext:
-    case DeclaratorContext::InitStmtContext:
+    case DeclaratorContext::File:
+    case DeclaratorContext::Member:
+    case DeclaratorContext::Block:
+    case DeclaratorContext::ForInit:
+    case DeclaratorContext::SelectionInit:
       return true;
 
-    case DeclaratorContext::ConditionContext:
-    case DeclaratorContext::KNRTypeListContext:
-    case DeclaratorContext::TypeNameContext:
-    case DeclaratorContext::FunctionalCastContext:
-    case DeclaratorContext::AliasDeclContext:
-    case DeclaratorContext::AliasTemplateContext:
-    case DeclaratorContext::PrototypeContext:
-    case DeclaratorContext::LambdaExprParameterContext:
-    case DeclaratorContext::ObjCParameterContext:
-    case DeclaratorContext::ObjCResultContext:
-    case DeclaratorContext::TemplateParamContext:
-    case DeclaratorContext::CXXNewContext:
-    case DeclaratorContext::CXXCatchContext:
-    case DeclaratorContext::ObjCCatchContext:
-    case DeclaratorContext::BlockLiteralContext:
-    case DeclaratorContext::LambdaExprContext:
-    case DeclaratorContext::ConversionIdContext:
-    case DeclaratorContext::TemplateArgContext:
-    case DeclaratorContext::TemplateTypeArgContext:
-    case DeclaratorContext::TrailingReturnContext:
-    case DeclaratorContext::TrailingReturnVarContext:
-    case DeclaratorContext::RequiresExprContext:
+    case DeclaratorContext::Condition:
+    case DeclaratorContext::KNRTypeList:
+    case DeclaratorContext::TypeName:
+    case DeclaratorContext::FunctionalCast:
+    case DeclaratorContext::AliasDecl:
+    case DeclaratorContext::AliasTemplate:
+    case DeclaratorContext::Prototype:
+    case DeclaratorContext::LambdaExprParameter:
+    case DeclaratorContext::ObjCParameter:
+    case DeclaratorContext::ObjCResult:
+    case DeclaratorContext::TemplateParam:
+    case DeclaratorContext::CXXNew:
+    case DeclaratorContext::CXXCatch:
+    case DeclaratorContext::ObjCCatch:
+    case DeclaratorContext::BlockLiteral:
+    case DeclaratorContext::LambdaExpr:
+    case DeclaratorContext::ConversionId:
+    case DeclaratorContext::TemplateArg:
+    case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::TrailingReturn:
+    case DeclaratorContext::TrailingReturnVar:
+    case DeclaratorContext::RequiresExpr:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2375,38 +2389,38 @@ public:
   /// expression could appear.
   bool isExpressionContext() const {
     switch (Context) {
-    case DeclaratorContext::FileContext:
-    case DeclaratorContext::KNRTypeListContext:
-    case DeclaratorContext::MemberContext:
+    case DeclaratorContext::File:
+    case DeclaratorContext::KNRTypeList:
+    case DeclaratorContext::Member:
 
     // FIXME: sizeof(...) permits an expression.
-    case DeclaratorContext::TypeNameContext:
+    case DeclaratorContext::TypeName:
 
-    case DeclaratorContext::FunctionalCastContext:
-    case DeclaratorContext::AliasDeclContext:
-    case DeclaratorContext::AliasTemplateContext:
-    case DeclaratorContext::PrototypeContext:
-    case DeclaratorContext::LambdaExprParameterContext:
-    case DeclaratorContext::ObjCParameterContext:
-    case DeclaratorContext::ObjCResultContext:
-    case DeclaratorContext::TemplateParamContext:
-    case DeclaratorContext::CXXNewContext:
-    case DeclaratorContext::CXXCatchContext:
-    case DeclaratorContext::ObjCCatchContext:
-    case DeclaratorContext::BlockLiteralContext:
-    case DeclaratorContext::LambdaExprContext:
-    case DeclaratorContext::ConversionIdContext:
-    case DeclaratorContext::TrailingReturnContext:
-    case DeclaratorContext::TrailingReturnVarContext:
-    case DeclaratorContext::TemplateTypeArgContext:
-    case DeclaratorContext::RequiresExprContext:
+    case DeclaratorContext::FunctionalCast:
+    case DeclaratorContext::AliasDecl:
+    case DeclaratorContext::AliasTemplate:
+    case DeclaratorContext::Prototype:
+    case DeclaratorContext::LambdaExprParameter:
+    case DeclaratorContext::ObjCParameter:
+    case DeclaratorContext::ObjCResult:
+    case DeclaratorContext::TemplateParam:
+    case DeclaratorContext::CXXNew:
+    case DeclaratorContext::CXXCatch:
+    case DeclaratorContext::ObjCCatch:
+    case DeclaratorContext::BlockLiteral:
+    case DeclaratorContext::LambdaExpr:
+    case DeclaratorContext::ConversionId:
+    case DeclaratorContext::TrailingReturn:
+    case DeclaratorContext::TrailingReturnVar:
+    case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::RequiresExpr:
       return false;
 
-    case DeclaratorContext::BlockContext:
-    case DeclaratorContext::ForContext:
-    case DeclaratorContext::InitStmtContext:
-    case DeclaratorContext::ConditionContext:
-    case DeclaratorContext::TemplateArgContext:
+    case DeclaratorContext::Block:
+    case DeclaratorContext::ForInit:
+    case DeclaratorContext::SelectionInit:
+    case DeclaratorContext::Condition:
+    case DeclaratorContext::TemplateArg:
       return true;
     }
 
@@ -2566,7 +2580,7 @@ public:
 
   /// Returns true if this declares a real member and not a friend.
   bool isFirstDeclarationOfMember() {
-    return getContext() == DeclaratorContext::MemberContext &&
+    return getContext() == DeclaratorContext::Member &&
            !getDeclSpec().isFriendSpecified();
   }
 
@@ -2588,8 +2602,7 @@ struct FieldDeclarator {
   Declarator D;
   Expr *BitfieldSize;
   explicit FieldDeclarator(const DeclSpec &DS)
-      : D(DS, DeclaratorContext::MemberContext),
-        BitfieldSize(nullptr) {}
+      : D(DS, DeclaratorContext::Member), BitfieldSize(nullptr) {}
 };
 
 /// Represents a C++11 virt-specifier-seq.

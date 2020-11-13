@@ -11,6 +11,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/NVVMIR.h"
 #include "llvm/Support/TargetSelect.h"
+
 using namespace mlir;
 
 #if MLIR_CUDA_CONVERSIONS_ENABLED
@@ -21,6 +22,7 @@ static OwnedBlob compilePtxToCubinForTesting(const std::string &, Location,
 }
 
 namespace mlir {
+namespace test {
 void registerTestConvertGPUKernelToCubinPass() {
   PassPipelineRegistration<>(
       "test-kernel-to-cubin",
@@ -37,5 +39,6 @@ void registerTestConvertGPUKernelToCubinPass() {
             "nvptx64-nvidia-cuda", "sm_35", "+ptx60", "nvvm.cubin"));
       });
 }
+} // namespace test
 } // namespace mlir
 #endif

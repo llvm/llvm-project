@@ -56,14 +56,14 @@ public:
 
     /// Called when a virtual register is no longer used. Return false to defer
     /// its deletion from LiveIntervals.
-    virtual bool LRE_CanEraseVirtReg(unsigned) { return true; }
+    virtual bool LRE_CanEraseVirtReg(Register) { return true; }
 
     /// Called before shrinking the live range of a virtual register.
-    virtual void LRE_WillShrinkVirtReg(unsigned) {}
+    virtual void LRE_WillShrinkVirtReg(Register) {}
 
     /// Called after cloning a virtual register.
     /// This is used for new registers representing connected components of Old.
-    virtual void LRE_DidCloneVirtReg(unsigned New, unsigned Old) {}
+    virtual void LRE_DidCloneVirtReg(Register New, Register Old) {}
   };
 
 private:

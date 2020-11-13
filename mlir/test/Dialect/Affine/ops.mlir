@@ -208,7 +208,7 @@ func @yield_loop(%buffer: memref<1024xf32>) -> f32 {
 }
 // CHECK:      %[[const_0:.*]] = constant 0.000000e+00 : f32
 // CHECK-NEXT: %[[output:.*]] = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%{{.*}} = %[[const_0]]) -> (f32) {
-// CHECK:        affine.if #set0(%{{.*}}) -> f32 {
+// CHECK:        affine.if #set(%{{.*}}) -> f32 {
 // CHECK:          affine.yield %{{.*}} : f32
 // CHECK-NEXT:   } else {
 // CHECK-NEXT:     affine.yield %{{.*}} : f32

@@ -29,7 +29,6 @@ void mlirAffineMapPrint(MlirAffineMap affineMap, MlirStringCallback callback,
                         void *userData) {
   mlir::detail::CallbackOstream stream(callback, userData);
   unwrap(affineMap).print(stream);
-  stream.flush();
 }
 
 void mlirAffineMapDump(MlirAffineMap affineMap) { unwrap(affineMap).dump(); }

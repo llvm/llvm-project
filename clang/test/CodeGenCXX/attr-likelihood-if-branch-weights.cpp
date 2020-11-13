@@ -69,6 +69,7 @@ void WhileStmt() {
 
   // CHECK-NOT: br {{.*}} %if.end{{.*}} !prof
   if (b)
+    // CHECK: br {{.*}} !prof !7
     while (B())
       [[unlikely]] { b = false; }
 }
@@ -96,6 +97,7 @@ void ForStmt() {
 
   // CHECK-NOT: br {{.*}} %if.end{{.*}} !prof
   if (b)
+    // CHECK: br {{.*}} !prof !7
     for (; B();)
       [[unlikely]] {}
 }

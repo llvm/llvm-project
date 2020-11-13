@@ -36,13 +36,13 @@ struct B
 {
     typedef T value_type;
 
-    TEST_CONSTEXPR_CXX20 B(int& count) : count(count) {}
+    TEST_CONSTEXPR_CXX20 B(int& count) : count_(count) {}
 
 #if TEST_STD_VER >= 11
     template <class U, class ...Args>
     TEST_CONSTEXPR_CXX20 void construct(U* p, Args&& ...args)
     {
-        ++count;
+        ++count_;
 #if TEST_STD_VER > 17
         std::construct_at(p, std::forward<Args>(args)...);
 #else
@@ -51,7 +51,7 @@ struct B
     }
 #endif
 
-    int& count;
+    int& count_;
 };
 
 struct A0

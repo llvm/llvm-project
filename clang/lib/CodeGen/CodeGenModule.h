@@ -606,9 +606,11 @@ public:
     return *ObjCData;
   }
 
-  // Version checking function, used to implement ObjC's @available:
+  // Version checking functions, used to implement ObjC's @available:
   // i32 @__isOSVersionAtLeast(i32, i32, i32)
   llvm::FunctionCallee IsOSVersionAtLeastFn = nullptr;
+  // i32 @__isPlatformVersionAtLeast(i32, i32, i32, i32)
+  llvm::FunctionCallee IsPlatformVersionAtLeastFn = nullptr;
 
   InstrProfStats &getPGOStats() { return PGOStats; }
   llvm::IndexedInstrProfReader *getPGOReader() const { return PGOReader.get(); }

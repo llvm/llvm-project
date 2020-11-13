@@ -81,6 +81,7 @@ namespace std {
 */
 
 #include <experimental/__config>
+#include <__availability>
 #include <memory>
 #include <typeinfo>
 #include <type_traits>

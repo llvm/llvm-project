@@ -25,8 +25,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-#include <set>
-
 #define DEBUG_TYPE "linalg-drop-unit-dims"
 
 using namespace mlir;
@@ -166,9 +164,8 @@ LogicalResult replaceBlockArgForUnitDimLoops<IndexedGenericOp>(
   for (unsigned unitDimLoop : unitDims) {
     entryBlock->getArgument(unitDimLoop).replaceAllUsesWith(zero);
   }
-  std::set<unsigned> orderedUnitDims(unitDims.begin(), unitDims.end());
-  for (unsigned i : llvm::reverse(orderedUnitDims))
-    entryBlock->eraseArgument(i);
+  SmallVector<unsigned, 8> unitDimsToErase(unitDims.begin(), unitDims.end());
+  entryBlock->eraseArguments(unitDimsToErase);
   return success();
 }
 

@@ -234,7 +234,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   // If Loc is a constant memory location, the call definitely could not
   // modify the memory location.
-  if (isModSet(Result) && pointsToConstantMemory(Loc, /*OrLocal*/ false))
+  if (isModSet(Result) && pointsToConstantMemory(Loc, AAQI, /*OrLocal*/ false))
     Result = clearMod(Result);
 
   return Result;
@@ -311,7 +311,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 
       // ModRefC1 indicates what Call1 might do to Call2ArgLoc, and we use
       // above ArgMask to update dependence info.
-      ModRefInfo ModRefC1 = getModRefInfo(Call1, Call2ArgLoc);
+      ModRefInfo ModRefC1 = getModRefInfo(Call1, Call2ArgLoc, AAQI);
       ArgMask = intersectModRef(ArgMask, ModRefC1);
 
       // Conservatively clear IsMustAlias unless only MustAlias is found.
@@ -352,7 +352,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
       // might Mod Call1ArgLoc, then we care about either a Mod or a Ref by
       // Call2. If Call1 might Ref, then we care only about a Mod by Call2.
       ModRefInfo ArgModRefC1 = getArgModRefInfo(Call1, Call1ArgIdx);
-      ModRefInfo ModRefC2 = getModRefInfo(Call2, Call1ArgLoc);
+      ModRefInfo ModRefC2 = getModRefInfo(Call2, Call1ArgLoc, AAQI);
       if ((isModSet(ArgModRefC1) && isModOrRefSet(ModRefC2)) ||
           (isRefSet(ArgModRefC1) && isModSet(ModRefC2)))
         R = intersectModRef(unionModRef(R, ArgModRefC1), Result);

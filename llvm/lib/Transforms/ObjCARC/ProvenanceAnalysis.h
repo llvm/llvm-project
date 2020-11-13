@@ -58,7 +58,7 @@ class ProvenanceAnalysis {
 
   DenseMap<const Value *, WeakTrackingVH> UnderlyingObjCPtrCache;
 
-  bool relatedCheck(const Value *A, const Value *B, const DataLayout &DL);
+  bool relatedCheck(const Value *A, const Value *B);
   bool relatedSelect(const SelectInst *A, const Value *B);
   bool relatedPHI(const PHINode *A, const Value *B);
 
@@ -71,7 +71,7 @@ public:
 
   AAResults *getAA() const { return AA; }
 
-  bool related(const Value *A, const Value *B, const DataLayout &DL);
+  bool related(const Value *A, const Value *B);
 
   void clear() {
     CachedResults.clear();

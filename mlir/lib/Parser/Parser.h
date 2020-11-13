@@ -36,13 +36,12 @@ public:
   /// Parse a comma-separated list of elements up until the specified end token.
   ParseResult
   parseCommaSeparatedListUntil(Token::Kind rightToken,
-                               const std::function<ParseResult()> &parseElement,
+                               function_ref<ParseResult()> parseElement,
                                bool allowEmptyList = true);
 
   /// Parse a comma separated list of elements that must have at least one entry
   /// in it.
-  ParseResult
-  parseCommaSeparatedList(const std::function<ParseResult()> &parseElement);
+  ParseResult parseCommaSeparatedList(function_ref<ParseResult()> parseElement);
 
   ParseResult parsePrettyDialectSymbolName(StringRef &prettyName);
 
@@ -188,6 +187,7 @@ public:
   OptionalParseResult parseOptionalAttribute(Attribute &attribute,
                                              Type type = {});
   OptionalParseResult parseOptionalAttribute(ArrayAttr &attribute, Type type);
+  OptionalParseResult parseOptionalAttribute(StringAttr &attribute, Type type);
 
   /// Parse an optional attribute that is demarcated by a specific token.
   template <typename AttributeT>
@@ -231,9 +231,6 @@ public:
   // Location Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Parse an inline location.
-  ParseResult parseLocation(LocationAttr &loc);
-
   /// Parse a raw location instance.
   ParseResult parseLocationInstance(LocationAttr &loc);
 
@@ -248,20 +245,9 @@ public:
 
   /// Parse an optional trailing location.
   ///
-  ///   trailing-location     ::= (`loc` `(` location `)`)?
+  ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
   ///
-  ParseResult parseOptionalTrailingLocation(Location &loc) {
-    // If there is a 'loc' we parse a trailing location.
-    if (!getToken().is(Token::kw_loc))
-      return success();
-
-    // Parse the location.
-    LocationAttr directLoc;
-    if (parseLocation(directLoc))
-      return failure();
-    loc = directLoc;
-    return success();
-  }
+  ParseResult parseOptionalTrailingLocation(Location &loc);
 
   //===--------------------------------------------------------------------===//
   // Affine Parsing

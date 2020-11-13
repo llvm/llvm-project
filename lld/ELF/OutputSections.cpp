@@ -20,6 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <regex>
 #include <unordered_set>
 
@@ -285,6 +286,8 @@ template <class ELFT> void OutputSection::maybeCompress() {
       !name.startswith(".debug_"))
     return;
 
+  llvm::TimeTraceScope timeScope("Compress debug sections");
+
   // Create a section header.
   zDebugHeader.resize(sizeof(Elf_Chdr));
   auto *hdr = reinterpret_cast<Elf_Chdr *>(zDebugHeader.data());
@@ -444,19 +447,19 @@ static bool isCrtend(StringRef s) {
   return std::regex_match(s.begin(), s.end(), re);
 }
 
-// .ctors and .dtors are sorted by this priority from highest to lowest.
+// .ctors and .dtors are sorted by this order:
 //
-//  1. The section was contained in crtbegin (crtbegin contains
-//     some sentinel value in its .ctors and .dtors so that the runtime
-//     can find the beginning of the sections.)
+// 1. .ctors/.dtors in crtbegin (which contains a sentinel value -1).
+// 2. The section is named ".ctors" or ".dtors" (priority: 65536).
+// 3. The section has an optional priority value in the form of ".ctors.N" or
+//    ".dtors.N" where N is a number in the form of %05u (priority: 65535-N).
+// 4. .ctors/.dtors in crtend (which contains a sentinel value 0).
 //
-//  2. The section has an optional priority value in the form of ".ctors.N"
-//     or ".dtors.N" where N is a number. Unlike .{init,fini}_array,
-//     they are compared as string rather than number.
-//
-//  3. The section is just ".ctors" or ".dtors".
-//
-//  4. The section was contained in crtend, which contains an end marker.
+// For 2 and 3, the sections are sorted by priority from high to low, e.g.
+// .ctors (65536), .ctors.00100 (65436), .ctors.00200 (65336).  In GNU ld's
+// internal linker scripts, the sorting is by string comparison which can
+// achieve the same goal given the optional priority values are of the same
+// length.
 //
 // In an ideal world, we don't need this function because .init_array and
 // .ctors are duplicate features (and .init_array is newer.) However, there
@@ -471,13 +474,7 @@ static bool compCtors(const InputSection *a, const InputSection *b) {
   bool endB = isCrtend(b->file->getName());
   if (endA != endB)
     return endB;
-  StringRef x = a->name;
-  StringRef y = b->name;
-  assert(x.startswith(".ctors") || x.startswith(".dtors"));
-  assert(y.startswith(".ctors") || y.startswith(".dtors"));
-  x = x.substr(6);
-  y = y.substr(6);
-  return x < y;
+  return getPriority(a->name) > getPriority(b->name);
 }
 
 // Sorts input sections by the special rules for .ctors and .dtors.
@@ -489,16 +486,17 @@ void OutputSection::sortCtorsDtors() {
   llvm::stable_sort(isd->sections, compCtors);
 }
 
-// If an input string is in the form of "foo.N" where N is a number,
-// return N. Otherwise, returns 65536, which is one greater than the
-// lowest priority.
+// If an input string is in the form of "foo.N" where N is a number, return N
+// (65535-N if .ctors.N or .dtors.N). Otherwise, returns 65536, which is one
+// greater than the lowest priority.
 int elf::getPriority(StringRef s) {
   size_t pos = s.rfind('.');
   if (pos == StringRef::npos)
     return 65536;
-  int v;
-  if (!to_integer(s.substr(pos + 1), v, 10))
-    return 65536;
+  int v = 65536;
+  if (to_integer(s.substr(pos + 1), v, 10) &&
+      (pos == 6 && (s.startswith(".ctors") || s.startswith(".dtors"))))
+    v = 65535 - v;
   return v;
 }
 

@@ -271,6 +271,13 @@ public:
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
 
+  /// Get the instruction at the given address.
+  ///
+  /// \return
+  ///    A valid \a InstructionSP if the address could be found, or null
+  ///    otherwise.
+  lldb::InstructionSP GetInstructionAtAddress(const Address &addr);
+
   //------------------------------------------------------------------
   /// Get the index of the next branch instruction.
   ///

@@ -13,8 +13,9 @@
 #include "filesystem"
 #include "array"
 #include "chrono"
-#include "cstdlib"
 #include "climits"
+#include "cstdlib"
+#include "ctime"
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -47,7 +48,7 @@ static string format_string_imp(const char* msg, ...) {
   struct GuardVAList {
     va_list& target;
     bool active = true;
-    GuardVAList(va_list& target) : target(target), active(true) {}
+    GuardVAList(va_list& tgt) : target(tgt), active(true) {}
     void clear() {
       if (active)
         va_end(target);
@@ -134,50 +135,50 @@ path error_value<path>() {
 
 template <class T>
 struct ErrorHandler {
-  const char* func_name;
-  error_code* ec = nullptr;
-  const path* p1 = nullptr;
-  const path* p2 = nullptr;
+  const char* func_name_;
+  error_code* ec_ = nullptr;
+  const path* p1_ = nullptr;
+  const path* p2_ = nullptr;
 
   ErrorHandler(const char* fname, error_code* ec, const path* p1 = nullptr,
                const path* p2 = nullptr)
-      : func_name(fname), ec(ec), p1(p1), p2(p2) {
-    if (ec)
-      ec->clear();
+      : func_name_(fname), ec_(ec), p1_(p1), p2_(p2) {
+    if (ec_)
+      ec_->clear();
   }
 
-  T report(const error_code& m_ec) const {
-    if (ec) {
-      *ec = m_ec;
+  T report(const error_code& ec) const {
+    if (ec_) {
+      *ec_ = ec;
       return error_value<T>();
     }
-    string what = string("in ") + func_name;
-    switch (bool(p1) + bool(p2)) {
+    string what = string("in ") + func_name_;
+    switch (bool(p1_) + bool(p2_)) {
     case 0:
-      __throw_filesystem_error(what, m_ec);
+      __throw_filesystem_error(what, ec);
     case 1:
-      __throw_filesystem_error(what, *p1, m_ec);
+      __throw_filesystem_error(what, *p1_, ec);
     case 2:
-      __throw_filesystem_error(what, *p1, *p2, m_ec);
+      __throw_filesystem_error(what, *p1_, *p2_, ec);
     }
     _LIBCPP_UNREACHABLE();
   }
 
   template <class... Args>
-  T report(const error_code& m_ec, const char* msg, Args const&... args) const {
-    if (ec) {
-      *ec = m_ec;
+  T report(const error_code& ec, const char* msg, Args const&... args) const {
+    if (ec_) {
+      *ec_ = ec;
       return error_value<T>();
     }
     string what =
-        string("in ") + func_name + ": " + format_string(msg, args...);
-    switch (bool(p1) + bool(p2)) {
+        string("in ") + func_name_ + ": " + format_string(msg, args...);
+    switch (bool(p1_) + bool(p2_)) {
     case 0:
-      __throw_filesystem_error(what, m_ec);
+      __throw_filesystem_error(what, ec);
     case 1:
-      __throw_filesystem_error(what, *p1, m_ec);
+      __throw_filesystem_error(what, *p1_, ec);
     case 2:
-      __throw_filesystem_error(what, *p1, *p2, m_ec);
+      __throw_filesystem_error(what, *p1_, *p2_, ec);
     }
     _LIBCPP_UNREACHABLE();
   }
@@ -197,8 +198,8 @@ private:
 using chrono::duration;
 using chrono::duration_cast;
 
-using TimeSpec = struct ::timespec;
-using StatT = struct ::stat;
+using TimeSpec = timespec;
+using StatT = struct stat;
 
 template <class FileTimeT, class TimeT,
           bool IsFloat = is_floating_point<typename FileTimeT::rep>::value>

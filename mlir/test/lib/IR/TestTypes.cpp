@@ -11,6 +11,7 @@
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
+using namespace mlir::test;
 
 namespace {
 struct TestRecursiveTypesPass
@@ -36,7 +37,7 @@ struct TestRecursiveTypesPass
     signalPassFailure();
   }
 };
-} // end namespace
+} // namespace
 
 LogicalResult TestRecursiveTypesPass::createIRWithTypes() {
   MLIRContext *ctx = &getContext();
@@ -69,10 +70,12 @@ LogicalResult TestRecursiveTypesPass::createIRWithTypes() {
 }
 
 namespace mlir {
+namespace test {
 
 void registerTestRecursiveTypesPass() {
   PassRegistration<TestRecursiveTypesPass> reg(
       "test-recursive-types", "Test support for recursive types");
 }
 
-} // end namespace mlir
+} // namespace test
+} // namespace mlir

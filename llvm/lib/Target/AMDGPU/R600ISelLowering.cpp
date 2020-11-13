@@ -1550,10 +1550,10 @@ SDValue R600TargetLowering::lowerFrameIndex(SDValue Op,
 
   unsigned FrameIndex = FIN->getIndex();
   Register IgnoredFrameReg;
-  unsigned Offset =
-    TFL->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
-  return DAG.getConstant(Offset * 4 * TFL->getStackWidth(MF), SDLoc(Op),
-                         Op.getValueType());
+  StackOffset Offset =
+      TFL->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
+  return DAG.getConstant(Offset.getFixed() * 4 * TFL->getStackWidth(MF),
+                         SDLoc(Op), Op.getValueType());
 }
 
 CCAssignFn *R600TargetLowering::CCAssignFnForCall(CallingConv::ID CC,

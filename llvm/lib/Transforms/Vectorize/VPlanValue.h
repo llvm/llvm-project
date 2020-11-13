@@ -78,11 +78,15 @@ public:
   /// are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPValue objects. They are used for concrete
   /// type identification.
-  enum { VPValueSC, VPInstructionSC, VPMemoryInstructionSC };
+  enum { VPValueSC, VPInstructionSC, VPMemoryInstructionSC, VPVWidenCallSC };
 
   VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
+
+  virtual ~VPValue() {
+    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+  }
 
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
@@ -152,6 +156,10 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 /// edges from VPValue's users to their defs.
 class VPUser {
   SmallVector<VPValue *, 2> Operands;
+
+protected:
+  /// Print the operands to \p O.
+  void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 
 public:
   VPUser() {}

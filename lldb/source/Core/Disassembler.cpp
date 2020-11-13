@@ -952,6 +952,13 @@ InstructionSP InstructionList::GetInstructionAtIndex(size_t idx) const {
   return inst_sp;
 }
 
+InstructionSP InstructionList::GetInstructionAtAddress(const Address &address) {
+  uint32_t index = GetIndexOfInstructionAtAddress(address);
+  if (index != UINT32_MAX)
+    return GetInstructionAtIndex(index);
+  return nullptr;
+}
+
 void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
                            const ExecutionContext *exe_ctx) {
   const uint32_t max_opcode_byte_size = GetMaxOpcocdeByteSize();

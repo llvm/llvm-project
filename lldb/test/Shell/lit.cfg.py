@@ -135,4 +135,4 @@ if can_set_dbregs:
     config.available_features.add('dbregs-set')
 
 # pass control variable through
-llvm_config.with_system_environment('FREEBSD_REMOTE_PLUGIN')
+llvm_config.with_system_environment('FREEBSD_LEGACY_PLUGIN')

@@ -1723,6 +1723,15 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Res;
   }
 
+  if (Constant *C = dyn_cast<Constant>(Op0)) {
+    Value *X;
+    Constant *C2;
+
+    // C-(X+C2) --> (C-C2)-X
+    if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))
+      return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
+  }
+
   auto TryToNarrowDeduceFlags = [this, &I, &Op0, &Op1]() -> Instruction * {
     if (Instruction *Ext = narrowMathIfNoOverflow(I))
       return Ext;
@@ -1834,10 +1843,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // C-(C2-X) --> X+(C-C2)
     if (match(Op1, m_Sub(m_Constant(C2), m_Value(X))) && !isa<ConstantExpr>(C2))
       return BinaryOperator::CreateAdd(X, ConstantExpr::getSub(C, C2));
-
-    // C-(X+C2) --> (C-C2)-X
-    if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))
-      return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
   }
 
   const APInt *Op0C;
@@ -2044,6 +2049,20 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Value *Neg = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
                                    I.hasNoSignedWrap());
     return SelectInst::Create(Cmp, Neg, A);
+  }
+
+  // If we are subtracting a low-bit masked subset of some value from an add
+  // of that same value with no low bits changed, that is clearing some low bits
+  // of the sum:
+  // sub (X + AddC), (X & AndC) --> and (X + AddC), ~AndC
+  const APInt *AddC, *AndC;
+  if (match(Op0, m_Add(m_Value(X), m_APInt(AddC))) &&
+      match(Op1, m_And(m_Specific(X), m_APInt(AndC)))) {
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    unsigned Cttz = AddC->countTrailingZeros();
+    APInt HighMask(APInt::getHighBitsSet(BitWidth, BitWidth - Cttz));
+    if ((HighMask & *AndC).isNullValue())
+      return BinaryOperator::CreateAnd(Op0, ConstantInt::get(Ty, ~(*AndC)));
   }
 
   if (Instruction *V =

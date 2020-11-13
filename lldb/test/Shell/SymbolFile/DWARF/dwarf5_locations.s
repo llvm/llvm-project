@@ -6,7 +6,7 @@
 # RUN: ld.lld -m elf_x86_64 %t.o -o %t 
 # RUN: lldb-test symbols %t | FileCheck %s
 
-# CHECK: Variable{0x7fffffff00000011}, name = "color"
+# CHECK: Variable{0x00000011}, name = "color"
 # CHECK-SAME: location = DW_OP_addrx 0x0
 
         .text

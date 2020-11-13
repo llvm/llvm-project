@@ -19,6 +19,7 @@
 
 #include "lsan_allocator.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_stoptheworld_fuchsia.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 
 // Ensure that the Zircon system ABI is linked in.
@@ -147,7 +148,7 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
               &params->argument->frontier);
         }
 
-        params->callback({}, params->argument);
+        params->callback(SuspendedThreadsListFuchsia(), params->argument);
       },
       &params);
 

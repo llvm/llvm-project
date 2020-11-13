@@ -20,75 +20,73 @@
 #include <cstdlib>
 #include <mutex>
 
-// Store target policy (disabled, mandatory, default)
-kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
-std::mutex TargetOffloadMtx;
-
 ////////////////////////////////////////////////////////////////////////////////
 /// manage the success or failure of a target construct
 static void HandleDefaultTargetOffload() {
-  TargetOffloadMtx.lock();
-  if (TargetOffloadPolicy == tgt_default) {
+  PM->TargetOffloadMtx.lock();
+  if (PM->TargetOffloadPolicy == tgt_default) {
     if (omp_get_num_devices() > 0) {
       DP("Default TARGET OFFLOAD policy is now mandatory "
          "(devices were found)\n");
-      TargetOffloadPolicy = tgt_mandatory;
+      PM->TargetOffloadPolicy = tgt_mandatory;
     } else {
       DP("Default TARGET OFFLOAD policy is now disabled "
          "(no devices were found)\n");
-      TargetOffloadPolicy = tgt_disabled;
+      PM->TargetOffloadPolicy = tgt_disabled;
     }
   }
-  TargetOffloadMtx.unlock();
+  PM->TargetOffloadMtx.unlock();
 }
 
 static int IsOffloadDisabled() {
-  if (TargetOffloadPolicy == tgt_default) HandleDefaultTargetOffload();
-  return TargetOffloadPolicy == tgt_disabled;
+  if (PM->TargetOffloadPolicy == tgt_default)
+    HandleDefaultTargetOffload();
+  return PM->TargetOffloadPolicy == tgt_disabled;
 }
 
 static void HandleTargetOutcome(bool success) {
-  switch (TargetOffloadPolicy) {
-    case tgt_disabled:
-      if (success) {
-        FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
-      }
-      break;
-    case tgt_default:
-      FATAL_MESSAGE0(1, "default offloading policy must be switched to "
-                        "mandatory or disabled");
-      break;
-    case tgt_mandatory:
-      if (!success) {
-        if (getInfoLevel() > 1)
-          for (const auto &Device : Devices)
-            dumpTargetPointerMappings(Device);
-        else
-          FAILURE_MESSAGE("run with env LIBOMPTARGET_INFO>1 to dump host-target"
-                          "pointer maps\n");
+  switch (PM->TargetOffloadPolicy) {
+  case tgt_disabled:
+    if (success) {
+      FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
+    }
+    break;
+  case tgt_default:
+    FATAL_MESSAGE0(1, "default offloading policy must be switched to "
+                      "mandatory or disabled");
+    break;
+  case tgt_mandatory:
+    if (!success) {
+      if (getInfoLevel() > 1)
+        for (const auto &Device : PM->Devices)
+          dumpTargetPointerMappings(Device);
+      else
+        FAILURE_MESSAGE("run with env LIBOMPTARGET_INFO>1 to dump host-target"
+                        "pointer maps\n");
 
-        FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
-      }
-      break;
+      FATAL_MESSAGE0(
+          1, "failure of target construct while offloading is mandatory");
+    }
+    break;
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t flags) {
-  RTLs->RegisterRequires(flags);
+  PM->RTLs.RegisterRequires(flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *desc) {
-  RTLs->RegisterLib(desc);
+  PM->RTLs.RegisterLib(desc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *desc) {
-  RTLs->UnregisterLib(desc);
+  PM->RTLs.UnregisterLib(desc);
 }
 
 /// creates host-to-target data mapping, stores it in the
@@ -131,7 +129,7 @@ EXTERN void __tgt_target_data_begin_mapper(int64_t device_id, int32_t arg_num,
     return;
   }
 
-  DeviceTy &Device = Devices[device_id];
+  DeviceTy &Device = PM->Devices[device_id];
 
 #ifdef OMPTARGET_DEBUG
   for (int i = 0; i < arg_num; ++i) {
@@ -188,16 +186,16 @@ EXTERN void __tgt_target_data_end_mapper(int64_t device_id, int32_t arg_num,
     device_id = omp_get_default_device();
   }
 
-  RTLsMtx->lock();
-  size_t Devices_size = Devices.size();
-  RTLsMtx->unlock();
-  if (Devices_size <= (size_t)device_id) {
+  PM->RTLsMtx.lock();
+  size_t DevicesSize = PM->Devices.size();
+  PM->RTLsMtx.unlock();
+  if (DevicesSize <= (size_t)device_id) {
     DP("Device ID  %" PRId64 " does not have a matching RTL.\n", device_id);
     HandleTargetOutcome(false);
     return;
   }
 
-  DeviceTy &Device = Devices[device_id];
+  DeviceTy &Device = PM->Devices[device_id];
   if (!Device.IsInit) {
     DP("Uninit device: ignore");
     HandleTargetOutcome(false);
@@ -262,7 +260,7 @@ EXTERN void __tgt_target_data_update_mapper(int64_t device_id, int32_t arg_num,
     return;
   }
 
-  DeviceTy& Device = Devices[device_id];
+  DeviceTy &Device = PM->Devices[device_id];
   int rc = target_data_update(Device, arg_num, args_base,
       args, arg_sizes, arg_types, arg_mappers);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
@@ -439,8 +437,8 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
 
   DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", device_id,
       loop_tripcount);
-  TblMapMtx->lock();
-  Devices[device_id].LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
-                                         loop_tripcount);
-  TblMapMtx->unlock();
+  PM->TblMapMtx.lock();
+  PM->Devices[device_id].LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
+                                             loop_tripcount);
+  PM->TblMapMtx.unlock();
 }

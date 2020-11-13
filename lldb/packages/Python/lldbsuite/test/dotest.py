@@ -835,6 +835,13 @@ def checkWatchpointSupport():
     print("watchpoint tests will not be run because: " + reason)
     configuration.skip_categories.append("watchpoint")
 
+def checkObjcSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    if not lldbplatformutil.platformIsDarwin():
+        print("objc tests will be skipped because of unsupported platform")
+        configuration.skip_categories.append("objc")
+
 def checkDebugInfoSupport():
     import lldb
 
@@ -938,25 +945,21 @@ def run_suite():
     # Note that it's not dotest's job to clean this directory.
     lldbutil.mkdir_p(configuration.test_build_dir)
 
-    target_platform = lldb.selected_platform.GetTriple().split('-')[2]
+    from . import lldbplatformutil
+    target_platform = lldbplatformutil.getPlatform()
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
+    checkObjcSupport()
 
-    # Don't do debugserver tests on anything except OS X.
-    configuration.dont_do_debugserver_test = (
-            "linux" in target_platform or
-            "freebsd" in target_platform or
-            "netbsd" in target_platform or
-            "windows" in target_platform)
+    # Perform LLGS tests only on platforms using it.
+    configuration.llgs_platform = (
+        target_platform in ["freebsd", "linux", "netbsd", "windows"])
 
-    # Don't do lldb-server (llgs) tests on anything except Linux and Windows.
-    configuration.dont_do_llgs_test = not (
-            "linux" in target_platform or
-            "netbsd" in target_platform or
-            "windows" in target_platform)
+    # Perform debugserver tests elsewhere (i.e. on Darwin platforms).
+    configuration.debugserver_platform = not configuration.llgs_platform
 
     for testdir in configuration.testdirs:
         for (dirpath, dirnames, filenames) in os.walk(testdir):

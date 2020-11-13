@@ -154,33 +154,13 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
     std::swap(A, B);
   }
 
-  // Match canonical forms of abs/nabs/min/max. We are not using ValueTracking's
+  // Match canonical forms of min/max. We are not using ValueTracking's
   // more powerful matchSelectPattern() because it may rely on instruction flags
   // such as "nsw". That would be incompatible with the current hashing
   // mechanism that may remove flags to increase the likelihood of CSE.
 
-  // These are the canonical forms of abs(X) and nabs(X) created by instcombine:
-  // %N = sub i32 0, %X
-  // %C = icmp slt i32 %X, 0
-  // %ABS = select i1 %C, i32 %N, i32 %X
-  //
-  // %N = sub i32 0, %X
-  // %C = icmp slt i32 %X, 0
-  // %NABS = select i1 %C, i32 %X, i32 %N
   Flavor = SPF_UNKNOWN;
   CmpInst::Predicate Pred;
-  if (match(Cond, m_ICmp(Pred, m_Specific(B), m_ZeroInt())) &&
-      Pred == ICmpInst::ICMP_SLT && match(A, m_Neg(m_Specific(B)))) {
-    // ABS: B < 0 ? -B : B
-    Flavor = SPF_ABS;
-    return true;
-  }
-  if (match(Cond, m_ICmp(Pred, m_Specific(A), m_ZeroInt())) &&
-      Pred == ICmpInst::ICMP_SLT && match(B, m_Neg(m_Specific(A)))) {
-    // NABS: A < 0 ? A : -A
-    Flavor = SPF_NABS;
-    return true;
-  }
 
   if (!match(Cond, m_ICmp(Pred, m_Specific(A), m_Specific(B)))) {
     // Check for commuted variants of min/max by swapping predicate.
@@ -239,7 +219,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
   SelectPatternFlavor SPF;
   Value *Cond, *A, *B;
   if (matchSelectWithOptionalNotCond(Inst, Cond, A, B, SPF)) {
-    // Hash min/max/abs (cmp + select) to allow for commuted operands.
+    // Hash min/max (cmp + select) to allow for commuted operands.
     // Min/max may also have non-canonical compare predicate (eg, the compare for
     // smin may use 'sgt' rather than 'slt'), and non-canonical operands in the
     // compare.
@@ -248,10 +228,6 @@ static unsigned getHashValueImpl(SimpleValue Val) {
         SPF == SPF_UMIN || SPF == SPF_UMAX) {
       if (A > B)
         std::swap(A, B);
-      return hash_combine(Inst->getOpcode(), SPF, A, B);
-    }
-    if (SPF == SPF_ABS || SPF == SPF_NABS) {
-      // ABS/NABS always puts the input in A and its negation in B.
       return hash_combine(Inst->getOpcode(), SPF, A, B);
     }
 
@@ -365,7 +341,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
            LII->getArgOperand(1) == RII->getArgOperand(0);
   }
 
-  // Min/max/abs can occur with commuted operands, non-canonical predicates,
+  // Min/max can occur with commuted operands, non-canonical predicates,
   // and/or non-canonical operands.
   // Selects can be non-trivially equivalent via inverted conditions and swaps.
   SelectPatternFlavor LSPF, RSPF;
@@ -378,11 +354,6 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
           LSPF == SPF_UMIN || LSPF == SPF_UMAX)
         return ((LHSA == RHSA && LHSB == RHSB) ||
                 (LHSA == RHSB && LHSB == RHSA));
-
-      if (LSPF == SPF_ABS || LSPF == SPF_NABS) {
-        // Abs results are placed in a defined order by matchSelectPattern.
-        return LHSA == RHSA && LHSB == RHSB;
-      }
 
       // select Cond, A, B <--> select not(Cond), B, A
       if (CondL == CondR && LHSA == RHSA && LHSB == RHSB)
@@ -401,7 +372,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     // This intentionally does NOT handle patterns with a double-negation in
     // the sense of not + not, because doing so could result in values
     // comparing
-    // as equal that hash differently in the min/max/abs cases like:
+    // as equal that hash differently in the min/max cases like:
     // select (cmp slt, X, Y), X, Y <--> select (not (not (cmp slt, X, Y))), X, Y
     //   ^ hashes as min                  ^ would not hash as min
     // In the context of the EarlyCSE pass, however, such cases never reach
@@ -656,11 +627,11 @@ private:
     StackNode &operator=(const StackNode &) = delete;
 
     // Accessors.
-    unsigned currentGeneration() { return CurrentGeneration; }
-    unsigned childGeneration() { return ChildGeneration; }
+    unsigned currentGeneration() const { return CurrentGeneration; }
+    unsigned childGeneration() const { return ChildGeneration; }
     void childGeneration(unsigned generation) { ChildGeneration = generation; }
     DomTreeNode *node() { return Node; }
-    DomTreeNode::const_iterator childIter() { return ChildIter; }
+    DomTreeNode::const_iterator childIter() const { return ChildIter; }
 
     DomTreeNode *nextChild() {
       DomTreeNode *child = *ChildIter;
@@ -668,8 +639,8 @@ private:
       return child;
     }
 
-    DomTreeNode::const_iterator end() { return EndIter; }
-    bool isProcessed() { return Processed; }
+    DomTreeNode::const_iterator end() const { return EndIter; }
+    bool isProcessed() const { return Processed; }
     void process() { Processed = true; }
 
   private:

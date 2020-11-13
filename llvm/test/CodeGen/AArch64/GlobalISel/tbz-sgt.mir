@@ -99,9 +99,8 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr64 = COPY $x0
-  ; CHECK:   %negative_one:gpr64 = MOVi64imm -1
-  ; CHECK:   %and:gpr64common = ANDXri %copy, 8000
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %and, %negative_one, implicit-def $nzcv
+  ; CHECK:   %and:gpr64sp = ANDXri %copy, 8000
+  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri %and, 1, 0, implicit-def $nzcv
   ; CHECK:   Bcc 12, %bb.1, implicit $nzcv
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:

@@ -73,7 +73,6 @@ public:
 
   void fixExternalBranchEdge(Edge &E, Symbol &Stub) {
     assert(E.getKind() == Branch32 && "Not a Branch32 edge?");
-    assert(E.getAddend() == 0 && "Branch32 edge has non-zero addend?");
 
     // Set the edge kind to Branch32ToStub. We will use this to check for stub
     // optimization opportunities in the optimize ELF_x86_64_GOTAndStubs pass
@@ -160,11 +159,6 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
           });
         }
       } else if (E.getKind() == Branch32ToStub) {
-
-        // Switch the edge kind to PCRel32: Whether we change the edge target
-        // or not this will be the desired kind.
-        E.setKind(Branch32);
-
         auto &StubBlock = E.getTarget().getBlock();
         assert(StubBlock.getSize() ==
                    sizeof(ELF_x86_64_GOTAndStubsBuilder::StubContent) &&
@@ -185,6 +179,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (Displacement >= std::numeric_limits<int32_t>::min() &&
             Displacement <= std::numeric_limits<int32_t>::max()) {
+          E.setKind(Branch32);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({
             dbgs() << "  Replaced stub branch with direct branch:\n    ";
@@ -232,6 +227,8 @@ private:
     case ELF::R_X86_64_GOTPCRELX:
     case ELF::R_X86_64_REX_GOTPCRELX:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
+    case ELF::R_X86_64_PLT32:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::Branch32;
     }
     return make_error<JITLinkError>("Unsupported x86-64 relocation:" +
                                     formatv("{0:d}", Type));
@@ -639,6 +636,8 @@ private:
     char *FixupPtr = BlockWorkingMem + E.getOffset();
     JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
     switch (E.getKind()) {
+    case ELFX86RelocationKind::Branch32:
+    case ELFX86RelocationKind::Branch32ToStub:
     case ELFX86RelocationKind::PCRel32:
     case ELFX86RelocationKind::PCRel32GOTLoad: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
@@ -687,6 +686,10 @@ StringRef getELFX86RelocationKindName(Edge::Kind R) {
     return "Pointer64";
   case PCRel32GOTLoad:
     return "PCRel32GOTLoad";
+  case Branch32:
+    return "Branch32";
+  case Branch32ToStub:
+    return "Branch32ToStub";
   }
   return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }

@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/APValue.h"
+#include "Linkage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,6 +58,51 @@ APValue::LValueBase APValue::LValueBase::getTypeInfo(TypeInfoLValue LV,
   Base.Ptr = LV;
   Base.TypeInfoType = TypeInfo.getAsOpaquePtr();
   return Base;
+}
+
+QualType APValue::LValueBase::getType() const {
+  if (!*this) return QualType();
+  if (const ValueDecl *D = dyn_cast<const ValueDecl*>()) {
+    // FIXME: It's unclear where we're supposed to take the type from, and
+    // this actually matters for arrays of unknown bound. Eg:
+    //
+    // extern int arr[]; void f() { extern int arr[3]; };
+    // constexpr int *p = &arr[1]; // valid?
+    //
+    // For now, we take the most complete type we can find.
+    for (auto *Redecl = cast<ValueDecl>(D->getMostRecentDecl()); Redecl;
+         Redecl = cast_or_null<ValueDecl>(Redecl->getPreviousDecl())) {
+      QualType T = Redecl->getType();
+      if (!T->isIncompleteArrayType())
+        return T;
+    }
+    return D->getType();
+  }
+
+  if (is<TypeInfoLValue>())
+    return getTypeInfoType();
+
+  if (is<DynamicAllocLValue>())
+    return getDynamicAllocType();
+
+  const Expr *Base = get<const Expr*>();
+
+  // For a materialized temporary, the type of the temporary we materialized
+  // may not be the type of the expression.
+  if (const MaterializeTemporaryExpr *MTE =
+          clang::dyn_cast<MaterializeTemporaryExpr>(Base)) {
+    SmallVector<const Expr *, 2> CommaLHSs;
+    SmallVector<SubobjectAdjustment, 2> Adjustments;
+    const Expr *Temp = MTE->getSubExpr();
+    const Expr *Inner = Temp->skipRValueSubobjectAdjustments(CommaLHSs,
+                                                             Adjustments);
+    // Keep any cv-qualifiers from the reference if we generated a temporary
+    // for it directly. Otherwise use the type after adjustment.
+    if (!Adjustments.empty())
+      return Inner->getType();
+  }
+
+  return Base->getType();
 }
 
 unsigned APValue::LValueBase::getCallIndex() const {
@@ -573,6 +620,11 @@ static double GetApproxValue(const llvm::APFloat &F) {
 
 void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
                           QualType Ty) const {
+  printPretty(Out, Ctx.getPrintingPolicy(), Ty, &Ctx);
+}
+
+void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
+                          QualType Ty, const ASTContext *Ctx) const {
   // There are no objects of type 'void', but values of this type can be
   // returned from functions.
   if (Ty->isVoidType()) {
@@ -602,10 +654,10 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
   case APValue::Vector: {
     Out << '{';
     QualType ElemTy = Ty->castAs<VectorType>()->getElementType();
-    getVectorElt(0).printPretty(Out, Ctx, ElemTy);
+    getVectorElt(0).printPretty(Out, Policy, ElemTy, Ctx);
     for (unsigned i = 1; i != getVectorLength(); ++i) {
       Out << ", ";
-      getVectorElt(i).printPretty(Out, Ctx, ElemTy);
+      getVectorElt(i).printPretty(Out, Policy, ElemTy, Ctx);
     }
     Out << '}';
     return;
@@ -627,12 +679,12 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     LValueBase Base = getLValueBase();
     if (!Base) {
       if (isNullPointer()) {
-        Out << (Ctx.getLangOpts().CPlusPlus11 ? "nullptr" : "0");
+        Out << (Policy.Nullptr ? "nullptr" : "0");
       } else if (IsReference) {
-        Out << "*(" << InnerTy.stream(Ctx.getPrintingPolicy()) << "*)"
+        Out << "*(" << InnerTy.stream(Policy) << "*)"
             << getLValueOffset().getQuantity();
       } else {
-        Out << "(" << Ty.stream(Ctx.getPrintingPolicy()) << ")"
+        Out << "(" << Ty.stream(Policy) << ")"
             << getLValueOffset().getQuantity();
       }
       return;
@@ -641,11 +693,11 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     if (!hasLValuePath()) {
       // No lvalue path: just print the offset.
       CharUnits O = getLValueOffset();
-      CharUnits S = Ctx.getTypeSizeInChars(InnerTy);
+      CharUnits S = Ctx ? Ctx->getTypeSizeInChars(InnerTy) : CharUnits::Zero();
       if (!O.isZero()) {
         if (IsReference)
           Out << "*(";
-        if (O % S) {
+        if (S.isZero() || O % S) {
           Out << "(char*)";
           S = CharUnits::One();
         }
@@ -657,16 +709,15 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
       if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>())
         Out << *VD;
       else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
-        TI.print(Out, Ctx.getPrintingPolicy());
+        TI.print(Out, Policy);
       } else if (DynamicAllocLValue DA = Base.dyn_cast<DynamicAllocLValue>()) {
         Out << "{*new "
-            << Base.getDynamicAllocType().stream(Ctx.getPrintingPolicy()) << "#"
+            << Base.getDynamicAllocType().stream(Policy) << "#"
             << DA.getIndex() << "}";
       } else {
         assert(Base.get<const Expr *>() != nullptr &&
                "Expecting non-null Expr");
-        Base.get<const Expr*>()->printPretty(Out, nullptr,
-                                             Ctx.getPrintingPolicy());
+        Base.get<const Expr*>()->printPretty(Out, nullptr, Policy);
       }
 
       if (!O.isZero()) {
@@ -683,37 +734,31 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     else if (isLValueOnePastTheEnd())
       Out << "*(&";
 
-    QualType ElemTy;
+    QualType ElemTy = Base.getType();
     if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>()) {
       Out << *VD;
-      ElemTy = VD->getType();
     } else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {
-      TI.print(Out, Ctx.getPrintingPolicy());
-      ElemTy = Base.getTypeInfoType();
+      TI.print(Out, Policy);
     } else if (DynamicAllocLValue DA = Base.dyn_cast<DynamicAllocLValue>()) {
-      Out << "{*new "
-          << Base.getDynamicAllocType().stream(Ctx.getPrintingPolicy()) << "#"
+      Out << "{*new " << Base.getDynamicAllocType().stream(Policy) << "#"
           << DA.getIndex() << "}";
-      ElemTy = Base.getDynamicAllocType();
     } else {
       const Expr *E = Base.get<const Expr*>();
       assert(E != nullptr && "Expecting non-null Expr");
-      E->printPretty(Out, nullptr, Ctx.getPrintingPolicy());
-      // FIXME: This is wrong if E is a MaterializeTemporaryExpr with an lvalue
-      // adjustment.
-      ElemTy = E->getType();
+      E->printPretty(Out, nullptr, Policy);
     }
 
     ArrayRef<LValuePathEntry> Path = getLValuePath();
     const CXXRecordDecl *CastToBase = nullptr;
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
-      if (ElemTy->getAs<RecordType>()) {
+      if (ElemTy->isRecordType()) {
         // The lvalue refers to a class type, so the next path entry is a base
         // or member.
         const Decl *BaseOrMember = Path[I].getAsBaseOrMember().getPointer();
         if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
           CastToBase = RD;
-          ElemTy = Ctx.getRecordType(RD);
+          // Leave ElemTy referring to the most-derived class. The actual type
+          // doesn't matter except for array types.
         } else {
           const ValueDecl *VD = cast<ValueDecl>(BaseOrMember);
           Out << ".";
@@ -725,7 +770,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
       } else {
         // The lvalue must refer to an array.
         Out << '[' << Path[I].getAsArrayIndex() << ']';
-        ElemTy = Ctx.getAsArrayType(ElemTy)->getElementType();
+        ElemTy = ElemTy->castAsArrayTypeUnsafe()->getElementType();
       }
     }
 
@@ -740,11 +785,11 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     return;
   }
   case APValue::Array: {
-    const ArrayType *AT = Ctx.getAsArrayType(Ty);
+    const ArrayType *AT = Ty->castAsArrayTypeUnsafe();
     QualType ElemTy = AT->getElementType();
     Out << '{';
     if (unsigned N = getArrayInitializedElts()) {
-      getArrayInitializedElt(0).printPretty(Out, Ctx, ElemTy);
+      getArrayInitializedElt(0).printPretty(Out, Policy, ElemTy, Ctx);
       for (unsigned I = 1; I != N; ++I) {
         Out << ", ";
         if (I == 10) {
@@ -752,7 +797,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
           Out << "...";
           break;
         }
-        getArrayInitializedElt(I).printPretty(Out, Ctx, ElemTy);
+        getArrayInitializedElt(I).printPretty(Out, Policy, ElemTy, Ctx);
       }
     }
     Out << '}';
@@ -769,7 +814,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
         assert(BI != CD->bases_end());
         if (!First)
           Out << ", ";
-        getStructBase(I).printPretty(Out, Ctx, BI->getType());
+        getStructBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
         First = false;
       }
     }
@@ -778,7 +823,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
         Out << ", ";
       if (FI->isUnnamedBitfield()) continue;
       getStructField(FI->getFieldIndex()).
-        printPretty(Out, Ctx, FI->getType());
+        printPretty(Out, Policy, FI->getType(), Ctx);
       First = false;
     }
     Out << '}';
@@ -788,7 +833,7 @@ void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
     Out << '{';
     if (const FieldDecl *FD = getUnionField()) {
       Out << "." << *FD << " = ";
-      getUnionValue().printPretty(Out, Ctx, FD->getType());
+      getUnionValue().printPretty(Out, Policy, FD->getType(), Ctx);
     }
     Out << '}';
     return;
@@ -976,4 +1021,100 @@ void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
       setMemberPointerUninit(Member, IsDerivedMember, Path.size());
   for (unsigned I = 0; I != Path.size(); ++I)
     InternalPath[I] = Path[I]->getCanonicalDecl();
+}
+
+LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
+                                           LVComputationKind computation) {
+  LinkageInfo LV = LinkageInfo::external();
+
+  auto MergeLV = [&](LinkageInfo MergeLV) {
+    LV.merge(MergeLV);
+    return LV.getLinkage() == InternalLinkage;
+  };
+  auto Merge = [&](const APValue &V) {
+    return MergeLV(getLVForValue(V, computation));
+  };
+
+  switch (V.getKind()) {
+  case APValue::None:
+  case APValue::Indeterminate:
+  case APValue::Int:
+  case APValue::Float:
+  case APValue::FixedPoint:
+  case APValue::ComplexInt:
+  case APValue::ComplexFloat:
+  case APValue::Vector:
+    break;
+
+  case APValue::AddrLabelDiff:
+    // Even for an inline function, it's not reasonable to treat a difference
+    // between the addresses of labels as an external value.
+    return LinkageInfo::internal();
+
+  case APValue::Struct: {
+    for (unsigned I = 0, N = V.getStructNumBases(); I != N; ++I)
+      if (Merge(V.getStructBase(I)))
+        break;
+    for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I)
+      if (Merge(V.getStructField(I)))
+        break;
+    break;
+  }
+
+  case APValue::Union:
+    if (const auto *FD = V.getUnionField())
+      Merge(V.getUnionValue());
+    break;
+
+  case APValue::Array: {
+    for (unsigned I = 0, N = V.getArrayInitializedElts(); I != N; ++I)
+      if (Merge(V.getArrayInitializedElt(I)))
+        break;
+    if (V.hasArrayFiller())
+      Merge(V.getArrayFiller());
+    break;
+  }
+
+  case APValue::LValue: {
+    if (!V.getLValueBase()) {
+      // Null or absolute address: this is external.
+    } else if (const auto *VD =
+                   V.getLValueBase().dyn_cast<const ValueDecl *>()) {
+      if (VD && MergeLV(getLVForDecl(VD, computation)))
+        break;
+    } else if (const auto TI = V.getLValueBase().dyn_cast<TypeInfoLValue>()) {
+      if (MergeLV(getLVForType(*TI.getType(), computation)))
+        break;
+    } else if (const Expr *E = V.getLValueBase().dyn_cast<const Expr *>()) {
+      // Almost all expression bases are internal. The exception is
+      // lifetime-extended temporaries.
+      // FIXME: These should be modeled as having the
+      // LifetimeExtendedTemporaryDecl itself as the base.
+      // FIXME: If we permit Objective-C object literals in template arguments,
+      // they should not imply internal linkage.
+      auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E);
+      if (!MTE || MTE->getStorageDuration() == SD_FullExpression)
+        return LinkageInfo::internal();
+      if (MergeLV(getLVForDecl(MTE->getExtendingDecl(), computation)))
+        break;
+    } else {
+      assert(V.getLValueBase().is<DynamicAllocLValue>() &&
+             "unexpected LValueBase kind");
+      return LinkageInfo::internal();
+    }
+    // The lvalue path doesn't matter: pointers to all subobjects always have
+    // the same visibility as pointers to the complete object.
+    break;
+  }
+
+  case APValue::MemberPointer:
+    if (const NamedDecl *D = V.getMemberPointerDecl())
+      MergeLV(getLVForDecl(D, computation));
+    // Note that we could have a base-to-derived conversion here to a member of
+    // a derived class with less linkage/visibility. That's covered by the
+    // linkage and visibility of the value's type.
+    break;
+  }
+
+  return LV;
 }

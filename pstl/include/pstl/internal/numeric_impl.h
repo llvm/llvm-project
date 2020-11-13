@@ -304,7 +304,7 @@ _ForwardIterator2
 __brick_adjacent_difference(_ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __d_first,
                             BinaryOperation __op, /*is_vector=*/std::true_type) noexcept
 {
-    assert(__first != __last);
+    _PSTL_ASSERT(__first != __last);
 
     typedef typename std::iterator_traits<_ForwardIterator1>::reference _ReferenceType1;
     typedef typename std::iterator_traits<_ForwardIterator2>::reference _ReferenceType2;
@@ -333,7 +333,7 @@ __pattern_adjacent_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __fir
                               _ForwardIterator2 __d_first, _BinaryOperation __op, _IsVector __is_vector,
                               /*is_parallel=*/std::true_type)
 {
-    assert(__first != __last);
+    _PSTL_ASSERT(__first != __last);
     typedef typename std::iterator_traits<_ForwardIterator1>::reference _ReferenceType1;
     typedef typename std::iterator_traits<_ForwardIterator2>::reference _ReferenceType2;
 

@@ -261,8 +261,7 @@ TYPED_TEST(SmallVectorTest, PushPopTest) {
   this->assertValuesInOrder(this->theVector, 2u, 2, 1);
 
   // Pop remaining elements
-  this->theVector.pop_back();
-  this->theVector.pop_back();
+  this->theVector.pop_back_n(2);
   this->assertEmpty(this->theVector);
 
   // Check number of constructor calls. Should be 2 for each list element,

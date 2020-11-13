@@ -64,6 +64,7 @@ endif()
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
     ios.cpp
+    ios.instantiations.cpp
     iostream.cpp
     locale.cpp
     regex.cpp
@@ -175,9 +176,6 @@ split_list(LIBCXX_LINK_FLAGS)
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  if(COMMAND llvm_setup_rpath)
-    llvm_setup_rpath(cxx_shared)
-  endif()
   target_link_libraries(cxx_shared PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared

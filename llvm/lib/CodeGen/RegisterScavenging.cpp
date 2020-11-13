@@ -97,12 +97,12 @@ void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
   }
 }
 
-void RegScavenger::addRegUnits(BitVector &BV, Register Reg) {
+void RegScavenger::addRegUnits(BitVector &BV, MCRegister Reg) {
   for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
     BV.set(*RUI);
 }
 
-void RegScavenger::removeRegUnits(BitVector &BV, Register Reg) {
+void RegScavenger::removeRegUnits(BitVector &BV, MCRegister Reg) {
   for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
     BV.reset(*RUI);
 }
@@ -134,9 +134,9 @@ void RegScavenger::determineKillsAndDefs() {
     }
     if (!MO.isReg())
       continue;
-    Register Reg = MO.getReg();
-    if (!Register::isPhysicalRegister(Reg) || isReserved(Reg))
+    if (!MO.getReg().isPhysical() || isReserved(MO.getReg()))
       continue;
+    MCRegister Reg = MO.getReg().asMCReg();
 
     if (MO.isUse()) {
       // Ignore undef uses.

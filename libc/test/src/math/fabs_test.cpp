@@ -15,11 +15,7 @@
 
 using FPBits = __llvm_libc::fputil::FPBits<double>;
 
-static const double zero = FPBits::zero();
-static const double negZero = FPBits::negZero();
-static const double nan = FPBits::buildNaN(1);
-static const double inf = FPBits::inf();
-static const double negInf = FPBits::negInf();
+DECLARE_SPECIAL_CONSTANTS(double)
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 

@@ -569,6 +569,30 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = floorf %arg0 : tensor<4x4x?xf32>
   %166 = floorf %t : tensor<4x4x?xf32>
 
+  // CHECK: %{{[0-9]+}} = floordivi_signed %arg2, %arg2 : i32
+  %167 = floordivi_signed %i, %i : i32
+
+  // CHECK: %{{[0-9]+}} = floordivi_signed %arg3, %arg3 : index
+  %168 = floordivi_signed %idx, %idx : index
+
+  // CHECK: %{{[0-9]+}} = floordivi_signed %cst_5, %cst_5 : vector<42xi32>
+  %169 = floordivi_signed %vci32, %vci32 : vector<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = floordivi_signed %cst_4, %cst_4 : tensor<42xi32>
+  %170 = floordivi_signed %tci32, %tci32 : tensor<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = ceildivi_signed %arg2, %arg2 : i32
+  %171 = ceildivi_signed %i, %i : i32
+
+  // CHECK: %{{[0-9]+}} = ceildivi_signed %arg3, %arg3 : index
+  %172 = ceildivi_signed %idx, %idx : index
+
+  // CHECK: %{{[0-9]+}} = ceildivi_signed %cst_5, %cst_5 : vector<42xi32>
+  %173 = ceildivi_signed %vci32, %vci32 : vector<42 x i32>
+
+  // CHECK: %{{[0-9]+}} = ceildivi_signed %cst_4, %cst_4 : tensor<42xi32>
+  %174 = ceildivi_signed %tci32, %tci32 : tensor<42 x i32>
+
   return
 }
 
@@ -945,3 +969,7 @@ func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : 
 
   return
 }
+
+// CHECK-LABEL: func private @legacy_visibility_syntax
+func @legacy_visibility_syntax() attributes { sym_visibility = "private" }
+

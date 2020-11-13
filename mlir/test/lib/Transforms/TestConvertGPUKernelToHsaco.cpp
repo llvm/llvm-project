@@ -11,6 +11,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/ROCDLIR.h"
 #include "llvm/Support/TargetSelect.h"
+
 using namespace mlir;
 
 #if MLIR_ROCM_CONVERSIONS_ENABLED
@@ -21,6 +22,7 @@ static OwnedBlob compileIsaToHsacoForTesting(const std::string &, Location,
 }
 
 namespace mlir {
+namespace test {
 void registerTestConvertGPUKernelToHsacoPass() {
   PassPipelineRegistration<>(
       "test-kernel-to-hsaco",
@@ -37,5 +39,6 @@ void registerTestConvertGPUKernelToHsacoPass() {
             "amdgcn-amd-amdhsa", "gfx900", "-code-object-v3", "rocdl.hsaco"));
       });
 }
+} // namespace test
 } // namespace mlir
 #endif

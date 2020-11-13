@@ -12,8 +12,6 @@
 // BufferHoisting expected behavior: It should move the existing AllocOp to
 // the entry block.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @condBranch
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cond_br %arg0, ^bb1, ^bb2
@@ -21,16 +19,10 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -49,8 +41,6 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // to any other block since the alloc has a dynamic dependency to block argument
 // %0 in bb2.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @condBranchDynamicType
 func @condBranchDynamicType(
   %arg0: i1,
@@ -62,16 +52,10 @@ func @condBranchDynamicType(
   br ^bb3(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = alloc(%0) : memref<?xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<?xf32>)
-     outs(%1: memref<?xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<?xf32>) out(%1: memref<?xf32>)
   br ^bb3(%1 : memref<?xf32>)
 ^bb3(%2: memref<?xf32>):
-  "linalg.copy"(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
+  test.copy(%2, %arg2) : (memref<?xf32>, memref<?xf32>)
   return
 }
 
@@ -79,7 +63,7 @@ func @condBranchDynamicType(
 //      CHECK: ^bb2
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc(%[[IDX]])
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
 
@@ -99,8 +83,6 @@ func @condBranchDynamicType(
 // to any other block since the alloc has a dynamic dependency to block argument
 // %0 in bb2.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @condBranchDynamicTypeNested
 func @condBranchDynamicTypeNested(
   %arg0: i1,
@@ -112,13 +94,7 @@ func @condBranchDynamicTypeNested(
   br ^bb6(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = alloc(%0) : memref<?xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<?xf32>)
-     outs(%1: memref<?xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<?xf32>) out(%1: memref<?xf32>)
   cond_br %arg0, ^bb3, ^bb4
 ^bb3:
   br ^bb5(%1 : memref<?xf32>)
@@ -129,7 +105,7 @@ func @condBranchDynamicTypeNested(
 ^bb6(%3: memref<?xf32>):
   br ^bb7(%3 : memref<?xf32>)
 ^bb7(%4: memref<?xf32>):
-  "linalg.copy"(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
+  test.copy(%4, %arg2) : (memref<?xf32>, memref<?xf32>)
   return
 }
 
@@ -137,7 +113,7 @@ func @condBranchDynamicTypeNested(
 //      CHECK: ^bb2
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc(%[[IDX]])
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
 
@@ -150,23 +126,15 @@ func @condBranchDynamicTypeNested(
 // BufferHoisting expected behavior: It should move the existing AllocOp to
 // the entry block.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @criticalEdge
 func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
 ^bb1:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   br ^bb2(%0 : memref<2xf32>)
 ^bb2(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -183,18 +151,10 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //    bb3 <- Initial position of the second AllocOp
 // BufferHoisting expected behavior: It shouldn't move the AllocOps.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @ifElse
 func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
@@ -204,25 +164,19 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
 ^bb3(%5: memref<2xf32>, %6: memref<2xf32>):
   %7 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%7: memref<2xf32>)
-     outs(%7: memref<2xf32>) {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }
-  "linalg.copy"(%7, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.buffer_based in(%7: memref<2xf32>) out(%7: memref<2xf32>)
+  test.copy(%7, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 //      CHECK: br ^bb3
 //      CHECK: br ^bb3
 // CHECK-NEXT: ^bb3
 //      CHECK: %[[ALLOC1:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
-//      CHECK: linalg.copy(%[[ALLOC1]]
+// CHECK-NEXT: test.buffer_based
+//      CHECK: test.copy(%[[ALLOC1]]
 // CHECK-NEXT: return
 
 // -----
@@ -235,18 +189,10 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //    bb3
 // BufferHoisting expected behavior: It shouldn't move the AllocOp.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @ifElseNoUsers
 func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
@@ -255,12 +201,12 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 ^bb2(%3: memref<2xf32>, %4: memref<2xf32>):
   br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
 ^bb3(%5: memref<2xf32>, %6: memref<2xf32>):
-  "linalg.copy"(%arg1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%arg1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
 
@@ -275,18 +221,10 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //       bb5 <- Initial position of the second AllocOp
 // BufferHoisting expected behavior: AllocOps shouldn't be moved.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @ifElseNested
 func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
@@ -300,58 +238,38 @@ func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   br ^bb5(%3, %6 : memref<2xf32>, memref<2xf32>)
 ^bb5(%7: memref<2xf32>, %8: memref<2xf32>):
   %9 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%7: memref<2xf32>)
-     outs(%9: memref<2xf32>) {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }
-  "linalg.copy"(%9, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.buffer_based in(%7: memref<2xf32>) out(%9: memref<2xf32>)
+  test.copy(%9, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 //      CHECK: br ^bb5
 //      CHECK: br ^bb5
 //      CHECK: br ^bb5
 // CHECK-NEXT: ^bb5
 //      CHECK: %[[ALLOC1:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
 
 // Test Case: Dead operations in a single block.
 // BufferHoisting expected behavior: It shouldn't move the AllocOps.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @redundantOperations
 func @redundantOperations(%arg0: memref<2xf32>) {
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg0: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
   %1 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%0: memref<2xf32>)
-     outs(%1: memref<2xf32>) {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }
+  test.buffer_based in(%0: memref<2xf32>) out(%1: memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 //      CHECK: %[[ALLOC1:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
 
@@ -364,8 +282,6 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 // BufferHoisting expected behavior: Both AllocOps should be moved to the
 // entry block.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @moving_alloc_and_inserting_missing_dealloc
 func @moving_alloc_and_inserting_missing_dealloc(
   %cond: i1,
@@ -374,26 +290,14 @@ func @moving_alloc_and_inserting_missing_dealloc(
   cond_br %cond, ^bb1, ^bb2
 ^bb1:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg0: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
   br ^exit(%0 : memref<2xf32>)
 ^bb2:
   %1 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg0: memref<2xf32>)
-     outs(%1: memref<2xf32>) {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }
+  test.buffer_based in(%arg0: memref<2xf32>) out(%1: memref<2xf32>)
   br ^exit(%1 : memref<2xf32>)
 ^exit(%arg2: memref<2xf32>):
-  "linalg.copy"(%arg2, %arg1) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%arg2, %arg1) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -413,8 +317,6 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // BufferHoisting expected behavior: It should move the AllocOp to the entry
 // block.
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @moving_invalid_dealloc_op_complex
 func @moving_invalid_dealloc_op_complex(
   %cond: i1,
@@ -425,17 +327,11 @@ func @moving_invalid_dealloc_op_complex(
   br ^exit(%arg0 : memref<2xf32>)
 ^bb2:
   %1 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg0: memref<2xf32>)
-     outs(%1: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg0: memref<2xf32>) out(%1: memref<2xf32>)
   dealloc %1 : memref<2xf32>
   br ^exit(%1 : memref<2xf32>)
 ^exit(%arg2: memref<2xf32>):
-  "linalg.copy"(%arg2, %arg1) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%arg2, %arg1) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -444,13 +340,11 @@ func @moving_invalid_dealloc_op_complex(
 
 // -----
 
-// Test Case: Nested regions - This test defines a GenericOp inside the region
-// of another GenericOp.
-// BufferHoisting expected behavior: The AllocOp of inner GenericOp should
-// remain inside the region of outer GenericOp. The AllocOp of the outer
-// GenericOp should be moved to the entry block.
-
-#map0 = affine_map<(d0) -> (d0)>
+// Test Case: Nested regions - This test defines a BufferBasedOp inside the
+// region of a RegionBufferBasedOp.
+// BufferHoisting expected behavior: The AllocOp for the BufferBasedOp should
+// remain inside the region of the RegiobBufferBasedOp. The AllocOp of the
+// RegionBufferBasedOp should be moved to the entry block.
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
 func @nested_regions_and_cond_branch(
@@ -462,35 +356,23 @@ func @nested_regions_and_cond_branch(
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {
-    indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
+  test.region_buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %1 = alloc() : memref<2xf32>
-    linalg.generic {
-      indexing_maps = [#map0, #map0],
-      iterator_types = ["parallel"]}
-        ins(%arg1: memref<2xf32>)
-      outs(%1: memref<2xf32>) {
-    ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-      %tmp2 = exp %gen2_arg0 : f32
-      linalg.yield %tmp2 : f32
-    }
+    test.buffer_based in(%arg1: memref<2xf32>) out(%1: memref<2xf32>)
     %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
+    test.region_yield %tmp1 : f32
   }
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 // CHECK-NEXT:   %[[ALLOC0:.*]] = alloc()
 // CHECK-NEXT:   cond_br
-//      CHECK:   linalg.generic
+//      CHECK:   test.region_buffer_based
 //      CHECK:     %[[ALLOC1:.*]] = alloc()
-// CHECK-NEXT:     linalg.generic
+// CHECK-NEXT:     test.buffer_based
 
 // -----
 
@@ -630,8 +512,6 @@ func @inner_region_control_flow_div(
 
 // -----
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // Test Case: Alloca operations shouldn't be moved.
 
 // CHECK-LABEL: func @condBranchAlloca
@@ -641,16 +521,10 @@ func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = alloca() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -658,11 +532,9 @@ func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //      CHECK: ^bb2
 //      CHECK: ^bb2
 // CHECK-NEXT: %[[ALLOCA:.*]] = alloca()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // Test Case: Alloca operations shouldn't be moved. The alloc operation also
 // shouldn't be moved analogously to the ifElseNested test.
@@ -673,13 +545,7 @@ func @ifElseNestedAlloca(
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
   %0 = alloca() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
-  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
-  }
+  test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
@@ -693,29 +559,21 @@ func @ifElseNestedAlloca(
   br ^bb5(%3, %6 : memref<2xf32>, memref<2xf32>)
 ^bb5(%7: memref<2xf32>, %8: memref<2xf32>):
   %9 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
-      ins(%7: memref<2xf32>)
-     outs(%9: memref<2xf32>) {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }
-  "linalg.copy"(%9, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.buffer_based in(%7: memref<2xf32>) out(%9: memref<2xf32>)
+  test.copy(%9, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOCA:.*]] = alloca()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 //      CHECK: ^bb5
 //      CHECK: ^bb5
 //      CHECK: ^bb5
 // CHECK-NEXT: ^bb5
 // CHECK-NEXT: %[[ALLOC:.*]] = alloc()
-// CHECK-NEXT: linalg.generic
+// CHECK-NEXT: test.buffer_based
 
 // -----
-
-#map0 = affine_map<(d0) -> (d0)>
 
 // Test Case: Alloca operations shouldn't be moved. The alloc operation should
 // be moved in the beginning analogous to the nestedRegionsAndCondBranch test.
@@ -730,35 +588,23 @@ func @nestedRegionsAndCondBranchAlloca(
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {
-    indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]}
-      ins(%arg1: memref<2xf32>)
-     outs(%0: memref<2xf32>) {
+  test.region_buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %1 = alloca() : memref<2xf32>
-    linalg.generic {
-      indexing_maps = [#map0, #map0],
-      iterator_types = ["parallel"]}
-        ins(%arg1: memref<2xf32>)
-      outs(%1: memref<2xf32>) {
-    ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-      %tmp2 = exp %gen2_arg0 : f32
-      linalg.yield %tmp2 : f32
-    }
+    test.buffer_based in(%arg1: memref<2xf32>) out(%1: memref<2xf32>)
     %tmp1 = exp %gen1_arg0 : f32
-    linalg.yield %tmp1 : f32
+    test.region_yield %tmp1 : f32
   }
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 // CHECK-NEXT:   %[[ALLOC:.*]] = alloc()
 // CHECK-NEXT:   cond_br
-//      CHECK:   linalg.generic
+//      CHECK:   test.region_buffer_based
 //      CHECK:     %[[ALLOCA:.*]] = alloca()
-// CHECK-NEXT:     linalg.generic
+// CHECK-NEXT:     test.buffer_based
 
 // -----
 
@@ -779,7 +625,7 @@ func @loop_alloc(
     %3 = alloc() : memref<2xf32>
     scf.yield %3 : memref<2xf32>
   }
-  "linalg.copy"(%1, %res) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %res) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -852,7 +698,7 @@ func @loop_nested_alloc(
     }
     scf.yield %2 : memref<2xf32>
   }
-  "linalg.copy"(%1, %res) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %res) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
@@ -893,7 +739,7 @@ func @loop_nested_alloc_dyn_dependency(
     }
     scf.yield %0 : memref<?xf32>
   }
-  "linalg.copy"(%1, %res) : (memref<?xf32>, memref<?xf32>) -> ()
+  test.copy(%1, %res) : (memref<?xf32>, memref<?xf32>)
   return
 }
 

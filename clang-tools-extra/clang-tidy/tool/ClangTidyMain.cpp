@@ -168,6 +168,16 @@ each source file in its parent directories.
 )"),
                                    cl::init(""), cl::cat(ClangTidyCategory));
 
+static cl::opt<std::string> ConfigFile("config-file", cl::desc(R"(
+Specify the path of .clang-tidy or custom config file:
+ e.g. --config-file=/some/path/myTidyConfigFile
+This option internally works exactly the same way as
+ --config option after reading specified config file.
+Use either --config-file or --config, not both.
+)"),
+                                       cl::init(""),
+                                       cl::cat(ClangTidyCategory));
+
 static cl::opt<bool> DumpConfig("dump-config", cl::desc(R"(
 Dumps configuration in the YAML format to
 stdout. This option can be used along with a
@@ -302,19 +312,41 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
   if (UseColor.getNumOccurrences() > 0)
     OverrideOptions.UseColor = UseColor;
 
-  if (!Config.empty()) {
-    if (llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
-            parseConfiguration(Config)) {
+  auto LoadConfig = [&](StringRef Configuration)
+      -> std::unique_ptr<ClangTidyOptionsProvider> {
+    llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
+        parseConfiguration(Configuration);
+    if (ParsedConfig)
       return std::make_unique<ConfigOptionsProvider>(
           GlobalOptions,
-          ClangTidyOptions::getDefaults().mergeWith(DefaultOptions, 0),
+          ClangTidyOptions::getDefaults().merge(DefaultOptions, 0),
           *ParsedConfig, OverrideOptions, std::move(FS));
-    } else {
-      llvm::errs() << "Error: invalid configuration specified.\n"
-                   << ParsedConfig.getError().message() << "\n";
+    llvm::errs() << "Error: invalid configuration specified.\n"
+                 << ParsedConfig.getError().message() << "\n";
+    return nullptr;
+  };
+
+  if (ConfigFile.getNumOccurrences() > 0) {
+    if (Config.getNumOccurrences() > 0) {
+      llvm::errs() << "Error: --config-file and --config are "
+                      "mutually exclusive. Specify only one.\n";
       return nullptr;
     }
+
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
+        llvm::MemoryBuffer::getFile(ConfigFile.c_str());
+    if (std::error_code EC = Text.getError()) {
+      llvm::errs() << "Error: can't read config-file '" << ConfigFile
+                   << "': " << EC.message() << "\n";
+      return nullptr;
+    }
+
+    return LoadConfig((*Text)->getBuffer());
   }
+
+  if (Config.getNumOccurrences() > 0)
+    return LoadConfig(Config);
+
   return std::make_unique<FileOptionsProvider>(GlobalOptions, DefaultOptions,
                                                 OverrideOptions, std::move(FS));
 }
@@ -423,9 +455,8 @@ int clangTidyMain(int argc, const char **argv) {
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
         getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
-    llvm::outs() << configurationAsText(
-                        ClangTidyOptions::getDefaults().mergeWith(
-                            EffectiveOptions, 0))
+    llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
+                        EffectiveOptions, 0))
                  << "\n";
     return 0;
   }

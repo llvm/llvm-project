@@ -810,6 +810,7 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                   CmpInst::Predicate VecPred,
                                    TTI::TargetCostKind CostKind,
                                    const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -838,11 +839,8 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     return Cost;
   }
 
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
-
   // On NEON a vector select gets lowered to vbsl.
-  if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
+  if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT && CondTy) {
     // Lowering of some vector selects is currently far from perfect.
     static const TypeConversionCostTblEntry NEONVectorSelectTbl[] = {
       { ISD::SELECT, MVT::v4i1, MVT::v4i64, 4*4 + 1*2 + 1 },
@@ -863,11 +861,15 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     return LT.first;
   }
 
-  int BaseCost = ST->hasMVEIntegerOps() && ValTy->isVectorTy()
-                     ? ST->getMVEVectorCostFactor()
-                     : 1;
-  return BaseCost * BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind,
-                                              I);
+  // Default to cheap (throughput/size of 1 instruction) but adjust throughput
+  // for "multiple beats" potentially needed by MVE instructions.
+  int BaseCost = 1;
+  if (CostKind != TTI::TCK_CodeSize && ST->hasMVEIntegerOps() &&
+      ValTy->isVectorTy())
+    BaseCost = ST->getMVEVectorCostFactor();
+
+  return BaseCost *
+         BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
 int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
@@ -949,39 +951,83 @@ bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) {
           (EltWidth == 16 && Alignment >= 2) || EltWidth == 8);
 }
 
-int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
-  const MemCpyInst *MI = dyn_cast<MemCpyInst>(I);
-  assert(MI && "MemcpyInst expected");
-  ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength());
-
-  // To model the cost of a library call, we assume 1 for the call, and
-  // 3 for the argument setup.
-  const unsigned LibCallCost = 4;
-
-  // If 'size' is not a constant, a library call will be generated.
-  if (!C)
-    return LibCallCost;
-
-  const unsigned Size = C->getValue().getZExtValue();
-  const Align DstAlign = *MI->getDestAlign();
-  const Align SrcAlign = *MI->getSourceAlign();
+/// Given a memcpy/memset/memmove instruction, return the number of memory
+/// operations performed, via querying findOptimalMemOpLowering. Returns -1 if a
+/// call is used.
+int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
+  MemOp MOp;
+  unsigned DstAddrSpace = ~0u;
+  unsigned SrcAddrSpace = ~0u;
   const Function *F = I->getParent()->getParent();
-  const unsigned Limit = TLI->getMaxStoresPerMemmove(F->hasMinSize());
-  std::vector<EVT> MemOps;
+
+  if (const auto *MC = dyn_cast<MemTransferInst>(I)) {
+    ConstantInt *C = dyn_cast<ConstantInt>(MC->getLength());
+    // If 'size' is not a constant, a library call will be generated.
+    if (!C)
+      return -1;
+
+    const unsigned Size = C->getValue().getZExtValue();
+    const Align DstAlign = *MC->getDestAlign();
+    const Align SrcAlign = *MC->getSourceAlign();
+
+    MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
+                      /*IsVolatile*/ false);
+    DstAddrSpace = MC->getDestAddressSpace();
+    SrcAddrSpace = MC->getSourceAddressSpace();
+  }
+  else if (const auto *MS = dyn_cast<MemSetInst>(I)) {
+    ConstantInt *C = dyn_cast<ConstantInt>(MS->getLength());
+    // If 'size' is not a constant, a library call will be generated.
+    if (!C)
+      return -1;
+
+    const unsigned Size = C->getValue().getZExtValue();
+    const Align DstAlign = *MS->getDestAlign();
+
+    MOp = MemOp::Set(Size, /*DstAlignCanChange*/ false, DstAlign,
+                     /*IsZeroMemset*/ false, /*IsVolatile*/ false);
+    DstAddrSpace = MS->getDestAddressSpace();
+  }
+  else
+    llvm_unreachable("Expected a memcpy/move or memset!");
+
+  unsigned Limit, Factor = 2;
+  switch(I->getIntrinsicID()) {
+    case Intrinsic::memcpy:
+      Limit = TLI->getMaxStoresPerMemcpy(F->hasMinSize());
+      break;
+    case Intrinsic::memmove:
+      Limit = TLI->getMaxStoresPerMemmove(F->hasMinSize());
+      break;
+    case Intrinsic::memset:
+      Limit = TLI->getMaxStoresPerMemset(F->hasMinSize());
+      Factor = 1;
+      break;
+    default:
+      llvm_unreachable("Expected a memcpy/move or memset!");
+  }
 
   // MemOps will be poplulated with a list of data types that needs to be
   // loaded and stored. That's why we multiply the number of elements by 2 to
   // get the cost for this memcpy.
+  std::vector<EVT> MemOps;
   if (getTLI()->findOptimalMemOpLowering(
-          MemOps, Limit,
-          MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
-                      /*IsVolatile*/ true),
-          MI->getDestAddressSpace(), MI->getSourceAddressSpace(),
-          F->getAttributes()))
-    return MemOps.size() * 2;
+          MemOps, Limit, MOp, DstAddrSpace,
+          SrcAddrSpace, F->getAttributes()))
+    return MemOps.size() * Factor;
 
   // If we can't find an optimal memop lowering, return the default cost
-  return LibCallCost;
+  return -1;
+}
+
+int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+  int NumOps = getNumMemOps(cast<IntrinsicInst>(I));
+
+  // To model the cost of a library call, we assume 1 for the call, and
+  // 3 for the argument setup.
+  if (NumOps == -1)
+    return 4;
+  return NumOps;
 }
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
@@ -1102,12 +1148,6 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     }
   }
 
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Opd1PropInfo,
-                                         Opd2PropInfo, Args, CxtI);
-
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->hasNEON()) {
@@ -1202,9 +1242,12 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   if (LooksLikeAFreeShift())
     return 0;
 
-  int BaseCost = ST->hasMVEIntegerOps() && Ty->isVectorTy()
-                     ? ST->getMVEVectorCostFactor()
-                     : 1;
+  // Default to cheap (throughput/size of 1 instruction) but adjust throughput
+  // for "multiple beats" potentially needed by MVE instructions.
+  int BaseCost = 1;
+  if (CostKind != TTI::TCK_CodeSize && ST->hasMVEIntegerOps() &&
+      Ty->isVectorTy())
+    BaseCost = ST->getMVEVectorCostFactor();
 
   // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
   // without treating floats as more expensive that scalars or increasing the
@@ -1341,7 +1384,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   unsigned ScalarCost =
       NumElems * LT.first + BaseT::getScalarizationOverhead(VTy, {});
 
-  if (Alignment < EltSize / 8)
+  if (EltSize < 8 || Alignment < EltSize / 8)
     return ScalarCost;
 
   unsigned ExtSize = EltSize;
@@ -1518,9 +1561,16 @@ bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
   // Check if an intrinsic will be lowered to a call and assume that any
   // other CallInst will generate a bl.
   if (auto *Call = dyn_cast<CallInst>(&I)) {
-    if (isa<IntrinsicInst>(Call)) {
-      if (const Function *F = Call->getCalledFunction())
-        return isLoweredToCall(F);
+    if (auto *II = dyn_cast<IntrinsicInst>(Call)) {
+      switch(II->getIntrinsicID()) {
+        case Intrinsic::memcpy:
+        case Intrinsic::memset:
+        case Intrinsic::memmove:
+          return getNumMemOps(II) == -1;
+        default:
+          if (const Function *F = Call->getCalledFunction())
+            return isLoweredToCall(F);
+      }
     }
     return true;
   }
@@ -1629,7 +1679,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       switch (Call->getIntrinsicID()) {
       default:
         break;
-      case Intrinsic::set_loop_iterations:
+      case Intrinsic::start_loop_iterations:
       case Intrinsic::test_set_loop_iterations:
       case Intrinsic::loop_decrement:
       case Intrinsic::loop_decrement_reg:
@@ -1894,6 +1944,10 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Limit the CFG of the loop body for targets with a branch predictor.
   // Allowing 4 blocks permits if-then-else diamonds in the body.
   if (ST->hasBranchPredictor() && L->getNumBlocks() > 4)
+    return;
+
+  // Don't unroll vectorized loops, including the remainder loop
+  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
     return;
 
   // Scan the loop: don't unroll loops with calls as this could prevent

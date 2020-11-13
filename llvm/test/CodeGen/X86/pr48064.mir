@@ -1,0 +1,435 @@
+# RUN: llc -mtriple="i386-pc-windows-msvc" -run-pass=stack-coloring %s -o - | FileCheck %s
+
+# There is a problem with the exception handler, we found in windows, when set
+# LifetimeStartOnFirstUse=true for stack-coloring in default. Take the following
+# case for example:
+#
+#// Compile with "clang-cl -m32 -O2 -EHs test.cpp"
+#__attribute__((noinline,nothrow,weak)) void escape(int *p) { }
+#struct object {
+#  int i;
+#  object() {
+#    i = 1;
+#  }
+#  ~object() {
+#    // if "object" and "exp" are assigned to the same slot,
+#    // this assign will corrupt "exp".
+#    i = 9999;
+#    escape(&i);
+#  }
+#};
+#inline void throwit() { throw 999; }
+#
+#volatile int v;
+#inline void func() {
+#  try {
+#    object o;
+#    throwit();
+#  }
+#  // "exp" is written by the OS when the "throw" occurs.
+#  // Then the destructor is called, and the store-assign
+#  // clobbers the value of "exp".
+#  // The dereference of "exp" (with value 9999) causes a crash.
+#  // All these done in libruntime, so it is hard to check in IR.
+#  catch (int &exp) {
+#    v = exp;
+#  }
+#}
+#
+#int main() {
+#  func();
+#  return 0;
+#}
+
+## Make sure that o.i not merge with exp.i
+# CHECK:      stack:
+# CHECK:  id: 2, name: o.i, type: default, offset: 0, size: 4, alignment: 4,
+# CHECK:  id: 3, name: exp.i, type: default, offset: 0, size: 4, alignment: 4,
+
+## Make sure that %stack.3.exp.i not replaced with %stack.2.o.i
+# CHECK:  bb.3.catch.i (landing-pad, ehfunclet-entry):
+# CHECK:    %7:gr32 = MOV32rm %stack.3.exp.i, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.exp.i)
+
+--- |
+  ; ModuleID = 'test-pre-stc.mir'
+  source_filename = "test.cpp"
+  target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
+
+  %rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
+  %eh.CatchableType = type { i32, i8*, i32, i32, i32, i32, i8* }
+  %eh.CatchableTypeArray.1 = type { i32, [1 x %eh.CatchableType*] }
+  %eh.ThrowInfo = type { i32, i8*, i8*, i8* }
+  %CXXExceptionRegistration = type { i8*, %EHRegistrationNode, i32 }
+  %EHRegistrationNode = type { %EHRegistrationNode*, i8* }
+  %struct.object = type { i32 }
+
+  $"_R0H@8" = comdat any
+
+  $"_CT_R0H@84" = comdat any
+
+  $_CTA1H = comdat any
+
+  $_TI1H = comdat any
+
+  @v__3HC = dso_local global i32 0, align 4
+  @"_7type_info__6B@" = external constant i8*
+  @"_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { i8** @"_7type_info__6B@", i8* null, [3 x i8] c".H\00" }, comdat
+  @"_CT_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, i8* bitcast (%rtti.TypeDescriptor2* @"_R0H@8" to i8*), i32 0, i32 -1, i32 0, i32 4, i8* null }, section ".xdata", comdat
+  @_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x %eh.CatchableType*] [%eh.CatchableType* @"_CT_R0H@84"] }, section ".xdata", comdat
+  @_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i8* null, i8* null, i8* bitcast (%eh.CatchableTypeArray.1* @_CTA1H to i8*) }, section ".xdata", comdat
+
+  ; Function Attrs: noinline nounwind sspstrong
+  define weak dso_local void @"escape__YAXPAH@Z"(i32* %p) local_unnamed_addr #0 {
+  entry:
+    ret void
+  }
+
+  ; Function Attrs: norecurse sspstrong
+  define dso_local i32 @main() local_unnamed_addr #1 personality i32 (...)* @__CxxFrameHandler3 {
+  entry:
+    %0 = alloca %CXXExceptionRegistration, align 4
+    %1 = bitcast %CXXExceptionRegistration* %0 to i8*
+    call void @llvm.x86.seh.ehregnode(i8* %1)
+    %2 = call i8* @llvm.stacksave()
+    %3 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 0
+    store i8* %2, i8** %3, align 4
+    %4 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 2
+    store i32 -1, i32* %4, align 4
+    %5 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 1
+    %6 = getelementptr inbounds %EHRegistrationNode, %EHRegistrationNode* %5, i32 0, i32 1
+    store i8* bitcast (i32 (i8*, i8*, i8*, i8*)* @"__ehhandler$main" to i8*), i8** %6, align 4
+    %7 = load %EHRegistrationNode*, %EHRegistrationNode* addrspace(257)* null, align 4
+    %8 = getelementptr inbounds %EHRegistrationNode, %EHRegistrationNode* %5, i32 0, i32 0
+    store %EHRegistrationNode* %7, %EHRegistrationNode** %8, align 4
+    store %EHRegistrationNode* %5, %EHRegistrationNode* addrspace(257)* null, align 4
+    %tmp.i.i = alloca i32, align 4
+    %o.i = alloca %struct.object, align 4
+    %zx = alloca i32*, align 4
+    %exp.i = alloca i32*, align 4
+    %9 = bitcast i32** %exp.i to i8*
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %9)
+    %10 = bitcast %struct.object* %o.i to i8*
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %10) #7
+    %i.i.i1 = bitcast %struct.object* %o.i to i32*
+    store i32 1, i32* %i.i.i1, align 4
+    %11 = bitcast i32* %tmp.i.i to i8*
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %11)
+    store i32 999, i32* %tmp.i.i, align 4
+    %12 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 2
+    store i32 1, i32* %12, align 4
+    invoke void @_CxxThrowException(i8* nonnull %11, %eh.ThrowInfo* nonnull @_TI1H) #8
+            to label %.noexc.i unwind label %ehcleanup.i
+
+  .noexc.i:                                         ; preds = %entry
+    unreachable
+
+  ehcleanup.i:                                      ; preds = %entry
+    %13 = cleanuppad within none []
+    %14 = bitcast %struct.object* %o.i to i32*
+    %15 = bitcast %struct.object* %o.i to i8*
+    store i32 9999, i32* %14, align 4
+    call void @"escape__YAXPAH@Z"(i32* nonnull %14) #7 [ "funclet"(token %13) ]
+    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %15) #7
+    cleanupret from %13 unwind label %catch.dispatch.i
+
+  catch.dispatch.i:                                 ; preds = %ehcleanup.i
+    %16 = catchswitch within none [label %catch.i] unwind to caller
+
+  catch.i:                                          ; preds = %catch.dispatch.i
+    %17 = catchpad within %16 [%rtti.TypeDescriptor2* @"_R0H@8", i32 8, i32** %exp.i]
+    %18 = load i32*, i32** %exp.i, align 4
+    %19 = load i32, i32* %18, align 4
+    store atomic volatile i32 %19, i32* @v__3HC release, align 4
+    catchret from %17 to label %func__YAXXZ.exit
+
+  func__YAXXZ.exit:                                 ; preds = %catch.i
+    %20 = bitcast i32** %exp.i to i8*
+    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %20)
+    %21 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 1
+    %22 = getelementptr inbounds %EHRegistrationNode, %EHRegistrationNode* %21, i32 0, i32 0
+    %23 = load %EHRegistrationNode*, %EHRegistrationNode** %22, align 4
+    store %EHRegistrationNode* %23, %EHRegistrationNode* addrspace(257)* null, align 4
+    ret i32 0
+  }
+
+  ; Function Attrs: argmemonly nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+
+  ; Function Attrs: nofree
+  declare dso_local i32 @__CxxFrameHandler3(...) #3
+
+  ; Function Attrs: argmemonly nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+
+  ; Function Attrs: nofree
+  declare dso_local x86_stdcallcc void @_CxxThrowException(i8*, %eh.ThrowInfo*) local_unnamed_addr #3
+
+  declare i32 @_setjmp3(i8*, i32, ...)
+
+  ; Function Attrs: nofree nosync nounwind willreturn
+  declare i8* @llvm.stacksave() #4
+
+  define internal i32 @"__ehhandler$main"(i8* %0, i8* %1, i8* %2, i8* %3) #5 {
+  entry:
+    %4 = call i8* @llvm.x86.seh.lsda(i8* bitcast (i32 ()* @main to i8*))
+    %5 = tail call i32 bitcast (i32 (...)* @__CxxFrameHandler3 to i32 (i8*, i8*, i8*, i8*, i8*)*)(i8* inreg %4, i8* %0, i8* %1, i8* %2, i8* %3)
+    ret i32 %5
+  }
+
+  ; Function Attrs: nounwind readnone
+  declare i8* @llvm.x86.seh.lsda(i8*) #6
+
+  declare x86_stdcallcc void @__CxxLongjmpUnwind(i8*)
+
+  ; Function Attrs: nounwind
+  declare void @llvm.x86.seh.ehregnode(i8*) #7
+
+  attributes #0 = { noinline nounwind sspstrong "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { norecurse sspstrong "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { argmemonly nofree nosync nounwind willreturn }
+  attributes #3 = { nofree }
+  attributes #4 = { nofree nosync nounwind willreturn }
+  attributes #5 = { "safeseh" }
+  attributes #6 = { nounwind readnone }
+  attributes #7 = { nounwind }
+  attributes #8 = { noreturn }
+
+  !llvm.linker.options = !{!0, !1, !2}
+  !llvm.module.flags = !{!3, !4}
+  !llvm.ident = !{!5}
+
+  !0 = !{!"/DEFAULTLIB:libcmt.lib"}
+  !1 = !{!"/DEFAULTLIB:libmmt.lib"}
+  !2 = !{!"/DEFAULTLIB:oldnames.lib"}
+  !3 = !{i32 1, !"NumRegisterParameters", i32 0}
+  !4 = !{i32 1, !"wchar_size", i32 2}
+  !5 = !{!"Intel(R) oneAPI DPC++ Compiler Pro 2021.1 (YYYY.x.0.MMDD)"}
+
+...
+---
+name:            'escape__YAXPAH@Z'
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    RET 0
+
+...
+---
+name:            main
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr32, preferred-register: '' }
+  - { id: 8, class: gr32, preferred-register: '' }
+  - { id: 9, class: gr32, preferred-register: '' }
+  - { id: 10, class: gr32, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: true
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: zx, type: default, offset: 0, size: 16, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: tmp.i.i, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: o.i, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: exp.i, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
+
+    %0:gr32 = COPY $esp
+    MOV32mr %stack.0.zx, 1, $noreg, 0, $noreg, %0 :: (store 4 into %ir.3)
+    MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, -1 :: (store 4 into %ir.4)
+    %1:gr32 = nuw LEA32r %stack.0.zx, 1, $noreg, 4, $noreg
+    MOV32mi %stack.0.zx, 1, $noreg, 8, $noreg, @"__ehhandler$main" :: (store 4 into %ir.6)
+    %2:gr32 = MOV32rm $noreg, 1, $noreg, 0, $fs :: (load 4 from `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    MOV32mr %stack.0.zx, 1, $noreg, 4, $noreg, killed %2 :: (store 4 into %ir.8)
+    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %1 :: (store 4 into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 1 :: (store 4 into %ir.i.i.i1)
+    MOV32mi %stack.1.tmp.i.i, 1, $noreg, 0, $noreg, 999 :: (store 4 into %ir.tmp.i.i)
+    MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, 1 :: (store 4 into %ir.12)
+    ADJCALLSTACKDOWN32 8, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    %3:gr32 = COPY $esp
+    %4:gr32 = LEA32r %stack.1.tmp.i.i, 1, $noreg, 0, $noreg
+    MOV32mr %3, 1, $noreg, 0, $noreg, killed %4 :: (store 4 into stack)
+    MOV32mi %3, 1, $noreg, 4, $noreg, @_TI1H :: (store 4 into stack + 4)
+    CALLpcrel32 @_CxxThrowException, csr_noregs, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    ADJCALLSTACKUP32 8, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    JMP_1 %bb.1
+
+  bb.1..noexc.i:
+    successors:
+
+
+  bb.2.ehcleanup.i (landing-pad, ehfunclet-entry):
+    successors: %bb.3(0x80000000)
+
+    MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 9999 :: (store 4 into %ir.14)
+    ADJCALLSTACKDOWN32 4, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    %5:gr32 = COPY $esp
+    %6:gr32 = LEA32r %stack.2.o.i, 1, $noreg, 0, $noreg
+    MOV32mr %5, 1, $noreg, 0, $noreg, killed %6 :: (store 4 into stack)
+    CALLpcrel32 @"escape__YAXPAH@Z", csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    ADJCALLSTACKUP32 4, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    CLEANUPRET
+
+  bb.3.catch.i (landing-pad, ehfunclet-entry):
+    successors: %bb.4(0x80000000)
+
+    %7:gr32 = MOV32rm %stack.3.exp.i, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.exp.i)
+    %8:gr32 = MOV32rm killed %7, 1, $noreg, 0, $noreg :: (load 4 from %ir.18)
+    MOV32mr $noreg, 1, $noreg, @v__3HC, $noreg, killed %8 :: (volatile store release 4 into @v__3HC)
+    CATCHRET %bb.4, %bb.0
+
+  bb.4.catch.i (landing-pad):
+    successors: %bb.5(0x80000000)
+
+    JMP_4 %bb.5
+
+  bb.5.func__YAXXZ.exit:
+    %9:gr32 = MOV32rm %stack.0.zx, 1, $noreg, 4, $noreg :: (dereferenceable load 4 from %ir.22)
+    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %9 :: (store 4 into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    %10:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %10
+    RET 0, $eax
+
+...
+---
+name:            '__ehhandler$main'
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4, stack-id: default,
+      isImmutable: false, isAliased: false, callee-saved-register: '',
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
+      isImmutable: false, isAliased: false, callee-saved-register: '',
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 4, alignment: 4, stack-id: default,
+      isImmutable: false, isAliased: false, callee-saved-register: '',
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 12, size: 4, alignment: 4, stack-id: default,
+      isImmutable: false, isAliased: false, callee-saved-register: '',
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    %0:gr32 = MOV32ri <mcsymbol L__ehtable$main>
+    $eax = COPY %0
+    TCRETURNdi @__CxxFrameHandler3, 0, csr_32, implicit $esp, implicit $ssp, implicit $eax
+
+...

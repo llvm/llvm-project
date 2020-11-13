@@ -27,8 +27,10 @@ struct TestCallGraphPass
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestCallGraphPass() {
   PassRegistration<TestCallGraphPass> pass(
       "test-print-callgraph", "Print the contents of a constructed callgraph.");
 }
+} // namespace test
 } // namespace mlir

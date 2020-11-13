@@ -5,14 +5,14 @@
 # RUN:   -o "image lookup -v -s lookup_rnglists2" -o exit | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -s lookup_rnglists
-# CHECK:  Function: id = {0x7fffffff00000030}, name = "rnglists", range = [0x0000000000000000-0x0000000000000004)
-# CHECK:    Blocks: id = {0x7fffffff00000030}, range = [0x00000000-0x00000004)
-# CHECK-NEXT:       id = {0x7fffffff00000046}, ranges = [0x00000001-0x00000002)[0x00000003-0x00000004)
+# CHECK:  Function: id = {0x00000030}, name = "rnglists", range = [0x0000000000000000-0x0000000000000004)
+# CHECK:    Blocks: id = {0x00000030}, range = [0x00000000-0x00000004)
+# CHECK-NEXT:       id = {0x00000046}, ranges = [0x00000001-0x00000002)[0x00000003-0x00000004)
 
 # CHECK-LABEL: image lookup -v -s lookup_rnglists2
-# CHECK:  Function: id = {0x7fffffff0000007a}, name = "rnglists2", range = [0x0000000000000004-0x0000000000000007)
-# CHECK:    Blocks: id = {0x7fffffff0000007a}, range = [0x00000004-0x00000007)
-# CHECK-NEXT:       id = {0x7fffffff00000091}, range = [0x00000005-0x00000007)
+# CHECK:  Function: id = {0x0000007a}, name = "rnglists2", range = [0x0000000000000004-0x0000000000000007)
+# CHECK:    Blocks: id = {0x0000007a}, range = [0x00000004-0x00000007)
+# CHECK-NEXT:       id = {0x00000091}, range = [0x00000005-0x00000007)
 
         .text
         .p2align 12

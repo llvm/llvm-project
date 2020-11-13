@@ -282,9 +282,20 @@ endif()
 # library.
 add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 
+# libcxxabi needs to, for various reasons, include the libcpp headers as if
+# it is being built as part of libcxx.
+add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
-  add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
+  if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+    # Building libcxxabi statically, but intending for it to be statically
+    # linked into a shared libcxx; keep dllexport enabled within libcxxabi,
+    # as the symbols will need to be exported from libcxx.
+  else()
+    # Regular static build; disable dllexports.
+    add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
+  endif()
 endif()
 
 add_compile_flags_if_supported(-Werror=return-type)

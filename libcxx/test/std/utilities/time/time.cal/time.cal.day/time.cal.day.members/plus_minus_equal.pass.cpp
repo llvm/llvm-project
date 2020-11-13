@@ -47,11 +47,11 @@ int main(int, char**)
 
     for (unsigned i = 0; i <= 10; ++i)
     {
-        day day(i);
-        assert(static_cast<unsigned>(day += days{22}) == i + 22);
-        assert(static_cast<unsigned>(day)             == i + 22);
-        assert(static_cast<unsigned>(day -= days{12}) == i + 10);
-        assert(static_cast<unsigned>(day)             == i + 10);
+        day d(i);
+        assert(static_cast<unsigned>(d += days{22}) == i + 22);
+        assert(static_cast<unsigned>(d)             == i + 22);
+        assert(static_cast<unsigned>(d -= days{12}) == i + 10);
+        assert(static_cast<unsigned>(d)             == i + 10);
     }
 
   return 0;

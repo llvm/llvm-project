@@ -39,9 +39,15 @@ void emitWebAssemblyDisassemblerTables(
             ->getValue());
     if (Opc == 0xFFFFFFFF)
       continue; // No opcode defined.
-    assert(Opc <= 0xFFFF);
-    auto Prefix = Opc >> 8;
-    Opc = Opc & 0xFF;
+    assert(Opc <= 0xFFFFFF);
+    unsigned Prefix;
+    if (Opc <= 0xFFFF) {
+      Prefix = Opc >> 8;
+      Opc = Opc & 0xFF;
+    } else {
+      Prefix = Opc >> 16;
+      Opc = Opc & 0xFFFF;
+    }
     auto &CGIP = OpcodeTable[Prefix][Opc];
     // All wasm instructions have a StackBased field of type string, we only
     // want the instructions for which this is "true".

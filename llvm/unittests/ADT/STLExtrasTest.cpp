@@ -323,6 +323,15 @@ TEST(STLExtrasTest, EraseIf) {
   EXPECT_EQ(7, V[3]);
 }
 
+TEST(STLExtrasTest, AppendRange) {
+  auto AppendVals = {3};
+  std::vector<int> V = {1, 2};
+  append_range(V, AppendVals);
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(2, V[1]);
+  EXPECT_EQ(3, V[2]);
+}
+
 namespace some_namespace {
 struct some_struct {
   std::vector<int> data;

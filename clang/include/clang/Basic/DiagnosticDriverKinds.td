@@ -44,6 +44,10 @@ def warn_drv_avr_libc_not_found: Warning<
 def warn_drv_avr_family_linking_stdlibs_not_implemented: Warning<
   "support for linking stdlibs for microcontroller '%0' is not implemented">,
   InGroup<AVRRtlibLinkingQuirks>;
+def warn_drv_avr_linker_section_addresses_not_implemented: Warning<
+  "support for passing the data section address to the linker for "
+  "microcontroller '%0' is not implemented">,
+  InGroup<AVRRtlibLinkingQuirks>;
 def warn_drv_avr_stdlib_not_linked: Warning<
   "standard library not linked and so no interrupt vector table or "
   "compiler runtime routines will be linked">,
@@ -117,8 +121,6 @@ def err_drv_missing_argument : Error<
   "argument to '%0' is missing (expected %1 value%s1)">;
 def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
-def err_drv_invalid_Xarch_argument_isdriver : Error<
-  "invalid Xarch argument: '%0', cannot change driver behavior inside Xarch argument">;
 def err_drv_Xopenmp_target_missing_triple : Error<
   "cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>">;
 def err_drv_invalid_Xopenmp_target_with_args : Error<

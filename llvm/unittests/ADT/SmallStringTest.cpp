@@ -71,6 +71,12 @@ TEST_F(SmallStringTest, AssignSmallVector) {
   EXPECT_STREQ("abc", theString.c_str());
 }
 
+TEST_F(SmallStringTest, AssignStringRefs) {
+  theString.assign({"abc", "def", "ghi"});
+  EXPECT_EQ(9u, theString.size());
+  EXPECT_STREQ("abcdefghi", theString.c_str());
+}
+
 TEST_F(SmallStringTest, AppendIterPair) {
   StringRef abc = "abc";
   theString.append(abc.begin(), abc.end());
@@ -94,6 +100,19 @@ TEST_F(SmallStringTest, AppendSmallVector) {
   theString.append(abcVec);
   EXPECT_EQ(6u, theString.size());
   EXPECT_STREQ("abcabc", theString.c_str());
+}
+
+TEST_F(SmallStringTest, AppendStringRefs) {
+  theString.append({"abc", "def", "ghi"});
+  EXPECT_EQ(9u, theString.size());
+  EXPECT_STREQ("abcdefghi", theString.c_str());
+  StringRef Jkl = "jkl";
+  std::string Mno = "mno";
+  SmallString<4> Pqr("pqr");
+  const char *Stu = "stu";
+  theString.append({Jkl, Mno, Pqr, Stu});
+  EXPECT_EQ(21u, theString.size());
+  EXPECT_STREQ("abcdefghijklmnopqrstu", theString.c_str());
 }
 
 TEST_F(SmallStringTest, StringRefConversion) {

@@ -83,6 +83,7 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                     match_info_ptr->GetProcessInfo().GetName())))
     return false;
 
+  process_info.SetArg0(cstr);
   Args &proc_args = process_info.GetArguments();
   while (1) {
     const uint8_t *p = data.PeekData(offset, 1);
@@ -175,6 +176,9 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
 
   const size_t actual_pid_count = (pid_data_size / sizeof(struct kinfo_proc));
 
+  ProcessInstanceInfoMatch match_info_noname{match_info};
+  match_info_noname.SetNameMatchType(NameMatch::Ignore);
+
   for (size_t i = 0; i < actual_pid_count; i++) {
     const struct kinfo_proc &kinfo = kinfos[i];
 
@@ -212,7 +216,7 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     process_info.SetEffectiveGroupID(kinfo.ki_svgid);
 
     // Make sure our info matches before we go fetch the name and cpu type
-    if (match_info.Matches(process_info) &&
+    if (match_info_noname.Matches(process_info) &&
         GetFreeBSDProcessArgs(&match_info, process_info)) {
       GetFreeBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))

@@ -462,14 +462,15 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
   OpBuilder moduleBuilder(module.getBody()->getTerminator());
 
-  // Get values captured by the async region
-  llvm::SetVector<mlir::Value> usedAbove;
-  getUsedValuesDefinedAbove(execute.body(), usedAbove);
+  // Collect all outlined function inputs.
+  llvm::SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
+                                              execute.dependencies().end());
+  getUsedValuesDefinedAbove(execute.body(), functionInputs);
 
-  // Collect types of the captured values.
-  auto usedAboveTypes =
-      llvm::map_range(usedAbove, [](Value value) { return value.getType(); });
-  SmallVector<Type, 4> inputTypes(usedAboveTypes.begin(), usedAboveTypes.end());
+  // Collect types for the outlined function inputs and outputs.
+  auto typesRange = llvm::map_range(
+      functionInputs, [](Value value) { return value.getType(); });
+  SmallVector<Type, 4> inputTypes(typesRange.begin(), typesRange.end());
   auto outputTypes = execute.getResultTypes();
 
   auto funcType = moduleBuilder.getFunctionType(inputTypes, outputTypes);
@@ -510,14 +511,19 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   Block *resume = addSuspensionPoint(coro, coroSave.getResult(0),
                                      entryBlock->getTerminator());
 
-  // Map from values defined above the execute op to the function arguments.
+  // Await on all dependencies before starting to execute the body region.
+  builder.setInsertionPointToStart(resume);
+  for (size_t i = 0; i < execute.dependencies().size(); ++i)
+    builder.create<AwaitOp>(loc, func.getArgument(i));
+
+  // Map from function inputs defined above the execute op to the function
+  // arguments.
   BlockAndValueMapping valueMapping;
-  valueMapping.map(usedAbove, func.getArguments());
+  valueMapping.map(functionInputs, func.getArguments());
 
   // Clone all operations from the execute operation body into the outlined
   // function body, and replace all `async.yield` operations with a call
   // to async runtime to emplace the result token.
-  builder.setInsertionPointToStart(resume);
   for (Operation &op : execute.body().getOps()) {
     if (isa<async::YieldOp>(op)) {
       builder.create<CallOp>(loc, kEmplaceToken, Type(), coro.asyncToken);
@@ -528,9 +534,9 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
   // Replace the original `async.execute` with a call to outlined function.
   OpBuilder callBuilder(execute);
-  SmallVector<Value, 4> usedAboveArgs(usedAbove.begin(), usedAbove.end());
-  auto callOutlinedFunc = callBuilder.create<CallOp>(
-      loc, func.getName(), execute.getResultTypes(), usedAboveArgs);
+  auto callOutlinedFunc =
+      callBuilder.create<CallOp>(loc, func.getName(), execute.getResultTypes(),
+                                 functionInputs.getArrayRef());
   execute.replaceAllUsesWith(callOutlinedFunc.getResults());
   execute.erase();
 
@@ -673,13 +679,11 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   llvm::DenseMap<FuncOp, CoroMachinery> outlinedFunctions;
 
   WalkResult outlineResult = module.walk([&](ExecuteOp execute) {
-    // We currently do not support execute operations that take async
-    // token dependencies, async value arguments or produce async results.
-    if (!execute.dependencies().empty() || !execute.operands().empty() ||
-        !execute.results().empty()) {
-      execute.emitOpError(
-          "Can't outline async.execute op with async dependencies, arguments "
-          "or returned async results");
+    // We currently do not support execute operations that have async value
+    // operands or produce async results.
+    if (!execute.operands().empty() || !execute.results().empty()) {
+      execute.emitOpError("can't outline async.execute op with async value "
+                          "operands or returned async results");
       return WalkResult::interrupt();
     }
 

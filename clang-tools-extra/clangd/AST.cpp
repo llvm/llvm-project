@@ -282,21 +282,20 @@ std::string printNamespaceScope(const DeclContext &DC) {
   return "";
 }
 
-llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
+SymbolID getSymbolID(const Decl *D) {
   llvm::SmallString<128> USR;
   if (index::generateUSRForDecl(D, USR))
-    return None;
+    return {};
   return SymbolID(USR);
 }
 
-llvm::Optional<SymbolID> getSymbolID(const llvm::StringRef MacroName,
-                                     const MacroInfo *MI,
-                                     const SourceManager &SM) {
+SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
+                     const SourceManager &SM) {
   if (MI == nullptr)
-    return None;
+    return {};
   llvm::SmallString<128> USR;
   if (index::generateUSRForMacro(MacroName, MI->getDefinitionLoc(), SM, USR))
-    return None;
+    return {};
   return SymbolID(USR);
 }
 

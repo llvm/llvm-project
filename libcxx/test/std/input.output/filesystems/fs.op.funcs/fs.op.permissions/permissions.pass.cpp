@@ -172,7 +172,10 @@ TEST_CASE(test_no_resolve_symlink_on_symlink)
 #endif
         std::error_code ec = GetTestEC();
         permissions(sym, TC.set_perms, TC.opts | perm_options::nofollow, ec);
-        TEST_CHECK(ec == expected_ec);
+        if (expected_ec)
+            TEST_CHECK(ErrorIs(ec, static_cast<std::errc>(expected_ec.value())));
+        else
+            TEST_CHECK(!ec);
         TEST_CHECK(status(file).permissions() == file_perms);
         TEST_CHECK(symlink_status(sym).permissions() == expected_link_perms);
     }

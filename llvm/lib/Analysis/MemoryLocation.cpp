@@ -257,10 +257,11 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
     case LibFunc_memccpy:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memccpy");
+      // We only know an upper bound on the number of bytes read/written.
       if (const ConstantInt *LenCI =
               dyn_cast<ConstantInt>(Call->getArgOperand(3)))
-        return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
-                              AATags);
+        return MemoryLocation(
+            Arg, LocationSize::upperBound(LenCI->getZExtValue()), AATags);
       break;
     default:
       break;

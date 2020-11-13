@@ -534,7 +534,7 @@ path __canonical(path const& orig_p, error_code* ec) {
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
   path p = __do_absolute(orig_p, &cwd, ec);
-#if _POSIX_VERSION >= 200112
+#if defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112
   std::unique_ptr<char, decltype(&::free)>
     hold(::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)
@@ -684,12 +684,14 @@ namespace {
       ec = capture_errno();
       return false;
     }
+    read_fd.fd = -1;
     ofstream out;
     out.__open(write_fd.fd, ios::binary);
     if (!out.is_open()) {
       ec = capture_errno();
       return false;
     }
+    write_fd.fd = -1;
 
     if (in.good() && out.good()) {
       using InIt = istreambuf_iterator<char>;

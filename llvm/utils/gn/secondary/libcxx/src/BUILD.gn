@@ -53,7 +53,10 @@ config("cxx_config") {
     "-Wno-user-defined-literals",
     "-Wno-covered-switch-default",
   ]
-  cflags_cc = [ "-nostdinc++" ]
+  cflags_cc = [
+    "-std=c++17",
+    "-nostdinc++",
+  ]
   defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
   if (target_os == "win") {
     cflags += [ "/Zl" ]
@@ -127,6 +130,7 @@ cxx_sources = [
   "include/config_elast.h",
   "include/refstring.h",
   "ios.cpp",
+  "ios.instantiations.cpp",
   "iostream.cpp",
   "locale.cpp",
   "memory.cpp",

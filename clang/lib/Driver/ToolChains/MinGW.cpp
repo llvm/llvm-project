@@ -491,6 +491,7 @@ SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Vptr;
   return Res;
 }
 

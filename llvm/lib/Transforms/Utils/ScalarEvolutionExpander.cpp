@@ -126,19 +126,21 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   assert(SE.getTypeSizeInBits(V->getType()) == SE.getTypeSizeInBits(Ty) &&
          "InsertNoopCastOfTo cannot change sizes!");
 
-  auto *PtrTy = dyn_cast<PointerType>(Ty);
   // inttoptr only works for integral pointers. For non-integral pointers, we
   // can create a GEP on i8* null  with the integral value as index. Note that
   // it is safe to use GEP of null instead of inttoptr here, because only
   // expressions already based on a GEP of null should be converted to pointers
   // during expansion.
-  if (Op == Instruction::IntToPtr && DL.isNonIntegralPointerType(PtrTy)) {
-    auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
-    assert(DL.getTypeAllocSize(Int8PtrTy->getElementType()) == 1 &&
-           "alloc size of i8 must by 1 byte for the GEP to be correct");
-    auto *GEP = Builder.CreateGEP(
-        Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "uglygep");
-    return Builder.CreateBitCast(GEP, Ty);
+  if (Op == Instruction::IntToPtr) {
+    auto *PtrTy = cast<PointerType>(Ty);
+    if (DL.isNonIntegralPointerType(PtrTy)) {
+      auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
+      assert(DL.getTypeAllocSize(Int8PtrTy->getElementType()) == 1 &&
+             "alloc size of i8 must by 1 byte for the GEP to be correct");
+      auto *GEP = Builder.CreateGEP(
+          Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "uglygep");
+      return Builder.CreateBitCast(GEP, Ty);
+    }
   }
   // Short-circuit unnecessary bitcasts.
   if (Op == Instruction::BitCast) {
@@ -663,7 +665,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
       L = PickMostRelevantLoop(L, getRelevantLoop(Op), SE.DT);
     return RelevantLoops[N] = L;
   }
-  if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(S)) {
+  if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(S)) {
     const Loop *Result = getRelevantLoop(C->getOperand());
     return RelevantLoops[C] = Result;
   }
@@ -1661,6 +1663,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   return expand(T);
 }
 
+Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
+  Value *V =
+      expandCodeForImpl(S->getOperand(), S->getOperand()->getType(), false);
+  return Builder.CreatePtrToInt(V, S->getType());
+}
+
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeForImpl(
@@ -2230,9 +2238,9 @@ template<typename T> static int costAndCollectOperands(
                         unsigned MinIdx, unsigned MaxIdx) {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     Type *OpType = S->getOperand(0)->getType();
-    return NumRequired *
-      TTI.getCmpSelInstrCost(Opcode, OpType,
-                             CmpInst::makeCmpResultType(OpType), CostKind);
+    return NumRequired * TTI.getCmpSelInstrCost(
+                             Opcode, OpType, CmpInst::makeCmpResultType(OpType),
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
   };
 
   switch (S->getSCEVType()) {
@@ -2241,6 +2249,9 @@ template<typename T> static int costAndCollectOperands(
   case scUnknown:
   case scConstant:
     return 0;
+  case scPtrToInt:
+    Cost = CastCost(Instruction::PtrToInt);
+    break;
   case scTruncate:
     Cost = CastCost(Instruction::Trunc);
     break;
@@ -2357,21 +2368,21 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // Assume to be zero-cost.
     return false;
   case scConstant: {
-    auto *Constant = dyn_cast<SCEVConstant>(S);
     // Only evalulate the costs of constants when optimizing for size.
     if (CostKind != TargetTransformInfo::TCK_CodeSize)
       return 0;
-    const APInt &Imm = Constant->getAPInt();
+    const APInt &Imm = cast<SCEVConstant>(S)->getAPInt();
     Type *Ty = S->getType();
     BudgetRemaining -= TTI.getIntImmCostInst(
         WorkItem.ParentOpcode, WorkItem.OperandIdx, Imm, Ty, CostKind);
     return BudgetRemaining < 0;
   }
   case scTruncate:
+  case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
-    int Cost = costAndCollectOperands<SCEVIntegralCastExpr>(WorkItem, TTI,
-                                                            CostKind, Worklist);
+    int Cost =
+        costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
     BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
   }
@@ -2400,7 +2411,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr: {
-    assert(dyn_cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
+    assert(cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)
     // than the number of it's terms.

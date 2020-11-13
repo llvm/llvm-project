@@ -12,7 +12,7 @@
 ; $ clang t.cpp -S -emit-llvm -g -gcodeview -o t.ll
 
 ; CHECK: CodeViewTypes [
-; CHECK:   Section: .debug$T (5)
+; CHECK:   Section: .debug$T (6)
 ; CHECK:   Magic: 0x4
 ; CHECK:   Struct (0x1000) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)

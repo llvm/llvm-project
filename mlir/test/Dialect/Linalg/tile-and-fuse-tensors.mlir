@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -linalg-fusion -canonicalize -cse -split-input-file | FileCheck %s --check-prefix=CANONICALIZED
+// RUN: mlir-opt %s -test-linalg-greedy-fusion -split-input-file | FileCheck %s
 
 #map0 = affine_map<(d0)[s0] -> (2, -d0 + s0)>
 #map1 = affine_map<(d0)[s0] -> (4, -d0 + s0)>
@@ -41,44 +40,19 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
 //  CHECK-SAME: %[[A:[0-9a-z]*]]: tensor<?x?xf32>
 //  CHECK-SAME: %[[B:[0-9a-z]*]]: tensor<?x?xf32>
 //  CHECK-SAME: %[[C:[0-9a-z]*]]: tensor<?x?xf32>
-//       CHECK: %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG: %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG: %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG: %[[dA1:.*]] = dim %[[A]], %[[C1]] : tensor<?x?xf32>
 //       CHECK: scf.for %[[I:[0-9a-z]*]]
+//       CHECK:     %[[stA:.*]] = subtensor %[[A]][%[[I]], 0] [2, %[[dA1]]] [1, 1]  : tensor<?x?xf32> to tensor<2x?xf32>
 //  CHECK-NEXT:   scf.for %[[J:[0-9a-z]*]]
-//  CHECK-NEXT:     scf.for %[[K:[0-9a-z]*]]
-//
-// subtensor of the original program, first one refers to the unfused matmul and becomes a dead SSA value.
-//       CHECK:     subtensor %{{.*}}[%[[I]], %[[K]]] {{.*}} : tensor<?x?xf32> to tensor<?x4xf32>
-//       CHECK:     %[[stB1:.*]] = subtensor %[[B]][%[[K]], %[[J]]] {{.*}} : tensor<?x?xf32> to tensor<4x?xf32>
-//       CHECK:     %[[stF:.*]] = subtensor %{{.*}}[%[[I]], %[[J]]] {{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
+//  CHECK-NEXT:     scf.for %[[K:[0-9a-z]*]] {{.*}} iter_args(%[[RES:[0-9a-z]*]]
+//   CHECK-DAG:       %[[stB1:.*]] = subtensor %[[B]][%[[K]], %[[J]]] [4, 3] [1, 1]  : tensor<?x?xf32> to tensor<4x3xf32>
+//   CHECK-DAG:       %[[stF:.*]] = subtensor %[[RES]][%[[I]], %[[J]]] [2, 3] [1, 1]  : tensor<?x?xf32> to tensor<2x3xf32>
 //
 // subtensors of the producing matmul.
-//       CHECK:     %[[stA:.*]] = subtensor %[[A]][%[[I]], %[[C0]]] {{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
-//  CHECK-NEXT:     %[[stB2:.*]] = subtensor %[[B]][%[[C0]], %[[K]]] {{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
-//  CHECK-NEXT:     %[[stC:.*]] = subtensor %[[C]][%[[I]], %[[K]]] {{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
-//  CHECK-NEXT:     %[[stD:.*]] = linalg.matmul ins(%[[stA]], %[[stB2]] : tensor<?x?xf32>, tensor<?x?xf32>) init(%[[stC]] : tensor<?x?xf32>)  -> tensor<?x?xf32>
-//  CHECK-NEXT:     %[[stD2:.*]] = tensor_cast %[[stD]] : tensor<?x?xf32> to tensor<?x4xf32>
-//  CHECK-NEXT:     %[[stG:.*]] = linalg.matmul ins(%[[stD2]], %[[stB1]] : tensor<?x4xf32>, tensor<4x?xf32>) init(%[[stF]] : tensor<?x?xf32>)  -> tensor<?x?xf32>
-//  CHECK-NEXT:     subtensor_insert %[[stG]]
-
-
-// CANONICALIZED-LABEL: func @matmul_tensors(
-//  CANONICALIZED-SAME: %[[A:[0-9a-z]*]]: tensor<?x?xf32>
-//  CANONICALIZED-SAME: %[[B:[0-9a-z]*]]: tensor<?x?xf32>
-//  CANONICALIZED-SAME: %[[C:[0-9a-z]*]]: tensor<?x?xf32>
-//       CANONICALIZED: %[[C0:.*]] = constant 0 : index
-//       CANONICALIZED: %[[C1:.*]] = constant 1 : index
-//       CANONICALIZED: scf.for %[[I:[0-9a-z]*]]
-//  CANONICALIZED-NEXT:   scf.for %[[J:[0-9a-z]*]]
-//  CANONICALIZED-NEXT:     scf.for %[[K:[0-9a-z]*]]
-//
-//       CANONICALIZED:     %[[stB1:.*]] = subtensor %[[B]][%[[K]], %[[J]]] [4, 3] [1, 1]  : tensor<?x?xf32> to tensor<4x3xf32>
-//       CANONICALIZED:     %[[stF:.*]] = subtensor %{{.*}}[%[[I]], %[[J]]] [2, 3] [1, 1]  : tensor<?x?xf32> to tensor<2x3xf32>
-//
-// subtensors of the producing matmul.
-//       CANONICALIZED:     %[[dA1:.*]] = dim %[[A]], %[[C1]] : tensor<?x?xf32>
-//       CANONICALIZED:     %[[stA:.*]] = subtensor %[[A]][%[[I]], 0] [2, %[[dA1]]] [1, 1]  : tensor<?x?xf32> to tensor<2x?xf32>
-//  CANONICALIZED-NEXT:     %[[stB2:.*]] = subtensor %[[B]][0, %[[K]]] [%[[dA1]], 4] [1, 1]  : tensor<?x?xf32> to tensor<?x4xf32>
-//  CANONICALIZED-NEXT:     %[[stC:.*]] = subtensor %[[C]][%[[I]], %[[K]]] [2, 4] [1, 1]  : tensor<?x?xf32> to tensor<2x4xf32>
-//  CANONICALIZED-NEXT:     %[[stD:.*]] = linalg.matmul ins(%[[stA]], %[[stB2]] : tensor<2x?xf32>, tensor<?x4xf32>) init(%[[stC]] : tensor<2x4xf32>)  -> tensor<2x4xf32>
-//  CANONICALIZED-NEXT:     %[[stG:.*]] = linalg.matmul ins(%[[stD]], %[[stB1]] : tensor<2x4xf32>, tensor<4x3xf32>) init(%[[stF]] : tensor<2x3xf32>)  -> tensor<2x3xf32>
-//  CANONICALIZED-NEXT:     subtensor_insert %[[stG]]
+//   CHECK-DAG:       %[[stB2:.*]] = subtensor %[[B]][0, %[[K]]] [%[[dA1]], 4] [1, 1]  : tensor<?x?xf32> to tensor<?x4xf32>
+//   CHECK-DAG:       %[[stC:.*]] = subtensor %[[C]][%[[I]], %[[K]]] [2, 4] [1, 1]  : tensor<?x?xf32> to tensor<2x4xf32>
+//       CHECK:       %[[stD:.*]] = linalg.matmul ins(%[[stA]], %[[stB2]] : tensor<2x?xf32>, tensor<?x4xf32>) init(%[[stC]] : tensor<2x4xf32>)  -> tensor<2x4xf32>
+//  CHECK-NEXT:       %[[stG:.*]] = linalg.matmul ins(%[[stD]], %[[stB1]] : tensor<2x4xf32>, tensor<4x3xf32>) init(%[[stF]] : tensor<2x3xf32>)  -> tensor<2x3xf32>
+//  CHECK-NEXT:       subtensor_insert %[[stG]] into %[[RES]][%[[I]], %[[J]]]

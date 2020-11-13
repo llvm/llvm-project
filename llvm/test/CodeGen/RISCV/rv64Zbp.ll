@@ -745,6 +745,53 @@ define signext i32 @grev16_i32(i32 signext %a) nounwind {
   ret i32 %or
 }
 
+declare i32 @llvm.fshl.i32(i32, i32, i32)
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+
+define signext i32 @grev16_i32_fshl(i32 signext %a) nounwind {
+; RV64I-LABEL: grev16_i32_fshl:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a1, a0, 16
+; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: grev16_i32_fshl:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    greviw a0, a0, 16
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: grev16_i32_fshl:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    greviw a0, a0, 16
+; RV64IBP-NEXT:    ret
+  %or = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
+  ret i32 %or
+}
+
+define signext i32 @grev16_i32_fshr(i32 signext %a) nounwind {
+; RV64I-LABEL: grev16_i32_fshr:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 16
+; RV64I-NEXT:    srliw a0, a0, 16
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: grev16_i32_fshr:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    greviw a0, a0, 16
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: grev16_i32_fshr:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    greviw a0, a0, 16
+; RV64IBP-NEXT:    ret
+  %or = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 16)
+  ret i32 %or
+}
+
 define i64 @grev16_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev16_i64:
 ; RV64I:       # %bb.0:
@@ -793,16 +840,61 @@ define i64 @grev32(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rori a0, a0, 32
+; RV64IB-NEXT:    rev32 a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rori a0, a0, 32
+; RV64IBP-NEXT:    rev32 a0, a0
 ; RV64IBP-NEXT:    ret
   %shl = shl i64 %a, 32
   %shr = lshr i64 %a, 32
   %or = or i64 %shl, %shr
+  ret i64 %or
+}
+
+declare i64 @llvm.fshl.i64(i64, i64, i64)
+declare i64 @llvm.fshr.i64(i64, i64, i64)
+
+define i64 @grev32_fshl(i64 %a) nounwind {
+; RV64I-LABEL: grev32_fshl:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 32
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: grev32_fshl:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: grev32_fshl:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    ret
+  %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 32)
+  ret i64 %or
+}
+
+define i64 @grev32_fshr(i64 %a) nounwind {
+; RV64I-LABEL: grev32_fshr:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: grev32_fshr:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: grev32_fshr:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    ret
+  %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 32)
   ret i64 %or
 }
 

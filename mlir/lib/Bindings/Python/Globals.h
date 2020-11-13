@@ -42,13 +42,17 @@ public:
     dialectSearchPrefixes.swap(newValues);
   }
 
+  /// Clears positive and negative caches regarding what implementations are
+  /// available. Future lookups will do more expensive existence checks.
+  void clearImportCache();
+
   /// Loads a python module corresponding to the given dialect namespace.
   /// No-ops if the module has already been loaded or is not found. Raises
   /// an error on any evaluation issues.
   /// Note that this returns void because it is expected that the module
   /// contains calls to decorators and helpers that register the salient
   /// entities.
-  void loadDialectModule(const std::string &dialectNamespace);
+  void loadDialectModule(llvm::StringRef dialectNamespace);
 
   /// Decorator for registering a custom Dialect class. The class object must
   /// have a DIALECT_NAMESPACE attribute.
@@ -65,27 +69,39 @@ public:
   /// This is intended to be called by implementation code.
   void registerOperationImpl(const std::string &operationName,
                              pybind11::object pyClass,
-                             pybind11::object rawClass);
+                             pybind11::object rawOpViewClass);
 
   /// Looks up a registered dialect class by namespace. Note that this may
   /// trigger loading of the defining module and can arbitrarily re-enter.
   llvm::Optional<pybind11::object>
   lookupDialectClass(const std::string &dialectNamespace);
 
+  /// Looks up a registered raw OpView class by operation name. Note that this
+  /// may trigger a load of the dialect, which can arbitrarily re-enter.
+  llvm::Optional<pybind11::object>
+  lookupRawOpViewClass(llvm::StringRef operationName);
+
 private:
   static PyGlobals *instance;
   /// Module name prefixes to search under for dialect implementation modules.
   std::vector<std::string> dialectSearchPrefixes;
-  /// Map of dialect namespace to bool flag indicating whether the module has
-  /// been successfully loaded or resolved to not found.
-  llvm::StringSet<> loadedDialectModules;
   /// Map of dialect namespace to external dialect class object.
   llvm::StringMap<pybind11::object> dialectClassMap;
   /// Map of full operation name to external operation class object.
   llvm::StringMap<pybind11::object> operationClassMap;
   /// Map of operation name to custom subclass that directly initializes
   /// the OpView base class (bypassing the user class constructor).
-  llvm::StringMap<pybind11::object> rawOperationClassMap;
+  llvm::StringMap<pybind11::object> rawOpViewClassMap;
+
+  /// Set of dialect namespaces that we have attempted to import implementation
+  /// modules for.
+  llvm::StringSet<> loadedDialectModulesCache;
+  /// Cache of operation name to custom OpView subclass that directly
+  /// initializes the OpView base class (or an undefined object for negative
+  /// lookup). This is maintained on loopup as a shadow of rawOpViewClassMap
+  /// in order for repeat lookups of the OpView classes to only incur the cost
+  /// of one hashtable lookup.
+  llvm::StringMap<pybind11::object> rawOpViewClassMapCache;
 };
 
 } // namespace python

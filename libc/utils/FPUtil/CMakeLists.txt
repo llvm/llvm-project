@@ -20,6 +20,7 @@ add_header_library(
     NearestIntegerOperations.h
     NormalFloat.h
   DEPENDS
+    libc.include.math
     libc.utils.CPP.standalone_cpp
 )
 

@@ -3,7 +3,8 @@
 
 // https://code.google.com/p/address-sanitizer/issues/detail?id=260
 // REQUIRES: lld
-
+// FIXME: This may pass on Android, with non-emulated-tls.
+// XFAIL: android
 int undefined();
 
 // On i386 clang adds --export-dynamic when linking with ASan, which adds all

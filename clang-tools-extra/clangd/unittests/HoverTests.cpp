@@ -2077,7 +2077,7 @@ TEST(Hover, DocsFromIndex) {
   TestTU TU = TestTU::withCode(T.code());
   auto AST = TU.build();
   Symbol IndexSym;
-  IndexSym.ID = *getSymbolID(&findDecl(AST, "X"));
+  IndexSym.ID = getSymbolID(&findDecl(AST, "X"));
   IndexSym.Documentation = "comment from index";
   SymbolSlab::Builder Symbols;
   Symbols.insert(IndexSym);

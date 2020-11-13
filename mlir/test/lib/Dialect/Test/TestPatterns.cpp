@@ -16,6 +16,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+using namespace mlir::test;
 
 // Native function for testing NativeCodeCall
 static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
@@ -955,6 +956,7 @@ struct TestMergeBlocksPatternDriver
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+namespace test {
 void registerPatternsTestPass() {
   PassRegistration<TestReturnTypeDriver>("test-return-type",
                                          "Run return type functions");
@@ -987,4 +989,5 @@ void registerPatternsTestPass() {
       "test-merge-blocks",
       "Test Merging operation in ConversionPatternRewriter"};
 }
+} // namespace test
 } // namespace mlir

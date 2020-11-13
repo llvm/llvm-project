@@ -124,8 +124,9 @@ protected:
   /// Split a vector load into 2 loads of half the vector.
   SDValue SplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
 
-  /// Widen a vector load from vec3 to vec4.
-  SDValue WidenVectorLoad(SDValue Op, SelectionDAG &DAG) const;
+  /// Widen a suitably aligned v3 load. For all other cases, split the input
+  /// vector load.
+  SDValue WidenOrSplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
 
   /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;

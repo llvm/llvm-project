@@ -883,9 +883,10 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 /// debug info.  It's the same as what we use for resolving the code-gen
 /// references for now.  FIXME: This can go wrong when references are
 /// SP-relative and simple call frames aren't used.
-int ARMFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                             Register &FrameReg) const {
-  return ResolveFrameIndexReference(MF, FI, FrameReg, 0);
+StackOffset ARMFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
+  return StackOffset::getFixed(ResolveFrameIndexReference(MF, FI, FrameReg, 0));
 }
 
 int ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,

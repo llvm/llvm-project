@@ -41,7 +41,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 
   /// Returns true if the given region 'src' can be inlined into the region
   /// 'dest' that is attached to an operation registered to the current dialect.
-  bool isLegalToInline(Region *dest, Region *src,
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                        BlockAndValueMapping &valueMapping) const final {
     // Conservatively don't allow inlining into affine structures.
     return false;
@@ -49,7 +49,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 
   /// Returns true if the given operation 'op', that is registered to this
   /// dialect, can be inlined into the given region, false otherwise.
-  bool isLegalToInline(Operation *op, Region *region,
+  bool isLegalToInline(Operation *op, Region *region, bool wouldBeCloned,
                        BlockAndValueMapping &valueMapping) const final {
     // Always allow inlining affine operations into the top-level region of a
     // function. There are some edge cases when inlining *into* affine
@@ -295,6 +295,33 @@ bool mlir::isValidSymbol(Value value, Region *region) {
 // `region` provides the polyhedral symbol scope. Returns false otherwise.
 static bool isValidAffineIndexOperand(Value value, Region *region) {
   return isValidDim(value, region) || isValidSymbol(value, region);
+}
+
+/// Prints dimension and symbol list.
+static void printDimAndSymbolList(Operation::operand_iterator begin,
+                                  Operation::operand_iterator end,
+                                  unsigned numDims, OpAsmPrinter &printer) {
+  OperandRange operands(begin, end);
+  printer << '(' << operands.take_front(numDims) << ')';
+  if (operands.size() > numDims)
+    printer << '[' << operands.drop_front(numDims) << ']';
+}
+
+/// Parses dimension and symbol list and returns true if parsing failed.
+static ParseResult parseDimAndSymbolList(OpAsmParser &parser,
+                                         SmallVectorImpl<Value> &operands,
+                                         unsigned &numDims) {
+  SmallVector<OpAsmParser::OperandType, 8> opInfos;
+  if (parser.parseOperandList(opInfos, OpAsmParser::Delimiter::Paren))
+    return failure();
+  // Store number of dimensions for validation by caller.
+  numDims = opInfos.size();
+
+  // Parse the optional symbol operands.
+  auto indexTy = parser.getBuilder().getIndexType();
+  return failure(parser.parseOperandList(
+                     opInfos, OpAsmParser::Delimiter::OptionalSquare) ||
+                 parser.resolveOperands(opInfos, indexTy, operands));
 }
 
 /// Utility function to verify that a set of operands are valid dimension and

@@ -43,6 +43,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsXCore.h"
@@ -640,8 +641,12 @@ static const char * const IntrinsicNameTable[] = {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_TARGET_DATA
 
+bool Function::isTargetIntrinsic(Intrinsic::ID IID) {
+  return IID > TargetInfos[0].Count;
+}
+
 bool Function::isTargetIntrinsic() const {
-  return IntID > TargetInfos[0].Count;
+  return isTargetIntrinsic(IntID);
 }
 
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same

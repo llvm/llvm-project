@@ -37,11 +37,11 @@
 // compressing/uncompressing MCInst instructions, plus
 // some helper functions:
 //
-// bool compressInst(MCInst& OutInst, const MCInst &MI,
+// bool compressInst(MCInst &OutInst, const MCInst &MI,
 //                   const MCSubtargetInfo &STI,
 //                   MCContext &Context);
 //
-// bool uncompressInst(MCInst& OutInst, const MCInst &MI,
+// bool uncompressInst(MCInst &OutInst, const MCInst &MI,
 //                     const MCRegisterInfo &MRI,
 //                     const MCSubtargetInfo &STI);
 //
@@ -610,17 +610,17 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       << "#undef GEN_CHECK_COMPRESS_INSTR\n\n";
 
   if (EType == EmitterType::Compress) {
-    FuncH << "static bool compressInst(MCInst& OutInst,\n";
+    FuncH << "static bool compressInst(MCInst &OutInst,\n";
     FuncH.indent(25) << "const MCInst &MI,\n";
     FuncH.indent(25) << "const MCSubtargetInfo &STI,\n";
     FuncH.indent(25) << "MCContext &Context) {\n";
   } else if (EType == EmitterType::Uncompress){
-    FuncH << "static bool uncompressInst(MCInst& OutInst,\n";
+    FuncH << "static bool uncompressInst(MCInst &OutInst,\n";
     FuncH.indent(27) << "const MCInst &MI,\n";
     FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
-    FuncH << "static bool isCompressibleInst(const MachineInstr& MI,\n";
+    FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(27) << "const RISCVSubtarget *Subtarget,\n";
     FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
@@ -781,7 +781,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
             unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
               DestOperand.Rec, StringRef("ImmediateCode"));
             CondStream.indent(6) << "MI.getOperand(" + std::to_string(OpIdx) +
-                                    ").isImm() && \n";
+                                    ").isImm() &&\n";
             CondStream.indent(6) << Namespace + "ValidateMachineOperand(" +
                                         "MI.getOperand(" + std::to_string(OpIdx) +
                                         "), Subtarget, " + std::to_string(Entry) +
@@ -858,7 +858,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       << "ValidateMachineOperand(const MachineOperand &MO,\n"
       << "                  const RISCVSubtarget *Subtarget,\n"
       << "                  unsigned PredicateIndex) {\n"
-      << "  int64_t Imm = MO.getImm(); \n"
+      << "  int64_t Imm = MO.getImm();\n"
       << "  switch (PredicateIndex) {\n"
       << "  default:\n"
       << "    llvm_unreachable(\"Unknown ImmLeaf Predicate kind\");\n"

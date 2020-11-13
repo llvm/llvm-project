@@ -6,6 +6,9 @@
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck --check-prefix=CHECK-strict %s
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck --check-prefix=CHECK-normal %s
 
+// Investigate why LeakyGlobal leak does show
+// UNSUPPORTED: arm-linux || armhf-linux
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sanitizer/lsan_interface.h>

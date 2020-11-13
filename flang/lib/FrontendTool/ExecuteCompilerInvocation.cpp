@@ -24,10 +24,13 @@ namespace Fortran::frontend {
 static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     CompilerInstance &ci) {
 
-  ActionKind ak = ci.GetFrontendOpts().programAction_;
+  ActionKind ak = ci.frontendOpts().programAction_;
   switch (ak) {
   case InputOutputTest:
     return std::make_unique<InputOutputTestAction>();
+    break;
+  case PrintPreprocessedInput:
+    return std::make_unique<PrintPreprocessedAction>();
     break;
   default:
     break;
@@ -52,7 +55,7 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci) {
 }
 bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
-  if (flang->GetFrontendOpts().showHelp_) {
+  if (flang->frontendOpts().showHelp_) {
     clang::driver::getDriverOptTable().PrintHelp(llvm::outs(),
         "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*Include=*/clang::driver::options::FC1Option,
@@ -62,7 +65,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   }
 
   // Honor -version.
-  if (flang->GetFrontendOpts().showVersion_) {
+  if (flang->frontendOpts().showVersion_) {
     llvm::cl::PrintVersionMessage();
     return true;
   }

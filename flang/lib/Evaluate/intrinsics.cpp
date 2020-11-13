@@ -207,26 +207,28 @@ struct IntrinsicDummyArgument {
 // KIND(0), KIND(0.0), KIND(''), &c. value for the function result.
 static constexpr IntrinsicDummyArgument DefaultingKIND{"kind",
     {IntType, KindCode::kindArg}, Rank::scalar,
-    Optionality::defaultsToDefaultForResult};
+    Optionality::defaultsToDefaultForResult, common::Intent::In};
 // MatchingDefaultKIND is a KIND= argument whose default value is the
 // kind of any "Same" function argument (viz., the one whose kind pattern is
 // "same").
 static constexpr IntrinsicDummyArgument MatchingDefaultKIND{"kind",
-    {IntType, KindCode::kindArg}, Rank::scalar,
-    Optionality::defaultsToSameKind};
+    {IntType, KindCode::kindArg}, Rank::scalar, Optionality::defaultsToSameKind,
+    common::Intent::In};
 // SizeDefaultKind is a KIND= argument whose default value should be
 // the kind of INTEGER used for address calculations, and can be
 // set so with a compiler flag; but the standard mandates the
 // kind of default INTEGER.
 static constexpr IntrinsicDummyArgument SizeDefaultKIND{"kind",
-    {IntType, KindCode::kindArg}, Rank::scalar,
-    Optionality::defaultsToSizeKind};
-static constexpr IntrinsicDummyArgument RequiredDIM{
-    "dim", {IntType, KindCode::dimArg}, Rank::scalar, Optionality::required};
-static constexpr IntrinsicDummyArgument OptionalDIM{
-    "dim", {IntType, KindCode::dimArg}, Rank::scalar, Optionality::optional};
-static constexpr IntrinsicDummyArgument OptionalMASK{
-    "mask", AnyLogical, Rank::conformable, Optionality::optional};
+    {IntType, KindCode::kindArg}, Rank::scalar, Optionality::defaultsToSizeKind,
+    common::Intent::In};
+static constexpr IntrinsicDummyArgument RequiredDIM{"dim",
+    {IntType, KindCode::dimArg}, Rank::scalar, Optionality::required,
+    common::Intent::In};
+static constexpr IntrinsicDummyArgument OptionalDIM{"dim",
+    {IntType, KindCode::dimArg}, Rank::scalar, Optionality::optional,
+    common::Intent::In};
+static constexpr IntrinsicDummyArgument OptionalMASK{"mask", AnyLogical,
+    Rank::conformable, Optionality::optional, common::Intent::In};
 
 struct IntrinsicInterface {
   static constexpr int maxArguments{7}; // if not a MAX/MIN(...)
@@ -474,6 +476,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", SameInt}, {"shift", AnyInt},
             {"size", AnyInt, Rank::elemental, Optionality::optional}},
         SameInt},
+    {"isnan", {{"a", AnyFloating}}, DefaultLogical},
     {"is_contiguous", {{"array", Addressable, Rank::anyOrAssumedRank}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"is_iostat_end", {{"i", AnyInt}}, DefaultLogical},
@@ -742,7 +745,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 //  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF,
 //  MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR
 //  IARG, IARGC, NARGS, NUMARG, BADDRESS, IADDR, CACHESIZE,
-//  EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC
+//  EOF, FP_CLASS, INT_PTR_KIND, MALLOC
 //  probably more (these are PGI + Intel, possibly incomplete)
 // TODO: Optionally warn on use of non-standard intrinsics:
 //  LOC, probably others

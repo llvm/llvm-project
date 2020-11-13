@@ -9,7 +9,7 @@ defvar list1 = ["foo", "bar", "snork"];
 def list_paste {
   list<string> the_list = list1 # in;
 }
-// ERROR1: error: Unknown token when parsing a value
+// ERROR1: error: Unknown or reserved token when parsing a value
 #endif
 
 
@@ -18,5 +18,5 @@ def list_paste {
 #ifdef ERROR2
 def name_paste#in {
 }
-// ERROR2: error: Unknown token when parsing a value
+// ERROR2: error: Unknown or reserved token when parsing a value
 #endif

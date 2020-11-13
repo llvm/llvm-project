@@ -719,16 +719,6 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     }
   }
 
-  if (!Config.SetSectionFlags.empty()) {
-    for (auto &Sec : Obj.sections()) {
-      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
-      if (Iter != Config.SetSectionFlags.end()) {
-        const SectionFlagsUpdate &SFU = Iter->second;
-        setSectionFlagsAndType(Sec, SFU.NewFlags);
-      }
-    }
-  }
-
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
@@ -768,6 +758,17 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     Obj.SymbolTable->addSymbol(
         SI.SymbolName, SI.Bind, SI.Type, Sec, Value, SI.Visibility,
         Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
+  }
+
+  // --set-section-flags works with sections added by --add-section.
+  if (!Config.SetSectionFlags.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
+      if (Iter != Config.SetSectionFlags.end()) {
+        const SectionFlagsUpdate &SFU = Iter->second;
+        setSectionFlagsAndType(Sec, SFU.NewFlags);
+      }
+    }
   }
 
   if (Config.EntryExpr)

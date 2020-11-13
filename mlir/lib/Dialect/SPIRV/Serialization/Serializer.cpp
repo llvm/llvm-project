@@ -751,12 +751,15 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
              << attrName << " attribute " << strAttr.getValue();
     }
     return emitError(loc, "expected string attribute for ") << attrName;
+  case spirv::Decoration::Aliased:
   case spirv::Decoration::Flat:
+  case spirv::Decoration::NonReadable:
+  case spirv::Decoration::NonWritable:
   case spirv::Decoration::NoPerspective:
-    if (auto unitAttr = attr.second.dyn_cast<UnitAttr>()) {
-      // For unit attributes, the args list has no values so we do nothing
+  case spirv::Decoration::Restrict:
+    // For unit attributes, the args list has no values so we do nothing
+    if (auto unitAttr = attr.second.dyn_cast<UnitAttr>())
       break;
-    }
     return emitError(loc, "expected unit attribute for ") << attrName;
   default:
     return emitError(loc, "unhandled decoration ") << decorationName;
@@ -1033,7 +1036,7 @@ bool Serializer::isInterfaceStructPtrType(Type type) const {
 LogicalResult Serializer::processType(Location loc, Type type,
                                       uint32_t &typeID) {
   // Maintains a set of names for nested identified struct types. This is used
-  // to properly seialize resursive references.
+  // to properly serialize resursive references.
   llvm::SetVector<StringRef> serializationCtx;
   return processTypeImpl(loc, type, typeID, serializationCtx);
 }
@@ -1170,7 +1173,7 @@ LogicalResult Serializer::prepareBasicType(
                             spirv::Opcode::OpTypeForwardPointer,
                             forwardPtrOperands);
 
-      // 2. Find the the pointee (enclosing) struct.
+      // 2. Find the pointee (enclosing) struct.
       auto structType = spirv::StructType::getIdentified(
           module.getContext(), pointeeStruct.getIdentifier());
 

@@ -45,7 +45,7 @@ Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
                   MapVector<StringRef, BitcodeModule> &ModuleMap,
-                  const std::vector<uint8_t> *CmdArgs = nullptr);
+                  const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
 Error finalizeOptimizationRemarks(
     std::unique_ptr<ToolOutputFile> DiagOutputFile);

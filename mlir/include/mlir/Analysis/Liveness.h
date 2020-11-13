@@ -86,7 +86,7 @@ public:
 
 private:
   /// Initializes the internal mappings.
-  void build(MutableArrayRef<Region> regions);
+  void build();
 
 private:
   /// The operation this analysis was constructed from.

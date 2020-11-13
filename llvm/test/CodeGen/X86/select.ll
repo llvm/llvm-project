@@ -557,63 +557,59 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; MCU-NEXT:    testb $1, %al
 ; MCU-NEXT:    jne .LBB7_1
 ; MCU-NEXT:  # %bb.2:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; MCU-NEXT:    movl (%eax), %eax
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; MCU-NEXT:    je .LBB7_5
 ; MCU-NEXT:  .LBB7_4:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; MCU-NEXT:    movl (%ecx), %ecx
 ; MCU-NEXT:    je .LBB7_8
 ; MCU-NEXT:  .LBB7_7:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; MCU-NEXT:    movl (%esi), %esi
 ; MCU-NEXT:    je .LBB7_11
 ; MCU-NEXT:  .LBB7_10:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; MCU-NEXT:    movl (%edi), %edi
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
 ; MCU-NEXT:    je .LBB7_14
 ; MCU-NEXT:  .LBB7_13:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebx
-; MCU-NEXT:    movl (%ebx), %ebx
-; MCU-NEXT:    je .LBB7_17
-; MCU-NEXT:  .LBB7_16:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; MCU-NEXT:    jmp .LBB7_18
-; MCU-NEXT:  .LBB7_1:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; MCU-NEXT:    movl (%eax), %eax
+; MCU-NEXT:    jmp .LBB7_15
+; MCU-NEXT:  .LBB7_1:
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; MCU-NEXT:    jne .LBB7_4
 ; MCU-NEXT:  .LBB7_5:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; MCU-NEXT:    movl (%ecx), %ecx
 ; MCU-NEXT:    jne .LBB7_7
 ; MCU-NEXT:  .LBB7_8:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; MCU-NEXT:    movl (%esi), %esi
 ; MCU-NEXT:    jne .LBB7_10
 ; MCU-NEXT:  .LBB7_11:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; MCU-NEXT:    movl (%edi), %edi
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
 ; MCU-NEXT:    jne .LBB7_13
 ; MCU-NEXT:  .LBB7_14:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebx
-; MCU-NEXT:    movl (%ebx), %ebx
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; MCU-NEXT:  .LBB7_15:
+; MCU-NEXT:    movl (%edi), %ebx
+; MCU-NEXT:    movl (%ecx), %edi
+; MCU-NEXT:    movl (%esi), %esi
+; MCU-NEXT:    movl (%ebp), %ecx
+; MCU-NEXT:    movl (%eax), %eax
 ; MCU-NEXT:    jne .LBB7_16
-; MCU-NEXT:  .LBB7_17:
+; MCU-NEXT:  # %bb.17:
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
+; MCU-NEXT:    jmp .LBB7_18
+; MCU-NEXT:  .LBB7_16:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
 ; MCU-NEXT:  .LBB7_18:
 ; MCU-NEXT:    movl (%ebp), %ebp
 ; MCU-NEXT:    decl %ebp
-; MCU-NEXT:    decl %ebx
-; MCU-NEXT:    decl %edi
-; MCU-NEXT:    decl %esi
-; MCU-NEXT:    decl %ecx
 ; MCU-NEXT:    decl %eax
-; MCU-NEXT:    movl %eax, 20(%edx)
-; MCU-NEXT:    movl %ecx, 16(%edx)
+; MCU-NEXT:    decl %ecx
+; MCU-NEXT:    decl %esi
+; MCU-NEXT:    decl %edi
+; MCU-NEXT:    decl %ebx
+; MCU-NEXT:    movl %ebx, 20(%edx)
+; MCU-NEXT:    movl %edi, 16(%edx)
 ; MCU-NEXT:    movl %esi, 12(%edx)
-; MCU-NEXT:    movl %edi, 8(%edx)
-; MCU-NEXT:    movl %ebx, 4(%edx)
+; MCU-NEXT:    movl %ecx, 8(%edx)
+; MCU-NEXT:    movl %eax, 4(%edx)
 ; MCU-NEXT:    movl %ebp, (%edx)
 ; MCU-NEXT:    popl %esi
 ; MCU-NEXT:    popl %edi

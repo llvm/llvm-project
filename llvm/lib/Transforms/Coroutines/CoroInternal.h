@@ -34,10 +34,12 @@ void initializeCoroCleanupLegacyPass(PassRegistry &);
 // CoroElide pass that triggers a restart of the pipeline by CGPassManager.
 // When CoroSplit pass sees the same coroutine the second time, it splits it up,
 // adds coroutine subfunctions to the SCC to be processed by IPO pipeline.
-
+// Async lowering similarily triggers a restart of the pipeline after it has
+// split the coroutine.
 #define CORO_PRESPLIT_ATTR "coroutine.presplit"
 #define UNPREPARED_FOR_SPLIT "0"
 #define PREPARED_FOR_SPLIT "1"
+#define ASYNC_RESTART_AFTER_SPLIT "2"
 
 #define CORO_DEVIRT_TRIGGER_FN "coro.devirt.trigger"
 
@@ -81,6 +83,11 @@ enum class ABI {
   /// suspend at most once during its execution, and the return value of
   /// the continuation is void.
   RetconOnce,
+
+  /// The "async continuation" lowering, where each suspend point creates a
+  /// single continuation function. The continuation function is available as an
+  /// intrinsic.
+  Async,
 };
 
 // Holds structural Coroutine Intrinsics for a particular function and other
@@ -133,9 +140,23 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     bool IsFrameInlineInStorage;
   };
 
+  struct AsyncLoweringStorage {
+    FunctionType *AsyncFuncTy;
+    Value *Context;
+    unsigned ContextArgNo;
+    uint64_t ContextHeaderSize;
+    uint64_t ContextAlignment;
+    uint64_t FrameOffset; // Start of the frame.
+    uint64_t ContextSize; // Includes frame size.
+    GlobalVariable *AsyncFuncPointer;
+
+    Align getContextAlignment() const { return Align(ContextAlignment); }
+  };
+
   union {
     SwitchLoweringStorage SwitchLowering;
     RetconLoweringStorage RetconLowering;
+    AsyncLoweringStorage AsyncLowering;
   };
 
   CoroIdInst *getSwitchCoroId() const {
@@ -147,6 +168,11 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     assert(ABI == coro::ABI::Retcon ||
            ABI == coro::ABI::RetconOnce);
     return cast<AnyCoroIdRetconInst>(CoroBegin->getId());
+  }
+
+  CoroIdAsyncInst *getAsyncCoroId() const {
+    assert(ABI == coro::ABI::Async);
+    return cast<CoroIdAsyncInst>(CoroBegin->getId());
   }
 
   unsigned getSwitchIndexField() const {
@@ -178,7 +204,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();
+    case coro::ABI::Async:
+      return AsyncLowering.AsyncFuncTy;
     }
+
     llvm_unreachable("Unknown coro::ABI enum");
   }
 
@@ -212,6 +241,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getCallingConv();
+    case coro::ABI::Async:
+      return CallingConv::Swift;
     }
     llvm_unreachable("Unknown coro::ABI enum");
   }

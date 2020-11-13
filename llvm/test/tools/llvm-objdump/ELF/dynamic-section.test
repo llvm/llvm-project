@@ -205,15 +205,14 @@ Sections:
      - Tag:   DT_NULL
        Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-objdump -p %t2 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=ELF32
@@ -421,15 +420,14 @@ Sections:
      - Tag:   DT_NULL
        Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## When printing the value column we want to have the minimal possible indentation.
 ## Use an arbitrary dynamic tag to demonstrate that.

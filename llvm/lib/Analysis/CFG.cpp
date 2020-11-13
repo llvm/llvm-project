@@ -14,8 +14,17 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+// The max number of basic blocks explored during reachability analysis between
+// two basic blocks. This is kept reasonably small to limit compile time when
+// repeatedly used by clients of this analysis (such as captureTracking).
+static cl::opt<unsigned> DefaultMaxBBsToExplore(
+    "dom-tree-reachability-max-bbs-to-explore", cl::Hidden,
+    cl::desc("Max number of BBs to explore for reachability analysis"),
+    cl::init(32));
 
 /// FindFunctionBackedges - Analyze the specified function to find all of the
 /// loop backedges in the function and return them.  This is a relatively cheap
@@ -152,9 +161,7 @@ bool llvm::isPotentiallyReachableFromMany(
 
   const Loop *StopLoop = LI ? getOutermostLoop(LI, StopBB) : nullptr;
 
-  // Limit the number of blocks we visit. The goal is to avoid run-away compile
-  // times on large CFGs without hampering sensible code. Arbitrarily chosen.
-  unsigned Limit = 32;
+  unsigned Limit = DefaultMaxBBsToExplore;
   SmallPtrSet<const BasicBlock*, 32> Visited;
   do {
     BasicBlock *BB = Worklist.pop_back_val();

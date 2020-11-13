@@ -53,6 +53,7 @@ static_library("Basic") {
     "DiagnosticIDs.cpp",
     "DiagnosticOptions.cpp",
     "ExpressionTraits.cpp",
+    "FileEntry.cpp",
     "FileManager.cpp",
     "FileSystemStatCache.cpp",
     "IdentifierTable.cpp",
@@ -102,5 +103,4 @@ static_library("Basic") {
     "XRayInstr.cpp",
     "XRayLists.cpp",
   ]
-  defines = [ "HAVE_VCS_VERSION_INC" ]  # For Version.cpp
 }

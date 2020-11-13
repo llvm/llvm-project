@@ -51,8 +51,8 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:  .LBB0_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, r1, r3
@@ -324,8 +324,9 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
 ; CHECK-NEXT:    sub.w r12, r2, #1
 ; CHECK-NEXT:    adr r2, .LCPI2_1
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q1, r12
 ; CHECK-NEXT:    vdup.32 q2, r12
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill

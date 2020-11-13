@@ -9,7 +9,9 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
-#include <pybind11/pybind11.h>
+#include <vector>
+
+#include "PybindUtils.h"
 
 #include "mlir-c/IR.h"
 #include "llvm/ADT/DenseMap.h"
@@ -18,8 +20,11 @@ namespace mlir {
 namespace python {
 
 class PyBlock;
+class PyInsertionPoint;
 class PyLocation;
+class DefaultingPyLocation;
 class PyMlirContext;
+class DefaultingPyMlirContext;
 class PyModule;
 class PyOperation;
 class PyType;
@@ -61,6 +66,7 @@ public:
     return stolen;
   }
 
+  T *get() { return referrent; }
   T *operator->() {
     assert(referrent && object);
     return referrent;
@@ -76,9 +82,70 @@ private:
   pybind11::object object;
 };
 
-using PyMlirContextRef = PyObjectRef<PyMlirContext>;
+/// Tracks an entry in the thread context stack. New entries are pushed onto
+/// here for each with block that activates a new InsertionPoint, Context or
+/// Location.
+///
+/// Pushing either a Location or InsertionPoint also pushes its associated
+/// Context. Pushing a Context will not modify the Location or InsertionPoint
+/// unless if they are from a different context, in which case, they are
+/// cleared.
+class PyThreadContextEntry {
+public:
+  enum class FrameKind {
+    Context,
+    InsertionPoint,
+    Location,
+  };
+
+  PyThreadContextEntry(FrameKind frameKind, pybind11::object context,
+                       pybind11::object insertionPoint,
+                       pybind11::object location)
+      : context(std::move(context)), insertionPoint(std::move(insertionPoint)),
+        location(std::move(location)), frameKind(frameKind) {}
+
+  /// Gets the top of stack context and return nullptr if not defined.
+  static PyMlirContext *getDefaultContext();
+
+  /// Gets the top of stack insertion point and return nullptr if not defined.
+  static PyInsertionPoint *getDefaultInsertionPoint();
+
+  /// Gets the top of stack location and returns nullptr if not defined.
+  static PyLocation *getDefaultLocation();
+
+  PyMlirContext *getContext();
+  PyInsertionPoint *getInsertionPoint();
+  PyLocation *getLocation();
+  FrameKind getFrameKind() { return frameKind; }
+
+  /// Stack management.
+  static PyThreadContextEntry *getTopOfStack();
+  static pybind11::object pushContext(PyMlirContext &context);
+  static void popContext(PyMlirContext &context);
+  static pybind11::object pushInsertionPoint(PyInsertionPoint &insertionPoint);
+  static void popInsertionPoint(PyInsertionPoint &insertionPoint);
+  static pybind11::object pushLocation(PyLocation &location);
+  static void popLocation(PyLocation &location);
+
+  /// Gets the thread local stack.
+  static std::vector<PyThreadContextEntry> &getStack();
+
+private:
+  static void push(FrameKind frameKind, pybind11::object context,
+                   pybind11::object insertionPoint, pybind11::object location);
+
+  /// An object reference to the PyContext.
+  pybind11::object context;
+  /// An object reference to the current insertion point.
+  pybind11::object insertionPoint;
+  /// An object reference to the current location.
+  pybind11::object location;
+  // The kind of push that was performed.
+  FrameKind frameKind;
+};
 
 /// Wrapper around MlirContext.
+using PyMlirContextRef = PyObjectRef<PyMlirContext>;
 class PyMlirContext {
 public:
   PyMlirContext() = delete;
@@ -129,14 +196,10 @@ public:
   /// Used for testing.
   size_t getLiveModuleCount();
 
-  /// Creates an operation. See corresponding python docstring.
-  pybind11::object
-  createOperation(std::string name, PyLocation location,
-                  llvm::Optional<std::vector<PyValue *>> operands,
-                  llvm::Optional<std::vector<PyType *>> results,
-                  llvm::Optional<pybind11::dict> attributes,
-                  llvm::Optional<std::vector<PyBlock *>> successors,
-                  int regions);
+  /// Enter and exit the context manager.
+  pybind11::object contextEnter();
+  void contextExit(pybind11::object excType, pybind11::object excVal,
+                   pybind11::object excTb);
 
 private:
   PyMlirContext(MlirContext context);
@@ -168,6 +231,17 @@ private:
   MlirContext context;
   friend class PyModule;
   friend class PyOperation;
+};
+
+/// Used in function arguments when None should resolve to the current context
+/// manager set instance.
+class DefaultingPyMlirContext
+    : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
+public:
+  using Defaulting::Defaulting;
+  static constexpr const char kTypeDescription[] =
+      "[ThreadContextAware] mlir.ir.Context";
+  static PyMlirContext &resolve();
 };
 
 /// Base class for all objects that directly or indirectly depend on an
@@ -232,7 +306,24 @@ class PyLocation : public BaseContextObject {
 public:
   PyLocation(PyMlirContextRef contextRef, MlirLocation loc)
       : BaseContextObject(std::move(contextRef)), loc(loc) {}
+
+  /// Enter and exit the context manager.
+  pybind11::object contextEnter();
+  void contextExit(pybind11::object excType, pybind11::object excVal,
+                   pybind11::object excTb);
+
   MlirLocation loc;
+};
+
+/// Used in function arguments when None should resolve to the current context
+/// manager set instance.
+class DefaultingPyLocation
+    : public Defaulting<DefaultingPyLocation, PyLocation> {
+public:
+  using Defaulting::Defaulting;
+  static constexpr const char kTypeDescription[] =
+      "[ThreadContextAware] mlir.ir.Location";
+  static PyLocation &resolve();
 };
 
 /// Wrapper around MlirModule.
@@ -275,6 +366,24 @@ private:
   pybind11::handle handle;
 };
 
+/// Base class for PyOperation and PyOpView which exposes the primary, user
+/// visible methods for manipulating it.
+class PyOperationBase {
+public:
+  virtual ~PyOperationBase() = default;
+  /// Implements the bound 'print' method and helps with others.
+  void print(pybind11::object fileObject, bool binary,
+             llvm::Optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+             bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope);
+  pybind11::object getAsm(bool binary,
+                          llvm::Optional<int64_t> largeElementsLimit,
+                          bool enableDebugInfo, bool prettyDebugInfo,
+                          bool printGenericOpForm, bool useLocalScope);
+
+  /// Each must provide access to the raw Operation.
+  virtual PyOperation &getOperation() = 0;
+};
+
 /// Wrapper around PyOperation.
 /// Operations exist in either an attached (dependent) or detached (top-level)
 /// state. In the detached state (as on creation), an operation is owned by
@@ -283,12 +392,13 @@ private:
 /// is bounded by its top-level parent reference.
 class PyOperation;
 using PyOperationRef = PyObjectRef<PyOperation>;
-class PyOperation : public BaseContextObject {
+class PyOperation : public PyOperationBase, public BaseContextObject {
 public:
   ~PyOperation();
+  PyOperation &getOperation() override { return *this; }
+
   /// Returns a PyOperation for the given MlirOperation, optionally associating
-  /// it with a parentKeepAlive (which must match on all such calls for the
-  /// same operation).
+  /// it with a parentKeepAlive.
   static PyOperationRef
   forOperation(PyMlirContextRef contextRef, MlirOperation operation,
                pybind11::object parentKeepAlive = pybind11::object());
@@ -317,14 +427,24 @@ public:
   }
   void checkValid();
 
-  /// Implements the bound 'print' method and helps with others.
-  void print(pybind11::object fileObject, bool binary,
-             llvm::Optional<int64_t> largeElementsLimit, bool enableDebugInfo,
-             bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope);
-  pybind11::object getAsm(bool binary,
-                          llvm::Optional<int64_t> largeElementsLimit,
-                          bool enableDebugInfo, bool prettyDebugInfo,
-                          bool printGenericOpForm, bool useLocalScope);
+  /// Gets the owning block or raises an exception if the operation has no
+  /// owning block.
+  PyBlock getBlock();
+
+  /// Gets the parent operation or raises an exception if the operation has
+  /// no parent.
+  PyOperationRef getParentOperation();
+
+  /// Creates an operation. See corresponding python docstring.
+  static pybind11::object
+  create(std::string name, llvm::Optional<std::vector<PyValue *>> operands,
+         llvm::Optional<std::vector<PyType *>> results,
+         llvm::Optional<pybind11::dict> attributes,
+         llvm::Optional<std::vector<PyBlock *>> successors, int regions,
+         DefaultingPyLocation location, pybind11::object ip);
+
+  /// Creates an OpView suitable for this operation.
+  pybind11::object createOpView();
 
 private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
@@ -350,17 +470,18 @@ private:
 /// custom ODS-style operation classes. Since this class is subclass on the
 /// python side, it must present an __init__ method that operates in pure
 /// python types.
-class PyOpView {
+class PyOpView : public PyOperationBase {
 public:
-  PyOpView(pybind11::object operation);
+  PyOpView(pybind11::object operationObject);
+  PyOperation &getOperation() override { return operation; }
 
   static pybind11::object createRawSubclass(pybind11::object userClass);
 
   pybind11::object getOperationObject() { return operationObject; }
 
 private:
+  PyOperation &operation;           // For efficient, cast-free access from C++
   pybind11::object operationObject; // Holds the reference.
-  PyOperation *operation;           // For efficient, cast-free access from C++
 };
 
 /// Wrapper around an MlirRegion.
@@ -401,6 +522,43 @@ public:
 private:
   PyOperationRef parentOperation;
   MlirBlock block;
+};
+
+/// An insertion point maintains a pointer to a Block and a reference operation.
+/// Calls to insert() will insert a new operation before the
+/// reference operation. If the reference operation is null, then appends to
+/// the end of the block.
+class PyInsertionPoint {
+public:
+  /// Creates an insertion point positioned after the last operation in the
+  /// block, but still inside the block.
+  PyInsertionPoint(PyBlock &block);
+  /// Creates an insertion point positioned before a reference operation.
+  PyInsertionPoint(PyOperationBase &beforeOperationBase);
+
+  /// Shortcut to create an insertion point at the beginning of the block.
+  static PyInsertionPoint atBlockBegin(PyBlock &block);
+  /// Shortcut to create an insertion point before the block terminator.
+  static PyInsertionPoint atBlockTerminator(PyBlock &block);
+
+  /// Inserts an operation.
+  void insert(PyOperationBase &operationBase);
+
+  /// Enter and exit the context manager.
+  pybind11::object contextEnter();
+  void contextExit(pybind11::object excType, pybind11::object excVal,
+                   pybind11::object excTb);
+
+  PyBlock &getBlock() { return block; }
+
+private:
+  // Trampoline constructor that avoids null initializing members while
+  // looking up parents.
+  PyInsertionPoint(PyBlock block, llvm::Optional<PyOperationRef> refOperation)
+      : refOperation(std::move(refOperation)), block(std::move(block)) {}
+
+  llvm::Optional<PyOperationRef> refOperation;
+  PyBlock block;
 };
 
 /// Wrapper around the generic MlirAttribute.
@@ -474,5 +632,18 @@ void populateIRSubmodule(pybind11::module &m);
 
 } // namespace python
 } // namespace mlir
+
+namespace pybind11 {
+namespace detail {
+
+template <>
+struct type_caster<mlir::python::DefaultingPyMlirContext>
+    : MlirDefaultingCaster<mlir::python::DefaultingPyMlirContext> {};
+template <>
+struct type_caster<mlir::python::DefaultingPyLocation>
+    : MlirDefaultingCaster<mlir::python::DefaultingPyLocation> {};
+
+} // namespace detail
+} // namespace pybind11
 
 #endif // MLIR_BINDINGS_PYTHON_IRMODULES_H

@@ -27,6 +27,7 @@ from dex.debugger.dbgeng.dbgeng import DbgEng
 from dex.debugger.lldb.LLDB import LLDB
 from dex.debugger.visualstudio.VisualStudio2015 import VisualStudio2015
 from dex.debugger.visualstudio.VisualStudio2017 import VisualStudio2017
+from dex.debugger.visualstudio.VisualStudio2019 import VisualStudio2019
 
 
 def _get_potential_debuggers():  # noqa
@@ -38,7 +39,8 @@ def _get_potential_debuggers():  # noqa
         DbgEng.get_option_name(): DbgEng,
         LLDB.get_option_name(): LLDB,
         VisualStudio2015.get_option_name(): VisualStudio2015,
-        VisualStudio2017.get_option_name(): VisualStudio2017
+        VisualStudio2017.get_option_name(): VisualStudio2017,
+        VisualStudio2019.get_option_name(): VisualStudio2019
     }
 
 

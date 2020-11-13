@@ -25,6 +25,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -109,7 +110,7 @@ void GenericOp::build(
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
-        symbolSource);
+        ArrayAttr(), symbolSource);
   if (!bodyBuild)
     return;
 
@@ -169,7 +170,7 @@ void IndexedGenericOp::build(
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
-        symbolSource);
+        ArrayAttr(), symbolSource);
   if (!bodyBuild)
     return;
 
@@ -313,7 +314,42 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
+static void getGenericEffectsImpl(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects,
+    ValueRange results, ValueRange inputBuffers, ValueRange outputBuffers) {
+  for (Value value : results) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), value,
+                         SideEffects::DefaultResource::get());
+  }
+  for (Value value : inputBuffers) {
+    effects.emplace_back(MemoryEffects::Read::get(), value,
+                         SideEffects::DefaultResource::get());
+  }
+  for (Value value : outputBuffers) {
+    effects.emplace_back(MemoryEffects::Read::get(), value,
+                         SideEffects::DefaultResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), value,
+                         SideEffects::DefaultResource::get());
+  }
+}
+
+void GenericOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(),
+                        getInputBuffers(), getOutputBuffers());
+}
+
+void IndexedGenericOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(),
+                        getInputBuffers(), getOutputBuffers());
+}
+
 namespace {
+
 template <typename GenericOpType>
 struct BlockArgsVerifier {
   static LogicalResult verify(GenericOpType op, Block &block);
@@ -370,6 +406,48 @@ LogicalResult BlockArgsVerifier<IndexedGenericOp>::verify(IndexedGenericOp op,
   }
   return success();
 }
+
+template <typename GenericOpType>
+struct AnnotationsVerifier {
+  static LogicalResult verify(GenericOpType op) { return success(); }
+};
+
+template <>
+LogicalResult AnnotationsVerifier<GenericOp>::verify(GenericOp op) {
+  ArrayAttr sparseAttr = op.sparseAttr();
+  if (!sparseAttr)
+    return success();
+  // Verify consistency of sparse annotations.
+  if (!op.hasTensorSemantics())
+    return op.emitOpError("expected sparse annotations on tensors only");
+  unsigned numTensors = op.getNumInputsAndOutputs();
+  if (sparseAttr.size() != numTensors)
+    return op.emitOpError("expected one sparse annotation for each tensor");
+  for (unsigned t = 0; t < numTensors; t++) {
+    auto dimAttr = sparseAttr[t].dyn_cast_or_null<ArrayAttr>();
+    if (!dimAttr)
+      return op.emitOpError("expected sparse annotation array for tensor ")
+             << t;
+    unsigned rank = op.getShapedType(t).getRank();
+    if (dimAttr.size() != rank)
+      return op.emitOpError("expected sparse annotation with rank ")
+             << rank << " for tensor " << t;
+    // Per-dimension annotations for each tensor consist of only "D" or "S".
+    for (unsigned d = 0; d < rank; d++) {
+      if (isDenseDim(dimAttr[d])) {
+        continue;
+      } else if (isSparseDim(dimAttr[d])) {
+        if (t == numTensors - 1)
+          return op.emitOpError("sparse output tensors not supported (yet)");
+        continue;
+      }
+      return op.emitOpError("expected sparse annotation at position ")
+             << d << " for tensor " << t;
+    }
+  }
+  return success();
+}
+
 } // namespace
 
 template <typename GenericOpType>
@@ -430,6 +508,9 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   if (!concatMap.getNumSymbols() && !inversePermutation(concatMap))
     return op.emitOpError("expected the concatenation of maps in indexing_map "
                           "to be invertible");
+
+  if (failed(AnnotationsVerifier<GenericOpType>::verify(op)))
+    return failure();
 
   return success();
 }
@@ -711,10 +792,10 @@ static SmallVector<SmallVector<AffineExpr, 2>, 2>
 convertReassociationIndicesToMaps(
     OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
   SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
-  for (const auto &indicies : reassociationIndices) {
+  for (const auto &indices : reassociationIndices) {
     SmallVector<AffineExpr, 2> reassociationMap;
-    reassociationMap.reserve(indicies.size());
-    for (int64_t index : indicies)
+    reassociationMap.reserve(indices.size());
+    for (int64_t index : indices)
       reassociationMap.push_back(b.getAffineDimExpr(index));
     reassociationMaps.push_back(std::move(reassociationMap));
   }
@@ -1039,12 +1120,28 @@ static LogicalResult verify(linalg::YieldOp op) {
 
 /////// Operations corresponding to library calls defined with Tablegen ////////
 
+void FillOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(), output(),
+                       SideEffects::DefaultResource::get());
+}
+
 static LogicalResult verify(FillOp op) {
   auto viewType = op.getOutputShapedType(0);
   auto fillType = op.value().getType();
   if (viewType.getElementType() != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
   return success();
+}
+
+void CopyOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), input(),
+                       SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), output(),
+                       SideEffects::DefaultResource::get());
 }
 
 static LogicalResult verify(CopyOp op) {
@@ -1091,6 +1188,17 @@ static LogicalResult verifyStrideOrDilation(LinalgPoolingOp op,
            << "s equal to number of window dimensions: " << attrs.size()
            << " vs " << op.getNumWindowLoops();
   return success();
+}
+
+void ConvOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), input(),
+                       SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Read::get(), filter(),
+                       SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), output(),
+                       SideEffects::DefaultResource::get());
 }
 
 static LogicalResult verify(ConvOp op) {
@@ -1142,6 +1250,16 @@ static LogicalResult verifySingleInputPoolingOp(PoolingOp op) {
   return success();
 }
 
+#define DEFINE_POOLING_OP_GET_EFFECTS(OP_NAME)                                 \
+  void OP_NAME::getEffects(                                                    \
+      SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>      \
+          &effects) {                                                          \
+    effects.emplace_back(MemoryEffects::Read::get(), input(),                  \
+                         SideEffects::DefaultResource::get());                 \
+    effects.emplace_back(MemoryEffects::Write::get(), output(),                \
+                         SideEffects::DefaultResource::get());                 \
+  }
+
 static LogicalResult verify(PoolingMaxOp op) {
   return verifySingleInputPoolingOp(op);
 }
@@ -1151,6 +1269,10 @@ static LogicalResult verify(PoolingMinOp op) {
 static LogicalResult verify(PoolingSumOp op) {
   return verifySingleInputPoolingOp(op);
 }
+
+DEFINE_POOLING_OP_GET_EFFECTS(PoolingMaxOp)
+DEFINE_POOLING_OP_GET_EFFECTS(PoolingMinOp)
+DEFINE_POOLING_OP_GET_EFFECTS(PoolingSumOp)
 
 namespace {
 struct EraseDeadLinalgOp;
@@ -1472,7 +1594,8 @@ static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
   p.printOptionalAttrDict(op.getAttrs(),
                           /*elidedAttrs=*/{"operand_segment_sizes"});
 
-  // Printing is shared with generic ops, except for the region and attributes.
+  // Printing is shared with generic ops, except for the region and
+  // attributes.
   printCommonStructuredOpParts(p, op);
 
   // Results printing.
@@ -1565,11 +1688,112 @@ struct FoldTensorCastOp : public RewritePattern {
 };
 } // namespace
 
+namespace {
+// Deduplicate redundant args of a linalg op.
+// An arg is redundant if it has the same Value and indexing map as another.
+struct DeduplicateInputs : public RewritePattern {
+  DeduplicateInputs(PatternBenefit benefit = 1)
+      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // This pattern reduces the number of arguments of an op, which breaks
+    // the invariants of semantically charged named ops.
+    if (!isa<GenericOp, IndexedGenericOp>(op))
+      return failure();
+    auto linalgOp = cast<LinalgOp>(op);
+
+    // Associate each input to an equivalent "canonical" input that has the same
+    // Value and indexing map.
+    //
+    // In the non-duplicate case, input `i` will have canonical input `i`. But
+    // in the case of duplicated inputs, the canonical input could be some other
+    // input `< i`. That is, a later input will have some earlier input as its
+    // canonical input.
+    llvm::SmallDenseMap<std::pair<Value, AffineMap>, int> canonicalInput;
+    // For later remapping tasks like deduplicating payload block arguments,
+    // having a simple "inputIndex -> canonicalInputIndex" integer mapping is
+    // convenient.
+    SmallVector<int, 6> canonicalInputIndices;
+    for (int i = 0, e = linalgOp.getNumInputs(); i != e; i++) {
+      Value input = linalgOp.getInput(i);
+      AffineMap indexingMap = linalgOp.getInputIndexingMap(i);
+      // STL-like maps have a convenient behavior for our use case here. In the
+      // case of duplicate keys, the insertion is rejected, and the returned
+      // iterator gives access to the value already in the map.
+      auto pair = canonicalInput.insert({{input, indexingMap}, i});
+      canonicalInputIndices.push_back(pair.first->second);
+    }
+
+    // If there are no duplicate args, then bail out.
+    if (canonicalInput.size() == linalgOp.getNumInputs())
+      return failure();
+
+    // The operands for the newly canonicalized op.
+    SmallVector<Value, 6> newOperands;
+    for (auto v : llvm::enumerate(linalgOp.getInputs()))
+      if (canonicalInputIndices[v.index()] == static_cast<int>(v.index()))
+        newOperands.push_back(v.value());
+    llvm::append_range(newOperands, linalgOp.getOutputBuffers());
+    llvm::append_range(newOperands, linalgOp.getInitTensors());
+    llvm::append_range(newOperands, linalgOp.getAssumedNonShapedOperands());
+
+    // Clone the old op with new operands.
+    Operation *newOp = linalgOp.clone(rewriter, op->getLoc(),
+                                      op->getResultTypes(), newOperands);
+    auto newLinalgOp = cast<LinalgOp>(newOp);
+
+    // Repair the indexing maps by filtering out the ones that have been
+    // eliminated.
+    SmallVector<AffineMap, 6> newIndexingMaps;
+    for (int i = 0, e = newLinalgOp.getNumInputs(); i != e; i++)
+      if (canonicalInputIndices[i] == i)
+        newIndexingMaps.push_back(newLinalgOp.getIndexingMap(i));
+    for (int i = 0, e = newLinalgOp.getNumOutputs(); i != e; i++)
+      newIndexingMaps.push_back(newLinalgOp.getOutputIndexingMap(i));
+    newOp->setAttr("indexing_maps",
+                   rewriter.getAffineMapArrayAttr(newIndexingMaps));
+
+    // Set the number of inputs to the new value. The `clone` call above kept
+    // the value from the original op.
+    newLinalgOp.setNumInputs(canonicalInput.size());
+
+    // linalg.indexed_generic payloads have additional arguments prepended to
+    // the block arg list. The number of such args is one per dimension of the
+    // iteration space.
+    int bbArgBaseOffset = 0;
+    if (isa<IndexedGenericOp>(op))
+      bbArgBaseOffset = newIndexingMaps[0].getNumInputs();
+
+    // Repair the payload entry block by RAUW'ing redundant arguments and
+    // erasing them.
+    Block &payload = newOp->getRegion(0).front();
+    for (int i = 0, e = linalgOp.getNumInputs(); i < e; i++) {
+      // Iterate in reverse, so that we erase later args first, preventing the
+      // argument list from shifting unexpectedly and invalidating all our
+      // indices.
+      int reversed = e - i - 1;
+      int canonicalIndex = canonicalInputIndices[reversed];
+      if (canonicalInputIndices[reversed] == reversed)
+        continue;
+      payload.getArgument(bbArgBaseOffset + reversed)
+          .replaceAllUsesWith(
+              payload.getArgument(bbArgBaseOffset + canonicalIndex));
+      payload.eraseArgument(bbArgBaseOffset + reversed);
+    }
+
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+} // namespace
+
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
   void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
                                         MLIRContext *context) {                \
     results.insert<EraseDeadLinalgOp>();                                       \
     results.insert<FoldTensorCastOp>();                                        \
+    results.insert<DeduplicateInputs>();                                       \
   }                                                                            \
                                                                                \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \
@@ -1586,4 +1810,5 @@ CANONICALIZERS_AND_FOLDERS(FillOp)
 CANONICALIZERS_AND_FOLDERS(GenericOp)
 CANONICALIZERS_AND_FOLDERS(IndexedGenericOp)
 
-// All named ops canonicalizers and folders are auto-generated in the .cpp.inc.
+// All named ops canonicalizers and folders are auto-generated in the
+// .cpp.inc.

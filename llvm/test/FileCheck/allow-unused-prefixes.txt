@@ -1,0 +1,10 @@
+; RUN: %ProtectFileCheckOutput not FileCheck --allow-unused-prefixes=false --check-prefixes=P1,P2 --input-file %S/Inputs/one-check.txt %S/Inputs/one-check.txt 2>&1 | FileCheck --check-prefix=MISSING-ONE %s
+; RUN: %ProtectFileCheckOutput not FileCheck --allow-unused-prefixes=false --check-prefixes=P1,P2,P3 --input-file %S/Inputs/one-check.txt %S/Inputs/one-check.txt 2>&1 | FileCheck --check-prefix=MISSING-MORE %s
+; RUN: FileCheck --allow-unused-prefixes=true  --check-prefixes=P1,P2 --input-file %S/Inputs/one-check.txt %S/Inputs/one-check.txt 
+
+;; Note: the default will be changed to 'false', at which time this run line
+;; should be changed accordingly.
+; RUN: FileCheck --check-prefixes=P1,P2 --input-file %S/Inputs/one-check.txt %S/Inputs/one-check.txt 
+
+; MISSING-ONE: error: no check strings found with prefix 'P2:' 
+; MISSING-MORE: error: no check strings found with prefixes 'P2:', 'P3:'

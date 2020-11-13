@@ -51,9 +51,7 @@ class CrashingInferiorStepTestCase(TestBase):
 
     # Inferior exits after stepping after a segfault. This is working as
     # intended IMHO.
-    @skipIfLinux
-    @skipIfFreeBSD
-    @expectedFailureNetBSD
+    @skipIf(oslist=["freebsd", "linux", "netbsd"])
     def test_inferior_crashing_expr_step_and_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
         self.build()

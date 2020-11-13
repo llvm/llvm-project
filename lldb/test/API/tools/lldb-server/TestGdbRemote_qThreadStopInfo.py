@@ -163,7 +163,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(
             self.THREAD_COUNT)
 
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     @llgs_test
     def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt_llgs(
             self):

@@ -92,7 +92,7 @@ body: |
   bb.4:
     successors: %bb.5
     renamable $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM killed renamable $sgpr2_sgpr3, 64, 0, 0
-    renamable $vgpr2 = BUFFER_ATOMIC_ADD_OFFSET_RTN killed renamable $vgpr2, killed renamable $sgpr12_sgpr13_sgpr14_sgpr15, 0, 0, 0, implicit $exec
+    renamable $vgpr2 = BUFFER_ATOMIC_ADD_OFFSET_RTN killed renamable $vgpr2, killed renamable $sgpr12_sgpr13_sgpr14_sgpr15, 0, 0, 1, 0, implicit $exec
 
   bb.5:
     successors: %bb.6

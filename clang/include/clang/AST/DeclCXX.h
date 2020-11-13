@@ -1008,8 +1008,13 @@ public:
 
   /// Retrieve the lambda static invoker, the address of which
   /// is returned by the conversion operator, and the body of which
-  /// is forwarded to the lambda call operator.
+  /// is forwarded to the lambda call operator. The version that does not
+  /// take a calling convention uses the 'default' calling convention for free
+  /// functions if the Lambda's calling convention was not modified via
+  /// attribute. Otherwise, it will return the calling convention specified for
+  /// the lambda.
   CXXMethodDecl *getLambdaStaticInvoker() const;
+  CXXMethodDecl *getLambdaStaticInvoker(CallingConv CC) const;
 
   /// Retrieve the generic lambda's template parameter list.
   /// Returns null if the class does not represent a lambda or a generic

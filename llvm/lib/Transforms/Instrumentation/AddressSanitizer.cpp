@@ -561,22 +561,6 @@ static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
   }
 }
 
-// For a ret instruction followed by a musttail call, we cannot insert anything
-// in between. Instead we use the musttail call instruction as the insertion
-// point.
-static Instruction *adjustForMusttailCall(Instruction *I) {
-  ReturnInst *RI = dyn_cast<ReturnInst>(I);
-  if (!RI)
-    return I;
-  Instruction *Prev = RI->getPrevNode();
-  if (BitCastInst *BCI = dyn_cast_or_null<BitCastInst>(Prev))
-    Prev = BCI->getPrevNode();
-  if (CallInst *CI = dyn_cast_or_null<CallInst>(Prev))
-    if (CI->isMustTailCall())
-      return CI;
-  return RI;
-}
-
 namespace {
 
 /// Module analysis for getting various metadata about the module.
@@ -985,8 +969,14 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   void createDynamicAllocasInitStorage();
 
   // ----------------------- Visitors.
-  /// Collect all Ret instructions.
-  void visitReturnInst(ReturnInst &RI) { RetVec.push_back(&RI); }
+  /// Collect all Ret instructions, or the musttail call instruction if it
+  /// precedes the return instruction.
+  void visitReturnInst(ReturnInst &RI) {
+    if (CallInst *CI = RI.getParent()->getTerminatingMustTailCall())
+      RetVec.push_back(CI);
+    else
+      RetVec.push_back(&RI);
+  }
 
   /// Collect all Resume instructions.
   void visitResumeInst(ResumeInst &RI) { RetVec.push_back(&RI); }
@@ -1021,8 +1011,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   // Unpoison dynamic allocas redzones.
   void unpoisonDynamicAllocas() {
     for (Instruction *Ret : RetVec)
-      unpoisonDynamicAllocasBeforeInst(adjustForMusttailCall(Ret),
-                                       DynamicAllocaLayout);
+      unpoisonDynamicAllocasBeforeInst(Ret, DynamicAllocaLayout);
 
     for (Instruction *StackRestoreInst : StackRestoreVec)
       unpoisonDynamicAllocasBeforeInst(StackRestoreInst,
@@ -3333,8 +3322,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
 
   // (Un)poison the stack before all ret instructions.
   for (Instruction *Ret : RetVec) {
-    Instruction *Adjusted = adjustForMusttailCall(Ret);
-    IRBuilder<> IRBRet(Adjusted);
+    IRBuilder<> IRBRet(Ret);
     // Mark the current frame as retired.
     IRBRet.CreateStore(ConstantInt::get(IntptrTy, kRetiredStackFrameMagic),
                        BasePlus0);
@@ -3353,7 +3341,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       Value *Cmp =
           IRBRet.CreateICmpNE(FakeStack, Constant::getNullValue(IntptrTy));
       Instruction *ThenTerm, *ElseTerm;
-      SplitBlockAndInsertIfThenElse(Cmp, Adjusted, &ThenTerm, &ElseTerm);
+      SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
       IRBuilder<> IRBPoison(ThenTerm);
       if (StackMallocIdx <= 4) {

@@ -134,9 +134,9 @@ public:
   }
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &OS) override;
+                       const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                             const char *ExtraCode, raw_ostream &OS) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   bool doInitialization(Module &M) override {
     SMShadowTracker.reset(0);
@@ -145,7 +145,7 @@ public:
     return AsmPrinter::doInitialization(M);
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
 };

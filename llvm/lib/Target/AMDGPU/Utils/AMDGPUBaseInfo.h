@@ -568,6 +568,9 @@ LLVM_READNONE
 bool isShader(CallingConv::ID CC);
 
 LLVM_READNONE
+bool isGraphics(CallingConv::ID CC);
+
+LLVM_READNONE
 bool isCompute(CallingConv::ID CC);
 
 LLVM_READNONE
@@ -774,10 +777,8 @@ struct SIModeRegisterDefaults {
   SIModeRegisterDefaults(const Function &F);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
-    const bool IsCompute = AMDGPU::isCompute(CC);
-
     SIModeRegisterDefaults Mode;
-    Mode.IEEE = IsCompute;
+    Mode.IEEE = !AMDGPU::isShader(CC);
     return Mode;
   }
 

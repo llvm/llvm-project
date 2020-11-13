@@ -79,7 +79,7 @@ public:
     bool isIdentified() const { return identified; }
     bool isPacked() const {
       assert(!isIdentified() &&
-             "'packed' bit is not part of the key for identified stucts");
+             "'packed' bit is not part of the key for identified structs");
       return packed;
     }
     bool isOpaque() const {
@@ -196,7 +196,7 @@ public:
   /// Constructs the storage from the given key. This sets up the uniquing key
   /// components and optionally the mutable component if they construction key
   /// has the relevant information. In the latter case, the struct is considered
-  /// as initalized and can no longer be mutated.
+  /// as initialized and can no longer be mutated.
   LLVMStructTypeStorage(const KeyTy &key) {
     if (!key.isIdentified()) {
       ArrayRef<LLVMType> types = key.getTypeList();

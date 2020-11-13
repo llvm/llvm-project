@@ -3821,3 +3821,24 @@ define i1 @signbit_bitcast_fptrunc_ppc_fp128(ppc_fp128 %x) {
   %s4 = icmp slt i32 %s3, 0
   ret i1 %s4
 }
+
+@x = external dso_local local_unnamed_addr global i32, align 4
+@y = external dso_local local_unnamed_addr global i32, align 4
+define i1 @pr47997(i32 %arg) {
+; CHECK-LABEL: @pr47997(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = add nsw i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    store i32 [[I]], i32* @x, align 4
+; CHECK-NEXT:    [[I1:%.*]] = sub nsw i32 1, [[ARG]]
+; CHECK-NEXT:    store i32 [[I1]], i32* @y, align 4
+; CHECK-NEXT:    ret i1 true
+;
+bb:
+  %i = add nsw i32 %arg, -1
+  store i32 %i, i32* @x
+  %i1 = sub nsw i32 1, %arg
+  store i32 %i1, i32* @y
+  %i2 = sub nsw i32 0, %i1
+  %i3 = icmp eq i32 %i, %i2
+  ret i1 %i3
+}

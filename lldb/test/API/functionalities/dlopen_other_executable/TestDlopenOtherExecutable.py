@@ -12,6 +12,7 @@ class TestCase(TestBase):
     # glibc's dlopen doesn't support opening executables.
     # https://sourceware.org/bugzilla/show_bug.cgi?id=11754
     @skipIfLinux
+    @expectedFailureAll(oslist=["freebsd"])
     @no_debug_info_test
     def test(self):
         self.build()

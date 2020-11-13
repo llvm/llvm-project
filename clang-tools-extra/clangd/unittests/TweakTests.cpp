@@ -572,6 +572,8 @@ TEST_F(ExpandAutoTypeTest, Test) {
             R"cpp(const char * x = "test";)cpp");
 
   EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
+  // expanding types in structured bindings is syntactically invalid.
+  EXPECT_UNAVAILABLE("const ^auto &[x,y] = (int[]){1,2};");
 
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
@@ -2977,6 +2979,18 @@ TEST_F(PopulateSwitchTest, Test) {
             namespace ns { enum Enum {A}; }
             void function() { switch (ns::A) {case ns::A:break;} }
           )"",
+      },
+      {
+          // Duplicated constant names
+          Function,
+          R""(enum Enum {A,B,b=B}; ^switch (A) {})"",
+          R""(enum Enum {A,B,b=B}; switch (A) {case A:case B:break;})"",
+      },
+      {
+          // Duplicated constant names all in switch
+          Function,
+          R""(enum Enum {A,B,b=B}; ^switch (A) {case A:case B:break;})"",
+          "unavailable",
       },
   };
 

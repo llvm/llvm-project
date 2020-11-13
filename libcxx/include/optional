@@ -147,6 +147,7 @@ template<class T>
 */
 
 #include <__config>
+#include <__availability>
 #include <__debug>
 #include <__functional_base>
 #include <functional>

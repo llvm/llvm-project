@@ -1226,7 +1226,7 @@ int R600InstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
   const R600FrameLowering *TFL = ST.getFrameLowering();
 
   Register IgnoredFrameReg;
-  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg);
+  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg).getFixed();
 
   return getIndirectIndexBegin(MF) + Offset;
 }

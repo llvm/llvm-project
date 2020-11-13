@@ -1269,10 +1269,16 @@ bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   const threadSafety::til::SExpr *SExp = CapE.sexpr();
   assert(SExp && "Null expressions should be ignored");
 
-  // Global variables are always in scope.
   if (const auto *LP = dyn_cast<til::LiteralPtr>(SExp)) {
     const ValueDecl *VD = LP->clangDecl();
-    return VD->isDefinedOutsideFunctionOrMethod();
+    // Variables defined in a function are always inaccessible.
+    if (!VD->isDefinedOutsideFunctionOrMethod())
+      return false;
+    // For now we consider static class members to be inaccessible.
+    if (isa<CXXRecordDecl>(VD->getDeclContext()))
+      return false;
+    // Global variables are always in scope.
+    return true;
   }
 
   // Members are in scope from methods of the same class.

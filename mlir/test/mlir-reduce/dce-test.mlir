@@ -6,10 +6,10 @@
 // CHECK-LABEL: func @simple1(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 
 // CHECK-NOT: func @dead_nested_function
-func @dead_private_function() attributes { sym_visibility = "private" }
+func private @dead_private_function()
 
 // CHECK-NOT: func @dead_nested_function
-func @dead_nested_function() attributes { sym_visibility = "nested" }
+func nested @dead_nested_function()
 
 func @simple1(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   "test.crashOp" () : () -> ()

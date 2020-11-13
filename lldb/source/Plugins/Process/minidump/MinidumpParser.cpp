@@ -62,27 +62,17 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
       static_cast<CvSignature>(static_cast<uint32_t>(*signature));
 
   if (cv_signature == CvSignature::Pdb70) {
-    const CvRecordPdb70 *pdb70_uuid = nullptr;
+    const UUID::CvRecordPdb70 *pdb70_uuid = nullptr;
     Status error = consumeObject(cv_record, pdb70_uuid);
     if (error.Fail())
       return UUID();
-
-    CvRecordPdb70 swapped;
-    if (!GetArchitecture().GetTriple().isOSBinFormatELF()) {
-      // LLDB's UUID class treats the data as a sequence of bytes, but breakpad
-      // interprets it as a sequence of little-endian fields, which it converts
-      // to big-endian when converting to text. Swap the bytes to big endian so
-      // that the string representation comes out right.
-      swapped = *pdb70_uuid;
-      llvm::sys::swapByteOrder(swapped.Uuid.Data1);
-      llvm::sys::swapByteOrder(swapped.Uuid.Data2);
-      llvm::sys::swapByteOrder(swapped.Uuid.Data3);
-      llvm::sys::swapByteOrder(swapped.Age);
-      pdb70_uuid = &swapped;
+    if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
+      if (pdb70_uuid->Age != 0)
+        return UUID::fromOptionalData(pdb70_uuid, sizeof(*pdb70_uuid));
+      return UUID::fromOptionalData(&pdb70_uuid->Uuid,
+                                    sizeof(pdb70_uuid->Uuid));
     }
-    if (pdb70_uuid->Age != 0)
-      return UUID::fromOptionalData(pdb70_uuid, sizeof(*pdb70_uuid));
-    return UUID::fromOptionalData(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
+    return UUID::fromCvRecord(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
     return UUID::fromOptionalData(cv_record);
 

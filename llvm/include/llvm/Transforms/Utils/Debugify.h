@@ -40,8 +40,6 @@ bool applyDebugifyMetadata(
 /// Returns true if any change was made.
 bool stripDebugifyMetadata(Module &M);
 
-} // namespace llvm
-
 llvm::ModulePass *createDebugifyModulePass();
 llvm::FunctionPass *createDebugifyFunctionPass();
 
@@ -77,6 +75,8 @@ struct DebugifyStatistics {
 /// Map pass names to a per-pass DebugifyStatistics instance.
 using DebugifyStatsMap = llvm::MapVector<llvm::StringRef, DebugifyStatistics>;
 
+void exportDebugifyStats(StringRef Path, const DebugifyStatsMap &Map);
+
 llvm::ModulePass *
 createCheckDebugifyModulePass(bool Strip = false,
                               llvm::StringRef NameOfWrappedPass = "",
@@ -92,7 +92,12 @@ struct NewPMCheckDebugifyPass
   llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
-namespace llvm {
+struct DebugifyEachInstrumentation {
+  DebugifyStatsMap StatsMap;
+
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
 /// DebugifyCustomPassManager wraps each pass with the debugify passes if
 /// needed.
 /// NOTE: We support legacy custom pass manager only.

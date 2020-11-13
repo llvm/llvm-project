@@ -112,7 +112,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
-  const FileEntry *Entry;
+  OptionalFileEntryRefDegradesToFileEntryPtr Entry;
   if (Type == MK_ExplicitModule || Type == MK_PrebuiltModule) {
     // If we're not expecting to pull this file out of the module cache, it
     // might have a different mtime due to being moved across filesystems in
@@ -288,7 +288,7 @@ void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
     if (modMap) {
       StringRef ModuleName = victim->ModuleName;
       if (Module *mod = modMap->findModule(ModuleName)) {
-        mod->setASTFile(nullptr);
+        mod->setASTFile(None);
       }
     }
   }
@@ -458,23 +458,21 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
   returnVisitState(State);
 }
 
-bool ModuleManager::lookupModuleFile(StringRef FileName,
-                                     off_t ExpectedSize,
+bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
                                      time_t ExpectedModTime,
-                                     const FileEntry *&File) {
-  if (FileName == "-") {
-    File = nullptr;
+                                     Optional<FileEntryRef> &File) {
+  File = None;
+  if (FileName == "-")
     return false;
-  }
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  auto FileOrErr = FileMgr.getFile(FileName, /*OpenFile=*/true,
-                                   /*CacheFailure=*/false);
-  if (!FileOrErr) {
-    File = nullptr;
+  Optional<FileEntryRef> FileOrErr =
+      expectedToOptional(FileMgr.getFileRef(FileName, /*OpenFile=*/true,
+                                            /*CacheFailure=*/false));
+  if (!FileOrErr)
     return false;
-  }
+
   File = *FileOrErr;
 
   if ((ExpectedSize && ExpectedSize != File->getSize()) ||

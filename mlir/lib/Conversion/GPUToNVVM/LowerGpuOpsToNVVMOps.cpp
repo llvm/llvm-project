@@ -138,7 +138,7 @@ struct LowerGpuOpsToNVVMOpsPass
     target.addIllegalDialect<gpu::GPUDialect>();
     target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
                         LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                        LLVM::Log2Op>();
+                        LLVM::Log2Op, LLVM::SinOp>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<NVVM::NVVMDialect>();
     // TODO: Remove once we support replacing non-root ops.
@@ -183,6 +183,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                  "__nv_log10");
   patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__nv_log2f",
                                                 "__nv_log2");
+  patterns.insert<OpToFuncCallLowering<SinOp>>(converter, "__nv_sinf",
+                                               "__nv_sin");
   patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__nv_tanhf",
                                                 "__nv_tanh");
 }

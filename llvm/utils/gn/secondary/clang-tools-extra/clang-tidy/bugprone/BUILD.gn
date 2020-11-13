@@ -45,6 +45,7 @@ static_library("bugprone") {
     "PosixReturnCheck.cpp",
     "RedundantBranchConditionCheck.cpp",
     "ReservedIdentifierCheck.cpp",
+    "SignalHandlerCheck.cpp",
     "SignedCharMisuseCheck.cpp",
     "SizeofContainerCheck.cpp",
     "SizeofExpressionCheck.cpp",

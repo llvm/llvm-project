@@ -126,6 +126,7 @@ private:
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
+  SMLoc StartTokLoc;
 
   /// This is the current buffer index we're lexing from as managed by the
   /// SourceMgr object.
@@ -709,6 +710,8 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   // Set our own handler which calls the saved handler.
   SrcMgr.setDiagHandler(DiagHandler, this);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
+  // Make MCStreamer aware of the StartTokLoc for locations in diagnostics.
+  Out.setStartTokLocPtr(&StartTokLoc);
 
   // Initialize the platform / file format parser.
   switch (Ctx.getObjectFileInfo()->getObjectFileType()) {
@@ -742,6 +745,8 @@ AsmParser::~AsmParser() {
   assert((HadError || ActiveMacros.empty()) &&
          "Unexpected active macro instantiation!");
 
+  // Remove MCStreamer's reference to the parser SMLoc.
+  Out.setStartTokLocPtr(nullptr);
   // Restore the saved diagnostics handler and context for use during
   // finalization.
   SrcMgr.setDiagHandler(SavedDiagHandler, SavedDiagContext);
@@ -989,7 +994,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Finalize the output stream if there are no errors and if the client wants
   // us to.
   if (!HadError && !NoFinalize)
-    Out.Finish();
+    Out.Finish(Lexer.getLoc());
 
   return HadError || getContext().hadError();
 }
@@ -1705,6 +1710,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   SMLoc IDLoc = ID.getLoc();
   StringRef IDVal;
   int64_t LocalLabelVal = -1;
+  StartTokLoc = ID.getLoc();
   if (Lexer.is(AsmToken::HashDirective))
     return parseCppHashLineFilenameComment(IDLoc,
                                            !isInsideMacroInstantiation());

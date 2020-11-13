@@ -25,51 +25,51 @@
 // RUN:   FileCheck -check-prefix=CHECK-KHWASAN %s
 
 int HasSanitizeAddress() { return 1; }
-// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-ASAN: Function Attrs: noinline nounwind sanitize_address
-// CHECK-KASAN: Function Attrs: noinline nounwind sanitize_address
-// CHECK-HWASAN: Function Attrs: noinline nounwind sanitize_hwaddress
-// CHECK-KHWASAN: Function Attrs: noinline nounwind sanitize_hwaddress
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-ASAN: Function Attrs: noinline nounwind sanitize_address mustprogress
+// CHECK-KASAN: Function Attrs: noinline nounwind sanitize_address mustprogress
+// CHECK-HWASAN: Function Attrs: noinline nounwind sanitize_hwaddress mustprogress
+// CHECK-KHWASAN: Function Attrs: noinline nounwind sanitize_hwaddress mustprogress
 
 __attribute__((no_sanitize("address"))) int NoSanitizeQuoteAddress() {
   return 0;
 }
-// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-ASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-KASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress$}}
-// CHECK-KHWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-HWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress mustprogress$}}
+// CHECK-KHWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress mustprogress$}}
 
 __attribute__((no_sanitize_address)) int NoSanitizeAddress() { return 0; }
-// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-ASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-KASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress$}}
-// CHECK-KHWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-HWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress mustprogress$}}
+// CHECK-KHWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress mustprogress$}}
 
 __attribute__((no_sanitize("kernel-address"))) int NoSanitizeKernelAddress() {
   return 0;
 }
-// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-ASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-KASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress$}}
-// CHECK-KHWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-HWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress mustprogress$}}
+// CHECK-KHWASAN: {{Function Attrs: noinline nounwind sanitize_hwaddress mustprogress$}}
 
 __attribute__((no_sanitize("hwaddress"))) int NoSanitizeHWAddress() {
   return 0;
 }
-// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-ASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
-// CHECK-KASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
-// CHECK-HWASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-KHWASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind sanitize_address mustprogress$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind sanitize_address mustprogress$}}
+// CHECK-HWASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-KHWASAN: {{Function Attrs: noinline nounwind mustprogress$}}
 
 __attribute__((no_sanitize("kernel-hwaddress"))) int NoSanitizeKernelHWAddress() {
   return 0;
 }
-// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-ASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
-// CHECK-KASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
-// CHECK-HWASAN: {{Function Attrs: noinline nounwind$}}
-// CHECK-KHWASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind sanitize_address mustprogress$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind sanitize_address mustprogress$}}
+// CHECK-HWASAN: {{Function Attrs: noinline nounwind mustprogress$}}
+// CHECK-KHWASAN: {{Function Attrs: noinline nounwind mustprogress$}}

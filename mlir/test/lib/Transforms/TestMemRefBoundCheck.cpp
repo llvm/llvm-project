@@ -46,8 +46,10 @@ void TestMemRefBoundCheck::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerMemRefBoundCheck() {
   PassRegistration<TestMemRefBoundCheck>(
       "test-memref-bound-check", "Check memref access bounds in a Function");
 }
+} // namespace test
 } // namespace mlir

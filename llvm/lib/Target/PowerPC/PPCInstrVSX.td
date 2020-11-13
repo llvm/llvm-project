@@ -167,7 +167,7 @@ multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
     def _rec    : XX3Form_Rc<opcode, xo, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        [(set InTy:$XT,
-                                (InTy (PPCvcmp_o InTy:$XA, InTy:$XB, xo)))]>,
+                                (InTy (PPCvcmp_rec InTy:$XA, InTy:$XB, xo)))]>,
                        isRecordForm;
   }
 }

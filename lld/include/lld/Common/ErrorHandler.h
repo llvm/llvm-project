@@ -89,11 +89,14 @@ extern llvm::raw_ostream *stderrOS;
 llvm::raw_ostream &outs();
 llvm::raw_ostream &errs();
 
+enum class ErrorTag { LibNotFound, SymbolNotFound };
+
 class ErrorHandler {
 public:
   uint64_t errorCount = 0;
   uint64_t errorLimit = 20;
   StringRef errorLimitExceededMsg = "too many errors emitted, stopping now";
+  StringRef errorHandlingScript;
   StringRef logName = "lld";
   bool exitEarly = true;
   bool fatalWarnings = false;
@@ -103,6 +106,7 @@ public:
   std::function<void()> cleanupCallback;
 
   void error(const Twine &msg);
+  void error(const Twine &msg, ErrorTag tag, ArrayRef<StringRef> args);
   LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg);
   void log(const Twine &msg);
   void message(const Twine &msg);
@@ -126,6 +130,9 @@ private:
 ErrorHandler &errorHandler();
 
 inline void error(const Twine &msg) { errorHandler().error(msg); }
+inline void error(const Twine &msg, ErrorTag tag, ArrayRef<StringRef> args) {
+  errorHandler().error(msg, tag, args);
+}
 inline LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg) {
   errorHandler().fatal(msg);
 }

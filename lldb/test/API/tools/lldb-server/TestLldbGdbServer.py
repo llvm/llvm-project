@@ -227,7 +227,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.attach_commandline_continue_app_exits()
 
-    @expectedFailureNetBSD
     @llgs_test
     def test_attach_commandline_continue_app_exits_llgs(self):
         self.init_llgs_test()
@@ -434,7 +433,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             "Advanced Vector Extensions" in register_sets)
 
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     @llgs_test
     def test_qRegisterInfo_contains_avx_registers_llgs(self):
         self.init_llgs_test()
@@ -480,7 +479,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qThreadInfo_contains_thread()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
-    @expectedFailureNetBSD
     @llgs_test
     def test_qThreadInfo_contains_thread_attach_llgs(self):
         self.init_llgs_test()
@@ -540,7 +538,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qThreadInfo_matches_qC()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
-    @expectedFailureNetBSD
     @llgs_test
     def test_qThreadInfo_matches_qC_attach_llgs(self):
         self.init_llgs_test()
@@ -604,7 +601,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     @llgs_test
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_llgs(
             self):
@@ -622,7 +619,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     @llgs_test
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_llgs(
             self):
@@ -688,7 +685,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.Hg_switches_to_3_threads()
 
     @expectedFailureAll(oslist=["windows"]) # expecting one more thread
-    @expectedFailureNetBSD
     @llgs_test
     def test_Hg_switches_to_3_threads_attach_llgs(self):
         self.init_llgs_test()
@@ -819,7 +815,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
 
     @skipIfWindows # no SIGSEGV support
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"])
     @llgs_test
     def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
         self.init_llgs_test()
@@ -916,6 +912,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qMemoryRegionInfo_is_supported()
 
     @llgs_test
+    @expectedFailureAll(oslist=["freebsd"])
     def test_qMemoryRegionInfo_is_supported_llgs(self):
         self.init_llgs_test()
         self.build()
@@ -980,6 +977,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qMemoryRegionInfo_reports_code_address_as_executable()
 
     @skipIfWindows # No pty support to test any inferior output
+    @expectedFailureAll(oslist=["freebsd"])
     @llgs_test
     def test_qMemoryRegionInfo_reports_code_address_as_executable_llgs(self):
         self.init_llgs_test()
@@ -1046,6 +1044,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
 
     @skipIfWindows # No pty support to test any inferior output
+    @expectedFailureAll(oslist=["freebsd"])
     @llgs_test
     def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_llgs(
             self):
@@ -1112,6 +1111,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
 
     @skipIfWindows # No pty support to test any inferior output
+    @expectedFailureAll(oslist=["freebsd"])
     @llgs_test
     def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_llgs(
             self):

@@ -789,6 +789,12 @@ struct ShuffleMask {
     OS << " }";
   }
 };
+
+LLVM_ATTRIBUTE_UNUSED
+raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &SM) {
+  SM.print(OS);
+  return OS;
+}
 } // namespace
 
 // --------------------------------------------------------------------
@@ -1680,7 +1686,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // The result length must be the same as the length of a single vector,
   // or a vector pair.
   assert(LogLen == HwLog || LogLen == HwLog+1);
-  bool Extend = (LogLen == HwLog);
+  bool HavePairs = LogLen == HwLog+1;
 
   if (!isPermutation(SM.Mask))
     return OpRef::fail();
@@ -1764,6 +1770,22 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   //  E  1 1 1 0      7  0 1 1 1      7  0 1 1 1      7  0 1 1 1
   //  F  1 1 1 1      F  1 1 1 1      F  1 1 1 1      F  1 1 1 1
 
+  // There is one special case that is not a perfect shuffle, but
+  // can be turned into one easily: when the shuffle operates on
+  // a vector pair, but the two vectors in the pair are swapped.
+  // The code below that identifies perfect shuffles will reject
+  // it, unless the order is reversed.
+  SmallVector<int,128> MaskStorage(SM.Mask.begin(), SM.Mask.end());
+  bool InvertedPair = false;
+  if (HavePairs && SM.Mask[0] >= int(HwLen)) {
+    for (int i = 0, e = SM.Mask.size(); i != e; ++i) {
+      int M = SM.Mask[i];
+      MaskStorage[i] = M >= int(HwLen) ? M-HwLen : M+HwLen;
+    }
+    InvertedPair = true;
+  }
+  ArrayRef<int> LocalMask(MaskStorage);
+
   auto XorPow2 = [] (ArrayRef<int> Mask, unsigned Num) {
     unsigned X = Mask[0] ^ Mask[Num/2];
     // Check that the first half has the X's bits clear.
@@ -1783,12 +1805,12 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   assert(VecLen > 2);
   for (unsigned I = VecLen; I >= 2; I >>= 1) {
     // Examine the initial segment of Mask of size I.
-    unsigned X = XorPow2(SM.Mask, I);
+    unsigned X = XorPow2(LocalMask, I);
     if (!isPowerOf2_32(X))
       return OpRef::fail();
     // Check the other segments of Mask.
     for (int J = I; J < VecLen; J += I) {
-      if (XorPow2(SM.Mask.slice(J, I), I) != X)
+      if (XorPow2(LocalMask.slice(J, I), I) != X)
         return OpRef::fail();
     }
     Perm[Log2_32(X)] = Log2_32(I)-1;
@@ -1909,7 +1931,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   //   input 2: ....GOOD
   // Then at the end, this needs to be undone. To accomplish this,
   // artificially add "LogLen-1" at both ends of the sequence.
-  if (Extend)
+  if (!HavePairs)
     SwapElems.push_back(LogLen-1);
   for (const CycleType &C : Cycles) {
     // Do the transformation: (a1..an) -> (M a1..an)(M a1).
@@ -1918,12 +1940,14 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     if (First == 0)
       SwapElems.push_back(C[0]);
   }
-  if (Extend)
+  if (!HavePairs)
     SwapElems.push_back(LogLen-1);
 
   const SDLoc &dl(Results.InpNode);
-  OpRef Arg = !Extend ? Va
-                      : concat(Va, OpRef::undef(SingleTy), Results);
+  OpRef Arg = HavePairs ? Va
+                        : concat(Va, OpRef::undef(SingleTy), Results);
+  if (InvertedPair)
+    Arg = concat(OpRef::hi(Arg), OpRef::lo(Arg), Results);
 
   for (unsigned I = 0, E = SwapElems.size(); I != E; ) {
     bool IsInc = I == E-1 || SwapElems[I] < SwapElems[I+1];
@@ -1947,7 +1971,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     Arg = OpRef::res(Results.top());
   }
 
-  return !Extend ? Arg : OpRef::lo(Arg);
+  return HavePairs ? Arg : OpRef::lo(Arg);
 }
 
 OpRef HvxSelector::butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results) {

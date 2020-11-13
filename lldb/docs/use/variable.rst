@@ -993,7 +993,7 @@ have many member variables but not all of these are actually necessary for the
 user to see.
 
 A filter will solve this issue by only letting the user see those member
-variables he cares about. Of course, the equivalent of a filter can be
+variables they care about. Of course, the equivalent of a filter can be
 implemented easily using synthetic children, but a filter lets you get the job
 done without having to write Python code.
 

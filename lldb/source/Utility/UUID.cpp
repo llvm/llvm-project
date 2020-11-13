@@ -35,6 +35,16 @@ static inline bool separate(size_t count) {
   }
 }
 
+UUID UUID::fromCvRecord(UUID::CvRecordPdb70 debug_info) {
+  llvm::sys::swapByteOrder(debug_info.Uuid.Data1);
+  llvm::sys::swapByteOrder(debug_info.Uuid.Data2);
+  llvm::sys::swapByteOrder(debug_info.Uuid.Data3);
+  llvm::sys::swapByteOrder(debug_info.Age);
+  if (debug_info.Age)
+    return UUID::fromOptionalData(&debug_info, sizeof(debug_info));
+  return UUID::fromOptionalData(&debug_info.Uuid, sizeof(debug_info.Uuid));
+}
+
 std::string UUID::GetAsString(llvm::StringRef separator) const {
   std::string result;
   llvm::raw_string_ostream os(result);

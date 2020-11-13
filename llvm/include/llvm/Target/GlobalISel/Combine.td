@@ -158,6 +158,23 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+// Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
+def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;
+def shift_immed_chain : GICombineRule<
+  (defs root:$d, shift_immed_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR, G_SSHLSAT, G_USHLSAT):$d,
+         [{ return Helper.matchShiftImmedChain(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.applyShiftImmedChain(*${d}, ${matchinfo}); }])>;
+
+// Transform shift (logic (shift X, C0), Y), C1
+//        -> logic (shift X, (C0+C1)), (shift Y, C1), if shifts are same
+def shift_of_shifted_logic_matchdata : GIDefMatchData<"ShiftOfShiftedLogic">;
+def shift_of_shifted_logic_chain : GICombineRule<
+  (defs root:$d, shift_of_shifted_logic_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR, G_USHLSAT, G_SSHLSAT):$d,
+         [{ return Helper.matchShiftOfShiftedLogic(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.applyShiftOfShiftedLogic(*${d}, ${matchinfo}); }])>;
+
 def mul_to_shl_matchdata : GIDefMatchData<"unsigned">;
 def mul_to_shl : GICombineRule<
   (defs root:$d, mul_to_shl_matchdata:$matchinfo),
@@ -364,12 +381,21 @@ def shl_ashr_to_sext_inreg : GICombineRule<
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
-// Fold (x & mask) -> x when (x & mask) is known to equal x.
-def and_trivial_mask_matchinfo : GIDefMatchData<"Register">;
-def and_trivial_mask: GICombineRule <
-  (defs root:$root, and_trivial_mask_matchinfo:$matchinfo),
+// Fold (x & y) -> x or (x & y) -> y when (x & y) is known to equal x or equal y.
+def redundant_and_matchinfo : GIDefMatchData<"Register">;
+def redundant_and: GICombineRule <
+  (defs root:$root, redundant_and_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
-         [{ return Helper.matchAndWithTrivialMask(*${root}, ${matchinfo}); }]),
+         [{ return Helper.matchRedundantAnd(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
+
+// Fold (x | y) -> x or (x | y) -> y when (x | y) is known to equal x or equal y.
+def redundant_or_matchinfo : GIDefMatchData<"Register">;
+def redundant_or: GICombineRule <
+  (defs root:$root, redundant_or_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_OR):$root,
+         [{ return Helper.matchRedundantOr(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
@@ -505,6 +531,17 @@ def ptr_add_with_zero: GICombineRule<
          [{ return Helper.matchPtrAddZero(*${root}); }]),
   (apply [{ return Helper.applyPtrAddZero(*${root}); }])>;
 
+def regs_small_vec : GIDefMatchData<"SmallVector<Register, 4>">;
+def combine_insert_vec_elts_build_vector : GICombineRule<
+  (defs root:$root, regs_small_vec:$info),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
+    [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
+
+// Currently only the one combine above.
+def insert_vec_elt_combines : GICombineGroup<
+                            [combine_insert_vec_elts_build_vector]>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -523,7 +560,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  and_trivial_mask, redundant_sext_inreg]>;
+  redundant_and, redundant_sext_inreg, redundant_or]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
@@ -532,9 +569,9 @@ def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one]>;
 
-def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
-    combines_for_extload, combine_indexed_load_store, undef_combines,
-    identity_combines, simplify_add_to_sub,
+def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
+    ptr_add_immed_chain, combines_for_extload, combine_indexed_load_store,
+    undef_combines, identity_combines, simplify_add_to_sub,
     hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
@@ -542,4 +579,5 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
-    const_combines, xor_of_and_with_same_reg, ptr_add_with_zero]>;
+    const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
+    shift_immed_chain, shift_of_shifted_logic_chain]>;

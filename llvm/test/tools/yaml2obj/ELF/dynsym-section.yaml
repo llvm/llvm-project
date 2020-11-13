@@ -31,3 +31,50 @@ Sections:
 # OFFSET-NEXT:   [Nr] Name    Type   Address          Off    Size   ES Flg Lk Inf Al
 # OFFSET-NEXT:   [ 0]         NULL   0000000000000000 000000 000000 00     0   0  0
 # OFFSET-NEXT:   [ 1] .dynsym DYNSYM 0000000000000000 000100 000018 18   A 0   1  0
+
+## Check we are able to set Link = 0 for the .dynsym section explicitly.
+
+# RUN: yaml2obj %s --docnum=2 -DLINK=0 -o %t2
+# RUN: llvm-readelf --section-headers %t2 | FileCheck %s --check-prefix=LINK-NULL
+
+# LINK-NULL: [Nr] Name    {{.*}} Flg Lk Inf
+# LINK-NULL: [ 1] .dynsym {{.*}}   A 0   1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Link: [[LINK=<none>]]
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Name: .foo
+    Type: SHT_PROGBITS
+
+## Check that by default the .dynsym section will be linked to the .dynstr section,
+## when the latter one exists.
+
+# RUN: yaml2obj %s --docnum=2 -o %t3
+# RUN: llvm-readelf --section-headers %t3 | FileCheck %s --check-prefix=LINK-DEFAULT
+
+# LINK-DEFAULT: [Nr] Name    {{.*}} Flg Lk Inf
+# LINK-DEFAULT: [ 1] .dynsym {{.*}}   A 2   1
+# LINK-DEFAULT: [ 2] .dynstr {{.*}}   A 0   0
+
+## Even when the .dynstr section exists, we can explicitly link the .dynsym section
+## to another section.
+
+# RUN: yaml2obj %s --docnum=2 -DLINK=3 -o %t4
+# RUN: llvm-readelf --section-headers %t4 | FileCheck %s --check-prefix=LINK-FOO
+
+# LINK-FOO: [Nr] Name     {{.*}} Flg Lk Inf
+# LINK-FOO: [ 1] .dynsym  {{.*}}   A 3   1
+# LINK-FOO: [ 3] .foo
+
+## Check we can use a section name as a Link value for .dynsym.
+
+# RUN: yaml2obj %s --docnum=2 -DLINK=.foo -o %t5
+# RUN: llvm-readelf --section-headers %t5 | FileCheck %s --check-prefix=LINK-FOO

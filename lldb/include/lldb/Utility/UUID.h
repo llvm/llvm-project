@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -22,6 +23,22 @@ namespace lldb_private {
 class UUID {
 public:
   UUID() = default;
+
+  // Reference:
+  // https://crashpad.chromium.org/doxygen/structcrashpad_1_1CodeViewRecordPDB70.html
+  struct CvRecordPdb70 {
+    struct {
+      llvm::support::ulittle32_t Data1;
+      llvm::support::ulittle16_t Data2;
+      llvm::support::ulittle16_t Data3;
+      uint8_t Data4[8];
+    } Uuid;
+    llvm::support::ulittle32_t Age;
+    // char PDBFileName[];
+  };
+
+  /// Create a UUID from CvRecordPdb70.
+  static UUID fromCvRecord(CvRecordPdb70 debug_info);
 
   /// Creates a UUID from the data pointed to by the bytes argument. No special
   /// significance is attached to any of the values.

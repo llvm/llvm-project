@@ -1,5 +1,5 @@
 # RUN: env CLANGD_FLAGS=-index-file=no-such-index not clangd -lit-test </dev/null 2>&1 >/dev/null | FileCheck %s
-CHECK: I[{{.*}}] clangd version {{.*}}
+CHECK: I[{{.*}}]{{.*}} clangd version {{.*}}
 CHECK: Working directory: {{.*}}
 CHECK: argv[0]: clangd
 CHECK: argv[1]: -lit-test

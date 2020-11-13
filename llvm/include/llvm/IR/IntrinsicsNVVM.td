@@ -37,11 +37,6 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
 // MISC
 //
 
-// Helper class for construction of n-element list<LLVMtype> [t,t,...,t]
-class RepLLVMType<int N, LLVMType T> {
-  list<LLVMType> ret = !if(N, !listconcat(RepLLVMType<!add(N,-1), T>.ret, [T]), []);
-}
-
 // Helper class that represents a 'fragment' of an NVPTX *MMA instruction.
 // Geom: m<M>n<N>k<K>. E.g. m8n32k16
 // Frag: [abcd]
@@ -54,40 +49,40 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
   string ft = frag#":"#ptx_elt_type;
   list<LLVMType> regs = !cond(
     // mma.sync.m8n8k4 uses smaller a/b fragments than wmma fp ops
-    !eq(gft,"m8n8k4:a:f16") : RepLLVMType<2, llvm_v2f16_ty>.ret,
-    !eq(gft,"m8n8k4:b:f16") : RepLLVMType<2, llvm_v2f16_ty>.ret,
+    !eq(gft,"m8n8k4:a:f16") : !listsplat(llvm_v2f16_ty, 2),
+    !eq(gft,"m8n8k4:b:f16") : !listsplat(llvm_v2f16_ty, 2),
 
     // fp16 -> fp16/fp32 @  m16n16k16/m8n32k16/m32n8k16
     // All currently supported geometries use the same fragment format,
     // so we only need to consider {fragment, type}.
-    !eq(ft,"a:f16") : RepLLVMType<8, llvm_v2f16_ty>.ret,
-    !eq(ft,"b:f16") : RepLLVMType<8, llvm_v2f16_ty>.ret,
-    !eq(ft,"c:f16") : RepLLVMType<4, llvm_v2f16_ty>.ret,
-    !eq(ft,"d:f16") : RepLLVMType<4, llvm_v2f16_ty>.ret,
-    !eq(ft,"c:f32") : RepLLVMType<8, llvm_float_ty>.ret,
-    !eq(ft,"d:f32") : RepLLVMType<8, llvm_float_ty>.ret,
+    !eq(ft,"a:f16") : !listsplat(llvm_v2f16_ty, 8),
+    !eq(ft,"b:f16") : !listsplat(llvm_v2f16_ty, 8),
+    !eq(ft,"c:f16") : !listsplat(llvm_v2f16_ty, 4),
+    !eq(ft,"d:f16") : !listsplat(llvm_v2f16_ty, 4),
+    !eq(ft,"c:f32") : !listsplat(llvm_float_ty, 8),
+    !eq(ft,"d:f32") : !listsplat(llvm_float_ty, 8),
 
     // u8/s8 -> s32 @ m16n16k16/m8n32k16/m32n8k16
-    !eq(gft,"m16n16k16:a:u8") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m16n16k16:a:s8") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m16n16k16:b:u8") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m16n16k16:b:s8") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m16n16k16:c:s32") : RepLLVMType<8, llvm_i32_ty>.ret,
-    !eq(gft,"m16n16k16:d:s32") : RepLLVMType<8, llvm_i32_ty>.ret,
+    !eq(gft,"m16n16k16:a:u8") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m16n16k16:a:s8") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m16n16k16:b:u8") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m16n16k16:b:s8") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m16n16k16:c:s32") : !listsplat(llvm_i32_ty, 8),
+    !eq(gft,"m16n16k16:d:s32") : !listsplat(llvm_i32_ty, 8),
 
     !eq(gft,"m8n32k16:a:u8") : [llvm_i32_ty],
     !eq(gft,"m8n32k16:a:s8") : [llvm_i32_ty],
-    !eq(gft,"m8n32k16:b:u8") : RepLLVMType<4, llvm_i32_ty>.ret,
-    !eq(gft,"m8n32k16:b:s8") : RepLLVMType<4, llvm_i32_ty>.ret,
-    !eq(gft,"m8n32k16:c:s32") : RepLLVMType<8, llvm_i32_ty>.ret,
-    !eq(gft,"m8n32k16:d:s32") : RepLLVMType<8, llvm_i32_ty>.ret,
+    !eq(gft,"m8n32k16:b:u8") : !listsplat(llvm_i32_ty, 4),
+    !eq(gft,"m8n32k16:b:s8") : !listsplat(llvm_i32_ty, 4),
+    !eq(gft,"m8n32k16:c:s32") : !listsplat(llvm_i32_ty, 8),
+    !eq(gft,"m8n32k16:d:s32") : !listsplat(llvm_i32_ty, 8),
 
-    !eq(gft,"m32n8k16:a:u8") : RepLLVMType<4, llvm_i32_ty>.ret,
-    !eq(gft,"m32n8k16:a:s8") : RepLLVMType<4, llvm_i32_ty>.ret,
+    !eq(gft,"m32n8k16:a:u8") : !listsplat(llvm_i32_ty, 4),
+    !eq(gft,"m32n8k16:a:s8") : !listsplat(llvm_i32_ty, 4),
     !eq(gft,"m32n8k16:b:u8") : [llvm_i32_ty],
     !eq(gft,"m32n8k16:b:s8") : [llvm_i32_ty],
-    !eq(gft,"m32n8k16:c:s32") : RepLLVMType<8, llvm_i32_ty>.ret,
-    !eq(gft,"m32n8k16:d:s32") : RepLLVMType<8, llvm_i32_ty>.ret,
+    !eq(gft,"m32n8k16:c:s32") : !listsplat(llvm_i32_ty, 8),
+    !eq(gft,"m32n8k16:d:s32") : !listsplat(llvm_i32_ty, 8),
 
     // u4/s4/b1 -> s32 @ m8n8k32 (u4/s4), m8n8k128(b1)
     !eq(gft,"m8n8k128:a:b1") : [llvm_i32_ty],
@@ -96,10 +91,10 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
     !eq(gft,"m8n8k128:b:b1") : [llvm_i32_ty],
     !eq(gft,"m8n8k32:b:u4") : [llvm_i32_ty],
     !eq(gft,"m8n8k32:b:s4") : [llvm_i32_ty],
-    !eq(gft,"m8n8k128:c:s32") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m8n8k128:d:s32") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m8n8k32:c:s32") : RepLLVMType<2, llvm_i32_ty>.ret,
-    !eq(gft,"m8n8k32:d:s32") : RepLLVMType<2, llvm_i32_ty>.ret,
+    !eq(gft,"m8n8k128:c:s32") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m8n8k128:d:s32") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m8n8k32:c:s32") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m8n8k32:d:s32") : !listsplat(llvm_i32_ty, 2),
   );
 }
 
@@ -133,7 +128,7 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
      !eq(A.ptx_elt_type, "u4") : [A],
      !eq(A.ptx_elt_type, "b1") : [A],
      // the rest are FP ops identified by accumulator & result type.
-     1: [D, C]
+     true: [D, C]
      );
    string ret = !foldl("", id_frags, a, b, !strconcat(a, ".", b.ptx_elt_type));
 }
@@ -230,10 +225,8 @@ class NVVM_MMA_OPS<int _ = 0> {
                                              ldst_bit_ab_ops,
                                              ldst_subint_cd_ops);
   // Separate A/B/C fragments (loads) from D (stores).
-  list<WMMA_REGS> all_ld_ops = !foldl([]<WMMA_REGS>, all_ldst_ops, a, b,
-                                      !listconcat(a, !if(!eq(b.frag,"d"), [],[b])));
-  list<WMMA_REGS> all_st_ops = !foldl([]<WMMA_REGS>, all_ldst_ops, a, b,
-                                      !listconcat(a, !if(!eq(b.frag,"d"), [b],[])));
+  list<WMMA_REGS> all_ld_ops = !filter(op, all_ldst_ops, !ne(op.frag, "d"));
+  list<WMMA_REGS> all_st_ops = !filter(op, all_ldst_ops, !eq(op.frag, "d"));
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;
@@ -301,7 +294,7 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
     !eq(t, "s4") : [],
     !eq(t, "u4") : [],
     // All other (non sub-int) are OK.
-    1: [1]
+    true: [1]
   );
 }
 
@@ -314,8 +307,8 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
   string Name = "int_nvvm_shfl_" # Suffix;
   string Builtin = "__nvvm_shfl_" # Suffix;
   string IntrName = "llvm.nvvm.shfl." # !subst("_",".", Suffix);
-  list<int> withGccBuiltin = !if(return_pred, [], [1]);
-  list<int> withoutGccBuiltin = !if(return_pred, [1], []);
+  bit withGccBuiltin = !not(return_pred);
+  bit withoutGccBuiltin = return_pred;
   LLVMType OpType = !cond(
     !eq(type,"i32"): llvm_i32_ty,
     !eq(type,"f32"): llvm_float_ty);
@@ -4005,18 +3998,18 @@ def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
 // SHUFFLE
 //
 // Generate intrinsics for all variants of shfl instruction.
-foreach sync = [0, 1] in {
+foreach sync = [false, true] in {
   foreach mode = ["up", "down", "bfly", "idx"] in {
     foreach type = ["i32", "f32"] in {
-      foreach return_pred = [0, 1] in {
+      foreach return_pred = [false, true] in {
         foreach i = [SHFL_INFO<sync, mode, type, return_pred>] in {
-          foreach _ = i.withGccBuiltin in {
+          if i.withGccBuiltin then {
             def i.Name : GCCBuiltin<i.Builtin>,
                          Intrinsic<i.RetTy, i.ArgsTy,
                                    [IntrInaccessibleMemOnly, IntrConvergent],
                                    i.IntrName>;
           }
-          foreach _ = i.withoutGccBuiltin in {
+          if i.withoutGccBuiltin then {
             def i.Name : Intrinsic<i.RetTy, i.ArgsTy,
                          [IntrInaccessibleMemOnly, IntrConvergent], i.IntrName>;
           }

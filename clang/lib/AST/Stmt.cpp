@@ -158,6 +158,10 @@ Stmt::Likelihood Stmt::getLikelihood(const Stmt *S) {
   return ::getLikelihood(S).first;
 }
 
+const Attr *Stmt::getLikelihoodAttr(const Stmt *S) {
+  return ::getLikelihood(S).second;
+}
+
 Stmt::Likelihood Stmt::getLikelihood(const Stmt *Then, const Stmt *Else) {
   Likelihood LHT = ::getLikelihood(Then).first;
   Likelihood LHE = ::getLikelihood(Else).first;

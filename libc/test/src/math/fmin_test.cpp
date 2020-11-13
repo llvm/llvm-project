@@ -14,9 +14,7 @@
 
 using FPBits = __llvm_libc::fputil::FPBits<double>;
 
-double nan = static_cast<double>(FPBits::buildNaN(1));
-double inf = static_cast<double>(FPBits::inf());
-double negInf = static_cast<double>(FPBits::negInf());
+DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(FminTest, NaNArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fmin(nan, inf));

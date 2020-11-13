@@ -28,8 +28,8 @@ void test_ds(){
   }
 }
 // SEQ: [[MEM_TY:%.+]] = type { [128 x i8] }
-// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] undef
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* undef
 // SEQ-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i64 8
 // SEQ-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 

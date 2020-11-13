@@ -1523,16 +1523,12 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
                          end_backtick - expr_content_start);
 
     ExecutionContext exe_ctx(GetExecutionContext());
-    Target *target = exe_ctx.GetTargetPtr();
 
     // Get a dummy target to allow for calculator mode while processing
     // backticks. This also helps break the infinite loop caused when target is
     // null.
-    if (!target)
-      target = m_debugger.GetDummyTarget();
-
-    if (!target)
-      continue;
+    Target *exe_target = exe_ctx.GetTargetPtr();
+    Target &target = exe_target ? *exe_target : m_debugger.GetDummyTarget();
 
     ValueObjectSP expr_result_valobj_sp;
 
@@ -1545,8 +1541,8 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
     options.SetTimeout(llvm::None);
 
     ExpressionResults expr_result =
-        target->EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
-                                   expr_result_valobj_sp, options);
+        target.EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
+                                  expr_result_valobj_sp, options);
 
     if (expr_result == eExpressionCompleted) {
       Scalar scalar;
@@ -2307,6 +2303,8 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     }
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
+    tmp_result.SetInteractive(result.GetInteractive());
+
     // If override_context is not NULL, pass no_context_switching = true for
     // HandleCommand() since we updated our context already.
 

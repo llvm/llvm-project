@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -inline="disable-simplify" | FileCheck %s
-// RUN: mlir-opt %s -inline="disable-simplify" -mlir-print-debuginfo | FileCheck %s --check-prefix INLINE-LOC
+// RUN: mlir-opt %s -inline="disable-simplify" -mlir-print-debuginfo -mlir-print-local-scope | FileCheck %s --check-prefix INLINE-LOC
 // RUN: mlir-opt %s -inline | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
@@ -181,5 +181,11 @@ func @inline_simplify() -> i32 {
   // INLINE_SIMPLIFY-NEXT: return %[[CST]]
   %fn = call @simplify_return_reference() : () -> (() -> i32)
   %res = call_indirect %fn() : () -> i32
+  return %res : i32
+}
+
+// CHECK-LABEL: func @no_inline_invalid_call
+func @no_inline_invalid_call() -> i32 {
+  %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock, noinline } : () -> (i32)
   return %res : i32
 }

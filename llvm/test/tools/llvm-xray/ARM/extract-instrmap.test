@@ -17,24 +17,23 @@ FileHeader:
   Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5 ]
   Entry:           0x00000000000012B0
 ProgramHeaders:
-  - Type:            PT_LOAD
-    Flags:           [ PF_R ]
-    Sections:
-      - Section:         .rel.dyn
-    Align:           0x0000000000001000
-  - Type:            PT_LOAD
-    Flags:           [ PF_X, PF_R ]
-    Sections:
-      - Section:         .text
-    VAddr:           0x00000000000012B0
-    Align:           0x0000000000001000
-  - Type:            PT_LOAD
-    Flags:           [ PF_W, PF_R ]
-    Sections:
-      - Section:         xray_instr_map
-      - Section:         xray_fn_idx
-    VAddr:           0x00000000000033CC
-    Align:           0x0000000000001000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .rel.dyn
+    LastSec:  .rel.dyn
+    Align:    0x0000000000001000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text
+    VAddr:    0x00000000000012B0
+    Align:    0x0000000000001000
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: xray_instr_map
+    LastSec:  xray_fn_idx
+    VAddr:    0x00000000000033CC
+    Align:    0x0000000000001000
 Sections:
   - Name:            .rel.dyn
     Type:            SHT_REL

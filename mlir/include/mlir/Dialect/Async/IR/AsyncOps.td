@@ -14,6 +14,7 @@
 #define ASYNC_OPS
 
 include "mlir/Dialect/Async/IR/AsyncBase.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -26,6 +27,8 @@ class Async_Op<string mnemonic, list<OpTrait> traits = []> :
 
 def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
+                       DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                                 ["getNumRegionInvocations"]>,
                        AttrSizedOperandSegments]> {
   let summary = "Asynchronous execute operation";
   let description = [{
@@ -43,7 +46,7 @@ def Async_ExecuteOp :
     (`async.token` or `async.value`).
 
    `async.execute` operation takes `async.token` dependencies and `async.value`
-    operands separatly, and starts execution of the attached body region only
+    operands separately, and starts execution of the attached body region only
     when all tokens and values become ready.
 
     Example:

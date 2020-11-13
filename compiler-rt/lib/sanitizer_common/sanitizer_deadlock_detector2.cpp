@@ -80,7 +80,7 @@ struct Mutex {
   Link link[kMaxLink];
 };
 
-struct DD : public DDetector {
+struct DD final : public DDetector {
   explicit DD(const DDFlags *flags);
 
   DDPhysicalThread* CreatePhysicalThread();

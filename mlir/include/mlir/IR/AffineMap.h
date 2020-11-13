@@ -323,6 +323,9 @@ AffineMap inversePermutation(AffineMap map);
 /// ```
 AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 
+AffineMap getProjectedMap(AffineMap map,
+                          ArrayRef<unsigned> projectedDimensions);
+
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
   return os;

@@ -20,8 +20,9 @@
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
+using namespace mlir::test;
 
-void mlir::registerTestDialect(DialectRegistry &registry) {
+void mlir::test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
 }
 
@@ -34,6 +35,30 @@ namespace {
 // Test support for interacting with the AsmPrinter.
 struct TestOpAsmInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  LogicalResult getAlias(Attribute attr, raw_ostream &os) const final {
+    StringAttr strAttr = attr.dyn_cast<StringAttr>();
+    if (!strAttr)
+      return failure();
+
+    // Check the contents of the string attribute to see what the test alias
+    // should be named.
+    Optional<StringRef> aliasName =
+        StringSwitch<Optional<StringRef>>(strAttr.getValue())
+            .Case("alias_test:dot_in_name", StringRef("test.alias"))
+            .Case("alias_test:trailing_digit", StringRef("test_alias0"))
+            .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
+            .Case("alias_test:sanitize_conflict_a",
+                  StringRef("test_alias_conflict0"))
+            .Case("alias_test:sanitize_conflict_b",
+                  StringRef("test_alias_conflict0_"))
+            .Default(llvm::None);
+    if (!aliasName)
+      return failure();
+
+    os << *aliasName;
+    return success();
+  }
 
   void getAsmResultNames(Operation *op,
                          OpAsmSetValueNameFn setNameFn) const final {
@@ -77,11 +102,17 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
 
-  bool isLegalToInline(Region *, Region *, BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const final {
+    // Don't allow inlining calls that are marked `noinline`.
+    return !call->hasAttr("noinline");
+  }
+  bool isLegalToInline(Region *, Region *, bool,
+                       BlockAndValueMapping &) const final {
     // Inlining into test dialect regions is legal.
     return true;
   }
-  bool isLegalToInline(Operation *, Region *,
+  bool isLegalToInline(Operation *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }

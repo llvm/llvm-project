@@ -43,7 +43,7 @@ int main ()
         assert(false);
         ((void)d);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    } catch (std::bad_cast) {
+    } catch (std::bad_cast const&) {
         // success
         return 0;
     } catch (...) {

@@ -24,7 +24,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/FoldUtils.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -57,30 +56,27 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   return llvm::None;
 }
 
-static Value emitOrFoldComposedAffineApply(OpBuilder &b, Location loc,
-                                           AffineMap map,
-                                           ValueRange operandsRef,
-                                           OperationFolder *folder) {
+static Value createFoldedComposedAffineApply(OpBuilder &b, Location loc,
+                                             AffineMap map,
+                                             ValueRange operandsRef) {
   SmallVector<Value, 4> operands(operandsRef.begin(), operandsRef.end());
   fullyComposeAffineMapAndOperands(&map, &operands);
   canonicalizeMapAndOperands(&map, &operands);
-  return folder ? folder->create<AffineApplyOp>(b, loc, map, operands)
-                : b.create<AffineApplyOp>(loc, map, operands);
+  return b.createOrFold<AffineApplyOp>(loc, map, operands);
 }
 
 SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
                                                      AffineMap map,
-                                                     ValueRange values,
-                                                     OperationFolder *folder) {
+                                                     ValueRange values) {
   SmallVector<Value, 4> res;
   res.reserve(map.getNumResults());
   unsigned numDims = map.getNumDims(), numSym = map.getNumSymbols();
   // For each `expr` in `map`, applies the `expr` to the values extracted from
   // ranges. If the resulting application can be folded into a Value, the
-  // folding occurs eagerly. Otherwise, an affine.apply operation is emitted.
+  // folding occurs eagerly.
   for (auto expr : map.getResults()) {
     AffineMap map = AffineMap::get(numDims, numSym, expr);
-    res.push_back(emitOrFoldComposedAffineApply(b, loc, map, values, folder));
+    res.push_back(createFoldedComposedAffineApply(b, loc, map, values));
   }
   return res;
 }
@@ -159,15 +155,14 @@ SmallVector<Value, 8> getShape(OpBuilder &builder, LinalgOp linalgOp) {
   return res;
 }
 
-Optional<SmallVector<Value, 4>>
-getLoopRanges(OpBuilder &builder, LinalgOp linalgOp, OperationFolder *folder) {
+Optional<SmallVector<Value, 4>> getLoopRanges(OpBuilder &builder,
+                                              LinalgOp linalgOp) {
   SmallVector<Value, 8> viewSizes = getShape(builder, linalgOp);
   AffineMap invertedMap =
       inversePermutation(concatAffineMaps(linalgOp.getIndexingMaps()));
   if (!invertedMap)
     return {};
-  return applyMapToValues(builder, linalgOp.getLoc(), invertedMap, viewSizes,
-                          folder);
+  return applyMapToValues(builder, linalgOp.getLoc(), invertedMap, viewSizes);
 }
 
 /// Specialization to build an scf "for" nest.

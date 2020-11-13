@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-greedy-fusion -split-input-file | FileCheck %s
 
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 #id_2d = affine_map<(d0, d1) -> (d0, d1)>
@@ -82,8 +82,11 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
     ^bb0(%i: index, %j: index, %a: f32, %b: f32, %c: f32): // no predecessors
       %i_int = index_cast %i: index to i32
       %i_float = sitofp %i_int : i32 to f32
+      %j_int = index_cast %j: index to i32
+      %j_float = sitofp %j_int : i32 to f32
       %ab = addf %a, %b : f32
-      %out = addf %ab, %i_float : f32
+      %tmp = addf %ab, %i_float : f32
+      %out = addf %tmp, %j_float : f32
       linalg.yield %out : f32
   }
   %C_X = dim %C, %c0 : memref<?x?xf32>
@@ -115,6 +118,7 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
 // CHECK:          [[i_new:%.*]] = addi [[i]], [[I]] : index
 // CHECK:          [[j_new:%.*]] = addi [[j]], [[J]] : index
 // CHECK:          {{.*}} = index_cast [[i_new]] : index to i32
+// CHECK:          {{.*}} = index_cast [[j_new]] : index to i32
 // CHECK:      linalg.generic
 // CHECK:          addf
 
@@ -137,10 +141,13 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
     ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
    outs(%C : memref<?x?xf32>) {
     ^bb0(%i: index, %j: index, %a: f32, %b: f32, %c: f32): // no predecessors
+      %i_int = index_cast %i: index to i32
+      %i_float = sitofp %i_int : i32 to f32
       %j_int = index_cast %j: index to i32
       %j_float = sitofp %j_int : i32 to f32
       %ab = addf %a, %b : f32
-      %out = addf %ab, %j_float : f32
+      %tmp = addf %ab, %i_float : f32
+      %out = addf %tmp, %j_float : f32
       linalg.yield %out : f32
   }
   %C_X = dim %C, %c0 : memref<?x?xf32>
@@ -176,8 +183,8 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
 // CHECK-NOT:  scf.parallel
 // CHECK:      linalg.indexed_generic
 // CHECK:        ^bb0([[i:%.*]]: index, [[j:%.*]]: index
-// CHECK:          [[i_new:%.*]] = addi [[i]], [[C0]] : index
 // CHECK:          [[j_new:%.*]] = addi [[j]], [[J]] : index
+// CHECK:          {{.*}} = index_cast [[i]] : index to i32
 // CHECK:          {{.*}} = index_cast [[j_new]] : index to i32
 // CHECK:      linalg.generic
 // CHECK:          addf

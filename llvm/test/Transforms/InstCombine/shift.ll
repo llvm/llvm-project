@@ -82,9 +82,7 @@ define i8 @test10a(i8 %A) {
   ret i8 %C
 }
 
-;; This transformation is deferred to DAGCombine:
 ;; (A >> 3) << 4 === (A & 0x1F) << 1
-;; The shl may be valuable to scalar evolution.
 define i8 @test11(i8 %x) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], 6
@@ -109,7 +107,6 @@ define i8 @test11a(i8 %A) {
   ret i8 %C
 }
 
-;; This is deferred to DAGCombine unless %B is single-use.
 ;; (A >> 8) << 8 === A & -256
 define i32 @test12(i32 %A) {
 ; CHECK-LABEL: @test12(
@@ -137,9 +134,7 @@ define i8 @shishi(i8 %x) {
   ret i8 %r
 }
 
-;; This transformation is deferred to DAGCombine:
 ;; (A >> 3) << 4 === (A & -8) * 2
-;; The shl may be valuable to scalar evolution.
 define i8 @test13(i8 %x) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], 6
@@ -1718,6 +1713,26 @@ define i177 @lshr_out_of_range(i177 %Y, i177** %A2) {
   %G18 = getelementptr i177*, i177** %A2, i1 %C8
   store i177** %G18, i177*** undef
   %B1 = udiv i177 %B10, %B6
+  ret i177 %B1
+}
+
+; OSS Fuzz #26716
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26716
+define i177 @lshr_out_of_range2(i177 %Y, i177** %A2) {
+; CHECK-LABEL: @lshr_out_of_range2(
+; CHECK-NEXT:    store i177** [[A2:%.*]], i177*** undef, align 8
+; CHECK-NEXT:    ret i177 0
+;
+  %B5 = udiv i177 %Y, -1
+  %B = sdiv i177 %B5, -1
+  %B4 = add i177 %B5, %B
+  %B2 = add i177 %B4, -1
+  %B6 = mul i177 %B5, %B2
+  %B12 = lshr i177 %Y, %B6
+  %C8 = icmp ugt i177 %B12, %B4
+  %G18 = getelementptr i177*, i177** %A2, i1 %C8
+  store i177** %G18, i177*** undef, align 8
+  %B1 = udiv i177 %B5, %B6
   ret i177 %B1
 }
 

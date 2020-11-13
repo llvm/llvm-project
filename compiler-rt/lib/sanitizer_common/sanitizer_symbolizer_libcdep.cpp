@@ -237,7 +237,7 @@ const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
 //   <file_name>:<line_number>:<column_number>
 //   ...
 //   <empty line>
-class LLVMSymbolizerProcess : public SymbolizerProcess {
+class LLVMSymbolizerProcess final : public SymbolizerProcess {
  public:
   explicit LLVMSymbolizerProcess(const char *path)
       : SymbolizerProcess(path, /*use_posix_spawn=*/SANITIZER_MAC) {}

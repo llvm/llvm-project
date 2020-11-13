@@ -120,6 +120,29 @@
 #define PPC64_HAS_VMX
 #endif
 
+#ifndef _LIBUNWIND_REMEMBER_HEAP_ALLOC
+#if defined(_LIBUNWIND_REMEMBER_STACK_ALLOC) || defined(__APPLE__) ||          \
+    defined(__linux__) || defined(__ANDROID__) || defined(__MINGW32__) ||      \
+    defined(_LIBUNWIND_IS_BAREMETAL)
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) alloca(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr)                                         \
+  do {                                                                         \
+  } while (0)
+#elif defined(_WIN32)
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) _malloca(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr) _freea(_ptr)
+#define _LIBUNWIND_REMEMBER_CLEANUP_NEEDED
+#else
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) malloc(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr) free(_ptr)
+#define _LIBUNWIND_REMEMBER_CLEANUP_NEEDED
+#endif
+#else /* _LIBUNWIND_REMEMBER_HEAP_ALLOC */
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) malloc(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr) free(_ptr)
+#define _LIBUNWIND_REMEMBER_CLEANUP_NEEDED
+#endif
+
 #if defined(NDEBUG) && defined(_LIBUNWIND_IS_BAREMETAL)
 #define _LIBUNWIND_ABORT(msg)                                                  \
   do {                                                                         \

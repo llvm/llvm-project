@@ -29,9 +29,11 @@ struct TestLivenessPass : public PassWrapper<TestLivenessPass, FunctionPass> {
 } // end anonymous namespace
 
 namespace mlir {
+namespace test {
 void registerTestLivenessPass() {
   PassRegistration<TestLivenessPass>(
       "test-print-liveness",
       "Print the contents of a constructed liveness information.");
 }
+} // namespace test
 } // namespace mlir

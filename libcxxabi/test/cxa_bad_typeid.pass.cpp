@@ -41,7 +41,7 @@ int main ()
         test_bad_typeid(nullptr);
         assert(false);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    } catch (std::bad_typeid) {
+    } catch (std::bad_typeid const&) {
         // success
         return 0;
     } catch (...) {

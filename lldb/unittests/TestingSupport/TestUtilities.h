@@ -36,16 +36,12 @@ public:
   static llvm::Expected<TestFile> fromYaml(llvm::StringRef Yaml);
   static llvm::Expected<TestFile> fromYamlFile(const llvm::Twine &Name);
 
-  ~TestFile() = default;
-
   ModuleSpec moduleSpec() {
     return ModuleSpec(FileSpec(), UUID(), dataBuffer());
   }
 
 private:
   TestFile(std::string &&Buffer) : Buffer(std::move(Buffer)) {}
-
-  void operator=(const TestFile &) = delete;
 
   lldb::DataBufferSP dataBuffer() {
     auto *Data = reinterpret_cast<const uint8_t *>(Buffer.data());

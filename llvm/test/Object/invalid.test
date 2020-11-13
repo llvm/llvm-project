@@ -175,9 +175,11 @@ Sections:
 ## when the e_shentsize field is broken.
 
 # RUN: yaml2obj %s --docnum=9 -o %t9
-# RUN: not llvm-readobj -S %t9 2>&1 | FileCheck --check-prefix=INVALID-SH-ENTSIZE %s
+# RUN: not llvm-readobj -S %t9 2>&1 | \
+# RUN:   FileCheck -DFILE=%t9 --implicit-check-not=warning: --check-prefix=INVALID-SH-ENTSIZE %s
 
-# INVALID-SH-ENTSIZE: error: {{.*}}: invalid  e_shentsize in ELF header: 1
+# INVALID-SH-ENTSIZE:      LoadName: <Not found>
+# INVALID-SH-ENTSIZE-NEXT: error: '[[FILE]]': unable to continue dumping, the file is corrupt: invalid e_shentsize in ELF header: 1
 
 --- !ELF
 FileHeader:
@@ -211,9 +213,9 @@ Sections:
 ## sizeof(.symtab_shndx) = (sizeof(.symtab) / entsize(.symtab)) * entsize(.symtab_shndx)
 
 # RUN: yaml2obj %s --docnum=11 -o %t11
-# RUN: not llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
+# RUN: llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 
-# INVALID-XINDEX-SIZE: error: {{.*}}: SHT_SYMTAB_SHNDX has 2 entries, but the symbol table associated has 1
+# INVALID-XINDEX-SIZE: warning: {{.*}}: SHT_SYMTAB_SHNDX has 2 entries, but the symbol table associated has 1
 
 --- !ELF
 FileHeader:
@@ -312,10 +314,12 @@ Symbols:
 ## when the e_shnum field is broken (is greater than the actual number of sections).
 
 # RUN: yaml2obj %s --docnum=15 -o %t15
-# RUN: not llvm-readobj -S %t15 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
+# RUN: not llvm-readobj -S %t15 2>&1 | \
+# RUN:   FileCheck -DFILE=%t15 --implicit-check-not=warning: --check-prefix=INVALID-SECTION-NUM %s
 
-# INVALID-SECTION-NUM: error: {{.*}}: section table goes past the end of file
- 
+# INVALID-SECTION-NUM:      LoadName: <Not found>
+# INVALID-SECTION-NUM-NEXT: error: '[[FILE]]': unable to continue dumping, the file is corrupt: section table goes past the end of file
+
 --- !ELF
 FileHeader:
   Class:    ELFCLASS64
@@ -450,10 +454,10 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Check that llvm-readobj reports a warning when a dynamic relocation section
 ## has sh_entsize field with size != sizeof(Elf_Rela).
@@ -525,8 +529,8 @@ Sections:
 ProgramHeaders:
   - Type:     PT_DYNAMIC
     FileSize: 0xffff0000
-    Sections:
-      - Section: .dynamic
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # RUN: yaml2obj --docnum=24 %s -o %t24
 # RUN: not obj2yaml 2>&1 %t24 | FileCheck %s -DFILE=%t24 --check-prefix=INVALID-SHSTRNDX
@@ -551,7 +555,7 @@ Sections:
 # RUN: yaml2obj --docnum=25 %s -o %t25
 # RUN: not llvm-readobj -h %t25 2>&1 | FileCheck -DFILE=%t25 --check-prefix=INVALID-SEC-NUM1 %s
 
-# INVALID-SEC-NUM1: error: '[[FILE]]': invalid section header table offset (e_shoff = 0x58) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
+# INVALID-SEC-NUM1: error: '[[FILE]]': unable to continue dumping, the file is corrupt: invalid section header table offset (e_shoff = 0x58) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
 
 --- !ELF
 FileHeader:
@@ -570,7 +574,7 @@ Sections:
 # RUN: yaml2obj --docnum=26 %s -o %t26
 # RUN: not llvm-readobj -h %t26 2>&1 | FileCheck -DFILE=%t26 --check-prefix=INVALID-SEC-NUM2 %s
 
-# INVALID-SEC-NUM2: error: '[[FILE]]': invalid number of sections specified in the NULL section's sh_size field (288230376151711744)
+# INVALID-SEC-NUM2: error: '[[FILE]]': unable to continue dumping, the file is corrupt: invalid number of sections specified in the NULL section's sh_size field (288230376151711744)
 
 --- !ELF
 FileHeader:
@@ -588,8 +592,8 @@ Sections:
 # RUN: yaml2obj --docnum=27 %s -o %t27
 # RUN: not llvm-readobj -h %t27 2>&1 | FileCheck -DFILE=%t27 --check-prefix=INVALID-SEC-NUM3 %s
 
-# INVALID-SEC-NUM3: error: '[[FILE]]': section header table goes past the end of the file: e_shoff = 0xffffffffffffffff
- 
+# INVALID-SEC-NUM3: error: '[[FILE]]': unable to continue dumping, the file is corrupt: section header table goes past the end of the file: e_shoff = 0xffffffffffffffff
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

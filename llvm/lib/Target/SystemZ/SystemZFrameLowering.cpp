@@ -565,7 +565,8 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
     Register IgnoredFrameReg;
     int64_t Offset =
-        getFrameIndexReference(MF, Save.getFrameIdx(), IgnoredFrameReg);
+        getFrameIndexReference(MF, Save.getFrameIdx(), IgnoredFrameReg)
+            .getFixed();
 
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, DwarfReg, SPOffsetFromCFA + Offset));
@@ -725,14 +726,14 @@ SystemZFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return true;
 }
 
-int SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                                 int FI,
-                                                 Register &FrameReg) const {
+StackOffset
+SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                             Register &FrameReg) const {
   // Our incoming SP is actually SystemZMC::CallFrameSize below the CFA, so
   // add that difference here.
-  int64_t Offset =
-    TargetFrameLowering::getFrameIndexReference(MF, FI, FrameReg);
-  return Offset + SystemZMC::CallFrameSize;
+  StackOffset Offset =
+      TargetFrameLowering::getFrameIndexReference(MF, FI, FrameReg);
+  return Offset + StackOffset::getFixed(SystemZMC::CallFrameSize);
 }
 
 MachineBasicBlock::iterator SystemZFrameLowering::

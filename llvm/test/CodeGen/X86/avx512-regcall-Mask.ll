@@ -157,6 +157,8 @@ define i64 @caller_argv64i1() #0 {
 ; WIN64-NEXT:    popq %r14
 ; WIN64-NEXT:    popq %r15
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_argv64i1:
@@ -261,6 +263,8 @@ define <64 x i1> @caller_retv64i1() #0 {
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_retv64i1:
@@ -345,6 +349,8 @@ define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> 
 ; WIN64-NEXT:    popq %r11
 ; WIN64-NEXT:    popq %rbp
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_argv32i1:
@@ -432,6 +438,8 @@ define i32 @caller_argv32i1() #0 {
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_argv32i1:
@@ -495,6 +503,8 @@ define i32 @caller_retv32i1() #0 {
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_retv32i1:
@@ -574,6 +584,8 @@ define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> 
 ; WIN64-NEXT:    popq %r10
 ; WIN64-NEXT:    popq %r11
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_argv16i1:
@@ -660,6 +672,8 @@ define i16 @caller_argv16i1() #0 {
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_argv16i1:
@@ -727,6 +741,8 @@ define i16 @caller_retv16i1() #0 {
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_retv16i1:
@@ -808,6 +824,8 @@ define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2) 
 ; WIN64-NEXT:    popq %r10
 ; WIN64-NEXT:    popq %r11
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_argv8i1:
@@ -894,6 +912,8 @@ define i8 @caller_argv8i1() #0 {
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_argv8i1:
@@ -965,6 +985,8 @@ define <8 x i1> @caller_retv8i1() #0 {
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    vzeroupper
 ; WIN64-NEXT:    retq
+; WIN64-NEXT:    .seh_handlerdata
+; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: caller_retv8i1:

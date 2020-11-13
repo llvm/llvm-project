@@ -2200,15 +2200,19 @@ public:
           m_count = count;
         break;
       }
-      case 's': {
-        int32_t start_position;
-        if (option_arg.empty() || option_arg.getAsInteger(0, start_position) ||
-            start_position < 0)
+      case 'p': {
+        int32_t position;
+        if (option_arg.empty() || option_arg.getAsInteger(0, position) ||
+            position < 0)
           error.SetErrorStringWithFormat(
               "invalid integer value for option '%s'",
               option_arg.str().c_str());
         else
-          m_start_position = start_position;
+          m_position = position;
+        break;
+      }
+      case 'r': {
+        m_raw = true;
         break;
       }
       default:
@@ -2219,19 +2223,20 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_count = kDefaultCount;
-      m_start_position = kDefaultStartPosition;
+      m_position = llvm::None;
+      m_raw = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_thread_trace_dump_instructions_options);
     }
 
-    static const uint32_t kDefaultCount = 20;
-    static const uint32_t kDefaultStartPosition = 0;
+    static const size_t kDefaultCount = 20;
 
     // Instance variables to hold the values for command options.
-    uint32_t m_count;
-    uint32_t m_start_position;
+    size_t m_count;
+    llvm::Optional<ssize_t> m_position;
+    bool m_raw;
   };
 
   CommandObjectTraceDumpInstructions(CommandInterpreter &interpreter)
@@ -2253,28 +2258,22 @@ public:
                                uint32_t index) override {
     current_command_args.GetCommandString(m_repeat_command);
     m_create_repeat_command_just_invoked = true;
+    m_consecutive_repetitions = 0;
     return m_repeat_command.c_str();
   }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
+    if (IsRepeatCommand())
+      m_consecutive_repetitions++;
     bool status = CommandObjectIterateOverThreads::DoExecute(args, result);
-    PrepareRepeatArguments();
-    return status;
-  }
 
-  void PrepareRepeatArguments() {
-    m_repeat_start_position = m_options.m_count + GetStartPosition();
     m_create_repeat_command_just_invoked = false;
+    return status;
   }
 
   bool IsRepeatCommand() {
     return !m_repeat_command.empty() && !m_create_repeat_command_just_invoked;
-  }
-
-  uint32_t GetStartPosition() {
-    return IsRepeatCommand() ? m_repeat_start_position
-                             : m_options.m_start_position;
   }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
@@ -2287,8 +2286,15 @@ protected:
     ThreadSP thread_sp =
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
 
-    trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
-                                    m_options.m_count, GetStartPosition());
+    size_t count = m_options.m_count;
+    ssize_t position = m_options.m_position.getValueOr(
+                           trace_sp->GetCursorPosition(*thread_sp)) -
+                       m_consecutive_repetitions * count;
+    if (position < 0)
+      result.SetError("error: no more data");
+    else
+      trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
+                                      count, position, m_options.m_raw);
     return true;
   }
 
@@ -2297,7 +2303,7 @@ protected:
   // Repeat command helpers
   std::string m_repeat_command;
   bool m_create_repeat_command_just_invoked;
-  uint32_t m_repeat_start_position;
+  size_t m_consecutive_repetitions = 0;
 };
 
 // CommandObjectMultiwordTraceDump

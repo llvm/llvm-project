@@ -133,7 +133,7 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
   auto ID = getSymbolID(TD);
   if (!ID)
     return {};
-  llvm::Optional<const SymbolSlab *> Symbols = lookupCached(*ID);
+  llvm::Optional<const SymbolSlab *> Symbols = lookupCached(ID);
   if (!Symbols)
     return {};
   const SymbolSlab &Syms = **Symbols;

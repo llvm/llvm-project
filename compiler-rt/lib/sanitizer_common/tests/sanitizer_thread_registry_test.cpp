@@ -162,7 +162,7 @@ struct RunThreadArgs {
   uptr shard;  // started from 1.
 };
 
-class TestThreadContext : public ThreadContextBase {
+class TestThreadContext final : public ThreadContextBase {
  public:
   explicit TestThreadContext(int tid) : ThreadContextBase(tid) {}
   void OnJoined(void *arg) {

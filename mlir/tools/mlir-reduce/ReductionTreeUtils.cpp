@@ -26,7 +26,7 @@ void ReductionTreeUtils::updateGoldenModule(ModuleOp &golden,
                                            reduced.getBody()->getOperations());
 }
 
-/// Update the the smallest node traversed so far in the reduction tree and
+/// Update the smallest node traversed so far in the reduction tree and
 /// print the debugging information for the currNode being traversed.
 void ReductionTreeUtils::updateSmallestNode(ReductionNode *currNode,
                                             ReductionNode *&smallestNode,
@@ -95,7 +95,7 @@ static std::vector<std::tuple<int, int>> getRanges(std::vector<bool> tSpace,
 }
 
 /// Create the specified number of variants by applying the transform method
-/// to different ranges of indices in the parent module. The isDeletion bolean
+/// to different ranges of indices in the parent module. The isDeletion boolean
 /// specifies if the transformation is the deletion of indices.
 void ReductionTreeUtils::createVariants(
     ReductionNode *parent, const Tester &test, int numVariants,

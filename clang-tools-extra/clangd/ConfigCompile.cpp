@@ -26,19 +26,33 @@
 #include "CompileCommands.h"
 #include "Config.h"
 #include "ConfigFragment.h"
+#include "ConfigProvider.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
 namespace config {
 namespace {
+
+// Returns an empty stringref if Path is not under FragmentDir. Returns Path
+// as-is when FragmentDir is empty.
+llvm::StringRef configRelative(llvm::StringRef Path,
+                               llvm::StringRef FragmentDir) {
+  if (FragmentDir.empty())
+    return Path;
+  if (!Path.consume_front(FragmentDir))
+    return llvm::StringRef();
+  return Path.empty() ? "." : Path;
+}
 
 struct CompiledFragmentImpl {
   // The independent conditions to check before using settings from this config.
@@ -49,7 +63,8 @@ struct CompiledFragmentImpl {
   std::vector<llvm::unique_function<bool(const Params &) const>> Conditions;
   // Mutations that this fragment will apply to the configuration.
   // These are invoked only if the conditions are satisfied.
-  std::vector<llvm::unique_function<void(Config &) const>> Apply;
+  std::vector<llvm::unique_function<void(const Params &, Config &) const>>
+      Apply;
 
   bool operator()(const Params &P, Config &C) const {
     for (const auto &C : Conditions) {
@@ -60,16 +75,21 @@ struct CompiledFragmentImpl {
     }
     dlog("Config fragment {0}: applying {1} rules", this, Apply.size());
     for (const auto &A : Apply)
-      A(C);
+      A(P, C);
     return true;
   }
 };
 
 // Wrapper around condition compile() functions to reduce arg-passing.
 struct FragmentCompiler {
+  FragmentCompiler(CompiledFragmentImpl &Out, DiagnosticCallback D,
+                   llvm::SourceMgr *SM)
+      : Out(Out), Diagnostic(D), SourceMgr(SM) {}
   CompiledFragmentImpl &Out;
   DiagnosticCallback Diagnostic;
   llvm::SourceMgr *SourceMgr;
+  // Normalized Fragment::SourceInfo::Directory.
+  std::string FragmentDirectory;
 
   llvm::Optional<llvm::Regex> compileRegex(const Located<std::string> &Text) {
     std::string Anchored = "^(" + *Text + ")$";
@@ -129,6 +149,11 @@ struct FragmentCompiler {
   }
 
   void compile(Fragment &&F) {
+    if (!F.Source.Directory.empty()) {
+      FragmentDirectory = llvm::sys::path::convert_to_slash(F.Source.Directory);
+      if (FragmentDirectory.back() != '/')
+        FragmentDirectory += '/';
+    }
     compile(std::move(F.If));
     compile(std::move(F.CompileFlags));
     compile(std::move(F.Index));
@@ -145,11 +170,16 @@ struct FragmentCompiler {
     }
     if (!PathMatch->empty()) {
       Out.Conditions.push_back(
-          [PathMatch(std::move(PathMatch))](const Params &P) {
+          [PathMatch(std::move(PathMatch)),
+           FragmentDir(FragmentDirectory)](const Params &P) {
             if (P.Path.empty())
               return false;
+            llvm::StringRef Path = configRelative(P.Path, FragmentDir);
+            // Ignore the file if it is not nested under Fragment.
+            if (Path.empty())
+              return false;
             return llvm::any_of(*PathMatch, [&](const llvm::Regex &RE) {
-              return RE.match(P.Path);
+              return RE.match(Path);
             });
           });
     }
@@ -161,11 +191,16 @@ struct FragmentCompiler {
     }
     if (!PathExclude->empty()) {
       Out.Conditions.push_back(
-          [PathExclude(std::move(PathExclude))](const Params &P) {
+          [PathExclude(std::move(PathExclude)),
+           FragmentDir(FragmentDirectory)](const Params &P) {
             if (P.Path.empty())
               return false;
+            llvm::StringRef Path = configRelative(P.Path, FragmentDir);
+            // Ignore the file if it is not nested under Fragment.
+            if (Path.empty())
+              return true;
             return llvm::none_of(*PathExclude, [&](const llvm::Regex &RE) {
-              return RE.match(P.Path);
+              return RE.match(Path);
             });
           });
     }
@@ -177,7 +212,7 @@ struct FragmentCompiler {
       for (auto &A : F.Remove)
         Remove->strip(*A);
       Out.Apply.push_back([Remove(std::shared_ptr<const ArgStripper>(
-                              std::move(Remove)))](Config &C) {
+                              std::move(Remove)))](const Params &, Config &C) {
         C.CompileFlags.Edits.push_back(
             [Remove](std::vector<std::string> &Args) {
               Remove->process(Args);
@@ -189,7 +224,7 @@ struct FragmentCompiler {
       std::vector<std::string> Add;
       for (auto &A : F.Add)
         Add.push_back(std::move(*A));
-      Out.Apply.push_back([Add(std::move(Add))](Config &C) {
+      Out.Apply.push_back([Add(std::move(Add))](const Params &, Config &C) {
         C.CompileFlags.Edits.push_back([Add](std::vector<std::string> &Args) {
           Args.insert(Args.end(), Add.begin(), Add.end());
         });
@@ -204,7 +239,8 @@ struct FragmentCompiler {
                          .map("Build", Config::BackgroundPolicy::Build)
                          .map("Skip", Config::BackgroundPolicy::Skip)
                          .value())
-        Out.Apply.push_back([Val](Config &C) { C.Index.Background = *Val; });
+        Out.Apply.push_back(
+            [Val](const Params &, Config &C) { C.Index.Background = *Val; });
     }
   }
 
@@ -219,7 +255,8 @@ struct FragmentCompiler {
         FullyQualifiedNamespaces.push_back(Namespace.str());
       }
       Out.Apply.push_back([FullyQualifiedNamespaces(
-                              std::move(FullyQualifiedNamespaces))](Config &C) {
+                              std::move(FullyQualifiedNamespaces))](
+                              const Params &, Config &C) {
         C.Style.FullyQualifiedNamespaces.insert(
             C.Style.FullyQualifiedNamespaces.begin(),
             FullyQualifiedNamespaces.begin(), FullyQualifiedNamespaces.end());

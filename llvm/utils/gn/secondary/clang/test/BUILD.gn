@@ -131,6 +131,7 @@ group("test") {
     ":lit_site_cfg",
     ":lit_unit_site_cfg",
     "//clang/lib/Headers",
+    "//clang/tools/apinotes-test",
     "//clang/tools/c-index-test",
     "//clang/tools/clang-diff",
     "//clang/tools/clang-format",

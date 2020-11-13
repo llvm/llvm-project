@@ -5022,8 +5022,12 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
            "failed to deduce lambda return type");
 
     // Build the new return type from scratch.
+    CallingConv RetTyCC = FD->getReturnType()
+                              ->getPointeeType()
+                              ->castAs<FunctionType>()
+                              ->getCallConv();
     QualType RetType = getLambdaConversionFunctionResultType(
-        CallOp->getType()->castAs<FunctionProtoType>());
+        CallOp->getType()->castAs<FunctionProtoType>(), RetTyCC);
     if (FD->getReturnType()->getAs<PointerType>())
       RetType = Context.getPointerType(RetType);
     else {

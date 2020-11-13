@@ -77,7 +77,7 @@ namespace std {
     using propagate_on_container_move_assignment = std::true_type;
     using is_always_equal = std::true_type;
 
-    Small* allocate(std::size_t) { assert(false); }
+    Small* allocate(std::size_t) { assert(false); return nullptr; }
 
     template <typename ...Args>
     void construct(Small* p, Args&& ...args) {

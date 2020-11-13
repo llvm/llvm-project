@@ -342,7 +342,7 @@ end:
 ; HSA-LABEL: {{^}}store_flat_scratch:
 ; CI-DAG: s_mov_b32 flat_scratch_lo, s9
 ; CI-DAG: s_add_u32 [[ADD:s[0-9]+]], s8, s11
-; CI: s_lshr_b32 flat_scratch_hi, [[ADD]], 8
+; CI-DAG: s_lshr_b32 flat_scratch_hi, [[ADD]], 8
 
 ; GFX9: s_add_u32 flat_scratch_lo, s6, s9
 ; GFX9: s_addc_u32 flat_scratch_hi, s7, 0

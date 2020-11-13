@@ -5,9 +5,9 @@
 # RUN:   -o exit | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -s lookup_rnglists
-# CHECK:  Function: id = {0x7fffffff0000002d}, name = "rnglists", range = [0x0000000000000000-0x0000000000000003)
-# CHECK:    Blocks: id = {0x7fffffff0000002d}, range = [0x00000000-0x00000003)
-# CHECK-NEXT:       id = {0x7fffffff00000043}, range = [0x00000001-0x00000002)
+# CHECK:  Function: id = {0x0000002d}, name = "rnglists", range = [0x0000000000000000-0x0000000000000003)
+# CHECK:    Blocks: id = {0x0000002d}, range = [0x00000000-0x00000003)
+# CHECK-NEXT:       id = {0x00000043}, range = [0x00000001-0x00000002)
 
         .text
 rnglists:

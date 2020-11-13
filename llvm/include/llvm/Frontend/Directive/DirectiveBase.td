@@ -131,6 +131,10 @@ class Directive<string d> {
   // function.
   string alternativeName = "";
 
+  // Clauses cannot appear twice in the three allowed lists below. Also, since
+  // required implies allowed, the same clause cannot appear in both the
+  // allowedClauses and requiredClauses lists.
+
   // List of allowed clauses for the directive.
   list<VersionedClause> allowedClauses = [];
 

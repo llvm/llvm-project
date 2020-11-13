@@ -165,8 +165,18 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 /// Combine symbol quality and relevance into a single score.
 float evaluateSymbolAndRelevance(float SymbolQuality, float SymbolRelevance);
 
-float evaluateDecisionForest(const SymbolQualitySignals &Quality,
-                             const SymbolRelevanceSignals &Relevance);
+/// Same semantics as CodeComplete::Score. Quality score and Relevance score
+/// have been removed since DecisionForest cannot assign individual scores to
+/// Quality and Relevance signals.
+struct DecisionForestScores {
+  float Total = 0.f;
+  float ExcludingName = 0.f;
+};
+
+DecisionForestScores
+evaluateDecisionForest(const SymbolQualitySignals &Quality,
+                       const SymbolRelevanceSignals &Relevance, float Base);
+
 /// TopN<T> is a lossy container that preserves only the "best" N elements.
 template <typename T, typename Compare = std::greater<T>> class TopN {
 public:

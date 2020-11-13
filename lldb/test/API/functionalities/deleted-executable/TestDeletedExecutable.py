@@ -16,10 +16,9 @@ class TestDeletedExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows # cannot delete a running executable
-    @expectedFailureAll(oslist=["linux"],
+    @expectedFailureAll(oslist=["freebsd", "linux"],
         triple=no_match('aarch64-.*-android'))
         # determining the architecture of the process fails
-    @expectedFailureNetBSD
     @skipIfReproducer # File synchronization is not supported during replay.
     def test(self):
         self.build()

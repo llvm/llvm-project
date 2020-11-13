@@ -29,6 +29,12 @@ struct ST {
 ST<int> gb;
 double gc[100];
 
+// CK1: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, i8* }
+// CK1: [[KMP_TASK_T_WITH_PRIVATES:%.+]] = type { [[KMP_TASK_T:%[^,]+]], [[KMP_PRIVATES_T:%.+]] }
+// CK1: [[KMP_TASK_T]] = type { i8*, i32 (i32, i8*)*, i32, %{{[^,]+}}, %{{[^,]+}} }
+// CK1-32: [[KMP_PRIVATES_T]] = type { [1 x i64], [1 x i8*], [1 x i8*] }
+// CK1-64: [[KMP_PRIVATES_T]] = type { [1 x i8*], [1 x i8*], [1 x i64] }
+
 // CK1: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 800]
 // CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 34]
 
@@ -46,20 +52,33 @@ void foo(int arg) {
   float lb[arg];
 
   // Region 00
-  // CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(i64 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
-  // CK1-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
-  // CK1-DAG: [[DEVi32]] = load i32, i32* %{{[^,]+}},
-  // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-
-  // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to [100 x double]**
-  // CK1-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to [100 x double]**
-  // CK1-DAG: store [100 x double]* @gc, [100 x double]** [[BPC0]]
-  // CK1-DAG: store [100 x double]* @gc, [100 x double]** [[PC0]]
-
-  // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  // CK1-DAG: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i8* [[TASK:%.+]])
+  // CK1-DAG: [[TASK]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i[[sz:32|64]] {{36|64}}, i{{32|64}} 4, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES]]*)* [[OMP_TASK_ENTRY:@[^,]+]] to i32 (i32, i8*)*), i64 [[DEV:%.+]])
+  // CK1-DAG: [[DEV]] = sext i32 [[DEV32:%.+]] to i64
+  // CK1-DAG: [[TASK_WITH_PRIVATES:%.+]] = bitcast i8* [[TASK]] to [[KMP_TASK_T_WITH_PRIVATES]]*
+  // CK1-DAG: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], [[KMP_TASK_T_WITH_PRIVATES]]* [[TASK_WITH_PRIVATES]], i32 0, i32 1
+  // CK1-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[PRIVATES]], i32 0, i32 1
+  // CK1-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[PRIVATES]], i32 0, i32 0
+  // CK1-DAG: [[FPBPADDR:%.+]] = bitcast [1 x i8*]* [[FPBPGEP]] to i8*
+  // CK1-DAG: [[BPADDR:%.+]] = bitcast i8** [[BPGEP:%.+]] to i8*
+  // CK1-DAG: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{4|8}} [[FPBPADDR]], i8* align {{4|8}} [[BPADDR]], i[[sz]] {{4|8}}, i1 false)
+  // CK1-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP:%.+]], i32 0, i32 0
+  // CK1-DAG: [[BPGEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
+  // CK1-DAG: [[BPADDR:%.+]] = bitcast i8** [[BPGEP]] to [100 x double]**
+  // CK1-DAG: store [100 x double]* [[GC:@[^,]+]], [100 x double]** [[BPADDR]], align
+  // CK1-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[PRIVATES]], i32 0, i32 2
+  // CK1-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[PRIVATES]], i32 0, i32 1
+  // CK1-DAG: [[FPPADDR:%.+]] = bitcast [1 x i8*]* [[FPPGEP]] to i8*
+  // CK1-DAG: [[PADDR:%.+]] = bitcast i8** [[PGEP:%.+]] to i8*
+  // CK1-DAG: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{4|8}} [[FPPADDR]], i8* align {{4|8}} [[PADDR]], i[[sz]] {{4|8}}, i1 false)
+  // CK1-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P:%.+]], i32 0, i32 0
+  // CK1-DAG: [[PGEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+  // CK1-DAG: [[PADDR:%.+]] = bitcast i8** [[PGEP]] to [100 x double]**
+  // CK1-DAG: store [100 x double]* [[GC]], [100 x double]** [[PADDR]], align
+  // CK1-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[PRIVATES]], i32 0, i32 0
+  // CK1-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], [[KMP_PRIVATES_T]]* [[PRIVATES]], i32 0, i32 2
+  // CK1-DAG: [[FPSZADDR:%.+]] = bitcast [1 x i64]* [[FPSZGEP]] to i8*
+  // CK1-DAG: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{4|8}} [[FPSZADDR]], i8* align {{4|8}} bitcast ([1 x i64]* [[SIZE00]] to i8*), i[[sz]] {{4|8}}, i1 false)
   #pragma omp target update if(1+3-5) device(arg) from(gc) nowait
   {++arg;}
 
@@ -142,6 +161,18 @@ void foo(int arg) {
   #pragma omp target update to(gb.b[:3])
   {++arg;}
 }
+
+// CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %{{[^,]+}})
+// CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(i64 %{{[^,]+}}, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SZ:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MTYPE00]], i32 0, i32 0), i8** null)
+// CK1-DAG: [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
+// CK1-DAG: [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
+// CK1-DAG: [[SZ]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
+// CK1-DAG: [[BPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPBPADDR:%[^,]+]], align
+// CK1-DAG: [[PADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPADDR:%[^,]+]], align
+// CK1-DAG: [[SZADDR]] = load [1 x i64]*, [1 x i64]** [[FPSZADDR:%[^,]+]], align
+// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]])
+// CK1:     ret i32 0
+// CK1:     }
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -DCK2 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK2 --check-prefix CK2-64
@@ -1127,5 +1158,493 @@ void check_present(int arg) {
   #pragma omp target update from(present: lb)
   ;
 }
+#endif
+
+///==========================================================================///
+// RUN: %clang_cc1 -DCK20 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK20 --check-prefix CK20-64
+// RUN: %clang_cc1 -DCK20 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK20 --check-prefix CK20-64
+// RUN: %clang_cc1 -DCK20 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK20 --check-prefix CK20-32
+// RUN: %clang_cc1 -DCK20 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK20 --check-prefix CK20-32
+
+// RUN: %clang_cc1 -DCK20 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK20 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK20 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK20 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK20
+
+struct ST {
+  int a;
+  double *b;
+};
+
+// CK20: [[STRUCT_ST:%.+]] = type { i32, double* }
+// CK20: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
+
+// CK20: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 3]
+// CK20: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+
+// CK20-LABEL: _Z3foo
+void foo(int arg) {
+  ST arr[3][4];
+  // CK20: [[DIMS:%.+]] = alloca [3 x [[STRUCT_DESCRIPTOR]]],
+  // CK20: [[ARRAY_IDX:%.+]] = getelementptr inbounds [3 x [4 x [[STRUCT_ST]]]], [3 x [4 x [[STRUCT_ST]]]]* [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK20: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [4 x [[STRUCT_ST]]], [4 x [[STRUCT_ST]]]* [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
+  // CK20: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [[STRUCT_ST]], [[STRUCT_ST]]* [[ARRAY_DECAY]], {{.+}}
+  // CK20: [[BP0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP:%.+]], {{.+}} 0, {{.+}} 0
+  // CK20: [[BPC:%.+]] = bitcast i8** [[BP0]] to [3 x [4 x [[STRUCT_ST]]]]**
+  // CK20: store [3 x [4 x [[STRUCT_ST]]]]* [[ARR]], [3 x [4 x [[STRUCT_ST]]]]** [[BPC]],
+  // CK20: [[P0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P:%.+]], {{.+}} 0, {{.+}} 0
+  // CK20: [[PC:%.+]] = bitcast i8** [[P0]] to [[STRUCT_ST]]**
+  // CK20: store [[STRUCT_ST]]* [[ARRAY_IDX_1]], [[STRUCT_ST]]** [[PC]],
+  // CK20: [[DIM_1:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 0
+  // CK20: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK20: store i64 0, i64* [[OFFSET]],
+  // CK20: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK20: store i64 2, i64* [[COUNT]],
+  // CK20: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK20: store i64 {{32|64}}, i64* [[STRIDE]],
+  // CK20: [[DIM_2:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 1
+  // CK20: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK20: store i64 1, i64* [[OFFSET_2]],
+  // CK20: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK20: store i64 4, i64* [[COUNT_2]],
+  // CK20: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK20: store i64 {{8|16}}, i64* [[STRIDE_2]],
+  // CK20: [[DIM_3:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 2
+  // CK20: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK20: store i64 0, i64* [[OFFSET_3]],
+  // CK20: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK20: store i64 1, i64* [[COUNT_3]],
+  // CK20: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK20: store i64 {{8|16}}, i64* [[STRIDE_3]],
+  // CK20-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MSIZE]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE]]{{.+}})
+  // CK20-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+  // CK20-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK20-DAG: [[PC0:%.+]] = bitcast [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]] to i8*
+  // CK20-DAG: [[PTRS:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs, i32 0, i32 0
+  // CK20-DAG: store i8* [[PC0]], i8** [[PTRS]],
+
+#pragma omp target update to(arr[0:2][1:4])
+  { ++arg; }
+}
+
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK21 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK21 --check-prefix CK21-64
+// RUN: %clang_cc1 -DCK21 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK21 --check-prefix CK21-64
+// RUN: %clang_cc1 -DCK21 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK21 --check-prefix CK21-32
+// RUN: %clang_cc1 -DCK21 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK21 --check-prefix CK21-32
+
+// RUN: %clang_cc1 -DCK21 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK21 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK21 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK21 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK21
+
+// CK21: [[STRUCT_ST:%.+]] = type { [10 x [10 x [10 x double*]]] }
+// CK21: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
+
+// CK21: [[MTYPE:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 299067162755073]
+
+struct ST {
+  double *dptr[10][10][10];
+
+  // CK21: _ZN2ST3fooEv
+  void foo() {
+    // CK21: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
+    // CK21: [[ARRAY_IDX:%.+]] = getelementptr inbounds [10 x [10 x [10 x double*]]], [10 x [10 x [10 x double*]]]* [[DPTR:%.+]], {{.+}} 0, {{.+}} 0
+    // CK21: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [10 x [10 x double*]], [10 x [10 x double*]]* [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
+    // CK21: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [10 x double*], [10 x double*]* [[ARRAY_DECAY]], {{.+}} 1
+    // CK21: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [10 x double*], [10 x double*]* [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
+    // CK21: [[ARRAY_IDX_3:%.+]] = getelementptr inbounds {{.+}}, {{.+}}* [[ARRAY_DECAY_2]], {{.+}} 0
+    // CK21: [[BP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%.+]], {{.+}} 0, {{.+}} 0
+    // CK21: [[P0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%.+]], i{{.+}} 0, i{{.+}} 0
+    // CK21: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 0
+    // CK21: [[OFFSET_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 0
+    // CK21: store i64 0, i64* [[OFFSET_1]],
+    // CK21: [[COUNT_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 1
+    // CK21: store i64 2, i64* [[COUNT_1]],
+    // CK21: [[STRIDE_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 2
+    // CK21: store i64 {{400|800}}, i64* [[STRIDE_1]],
+    // CK21: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 1
+    // CK21: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 0
+    // CK21: store i64 1, i64* [[OFFSET_2]],
+    // CK21: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 1
+    // CK21: store i64 3, i64* [[COUNT_2]],
+    // CK21: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 2
+    // CK21: store i64 {{40|80}}, i64* [[STRIDE_2]],
+    // CK21: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 2
+    // CK21: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 0
+    // CK21: store i64 0, i64* [[OFFSET_3]],
+    // CK21: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 1
+    // CK21: store i64 4, i64* [[COUNT_3]],
+    // CK21: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 2
+    // CK21: store i64 {{4|8}}, i64* [[STRIDE_3]],
+    // CK21: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 3
+    // CK21: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 0
+    // CK21: store i64 0, i64* [[OFFSET_4]],
+    // CK21: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 1
+    // CK21: store i64 1, i64* [[COUNT_4]],
+    // CK21: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 2
+    // CK21: store i64 {{4|8}}, i64* [[STRIDE_4]],
+    // CK21-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i{{.+}}* [[GEPSZ:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE]]{{.+}})
+    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+    // CK21-DAG: [[PC0:%.+]] = bitcast [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]] to i8*
+    // CK21-DAG: [[PTRS:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs, i32 0, i32 0
+    // CK21-DAG: store i8* [[PC0]], i8** [[PTRS]],
+#pragma omp target update to(dptr[0:2][1:3][0:4])
+  }
+};
+
+void bar() {
+  ST st;
+  st.foo();
+}
+
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK22 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK22 --check-prefix CK22-64
+// RUN: %clang_cc1 -DCK22 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK22 --check-prefix CK22-64
+// RUN: %clang_cc1 -DCK22 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK22 --check-prefix CK22-32
+// RUN: %clang_cc1 -DCK22 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK22 --check-prefix CK22-32
+
+// RUN: %clang_cc1 -DCK22 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK22 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK22 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK22 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK22
+
+// CK22: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
+
+// CK22: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK22: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+
+struct ST {
+  // CK22: _ZN2ST3fooEPA10_Pi
+  void foo(int *arr[5][10]) {
+    // CK22: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
+    // CK22: [[ARRAY_IDX:%.+]] = getelementptr inbounds [10 x i32*], [10 x i32*]* [[ARR:%.+]], {{.+}} 0
+    // CK22: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [10 x i32*], [10 x i32*]* [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
+    // CK22: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds i32*, i32** [[ARRAY_DECAY:%.+]], {{.+}} 1
+    // CK22: [[BP0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP:%.+]], {{.+}} 0, {{.+}} 0
+    // CK22: [[P0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P:%.+]], i{{.+}} 0, i{{.+}} 0
+    // CK22: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 0
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 0
+    // CK22: store i64 0, i64* [[OFFSET]],
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 1
+    // CK22: store i64 2, i64* [[COUNT]],
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 2
+    // CK22: store i64 200, i64* [[STRIDE]],
+    // CK22: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 1
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 0
+    // CK22: store i64 1, i64* [[OFFSET]],
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 1
+    // CK22: store i64 3, i64* [[COUNT]],
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 2
+    // CK22: store i64 40, i64* [[STRIDE]],
+    // CK22: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 2
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 0
+    // CK22: store i64 0, i64* [[OFFSET]],
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 1
+    // CK22: store i64 4, i64* [[COUNT]],
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 2
+    // CK22: store i64 4, i64* [[STRIDE]],
+    // CK22: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 3
+    // CK22: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 0
+    // CK22: store i64 0, i64* [[OFFSET]],
+    // CK22: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 1
+    // CK22: store i64 1, i64* [[COUNT]],
+    // CK22: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 2
+    // CK22: store i64 4, i64* [[STRIDE]],
+    // CK22-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MSIZE]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE]]{{.+}})
+    // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+    // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+    // CK22-DAG: [[PC0:%.+]] = bitcast [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]] to i8*
+    // CK22-DAG: [[PTRS:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs, i32 0, i32 0
+    // CK22-DAG: store i8* [[PC0]], i8** [[PTRS]],
+#pragma omp target update to(arr[0:2][1:3][0:4])
+  }
+};
+
+void bar() {
+  ST st;
+  int *arr[5][10];
+  st.foo(arr);
+}
+
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK23 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK23 --check-prefix CK23-64
+// RUN: %clang_cc1 -DCK23 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-64
+// RUN: %clang_cc1 -DCK23 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-32
+// RUN: %clang_cc1 -DCK23 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-32
+
+// RUN: %clang_cc1 -DCK23 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK23 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK23 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK23 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK23
+
+// CK23: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
+
+// CK23: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK23: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+
+// CK23: foo
+void foo(int arg) {
+  float farr[5][5][5];
+  // CK23: [[ARG_ADDR:%.+]] = alloca i32,
+  // CK23: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
+  // CK23: [[ARRAY_IDX:%.+]] = getelementptr inbounds [5 x [5 x [5 x float]]], [5 x [5 x [5 x float]]]* [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK23: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [5 x [5 x float]], [5 x [5 x float]]* [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
+  // CK23: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [5 x float], [5 x float]* [[ARRAY_DECAY]], {{.+}}
+  // CK23: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [5 x float], [5 x float]* [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
+  // CK23: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds float, float* [[ARRAY_DECAY_2]], {{.+}}
+  // CK23: [[MUL:%.+]] = mul nuw i64 4,
+  // CK23: [[BP0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP:%.+]], {{.+}} 0, {{.+}} 0
+  // CK23: [[BPC:%.+]] = bitcast i8** [[BP0]] to [5 x [5 x [5 x float]]]**
+  // CK23: store [5 x [5 x [5 x float]]]* [[ARR]], [5 x [5 x [5 x float]]]** [[BPC]],
+  // CK23: [[P0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P:%.+]], {{.+}} 0, {{.+}} 0
+  // CK23: [[PC:%.+]] = bitcast i8** [[P0]] to float**
+  // CK23: store float* [[ARRAY_IDX_2]], float** [[PC]],
+  // CK23: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 0
+  // CK23: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK23: store i64 0, i64* [[OFFSET]],
+  // CK23: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK23: store i64 2, i64* [[COUNT]],
+  // CK23: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK23: store i64 200, i64* [[STRIDE]],
+  // CK23: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 1
+  // CK23: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK23: store i64 1, i64* [[OFFSET_2]],
+  // CK23: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK23: store i64 2, i64* [[COUNT_2]],
+  // CK23: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK23: store i64 20, i64* [[STRIDE_2]],
+  // CK23: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 2
+  // CK23: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK23: store i64 0, i64* [[OFFSET_3]],
+  // CK23: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK23: store i64 2, i64* [[COUNT_3]],
+  // CK23: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK23: store i64 [[MUL]], i64* [[STRIDE_3]],
+  // CK23: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 3
+  // CK23: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 0
+  // CK23: store i64 0, i64* [[OFFSET_4]],
+  // CK23: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 1
+  // CK23: store i64 1, i64* [[COUNT_4]],
+  // CK23: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 2
+  // CK23: store i64 4, i64* [[STRIDE_4]],
+  // CK23-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MSIZE]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE]]{{.+}})
+  // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+  // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK23-DAG: [[PC0:%.+]] = bitcast [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]] to i8*
+  // CK23-DAG: [[PTRS:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs, i32 0, i32 0
+  // CK23-DAG: store i8* [[PC0]], i8** [[PTRS]],
+#pragma omp target update to(farr[0:2:2][1:2:1][0:2:arg])
+}
+
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK24 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK24 --check-prefix CK24-64
+// RUN: %clang_cc1 -DCK24 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK24 --check-prefix CK24-64
+// RUN: %clang_cc1 -DCK24 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK24 --check-prefix CK24-32
+// RUN: %clang_cc1 -DCK24 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK24 --check-prefix CK24-32
+
+// RUN: %clang_cc1 -DCK24 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK24 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK24 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK24 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK24
+
+// CK24: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
+
+// CK24: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK24: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+
+// CK24: foo
+void foo(int arg) {
+  double darr[3][4][5];
+  // CK24: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
+  // CK24: [[ARRAY_IDX:%.+]] = getelementptr inbounds [3 x [4 x [5 x double]]], [3 x [4 x [5 x double]]]* [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK24: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [4 x [5 x double]], [4 x [5 x double]]* [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
+  // CK24: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [5 x double], [5 x double]* [[ARRAY_DECAY]], {{.+}}
+  // CK24: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [5 x double], [5 x double]* [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
+  // CK24: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds double, double* [[ARRAY_DECAY_2]], {{.+}}
+  // CK24: [[MUL:%.+]] = mul nuw i64 8,
+  // CK24: [[SUB:%.+]] = sub nuw i64 4, [[ARG:%.+]]
+  // CK24: [[LEN:%.+]] = udiv {{.+}} [[SUB]], 1
+  // CK24: [[BP0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP:%.+]], {{.+}} 0, {{.+}} 0
+  // CK24: [[BPC:%.+]] = bitcast i8** [[BP0]] to [3 x [4 x [5 x double]]]**
+  // CK24: store [3 x [4 x [5 x double]]]* [[ARR]], [3 x [4 x [5 x double]]]** [[BPC]],
+  // CK24: [[P0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P:%.+]], {{.+}} 0, {{.+}} 0
+  // CK24: [[PC:%.+]] = bitcast i8** [[P0]] to double**
+  // CK24: store double* [[ARRAY_IDX_2]], double** [[PC]],
+  // CK24: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 0
+  // CK24: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK24: store i64 0, i64* [[OFFSET]],
+  // CK24: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK24: store i64 2, i64* [[COUNT]],
+  // CK24: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK24: store i64 320, i64* [[STRIDE]],
+  // CK24: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 1
+  // CK24: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK24: store i64 [[ARG]], i64* [[OFFSET_2]],
+  // CK24: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK24: store i64 [[LEN]], i64* [[COUNT_2]],
+  // CK24: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK24: store i64 40, i64* [[STRIDE_2]],
+  // CK24: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 2
+  // CK24: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK24: store i64 0, i64* [[OFFSET_3]],
+  // CK24: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK24: store i64 2, i64* [[COUNT_3]],
+  // CK24: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK24: store i64 [[MUL]], i64* [[STRIDE_3]],
+  // CK24: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 3
+  // CK24: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 0
+  // CK24: store i64 0, i64* [[OFFSET_4]],
+  // CK24: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 1
+  // CK24: store i64 1, i64* [[COUNT_4]],
+  // CK24: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 2
+  // CK24: store i64 8, i64* [[STRIDE_4]],
+  // CK24-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MSIZE]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE]]{{.+}})
+  // CK24-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+  // CK24-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK24-DAG: [[PC0:%.+]] = bitcast [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]] to i8*
+  // CK24-DAG: [[PTRS:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs, i32 0, i32 0
+  // CK24-DAG: store i8* [[PC0]], i8** [[PTRS]],
+#pragma omp target update to(darr[0:2:2][arg: :1][:2:arg])
+}
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK25 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK25 --check-prefix CK25-64
+// RUN: %clang_cc1 -DCK25 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK25 --check-prefix CK25-64
+// RUN: %clang_cc1 -DCK25 -verify -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK25 --check-prefix CK25-32
+// RUN: %clang_cc1 -DCK25 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK25 --check-prefix CK25-32
+
+// RUN: %clang_cc1 -DCK25 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK25 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK25 -verify -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK25 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK25
+
+// CK25: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
+
+// CK25: [[MSIZE:@.+]] = {{.+}}constant [3 x i64] [i64 4, i64 4, i64 3]
+// CK25: [[MTYPE:@.+]] = {{.+}}constant [3 x i64] [i64 17592186044449, i64 33, i64 17592186044449]
+
+// CK25-LABEL: _Z3foo
+void foo(int arg) {
+  int arr[3][4][5], x;
+  float farr[4][3];
+
+  // CK25: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
+  // CK25: [[DIMS_2:%.+]] = alloca [3 x [[STRUCT_DESCRIPTOR]]],
+  // CK25: [[ARRAY_IDX:%.+]] = getelementptr inbounds [3 x [4 x [5 x i32]]], [3 x [4 x [5 x i32]]]* [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [4 x [5 x i32]], [4 x [5 x i32]]* [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [5 x i32], [5 x i32]* [[ARRAY_DECAY]], {{.+}}
+  // CK25: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [5 x i32], [5 x i32]* [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_IDX_3:%.+]] = getelementptr inbounds {{.+}}, {{.+}}* [[ARRAY_DECAY_2]], {{.+}} 1
+  // CK25: [[LEN:%.+]] = sub nuw i64 4, [[ARG_ADDR:%.+]]
+  // CK25: [[ARRAY_IDX_4:%.+]] = getelementptr inbounds [4 x [3 x float]], [4 x [3 x float]]* [[FARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_DECAY_5:%.+]] = getelementptr inbounds [3 x float], [3 x float]* [[ARRAY_IDX_4]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_IDX_6:%.+]] = getelementptr inbounds float, float* [[ARRAY_DECAY_5:%.+]], {{.+}} 1
+  // CK25: [[BP0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP:%.+]], i{{.+}} 0, i{{.+}} 0
+  // CK25: [[P0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P:%.+]], i{{.+}} 0, i{{.+}} 0
+  // CK25: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 0, i64* [[OFFSET]],
+  // CK25: [[COUNT:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 2, i64* [[COUNT]],
+  // CK25: [[STRIDE:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_1]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 80, i64* [[STRIDE]],
+  // CK25: [[DIM_2:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 1
+  // CK25: [[OFFSET_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 [[ARG:%.+]], i64* [[OFFSET_2]],
+  // CK25: [[COUNT_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 [[LEN]], i64* [[COUNT_2]],
+  // CK25: [[STRIDE_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_2]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 20, i64* [[STRIDE_2]],
+  // CK25: [[DIM_3:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 2
+  // CK25: [[OFFSET_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 1, i64* [[OFFSET_3]],
+  // CK25: [[COUNT_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 4, i64* [[COUNT_3]],
+  // CK25: [[STRIDE_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_3]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 4, i64* [[STRIDE_3]],
+  // CK25: [[DIM_4:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]], {{.+}} 0, {{.+}} 3
+  // CK25: [[OFFSET_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 0, i64* [[OFFSET_4]],
+  // CK25: [[COUNT_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 1, i64* [[COUNT_4]],
+  // CK25: [[STRIDE_4:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_4]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 4, i64* [[STRIDE_4]],
+  // CK25: [[PC0:%.+]] = bitcast [4 x [[STRUCT_DESCRIPTOR]]]* [[DIMS]] to i8*
+  // CK25: [[PTRS:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* %.offload_ptrs, i32 0, i32 0
+  // CK25: store i8* [[PC0]], i8** [[PTRS]],
+  // CK25: [[DIM_5:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS_2]], {{.+}} 0, {{.+}} 0
+  // CK25: [[OFFSET_2_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_5]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 0, i64* [[OFFSET_2_1]],
+  // CK25: [[COUNT_2_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_5]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 2, i64* [[COUNT_2_1]],
+  // CK25: [[STRIDE_2_1:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_5]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 12, i64* [[STRIDE_2_1]],
+  // CK25: [[DIM_6:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS_2]], {{.+}} 0, {{.+}} 1
+  // CK25: [[OFFSET_2_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_6]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 1, i64* [[OFFSET_2_2]],
+  // CK25: [[COUNT_2_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_6]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 2, i64* [[COUNT_2_2]],
+  // CK25: [[STRIDE_2_2:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_6]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 4, i64* [[STRIDE_2_2]],
+  // CK25: [[DIM_7:%.+]] = getelementptr inbounds [3 x [[STRUCT_DESCRIPTOR]]], [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS_2]], {{.+}} 0, {{.+}} 2
+  // CK25: [[OFFSET_2_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_7]], {{.+}} 0, {{.+}} 0
+  // CK25: store i64 0, i64* [[OFFSET_2_3]],
+  // CK25: [[COUNT_2_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_7]], {{.+}} 0, {{.+}} 1
+  // CK25: store i64 1, i64* [[COUNT_2_3]],
+  // CK25: [[STRIDE_2_3:%.+]] = getelementptr inbounds [[STRUCT_DESCRIPTOR]], [[STRUCT_DESCRIPTOR]]* [[DIM_7]], {{.+}} 0, {{.+}} 2
+  // CK25: store i64 4, i64* [[STRIDE_2_3]],
+  // CK25: [[PC1:%.+]] = bitcast [3 x [[STRUCT_DESCRIPTOR]]]* [[DIMS_2]] to i8*
+  // CK25: [[PTRS_2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* %.offload_ptrs, i32 0, i32 2
+  // CK25: store i8* [[PC1]], i8** [[PTRS_2]],
+  // CK25-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 3, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[MSIZE]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[MTYPE]]{{.+}})
+  // CK25-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+  // CK25-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+
+#pragma omp target update to(arr[0:2][arg:][1:4], x, farr[0:2][1:2])
+  { ++arg; }
+}
+
 #endif
 #endif

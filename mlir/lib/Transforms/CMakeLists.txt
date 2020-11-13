@@ -3,6 +3,7 @@ add_subdirectory(Utils)
 add_mlir_library(MLIRTransforms
   BufferDeallocation.cpp
   BufferOptimizations.cpp
+  BufferResultsToOutParams.cpp
   Bufferize.cpp
   Canonicalizer.cpp
   CopyRemoval.cpp

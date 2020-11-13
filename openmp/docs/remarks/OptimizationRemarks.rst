@@ -1,0 +1,2 @@
+OpenMP Optimization Remarks
+===========================

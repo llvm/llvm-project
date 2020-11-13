@@ -78,6 +78,8 @@ enum OperandType {
   OPERAND_BRLIST,
   /// 32-bit unsigned table number.
   OPERAND_TABLE,
+  /// heap type immediate for ref.null.
+  OPERAND_HEAPTYPE,
 };
 } // end namespace WebAssembly
 
@@ -138,6 +140,13 @@ enum class BlockType : unsigned {
   // to pop values off the stack, so the exact multivalue signature can always
   // be inferred from the return type of the parent function in MCInstLower.
   Multivalue = 0xffff,
+};
+
+/// Used as immediate MachineOperands for heap types, e.g. for ref.null.
+enum class HeapType : unsigned {
+  Invalid = 0x00,
+  Externref = unsigned(wasm::ValType::EXTERNREF),
+  Funcref = unsigned(wasm::ValType::FUNCREF),
 };
 
 /// Instruction opcodes emitted via means other than CodeGen.

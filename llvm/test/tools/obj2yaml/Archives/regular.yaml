@@ -2,20 +2,22 @@
 
 ## Check how we dump an empty archive.
 
-# RUN: rm -f %t.empty.a
-# RUN: llvm-ar rc %t.empty.a
+# RUN: yaml2obj %s --docnum=1 -o %t.empty.a
 # RUN: obj2yaml %t.empty.a | FileCheck %s --check-prefix=EMPTY
 
 # EMPTY:      --- !Arch
 # EMPTY-NEXT: Members: []
 # EMPTY-NEXT: ...
 
+--- !Arch
+Members: []
+
 ## Check how we dump archives with multiple members.
 ## Check we don't dump excessive spaces when dumping fields.
 ## Check we don't dump fields with values that are equal to default values.
 ## Check how we dump empty field values.
 
-# RUN: yaml2obj %s --docnum=1 -o %t.multiple.a
+# RUN: yaml2obj %s --docnum=2 -o %t.multiple.a
 # RUN: obj2yaml %t.multiple.a | FileCheck %s --check-prefix=MULTIPLE
 
 # MULTIPLE:      --- !Arch
@@ -85,7 +87,7 @@ Members:
 
 ## Check we report an error for non-regular archives.
 
-# RUN: yaml2obj %s --docnum=2 -o %t.not.regular.a
+# RUN: yaml2obj %s --docnum=3 -o %t.not.regular.a
 # RUN: not obj2yaml %t.not.regular.a 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.not.regular.a --check-prefix=NOT-REGULAR-ERR
 
@@ -98,7 +100,7 @@ Members:
 
 ## Check we report an error when unable to read the header of an archive member.
 
-# RUN: yaml2obj %s --docnum=3 -o %t.truncated.a
+# RUN: yaml2obj %s --docnum=4 -o %t.truncated.a
 # RUN: not obj2yaml %t.truncated.a 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.truncated.a --check-prefix=TRUNCATED-ERR
 
@@ -109,7 +111,7 @@ Content: "00"
 
 ## Check we report an error when unable to read the data of an archive member.
 
-# RUN: yaml2obj %s --docnum=4 -o %t.entdata.a
+# RUN: yaml2obj %s --docnum=5 -o %t.entdata.a
 # RUN: not obj2yaml %t.entdata.a 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.entdata.a --check-prefix=ENTDATA-ERR
 
@@ -121,7 +123,7 @@ Members:
 
 ## Check we report an error when unable to read the size of an archive member.
 
-# RUN: yaml2obj %s --docnum=4 -DSIZE='x' -o %t.entsize.a
+# RUN: yaml2obj %s --docnum=5 -DSIZE='x' -o %t.entsize.a
 # RUN: not obj2yaml %t.entsize.a 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.entsize.a --check-prefix=ENTSIZE-ERR
 
@@ -130,7 +132,7 @@ Members:
 ## Check we don't try to dump the padding byte when the size of the content is odd and
 ## the content ends at the end of a file.
 
-# RUN: yaml2obj %s --docnum=5 -DCONTENT="61" -o %t.no.padding.byte.a
+# RUN: yaml2obj %s --docnum=6 -DCONTENT="61" -o %t.no.padding.byte.a
 # RUN: obj2yaml %t.no.padding.byte.a | FileCheck %s --check-prefix=NO-PADDING-BYTE
 
 #      NO-PADDING-BYTE: --- !Arch
@@ -147,7 +149,7 @@ Members:
 ## Check we dump the padding byte when the size of the content is odd and the content ends
 ## before the end of a file.
 
-# RUN: yaml2obj %s --docnum=5 -DCONTENT="610A" -o %t.padding.byte.a
+# RUN: yaml2obj %s --docnum=6 -DCONTENT="610A" -o %t.padding.byte.a
 # RUN: obj2yaml %t.padding.byte.a | FileCheck %s --check-prefix=PADDING-BYTE
 
 #      PADDING-BYTE: --- !Arch

@@ -83,6 +83,8 @@ public:
   DefinedFunction *addSyntheticFunction(StringRef name, uint32_t flags,
                                         InputFunction *function);
   DefinedData *addOptionalDataSymbol(StringRef name, uint64_t value = 0);
+  DefinedGlobal *addOptionalGlobalSymbols(StringRef name, uint32_t flags,
+                                          InputGlobal *global);
 
   void handleSymbolVariants();
   void handleWeakUndefines();

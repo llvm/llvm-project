@@ -170,7 +170,8 @@ func @block_first_has_predecessor() {
 // -----
 
 func @no_return() {
-  %x = constant 0 : i32  // expected-error {{block with no terminator}}
+  %x = constant 0 : i32
+  %y = constant 1 : i32  // expected-error {{block with no terminator}}
 }
 
 // -----
@@ -718,14 +719,14 @@ func @elementsattr_malformed_opaque() -> () {
 
 func @elementsattr_malformed_opaque1() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{elements hex string only contains hex digits}}
+  "foo"(){bar = opaque<"", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
 }
 
 // -----
 
 func @elementsattr_malformed_opaque2() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{elements hex string should start with '0x'}}
+  "foo"(){bar = opaque<"", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
 }
 
 // -----
@@ -1513,9 +1514,14 @@ func @really_large_bound() {
 // -----
 
 func @duplicate_dictionary_attr_key() {
-  // expected-error @+1 {{duplicate key in dictionary attribute}}
+  // expected-error @+1 {{duplicate key 'a' in dictionary attribute}}
   "foo.op"() {a, a} : () -> ()
 }
+
+// -----
+
+// expected-error @+1 {{attribute 'attr' occurs more than once in the attribute list}}
+test.format_symbol_name_attr_op @name { attr = "xx" }
 
 // -----
 

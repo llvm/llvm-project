@@ -512,6 +512,7 @@ public:
   const SCEV *getConstant(ConstantInt *V);
   const SCEV *getConstant(const APInt &Val);
   const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
+  const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
@@ -939,17 +940,28 @@ public:
   bool isKnownOnEveryIteration(ICmpInst::Predicate Pred,
                                const SCEVAddRecExpr *LHS, const SCEV *RHS);
 
-  /// Return true if, for all loop invariant X, the predicate "LHS `Pred` X"
-  /// is monotonically increasing or decreasing.  In the former case set
-  /// `Increasing` to true and in the latter case set `Increasing` to false.
-  ///
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
   /// around.  A predicate is said to be monotonically decreasing if may go
   /// from being true to being false as the loop iterates, but never the other
   /// way around.
-  bool isMonotonicPredicate(const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
-                            bool &Increasing);
+  enum MonotonicPredicateType {
+    MonotonicallyIncreasing,
+    MonotonicallyDecreasing
+  };
+
+  /// If, for all loop invariant X, the predicate "LHS `Pred` X" is
+  /// monotonically increasing or decreasing, returns
+  /// Some(MonotonicallyIncreasing) and Some(MonotonicallyDecreasing)
+  /// respectively. If we could not prove either of these facts, returns None.
+  ///
+  /// If NumIter was provided, then we are proving monotonicity during at least
+  /// NumIter first iterations. If it was not provided, then we are proving
+  /// monotonicity on all iteration space.
+  Optional<MonotonicPredicateType>
+  getMonotonicPredicateType(const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
+                            Optional<const SCEV *> NumIter = None,
+                            const Instruction *Context = nullptr);
 
   /// Return true if the result of the predicate LHS `Pred` RHS is loop
   /// invariant with respect to L.  Set InvariantPred, InvariantLHS and
@@ -1149,6 +1161,11 @@ public:
   /// canonicalizing an expression in the cases where the result isn't going
   /// to be a constant.
   Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
+
+  /// Update no-wrap flags of an AddRec. This may drop the cached info about
+  /// this AddRec (such as range info) in case if new flags may potentially
+  /// sharpen it.
+  void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEV::NoWrapFlags Flags);
 
 private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
@@ -1881,8 +1898,9 @@ private:
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
-  bool isMonotonicPredicateImpl(const SCEVAddRecExpr *LHS,
-                                ICmpInst::Predicate Pred, bool &Increasing);
+  Optional<MonotonicPredicateType> getMonotonicPredicateTypeImpl(
+      const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
+      Optional<const SCEV *> NumIter, const Instruction *Context);
 
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)

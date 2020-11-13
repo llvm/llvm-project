@@ -47,6 +47,7 @@ SEMANTIC_DIAGOPT(IgnoreWarnings, 1, 0)   /// -w
 DIAGOPT(NoRewriteMacros, 1, 0)  /// -Wno-rewrite-macros
 DIAGOPT(Pedantic, 1, 0)         /// -pedantic
 DIAGOPT(PedanticErrors, 1, 0)   /// -pedantic-errors
+DIAGOPT(ShowLine, 1, 1)         /// Show line number on diagnostics.
 DIAGOPT(ShowColumn, 1, 1)       /// Show column number on diagnostics.
 DIAGOPT(ShowLocation, 1, 1)     /// Show source location information.
 DIAGOPT(ShowLevel, 1, 1)        /// Show diagnostic level.

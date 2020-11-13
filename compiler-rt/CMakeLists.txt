@@ -121,11 +121,10 @@ if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
 endif()
 if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*android.*")
   set(ANDROID 1)
+  string(REGEX MATCH "-target(=| +)[^ ]+android([0-9]+)" ANDROID_API_LEVEL "${CMAKE_C_FLAGS}")
+  set(ANDROID_API_LEVEL ${CMAKE_MATCH_2})
 endif()
 pythonize_bool(ANDROID)
-
-set(ANDROID_NDK_VERSION 18
-    CACHE STRING "Set this to the Android NDK version that you are using")
 
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -185,7 +184,11 @@ endif()
 pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 macro(handle_default_cxx_lib var)
-  if (${var} STREQUAL "default")
+  # Specifying -stdlib= in CMAKE_CXX_FLAGS overrides the defaults.
+  if (CMAKE_CXX_FLAGS MATCHES "-stdlib=([a-zA-Z+]*)")
+    set(${var}_LIBNAME "${CMAKE_MATCH_1}")
+    set(${var}_SYSTEM 1)
+  elseif (${var} STREQUAL "default")
     if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
       set(${var}_LIBNAME "libc++")
       set(${var}_SYSTEM 1)
@@ -274,6 +277,10 @@ if(NOT COMPILER_RT_HAS_FUNC_SYMBOL)
 endif()
 
 # Provide some common commmandline flags for Sanitizer runtimes.
+if("${ANDROID_API_LEVEL}" GREATER_EQUAL 28)
+  list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
+endif()
 if(NOT WIN32)
   append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC SANITIZER_COMMON_CFLAGS)
 endif()
@@ -409,7 +416,6 @@ endif()
 append_list_if(COMPILER_RT_HAS_WGNU_FLAG -Wno-gnu SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WC99_EXTENSIONS_FLAG -Wno-c99-extensions SANITIZER_COMMON_CFLAGS)
-append_list_if(COMPILER_RT_HAS_WNON_VIRTUAL_DTOR_FLAG -Wno-non-virtual-dtor SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4146_FLAG /wd4146 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4291_FLAG /wd4291 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4391_FLAG /wd4391 SANITIZER_COMMON_CFLAGS)
@@ -438,6 +444,25 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
   list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
   list(APPEND SANITIZER_COMMON_LINK_LIBS zircon)
 endif()
+
+# TODO: COMPILER_RT_COMMON_CFLAGS and COMPILER_RT_COMMON_LINK_FLAGS are
+# intended for use in non-sanitizer runtimes such as libFuzzer, profile or XRay,
+# move these higher to include common flags, then derive SANITIZER_COMMON_CFLAGS
+# and SANITIZER_COMMON_LINK_FLAGS from those and append sanitizer-specific flags.
+set(COMPILER_RT_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+set(COMPILER_RT_COMMON_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
+
+# We don't use the C++ standard library, so avoid including it by mistake.
+append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ SANITIZER_COMMON_CFLAGS)
+append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SANITIZER_COMMON_LINK_FLAGS)
+
+# Remove -stdlib= which is unused when passing -nostdinc++...
+string(REGEX MATCHALL "-stdlib=[a-zA-Z+]*" stdlib_flag ${CMAKE_CXX_FLAGS})
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
+# ...we need it to build some runtimes and tests so readd it where appropriate.
+list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
+list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
 macro(append_libcxx_libs var)
   if (${var}_INTREE)
@@ -469,6 +494,46 @@ if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
   append_libcxx_libs(SANITIZER_TEST_CXX)
 elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
   append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_TEST_CXX_LIBRARIES)
+endif()
+
+# TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
+# move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
+
+# Unittests need access to C++ standard library.
+string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
+
+# When cross-compiling, COMPILER_RT_TEST_COMPILER_CFLAGS help in compilation
+# and linking of unittests.
+string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
+
+# Unittests support.
+set(COMPILER_RT_GTEST_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest)
+set(COMPILER_RT_GTEST_SOURCE ${COMPILER_RT_GTEST_PATH}/src/gtest-all.cc)
+set(COMPILER_RT_GTEST_CFLAGS
+  -DGTEST_NO_LLVM_SUPPORT=1
+  -DGTEST_HAS_RTTI=0
+  -I${COMPILER_RT_GTEST_PATH}/include
+  -I${COMPILER_RT_GTEST_PATH}
+)
+
+# Mocking support.
+set(COMPILER_RT_GMOCK_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock)
+set(COMPILER_RT_GMOCK_SOURCE ${COMPILER_RT_GMOCK_PATH}/src/gmock-all.cc)
+set(COMPILER_RT_GMOCK_CFLAGS
+  -DGTEST_NO_LLVM_SUPPORT=1
+  -DGTEST_HAS_RTTI=0
+  -I${COMPILER_RT_GMOCK_PATH}/include
+  -I${COMPILER_RT_GMOCK_PATH}
+)
+
+append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
+append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
+append_list_if(COMPILER_RT_HAS_WSUGGEST_OVERRIDE_FLAG -Wno-suggest-override COMPILER_RT_UNITTEST_CFLAGS)
+
+if(MSVC)
+  # gtest use a lot of stuff marked as deprecated on Windows.
+  list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
 endif()
 
 # Warnings to turn off for all libraries, not just sanitizers.
@@ -534,7 +599,18 @@ else()
     set(COMPILER_RT_HAS_LLD TRUE)
   endif()
 endif()
+
+if(ANDROID)
+  set(COMPILER_RT_HAS_LLD TRUE)
+  set(COMPILER_RT_TEST_USE_LLD TRUE)
+  append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
+  if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
+    set(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT FALSE)
+  endif()
+endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
+pythonize_bool(COMPILER_RT_TEST_USE_LLD)
 
 add_subdirectory(lib)
 

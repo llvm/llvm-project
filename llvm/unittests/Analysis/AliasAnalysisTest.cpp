@@ -262,6 +262,43 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
   EXPECT_EQ(MayAlias, BatchAA2.alias(PhiLoc, A1Loc));
 }
 
+TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define void @f(i8* %a.base, i8* %b.base, i1 %c) {
+    entry:
+      br label %loop
+
+    loop:
+      %a = phi i8* [ %a.next, %loop ], [ %a.base, %entry ]
+      %b = phi i8* [ %b.next, %loop ], [ %b.base, %entry ]
+      %a.next = getelementptr i8, i8* %a, i64 1
+      %b.next = getelementptr i8, i8* %b, i64 1
+      br label %loop
+    }
+  )", Err, C);
+
+  Function *F = M->getFunction("f");
+  Instruction *A = getInstructionByName(*F, "a");
+  Instruction *B = getInstructionByName(*F, "b");
+  Instruction *ANext = getInstructionByName(*F, "a.next");
+  Instruction *BNext = getInstructionByName(*F, "b.next");
+  MemoryLocation ALoc(A, LocationSize::precise(1));
+  MemoryLocation BLoc(B, LocationSize::precise(1));
+  MemoryLocation ANextLoc(ANext, LocationSize::precise(1));
+  MemoryLocation BNextLoc(BNext, LocationSize::precise(1));
+
+  auto &AA = getAAResults(*F);
+  EXPECT_EQ(MayAlias, AA.alias(ALoc, BLoc));
+  EXPECT_EQ(MayAlias, AA.alias(ANextLoc, BNextLoc));
+
+  BatchAAResults BatchAA(AA);
+  EXPECT_EQ(MayAlias, BatchAA.alias(ALoc, BLoc));
+  // TODO: This is incorrect.
+  EXPECT_EQ(NoAlias, BatchAA.alias(ANextLoc, BNextLoc));
+}
+
 class AAPassInfraTest : public testing::Test {
 protected:
   LLVMContext C;

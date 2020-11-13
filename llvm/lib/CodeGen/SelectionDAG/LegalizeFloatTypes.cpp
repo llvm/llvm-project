@@ -140,6 +140,10 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMAX:
       R = SoftenFloatRes_VECREDUCE(N);
       break;
+    case ISD::VECREDUCE_SEQ_FADD:
+    case ISD::VECREDUCE_SEQ_FMUL:
+      R = SoftenFloatRes_VECREDUCE_SEQ(N);
+      break;
   }
 
   // If R is null, the sub-method took care of registering the result.
@@ -784,6 +788,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE_SEQ(SDNode *N) {
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
+  return SDValue();
+}
 
 //===----------------------------------------------------------------------===//
 //  Convert Float Operand to Integer
@@ -1286,7 +1294,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FABS(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandFloatRes_FMINNUM(SDNode *N, SDValue &Lo,
                                               SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
+  ExpandFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                        RTLIB::FMIN_F32, RTLIB::FMIN_F64,
                                        RTLIB::FMIN_F80, RTLIB::FMIN_F128,
                                        RTLIB::FMIN_PPCF128), Lo, Hi);
@@ -1629,16 +1637,14 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   // though.
   if (SrcVT.bitsLE(MVT::i32)) {
     // The integer can be represented exactly in an f64.
-    Src = DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
-                      MVT::i32, Src);
     Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
                                    APInt(NVT.getSizeInBits(), 0)), dl, NVT);
     if (Strict) {
-      Hi = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl,
-                       DAG.getVTList(NVT, MVT::Other), {Chain, Src}, Flags);
+      Hi = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
+                       {Chain, Src}, Flags);
       Chain = Hi.getValue(1);
     } else
-      Hi = DAG.getNode(ISD::SINT_TO_FP, dl, NVT, Src);
+      Hi = DAG.getNode(N->getOpcode(), dl, NVT, Src);
   } else {
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
     if (SrcVT.bitsLE(MVT::i64)) {
@@ -1660,7 +1666,8 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     GetPairElements(Tmp.first, Lo, Hi);
   }
 
-  if (isSigned) {
+  // No need to complement for unsigned 32-bit integers
+  if (isSigned || SrcVT.bitsLE(MVT::i32)) {
     if (Strict)
       ReplaceValueWith(SDValue(N, 1), Chain);
 
@@ -2254,6 +2261,10 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMAX:
       R = PromoteFloatRes_VECREDUCE(N);
       break;
+    case ISD::VECREDUCE_SEQ_FADD:
+    case ISD::VECREDUCE_SEQ_FMUL:
+      R = PromoteFloatRes_VECREDUCE_SEQ(N);
+      break;
   }
 
   if (R.getNode())
@@ -2494,6 +2505,11 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_VECREDUCE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_VECREDUCE_SEQ(SDNode *N) {
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
+  return SDValue();
+}
+
 SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
   EVT VT = N->getValueType(0);
 
@@ -2607,6 +2623,10 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAX:
     R = SoftPromoteHalfRes_VECREDUCE(N);
+    break;
+  case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
+    R = SoftPromoteHalfRes_VECREDUCE_SEQ(N);
     break;
   }
 
@@ -2803,6 +2823,12 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE(SDNode *N) {
   // Expand and soften recursively.
   ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduce(N, DAG));
+  return SDValue();
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N) {
+  // Expand and soften.
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduceSeq(N, DAG));
   return SDValue();
 }
 

@@ -328,8 +328,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     if (function.isDeclaration() || function.hasPrivateLinkage())
       continue;
 
-    const bool external =
-        function.hasExternalLinkage() || function.hasLinkOnceODRLinkage();
+    const bool external = !function.hasLocalLinkage();
 
     void *fun_ptr = m_execution_engine_up->getPointerToFunction(&function);
 

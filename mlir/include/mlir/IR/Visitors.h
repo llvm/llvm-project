@@ -21,6 +21,8 @@ namespace mlir {
 class Diagnostic;
 class InFlightDiagnostic;
 class Operation;
+class Block;
+class Region;
 
 /// A utility result that is used to signal if a walk method should be
 /// interrupted or advance.
@@ -61,31 +63,39 @@ decltype(first_argument_type(&F::operator())) first_argument_type(F);
 template <typename T>
 using first_argument = decltype(first_argument_type(std::declval<T>()));
 
-/// Walk all of the operations nested under and including the given operation.
-void walkOperations(Operation *op, function_ref<void(Operation *op)> callback);
+/// Walk all of the regions, blocks, or operations nested under (and including)
+/// the given operation.
+void walk(Operation *op, function_ref<void(Region *)> callback);
+void walk(Operation *op, function_ref<void(Block *)> callback);
+void walk(Operation *op, function_ref<void(Operation *)> callback);
 
-/// Walk all of the operations nested under and including the given operation.
-/// This methods walks operations until an interrupt result is returned by the
-/// callback.
-WalkResult walkOperations(Operation *op,
-                          function_ref<WalkResult(Operation *op)> callback);
+/// Walk all of the regions, blocks, or operations nested under (and including)
+/// the given operation. These functions walk until an interrupt result is
+/// returned by the callback.
+WalkResult walk(Operation *op, function_ref<WalkResult(Region *)> callback);
+WalkResult walk(Operation *op, function_ref<WalkResult(Block *)> callback);
+WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback);
 
 // Below are a set of functions to walk nested operations. Users should favor
 // the direct `walk` methods on the IR classes(Operation/Block/etc) over these
 // methods. They are also templated to allow for statically dispatching based
 // upon the type of the callback function.
 
-/// Walk all of the operations nested under and including the given operation.
-/// This method is selected for callbacks that operate on Operation*.
+/// Walk all of the regions, blocks, or operations nested under (and including)
+/// the given operation. This method is selected for callbacks that operate on
+/// Region*, Block*, and Operation*.
 ///
 /// Example:
+///   op->walk([](Region *r) { ... });
+///   op->walk([](Block *b) { ... });
 ///   op->walk([](Operation *op) { ... });
 template <
     typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<std::is_same<ArgT, Operation *>::value, RetT>::type
-walkOperations(Operation *op, FuncTy &&callback) {
-  return detail::walkOperations(op, function_ref<RetT(ArgT)>(callback));
+typename std::enable_if<
+    llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value, RetT>::type
+walk(Operation *op, FuncTy &&callback) {
+  return walk(op, function_ref<RetT(ArgT)>(callback));
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
@@ -97,15 +107,16 @@ walkOperations(Operation *op, FuncTy &&callback) {
 template <
     typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
-                            std::is_same<RetT, void>::value,
-                        RetT>::type
-walkOperations(Operation *op, FuncTy &&callback) {
+typename std::enable_if<
+    !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
+        std::is_same<RetT, void>::value,
+    RetT>::type
+walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
       callback(derivedOp);
   };
-  return detail::walkOperations(op, function_ref<RetT(Operation *)>(wrapperFn));
+  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn));
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
@@ -121,21 +132,22 @@ walkOperations(Operation *op, FuncTy &&callback) {
 template <
     typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
-                            std::is_same<RetT, WalkResult>::value,
-                        RetT>::type
-walkOperations(Operation *op, FuncTy &&callback) {
+typename std::enable_if<
+    !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
+        std::is_same<RetT, WalkResult>::value,
+    RetT>::type
+walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
       return callback(derivedOp);
     return WalkResult::advance();
   };
-  return detail::walkOperations(op, function_ref<RetT(Operation *)>(wrapperFn));
+  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn));
 }
 
 /// Utility to provide the return type of a templated walk method.
 template <typename FnT>
-using walkResultType = decltype(walkOperations(nullptr, std::declval<FnT>()));
+using walkResultType = decltype(walk(nullptr, std::declval<FnT>()));
 } // end namespace detail
 
 } // namespace mlir

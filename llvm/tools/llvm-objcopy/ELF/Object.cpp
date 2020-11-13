@@ -1775,6 +1775,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSectionHeaders() {
     Sec->Align = Shdr.sh_addralign;
     Sec->EntrySize = Shdr.sh_entsize;
     Sec->Index = Index++;
+    Sec->OriginalIndex = Sec->Index;
     Sec->OriginalData =
         ArrayRef<uint8_t>(ElfFile.base() + Shdr.sh_offset,
                           (Shdr.sh_type == SHT_NOBITS) ? 0 : Shdr.sh_size);
@@ -2304,12 +2305,19 @@ static uint64_t layoutSectionsForOnlyKeepDebug(Object &Obj, uint64_t Off) {
   return Off;
 }
 
-// Rewrite p_offset and p_filesz of non-empty non-PT_PHDR segments after
-// sh_offset values have been updated.
+// Rewrite p_offset and p_filesz of non-PT_PHDR segments after sh_offset values
+// have been updated.
 static uint64_t layoutSegmentsForOnlyKeepDebug(std::vector<Segment *> &Segments,
                                                uint64_t HdrEnd) {
   uint64_t MaxOffset = 0;
   for (Segment *Seg : Segments) {
+    // An empty segment contains no section (see sectionWithinSegment). If it
+    // has a parent segment, copy the parent segment's offset field. This works
+    // for empty PT_TLS. We don't handle empty segments without a parent for
+    // now.
+    if (Seg->ParentSegment != nullptr && Seg->MemSize == 0)
+      Seg->Offset = Seg->ParentSegment->Offset;
+
     const SectionBase *FirstSec = Seg->firstSection();
     if (Seg->Type == PT_PHDR || !FirstSec)
       continue;

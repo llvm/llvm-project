@@ -534,6 +534,10 @@ private:
   void mangleAArch64FixedSveVectorType(const DependentVectorType *T);
 
   void mangleIntegerLiteral(QualType T, const llvm::APSInt &Value);
+  void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
+  void mangleFixedPointLiteral();
+  void mangleNullPointer(QualType T);
+
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
                         NestedNameSpecifier *qualifier,
@@ -555,6 +559,7 @@ private:
                           unsigned NumTemplateArgs);
   void mangleTemplateArgs(const TemplateArgumentList &AL);
   void mangleTemplateArg(TemplateArgument A);
+  void mangleValueInTemplateArg(QualType T, const APValue &V);
 
   void mangleTemplateParameter(unsigned Depth, unsigned Index);
 
@@ -649,23 +654,13 @@ void CXXNameMangler::mangle(GlobalDecl GD) {
   Out << "_Z";
   if (isa<FunctionDecl>(GD.getDecl()))
     mangleFunctionEncoding(GD);
-  else if (const VarDecl *VD = dyn_cast<VarDecl>(GD.getDecl()))
-    mangleName(VD);
+  else if (isa<VarDecl, FieldDecl, MSGuidDecl, TemplateParamObjectDecl,
+               BindingDecl>(GD.getDecl()))
+    mangleName(GD);
   else if (const IndirectFieldDecl *IFD =
                dyn_cast<IndirectFieldDecl>(GD.getDecl()))
     mangleName(IFD->getAnonField());
-  else if (const FieldDecl *FD = dyn_cast<FieldDecl>(GD.getDecl()))
-    mangleName(FD);
-  else if (const MSGuidDecl *GuidD = dyn_cast<MSGuidDecl>(GD.getDecl()))
-    mangleName(GuidD);
-  else if (const BindingDecl *BD = dyn_cast<BindingDecl>(GD.getDecl()))
-    mangleName(BD);
-  else if (isa<TemplateParamObjectDecl>(GD.getDecl())) {
-    DiagnosticsEngine &Diags = Context.getDiags();
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-      "cannot mangle template parameter objects yet");
-    Diags.Report(SourceLocation(), DiagID);
-  } else
+  else
     llvm_unreachable("unexpected kind of global decl");
 }
 
@@ -1064,6 +1059,27 @@ void CXXNameMangler::mangleFloat(const llvm::APFloat &f) {
   Out.write(buffer.data(), numCharacters);
 }
 
+void CXXNameMangler::mangleFloatLiteral(QualType T, const llvm::APFloat &V) {
+  Out << 'L';
+  mangleType(T);
+  mangleFloat(V);
+  Out << 'E';
+}
+
+void CXXNameMangler::mangleFixedPointLiteral() {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "cannot mangle fixed point literals yet");
+  Diags.Report(DiagID);
+}
+
+void CXXNameMangler::mangleNullPointer(QualType T) {
+  //  <expr-primary> ::= L <type> 0 E
+  Out << 'L';
+  mangleType(T);
+  Out << "0E";
+}
+
 void CXXNameMangler::mangleNumber(const llvm::APSInt &Value) {
   if (Value.isSigned() && Value.isNegative()) {
     Out << 'n';
@@ -1307,6 +1323,15 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
       llvm::raw_svector_ostream GUIDOS(GUID);
       Context.mangleMSGuidDecl(GD, GUIDOS);
       Out << GUID.size() << GUID;
+      break;
+    }
+
+    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+      // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/63.
+      Out << "TAX";
+      mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(),
+                               TPO->getValue());
+      Out << "E";
       break;
     }
 
@@ -2828,6 +2853,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
         << type_name;                                                          \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+  case BuiltinType::Id: \
+    type_name = #Name; \
+    Out << 'u' << type_name.size() << type_name; \
+    break;
+#include "clang/Basic/PPCTypes.def"
   }
 }
 
@@ -3462,10 +3493,13 @@ void CXXNameMangler::mangleType(const DependentSizedExtVectorType *T) {
 }
 
 void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
-  // Mangle matrix types using a vendor extended type qualifier:
-  // U<Len>matrix_type<Rows><Columns><element type>
+  // Mangle matrix types as a vendor extended type:
+  // u<Len>matrix_typeI<Rows><Columns><element type>E
+
   StringRef VendorQualifier = "matrix_type";
-  Out << "U" << VendorQualifier.size() << VendorQualifier;
+  Out << "u" << VendorQualifier.size() << VendorQualifier;
+
+  Out << "I";
   auto &ASTCtx = getASTContext();
   unsigned BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
   llvm::APSInt Rows(BitWidth);
@@ -3475,15 +3509,20 @@ void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
   Columns = T->getNumColumns();
   mangleIntegerLiteral(ASTCtx.getSizeType(), Columns);
   mangleType(T->getElementType());
+  Out << "E";
 }
 
 void CXXNameMangler::mangleType(const DependentSizedMatrixType *T) {
-  // U<Len>matrix_type<row expr><column expr><element type>
+  // Mangle matrix types as a vendor extended type:
+  // u<Len>matrix_typeI<row expr><column expr><element type>E
   StringRef VendorQualifier = "matrix_type";
-  Out << "U" << VendorQualifier.size() << VendorQualifier;
+  Out << "u" << VendorQualifier.size() << VendorQualifier;
+
+  Out << "I";
   mangleTemplateArg(T->getRowExpr());
   mangleTemplateArg(T->getColumnExpr());
   mangleType(T->getElementType());
+  Out << "E";
 }
 
 void CXXNameMangler::mangleType(const DependentAddressSpaceType *T) {
@@ -3944,7 +3983,6 @@ recurse:
   case Expr::PseudoObjectExprClass:
   case Expr::AtomicExprClass:
   case Expr::SourceLocExprClass:
-  case Expr::FixedPointLiteralClass:
   case Expr::BuiltinBitCastExprClass:
   {
     if (!NullOut) {
@@ -4169,7 +4207,7 @@ recurse:
 
   case Expr::CXXUnresolvedConstructExprClass: {
     const CXXUnresolvedConstructExpr *CE = cast<CXXUnresolvedConstructExpr>(E);
-    unsigned N = CE->arg_size();
+    unsigned N = CE->getNumArgs();
 
     if (CE->isListInitialization()) {
       assert(N == 1 && "unexpected form for list initialization");
@@ -4518,12 +4556,13 @@ recurse:
 
   case Expr::FloatingLiteralClass: {
     const FloatingLiteral *FL = cast<FloatingLiteral>(E);
-    Out << 'L';
-    mangleType(FL->getType());
-    mangleFloat(FL->getValue());
-    Out << 'E';
+    mangleFloatLiteral(FL->getType(), FL->getValue());
     break;
   }
+
+  case Expr::FixedPointLiteralClass:
+    mangleFixedPointLiteral();
+    break;
 
   case Expr::CharacterLiteralClass:
     Out << 'L';
@@ -4587,9 +4626,7 @@ recurse:
 
   case Expr::GNUNullExprClass:
     // Mangle as if an integer literal 0.
-    Out << 'L';
-    mangleType(E->getType());
-    Out << "0E";
+    mangleIntegerLiteral(E->getType(), llvm::APSInt(32));
     break;
 
   case Expr::CXXNullPtrLiteralExprClass: {
@@ -4870,21 +4907,29 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A) {
     break;
   case TemplateArgument::Declaration: {
     //  <expr-primary> ::= L <mangled-name> E # external name
+    ValueDecl *D = A.getAsDecl();
+
+    // Template parameter objects are modeled by reproducing a source form
+    // produced as if by aggregate initialization.
+    if (A.getParamTypeForDecl()->isRecordType()) {
+      Out << 'X';
+      auto *TPO = cast<TemplateParamObjectDecl>(D);
+      mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(),
+                               TPO->getValue());
+      Out << 'E';
+      break;
+    }
+
     // Clang produces AST's where pointer-to-member-function expressions
     // and pointer-to-function expressions are represented as a declaration not
     // an expression. We compensate for it here to produce the correct mangling.
-    ValueDecl *D = A.getAsDecl();
     bool compensateMangling = !A.getParamTypeForDecl()->isReferenceType();
     if (compensateMangling) {
       Out << 'X';
       mangleOperatorName(OO_Amp, 1);
     }
 
-    Out << 'L';
-    // References to external entities use the mangled name; if the name would
-    // not normally be mangled then mangle it as unqualified.
-    mangle(D);
-    Out << 'E';
+    mangleDeclRefExpr(D);
 
     if (compensateMangling)
       Out << 'E';
@@ -4892,10 +4937,7 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A) {
     break;
   }
   case TemplateArgument::NullPtr: {
-    //  <expr-primary> ::= L <type> 0 E
-    Out << 'L';
-    mangleType(A.getNullPtrType());
-    Out << "0E";
+    mangleNullPointer(A.getNullPtrType());
     break;
   }
   case TemplateArgument::Pack: {
@@ -4905,6 +4947,397 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A) {
       mangleTemplateArg(P);
     Out << 'E';
   }
+  }
+}
+
+/// Determine whether a given value is equivalent to zero-initialization for
+/// the purpose of discarding a trailing portion of a 'tl' mangling.
+///
+/// Note that this is not in general equivalent to determining whether the
+/// value has an all-zeroes bit pattern.
+static bool isZeroInitialized(QualType T, const APValue &V) {
+  // FIXME: mangleValueInTemplateArg has quadratic time complexity in
+  // pathological cases due to using this, but it's a little awkward
+  // to do this in linear time in general.
+  switch (V.getKind()) {
+  case APValue::None:
+  case APValue::Indeterminate:
+  case APValue::AddrLabelDiff:
+    return false;
+
+  case APValue::Struct: {
+    const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+    assert(RD && "unexpected type for record value");
+    unsigned I = 0;
+    for (const CXXBaseSpecifier &BS : RD->bases()) {
+      if (!isZeroInitialized(BS.getType(), V.getStructBase(I)))
+        return false;
+      ++I;
+    }
+    I = 0;
+    for (const FieldDecl *FD : RD->fields()) {
+      if (!FD->isUnnamedBitfield() &&
+          !isZeroInitialized(FD->getType(), V.getStructField(I)))
+        return false;
+      ++I;
+    }
+    return true;
+  }
+
+  case APValue::Union: {
+    const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+    assert(RD && "unexpected type for union value");
+    // Zero-initialization zeroes the first non-unnamed-bitfield field, if any.
+    for (const FieldDecl *FD : RD->fields()) {
+      if (!FD->isUnnamedBitfield())
+        return V.getUnionField() && declaresSameEntity(FD, V.getUnionField()) &&
+               isZeroInitialized(FD->getType(), V.getUnionValue());
+    }
+    // If there are no fields (other than unnamed bitfields), the value is
+    // necessarily zero-initialized.
+    return true;
+  }
+
+  case APValue::Array: {
+    QualType ElemT(T->getArrayElementTypeNoTypeQual(), 0);
+    for (unsigned I = 0, N = V.getArrayInitializedElts(); I != N; ++I)
+      if (!isZeroInitialized(ElemT, V.getArrayInitializedElt(I)))
+        return false;
+    return !V.hasArrayFiller() || isZeroInitialized(ElemT, V.getArrayFiller());
+  }
+
+  case APValue::Vector: {
+    const VectorType *VT = T->castAs<VectorType>();
+    for (unsigned I = 0, N = V.getVectorLength(); I != N; ++I)
+      if (!isZeroInitialized(VT->getElementType(), V.getVectorElt(I)))
+        return false;
+    return true;
+  }
+
+  case APValue::Int:
+    return !V.getInt();
+
+  case APValue::Float:
+    return V.getFloat().isPosZero();
+
+  case APValue::FixedPoint:
+    return !V.getFixedPoint().getValue();
+
+  case APValue::ComplexFloat:
+    return V.getComplexFloatReal().isPosZero() &&
+           V.getComplexFloatImag().isPosZero();
+
+  case APValue::ComplexInt:
+    return !V.getComplexIntReal() && !V.getComplexIntImag();
+
+  case APValue::LValue:
+    return V.isNullPointer();
+
+  case APValue::MemberPointer:
+    return !V.getMemberPointerDecl();
+  }
+
+  llvm_unreachable("Unhandled APValue::ValueKind enum");
+}
+
+void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V) {
+  // Ignore all top-level cv-qualifiers, to match GCC.
+  Qualifiers Quals;
+  T = getASTContext().getUnqualifiedArrayType(T, Quals);
+
+  // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/63.
+  switch (V.getKind()) {
+  case APValue::None:
+  case APValue::Indeterminate:
+    Out << 'L';
+    mangleType(T);
+    Out << 'E';
+    return;
+
+  case APValue::AddrLabelDiff:
+    llvm_unreachable("unexpected value kind in template argument");
+
+  case APValue::Struct: {
+    const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+    assert(RD && "unexpected type for record value");
+
+    // Drop trailing zero-initialized elements.
+    llvm::SmallVector<const FieldDecl *, 16> Fields(RD->field_begin(),
+                                                    RD->field_end());
+    while (
+        !Fields.empty() &&
+        (Fields.back()->isUnnamedBitfield() ||
+         isZeroInitialized(Fields.back()->getType(),
+                           V.getStructField(Fields.back()->getFieldIndex())))) {
+      Fields.pop_back();
+    }
+    llvm::ArrayRef<CXXBaseSpecifier> Bases(RD->bases_begin(), RD->bases_end());
+    if (Fields.empty()) {
+      while (!Bases.empty() &&
+             isZeroInitialized(Bases.back().getType(),
+                               V.getStructBase(Bases.size() - 1)))
+        Bases = Bases.drop_back();
+    }
+
+    // <expression> ::= tl <type> <braced-expression>* E
+    Out << "tl";
+    mangleType(T);
+    for (unsigned I = 0, N = Bases.size(); I != N; ++I)
+      mangleValueInTemplateArg(Bases[I].getType(), V.getStructBase(I));
+    for (unsigned I = 0, N = Fields.size(); I != N; ++I) {
+      if (Fields[I]->isUnnamedBitfield())
+        continue;
+      mangleValueInTemplateArg(Fields[I]->getType(),
+                               V.getStructField(Fields[I]->getFieldIndex()));
+    }
+    Out << 'E';
+    return;
+  }
+
+  case APValue::Union: {
+    assert(T->getAsCXXRecordDecl() && "unexpected type for union value");
+    const FieldDecl *FD = V.getUnionField();
+
+    if (!FD) {
+      Out << 'L';
+      mangleType(T);
+      Out << 'E';
+      return;
+    }
+
+    // <braced-expression> ::= di <field source-name> <braced-expression>
+    Out << "tl";
+    mangleType(T);
+    if (!isZeroInitialized(T, V)) {
+      Out << "di";
+      mangleSourceName(FD->getIdentifier());
+      mangleValueInTemplateArg(FD->getType(), V.getUnionValue());
+    }
+    Out << 'E';
+    return;
+  }
+
+  case APValue::Array: {
+    QualType ElemT(T->getArrayElementTypeNoTypeQual(), 0);
+
+    Out << "tl";
+    mangleType(T);
+
+    // Drop trailing zero-initialized elements.
+    unsigned N = V.getArraySize();
+    if (!V.hasArrayFiller() || isZeroInitialized(ElemT, V.getArrayFiller())) {
+      N = V.getArrayInitializedElts();
+      while (N && isZeroInitialized(ElemT, V.getArrayInitializedElt(N - 1)))
+        --N;
+    }
+
+    for (unsigned I = 0; I != N; ++I) {
+      const APValue &Elem = I < V.getArrayInitializedElts()
+                                ? V.getArrayInitializedElt(I)
+                                : V.getArrayFiller();
+      mangleValueInTemplateArg(ElemT, Elem);
+    }
+    Out << 'E';
+    return;
+  }
+
+  case APValue::Vector: {
+    const VectorType *VT = T->castAs<VectorType>();
+
+    Out << "tl";
+    mangleType(T);
+    unsigned N = V.getVectorLength();
+    while (N && isZeroInitialized(VT->getElementType(), V.getVectorElt(N - 1)))
+      --N;
+    for (unsigned I = 0; I != N; ++I)
+      mangleValueInTemplateArg(VT->getElementType(), V.getVectorElt(I));
+    Out << 'E';
+    return;
+  }
+
+  case APValue::Int:
+    mangleIntegerLiteral(T, V.getInt());
+    return;
+
+  case APValue::Float:
+    mangleFloatLiteral(T, V.getFloat());
+    return;
+
+  case APValue::FixedPoint:
+    mangleFixedPointLiteral();
+    return;
+
+  case APValue::ComplexFloat: {
+    const ComplexType *CT = T->castAs<ComplexType>();
+    Out << "tl";
+    mangleType(T);
+    if (!V.getComplexFloatReal().isPosZero() ||
+        !V.getComplexFloatImag().isPosZero())
+      mangleFloatLiteral(CT->getElementType(), V.getComplexFloatReal());
+    if (!V.getComplexFloatImag().isPosZero())
+      mangleFloatLiteral(CT->getElementType(), V.getComplexFloatImag());
+    Out << 'E';
+    return;
+  }
+
+  case APValue::ComplexInt: {
+    const ComplexType *CT = T->castAs<ComplexType>();
+    Out << "tl";
+    mangleType(T);
+    if (V.getComplexIntReal().getBoolValue() ||
+        V.getComplexIntImag().getBoolValue())
+      mangleIntegerLiteral(CT->getElementType(), V.getComplexIntReal());
+    if (V.getComplexIntImag().getBoolValue())
+      mangleIntegerLiteral(CT->getElementType(), V.getComplexIntImag());
+    Out << 'E';
+    return;
+  }
+
+  case APValue::LValue: {
+    // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
+    assert((T->isPointerType() || T->isReferenceType()) &&
+           "unexpected type for LValue template arg");
+
+    if (V.isNullPointer()) {
+      mangleNullPointer(T);
+      return;
+    }
+
+    APValue::LValueBase B = V.getLValueBase();
+    if (!B) {
+      // Non-standard mangling for integer cast to a pointer; this can only
+      // occur as an extension.
+      CharUnits Offset = V.getLValueOffset();
+      if (Offset.isZero()) {
+        // This is reinterpret_cast<T*>(0), not a null pointer. Mangle this as
+        // a cast, because L <type> 0 E means something else.
+        Out << "rc";
+        mangleType(T);
+        Out << "Li0E";
+      } else {
+        Out << "L";
+        mangleType(T);
+        Out << Offset.getQuantity() << 'E';
+      }
+      return;
+    }
+
+    enum { Base, Offset, Path } Kind;
+    if (!V.hasLValuePath()) {
+      // Mangle as (T*)((char*)&base + N).
+      if (T->isReferenceType()) {
+        Out << "decvP";
+        mangleType(T->getPointeeType());
+      } else {
+        Out << "cv";
+        mangleType(T);
+      }
+      Out << "plcvPcad";
+      Kind = Offset;
+    } else {
+      if (T->isPointerType())
+        Out << "ad";
+      if (!V.getLValuePath().empty() || V.isLValueOnePastTheEnd()) {
+        Out << "so";
+        mangleType(T->getPointeeType());
+        Kind = Path;
+      } else {
+        Kind = Base;
+      }
+    }
+
+    QualType TypeSoFar;
+    if (auto *VD = B.dyn_cast<const ValueDecl*>()) {
+      Out << 'L';
+      mangle(VD);
+      Out << 'E';
+      TypeSoFar = VD->getType();
+    } else if (auto *E = B.dyn_cast<const Expr*>()) {
+      mangleExpression(E);
+      TypeSoFar = E->getType();
+    } else if (auto TI = B.dyn_cast<TypeInfoLValue>()) {
+      Out << "ti";
+      mangleType(QualType(TI.getType(), 0));
+      TypeSoFar = B.getTypeInfoType();
+    } else {
+      // We should never see dynamic allocations here.
+      llvm_unreachable("unexpected lvalue base kind in template argument");
+    }
+
+    switch (Kind) {
+    case Base:
+      break;
+
+    case Offset:
+      Out << 'L';
+      mangleType(Context.getASTContext().getPointerDiffType());
+      mangleNumber(V.getLValueOffset().getQuantity());
+      Out << 'E';
+      break;
+
+    case Path:
+      // <expression> ::= so <referent type> <expr> [<offset number>]
+      //                  <union-selector>* [p] E
+      if (!V.getLValueOffset().isZero())
+        mangleNumber(V.getLValueOffset().getQuantity());
+
+      // We model a past-the-end array pointer as array indexing with index N,
+      // not with the "past the end" flag. Compensate for that.
+      bool OnePastTheEnd = V.isLValueOnePastTheEnd();
+
+      for (APValue::LValuePathEntry E : V.getLValuePath()) {
+        if (auto *AT = TypeSoFar->getAsArrayTypeUnsafe()) {
+          if (auto *CAT = dyn_cast<ConstantArrayType>(AT))
+            OnePastTheEnd |= CAT->getSize() == E.getAsArrayIndex();
+          TypeSoFar = AT->getElementType();
+        } else {
+          const Decl *D = E.getAsBaseOrMember().getPointer();
+          if (auto *FD = dyn_cast<FieldDecl>(D)) {
+            // <union-selector> ::= _ <number>
+            if (FD->getParent()->isUnion()) {
+              Out << '_';
+              if (FD->getFieldIndex())
+                Out << (FD->getFieldIndex() - 1);
+            }
+            TypeSoFar = FD->getType();
+          } else {
+            TypeSoFar =
+                Context.getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+          }
+        }
+      }
+
+      if (OnePastTheEnd)
+        Out << 'p';
+      Out << 'E';
+      break;
+    }
+
+    return;
+  }
+
+  case APValue::MemberPointer:
+    // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
+    if (!V.getMemberPointerDecl()) {
+      mangleNullPointer(T);
+      return;
+    }
+
+    if (!V.getMemberPointerPath().empty()) {
+      Out << "mc";
+      mangleType(T);
+    }
+    Out << "adL";
+    mangle(V.getMemberPointerDecl());
+    Out << 'E';
+    if (!V.getMemberPointerPath().empty()) {
+      CharUnits Offset =
+          Context.getASTContext().getMemberPointerPathAdjustment(V);
+      if (!Offset.isZero())
+        mangleNumber(Offset.getQuantity());
+      Out << 'E';
+    }
+    return;
   }
 }
 
@@ -5224,8 +5657,8 @@ bool CXXNameMangler::shouldHaveAbiTags(ItaniumMangleContextImpl &C,
 void ItaniumMangleContextImpl::mangleCXXName(GlobalDecl GD,
                                              raw_ostream &Out) {
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
-  assert((isa<FunctionDecl>(D) || isa<VarDecl>(D)) &&
-          "Invalid mangleName() call, argument is not a variable or function!");
+  assert((isa<FunctionDecl, VarDecl, TemplateParamObjectDecl>(D)) &&
+         "Invalid mangleName() call, argument is not a variable or function!");
 
   PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                  getASTContext().getSourceManager(),

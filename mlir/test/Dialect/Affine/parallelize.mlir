@@ -1,7 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize| FileCheck %s
 
-// For multiple nested for-loops.
-// CHECK-DAG: [[MAP5:#map[0-9]+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0 + d1, d2 * 2 + d3, d4 * 2 + d5, d6 + d7)>
 // CHECK-LABEL:    func @reduce_window_max() {
 func @reduce_window_max() {
   %cst = constant 0.000000e+00 : f32

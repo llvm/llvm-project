@@ -181,6 +181,32 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
   let assemblyFormat = "attr-dict $input `:` type($input)";
 }
 
+def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
+  let summary = "Determines if 2 shapes can be successfully broadcasted";
+  let description = [{
+    Given two input shapes or extent tensors, return a predicate specifying if
+    they are broadcastable. This broadcastable follows the same logic as what
+    shape.broadcast documents.
+
+    Concretely, shape.is_broadcastable returning true implies that
+    shape.broadcast will not give an error, and shape.cstr_broadcastable will
+    not result in an assertion failure. Similarly, false implies an error or
+    assertion failure.
+
+    Example:
+    ```mlir
+    %true = shape.is_broadcastable [2,2], [3,1,2]
+    %false = shape.is_broadcastable [2,2], [3,2]
+    ```
+  }];
+
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$lhs,
+                       Shape_ShapeOrExtentTensorType:$rhs);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs) `,` type($rhs)";
+}
+
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
   let summary = "Gets the rank of a shape";
   let description = [{

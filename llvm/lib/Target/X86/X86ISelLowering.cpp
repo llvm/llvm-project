@@ -3381,8 +3381,8 @@ private:
 
   void forwardMustTailParameters(SDValue &Chain);
 
-  bool is64Bit() { return Subtarget.is64Bit(); }
-  bool isWin64() { return Subtarget.isCallingConvWin64(CallConv); }
+  bool is64Bit() const { return Subtarget.is64Bit(); }
+  bool isWin64() const { return Subtarget.isCallingConvWin64(CallConv); }
 
   X86MachineFunctionInfo *FuncInfo;
   const SDLoc &DL;
@@ -4480,7 +4480,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     Register VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!Register::isVirtualRegister(VR))
+    if (!VR.isVirtual())
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
     if (!Def)
@@ -20407,8 +20407,8 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     // of a signed i64.  Let Thresh be the FP equivalent of
     // 0x8000000000000000ULL.
     //
-    //  Adjust = (Value < Thresh) ? 0 : 0x80000000;
-    //  FltOfs = (Value < Thresh) ? 0 : 0x80000000;
+    //  Adjust = (Value >= Thresh) ? 0x80000000 : 0;
+    //  FltOfs = (Value >= Thresh) ? 0x80000000 : 0;
     //  FistSrc = (Value - FltOfs);
     //  Fist-to-mem64 FistSrc
     //  Add 0 or 0x800...0ULL to the 64-bit result, which is equivalent
@@ -20438,20 +20438,30 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                    *DAG.getContext(), TheVT);
     SDValue Cmp;
     if (IsStrict) {
-      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT,
-                         Chain, /*IsSignaling*/ true);
+      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETGE, Chain,
+                         /*IsSignaling*/ true);
       Chain = Cmp.getValue(1);
     } else {
-      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT);
+      Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETGE);
     }
 
-    Adjust = DAG.getSelect(DL, MVT::i64, Cmp,
-                           DAG.getConstant(0, DL, MVT::i64),
-                           DAG.getConstant(APInt::getSignMask(64),
-                                           DL, MVT::i64));
-    SDValue FltOfs = DAG.getSelect(DL, TheVT, Cmp,
-                                   DAG.getConstantFP(0.0, DL, TheVT),
-                                   ThreshVal);
+    // Our preferred lowering of
+    //
+    // (Value >= Thresh) ? 0x8000000000000000ULL : 0
+    //
+    // is
+    //
+    // (Value >= Thresh) << 63
+    //
+    // but since we can get here after LegalOperations, DAGCombine might do the
+    // wrong thing if we create a select. So, directly create the preferred
+    // version.
+    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Cmp);
+    SDValue Const63 = DAG.getConstant(63, DL, MVT::i8);
+    Adjust = DAG.getNode(ISD::SHL, DL, MVT::i64, Zext, Const63);
+
+    SDValue FltOfs = DAG.getSelect(DL, TheVT, Cmp, ThreshVal,
+                                   DAG.getConstantFP(0.0, DL, TheVT));
 
     if (IsStrict) {
       Value = DAG.getNode(ISD::STRICT_FSUB, DL, { TheVT, MVT::Other},
@@ -32316,7 +32326,7 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   BuildMI(testMBB, DL, TII->get(X86::JCC_1))
       .addMBB(tailMBB)
-      .addImm(X86::COND_LE);
+      .addImm(X86::COND_GE);
   testMBB->addSuccessor(blockMBB);
   testMBB->addSuccessor(tailMBB);
 
@@ -32332,9 +32342,9 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
   //
   // The property we want to enforce is to never have more than [page alloc] between two probes.
 
-  const unsigned MovMIOpc =
-      TFI.Uses64BitFramePtr ? X86::MOV64mi32 : X86::MOV32mi;
-  addRegOffset(BuildMI(blockMBB, DL, TII->get(MovMIOpc)), physSPReg, false, 0)
+  const unsigned XORMIOpc =
+      TFI.Uses64BitFramePtr ? X86::XOR64mi8 : X86::XOR32mi8;
+  addRegOffset(BuildMI(blockMBB, DL, TII->get(XORMIOpc)), physSPReg, false, 0)
       .addImm(0);
 
   BuildMI(blockMBB, DL,
@@ -34098,13 +34108,11 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits Known2;
     if (!!DemandedLHS) {
       Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedLHS, Depth + 1);
-      Known.One &= Known2.One;
-      Known.Zero &= Known2.Zero;
+      Known = KnownBits::commonBits(Known, Known2);
     }
     if (!!DemandedRHS) {
       Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedRHS, Depth + 1);
-      Known.One &= Known2.One;
-      Known.Zero &= Known2.Zero;
+      Known = KnownBits::commonBits(Known, Known2);
     }
 
     if (Known.countMinLeadingZeros() < BitWidth)
@@ -34147,8 +34155,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     // Only known if known in both the LHS and RHS.
-    Known.One &= Known2.One;
-    Known.Zero &= Known2.Zero;
+    Known = KnownBits::commonBits(Known, Known2);
     break;
   }
   case X86ISD::BEXTR:
@@ -34290,8 +34297,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
             continue;
           KnownBits Known2 =
               DAG.computeKnownBits(Ops[i], DemandedOps[i], Depth + 1);
-          Known.One &= Known2.One;
-          Known.Zero &= Known2.Zero;
+          Known = KnownBits::commonBits(Known, Known2);
         }
       }
     }
@@ -38400,8 +38406,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
         return true;
 
       KnownScl = KnownScl.trunc(VecVT.getScalarSizeInBits());
-      Known.One = KnownVec.One & KnownScl.One;
-      Known.Zero = KnownVec.Zero & KnownScl.Zero;
+      Known = KnownBits::commonBits(KnownVec, KnownScl);
       return false;
     }
     break;
@@ -47550,7 +47555,8 @@ static SDValue rebuildGatherScatter(MaskedGatherScatterSDNode *GorS,
   return DAG.getMaskedScatter(Scatter->getVTList(),
                               Scatter->getMemoryVT(), DL,
                               Ops, Scatter->getMemOperand(),
-                              Scatter->getIndexType());
+                              Scatter->getIndexType(),
+                              Scatter->isTruncatingStore());
 }
 
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,

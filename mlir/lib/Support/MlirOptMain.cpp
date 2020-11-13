@@ -58,11 +58,17 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
     return failure();
 
   // Apply any pass manager command line options.
-  PassManager pm(context, verifyPasses);
+  PassManager pm(context, OpPassManager::Nesting::Implicit);
+  pm.enableVerifier(verifyPasses);
   applyPassManagerCLOptions(pm);
 
+  auto errorHandler = [&](const Twine &msg) {
+    emitError(UnknownLoc::get(context)) << msg;
+    return failure();
+  };
+
   // Build the provided pipeline.
-  if (failed(passPipeline.addToPipeline(pm)))
+  if (failed(passPipeline.addToPipeline(pm, errorHandler)))
     return failure();
 
   // Run the pipeline.

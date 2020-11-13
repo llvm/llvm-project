@@ -334,3 +334,20 @@ func @tensor_cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf3
 
   return %1: tensor<3x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @linalg_effects(
+//  CHECK-SAME:     %[[A:[a-z0-9]*]]: tensor<?x?xf32>
+//  CHECK-SAME:     %[[B:[a-z0-9]*]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[C:[a-z0-9]*]]: tensor<?x?xf32>
+func @linalg_effects(%a : tensor<?x?xf32>, %b : memref<?x?xf32>, %c : tensor<?x?xf32>) {
+  // CHECK-NOT:   %{{.*}} = linalg.matmul
+  %t = linalg.matmul ins(%a, %b : tensor<?x?xf32>, memref<?x?xf32>)
+                    init(%c : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+  // CHECK-NOT:   %{{.*}} = linalg.matmul
+  linalg.matmul ins(%a, %c : tensor<?x?xf32>, tensor<?x?xf32>)
+               outs(%b : memref<?x?xf32>)
+  return
+}

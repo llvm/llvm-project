@@ -9,6 +9,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/BitVector.h"
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -174,6 +175,22 @@ void Block::eraseArgument(unsigned index) {
   assert(index < arguments.size());
   arguments[index].destroy();
   arguments.erase(arguments.begin() + index);
+}
+
+void Block::eraseArguments(ArrayRef<unsigned> argIndices) {
+  llvm::BitVector eraseIndices(getNumArguments());
+  for (unsigned i : argIndices)
+    eraseIndices.set(i);
+  eraseArguments(eraseIndices);
+}
+
+void Block::eraseArguments(llvm::BitVector eraseIndices) {
+  // We do this in reverse so that we erase later indices before earlier
+  // indices, to avoid shifting the later indices.
+  unsigned originalNumArgs = getNumArguments();
+  for (unsigned i = 0; i < originalNumArgs; ++i)
+    if (eraseIndices.test(originalNumArgs - i - 1))
+      eraseArgument(originalNumArgs - i - 1);
 }
 
 /// Insert one value to the given position of the argument list. The existing

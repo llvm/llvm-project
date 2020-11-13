@@ -190,7 +190,6 @@ public:
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
 
   /// Add constant value entry in variable DIE.
-  void addConstantValue(DIE &Die, const MachineOperand &MO, const DIType *Ty);
   void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
   void addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty);
   void addConstantValue(DIE &Die, const APInt &Val, bool Unsigned);
@@ -198,7 +197,6 @@ public:
   void addConstantValue(DIE &Die, bool Unsigned, uint64_t Val);
 
   /// Add constant value entry in variable DIE.
-  void addConstantFPValue(DIE &Die, const MachineOperand &MO);
   void addConstantFPValue(DIE &Die, const ConstantFP *CFP);
 
   /// Add a linkage name, if it isn't empty.
@@ -301,6 +299,8 @@ private:
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
   void constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy);
   void constructSubrangeDIE(DIE &Buffer, const DISubrange *SR, DIE *IndexTy);
+  void constructGenericSubrangeDIE(DIE &Buffer, const DIGenericSubrange *SR,
+                                   DIE *IndexTy);
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);

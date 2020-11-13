@@ -82,6 +82,7 @@ public:
   bool getDeserialize() const { return Deserialize; }
 
   void SetTraversalKind(TraversalKind TK) { Traversal = TK; }
+  TraversalKind GetTraversalKind() const { return Traversal; }
 
   void Visit(const Decl *D) {
     getNodeDelegate().AddChild([=] {
@@ -100,6 +101,14 @@ public:
 
       // Decls within functions are visited by the body.
       if (!isa<FunctionDecl>(*D) && !isa<ObjCMethodDecl>(*D)) {
+        if (Traversal != TK_AsIs) {
+          if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+            auto SK = CTSD->getSpecializationKind();
+            if (SK == TSK_ExplicitInstantiationDeclaration ||
+                SK == TSK_ExplicitInstantiationDefinition)
+              return;
+          }
+        }
         if (const auto *DC = dyn_cast<DeclContext>(D))
           dumpDeclContext(DC);
       }
@@ -481,8 +490,10 @@ public:
 
     Visit(D->getTemplatedDecl());
 
-    for (const auto *Child : D->specializations())
-      dumpTemplateDeclSpecialization(Child);
+    if (Traversal == TK_AsIs) {
+      for (const auto *Child : D->specializations())
+        dumpTemplateDeclSpecialization(Child);
+    }
   }
 
   void VisitTypeAliasDecl(const TypeAliasDecl *D) {

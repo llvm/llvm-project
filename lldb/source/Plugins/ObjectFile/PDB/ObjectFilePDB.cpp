@@ -27,43 +27,11 @@ using namespace llvm::codeview;
 
 LLDB_PLUGIN_DEFINE(ObjectFilePDB)
 
-struct CVInfoPdb70 {
-  // 16-byte GUID
-  struct _Guid {
-    llvm::support::ulittle32_t Data1;
-    llvm::support::ulittle16_t Data2;
-    llvm::support::ulittle16_t Data3;
-    uint8_t Data4[8];
-  } Guid;
-
-  llvm::support::ulittle32_t Age;
-};
-
 static UUID GetPDBUUID(InfoStream &IS) {
-  // This part is similar with what has done in ObjectFilePECOFF.
-  using llvm::support::endian::read16be;
-  using llvm::support::endian::read32;
-  using llvm::support::endian::read32be;
-
-  GUID guid = IS.getGuid();
-  const uint8_t *guid_p = guid.Guid;
-  struct CVInfoPdb70 info;
-  info.Guid.Data1 = read32be(guid_p);
-  guid_p += 4;
-  info.Guid.Data2 = read16be(guid_p);
-  guid_p += 2;
-  info.Guid.Data3 = read16be(guid_p);
-  guid_p += 2;
-  memcpy(info.Guid.Data4, guid_p, 8);
-
-  // Return 20-byte UUID if the Age is not zero
-  uint32_t age = IS.getAge();
-  if (age) {
-    info.Age = read32(&age, llvm::support::big);
-    return UUID::fromOptionalData(&info, sizeof(info));
-  }
-  // Otherwise return 16-byte GUID
-  return UUID::fromOptionalData(&info.Guid, sizeof(info.Guid));
+  UUID::CvRecordPdb70 debug_info;
+  memcpy(&debug_info.Uuid, IS.getGuid().Guid, sizeof(debug_info.Uuid));
+  debug_info.Age = IS.getAge();
+  return UUID::fromCvRecord(debug_info);
 }
 
 char ObjectFilePDB::ID;

@@ -8,7 +8,7 @@
     br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
 
   for.body.preheader:                               ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %N)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.end, %entry
@@ -18,7 +18,7 @@
     %lsr.iv4 = phi i32* [ %b, %for.body.preheader ], [ %scevgep5, %for.end ]
     %lsr.iv2 = phi i32* [ %c, %for.body.preheader ], [ %scevgep3, %for.end ]
     %lsr.iv1 = phi i32* [ %a, %for.body.preheader ], [ %scevgep, %for.end ]
-    %lsr.iv = phi i32 [ %N, %for.body.preheader ], [ %lsr.iv.next, %for.end ]
+    %lsr.iv = phi i32 [ %start, %for.body.preheader ], [ %lsr.iv.next, %for.end ]
     %size = call i32 @llvm.arm.space(i32 3072, i32 undef)
     %0 = load i32, i32* %lsr.iv4, align 4
     %1 = load i32, i32* %lsr.iv2, align 4
@@ -46,7 +46,7 @@
   declare i32 @llvm.arm.space(i32 immarg, i32) #0
 
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #1
+  declare i32 @llvm.start.loop.iterations.i32(i32) #1
 
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
@@ -166,7 +166,7 @@ body:             |
     liveins: $r0, $r1, $r2, $r3, $r4, $lr
 
     $lr = tMOVr $r3, 14, $noreg
-    t2DoLoopStart killed $r3
+    $lr = t2DoLoopStart killed $r3
     tB %bb.2, 14, $noreg
 
   bb.2.for.end:

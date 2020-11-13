@@ -325,39 +325,39 @@ body:             |
 # GCN-LABEL: {{^}}name: vopc_instructions
 
 # GFX89: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
-# GFX89: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit $mode, implicit $exec
-# GFX89: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# GFX89: $vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit $exec
-# GFX89: $vcc = V_CMPX_EQ_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $exec
+# GFX89: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit $mode, implicit $exec
+# GFX89: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# GFX89: $vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit $exec
+# GFX89: $vcc = V_CMPX_EQ_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $exec
 
 
-# VI: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit $mode, implicit $exec
+# VI: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit $mode, implicit $exec
 # VI: %{{[0-9]+}}:sreg_64 = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, implicit-def $exec, implicit $mode, implicit $exec
-# VI: $vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %3, 0, 6, 4, implicit-def $vcc, implicit $exec
+# VI: $vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %3, 0, 6, 4, implicit $exec
 # VI: %{{[0-9]+}}:sreg_64 = V_CMPX_EQ_I32_e64 23, killed %{{[0-9]+}}, implicit-def $exec, implicit $exec
 
-# GFX9: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit $mode, implicit $exec
+# GFX9: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit $mode, implicit $exec
 # GFX9: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 23, implicit $exec
-# GFX9: %{{[0-9]+}}:sreg_64 = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# GFX9: $vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit $exec
+# GFX9: %{{[0-9]+}}:sreg_64 = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# GFX9: $vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit $exec
 # GFX9: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 23, implicit $exec
-# GFX9: %{{[0-9]+}}:sreg_64 = V_CMPX_EQ_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $exec
+# GFX9: %{{[0-9]+}}:sreg_64 = V_CMPX_EQ_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $exec
 
 
-# VI: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit-def $vcc, implicit $mode, implicit $exec
-# VI: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# VI: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit-def $vcc, implicit $mode, implicit $exec
-# VI: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# VI: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# VI: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# VI: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
+# VI: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit $mode, implicit $exec
+# VI: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# VI: $vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit $mode, implicit $exec
+# VI: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# VI: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# VI: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# VI: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
 
 # GFX9: $vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, implicit $mode, implicit $exec
-# GFX9: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
+# GFX9: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
 # GFX9: $vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, implicit $mode, implicit $exec
-# GFX9: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# GFX9: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
-# GFX9: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $vcc, implicit-def $exec, implicit $mode, implicit $exec
+# GFX9: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# GFX9: $vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
+# GFX9: $vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def $exec, implicit $mode, implicit $exec
 # GFX9: $vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %{{[0-9]+}}, 1, implicit-def $exec, implicit $mode, implicit $exec
 
 

@@ -50,6 +50,10 @@ GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
   TSchedModel.init(&ST);
 }
 
+void GCNHazardRecognizer::Reset() {
+  EmittedInstrs.clear();
+}
+
 void GCNHazardRecognizer::EmitInstruction(SUnit *SU) {
   EmitInstruction(SU->getInstr());
 }
@@ -207,9 +211,14 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   return NoHazard;
 }
 
-static void insertNoopInBundle(MachineInstr *MI, const SIInstrInfo &TII) {
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
-      .addImm(0);
+static void insertNoopsInBundle(MachineInstr *MI, const SIInstrInfo &TII,
+                                unsigned Quantity) {
+  while (Quantity > 0) {
+    unsigned Arg = std::min(Quantity, 8u);
+    Quantity -= Arg;
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
+        .addImm(Arg - 1);
+  }
 }
 
 void GCNHazardRecognizer::processBundle() {
@@ -220,11 +229,11 @@ void GCNHazardRecognizer::processBundle() {
     CurrCycleInstr = &*MI;
     unsigned WaitStates = PreEmitNoopsCommon(CurrCycleInstr);
 
-    if (IsHazardRecognizerMode)
+    if (IsHazardRecognizerMode) {
       fixHazards(CurrCycleInstr);
 
-    for (unsigned i = 0; i < WaitStates; ++i)
-      insertNoopInBundle(CurrCycleInstr, TII);
+      insertNoopsInBundle(CurrCycleInstr, TII, WaitStates);
+    }
 
     // It’s unnecessary to track more than MaxLookAhead instructions. Since we
     // include the bundled MI directly after, only add a maximum of
@@ -476,8 +485,8 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 // No-op Hazard Detection
 //===----------------------------------------------------------------------===//
 
-static void addRegUnits(const SIRegisterInfo &TRI,
-                        BitVector &BV, unsigned Reg) {
+static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
+                        MCRegister Reg) {
   for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI)
     BV.set(*RUI);
 }
@@ -487,7 +496,7 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
                          BitVector &Set) {
   for (const MachineOperand &Op : Ops) {
     if (Op.isReg())
-      addRegUnits(TRI, Set, Op.getReg());
+      addRegUnits(TRI, Set, Op.getReg().asMCReg());
   }
 }
 
@@ -948,7 +957,6 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   unsigned SDSTName;
   switch (MI->getOpcode()) {
   case AMDGPU::V_READLANE_B32:
-  case AMDGPU::V_READLANE_B32_gfx10:
   case AMDGPU::V_READFIRSTLANE_B32:
     SDSTName = AMDGPU::OpName::vdst;
     break;

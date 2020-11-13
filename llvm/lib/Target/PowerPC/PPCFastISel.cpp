@@ -1626,7 +1626,10 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (!isTypeLegal(ArgTy, ArgVT) && ArgVT != MVT::i16 && ArgVT != MVT::i8)
       return false;
 
-    if (ArgVT.isVector())
+    // FIXME: FastISel cannot handle non-simple types yet, including 128-bit FP
+    // types, which is passed through vector register. Skip these types and
+    // fallback to default SelectionDAG based selection.
+    if (ArgVT.isVector() || ArgVT == MVT::f128)
       return false;
 
     unsigned Arg = getRegForValue(ArgValue);

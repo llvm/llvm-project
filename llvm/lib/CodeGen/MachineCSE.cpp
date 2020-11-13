@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
@@ -115,18 +116,18 @@ namespace {
 
     bool PerformTrivialCopyPropagation(MachineInstr *MI,
                                        MachineBasicBlock *MBB);
-    bool isPhysDefTriviallyDead(unsigned Reg,
+    bool isPhysDefTriviallyDead(MCRegister Reg,
                                 MachineBasicBlock::const_iterator I,
                                 MachineBasicBlock::const_iterator E) const;
     bool hasLivePhysRegDefUses(const MachineInstr *MI,
                                const MachineBasicBlock *MBB,
-                               SmallSet<unsigned, 8> &PhysRefs,
+                               SmallSet<MCRegister, 8> &PhysRefs,
                                PhysDefVector &PhysDefs, bool &PhysUseDef) const;
     bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                          SmallSet<unsigned, 8> &PhysRefs,
+                          SmallSet<MCRegister, 8> &PhysRefs,
                           PhysDefVector &PhysDefs, bool &NonLocal) const;
     bool isCSECandidate(MachineInstr *MI);
-    bool isProfitableToCSE(unsigned CSReg, unsigned Reg,
+    bool isProfitableToCSE(Register CSReg, Register Reg,
                            MachineBasicBlock *CSBB, MachineInstr *MI);
     void EnterScope(MachineBasicBlock *MBB);
     void ExitScope(MachineBasicBlock *MBB);
@@ -218,10 +219,9 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
   return Changed;
 }
 
-bool
-MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
-                                   MachineBasicBlock::const_iterator I,
-                                   MachineBasicBlock::const_iterator E) const {
+bool MachineCSE::isPhysDefTriviallyDead(
+    MCRegister Reg, MachineBasicBlock::const_iterator I,
+    MachineBasicBlock::const_iterator E) const {
   unsigned LookAheadLeft = LookAheadLimit;
   while (LookAheadLeft) {
     // Skip over dbg_value's.
@@ -255,7 +255,7 @@ MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
   return false;
 }
 
-static bool isCallerPreservedOrConstPhysReg(unsigned Reg,
+static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
                                             const MachineFunction &MF,
                                             const TargetRegisterInfo &TRI) {
   // MachineRegisterInfo::isConstantPhysReg directly called by
@@ -276,7 +276,7 @@ static bool isCallerPreservedOrConstPhysReg(unsigned Reg,
 /// instruction does not uses a physical register.
 bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
                                        const MachineBasicBlock *MBB,
-                                       SmallSet<unsigned, 8> &PhysRefs,
+                                       SmallSet<MCRegister, 8> &PhysRefs,
                                        PhysDefVector &PhysDefs,
                                        bool &PhysUseDef) const {
   // First, add all uses to PhysRefs.
@@ -289,7 +289,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (Register::isVirtualRegister(Reg))
       continue;
     // Reading either caller preserved or constant physregs is ok.
-    if (!isCallerPreservedOrConstPhysReg(Reg, *MI->getMF(), *TRI))
+    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), *MI->getMF(), *TRI))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }
@@ -308,12 +308,12 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (Register::isVirtualRegister(Reg))
       continue;
     // Check against PhysRefs even if the def is "dead".
-    if (PhysRefs.count(Reg))
+    if (PhysRefs.count(Reg.asMCReg()))
       PhysUseDef = true;
     // If the def is dead, it's ok. But the def may not marked "dead". That's
     // common since this pass is run before livevariables. We can scan
     // forward a few instructions and check if it is obviously dead.
-    if (!MO.isDead() && !isPhysDefTriviallyDead(Reg, I, MBB->end()))
+    if (!MO.isDead() && !isPhysDefTriviallyDead(Reg.asMCReg(), I, MBB->end()))
       PhysDefs.push_back(std::make_pair(MOP.index(), Reg));
   }
 
@@ -327,7 +327,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
 }
 
 bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                                  SmallSet<unsigned, 8> &PhysRefs,
+                                  SmallSet<MCRegister, 8> &PhysRefs,
                                   PhysDefVector &PhysDefs,
                                   bool &NonLocal) const {
   // For now conservatively returns false if the common subexpression is
@@ -382,7 +382,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
       Register MOReg = MO.getReg();
       if (Register::isVirtualRegister(MOReg))
         continue;
-      if (PhysRefs.count(MOReg))
+      if (PhysRefs.count(MOReg.asMCReg()))
         return false;
     }
 
@@ -429,7 +429,7 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
 /// isProfitableToCSE - Return true if it's profitable to eliminate MI with a
 /// common expression that defines Reg. CSBB is basic block where CSReg is
 /// defined.
-bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
+bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
                                    MachineBasicBlock *CSBB, MachineInstr *MI) {
   // FIXME: Heuristics that works around the lack the live range splitting.
 
@@ -556,7 +556,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
     // used, then it's not safe to replace it with a common subexpression.
     // It's also not safe if the instruction uses physical registers.
     bool CrossMBBPhysDef = false;
-    SmallSet<unsigned, 8> PhysRefs;
+    SmallSet<MCRegister, 8> PhysRefs;
     PhysDefVector PhysDefs;
     bool PhysUseDef = false;
     if (FoundCSE && hasLivePhysRegDefUses(MI, MBB, PhysRefs,

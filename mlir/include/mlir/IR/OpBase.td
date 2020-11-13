@@ -38,14 +38,15 @@ class StrFunc<string r> {
   string result = r;
 }
 
+// TODO: Use !interleave() directly rather than through StrJoin/StrJoinInt.
+
 // Concatenates a list of strings with a separator (default ", ")
 class StrJoin<list<string> strings, string sep = ", "> :
-    StrFunc<!if(!empty(strings), "",
-         !foldl(!head(strings), !tail(strings), prev, cur, prev # sep # cur))>;
+    StrFunc<!interleave(strings, sep)>;
 
 // Concatenates a list of integers into a string with a separator (default ", ")
 class StrJoinInt<list<int> integers, string sep = ", "> :
-    StrJoin<!foreach(i, integers, !cast<string>(i)), sep>;
+    StrFunc<!interleave(integers, sep)>;
 
 //===----------------------------------------------------------------------===//
 // Predicate definitions
@@ -913,7 +914,7 @@ class SignlessIntegerAttrBase<I attrValType, string descr> :
   let returnType = [{ ::llvm::APInt }];
 }
 // Base class for signless integer attributes of fixed width that have a
-// correpsonding C++ type.
+// corresponding C++ type.
 class TypedSignlessIntegerAttrBase<I attrValType, string retType, string descr>
     : SignlessIntegerAttrBase<attrValType, descr> {
   let returnType = retType;
@@ -942,7 +943,7 @@ class SignedIntegerAttrBase<SI attrValType, string descr> :
   let returnType = [{ ::llvm::APInt }];
 }
 // Base class for signed integer attributes of fixed width that have a
-// correpsonding C++ type.
+// corresponding C++ type.
 class TypedSignedIntegerAttrBase<SI attrValType, string retType, string descr>
     : SignedIntegerAttrBase<attrValType, descr> {
   let returnType = retType;
@@ -971,7 +972,7 @@ class UnsignedIntegerAttrBase<UI attrValType, string descr> :
   let returnType = [{ ::llvm::APInt }];
 }
 // Base class for unsigned integer attributes of fixed width that have a
-// correpsonding C++ type.
+// corresponding C++ type.
 class TypedUnsignedIntegerAttrBase<UI attrValType, string retType, string descr>
     : UnsignedIntegerAttrBase<attrValType, descr> {
   let returnType = retType;
@@ -1585,8 +1586,7 @@ class Confined<Attr attr, list<AttrConstraint> constraints> : Attr<
 class AllAttrConstraintsOf<list<AttrConstraint> constraints> : AttrConstraint<
     And<!listconcat([!head(constraints).predicate],
                       !foreach(pred, !tail(constraints), pred.predicate))>,
-    !foldl(/*init*/!head(constraints).description, /*list*/!tail(constraints),
-           prev, cur, prev # " and " # cur.description)> {
+    !interleave(!foreach(con, constraints, con.description), " and ")> {
 }
 
 class IntMinValue<int n> : AttrConstraint<
@@ -1750,6 +1750,9 @@ def Terminator : NativeOpTrait<"IsTerminator">;
 // Op can be safely normalized in the presence of MemRefs with
 // non-identity maps.
 def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
+// Op can be systematically interconverted between scalar and vector/tensor
+// form by mapping elementwise based on the type.
+def ElementwiseMappable : NativeOpTrait<"ElementwiseMappable">;
 
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>

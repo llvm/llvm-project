@@ -271,6 +271,11 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
                                          SmallVector<wasm::ValType, 4>());
             break;
           }
+        } else if (Info.OperandType == WebAssembly::OPERAND_HEAPTYPE) {
+          assert(static_cast<WebAssembly::HeapType>(MO.getImm()) !=
+                 WebAssembly::HeapType::Invalid);
+          // With typed function references, this will need a case for type
+          // index operands.  Otherwise, fall through.
         }
       }
       MCOp = MCOperand::createImm(MO.getImm());

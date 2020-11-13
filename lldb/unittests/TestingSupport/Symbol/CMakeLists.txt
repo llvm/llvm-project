@@ -6,9 +6,11 @@ add_lldb_library(lldbSymbolHelpers
     lldbCore
     lldbHost
     lldbPluginExpressionParserClang
+    lldbPluginObjectFileELF
     lldbPluginSymbolFileDWARF
     lldbPluginTypeSystemClang
     lldbUtilityHelpers
+    LLVMTestingSupport
 
   LINK_COMPONENTS
     ObjectYAML

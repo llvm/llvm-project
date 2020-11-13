@@ -14,7 +14,6 @@ class ExitDuringStepTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit during step handling."""
@@ -24,7 +23,6 @@ class ExitDuringStepTestCase(TestBase):
             'stop reason = instruction step',
             True)
 
-    @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_step_over(self):
         """Test thread exit during step-over handling."""
@@ -34,7 +32,6 @@ class ExitDuringStepTestCase(TestBase):
             'stop reason = step over',
             False)
 
-    @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_step_in(self):
         """Test thread exit during step-in handling."""

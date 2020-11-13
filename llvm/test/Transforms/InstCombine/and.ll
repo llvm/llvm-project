@@ -973,3 +973,130 @@ define <2 x i59> @lowbitmask_casted_shift_vec_splat(<2 x i47> %x) {
   %r = and <2 x i59> %s, <i59 18014398509481983, i59 18014398509481983>  ;  -1 u>> 5 == 0x3f_ffff_ffff_ffff
   ret <2 x i59> %r
 }
+
+define i32 @lowmask_sext_in_reg(i32 %x) {
+; CHECK-LABEL: @lowmask_sext_in_reg(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 20
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 20
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 20
+  %r = ashr i32 %l, 20
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4095
+  ret i32 %and
+}
+
+define i32 @lowmask_not_sext_in_reg(i32 %x) {
+; CHECK-LABEL: @lowmask_not_sext_in_reg(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 19
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[L]], 20
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 19
+  %r = ashr i32 %l, 20
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4095
+  ret i32 %and
+}
+
+define i32 @not_lowmask_sext_in_reg(i32 %x) {
+; CHECK-LABEL: @not_lowmask_sext_in_reg(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 20
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 20
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4096
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 20
+  %r = ashr i32 %l, 20
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4096
+  ret i32 %and
+}
+
+define i32 @not_lowmask_sext_in_reg2(i32 %x) {
+; CHECK-LABEL: @not_lowmask_sext_in_reg2(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 21
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 [[L]], 21
+; CHECK-NEXT:    call void @use32(i32 [[R]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %l = shl i32 %x, 21
+  %r = ashr i32 %l, 21
+  call void @use32(i32 %r)
+  %and = and i32 %r, 4095
+  ret i32 %and
+}
+
+define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, <2 x i32>* %p) {
+; CHECK-LABEL: @lowmask_sext_in_reg_splat(
+; CHECK-NEXT:    [[L:%.*]] = shl <2 x i32> [[X:%.*]], <i32 20, i32 20>
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i32> [[L]], <i32 20, i32 20>
+; CHECK-NEXT:    store <2 x i32> [[R]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[R]], <i32 4095, i32 4095>
+; CHECK-NEXT:    ret <2 x i32> [[AND]]
+;
+  %l = shl <2 x i32> %x, <i32 20, i32 20>
+  %r = ashr <2 x i32> %l, <i32 20, i32 20>
+  store <2 x i32> %r, <2 x i32>* %p
+  %and = and <2 x i32> %r, <i32 4095, i32 4095>
+  ret <2 x i32> %and
+}
+
+define i8 @lowmask_add(i8 %x) {
+; CHECK-LABEL: @lowmask_add(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -64 ; 0xc0
+  call void @use8(i8 %a)
+  %r = and i8 %a, 32 ; 0x20
+  ret i8 %r
+}
+
+define i8 @not_lowmask_add(i8 %x) {
+; CHECK-LABEL: @not_lowmask_add(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 64
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -64 ; 0xc0
+  call void @use8(i8 %a)
+  %r = and i8 %a, 64 ; 0x40
+  ret i8 %r
+}
+
+define i8 @not_lowmask_add2(i8 %x) {
+; CHECK-LABEL: @not_lowmask_add2(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -96
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 63
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -96 ; 0xe0
+  call void @use8(i8 %a)
+  %r = and i8 %a, 63 ; 0x3f
+  ret i8 %r
+}
+
+define <2 x i8> @lowmask_add_splat(<2 x i8> %x, <2 x i8>* %p) {
+; CHECK-LABEL: @lowmask_add_splat(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 32, i8 32>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
+  store <2 x i8> %a, <2 x i8>* %p
+  %r = and <2 x i8> %a, <i8 32, i8 32> ; 0x20
+  ret <2 x i8> %r
+}

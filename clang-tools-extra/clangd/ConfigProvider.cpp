@@ -13,9 +13,11 @@
 #include "support/Trace.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <chrono>
 #include <mutex>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -51,14 +53,18 @@ class FileConfigCache {
 
     // Finally parse and compile the actual fragments.
     for (auto &Fragment :
-         Fragment::parseYAML(Buf->get()->getBuffer(), Path, DC))
+         Fragment::parseYAML(Buf->get()->getBuffer(), Path, DC)) {
+      Fragment.Source.Directory = Directory;
       CachedValue.push_back(std::move(Fragment).compile(DC));
+    }
   }
 
 public:
   // Must be set before the cache is used. Not a constructor param to allow
   // computing ancestor-relative paths to be deferred.
   std::string Path;
+  // Directory associated with this fragment.
+  std::string Directory;
 
   // Retrieves up-to-date config fragments from disk.
   // A cached result may be reused if the mtime and size are unchanged.
@@ -105,6 +111,7 @@ public:
 };
 
 std::unique_ptr<Provider> Provider::fromYAMLFile(llvm::StringRef AbsPath,
+                                                 llvm::StringRef Directory,
                                                  const ThreadsafeFS &FS) {
   class AbsFileProvider : public Provider {
     mutable FileConfigCache Cache; // threadsafe
@@ -118,13 +125,16 @@ std::unique_ptr<Provider> Provider::fromYAMLFile(llvm::StringRef AbsPath,
     };
 
   public:
-    AbsFileProvider(llvm::StringRef Path, const ThreadsafeFS &FS) : FS(FS) {
+    AbsFileProvider(llvm::StringRef Path, llvm::StringRef Directory,
+                    const ThreadsafeFS &FS)
+        : FS(FS) {
       assert(llvm::sys::path::is_absolute(Path));
       Cache.Path = Path.str();
+      Cache.Directory = Directory.str();
     }
   };
 
-  return std::make_unique<AbsFileProvider>(AbsPath, FS);
+  return std::make_unique<AbsFileProvider>(AbsPath, Directory, FS);
 }
 
 std::unique_ptr<Provider>
@@ -170,6 +180,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
             llvm::SmallString<256> ConfigPath = Ancestor;
             path::append(ConfigPath, RelPath);
             R.first->second.Path = ConfigPath.str().str();
+            R.first->second.Directory = Ancestor.str();
           }
           Caches.push_back(&R.first->second);
         }
@@ -177,8 +188,9 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
       // Finally query each individual file.
       // This will take a (per-file) lock for each file that actually exists.
       std::vector<CompiledFragment> Result;
-      for (FileConfigCache *Cache : Caches)
+      for (FileConfigCache *Cache : Caches) {
         Cache->read(FS, DC, P.FreshTime, Result);
+      }
       return Result;
     };
 

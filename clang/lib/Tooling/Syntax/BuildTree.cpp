@@ -636,12 +636,11 @@ private:
           (EndChildren == Trees.end() || EndChildren->first == Tokens.end()) &&
           "fold crosses boundaries of existing subtrees");
 
-      // We need to go in reverse order, because we can only prepend.
-      for (auto It = EndChildren; It != BeginChildren; --It) {
-        auto *C = std::prev(It)->second;
+      for (auto It = BeginChildren; It != EndChildren; ++It) {
+        auto *C = It->second;
         if (C->getRole() == NodeRole::Detached)
           C->setRole(NodeRole::Unknown);
-        Node->prependChildLowLevel(C);
+        Node->appendChildLowLevel(C);
       }
 
       // Mark that this node came from the AST and is backed by the source code.
@@ -1712,9 +1711,9 @@ const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
   return It->second;
 }
 
-syntax::TranslationUnit *
-syntax::buildSyntaxTree(Arena &A, const TranslationUnitDecl &TU) {
+syntax::TranslationUnit *syntax::buildSyntaxTree(Arena &A,
+                                                 ASTContext &Context) {
   TreeBuilder Builder(A);
-  BuildTreeVisitor(TU.getASTContext(), Builder).TraverseAST(TU.getASTContext());
+  BuildTreeVisitor(Context, Builder).TraverseAST(Context);
   return std::move(Builder).finalize();
 }

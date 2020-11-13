@@ -25,7 +25,6 @@ ProgramHeaders:
     Flags: [ PF_X, PF_R ]
     VAddr: 0x400000
     Align: 0x1000
-    Sections:
-      - Section: .text1
-      - Section: .text2
+    FirstSec: .text1
+    LastSec:  .text2
 ...

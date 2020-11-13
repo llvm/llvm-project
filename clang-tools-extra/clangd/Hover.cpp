@@ -269,7 +269,7 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
   if (!ID)
     return;
   LookupRequest Req;
-  Req.IDs.insert(*ID);
+  Req.IDs.insert(ID);
   Index->lookup(Req, [&](const Symbol &S) {
     Hover.Documentation = std::string(S.Documentation);
   });

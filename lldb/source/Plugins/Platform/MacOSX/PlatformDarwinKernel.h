@@ -57,7 +57,7 @@ public:
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,
-                  lldb::ModuleSP *old_module_sp_ptr,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr) override;
 
   bool GetSupportedArchitectureAtIndex(uint32_t idx,
@@ -143,13 +143,14 @@ protected:
   GetSharedModuleKext(const lldb_private::ModuleSpec &module_spec,
                       lldb_private::Process *process, lldb::ModuleSP &module_sp,
                       const lldb_private::FileSpecList *module_search_paths_ptr,
-                      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+                      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                      bool *did_create_ptr);
 
   lldb_private::Status GetSharedModuleKernel(
       const lldb_private::ModuleSpec &module_spec,
       lldb_private::Process *process, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr,
-      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   lldb_private::Status
   ExamineKextForMatchingUUID(const lldb_private::FileSpec &kext_bundle_path,

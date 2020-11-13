@@ -32,7 +32,7 @@ struct DDLogicalThread {
   bool report_pending;
 };
 
-struct DD : public DDetector {
+struct DD final : public DDetector {
   SpinMutex mtx;
   DeadlockDetector<DDBV> dd;
   DDFlags flags;

@@ -271,6 +271,8 @@ public:
     }
   }
 
+  const Symbol *GetFinalForRank(int) const;
+
 private:
   // These are (1) the names of the derived type parameters in the order
   // in which they appear on the type definition statement(s), and (2) the
@@ -501,10 +503,12 @@ public:
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
       // OpenMP data-mapping attribute
       OmpMapTo, OmpMapFrom, OmpMapAlloc, OmpMapRelease, OmpMapDelete,
+      // OpenMP data-copying attribute
+      OmpCopyIn,
       // OpenMP miscellaneous flags
       OmpCommonBlock, OmpReduction, OmpAllocate, OmpDeclareSimd,
       OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction, OmpFlushed,
-      OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined, OmpAligned);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

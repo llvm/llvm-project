@@ -123,52 +123,72 @@ enum SpillOpcodeKey {
   SOK_VectorFloat8Spill,
   SOK_VectorFloat4Spill,
   SOK_SpillToVSR,
+  SOK_PairedVecSpill,
+  SOK_AccumulatorSpill,
+  SOK_UAccumulatorSpill,
   SOK_SPESpill,
   SOK_LastOpcodeSpill // This must be last on the enum.
 };
 
 // Define list of load and store spill opcodes.
+#define NoInstr PPC::INSTRUCTION_LIST_END
 #define Pwr8LoadOpcodes                                                        \
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,    \
-        PPC::SPILLTOVSR_LD, PPC::EVLDD                                         \
+        PPC::SPILLTOVSR_LD, NoInstr, NoInstr, NoInstr, PPC::EVLDD              \
   }
 
 #define Pwr9LoadOpcodes                                                        \
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
-        PPC::DFLOADf32, PPC::SPILLTOVSR_LD                                     \
+        PPC::DFLOADf32, PPC::SPILLTOVSR_LD, NoInstr, NoInstr, NoInstr, NoInstr \
+  }
+
+#define Pwr10LoadOpcodes                                                       \
+  {                                                                            \
+    PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
+        PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
+        PPC::DFLOADf32, PPC::SPILLTOVSR_LD, PPC::LXVP, PPC::RESTORE_ACC,       \
+        PPC::RESTORE_UACC, NoInstr                                             \
   }
 
 #define Pwr8StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX,                    \
-        PPC::SPILLTOVSR_ST, PPC::EVSTDD                                        \
+        PPC::SPILLTOVSR_ST, NoInstr, NoInstr, NoInstr, PPC::EVSTDD             \
   }
 
 #define Pwr9StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
-        PPC::SPILLTOVSR_ST                                                     \
+        PPC::SPILLTOVSR_ST, NoInstr, NoInstr, NoInstr, NoInstr                 \
+  }
+
+#define Pwr10StoreOpcodes                                                      \
+  {                                                                            \
+    PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
+        PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
+        PPC::SPILLTOVSR_ST, PPC::STXVP, PPC::SPILL_ACC, PPC::SPILL_UACC,       \
+        NoInstr                                                                \
   }
 
 // Initialize arrays for load and store spill opcodes on supported subtargets.
 #define StoreOpcodesForSpill                                                   \
-  { Pwr8StoreOpcodes, Pwr9StoreOpcodes }
+  { Pwr8StoreOpcodes, Pwr9StoreOpcodes, Pwr10StoreOpcodes }
 #define LoadOpcodesForSpill                                                    \
-  { Pwr8LoadOpcodes, Pwr9LoadOpcodes }
+  { Pwr8LoadOpcodes, Pwr9LoadOpcodes, Pwr10LoadOpcodes }
 
 class PPCSubtarget;
 class PPCInstrInfo : public PPCGenInstrInfo {
   PPCSubtarget &Subtarget;
   const PPCRegisterInfo RI;
-  const unsigned StoreSpillOpcodesArray[2][SOK_LastOpcodeSpill] =
+  const unsigned StoreSpillOpcodesArray[3][SOK_LastOpcodeSpill] =
       StoreOpcodesForSpill;
-  const unsigned LoadSpillOpcodesArray[2][SOK_LastOpcodeSpill] =
+  const unsigned LoadSpillOpcodesArray[3][SOK_LastOpcodeSpill] =
       LoadOpcodesForSpill;
 
   void StoreRegToStackSlot(MachineFunction &MF, unsigned SrcReg, bool isKill,
@@ -226,6 +246,7 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   unsigned getSpillTarget() const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
+  unsigned getSpillIndex(const TargetRegisterClass *RC) const;
   int16_t getFMAOpIdxInfo(unsigned Opcode) const;
   void reassociateFMA(MachineInstr &Root, MachineCombinerPattern Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -564,6 +585,7 @@ public:
   bool convertToImmediateForm(MachineInstr &MI,
                               MachineInstr **KilledDef = nullptr) const;
   bool foldFrameOffset(MachineInstr &MI) const;
+  bool combineRLWINM(MachineInstr &MI, MachineInstr **ToErase = nullptr) const;
   bool isADDIInstrEligibleForFolding(MachineInstr &ADDIMI, int64_t &Imm) const;
   bool isADDInstrEligibleForFolding(MachineInstr &ADDMI) const;
   bool isImmInstrEligibleForFolding(MachineInstr &MI, unsigned &BaseReg,

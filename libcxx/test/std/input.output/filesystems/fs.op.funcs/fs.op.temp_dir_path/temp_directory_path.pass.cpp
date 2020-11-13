@@ -50,7 +50,7 @@ TEST_CASE(basic_tests)
     const path dir_perms = env.create_dir("bad_perms_dir");
     const path nested_dir = env.create_dir("bad_perms_dir/nested");
     permissions(dir_perms, perms::none);
-    const std::error_code expect_ec = std::make_error_code(std::errc::not_a_directory);
+    LIBCPP_ONLY(const std::errc expect_errc = std::errc::not_a_directory);
     struct TestCase {
       std::string name;
       path p;
@@ -75,7 +75,7 @@ TEST_CASE(basic_tests)
         PutEnv(TC.name, dne);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        LIBCPP_ONLY(TEST_CHECK(ec == expect_ec));
+        LIBCPP_ONLY(TEST_CHECK(ErrorIs(ec, expect_errc)));
         TEST_CHECK(ec != GetTestEC());
         TEST_CHECK(ec);
         TEST_CHECK(ret == "");
@@ -84,7 +84,7 @@ TEST_CASE(basic_tests)
         PutEnv(TC.name, file);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        LIBCPP_ONLY(TEST_CHECK(ec == expect_ec));
+        LIBCPP_ONLY(TEST_CHECK(ErrorIs(ec, expect_errc)));
         TEST_CHECK(ec != GetTestEC());
         TEST_CHECK(ec);
         TEST_CHECK(ret == "");
@@ -93,7 +93,7 @@ TEST_CASE(basic_tests)
         PutEnv(TC.name, nested_dir);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        TEST_CHECK(ec == std::make_error_code(std::errc::permission_denied));
+        TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
         TEST_CHECK(ret == "");
 
         // Set the env variable to point to a non-existent dir

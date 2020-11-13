@@ -1,21 +1,21 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
-import mlir
+from mlir.ir import *
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
   gc.collect()
-  assert mlir.ir.Context._get_live_count() == 0
+  assert Context._get_live_count() == 0
 
 
 # Verify successful parse.
 # CHECK-LABEL: TEST: testParseSuccess
 # CHECK: module @successfulParse
 def testParseSuccess():
-  ctx = mlir.ir.Context()
-  module = ctx.parse_module(r"""module @successfulParse {}""")
+  ctx = Context()
+  module = Module.parse(r"""module @successfulParse {}""", ctx)
   assert module.context is ctx
   print("CLEAR CONTEXT")
   ctx = None  # Ensure that module captures the context.
@@ -30,9 +30,9 @@ run(testParseSuccess)
 # CHECK-LABEL: TEST: testParseError
 # CHECK: testParseError: Unable to parse module assembly (see diagnostics)
 def testParseError():
-  ctx = mlir.ir.Context()
+  ctx = Context()
   try:
-    module = ctx.parse_module(r"""}SYNTAX ERROR{""")
+    module = Module.parse(r"""}SYNTAX ERROR{""", ctx)
   except ValueError as e:
     print("testParseError:", e)
   else:
@@ -45,9 +45,9 @@ run(testParseError)
 # CHECK-LABEL: TEST: testCreateEmpty
 # CHECK: module {
 def testCreateEmpty():
-  ctx = mlir.ir.Context()
-  loc = ctx.get_unknown_location()
-  module = ctx.create_module(loc)
+  ctx = Context()
+  loc = Location.unknown(ctx)
+  module = Module.create(loc)
   print("CLEAR CONTEXT")
   ctx = None  # Ensure that module captures the context.
   gc.collect()
@@ -63,10 +63,10 @@ run(testCreateEmpty)
 # CHECK: func @roundtripUnicode()
 # CHECK: foo = "\F0\9F\98\8A"
 def testRoundtripUnicode():
-  ctx = mlir.ir.Context()
-  module = ctx.parse_module(r"""
+  ctx = Context()
+  module = Module.parse(r"""
     func @roundtripUnicode() attributes { foo = "😊" }
-  """)
+  """, ctx)
   print(str(module))
 
 run(testRoundtripUnicode)
@@ -75,8 +75,8 @@ run(testRoundtripUnicode)
 # Tests that module.operation works and correctly interns instances.
 # CHECK-LABEL: TEST: testModuleOperation
 def testModuleOperation():
-  ctx = mlir.ir.Context()
-  module = ctx.parse_module(r"""module @successfulParse {}""")
+  ctx = Context()
+  module = Module.parse(r"""module @successfulParse {}""", ctx)
   assert ctx._get_live_module_count() == 1
   op1 = module.operation
   assert ctx._get_live_operation_count() == 1
@@ -106,13 +106,13 @@ run(testModuleOperation)
 
 # CHECK-LABEL: TEST: testModuleCapsule
 def testModuleCapsule():
-  ctx = mlir.ir.Context()
-  module = ctx.parse_module(r"""module @successfulParse {}""")
+  ctx = Context()
+  module = Module.parse(r"""module @successfulParse {}""", ctx)
   assert ctx._get_live_module_count() == 1
   # CHECK: "mlir.ir.Module._CAPIPtr"
   module_capsule = module._CAPIPtr
   print(module_capsule)
-  module_dup = mlir.ir.Module._CAPICreate(module_capsule)
+  module_dup = Module._CAPICreate(module_capsule)
   assert module is module_dup
   assert module_dup.context is ctx
   # Gc and verify destructed.

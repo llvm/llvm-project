@@ -40,10 +40,13 @@ class SuspendedThreadsList {
   virtual uptr ThreadCount() const { UNIMPLEMENTED(); }
   virtual tid_t GetThreadID(uptr index) const { UNIMPLEMENTED(); }
 
+ protected:
+  ~SuspendedThreadsList() {}
+
  private:
   // Prohibit copy and assign.
-  SuspendedThreadsList(const SuspendedThreadsList&);
-  void operator=(const SuspendedThreadsList&);
+  SuspendedThreadsList(const SuspendedThreadsList &) = delete;
+  void operator=(const SuspendedThreadsList &) = delete;
 };
 
 typedef void (*StopTheWorldCallback)(

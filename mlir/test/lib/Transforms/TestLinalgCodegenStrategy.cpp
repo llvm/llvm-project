@@ -143,8 +143,10 @@ void TestLinalgCodegenStrategy::runOnFunction() {
 }
 
 namespace mlir {
+namespace test {
 void registerTestLinalgCodegenStrategy() {
   PassRegistration<TestLinalgCodegenStrategy> testLinalgCodegenStrategyPass(
       "test-linalg-codegen-strategy", "Test Linalg Codegen Strategy.");
 }
+} // namespace test
 } // namespace mlir

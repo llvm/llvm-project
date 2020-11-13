@@ -1737,6 +1737,21 @@ public:
     return 5;
   }
 
+  /// Return the maximal number of alias checks on memory operands. For
+  /// instructions with more than one memory operands, the alias check on a
+  /// single MachineInstr pair has quadratic overhead and results in
+  /// unacceptable performance in the worst case. The limit here is to clamp
+  /// that maximal checks performed. Usually, that's the product of memory
+  /// operand numbers from that pair of MachineInstr to be checked. For
+  /// instance, with two MachineInstrs with 4 and 5 memory operands
+  /// correspondingly, a total of 20 checks are required. With this limit set to
+  /// 16, their alias check is skipped. We choose to limit the product instead
+  /// of the individual instruction as targets may have special MachineInstrs
+  /// with a considerably high number of memory operands, such as `ldm` in ARM.
+  /// Setting this limit per MachineInstr would result in either too high
+  /// overhead or too rigid restriction.
+  virtual unsigned getMemOperandAACheckLimit() const { return 16; }
+
   /// Return an array that contains the ids of the target indices (used for the
   /// TargetIndex machine operand) and their names.
   ///
