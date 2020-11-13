@@ -3928,10 +3928,67 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
 
-  // If we have more than one job, then disable integrated-cc1 for now.
-  if (C.getJobs().size() > 1)
+  StringRef StatReportFile;
+  bool PrintProcessStat = false;
+  if (const Arg *A = C.getArgs().getLastArg(options::OPT_fproc_stat_report_EQ))
+    StatReportFile = A->getValue();
+  if (C.getArgs().hasArg(options::OPT_fproc_stat_report))
+    PrintProcessStat = true;
+
+  // If we have more than one job, then disable integrated-cc1 for now. Do this
+  // also when we need to report process execution statistics.
+  if (C.getJobs().size() > 1 || !StatReportFile.empty() || PrintProcessStat)
     for (auto &J : C.getJobs())
       J.InProcess = false;
+
+  if (!StatReportFile.empty() || PrintProcessStat) {
+    C.setPostCallback([=](const Command &Cmd, int Res) {
+      Optional<llvm::sys::ProcessStatistics> ProcStat =
+          Cmd.getProcessStatistics();
+      if (!ProcStat)
+        return;
+      if (PrintProcessStat) {
+        using namespace llvm;
+        // Human readable output.
+        outs() << sys::path::filename(Cmd.getExecutable()) << ": "
+               << "output=";
+        if (Cmd.getOutputFilenames().empty())
+          outs() << "\"\"";
+        else
+          outs() << Cmd.getOutputFilenames().front();
+        outs() << ", total="
+               << format("%.3f", ProcStat->TotalTime.count() / 1000.) << " ms"
+               << ", user="
+               << format("%.3f", ProcStat->UserTime.count() / 1000.) << " ms"
+               << ", mem=" << ProcStat->PeakMemory << " Kb\n";
+      }
+      if (!StatReportFile.empty()) {
+        // CSV format.
+        std::string Buffer;
+        llvm::raw_string_ostream Out(Buffer);
+        Out << llvm::sys::path::filename(Cmd.getExecutable()) << ',';
+        if (Cmd.getOutputFilenames().empty())
+          Out << "\"\"";
+        else
+          llvm::sys::printArg(Out, Cmd.getOutputFilenames().front(), true);
+        Out << ',' << ProcStat->TotalTime.count() << ','
+            << ProcStat->UserTime.count() << ',' << ProcStat->PeakMemory
+            << '\n';
+        Out.flush();
+        std::error_code EC;
+        llvm::raw_fd_ostream OS(StatReportFile, EC, llvm::sys::fs::OF_Append);
+        if (EC)
+          return;
+        auto L = OS.lock();
+        if (!L) {
+          llvm::errs() << "ERROR: Cannot lock file " << StatReportFile << ": "
+                       << toString(L.takeError()) << "\n";
+          return;
+        }
+        OS << Buffer;
+      }
+    });
+  }
 
   // If the user passed -Qunused-arguments or there were errors, don't warn
   // about any unused arguments.

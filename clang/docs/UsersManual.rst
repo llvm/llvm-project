@@ -747,6 +747,51 @@ Current limitations
    translated from debug annotations. That translation can be lossy,
    which results in some remarks having no location information.
 
+Options to Emit Resource Consumption Reports
+--------------------------------------------
+
+These are options that report execution time and consumed memory of different
+compilations steps.
+
+.. option:: -fproc-stat-report=
+
+  This option requests driver to print used memory and execution time of each
+  compilation step. The ``clang`` driver during execution calls different tools,
+  like compiler, assembler, linker etc. With this option the driver reports
+  total execution time, the execution time spent in user mode and peak memory
+  usage of each the called tool. Value of the option specifies where the report
+  is sent to. If it specifies a regular file, the data are saved to this file in
+  CSV format:
+
+.. code-block:: console
+
+   $ clang -fproc-stat-report=abc foo.c
+   $ cat abc
+   clang-11,"/tmp/foo-123456.o",92000,84000,87536
+   ld,"a.out",900,8000,53568
+
+  The data on each row represent:
+  
+  * file name of the tool executable,
+  * output file name in quotes,
+  * total execution time in microseconds,
+  * execution time in user mode in microseconds,
+  * peak memory usage in Kb.
+  
+  It is possible to specify this option without any value. In this case statistics
+  is printed on standard output in human readable format:
+  
+.. code-block:: console
+
+  $ clang -fproc-stat-report foo.c
+  clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
+  ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
+  
+  The report file specified in the option is locked for write, so this option
+  can be used to collect statistics in parallel builds. The report file is not
+  cleared, new data is appended to it, thus making posible to accumulate build
+  statistics.
+
 Other Options
 -------------
 Clang options that don't fit neatly into other categories.
