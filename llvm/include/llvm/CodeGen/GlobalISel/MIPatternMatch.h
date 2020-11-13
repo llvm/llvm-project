@@ -68,8 +68,13 @@ inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
   return SpecificConstantMatch(RequestedValue);
 }
 
-/// Matches an integer 0.
+///{
+/// Convenience matchers for specific integer values.
 inline SpecificConstantMatch m_ZeroInt() { return SpecificConstantMatch(0); }
+inline SpecificConstantMatch m_AllOnesInt() {
+  return SpecificConstantMatch(-1);
+}
+///}
 
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
@@ -449,6 +454,14 @@ template <typename SrcTy>
 inline BinaryOp_match<SpecificConstantMatch, SrcTy, TargetOpcode::G_SUB>
 m_Neg(const SrcTy &&Src) {
   return m_GSub(m_ZeroInt(), Src);
+}
+
+/// Matches a register not-ed by a G_XOR.
+/// G_XOR %not_reg, -1
+template <typename SrcTy>
+inline BinaryOp_match<SrcTy, SpecificConstantMatch, TargetOpcode::G_XOR, true>
+m_Not(const SrcTy &&Src) {
+  return m_GXor(Src, m_AllOnesInt());
 }
 
 } // namespace GMIPatternMatch
