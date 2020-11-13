@@ -457,11 +457,21 @@ def Vector_ExtractSlicesOp :
 
 def Vector_ExtractMapOp :
   Vector_Op<"extract_map", [NoSideEffect]>,
-    Arguments<(ins AnyVector:$vector, Index:$id)>,
+    Arguments<(ins AnyVector:$vector, Variadic<Index>:$ids)>,
     Results<(outs AnyVector)> {
   let summary = "vector extract map operation";
   let description = [{
-    Takes an 1-D vector and extracts a sub-part of the vector starting at id.
+    Takes an N-D vector and extracts a sub-part of the vector starting at id
+    along each dimension.
+
+    The dimension associated to each element of `ids` used to extract are
+    implicitly deduced from the the destination type. For each dimension the
+    multiplicity is the destination dimension size divided by the source
+    dimension size, each dimension with a multiplicity greater than 1 is
+    associated to the next id, following ids order.
+    For example if the source type is `vector<64x4x32xf32>` and the destination
+    type is `vector<4x4x2xf32>`, the first id maps to dimension 0 and the second
+    id to dimension 2.
 
     Similarly to vector.tuple_get, this operation is used for progressive
     lowering and should be folded away before converting to LLVM.
@@ -488,10 +498,14 @@ def Vector_ExtractMapOp :
 
     ```mlir
     %ev = vector.extract_map %v[%id] : vector<32xf32> to vector<1xf32>
+    %ev1 = vector.extract_map %v1[%id1, %id2] : vector<64x4x32xf32>
+      to vector<4x4x2xf32>
     ```
   }];
   let builders = [
-    OpBuilderDAG<(ins "Value":$vector, "Value":$id, "int64_t":$multiplicity)>];
+    OpBuilderDAG<(ins "Value":$vector, "ValueRange":$ids,
+                  "ArrayRef<int64_t>":$multiplicity,
+                  "AffineMap":$map)>];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
       return vector().getType().cast<VectorType>();
@@ -499,13 +513,11 @@ def Vector_ExtractMapOp :
     VectorType getResultType() {
       return getResult().getType().cast<VectorType>();
     }
-    int64_t multiplicity() {
-      return getSourceVectorType().getNumElements() /
-        getResultType().getNumElements();
-    }
+    void getMultiplicity(SmallVectorImpl<int64_t> &multiplicity);
+    AffineMap map();
   }];
   let assemblyFormat = [{
-    $vector `[` $id `]` attr-dict `:` type($vector) `to` type(results)
+    $vector `[` $ids `]` attr-dict `:` type($vector) `to` type(results)
   }];
 
   let hasFolder = 1;
@@ -686,12 +698,18 @@ def Vector_InsertSlicesOp :
 
 def Vector_InsertMapOp :
   Vector_Op<"insert_map", [NoSideEffect, AllTypesMatch<["dest", "result"]>]>,
-    Arguments<(ins AnyVector:$vector, AnyVector:$dest, Index:$id)>,
+    Arguments<(ins AnyVector:$vector, AnyVector:$dest, Variadic<Index>:$ids)>,
     Results<(outs AnyVector:$result)> {
   let summary = "vector insert map operation";
   let description = [{
-    Inserts a 1-D vector and within a larger vector starting at id. The new
+    Inserts a N-D vector and within a larger vector starting at id. The new
     vector created will have the same size as the destination operand vector.
+
+    The dimension associated to each element of `ids` used to insert is
+    implicitly deduced from the source type (see `ExtractMapOp` for details).
+    For example if source type is `vector<4x4x2xf32>` and the destination type
+    is `vector<64x4x32xf32>`, the first id maps to dimension 0 and the second id
+    to dimension 2.
 
     Similarly to vector.tuple_get, this operation is used for progressive
     lowering and should be folded away before converting to LLVM.
@@ -723,10 +741,12 @@ def Vector_InsertMapOp :
 
     ```mlir
     %v = vector.insert_map %ev %v[%id] : vector<1xf32> into vector<32xf32>
+    %v1 = vector.insert_map %ev1, %v1[%arg0, %arg1] : vector<2x4x1xf32>
+      into vector<64x4x32xf32>
     ```
   }];
   let builders = [OpBuilderDAG<(ins "Value":$vector, "Value":$dest,
-                                "Value":$id, "int64_t":$multiplicity)>];
+                                "ValueRange":$ids)>];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
       return vector().getType().cast<VectorType>();
@@ -734,13 +754,11 @@ def Vector_InsertMapOp :
     VectorType getResultType() {
       return getResult().getType().cast<VectorType>();
     }
-    int64_t multiplicity() {
-      return getResultType().getNumElements() /
-        getSourceVectorType().getNumElements();
-    }
+    // Return a map indicating the dimension mapping to the given ids.
+    AffineMap map();
   }];
   let assemblyFormat = [{
-    $vector `,` $dest `[` $id `]` attr-dict
+    $vector `,` $dest `[` $ids `]` attr-dict
       `:` type($vector) `into` type($result)
   }];
 }

@@ -163,21 +163,40 @@ struct TestVectorDistributePatterns
     registry.insert<VectorDialect>();
     registry.insert<AffineDialect>();
   }
-  Option<int32_t> multiplicity{
-      *this, "distribution-multiplicity",
-      llvm::cl::desc("Set the multiplicity used for distributing vector"),
-      llvm::cl::init(32)};
+  ListOption<int32_t> multiplicity{
+      *this, "distribution-multiplicity", llvm::cl::MiscFlags::CommaSeparated,
+      llvm::cl::desc("Set the multiplicity used for distributing vector")};
+
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
     OwningRewritePatternList patterns;
     FuncOp func = getFunction();
     func.walk([&](AddFOp op) {
       OpBuilder builder(op);
-      Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
-          builder, op.getOperation(), func.getArgument(0), multiplicity);
-      if (ops.hasValue()) {
-        SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
-        op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
+      if (auto vecType = op.getType().dyn_cast<VectorType>()) {
+        SmallVector<int64_t, 2> mul;
+        SmallVector<AffineExpr, 2> perm;
+        SmallVector<Value, 2> ids;
+        unsigned count = 0;
+        // Remove the multiplicity of 1 and calculate the affine map based on
+        // the multiplicity.
+        SmallVector<int32_t, 4> m(multiplicity.begin(), multiplicity.end());
+        for (unsigned i = 0, e = vecType.getRank(); i < e; i++) {
+          if (i < m.size() && m[i] != 1 && vecType.getDimSize(i) % m[i] == 0) {
+            mul.push_back(m[i]);
+            ids.push_back(func.getArgument(count++));
+            perm.push_back(getAffineDimExpr(i, ctx));
+          }
+        }
+        auto map = AffineMap::get(op.getType().cast<VectorType>().getRank(), 0,
+                                  perm, ctx);
+        Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
+            builder, op.getOperation(), ids, mul, map);
+        if (ops.hasValue()) {
+          SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
+          op.getResult().replaceAllUsesExcept(ops->insert.getResult(),
+                                              extractOp);
+        }
       }
     });
     patterns.insert<PointwiseExtractPattern>(ctx);
@@ -229,9 +248,11 @@ struct TestVectorToLoopPatterns
       for (Operation *it : dependentOps) {
         it->moveBefore(forOp.getBody()->getTerminator());
       }
+      auto map = AffineMap::getMultiDimIdentityMap(1, ctx);
       // break up the original op and let the patterns propagate.
       Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
-          builder, op.getOperation(), forOp.getInductionVar(), multiplicity);
+          builder, op.getOperation(), {forOp.getInductionVar()}, {multiplicity},
+          map);
       if (ops.hasValue()) {
         SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
         op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);

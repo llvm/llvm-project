@@ -2483,16 +2483,16 @@ LogicalResult mlir::vector::PointwiseExtractPattern::matchAndRewrite(
   SmallVector<Value, 4> extractOperands;
   for (OpOperand &operand : definedOp->getOpOperands())
     extractOperands.push_back(rewriter.create<vector::ExtractMapOp>(
-        loc, operand.get(), extract.id(), extract.multiplicity()));
+        loc, extract.getResultType(), operand.get(), extract.ids()));
   Operation *newOp = cloneOpWithOperandsAndTypes(
       rewriter, loc, definedOp, extractOperands, extract.getResult().getType());
   rewriter.replaceOp(extract, newOp->getResult(0));
   return success();
 }
 
-Optional<mlir::vector::DistributeOps>
-mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
-                                         Value id, int64_t multiplicity) {
+Optional<mlir::vector::DistributeOps> mlir::vector::distributPointwiseVectorOp(
+    OpBuilder &builder, Operation *op, ArrayRef<Value> ids,
+    ArrayRef<int64_t> multiplicity, const AffineMap &map) {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(op);
   Location loc = op->getLoc();
@@ -2500,15 +2500,24 @@ mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
     return {};
   Value result = op->getResult(0);
   VectorType type = op->getResult(0).getType().dyn_cast<VectorType>();
-  // Currently only support distributing 1-D vectors of size multiple of the
-  // given multiplicty. To handle more sizes we would need to support masking.
-  if (!type || type.getRank() != 1 || type.getNumElements() % multiplicity != 0)
+  if (!type || map.getNumResults() != multiplicity.size())
     return {};
+  // For each dimension being distributed check that the size is a multiple of
+  // the multiplicity. To handle more sizes we would need to support masking.
+  unsigned multiplictyCount = 0;
+  for (auto exp : map.getResults()) {
+    auto affinExp = exp.dyn_cast<AffineDimExpr>();
+    if (!affinExp || affinExp.getPosition() >= type.getRank() ||
+        type.getDimSize(affinExp.getPosition()) %
+                multiplicity[multiplictyCount++] !=
+            0)
+      return {};
+  }
   DistributeOps ops;
   ops.extract =
-      builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
-  ops.insert = builder.create<vector::InsertMapOp>(loc, ops.extract, result, id,
-                                                   multiplicity);
+      builder.create<vector::ExtractMapOp>(loc, result, ids, multiplicity, map);
+  ops.insert =
+      builder.create<vector::InsertMapOp>(loc, ops.extract, result, ids);
   return ops;
 }
 
@@ -2529,17 +2538,22 @@ struct TransferReadExtractPattern
     using mlir::edsc::op::operator*;
     using namespace mlir::edsc::intrinsics;
     SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
-    indices.back() =
-        indices.back() +
-        (extract.id() *
-         std_constant_index(extract.getResultType().getDimSize(0)));
+    AffineMap map = extract.map();
+    unsigned idCount = 0;
+    for (auto expr : map.getResults()) {
+      unsigned pos = expr.cast<AffineDimExpr>().getPosition();
+      indices[pos] =
+          indices[pos] +
+          extract.ids()[idCount++] *
+              std_constant_index(extract.getResultType().getDimSize(pos));
+    }
     Value newRead = vector_transfer_read(extract.getType(), read.memref(),
                                          indices, read.permutation_map(),
-                                         read.padding(), ArrayAttr());
+                                         read.padding(), read.maskedAttr());
     Value dest = rewriter.create<ConstantOp>(
         read.getLoc(), read.getType(), rewriter.getZeroAttr(read.getType()));
-    newRead = rewriter.create<vector::InsertMapOp>(
-        read.getLoc(), newRead, dest, extract.id(), extract.multiplicity());
+    newRead = rewriter.create<vector::InsertMapOp>(read.getLoc(), newRead, dest,
+                                                   extract.ids());
     rewriter.replaceOp(read, newRead);
     return success();
   }
@@ -2560,12 +2574,17 @@ struct TransferWriteInsertPattern
     using namespace mlir::edsc::intrinsics;
     SmallVector<Value, 4> indices(write.indices().begin(),
                                   write.indices().end());
-    indices.back() =
-        indices.back() +
-        (insert.id() *
-         std_constant_index(insert.getSourceVectorType().getDimSize(0)));
+    AffineMap map = insert.map();
+    unsigned idCount = 0;
+    for (auto expr : map.getResults()) {
+      unsigned pos = expr.cast<AffineDimExpr>().getPosition();
+      indices[pos] =
+          indices[pos] +
+          insert.ids()[idCount++] *
+              std_constant_index(insert.getSourceVectorType().getDimSize(pos));
+    }
     vector_transfer_write(insert.vector(), write.memref(), indices,
-                          write.permutation_map(), ArrayAttr());
+                          write.permutation_map(), write.maskedAttr());
     rewriter.eraseOp(write);
     return success();
   }
