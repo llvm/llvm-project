@@ -314,7 +314,7 @@ TYPE_CONTEXT_PARSER("BACKSPACE statement"_en_US,
 // R1225 endfile-stmt ->
 //         ENDFILE file-unit-number | ENDFILE ( position-spec-list )
 TYPE_CONTEXT_PARSER("ENDFILE statement"_en_US,
-    construct<EndfileStmt>("ENDFILE" >> positionOrFlushSpecList))
+    construct<EndfileStmt>("END FILE" >> positionOrFlushSpecList))
 
 // R1226 rewind-stmt -> REWIND file-unit-number | REWIND ( position-spec-list )
 TYPE_CONTEXT_PARSER("REWIND statement"_en_US,
