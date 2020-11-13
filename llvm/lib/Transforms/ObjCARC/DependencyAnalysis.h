@@ -54,7 +54,6 @@ void FindDependencies(DependenceKind Flavor,
                       const Value *Arg,
                       BasicBlock *StartBB, Instruction *StartInst,
                       SmallPtrSetImpl<Instruction *> &DependingInstructions,
-                      SmallPtrSetImpl<const BasicBlock *> &Visited,
                       ProvenanceAnalysis &PA);
 
 bool
