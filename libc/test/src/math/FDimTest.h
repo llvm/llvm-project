@@ -6,11 +6,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "include/math.h"
 #include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 template <typename T>
 class FDimTestTemplate : public __llvm_libc::testing::Test {

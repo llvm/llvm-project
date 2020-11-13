@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/math.h"
 #include "src/math/frexpf.h"
 #include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/BitPatterns.h"
@@ -16,6 +15,7 @@
 #include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 using __llvm_libc::fputil::valueAsBits;

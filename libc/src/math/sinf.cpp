@@ -9,8 +9,8 @@
 #include "math_utils.h"
 #include "sincosf_utils.h"
 
-#include "include/math.h"
 #include "src/__support/common.h"
+#include <math.h>
 
 #include <stdint.h>
 
