@@ -1445,6 +1445,10 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
   void *ptr = NULL;
   kmp_allocator_t *al;
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+
+  if (size == 0)
+    return NULL;
+
   if (allocator == omp_null_allocator)
     allocator = __kmp_threads[gtid]->th.th_def_allocator;
 
@@ -1573,6 +1577,39 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
 
   KE_TRACE(25, ("__kmpc_alloc returns %p, T#%d\n", desc.ptr_align, gtid));
   return desc.ptr_align;
+}
+
+void *__kmpc_calloc(int gtid, size_t nmemb, size_t size,
+                    omp_allocator_handle_t allocator) {
+  void *ptr = NULL;
+  kmp_allocator_t *al;
+  KMP_DEBUG_ASSERT(__kmp_init_serial);
+
+  if (allocator == omp_null_allocator)
+    allocator = __kmp_threads[gtid]->th.th_def_allocator;
+
+  KE_TRACE(25, ("__kmpc_calloc: T#%d (%d, %d, %p)\n", gtid, (int)nmemb,
+                (int)size, allocator));
+
+  al = RCAST(kmp_allocator_t *, CCAST(omp_allocator_handle_t, allocator));
+
+  if (nmemb == 0 || size == 0)
+    return ptr;
+
+  if ((SIZE_MAX - sizeof(kmp_mem_desc_t)) / size < nmemb) {
+    if (al->fb == omp_atv_abort_fb) {
+      KMP_ASSERT(0);
+    }
+    return ptr;
+  }
+
+  ptr = __kmpc_alloc(gtid, nmemb * size, allocator);
+
+  if (ptr) {
+    memset(ptr, 0x00, nmemb * size);
+  }
+  KE_TRACE(25, ("__kmpc_calloc returns %p, T#%d\n", ptr, gtid));
+  return ptr;
 }
 
 void __kmpc_free(int gtid, void *ptr, const omp_allocator_handle_t allocator) {
