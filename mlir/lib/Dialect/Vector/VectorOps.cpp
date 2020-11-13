@@ -999,32 +999,78 @@ void ExtractSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 //===----------------------------------------------------------------------===//
 
 void ExtractMapOp::build(OpBuilder &builder, OperationState &result,
-                         Value vector, Value id, int64_t multiplicity) {
+                         Value vector, ValueRange ids,
+                         ArrayRef<int64_t> multiplicity,
+                         AffineMap permutationMap) {
+  assert(ids.size() == multiplicity.size() &&
+         ids.size() == permutationMap.getNumResults());
+  assert(permutationMap.isProjectedPermutation());
   VectorType type = vector.getType().cast<VectorType>();
-  VectorType resultType = VectorType::get(type.getNumElements() / multiplicity,
-                                          type.getElementType());
-  ExtractMapOp::build(builder, result, resultType, vector, id);
+  SmallVector<int64_t, 4> newShape(type.getShape().begin(),
+                                   type.getShape().end());
+  for (unsigned i = 0, e = permutationMap.getNumResults(); i < e; i++) {
+    AffineExpr expr = permutationMap.getResult(i);
+    auto dim = expr.cast<AffineDimExpr>();
+    newShape[dim.getPosition()] = newShape[dim.getPosition()] / multiplicity[i];
+  }
+  VectorType resultType = VectorType::get(newShape, type.getElementType());
+  ExtractMapOp::build(builder, result, resultType, vector, ids);
 }
 
 static LogicalResult verify(ExtractMapOp op) {
-  if (op.getSourceVectorType().getShape().size() != 1 ||
-      op.getResultType().getShape().size() != 1)
-    return op.emitOpError("expects source and destination vectors of rank 1");
-  if (op.getSourceVectorType().getNumElements() %
-          op.getResultType().getNumElements() !=
-      0)
+  if (op.getSourceVectorType().getRank() != op.getResultType().getRank())
     return op.emitOpError(
-        "source vector size must be a multiple of destination vector size");
+        "expected source and destination vectors of same rank");
+  unsigned numId = 0;
+  for (unsigned i = 0, e = op.getSourceVectorType().getRank(); i < e; ++i) {
+    if (op.getSourceVectorType().getDimSize(i) %
+            op.getResultType().getDimSize(i) !=
+        0)
+      return op.emitOpError("source vector dimensions must be a multiple of "
+                            "destination vector dimensions");
+    if (op.getSourceVectorType().getDimSize(i) !=
+        op.getResultType().getDimSize(i))
+      numId++;
+  }
+  if (numId != op.ids().size())
+    return op.emitOpError("expected number of ids must match the number of "
+                          "dimensions distributed");
   return success();
 }
 
 OpFoldResult ExtractMapOp::fold(ArrayRef<Attribute> operands) {
   auto insert = vector().getDefiningOp<vector::InsertMapOp>();
-  if (insert == nullptr || multiplicity() != insert.multiplicity() ||
-      id() != insert.id())
+  if (insert == nullptr || getType() != insert.vector().getType() ||
+      ids() != insert.ids())
     return {};
   return insert.vector();
 }
+
+void ExtractMapOp::getMultiplicity(SmallVectorImpl<int64_t> &multiplicity) {
+  assert(multiplicity.empty());
+  for (unsigned i = 0, e = getSourceVectorType().getRank(); i < e; i++) {
+    if (getSourceVectorType().getDimSize(i) != getResultType().getDimSize(i))
+      multiplicity.push_back(getSourceVectorType().getDimSize(i) /
+                             getResultType().getDimSize(i));
+  }
+}
+
+template <typename MapOp>
+AffineMap calculateImplicitMap(MapOp op) {
+  SmallVector<AffineExpr, 4> perm;
+  // Check which dimension have a multiplicity greater than 1 and associated
+  // them to the IDs in order.
+  for (unsigned i = 0, e = op.getSourceVectorType().getRank(); i < e; i++) {
+    if (op.getSourceVectorType().getDimSize(i) !=
+        op.getResultType().getDimSize(i))
+      perm.push_back(getAffineDimExpr(i, op.getContext()));
+  }
+  auto map = AffineMap::get(op.getSourceVectorType().getRank(), 0, perm,
+                            op.getContext());
+  return map;
+}
+
+AffineMap ExtractMapOp::map() { return calculateImplicitMap(*this); }
 
 //===----------------------------------------------------------------------===//
 // BroadcastOp
@@ -1253,25 +1299,32 @@ void InsertSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 //===----------------------------------------------------------------------===//
 
 void InsertMapOp::build(OpBuilder &builder, OperationState &result,
-                        Value vector, Value dest, Value id,
-                        int64_t multiplicity) {
-  VectorType type = vector.getType().cast<VectorType>();
-  VectorType resultType = VectorType::get(type.getNumElements() * multiplicity,
-                                          type.getElementType());
-  InsertMapOp::build(builder, result, resultType, vector, dest, id);
+                        Value vector, Value dest, ValueRange ids) {
+  InsertMapOp::build(builder, result, dest.getType(), vector, dest, ids);
 }
 
 static LogicalResult verify(InsertMapOp op) {
-  if (op.getSourceVectorType().getShape().size() != 1 ||
-      op.getResultType().getShape().size() != 1)
-    return op.emitOpError("expected source and destination vectors of rank 1");
-  if (op.getResultType().getNumElements() %
-          op.getSourceVectorType().getNumElements() !=
-      0)
+  if (op.getSourceVectorType().getRank() != op.getResultType().getRank())
     return op.emitOpError(
-        "destination vector size must be a multiple of source vector size");
+        "expected source and destination vectors of same rank");
+  unsigned numId = 0;
+  for (unsigned i = 0, e = op.getResultType().getRank(); i < e; i++) {
+    if (op.getResultType().getDimSize(i) %
+            op.getSourceVectorType().getDimSize(i) !=
+        0)
+      return op.emitOpError(
+          "destination vector size must be a multiple of source vector size");
+    if (op.getResultType().getDimSize(i) !=
+        op.getSourceVectorType().getDimSize(i))
+      numId++;
+  }
+  if (numId != op.ids().size())
+    return op.emitOpError("expected number of ids must match the number of "
+                          "dimensions distributed");
   return success();
 }
+
+AffineMap InsertMapOp::map() { return calculateImplicitMap(*this); }
 
 //===----------------------------------------------------------------------===//
 // InsertStridedSliceOp
