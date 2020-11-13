@@ -134,6 +134,13 @@ static llvm::Optional<bool> normalizeSimpleFlag(OptSpecifier Opt,
   return None;
 }
 
+void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
+                           const char *Spelling,
+                           CompilerInvocation::StringAllocator SA,
+                           unsigned TableIndex, unsigned Value) {
+  Args.push_back(Spelling);
+}
+
 template <typename T, T Value>
 static llvm::Optional<T>
 normalizeFlagToValue(OptSpecifier Opt, unsigned TableIndex, const ArgList &Args,
@@ -141,6 +148,27 @@ normalizeFlagToValue(OptSpecifier Opt, unsigned TableIndex, const ArgList &Args,
   if (Args.hasArg(Opt))
     return Value;
   return None;
+}
+
+static Optional<bool> normalizeBooleanFlag(OptSpecifier PosOpt,
+                                           OptSpecifier NegOpt,
+                                           unsigned TableIndex,
+                                           const ArgList &Args,
+                                           DiagnosticsEngine &Diags) {
+  if (const Arg *A = Args.getLastArg(PosOpt, NegOpt))
+    return A->getOption().matches(PosOpt);
+  return None;
+}
+
+static void denormalizeBooleanFlag(SmallVectorImpl<const char *> &Args,
+                                   const char *Spelling,
+                                   const char *NegSpelling,
+                                   CompilerInvocation::StringAllocator SA,
+                                   unsigned TableIndex, unsigned Value) {
+  if (Value)
+    Args.push_back(Spelling);
+  else
+    Args.push_back(NegSpelling);
 }
 
 static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
@@ -165,12 +193,14 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
 }
 
 static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
+                                  const char *Spelling,
                                   CompilerInvocation::StringAllocator SA,
                                   unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
   for (int I = 0, E = Table.Size; I != E; ++I) {
     if (Value == Table.Table[I].Value) {
+      Args.push_back(Spelling);
       Args.push_back(Table.Table[I].Name);
       return;
     }
@@ -181,8 +211,10 @@ static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
 }
 
 static void denormalizeString(SmallVectorImpl<const char *> &Args,
+                              const char *Spelling,
                               CompilerInvocation::StringAllocator SA,
                               unsigned TableIndex, const std::string &Value) {
+  Args.push_back(Spelling);
   Args.push_back(SA(Value));
 }
 
@@ -776,10 +808,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
         Opts.setInlining(CodeGenOptions::OnlyAlwaysInlining);
     }
   }
-
-  Opts.ExperimentalNewPassManager = Args.hasFlag(
-      OPT_fexperimental_new_pass_manager, OPT_fno_experimental_new_pass_manager,
-      /* Default */ ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER);
 
   Opts.DebugPassManager =
       Args.hasFlag(OPT_fdebug_pass_manager, OPT_fno_debug_pass_manager,
@@ -3741,7 +3769,21 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
       this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
   }
 
+#define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
+    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NEG_SPELLING)                                                              \
+  {                                                                            \
+    if (auto MaybeValue =                                                      \
+            NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
+      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
+    else                                                                       \
+      this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                    \
+  }
+
 #include "clang/Driver/Options.inc"
+#undef OPTION_WITH_MARSHALLING_BOOLEAN
 #undef OPTION_WITH_MARSHALLING
   return true;
 }
@@ -4000,16 +4042,22 @@ void CompilerInvocation::generateCC1CommandLine(
     TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
   if (((FLAGS) & options::CC1Option) &&                                        \
       (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != (DEFAULT_VALUE))) {          \
-    if (Option::KIND##Class == Option::FlagClass) {                            \
-      Args.push_back(SPELLING);                                                \
-    }                                                                          \
-    if (Option::KIND##Class == Option::SeparateClass) {                        \
-      Args.push_back(SPELLING);                                                \
-      DENORMALIZER(Args, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));           \
-    }                                                                          \
+    DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));   \
+  }
+
+#define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
+    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NEG_SPELLING)                                                              \
+  if (((FLAGS)&options::CC1Option) &&                                          \
+      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != DEFAULT_VALUE)) {            \
+    DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX,                \
+                 EXTRACTOR(this->KEYPATH));                                    \
   }
 
 #include "clang/Driver/Options.inc"
+#undef OPTION_WITH_MARSHALLING_BOOLEAN
 #undef OPTION_WITH_MARSHALLING
 }
 
