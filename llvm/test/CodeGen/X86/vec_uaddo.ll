@@ -1180,7 +1180,9 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX512-NEXT:    kandnw %k0, %k1, %k2
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k2} {z}
-; AVX512-NEXT:    kmovd %k1, %eax
+; AVX512-NEXT:    kshiftlw $12, %k1, %k0
+; AVX512-NEXT:    kshiftrw $12, %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movb %al, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<4 x i1>, <4 x i1>} @llvm.uadd.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)
