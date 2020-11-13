@@ -1527,8 +1527,7 @@ static void sinkSpillUsesAfterCoroBegin(Function &F, const SpillInfo &Spills,
     for (User *U : SpillDef->users()) {
       auto Inst = cast<Instruction>(U);
       if (Inst->getParent() != CoroBegin->getParent() ||
-          Dom.dominates(CoroBegin, Inst) ||
-          isa<CoroIdAsyncInst>(Inst) /*'fake' use of async context argument*/)
+          Dom.dominates(CoroBegin, Inst))
         continue;
       if (ToMove.insert(Inst))
         Worklist.push_back(Inst);

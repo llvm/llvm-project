@@ -84,16 +84,12 @@ const FunctionDecl *SVal::getAsFunctionDecl() const {
 /// the first symbolic parent region is returned.
 SymbolRef SVal::getAsLocSymbol(bool IncludeBaseRegions) const {
   // FIXME: should we consider SymbolRef wrapped in CodeTextRegion?
-  if (Optional<nonloc::LocAsInteger> X = getAs<nonloc::LocAsInteger>())
-    return X->getLoc().getAsLocSymbol(IncludeBaseRegions);
-
-  if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
-    const MemRegion *R = X->getRegion();
-    if (const SymbolicRegion *SymR = IncludeBaseRegions ?
-                                      R->getSymbolicBase() :
-                                      dyn_cast<SymbolicRegion>(R->StripCasts()))
+  if (const MemRegion *R = getAsRegion())
+    if (const SymbolicRegion *SymR =
+            IncludeBaseRegions ? R->getSymbolicBase()
+                               : dyn_cast<SymbolicRegion>(R->StripCasts()))
       return SymR->getSymbol();
-  }
+
   return nullptr;
 }
 
@@ -116,8 +112,6 @@ SymbolRef SVal::getLocSymbolInBase() const {
   return nullptr;
 }
 
-// TODO: The next 3 functions have to be simplified.
-
 /// If this SVal wraps a symbol return that SymbolRef.
 /// Otherwise, return 0.
 ///
@@ -130,22 +124,6 @@ SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
     return X->getSymbol();
 
   return getAsLocSymbol(IncludeBaseRegions);
-}
-
-/// getAsSymbolicExpression - If this Sval wraps a symbolic expression then
-///  return that expression.  Otherwise return NULL.
-const SymExpr *SVal::getAsSymbolicExpression() const {
-  if (Optional<nonloc::SymbolVal> X = getAs<nonloc::SymbolVal>())
-    return X->getSymbol();
-
-  return getAsSymbol();
-}
-
-const SymExpr* SVal::getAsSymExpr() const {
-  const SymExpr* Sym = getAsSymbol();
-  if (!Sym)
-    Sym = getAsSymbolicExpression();
-  return Sym;
 }
 
 const MemRegion *SVal::getAsRegion() const {
@@ -175,18 +153,18 @@ bool nonloc::PointerToMember::isNullMemberPointer() const {
   return getPTMData().isNull();
 }
 
-const DeclaratorDecl *nonloc::PointerToMember::getDecl() const {
+const NamedDecl *nonloc::PointerToMember::getDecl() const {
   const auto PTMD = this->getPTMData();
   if (PTMD.isNull())
     return nullptr;
 
-  const DeclaratorDecl *DD = nullptr;
-  if (PTMD.is<const DeclaratorDecl *>())
-    DD = PTMD.get<const DeclaratorDecl *>();
+  const NamedDecl *ND = nullptr;
+  if (PTMD.is<const NamedDecl *>())
+    ND = PTMD.get<const NamedDecl *>();
   else
-    DD = PTMD.get<const PointerToMemberData *>()->getDeclaratorDecl();
+    ND = PTMD.get<const PointerToMemberData *>()->getDeclaratorDecl();
 
-  return DD;
+  return ND;
 }
 
 //===----------------------------------------------------------------------===//
@@ -203,14 +181,14 @@ nonloc::CompoundVal::iterator nonloc::CompoundVal::end() const {
 
 nonloc::PointerToMember::iterator nonloc::PointerToMember::begin() const {
   const PTMDataType PTMD = getPTMData();
-  if (PTMD.is<const DeclaratorDecl *>())
+  if (PTMD.is<const NamedDecl *>())
     return {};
   return PTMD.get<const PointerToMemberData *>()->begin();
 }
 
 nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
   const PTMDataType PTMD = getPTMData();
-  if (PTMD.is<const DeclaratorDecl *>())
+  if (PTMD.is<const NamedDecl *>())
     return {};
   return PTMD.get<const PointerToMemberData *>()->end();
 }

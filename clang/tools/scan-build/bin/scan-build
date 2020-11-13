@@ -1925,7 +1925,7 @@ if ($Clang !~ /\+\+(\.exe)?$/) {
     $ClangCXX =~ s/.exe$/++.exe/;
   }
   else {
-    $ClangCXX =~ s/\-\d+\.\d+$//;
+    $ClangCXX =~ s/\-\d+(\.\d+)?$//;
     $ClangCXX .= "++";
   }
 }
@@ -1973,11 +1973,13 @@ my $CCC_ANALYZER_ANALYSIS = join ' ', @AnalysesToRun;
 my $CCC_ANALYZER_PLUGINS = join ' ', map { "-load ".$_ } @{$Options{PluginsToLoad}};
 my $CCC_ANALYZER_CONFIG = join ' ', map { "-analyzer-config ".$_ } @{$Options{ConfigOptions}};
 
-foreach (sort { $Options{SilenceCheckers}{$a} <=> $Options{SilenceCheckers}{$b} }
-         keys %{$Options{SilenceCheckers}}) {
-  # Add checkers in order they were silenced.
+if (%{$Options{SilenceCheckers}}) {
   $CCC_ANALYZER_CONFIG =
-      $CCC_ANALYZER_CONFIG." -analyzer-config silence-checkers=".$_;
+      $CCC_ANALYZER_CONFIG." -analyzer-config silence-checkers="
+                          .join(';', sort {
+                                            $Options{SilenceCheckers}{$a} <=>
+                                            $Options{SilenceCheckers}{$b}
+                                          } keys %{$Options{SilenceCheckers}});
 }
 
 my %EnvVars = (

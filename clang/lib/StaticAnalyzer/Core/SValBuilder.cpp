@@ -236,10 +236,11 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
   return nonloc::SymbolVal(sym);
 }
 
-DefinedSVal SValBuilder::getMemberPointer(const DeclaratorDecl *DD) {
-  assert(!DD || isa<CXXMethodDecl>(DD) || isa<FieldDecl>(DD));
+DefinedSVal SValBuilder::getMemberPointer(const NamedDecl *ND) {
+  assert(!ND || isa<CXXMethodDecl>(ND) || isa<FieldDecl>(ND) ||
+         isa<IndirectFieldDecl>(ND));
 
-  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(DD)) {
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND)) {
     // Sema treats pointers to static member functions as have function pointer
     // type, so return a function pointer for the method.
     // We don't need to play a similar trick for static member fields
@@ -249,7 +250,7 @@ DefinedSVal SValBuilder::getMemberPointer(const DeclaratorDecl *DD) {
       return getFunctionPointer(MD);
   }
 
-  return nonloc::PointerToMember(DD);
+  return nonloc::PointerToMember(ND);
 }
 
 DefinedSVal SValBuilder::getFunctionPointer(const FunctionDecl *func) {
@@ -303,6 +304,14 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   case Stmt::StringLiteralClass: {
     const auto *SL = cast<StringLiteral>(E);
     return makeLoc(getRegionManager().getStringRegion(SL));
+  }
+
+  case Stmt::PredefinedExprClass: {
+    const auto *PE = cast<PredefinedExpr>(E);
+    assert(PE->getFunctionName() &&
+           "Since we analyze only instantiated functions, PredefinedExpr "
+           "should have a function name.");
+    return makeLoc(getRegionManager().getStringRegion(PE->getFunctionName()));
   }
 
   // Fast-path some expressions to avoid the overhead of going through the AST's
@@ -377,8 +386,8 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
-  const SymExpr *symLHS = LHS.getAsSymExpr();
-  const SymExpr *symRHS = RHS.getAsSymExpr();
+  SymbolRef symLHS = LHS.getAsSymbol();
+  SymbolRef symRHS = RHS.getAsSymbol();
 
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
@@ -492,7 +501,7 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   if (getContext().getTypeSize(castTy) >= getContext().getTypeSize(originalTy))
     return evalCast(val, castTy, originalTy);
 
-  const SymExpr *se = val.getAsSymbolicExpression();
+  SymbolRef se = val.getAsSymbol();
   if (!se) // Let evalCast handle non symbolic expressions.
     return evalCast(val, castTy, originalTy);
 
