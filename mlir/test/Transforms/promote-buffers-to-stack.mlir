@@ -1,4 +1,6 @@
-// RUN: mlir-opt -promote-buffers-to-stack -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -promote-buffers-to-stack -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix DEFINDEX
+// RUN: mlir-opt -promote-buffers-to-stack="bitwidth-of-index-type=256 max-alloc-size-in-bytes=128" -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix BIGINDEX
+// RUN: mlir-opt -promote-buffers-to-stack="bitwidth-of-index-type=256 max-alloc-size-in-bytes=64" -split-input-file %s | FileCheck %s --check-prefix=CHECK --check-prefix LOWLIMIT
 
 // This file checks the behavior of PromoteBuffersToStack pass for converting
 // AllocOps into AllocaOps, if possible.
@@ -566,3 +568,19 @@ func @large_buffer_allocation(%arg0: memref<2048xf32>) {
 
 // CHECK-NEXT: %[[ALLOC:.*]] = alloc()
 // CHECK-NEXT: test.copy
+
+// -----
+
+// Test Case: AllocOp with element type index.
+// PromoteBuffersToStack expected behavior: It should convert it to an
+// AllocaOp.
+
+// CHECK-LABEL: func @indexElementType
+func @indexElementType() {
+  %0 = alloc() : memref<4xindex>
+  return
+}
+// DEFINDEX-NEXT: alloca()
+// BIGINDEX-NEXT: alloca()
+// LOWLIMIT-NEXT: alloc()
+// CHECK-NEXT: return
