@@ -2298,6 +2298,29 @@ inline ExtractValue_match<Ind, Val_t> m_ExtractValue(const Val_t &V) {
   return ExtractValue_match<Ind, Val_t>(V);
 }
 
+/// Matcher for a single index InsertValue instruction.
+template <int Ind, typename T0, typename T1> struct InsertValue_match {
+  T0 Op0;
+  T1 Op1;
+
+  InsertValue_match(const T0 &Op0, const T1 &Op1) : Op0(Op0), Op1(Op1) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<InsertValueInst>(V)) {
+      return Op0.match(I->getOperand(0)) && Op1.match(I->getOperand(1)) &&
+             I->getNumIndices() == 1 && Ind == I->getIndices()[0];
+    }
+    return false;
+  }
+};
+
+/// Matches a single index InsertValue instruction.
+template <int Ind, typename Val_t, typename Elt_t>
+inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
+                                                          const Elt_t &Elt) {
+  return InsertValue_match<Ind, Val_t, Elt_t>(Val, Elt);
+}
+
 /// Matches patterns for `vscale`. This can either be a call to `llvm.vscale` or
 /// the constant expression
 ///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
