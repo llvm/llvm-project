@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   OrcJIT
   OrcShared
+  OrcTargetProcess
   Passes
   RuntimeDyld
   Support
