@@ -36,6 +36,20 @@
 #include "omp-tools.h"
 #include <sys/resource.h>
 
+// Define attribute that indicates that the fall through from the previous
+// case label is intentional and should not be diagnosed by a compiler
+//   Code from libcxx/include/__config
+// Use a function like macro to imply that it must be followed by a semicolon
+#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#define KMP_FALLTHROUGH() [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#define KMP_FALLTHROUGH() [[clang::fallthrough]]
+#elif __has_attribute(fallthrough) || __GNUC__ >= 7
+#define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
+#else
+#define KMP_FALLTHROUGH() ((void)0)
+#endif
+
 static int runOnTsan;
 static int hasReductionCallback;
 
@@ -536,7 +550,7 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
     TsanHappensAfter(ToParallelData(parallel_data)->GetParallelPtr());
     TsanFuncEntry(ToParallelData(parallel_data)->codePtr);
     break;
-  case ompt_scope_end:
+  case ompt_scope_end: {
     TaskData *Data = ToTaskData(task_data);
     assert(Data->freed == 0 && "Implicit task end should only be called once!");
     Data->freed = 1;
@@ -544,6 +558,11 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
            "All tasks should have finished at the implicit barrier!");
     delete Data;
     TsanFuncExit();
+    break;
+  }
+  case ompt_scope_beginend:
+    // Should not occur according to OpenMP 5.1
+    // Tested in OMPT tests
     break;
   }
 }
@@ -556,11 +575,15 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
   TaskData *Data = ToTaskData(task_data);
   switch (endpoint) {
   case ompt_scope_begin:
+  case ompt_scope_beginend:
     TsanFuncEntry(codeptr_ra);
     switch (kind) {
     case ompt_sync_region_barrier_implementation:
     case ompt_sync_region_barrier_implicit:
     case ompt_sync_region_barrier_explicit:
+    case ompt_sync_region_barrier_implicit_parallel:
+    case ompt_sync_region_barrier_implicit_workshare:
+    case ompt_sync_region_barrier_teams:
     case ompt_sync_region_barrier: {
       char BarrierIndex = Data->BarrierIndex;
       TsanHappensBefore(Data->Team->GetBarrierPtr(BarrierIndex));
@@ -585,16 +608,23 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
       Data->TaskGroup = new Taskgroup(Data->TaskGroup);
       break;
 
-    default:
+    case ompt_sync_region_reduction:
+      // should never be reached
       break;
+
     }
-    break;
+    if (endpoint == ompt_scope_begin)
+      break;
+    KMP_FALLTHROUGH();
   case ompt_scope_end:
     TsanFuncExit();
     switch (kind) {
     case ompt_sync_region_barrier_implementation:
     case ompt_sync_region_barrier_implicit:
     case ompt_sync_region_barrier_explicit:
+    case ompt_sync_region_barrier_implicit_parallel:
+    case ompt_sync_region_barrier_implicit_workshare:
+    case ompt_sync_region_barrier_teams:
     case ompt_sync_region_barrier: {
       if (hasReductionCallback < ompt_set_always) {
         // We want to track writes after the barrier again.
@@ -636,8 +666,11 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
       break;
     }
 
-    default:
+    case ompt_sync_region_reduction:
+      // Should not occur according to OpenMP 5.1
+      // Tested in OMPT tests
       break;
+
     }
     break;
   }
@@ -666,6 +699,11 @@ static void ompt_tsan_reduction(ompt_sync_region_t kind,
     default:
       break;
     }
+    break;
+  case ompt_scope_beginend:
+    // Should not occur according to OpenMP 5.1
+    // Tested in OMPT tests
+    // Would have no implications for DR detection
     break;
   }
 }
