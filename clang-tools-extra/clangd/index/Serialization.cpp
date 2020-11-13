@@ -21,6 +21,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 #include <vector>
 
 namespace clang {
@@ -81,12 +82,17 @@ public:
 
   uint32_t consumeVar() {
     constexpr static uint8_t More = 1 << 7;
-    uint8_t B = consume8();
+
+    // Use a 32 bit unsigned here to prevent promotion to signed int (unless int
+    // is wider than 32 bits).
+    uint32_t B = consume8();
     if (LLVM_LIKELY(!(B & More)))
       return B;
     uint32_t Val = B & ~More;
     for (int Shift = 7; B & More && Shift < 32; Shift += 7) {
       B = consume8();
+      // 5th byte of a varint can only have lowest 4 bits set.
+      assert((Shift != 28 || B == (B & 0x0f)) && "Invalid varint encoding");
       Val |= (B & ~More) << Shift;
     }
     return Val;
