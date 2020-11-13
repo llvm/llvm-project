@@ -149,6 +149,7 @@ set(files
   support/fuchsia/xlocale.h
   support/ibm/limits.h
   support/ibm/locale_mgmt_aix.h
+  support/ibm/nanosleep.h
   support/ibm/support.h
   support/ibm/xlocale.h
   support/musl/xlocale.h
