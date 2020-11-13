@@ -37,6 +37,9 @@ def LLVM_Dialect : Dialect {
     /// Uses `reportError` to report errors.
     static LogicalResult verifyDataLayoutString(
         StringRef descr, llvm::function_ref<void (const Twine &)> reportError);
+
+    /// Name of the target triple attribute.
+    static StringRef getTargetTripleAttrName() { return "llvm.target_triple"; }
   }];
 }
 

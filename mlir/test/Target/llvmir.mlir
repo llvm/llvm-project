@@ -1311,3 +1311,17 @@ module attributes {llvm.data_layout = "E"} {
   llvm.func @module_big_endian()
 }
 
+// -----
+
+// CHECK: "CodeView", i32 1
+module attributes {llvm.target_triple = "x86_64-pc-windows-msvc"} {}
+
+// -----
+
+// CHECK-NOT: "CodeView", i32 1
+module attributes {llvm.target_triple = "aarch64-linux-android"} {}
+
+// -----
+
+// CHECK-NOT: "CodeView", i32 1
+module attributes {} {}
