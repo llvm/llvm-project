@@ -933,6 +933,47 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
   ret i32 %1
 }
 
+; Similar to bswap_i32 but the result is not sign extended.
+; FIXME: We should use greviw here.
+define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
+; RV64I-LABEL: bswap_i32_nosext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    addi a3, zero, 255
+; RV64I-NEXT:    slli a4, a3, 32
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    slli a4, a0, 24
+; RV64I-NEXT:    slli a5, a3, 40
+; RV64I-NEXT:    and a4, a4, a5
+; RV64I-NEXT:    or a2, a4, a2
+; RV64I-NEXT:    slli a4, a0, 40
+; RV64I-NEXT:    slli a3, a3, 48
+; RV64I-NEXT:    and a3, a4, a3
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sw a0, 0(a1)
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: bswap_i32_nosext:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    rev8 a0, a0
+; RV64IB-NEXT:    srli a0, a0, 32
+; RV64IB-NEXT:    sw a0, 0(a1)
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: bswap_i32_nosext:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    rev8 a0, a0
+; RV64IBP-NEXT:    srli a0, a0, 32
+; RV64IBP-NEXT:    sw a0, 0(a1)
+; RV64IBP-NEXT:    ret
+  %1 = tail call i32 @llvm.bswap.i32(i32 %a)
+  store i32 %1, i32* %x
+  ret void
+}
+
 declare i64 @llvm.bswap.i64(i64)
 
 define i64 @bswap_i64(i64 %a) {
