@@ -6513,6 +6513,23 @@ to represent function names in the profile database), and the 5th and 7th
 operands give the execution count that each of the respective prior target
 functions was called.
 
+.. _md_annotation:
+
+'``annotation``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``annotation`` metadata can be used to attach a tuple of annotation strings
+to any instruction. This metadata does not impact the semantics of the program
+and may only be used to provide additional insight about the program and
+transformations to users.
+
+Example:
+
+.. code-block:: text
+
+    %a.addr = alloca float*, align 8, !annotation !0
+    !0 = !{!"auto-init"}
+
 Module Flags Metadata
 =====================
 

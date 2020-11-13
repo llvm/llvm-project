@@ -163,7 +163,7 @@ define float @ret_float_0x0() {
 
 ; MTHC1-DAG:     mtc1 $zero, $f0
 
-; DMTC-DAG:      dmtc1 $zero, $f0
+; DMTC1-DAG:      mtc1 $zero, $f0
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR
@@ -195,7 +195,7 @@ define double @ret_double_0x0() {
 ; MTHC1-DAG:     mtc1 $zero, $f0
 ; MTHC1-DAG:     mthc1 $zero, $f0
 
-; DMTC-DAG:      dmtc1 $zero, $f0
+; DMTC1-DAG:      dmtc1 $zero, $f0
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR

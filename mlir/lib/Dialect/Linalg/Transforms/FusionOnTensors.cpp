@@ -341,10 +341,9 @@ template <typename... Args>
 static LinalgOp createLinalgOpOfSameType(LinalgOp op, PatternRewriter &rewriter,
                                          Args... args) {
   if (isa<GenericOp>(op.getOperation()))
-    return cast<LinalgOp>(rewriter.create<GenericOp>(args...).getOperation());
+    return rewriter.create<GenericOp>(args...);
   if (isa<IndexedGenericOp>(op.getOperation()))
-    return cast<LinalgOp>(
-        rewriter.create<IndexedGenericOp>(args...).getOperation());
+    return rewriter.create<IndexedGenericOp>(args...);
   llvm_unreachable(
       "expected only linalg.generic or linalg.indexed_generic ops");
   return nullptr;

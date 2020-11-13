@@ -11,7 +11,7 @@ Introduction
 This document aims to provide a high-level overview of the design and
 implementation of the ORC JIT APIs. Except where otherwise stated all discussion
 refers to the modern ORCv2 APIs (available since LLVM 7). Clients wishing to
-transition from OrcV1 should see Section :ref:`transition_orcv1_to_orcv2`.
+transition from OrcV1 should see Section :ref:`transitioning_orcv1_to_orcv2`.
 
 Use-cases
 =========
@@ -463,7 +463,7 @@ Supporting Custom Compilers
 
 TBD.
 
-.. transitioning_orcv1_to_orcv2::
+.. _transitioning_orcv1_to_orcv2:
 
 Transitioning from ORCv1 to ORCv2
 =================================

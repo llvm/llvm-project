@@ -41,7 +41,7 @@ Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
 
   SymbolMap NewSymbols;
 
-  TargetProcessControl::LookupRequestElement Request(H, LookupSymbols);
+  tpctypes::LookupRequest Request(H, LookupSymbols);
   auto Result = TPC.lookupSymbols(Request);
   if (!Result)
     return Result.takeError();

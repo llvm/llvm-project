@@ -15,5 +15,12 @@ add_llvm_component_library(LLVMLibDriver
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  BinaryFormat
+  BitReader
+  Object
+  Option
+  Support
   )
 add_dependencies(LLVMLibDriver LibOptionsTableGen)

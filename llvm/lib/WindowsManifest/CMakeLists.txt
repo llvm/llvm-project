@@ -10,7 +10,13 @@ add_llvm_component_library(LLVMWindowsManifest
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/WindowsManifest
   ${Backtrace_INCLUDE_DIRS}
-  LINK_LIBS ${imported_libs})
+
+  LINK_LIBS
+  ${imported_libs}
+
+  LINK_COMPONENTS
+  Support
+  )
 
 # This block is only needed for llvm-config. When we deprecate llvm-config and
 # move to using CMake export, this block can be removed.

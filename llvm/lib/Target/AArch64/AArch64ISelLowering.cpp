@@ -3705,6 +3705,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 }
 
+bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
+  if (VT.getVectorElementType() == MVT::i32 &&
+      VT.getVectorElementCount().getKnownMinValue() >= 4)
+    return true;
+
+  return false;
+}
+
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   return ExtVal.getValueType().isScalableVector();
 }
@@ -3792,11 +3800,8 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
     InputVT = DAG.getValueType(MemVT.changeVectorElementTypeToInteger());
   }
 
-  if (getScatterIndexIsExtended(Index)) {
-    if (Index.getOpcode() == ISD::AND)
-      IsSigned = false;
+  if (getScatterIndexIsExtended(Index))
     Index = Index.getOperand(0);
-  }
 
   SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, InputVT};
   return DAG.getNode(getScatterVecOpcode(IsScaled, IsSigned, NeedsExtend), DL,

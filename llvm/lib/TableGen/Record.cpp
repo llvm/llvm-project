@@ -1010,36 +1010,53 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case LT:
   case GE:
   case GT: {
-    // try to fold eq comparison for 'bit' and 'int', otherwise fallback
-    // to string objects.
-    IntInit *L =
+    // First see if we have two bit, bits, or int.
+    IntInit *LHSi =
         dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get()));
-    IntInit *R =
+    IntInit *RHSi =
         dyn_cast_or_null<IntInit>(RHS->convertInitializerTo(IntRecTy::get()));
 
-    if (L && R) {
+    if (LHSi && RHSi) {
       bool Result;
       switch (getOpcode()) {
-      case EQ: Result = L->getValue() == R->getValue(); break;
-      case NE: Result = L->getValue() != R->getValue(); break;
-      case LE: Result = L->getValue() <= R->getValue(); break;
-      case LT: Result = L->getValue() < R->getValue(); break;
-      case GE: Result = L->getValue() >= R->getValue(); break;
-      case GT: Result = L->getValue() > R->getValue(); break;
+      case EQ: Result = LHSi->getValue() == RHSi->getValue(); break;
+      case NE: Result = LHSi->getValue() != RHSi->getValue(); break;
+      case LE: Result = LHSi->getValue() <= RHSi->getValue(); break;
+      case LT: Result = LHSi->getValue() <  RHSi->getValue(); break;
+      case GE: Result = LHSi->getValue() >= RHSi->getValue(); break;
+      case GT: Result = LHSi->getValue() >  RHSi->getValue(); break;
       default: llvm_unreachable("unhandled comparison");
       }
       return BitInit::get(Result);
     }
 
-    if (getOpcode() == EQ || getOpcode() == NE) {
-      StringInit *LHSs = dyn_cast<StringInit>(LHS);
-      StringInit *RHSs = dyn_cast<StringInit>(RHS);
+    // Next try strings.
+    StringInit *LHSs = dyn_cast<StringInit>(LHS);
+    StringInit *RHSs = dyn_cast<StringInit>(RHS);
 
-      // Make sure we've resolved
-      if (LHSs && RHSs) {
-        bool Equal = LHSs->getValue() == RHSs->getValue();
-        return BitInit::get(getOpcode() == EQ ? Equal : !Equal);
+    if (LHSs && RHSs) {
+      bool Result;
+      switch (getOpcode()) {
+      case EQ: Result = LHSs->getValue() == RHSs->getValue(); break;
+      case NE: Result = LHSs->getValue() != RHSs->getValue(); break;
+      case LE: Result = LHSs->getValue() <= RHSs->getValue(); break;
+      case LT: Result = LHSs->getValue() <  RHSs->getValue(); break;
+      case GE: Result = LHSs->getValue() >= RHSs->getValue(); break;
+      case GT: Result = LHSs->getValue() >  RHSs->getValue(); break;
+      default: llvm_unreachable("unhandled comparison");
       }
+      return BitInit::get(Result);
+////      bool Equal = LHSs->getValue() == RHSs->getValue();
+////      return BitInit::get(getOpcode() == EQ ? Equal : !Equal);
+    }
+
+    // Finally, !eq and !ne can be used with records.
+    if (getOpcode() == EQ || getOpcode() == NE) {
+      DefInit *LHSd = dyn_cast<DefInit>(LHS);
+      DefInit *RHSd = dyn_cast<DefInit>(RHS);
+      if (LHSd && RHSd)
+        return BitInit::get((getOpcode() == EQ) ? LHSd == RHSd
+                                                : LHSd != RHSd);
     }
 
     break;

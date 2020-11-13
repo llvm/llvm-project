@@ -218,6 +218,7 @@
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar
 ; CHECK-EXT: Running pass: {{.*}}::Bye
+; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 

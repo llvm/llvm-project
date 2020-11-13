@@ -104,6 +104,7 @@
 ; CHECK-O2-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O2-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O2-NEXT: Running pass: GlobalDCEPass
+; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

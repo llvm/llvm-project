@@ -65,11 +65,12 @@ public:
   }
 
   static Expected<std::unique_ptr<KaleidoscopeJIT>> Create() {
-    auto TPC = SelfTargetProcessControl::Create();
+    auto SSP = std::make_shared<SymbolStringPool>();
+    auto TPC = SelfTargetProcessControl::Create(SSP);
     if (!TPC)
       return TPC.takeError();
 
-    auto ES = std::make_unique<ExecutionSession>();
+    auto ES = std::make_unique<ExecutionSession>(std::move(SSP));
 
     JITTargetMachineBuilder JTMB((*TPC)->getTargetTriple());
 

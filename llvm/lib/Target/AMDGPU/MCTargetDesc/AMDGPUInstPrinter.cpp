@@ -1023,7 +1023,7 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   else if (Tgt == Exp::ET_NULL)
     O << " null";
   else if (Tgt >= Exp::ET_POS0 &&
-           Tgt <= (isGFX10(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
+           Tgt <= uint32_t(isGFX10(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
     O << " pos" << Tgt - Exp::ET_POS0;
   else if (isGFX10(STI) && Tgt == Exp::ET_PRIM)
     O << " prim";

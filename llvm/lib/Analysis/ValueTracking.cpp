@@ -993,8 +993,7 @@ static void computeKnownBitsFromShiftOperator(
   computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
 
   if (Known.isConstant()) {
-    unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
-    Known = KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt)));
+    Known = KF(Known2, Known);
 
     // If the known bits conflict, this must be an overflowing left shift, so
     // the shift result is poison. We can return anything we want. Choose 0 for

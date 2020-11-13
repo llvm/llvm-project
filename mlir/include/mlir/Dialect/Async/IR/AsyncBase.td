@@ -56,6 +56,16 @@ class Async_ValueType<Type type>
   Type valueType = type;
 }
 
+def Async_GroupType : DialectType<AsyncDialect,
+    CPred<"$_self.isa<::mlir::async::GroupType>()">, "group type">,
+    BuildableType<"$_builder.getType<::mlir::async::GroupType>()"> {
+  let typeDescription = [{
+    `async.group` represent a set of async tokens or values and allows to
+    execute async operations on all of them together (e.g. wait for the
+    completion of all/any of them).
+  }];
+}
+
 def Async_AnyValueType : DialectType<AsyncDialect,
                            CPred<"$_self.isa<::mlir::async::ValueType>()">,
                                  "async value type">;

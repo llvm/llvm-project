@@ -27,8 +27,8 @@ func @inline_notation() -> i32 {
 // CHECK-LABEL: func @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 func @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 
-// CHECK-ALIAS: #[[LOC:.*]] = loc("out_of_line_location")
-#loc = loc("out_of_line_location")
-
-// CHECK-ALIAS: "foo.op"() : () -> () loc(#[[LOC]])
+// CHECK-ALIAS: "foo.op"() : () -> () loc(#[[LOC:.*]])
 "foo.op"() : () -> () loc(#loc)
+
+// CHECK-ALIAS: #[[LOC]] = loc("out_of_line_location")
+#loc = loc("out_of_line_location")

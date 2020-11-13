@@ -427,6 +427,7 @@ private:
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
+  void visitAnnotationMetadata(MDNode *Annotation);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -4294,6 +4295,14 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   }
 }
 
+void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
+  Assert(isa<MDTuple>(Annotation), "annotation must be a tuple");
+  Assert(Annotation->getNumOperands() >= 1,
+         "annotation must have at least one operand");
+  for (const MDOperand &Op : Annotation->operands())
+    Assert(isa<MDString>(Op.get()), "operands must be strings");
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -4453,6 +4462,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_prof))
     visitProfMetadata(I, MD);
+
+  if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
+    visitAnnotationMetadata(Annotation);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     AssertDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);

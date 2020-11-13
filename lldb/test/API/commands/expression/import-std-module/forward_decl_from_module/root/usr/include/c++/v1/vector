@@ -7,7 +7,7 @@ namespace std {
     // Pretend to be a std::vector template we need to instantiate in LLDB
     // when import-std-module is enabled.
     template<typename T>
-    struct vector { class F; F *f; };
+    struct vector { class F; F *f = nullptr; };
     // The definition of our forward declared nested class.
     template<typename T> class vector<T>::F { int x; };
   }
