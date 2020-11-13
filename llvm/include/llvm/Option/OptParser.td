@@ -97,17 +97,15 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   OptionGroup Group = ?;
   Option Alias = ?;
   list<string> AliasArgs = [];
-  string MarshallingKind = ?;
   code KeyPath = ?;
   code DefaultValue = ?;
   bit ShouldAlwaysEmit = 0;
-  // Used by the Flag option kind.
-  bit IsPositive = 1;
-  // Used by the String option kind.
   code NormalizerRetTy = ?;
   code NormalizedValuesScope = "";
   code Normalizer = "";
   code Denormalizer = "";
+  code ValueMerger = "mergeForwardValue";
+  code ValueExtractor = "extractForwardValue";
   list<code> NormalizedValues = ?;
 }
 
@@ -144,29 +142,39 @@ class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
 
 // Helpers for defining marshalling information.
 
-class DefaultAnyOf<list<Option> defaults> {
-  code DefaultValue = !foldl("false", defaults, accumulator, option,
-                             !strconcat(accumulator, " || ", !cast<string>(option.KeyPath)));
+class DefaultAnyOf<list<Option> options, string default = "false", string separator = " || "> {
+  code DefaultValue = !foldl(default, options, accumulator, option,
+                             !strconcat(accumulator, separator, !cast<string>(option.KeyPath)));
 }
 
 class MarshallingInfo<code keypath, code defaultvalue> {
   code KeyPath = keypath;
   code DefaultValue = defaultvalue;
 }
+
 class MarshallingInfoString<code keypath, code defaultvalue, code normalizerretty>
   : MarshallingInfo<keypath, defaultvalue> {
-  string MarshallingKind = "string";
   code NormalizerRetTy = normalizerretty;
 }
 
-class MarshallingInfoFlag<code keypath, DefaultAnyOf defaults = DefaultAnyOf<[]>>
+class MarshallingInfoFlag<code keypath, DefaultAnyOf defaults = DefaultAnyOf<[]>, code ty="unsigned">
   : MarshallingInfo<keypath, defaults.DefaultValue> {
-  string MarshallingKind = "flag";
+  code NormalizerRetTy = ty;
+  code Normalizer = "normalizeSimpleFlag";
+}
+
+class MarshallingInfoBitfieldFlag<code keypath, code value>
+  : MarshallingInfoFlag<keypath, DefaultAnyOf<[], "0u", " | ">, "unsigned"> {
+  code Normalizer = "(normalizeFlagToValue<unsigned, "#value#">)";
+  code ValueMerger = "mergeMaskValue";
+  code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
 }
 
 // Mixins for additional marshalling attributes.
 
-class IsNegative { bit IsPositive = 0; }
+class IsNegative {
+  // todo: create & apply a normalizer for negative flags
+}
 class AlwaysEmit { bit ShouldAlwaysEmit = 1; }
 class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
@@ -177,6 +185,8 @@ class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";
 }
+class ValueMerger<code merger> { code ValueMerger = merger; }
+class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
 // Predefined options.
 
