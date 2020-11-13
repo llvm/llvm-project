@@ -124,7 +124,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
   DenseSet<Operation *> eraseSet;
 
   // Save original Linalg ops, we only want to make a pass over those.
-  SmallVector<Operation *, 8> linalgOps;
+  SmallVector<LinalgOp, 8> linalgOps;
   f.walk([&](LinalgOp op) {
     // TODO: support multi-results.
     if (op.getOperation()->getNumResults() <= 1)
@@ -133,8 +133,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
 
   // Tile and Fuse for tensors inputs (TODO: all tensor operands).
   bool changed = false;
-  for (auto *op : llvm::reverse(linalgOps)) {
-    LinalgOp linalgOp = cast<LinalgOp>(op);
+  for (LinalgOp linalgOp : llvm::reverse(linalgOps)) {
     for (auto en : llvm::enumerate(linalgOp.getShapedOperands())) {
       if (en.value().getType().isa<MemRefType>()) {
         // TODO: LinalgDependenceGraph should be able to update itself.
@@ -142,7 +141,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
         // removed.
         linalg::Aliases aliases;
         linalg::LinalgDependenceGraph graph(aliases, linalgOps);
-        if (auto info = fuseProducerOfBuffer(b, op, en.index(), graph)) {
+        if (auto info = fuseProducerOfBuffer(b, linalgOp, en.index(), graph)) {
           auto *originalOp = info->originalProducer.getOperation();
           eraseSet.insert(originalOp);
           auto *originalOpInLinalgOpsVector =
@@ -155,7 +154,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
         // Tile and Fuse tensor input (TODO: init_tensors too).
         if (en.index() >= linalgOp.getNumInputs())
           continue;
-        if (auto info = fuseProducerOfTensor(b, op, en.index())) {
+        if (auto info = fuseProducerOfTensor(b, linalgOp, en.index())) {
           auto *originalOp = info->originalProducer.getOperation();
           auto *originalOpInLinalgOpsVector =
               std::find(linalgOps.begin(), linalgOps.end(), originalOp);

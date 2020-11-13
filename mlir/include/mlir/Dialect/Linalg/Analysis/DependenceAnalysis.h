@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_ANALYSIS_DEPENDENCEANALYSIS_H_
 #define MLIR_DIALECT_LINALG_ANALYSIS_DEPENDENCEANALYSIS_H_
 
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
 
@@ -67,7 +68,7 @@ public:
 
   // Builds a linalg dependence graph for the ops of type LinalgOp under `f`.
   static LinalgDependenceGraph buildDependenceGraph(Aliases &aliases, FuncOp f);
-  LinalgDependenceGraph(Aliases &aliases, ArrayRef<Operation *> ops);
+  LinalgDependenceGraph(Aliases &aliases, ArrayRef<LinalgOp> ops);
 
   /// Returns the X such that op -> X is a dependence of type dt.
   dependence_range getDependencesFrom(Operation *src, DependenceType dt) const;
@@ -168,7 +169,7 @@ private:
                                         ArrayRef<DependenceType> types) const;
 
   Aliases &aliases;
-  SmallVector<Operation *, 8> linalgOps;
+  SmallVector<LinalgOp, 8> linalgOps;
   DenseMap<Operation *, unsigned> linalgOpPositions;
 };
 } // namespace linalg
