@@ -14,8 +14,11 @@ if (NOT DEFINED CLANGD_BUILD_XPC)
   unset(CLANGD_BUILD_XPC_DEFAULT)
 endif ()
 
-llvm_canonicalize_cmake_booleans(CLANGD_BUILD_XPC)
-llvm_canonicalize_cmake_booleans(CLANGD_ENABLE_REMOTE)
+llvm_canonicalize_cmake_booleans(
+  CLANGD_BUILD_XPC
+  CLANGD_ENABLE_REMOTE
+  LLVM_ENABLE_ZLIB
+)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Features.inc.in
