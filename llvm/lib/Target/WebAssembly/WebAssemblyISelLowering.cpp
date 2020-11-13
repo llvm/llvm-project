@@ -646,7 +646,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                    MachineFunction &MF,
                                                    unsigned Intrinsic) const {
   switch (Intrinsic) {
-  case Intrinsic::wasm_atomic_notify:
+  case Intrinsic::wasm_memory_atomic_notify:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -660,7 +660,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // consistent. The same applies for wasm_atomic_wait intrinsics too.
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
-  case Intrinsic::wasm_atomic_wait_i32:
+  case Intrinsic::wasm_memory_atomic_wait32:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -668,7 +668,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(4);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
-  case Intrinsic::wasm_atomic_wait_i64:
+  case Intrinsic::wasm_memory_atomic_wait64:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i64;
     Info.ptrVal = I.getArgOperand(0);
