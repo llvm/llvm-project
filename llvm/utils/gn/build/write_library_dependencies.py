@@ -19,10 +19,10 @@ OUTPUT = """struct AvailableComponent {
     bool IsInstalled;
 
     /// The list of libraries required when linking this component.
-    const char *RequiredLibraries[85];
-  } AvailableComponents[85] = {
+    const char *RequiredLibraries[84];
+  } AvailableComponents[84] = {
   { "aggressiveinstcombine", "LLVMAggressiveInstCombine", true, {"analysis", "core", "support", "transformutils"} },
-{ "all", nullptr, true, {"demangle", "support", "tablegen", "core", "fuzzmutate", "filecheck", "interfacestub", "irreader", "codegen", "selectiondag", "asmprinter", "mirparser", "globalisel", "binaryformat", "bitreader", "bitwriter", "bitstreamreader", "dwarflinker", "extensions", "frontendopenacc", "frontendopenmp", "transformutils", "instrumentation", "aggressiveinstcombine", "instcombine", "scalaropts", "ipo", "vectorize", "hellonew", "objcarcopts", "coroutines", "cfguard", "linker", "analysis", "lto", "mc", "mcparser", "mcdisassembler", "mca", "object", "objectyaml", "option", "remarks", "debuginfodwarf", "debuginfogsym", "debuginfomsf", "debuginfocodeview", "debuginfopdb", "symbolize", "executionengine", "interpreter", "jitlink", "mcjit", "orcjit", "orcshared", "orctargetprocess", "runtimedyld", "target", "x86codegen", "x86asmparser", "x86disassembler", "x86desc", "x86info", "webassemblycodegen", "webassemblyasmparser", "webassemblydisassembler", "webassemblydesc", "webassemblyinfo", "asmparser", "lineeditor", "profiledata", "coverage", "passes", "textapi", "dlltooldriver", "libdriver", "xray", "windowsmanifest"} },
+{ "all", nullptr, true, {"demangle", "support", "tablegen", "core", "fuzzmutate", "filecheck", "interfacestub", "irreader", "codegen", "selectiondag", "asmprinter", "mirparser", "globalisel", "binaryformat", "bitreader", "bitwriter", "bitstreamreader", "dwarflinker", "extensions", "frontendopenmp", "transformutils", "instrumentation", "aggressiveinstcombine", "instcombine", "scalaropts", "ipo", "vectorize", "hellonew", "objcarcopts", "coroutines", "cfguard", "linker", "analysis", "lto", "mc", "mcparser", "mcdisassembler", "mca", "object", "objectyaml", "option", "remarks", "debuginfodwarf", "debuginfogsym", "debuginfomsf", "debuginfocodeview", "debuginfopdb", "symbolize", "executionengine", "interpreter", "jitlink", "mcjit", "orcjit", "orcshared", "orctargetprocess", "runtimedyld", "target", "x86codegen", "x86asmparser", "x86disassembler", "x86desc", "x86info", "webassemblycodegen", "webassemblyasmparser", "webassemblydisassembler", "webassemblydesc", "webassemblyinfo", "asmparser", "lineeditor", "profiledata", "coverage", "passes", "textapi", "dlltooldriver", "libdriver", "xray", "windowsmanifest"} },
 { "all-targets", nullptr, true, {"x86", "webassembly"} },
 { "analysis", "LLVMAnalysis", true, {"binaryformat", "core", "object", "profiledata", "support"} },
 { "asmparser", "LLVMAsmParser", true, {"binaryformat", "core", "support"} },
@@ -48,7 +48,6 @@ OUTPUT = """struct AvailableComponent {
 { "executionengine", "LLVMExecutionEngine", true, {"core", "mc", "object", "runtimedyld", "support", "target"} },
 { "extensions", "LLVMExtensions", true, {"support"} },
 { "filecheck", "LLVMFileCheck", true, {} },
-{ "frontendopenacc", "LLVMFrontendOpenACC", true, {} },
 { "frontendopenmp", "LLVMFrontendOpenMP", true, {"core", "support", "transformutils"} },
 { "fuzzmutate", "LLVMFuzzMutate", true, {"analysis", "bitreader", "bitwriter", "core", "scalaropts", "support", "target"} },
 { "globalisel", "LLVMGlobalISel", true, {"analysis", "codegen", "core", "mc", "selectiondag", "support", "target", "transformutils"} },
