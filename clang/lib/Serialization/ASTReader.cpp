@@ -4479,9 +4479,9 @@ ASTReader::ReadASTCore(StringRef FileName,
       return Missing;
 
     // Otherwise, return an error.
-    Diag(diag::err_module_file_not_found) << moduleKindForDiagnostic(Type)
-                                          << FileName << !ErrorStr.empty()
-                                          << ErrorStr;
+    Diag(diag::err_ast_file_not_found)
+        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
+        << ErrorStr;
     return Failure;
 
   case ModuleManager::OutOfDate:
@@ -4491,9 +4491,9 @@ ASTReader::ReadASTCore(StringRef FileName,
       return OutOfDate;
 
     // Otherwise, return an error.
-    Diag(diag::err_module_file_out_of_date) << moduleKindForDiagnostic(Type)
-                                            << FileName << !ErrorStr.empty()
-                                            << ErrorStr;
+    Diag(diag::err_ast_file_out_of_date)
+        << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
+        << ErrorStr;
     return Failure;
   }
 
@@ -4514,7 +4514,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   // Sniff for the signature.
   if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
-    Diag(diag::err_module_file_invalid)
+    Diag(diag::err_ast_file_invalid)
         << moduleKindForDiagnostic(Type) << FileName << std::move(Err);
     return Failure;
   }
