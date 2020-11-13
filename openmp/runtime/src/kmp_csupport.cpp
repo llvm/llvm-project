@@ -4202,9 +4202,13 @@ void __kmpc_doacross_fini(ident_t *loc, int gtid) {
   KA_TRACE(20, ("__kmpc_doacross_fini() exit: T#%d\n", gtid));
 }
 
-/* omp_alloc/omp_free only defined for C/C++, not for Fortran */
+/* omp_alloc/omp_calloc/omp_free only defined for C/C++, not for Fortran */
 void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
   return __kmpc_alloc(__kmp_entry_gtid(), size, allocator);
+}
+
+void *omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t allocator) {
+  return __kmpc_calloc(__kmp_entry_gtid(), nmemb, size, allocator);
 }
 
 void omp_free(void *ptr, omp_allocator_handle_t allocator) {

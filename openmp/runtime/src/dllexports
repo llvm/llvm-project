@@ -517,6 +517,7 @@ kmp_set_disp_num_buffers                    890
         __kmpc_set_default_allocator
         __kmpc_get_default_allocator
         __kmpc_alloc
+        __kmpc_calloc
         __kmpc_free
         __kmpc_init_allocator
         __kmpc_destroy_allocator
@@ -534,6 +535,7 @@ kmp_set_disp_num_buffers                    890
     omp_get_supported_active_levels         758
     omp_fulfill_event                       759
     omp_display_env                         733
+    omp_calloc                              776
 
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA
