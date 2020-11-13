@@ -1560,8 +1560,8 @@ and non-0 as true.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
-    Use ``!cast<string>`` to compare other types of objects.
+    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or 
+    record values. Use ``!cast<string>`` to compare other types of objects.
 
 ``!filter(``\ *var*\ ``,`` *list*\ ``,`` *predicate*\ ``)``
 
@@ -1603,7 +1603,7 @@ and non-0 as true.
 
 ``!ge(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than or equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, or ``int`` values.
+    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
 
 ``!getdagop(``\ *dag*\ ``)`` --or-- ``!getdagop<``\ *type*\ ``>(``\ *dag*\ ``)``
     This operator produces the operator of the given *dag* node.
@@ -1629,7 +1629,7 @@ and non-0 as true.
 
 ``!gt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, or ``int`` values.
+    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
 
 ``!head(``\ *a*\ ``)``
     This operator produces the zeroth element of the list *a*.
@@ -1652,7 +1652,7 @@ and non-0 as true.
 
 ``!le(``\ *a*\ ``,`` *b*\ ``)``
     This operator produces 1 if *a* is less than or equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, or ``int`` values.
+    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
 
 ``!listconcat(``\ *list1*\ ``,`` *list2*\ ``, ...)``
     This operator concatenates the list arguments *list1*, *list2*, etc., and
@@ -1665,15 +1665,15 @@ and non-0 as true.
 
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, or ``int`` values.
+    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
 
 ``!mul(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator multiplies *a*, *b*, etc., and produces the product.
 
 ``!ne(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is not equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
-    Use ``!cast<string>`` to compare other types of objects.
+    The arguments must be ``bit``, ``bits``, ``int``, ``string``,
+    or record values. Use ``!cast<string>`` to compare other types of objects.
 
 ``!not(``\ *a*\ ``)``
     This operator performs a logical NOT on *a*, which must be
