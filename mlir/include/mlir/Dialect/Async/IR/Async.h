@@ -47,6 +47,12 @@ public:
   Type getValueType();
 };
 
+/// The group type to represent async tokens or values grouped together.
+class GroupType : public Type::TypeBase<GroupType, Type, TypeStorage> {
+public:
+  using Base::Base;
+};
+
 } // namespace async
 } // namespace mlir
 
