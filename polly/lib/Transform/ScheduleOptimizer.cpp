@@ -1662,6 +1662,8 @@ void IslScheduleOptimizer::printScop(raw_ostream &OS, Scop &) const {
   isl_printer_free(p);
 
   OS << ScheduleStr << "\n";
+
+  free(ScheduleStr);
 }
 
 void IslScheduleOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
