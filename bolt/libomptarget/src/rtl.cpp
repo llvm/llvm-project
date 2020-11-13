@@ -31,39 +31,23 @@ static const char *RTLNames[] = {
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu.so",
 };
 
-RTLsTy *RTLs;
-std::mutex *RTLsMtx;
-
-HostEntriesBeginToTransTableTy *HostEntriesBeginToTransTable;
-std::mutex *TrlTblMtx;
-
-HostPtrToTableMapTy *HostPtrToTableMap;
-std::mutex *TblMapMtx;
+PluginManager *PM;
 
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
-  RTLs = new RTLsTy();
-  RTLsMtx = new std::mutex();
-  HostEntriesBeginToTransTable = new HostEntriesBeginToTransTableTy();
-  TrlTblMtx = new std::mutex();
-  HostPtrToTableMap = new HostPtrToTableMapTy();
-  TblMapMtx = new std::mutex();
+  PM = new PluginManager();
 }
 
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
-  delete RTLs;
-  delete RTLsMtx;
-  delete HostEntriesBeginToTransTable;
-  delete TrlTblMtx;
-  delete HostPtrToTableMap;
-  delete TblMapMtx;
+  delete PM;
 }
 
 void RTLsTy::LoadRTLs() {
   // Parse environment variable OMP_TARGET_OFFLOAD (if set)
-  TargetOffloadPolicy = (kmp_target_offload_kind_t) __kmpc_get_target_offload();
-  if (TargetOffloadPolicy == tgt_disabled) {
+  PM->TargetOffloadPolicy =
+      (kmp_target_offload_kind_t)__kmpc_get_target_offload();
+  if (PM->TargetOffloadPolicy == tgt_disabled) {
     return;
   }
 
@@ -197,7 +181,7 @@ static void RegisterGlobalCtorsDtorsForImage(__tgt_bin_desc *desc,
     __tgt_device_image *img, RTLInfoTy *RTL) {
 
   for (int32_t i = 0; i < RTL->NumberOfDevices; ++i) {
-    DeviceTy &Device = Devices[RTL->Idx + i];
+    DeviceTy &Device = PM->Devices[RTL->Idx + i];
     Device.PendingGlobalsMtx.lock();
     Device.HasPendingGlobals = true;
     for (__tgt_offload_entry *entry = img->EntriesBegin;
@@ -266,7 +250,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
   // Attempt to load all plugins available in the system.
   std::call_once(initFlag, &RTLsTy::LoadRTLs, this);
 
-  RTLsMtx->lock();
+  PM->RTLsMtx.lock();
   // Register the images with the RTLs that understand them, if any.
   for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
     // Obtain the image.
@@ -290,21 +274,21 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       if (!R.isUsed) {
         // Initialize the device information for the RTL we are about to use.
         DeviceTy device(&R);
-        size_t start = Devices.size();
-        Devices.resize(start + R.NumberOfDevices, device);
+        size_t Start = PM->Devices.size();
+        PM->Devices.resize(Start + R.NumberOfDevices, device);
         for (int32_t device_id = 0; device_id < R.NumberOfDevices;
             device_id++) {
           // global device ID
-          Devices[start + device_id].DeviceID = start + device_id;
+          PM->Devices[Start + device_id].DeviceID = Start + device_id;
           // RTL local device ID
-          Devices[start + device_id].RTLDeviceID = device_id;
+          PM->Devices[Start + device_id].RTLDeviceID = device_id;
         }
 
         // Initialize the index of this RTL and save it in the used RTLs.
         R.Idx = (UsedRTLs.empty())
                     ? 0
                     : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
-        assert((size_t) R.Idx == start &&
+        assert((size_t) R.Idx == Start &&
             "RTL index should equal the number of devices used so far.");
         R.isUsed = true;
         UsedRTLs.push_back(&R);
@@ -313,22 +297,22 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       }
 
       // Initialize (if necessary) translation table for this library.
-      TrlTblMtx->lock();
-      if(!HostEntriesBeginToTransTable->count(desc->HostEntriesBegin)){
-        TranslationTable &tt =
-            (*HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
-        tt.HostTable.EntriesBegin = desc->HostEntriesBegin;
-        tt.HostTable.EntriesEnd = desc->HostEntriesEnd;
+      PM->TrlTblMtx.lock();
+      if (!PM->HostEntriesBeginToTransTable.count(desc->HostEntriesBegin)) {
+        TranslationTable &TransTable =
+            (PM->HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
+        TransTable.HostTable.EntriesBegin = desc->HostEntriesBegin;
+        TransTable.HostTable.EntriesEnd = desc->HostEntriesEnd;
       }
 
       // Retrieve translation table for this library.
       TranslationTable &TransTable =
-          (*HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
+          (PM->HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
 
       DP("Registering image " DPxMOD " with RTL %s!\n",
           DPxPTR(img->ImageStart), R.RTLName.c_str());
       RegisterImageIntoTranslationTable(TransTable, R, img);
-      TrlTblMtx->unlock();
+      PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
       // Load ctors/dtors for static objects
@@ -342,8 +326,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       DP("No RTL found for image " DPxMOD "!\n", DPxPTR(img->ImageStart));
     }
   }
-  RTLsMtx->unlock();
-
+  PM->RTLsMtx.unlock();
 
   DP("Done registering entries!\n");
 }
@@ -351,7 +334,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
 void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
   DP("Unloading target library!\n");
 
-  RTLsMtx->lock();
+  PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
   for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
     // Obtain the image.
@@ -379,7 +362,7 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
       // Execute dtors for static objects if the device has been used, i.e.
       // if its PendingCtors list has been emptied.
       for (int32_t i = 0; i < FoundRTL->NumberOfDevices; ++i) {
-        DeviceTy &Device = Devices[FoundRTL->Idx + i];
+        DeviceTy &Device = PM->Devices[FoundRTL->Idx + i];
         Device.PendingGlobalsMtx.lock();
         if (Device.PendingCtorsDtors[desc].PendingCtors.empty()) {
           for (auto &dtor : Device.PendingCtorsDtors[desc].PendingDtors) {
@@ -407,28 +390,28 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
           DPxPTR(img->ImageStart));
     }
   }
-  RTLsMtx->unlock();
+  PM->RTLsMtx.unlock();
   DP("Done unregistering images!\n");
 
-  // Remove entries from HostPtrToTableMap
-  TblMapMtx->lock();
+  // Remove entries from PM->HostPtrToTableMap
+  PM->TblMapMtx.lock();
   for (__tgt_offload_entry *cur = desc->HostEntriesBegin;
       cur < desc->HostEntriesEnd; ++cur) {
-    HostPtrToTableMap->erase(cur->addr);
+    PM->HostPtrToTableMap.erase(cur->addr);
   }
 
   // Remove translation table for this descriptor.
-  auto tt = HostEntriesBeginToTransTable->find(desc->HostEntriesBegin);
-  if (tt != HostEntriesBeginToTransTable->end()) {
+  auto TransTable = PM->HostEntriesBeginToTransTable.find(desc->HostEntriesBegin);
+  if (TransTable != PM->HostEntriesBeginToTransTable.end()) {
     DP("Removing translation table for descriptor " DPxMOD "\n",
         DPxPTR(desc->HostEntriesBegin));
-    HostEntriesBeginToTransTable->erase(tt);
+    PM->HostEntriesBeginToTransTable.erase(TransTable);
   } else {
     DP("Translation table for descriptor " DPxMOD " cannot be found, probably "
         "it has been already removed.\n", DPxPTR(desc->HostEntriesBegin));
   }
 
-  TblMapMtx->unlock();
+  PM->TblMapMtx.unlock();
 
   // TODO: Remove RTL and the devices it manages if it's not used anymore?
   // TODO: Write some RTL->unload_image(...) function?

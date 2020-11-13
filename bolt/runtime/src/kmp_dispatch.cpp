@@ -69,16 +69,24 @@ void __kmp_dispatch_dxo_error(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 }
 
 // Returns either SCHEDULE_MONOTONIC or SCHEDULE_NONMONOTONIC
-static inline int __kmp_get_monotonicity(enum sched_type schedule,
+static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
                                          bool use_hier = false) {
   // Pick up the nonmonotonic/monotonic bits from the scheduling type
-  int monotonicity;
-  // default to monotonic
-  monotonicity = SCHEDULE_MONOTONIC;
-  if (SCHEDULE_HAS_NONMONOTONIC(schedule))
+  // TODO: make nonmonotonic when static_steal is fixed
+  int monotonicity = SCHEDULE_MONOTONIC;
+
+  // Let default be monotonic for executables
+  // compiled with OpenMP* 4.5 or less compilers
+  if (loc->get_openmp_version() < 50)
+    monotonicity = SCHEDULE_MONOTONIC;
+
+  if (use_hier)
+    monotonicity = SCHEDULE_MONOTONIC;
+  else if (SCHEDULE_HAS_NONMONOTONIC(schedule))
     monotonicity = SCHEDULE_NONMONOTONIC;
   else if (SCHEDULE_HAS_MONOTONIC(schedule))
     monotonicity = SCHEDULE_MONOTONIC;
+
   return monotonicity;
 }
 
@@ -146,7 +154,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 #endif
 
   /* Pick up the nonmonotonic/monotonic bits from the scheduling type */
-  monotonicity = __kmp_get_monotonicity(schedule, use_hier);
+  monotonicity = __kmp_get_monotonicity(loc, schedule, use_hier);
   schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
 
   /* Pick up the nomerge/ordered bits from the scheduling type */
@@ -177,7 +185,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       // Use the scheduling specified by OMP_SCHEDULE (or __kmp_sch_default if
       // not specified)
       schedule = team->t.t_sched.r_sched_type;
-      monotonicity = __kmp_get_monotonicity(schedule, use_hier);
+      monotonicity = __kmp_get_monotonicity(loc, schedule, use_hier);
       schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
       // Detail the schedule if needed (global controls are differentiated
       // appropriately)
@@ -244,7 +252,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     if (schedule == kmp_sch_runtime_simd) {
       // compiler provides simd_width in the chunk parameter
       schedule = team->t.t_sched.r_sched_type;
-      monotonicity = __kmp_get_monotonicity(schedule, use_hier);
+      monotonicity = __kmp_get_monotonicity(loc, schedule, use_hier);
       schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
       // Detail the schedule if needed (global controls are differentiated
       // appropriately)
@@ -2016,7 +2024,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           "__kmp_dispatch_next: T#%%d serialized case: p_lb:%%%s "
           "p_ub:%%%s p_st:%%%s p_last:%%p %%d  returning:%%d\n",
           traits_t<T>::spec, traits_t<T>::spec, traits_t<ST>::spec);
-      KD_TRACE(10, (buff, gtid, *p_lb, *p_ub, *p_st, p_last, *p_last, status));
+      KD_TRACE(10, (buff, gtid, *p_lb, *p_ub, *p_st, p_last,
+                    (p_last ? *p_last : 0), status));
       __kmp_str_free(&buff);
     }
 #endif
