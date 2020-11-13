@@ -366,9 +366,9 @@ TEST(SerializationTest, NoCrashOnBadArraySize) {
   Pos += FileDigest.size();
 
   // Varints are little-endian base-128 numbers, where the top-bit of each byte
-  // indicates whether there are more. 8fffffff7f -> 0xffffffff.
+  // indicates whether there are more. ffffffff0f -> 0xffffffff.
   std::string CorruptSrcs =
-      (Srcs->Data.take_front(Pos) + llvm::fromHex("8fffffff7f") +
+      (Srcs->Data.take_front(Pos) + llvm::fromHex("ffffffff0f") +
        "some_random_garbage")
           .str();
   Srcs->Data = CorruptSrcs;
