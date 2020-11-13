@@ -105,7 +105,7 @@ public:
   /// of pipelines.
   /// Note: The quality of the string representation depends entirely on the
   /// the correctness of per-pass overrides of Pass::printAsTextualPipeline.
-  void printAsTextualPipeline(raw_ostream &os, bool filterVerifier = true);
+  void printAsTextualPipeline(raw_ostream &os);
 
   /// Raw dump of the pass manager to llvm::errs().
   void dump();
