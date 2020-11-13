@@ -151,6 +151,18 @@ const ConstantFP* getConstantFPVRegVal(Register VReg,
 MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
                            const MachineRegisterInfo &MRI);
 
+/// Simple struct used to hold a Register value and the instruction which
+/// defines it.
+struct DefinitionAndSourceRegister {
+  MachineInstr *MI;
+  Register Reg;
+};
+
+/// Find the def instruction for \p Reg, and underlying value Register folding
+/// away any copies.
+Optional<DefinitionAndSourceRegister>
+getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
+
 /// Find the def instruction for \p Reg, folding away any trivial copies. May
 /// return nullptr if \p Reg is not a generic virtual register.
 MachineInstr *getDefIgnoringCopies(Register Reg,
