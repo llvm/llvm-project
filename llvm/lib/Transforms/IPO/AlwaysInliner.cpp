@@ -78,6 +78,10 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
             *CB, IFI, &FAM.getResult<AAManager>(F), InsertLifetime);
         assert(Res.isSuccess() && "unexpected failure to inline");
         (void)Res;
+
+        // Merge the attributes based on the inlining.
+        AttributeFuncs::mergeAttributesForInlining(*Caller, F);
+
         Changed = true;
       }
 
