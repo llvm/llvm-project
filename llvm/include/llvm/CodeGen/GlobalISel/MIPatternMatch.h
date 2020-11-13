@@ -53,6 +53,24 @@ struct ConstantMatch {
 
 inline ConstantMatch m_ICst(int64_t &Cst) { return ConstantMatch(Cst); }
 
+/// Matcher for a specific constant value.
+struct SpecificConstantMatch {
+  int64_t RequestedVal;
+  SpecificConstantMatch(int64_t RequestedVal) : RequestedVal(RequestedVal) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    int64_t MatchedVal;
+    return mi_match(Reg, MRI, m_ICst(MatchedVal)) && MatchedVal == RequestedVal;
+  }
+};
+
+/// Matches a constant equal to \p RequestedValue.
+inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
+  return SpecificConstantMatch(RequestedValue);
+}
+
+/// Matches an integer 0.
+inline SpecificConstantMatch m_ZeroInt() { return SpecificConstantMatch(0); }
+
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
 // We might want to support taking in some MachineOperands and call getReg on
@@ -423,6 +441,14 @@ inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
 m_GInsertVecElt(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
   return TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
                          TargetOpcode::G_INSERT_VECTOR_ELT>(Src0, Src1, Src2);
+}
+
+/// Matches a register negated by a G_SUB.
+/// G_SUB 0, %negated_reg
+template <typename SrcTy>
+inline BinaryOp_match<SpecificConstantMatch, SrcTy, TargetOpcode::G_SUB>
+m_Neg(const SrcTy &&Src) {
+  return m_GSub(m_ZeroInt(), Src);
 }
 
 } // namespace GMIPatternMatch

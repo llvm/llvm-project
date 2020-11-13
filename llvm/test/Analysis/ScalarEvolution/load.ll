@@ -17,11 +17,11 @@ define i32 @test1() nounwind readnone {
 ; CHECK-NEXT:    %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,50) S: [0,50) Exits: 49 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [50 x i32], [50 x i32]* @arr1, i32 0, i32 %i.03
-; CHECK-NEXT:    --> {@arr1,+,4}<nsw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (196 + @arr1) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {@arr1,+,4}<nuw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (196 + @arr1) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %0 = load i32, i32* %arrayidx, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 50 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [50 x i32], [50 x i32]* @arr2, i32 0, i32 %i.03
-; CHECK-NEXT:    --> {@arr2,+,4}<nsw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (196 + @arr2) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {@arr2,+,4}<nuw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (196 + @arr2) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %1 = load i32, i32* %arrayidx1, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add i32 %0, %sum.04
@@ -74,7 +74,7 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:    %n.01 = phi %struct.ListNode* [ bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node5 to %struct.ListNode*), %entry ], [ %1, %for.body ]
 ; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %i = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 1
-; CHECK-NEXT:    --> (4 + %n.01)<nsw> U: [-2147483644,-2147483648) S: [-2147483644,-2147483648) Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> (4 + %n.01)<nuw> U: [4,0) S: [4,0) Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %0 = load i32, i32* %i, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add nsw i32 %0, %sum.02

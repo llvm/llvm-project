@@ -566,6 +566,7 @@ static bool supportsWasm64(uint64_t Type) {
   case wasm::R_WASM_MEMORY_ADDR_I64:
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I64:
+  case wasm::R_WASM_FUNCTION_OFFSET_I64:
     return true;
   default:
     return supportsWasm32(Type);
@@ -601,6 +602,7 @@ static uint64_t resolveWasm64(RelocationRef R, uint64_t S, uint64_t A) {
   case wasm::R_WASM_MEMORY_ADDR_I64:
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I64:
+  case wasm::R_WASM_FUNCTION_OFFSET_I64:
     // For wasm section, its offset at 0 -- ignoring Value
     return A;
   default:

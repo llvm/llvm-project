@@ -1654,6 +1654,24 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] i
                                 "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
 }
 
+let Predicates = [PairedVectorMemops] in {
+  // Intrinsics for Paired Vector Loads.
+  def : Pat<(v256i1 (int_ppc_mma_lxvp iaddrX16:$src)), (LXVP memrix16:$src)>;
+  def : Pat<(v256i1 (int_ppc_mma_lxvp xaddrX16:$src)), (LXVPX xaddrX16:$src)>;
+  let Predicates = [PairedVectorMemops, PrefixInstrs] in {
+    def : Pat<(v256i1 (int_ppc_mma_lxvp iaddrX34:$src)), (PLXVP memri34:$src)>;
+  }
+  // Intrinsics for Paired Vector Stores.
+  def : Pat<(int_ppc_mma_stxvp v256i1:$XSp, iaddrX16:$dst),
+            (STXVP $XSp, memrix16:$dst)>;
+  def : Pat<(int_ppc_mma_stxvp v256i1:$XSp, xaddrX16:$dst),
+            (STXVPX $XSp, xaddrX16:$dst)>;
+  let Predicates = [PairedVectorMemops, PrefixInstrs] in {
+    def : Pat<(int_ppc_mma_stxvp v256i1:$XSp, iaddrX34:$dst),
+              (PSTXVP $XSp, memri34:$dst)>;
+  }
+}
+
 // TODO: We have an added complexity of 500 here. This is only a temporary
 // solution to have tablegen consider these patterns first. The way we do
 // addressing for PowerPC is complex depending on available D form, X form, or

@@ -14776,6 +14776,19 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       break;
   #include "clang/Basic/BuiltinsPPC.def"
     }
+    if (BuiltinID == PPC::BI__builtin_mma_lxvp ||
+        BuiltinID == PPC::BI__builtin_mma_stxvp) {
+      if (BuiltinID == PPC::BI__builtin_mma_lxvp) {
+        Ops[1] = Builder.CreateBitCast(Ops[1], Int8PtrTy);
+        Ops[0] = Builder.CreateGEP(Ops[1], Ops[0]);
+      } else {
+        Ops[2] = Builder.CreateBitCast(Ops[2], Int8PtrTy);
+        Ops[1] = Builder.CreateGEP(Ops[2], Ops[1]);
+      }
+      Ops.pop_back();
+      llvm::Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops, "");
+    }
     SmallVector<Value*, 4> CallOps;
     if (Accumulate) {
       Address Addr = EmitPointerWithAlignment(E->getArg(0));
