@@ -169,8 +169,8 @@ static cl::opt<bool> ClDebugNonzeroLabels(
 //
 // If this flag is set to true, the user must provide definitions for the
 // following callback functions:
-//   void __dfsan_load_callback(dfsan_label Label);
-//   void __dfsan_store_callback(dfsan_label Label);
+//   void __dfsan_load_callback(dfsan_label Label, void* addr);
+//   void __dfsan_store_callback(dfsan_label Label, void* addr);
 //   void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
 //   void __dfsan_cmp_callback(dfsan_label CombinedLabel);
 static cl::opt<bool> ClEventCallbacks(
@@ -353,6 +353,7 @@ class DataFlowSanitizer {
 
   Module *Mod;
   LLVMContext *Ctx;
+  Type *Int8Ptr;
   IntegerType *ShadowTy;
   PointerType *ShadowPtrTy;
   IntegerType *IntptrTy;
@@ -372,7 +373,8 @@ class DataFlowSanitizer {
   FunctionType *DFSanSetLabelFnTy;
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
-  FunctionType *DFSanLoadStoreCmpCallbackFnTy;
+  FunctionType *DFSanCmpCallbackFnTy;
+  FunctionType *DFSanLoadStoreCallbackFnTy;
   FunctionType *DFSanMemTransferCallbackFnTy;
   FunctionCallee DFSanUnionFn;
   FunctionCallee DFSanCheckedUnionFn;
@@ -575,6 +577,7 @@ bool DataFlowSanitizer::init(Module &M) {
 
   Mod = &M;
   Ctx = &M.getContext();
+  Int8Ptr = Type::getInt8PtrTy(*Ctx);
   ShadowTy = IntegerType::get(*Ctx, ShadowWidthBits);
   ShadowPtrTy = PointerType::getUnqual(ShadowTy);
   IntptrTy = DL.getIntPtrType(*Ctx);
@@ -605,8 +608,12 @@ bool DataFlowSanitizer::init(Module &M) {
       Type::getVoidTy(*Ctx), None, /*isVarArg=*/false);
   DFSanVarargWrapperFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
-  DFSanLoadStoreCmpCallbackFnTy =
-      FunctionType::get(Type::getVoidTy(*Ctx), ShadowTy, /*isVarArg=*/false);
+  DFSanCmpCallbackFnTy = FunctionType::get(Type::getVoidTy(*Ctx), ShadowTy,
+                                           /*isVarArg=*/false);
+  Type *DFSanLoadStoreCallbackArgs[2] = {ShadowTy, Int8Ptr};
+  DFSanLoadStoreCallbackFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanLoadStoreCallbackArgs,
+                        /*isVarArg=*/false);
   Type *DFSanMemTransferCallbackArgs[2] = {ShadowPtrTy, IntptrTy};
   DFSanMemTransferCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanMemTransferCallbackArgs,
@@ -792,13 +799,13 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
 // Initializes event callback functions and declare them in the module
 void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
   DFSanLoadCallbackFn = Mod->getOrInsertFunction("__dfsan_load_callback",
-                                                 DFSanLoadStoreCmpCallbackFnTy);
-  DFSanStoreCallbackFn = Mod->getOrInsertFunction(
-      "__dfsan_store_callback", DFSanLoadStoreCmpCallbackFnTy);
+                                                 DFSanLoadStoreCallbackFnTy);
+  DFSanStoreCallbackFn = Mod->getOrInsertFunction("__dfsan_store_callback",
+                                                  DFSanLoadStoreCallbackFnTy);
   DFSanMemTransferCallbackFn = Mod->getOrInsertFunction(
       "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
-  DFSanCmpCallbackFn = Mod->getOrInsertFunction("__dfsan_cmp_callback",
-                                                DFSanLoadStoreCmpCallbackFnTy);
+  DFSanCmpCallbackFn =
+      Mod->getOrInsertFunction("__dfsan_cmp_callback", DFSanCmpCallbackFnTy);
 }
 
 bool DataFlowSanitizer::runImpl(Module &M) {
@@ -1404,7 +1411,8 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   DFSF.setShadow(&LI, Shadow);
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&LI);
-    IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, Shadow);
+    Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
+    IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {Shadow, Addr8});
   }
 }
 
@@ -1477,7 +1485,8 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   DFSF.storeShadow(SI.getPointerOperand(), Size, Alignment, Shadow, &SI);
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&SI);
-    IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, Shadow);
+    Value *Addr8 = IRB.CreateBitCast(SI.getPointerOperand(), DFSF.DFS.Int8Ptr);
+    IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {Shadow, Addr8});
   }
 }
 
