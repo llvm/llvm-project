@@ -881,7 +881,7 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
   // we don't have information about probabilities.
   if (Instruction *LHS = dyn_cast<Instruction>(CI->getOperand(0)))
     if (LHS->getOpcode() == Instruction::And)
-      if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(LHS->getOperand(1)))
+      if (ConstantInt *AndRHS = GetConstantInt(LHS->getOperand(1)))
         if (AndRHS->getValue().isPowerOf2())
           return false;
 
