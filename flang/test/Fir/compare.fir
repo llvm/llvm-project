@@ -16,8 +16,8 @@ func @cmp2(%a : !fir.real<16>, %b : !fir.real<16>) -> i1 {
 
 // CHECK-LABEL: define i1 @cmp3(<2 x float> %0, <2 x float> %1)
 func @cmp3(%a : !fir.complex<4>, %b : !fir.complex<4>) -> i1 {
-  // CHECK: fcmp ueq float
-  %1 = fir.cmpc "ueq", %a, %b : !fir.complex<4>
+  // CHECK: fcmp oeq float
+  %1 = fir.cmpc "oeq", %a, %b : !fir.complex<4>
   return %1 : i1
 }
 
