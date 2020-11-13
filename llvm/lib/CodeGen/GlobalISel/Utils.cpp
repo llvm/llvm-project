@@ -351,15 +351,8 @@ llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
   return MI->getOperand(1).getFPImm();
 }
 
-namespace {
-struct DefinitionAndSourceRegister {
-  MachineInstr *MI;
-  Register Reg;
-};
-} // namespace
-
-static Optional<DefinitionAndSourceRegister>
-getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
+Optional<DefinitionAndSourceRegister>
+llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
   auto *DefMI = MRI.getVRegDef(Reg);
   auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
