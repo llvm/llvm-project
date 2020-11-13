@@ -1837,10 +1837,7 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   // Also take the opportunity here to try to do some optimization.
   // Try to convert this into a G_SUB if the offset is a 0-x negate idiom.
   Register NegatedReg;
-  int64_t Cst;
-  if (!mi_match(I.getOperand(2).getReg(), MRI,
-                m_GSub(m_ICst(Cst), m_Reg(NegatedReg))) ||
-      Cst != 0)
+  if (!mi_match(I.getOperand(2).getReg(), MRI, m_Neg(m_Reg(NegatedReg))))
     return true;
   I.getOperand(2).setReg(NegatedReg);
   I.setDesc(TII.get(TargetOpcode::G_SUB));
