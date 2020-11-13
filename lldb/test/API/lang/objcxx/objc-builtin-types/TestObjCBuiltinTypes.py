@@ -1,7 +1,5 @@
 """Test that the expression parser doesn't get confused by 'id' and 'Class'"""
 
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -21,7 +19,6 @@ class TestObjCBuiltinTypes(TestBase):
             self.main_source, '// Set breakpoint here.')
 
     @add_test_categories(['pyapi'])
-    #<rdar://problem/10591460> [regression] Can't print ivar value: error: reference to 'id' is ambiguous
     def test_with_python_api(self):
         """Test expression parser respect for ObjC built-in types."""
         self.build()
@@ -57,4 +54,7 @@ class TestObjCBuiltinTypes(TestBase):
 
         self.expect("expr (foo)", patterns=["\(ns::id\) \$.* = 0"])
 
-        self.expect("expr id my_id = 0; my_id", patterns=["\(id\) \$.* = nil"])
+        self.expect("expr --language Objective-C++ -- id my_id = 0; my_id",
+                    patterns=["\(id\) \$.* = nil"])
+        self.expect("expr --language C++ -- id my_id = 0; my_id",
+                    patterns=["\(id\) \$.* = nullptr"])
