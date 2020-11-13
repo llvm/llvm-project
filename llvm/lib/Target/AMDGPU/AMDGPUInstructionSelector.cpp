@@ -633,7 +633,6 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
 
   Register ShiftSrc0;
   Register ShiftSrc1;
-  int64_t ShiftAmt;
 
   // With multiple uses of the shift, this will duplicate the shift and
   // increase register pressure.
@@ -645,14 +644,11 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   // (build_vector_trunc $src0, $src1)
   //  => (S_PACK_LL_B32_B16 $src0, $src1)
 
-  // FIXME: This is an inconvenient way to check a specific value
   bool Shift0 = mi_match(
-    Src0, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc0), m_ICst(ShiftAmt)))) &&
-    ShiftAmt == 16;
+      Src0, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc0), m_SpecificICst(16))));
 
   bool Shift1 = mi_match(
-    Src1, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc1), m_ICst(ShiftAmt)))) &&
-    ShiftAmt == 16;
+      Src1, *MRI, m_OneUse(m_GLShr(m_Reg(ShiftSrc1), m_SpecificICst(16))));
 
   unsigned Opc = AMDGPU::S_PACK_LL_B32_B16;
   if (Shift0 && Shift1) {
@@ -3474,9 +3470,7 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
     return false;
 
-  int64_t MergeRHS;
-  if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(MergeRHS)) &&
-      MergeRHS == 0) {
+  if (mi_match(Def->getOperand(2).getReg(), MRI, m_ZeroInt())) {
     return Def->getOperand(1).getReg();
   }
 
