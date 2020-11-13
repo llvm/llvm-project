@@ -1125,7 +1125,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     if (!HasNull)
       continue;
 
-    SmallPtrSet<Instruction *, 4> DependingInstructions;
+    Instruction *DepInst = nullptr;
 
     // Check that there is nothing that cares about the reference
     // count between the call and the phi.
@@ -1137,13 +1137,13 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     case ARCInstKind::Release:
       // These can't be moved across things that care about the retain
       // count.
-      FindDependencies(NeedsPositiveRetainCount, Arg, Inst->getParent(), Inst,
-                       DependingInstructions, PA);
+      DepInst = findSingleDependency(NeedsPositiveRetainCount, Arg,
+                                     Inst->getParent(), Inst, PA);
       break;
     case ARCInstKind::Autorelease:
       // These can't be moved across autorelease pool scope boundaries.
-      FindDependencies(AutoreleasePoolBoundary, Arg, Inst->getParent(), Inst,
-                       DependingInstructions, PA);
+      DepInst = findSingleDependency(AutoreleasePoolBoundary, Arg,
+                                     Inst->getParent(), Inst, PA);
       break;
     case ARCInstKind::ClaimRV:
     case ARCInstKind::RetainRV:
@@ -1157,9 +1157,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
       llvm_unreachable("Invalid dependence flavor");
     }
 
-    if (DependingInstructions.size() != 1)
-      continue;
-    if (*DependingInstructions.begin() != PN)
+    if (DepInst != PN)
       continue;
 
     Changed = true;
@@ -2233,24 +2231,21 @@ bool ObjCARCOpt::OptimizeSequences(Function &F) {
 /// Check if there is a dependent call earlier that does not have anything in
 /// between the Retain and the call that can affect the reference count of their
 /// shared pointer argument. Note that Retain need not be in BB.
-static bool
-HasSafePathToPredecessorCall(const Value *Arg, Instruction *Retain,
-                             SmallPtrSetImpl<Instruction *> &DepInsts,
-                             ProvenanceAnalysis &PA) {
-  FindDependencies(CanChangeRetainCount, Arg, Retain->getParent(), Retain,
-                   DepInsts, PA);
-  if (DepInsts.size() != 1)
-    return false;
-
-  auto *Call = dyn_cast_or_null<CallInst>(*DepInsts.begin());
+static CallInst *HasSafePathToPredecessorCall(const Value *Arg,
+                                              Instruction *Retain,
+                                              ProvenanceAnalysis &PA) {
+  auto *Call = dyn_cast_or_null<CallInst>(findSingleDependency(
+      CanChangeRetainCount, Arg, Retain->getParent(), Retain, PA));
 
   // Check that the pointer is the return value of the call.
   if (!Call || Arg != Call)
-    return false;
+    return nullptr;
 
   // Check that the call is a regular call.
   ARCInstKind Class = GetBasicARCInstKind(Call);
-  return Class == ARCInstKind::CallOrUser || Class == ARCInstKind::Call;
+  return Class == ARCInstKind::CallOrUser || Class == ARCInstKind::Call
+             ? Call
+             : nullptr;
 }
 
 /// Find a dependent retain that precedes the given autorelease for which there
@@ -2260,12 +2255,8 @@ static CallInst *
 FindPredecessorRetainWithSafePath(const Value *Arg, BasicBlock *BB,
                                   Instruction *Autorelease,
                                   ProvenanceAnalysis &PA) {
-  SmallPtrSet<Instruction *, 4> DepInsts;
-  FindDependencies(CanChangeRetainCount, Arg, BB, Autorelease, DepInsts, PA);
-  if (DepInsts.size() != 1)
-    return nullptr;
-
-  auto *Retain = dyn_cast_or_null<CallInst>(*DepInsts.begin());
+  auto *Retain = dyn_cast_or_null<CallInst>(
+      findSingleDependency(CanChangeRetainCount, Arg, BB, Autorelease, PA));
 
   // Check that we found a retain with the same argument.
   if (!Retain || !IsRetain(GetBasicARCInstKind(Retain)) ||
@@ -2284,11 +2275,9 @@ FindPredecessorAutoreleaseWithSafePath(const Value *Arg, BasicBlock *BB,
                                        ReturnInst *Ret,
                                        ProvenanceAnalysis &PA) {
   SmallPtrSet<Instruction *, 4> DepInsts;
-  FindDependencies(NeedsPositiveRetainCount, Arg, BB, Ret, DepInsts, PA);
-  if (DepInsts.size() != 1)
-    return nullptr;
+  auto *Autorelease = dyn_cast_or_null<CallInst>(
+      findSingleDependency(NeedsPositiveRetainCount, Arg, BB, Ret, PA));
 
-  auto *Autorelease = dyn_cast_or_null<CallInst>(*DepInsts.begin());
   if (!Autorelease)
     return nullptr;
   ARCInstKind AutoreleaseClass = GetBasicARCInstKind(Autorelease);
@@ -2314,7 +2303,6 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
 
   LLVM_DEBUG(dbgs() << "\n== ObjCARCOpt::OptimizeReturns ==\n");
 
-  SmallPtrSet<Instruction *, 4> DependingInstructions;
   for (BasicBlock &BB: F) {
     ReturnInst *Ret = dyn_cast<ReturnInst>(&BB.back());
     if (!Ret)
@@ -2341,21 +2329,13 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
 
     // Check that there is nothing that can affect the reference count
     // between the retain and the call.  Note that Retain need not be in BB.
-    bool HasSafePathToCall =
-        HasSafePathToPredecessorCall(Arg, Retain, DependingInstructions, PA);
+    CallInst *Call = HasSafePathToPredecessorCall(Arg, Retain, PA);
 
     // Don't remove retainRV/autoreleaseRV pairs if the call isn't a tail call.
-    if (HasSafePathToCall &&
-        GetBasicARCInstKind(Retain) == ARCInstKind::RetainRV &&
-        GetBasicARCInstKind(Autorelease) == ARCInstKind::AutoreleaseRV &&
-        !cast<CallInst>(*DependingInstructions.begin())->isTailCall()) {
-      DependingInstructions.clear();
-      continue;
-    }
-
-    DependingInstructions.clear();
-
-    if (!HasSafePathToCall)
+    if (!Call ||
+        (!Call->isTailCall() &&
+         GetBasicARCInstKind(Retain) == ARCInstKind::RetainRV &&
+         GetBasicARCInstKind(Autorelease) == ARCInstKind::AutoreleaseRV))
       continue;
 
     // If so, we can zap the retain and autorelease.
