@@ -54,6 +54,7 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
     FuncOp func =
         FuncOp::create(builder.getUnknownLoc(), name,
                        builder.getFunctionType(llvm::None, llvm::None));
+    func.setPrivate();
     module->push_back(func);
   }
 

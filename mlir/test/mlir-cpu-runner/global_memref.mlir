@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s -convert-std-to-llvm | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
-func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
-func @print_memref_i32(memref<*xi32>) attributes { llvm.emit_c_interface }
-func @printNewline() -> ()
+func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func private @print_memref_i32(memref<*xi32>) attributes { llvm.emit_c_interface }
+func private @printNewline() -> ()
 
 global_memref "private" @gv0 : memref<4xf32> = dense<[0.0, 1.0, 2.0, 3.0]>
 func @test1DMemref() {

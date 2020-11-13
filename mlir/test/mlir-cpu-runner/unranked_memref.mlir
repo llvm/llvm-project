@@ -70,8 +70,8 @@ func @main() -> () {
     return
 }
 
-func @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
-func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
+func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func @return_two_var_memref_caller() {
   %0 = alloca() : memref<4x3xf32>
@@ -102,8 +102,8 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   return %0 : memref<*xf32>
 }
 
-func @printU64(index) -> ()
-func @printNewline() -> ()
+func private @printU64(index) -> ()
+func private @printNewline() -> ()
 
 func @dim_op_of_unranked() {
   %ranked = alloc() : memref<4x3xf32>

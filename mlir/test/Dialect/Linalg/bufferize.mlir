@@ -135,7 +135,7 @@ func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
 // CHECK-DAG: #[[$MAP0:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$MAP1:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1 * 2)>
 
-func @make_index() -> index
+func private @make_index() -> index
 
 // CHECK-LABEL: func @bufferize_subtensor(
 //  CHECK-SAME:   %[[T:[0-9a-z]*]]: tensor<?x?xf32>
@@ -168,7 +168,7 @@ func @bufferize_subtensor(%t : tensor<?x?xf32>) -> (tensor<2x3xf32>, tensor<2x?x
 // CHECK-DAG: #[[$MAP0:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$MAP1:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1 * 2)>
 
-func @make_index() -> index
+func private @make_index() -> index
 
 // CHECK-LABEL: func @bufferize_subtensor_insert(
 //  CHECK-SAME:   %[[T:[0-9a-z]*]]: tensor<?x?xf32>

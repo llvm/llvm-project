@@ -109,7 +109,7 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
   auto addFuncDecl = [&](StringRef name, FunctionType type) {
     if (module.lookupSymbol(name))
       return;
-    builder.create<FuncOp>(module.getLoc(), name, type);
+    builder.create<FuncOp>(module.getLoc(), name, type).setPrivate();
   };
 
   MLIRContext *ctx = module.getContext();

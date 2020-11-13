@@ -5,7 +5,7 @@
 // expected-remark@below {{symbol_removable function successfully erased}}
 module attributes {sym.outside_use = @symbol_foo } {
   // expected-remark@+1 {{symbol has 2 uses}}
-  func @symbol_foo()
+  func private @symbol_foo()
 
   // expected-remark@below {{symbol has no uses}}
   // expected-remark@below {{found use of symbol : @symbol_foo}}
@@ -20,10 +20,10 @@ module attributes {sym.outside_use = @symbol_foo } {
   }
 
   // expected-remark@below {{symbol has no uses}}
-  func @symbol_removable()
+  func private @symbol_removable()
 
   // expected-remark@+1 {{symbol has 1 use}}
-  func @symbol_baz()
+  func private @symbol_baz()
 
   // expected-remark@+1 {{found use of symbol : @symbol_baz}}
   module attributes {test.reference = @symbol_baz} {
@@ -40,7 +40,7 @@ module {
     // expected-remark@+1 {{symbol has 1 uses}}
     module @module_c {
       // expected-remark@+1 {{symbol has 1 uses}}
-      func @foo()
+      func nested @foo()
     }
   }
 

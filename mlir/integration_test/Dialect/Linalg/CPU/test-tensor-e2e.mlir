@@ -31,4 +31,4 @@ func @main() {
 // Note that this is skipping a step and we would need at least some function
 // attribute to declare that this conversion is valid (e.g. when we statically
 // know that things will play nicely at the C ABI boundary).
-func @print_memref_f32(%ptr : tensor<*xf32>)
+func private @print_memref_f32(%ptr : tensor<*xf32>)
