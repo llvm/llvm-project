@@ -2051,6 +2051,20 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return SelectInst::Create(Cmp, Neg, A);
   }
 
+  // If we are subtracting a low-bit masked subset of some value from an add
+  // of that same value with no low bits changed, that is clearing some low bits
+  // of the sum:
+  // sub (X + AddC), (X & AndC) --> and (X + AddC), ~AndC
+  const APInt *AddC, *AndC;
+  if (match(Op0, m_Add(m_Value(X), m_APInt(AddC))) &&
+      match(Op1, m_And(m_Specific(X), m_APInt(AndC)))) {
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    unsigned Cttz = AddC->countTrailingZeros();
+    APInt HighMask(APInt::getHighBitsSet(BitWidth, BitWidth - Cttz));
+    if ((HighMask & *AndC).isNullValue())
+      return BinaryOperator::CreateAnd(Op0, ConstantInt::get(Ty, ~(*AndC)));
+  }
+
   if (Instruction *V =
           canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(I))
     return V;

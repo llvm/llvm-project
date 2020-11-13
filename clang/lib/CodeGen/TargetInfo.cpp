@@ -8712,35 +8712,9 @@ private:
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
                                          uint64_t Members) const override;
 
-  // Coerce HIP pointer arguments from generic pointers to global ones.
+  // Coerce HIP scalar pointer arguments from generic pointers to global ones.
   llvm::Type *coerceKernelArgumentType(llvm::Type *Ty, unsigned FromAS,
                                        unsigned ToAS) const {
-    // Structure types.
-    if (auto STy = dyn_cast<llvm::StructType>(Ty)) {
-      SmallVector<llvm::Type *, 8> EltTys;
-      bool Changed = false;
-      for (auto T : STy->elements()) {
-        auto NT = coerceKernelArgumentType(T, FromAS, ToAS);
-        EltTys.push_back(NT);
-        Changed |= (NT != T);
-      }
-      // Skip if there is no change in element types.
-      if (!Changed)
-        return STy;
-      if (STy->hasName())
-        return llvm::StructType::create(
-            EltTys, (STy->getName() + ".coerce").str(), STy->isPacked());
-      return llvm::StructType::get(getVMContext(), EltTys, STy->isPacked());
-    }
-    // Array types.
-    if (auto ATy = dyn_cast<llvm::ArrayType>(Ty)) {
-      auto T = ATy->getElementType();
-      auto NT = coerceKernelArgumentType(T, FromAS, ToAS);
-      // Skip if there is no change in that element type.
-      if (NT == T)
-        return ATy;
-      return llvm::ArrayType::get(NT, ATy->getNumElements());
-    }
     // Single value types.
     if (Ty->isPointerTy() && Ty->getPointerAddressSpace() == FromAS)
       return llvm::PointerType::get(
