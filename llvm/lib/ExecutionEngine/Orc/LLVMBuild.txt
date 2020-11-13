@@ -21,5 +21,6 @@ subdirectories = Shared TargetProcess
 type = Library
 name = OrcJIT
 parent = ExecutionEngine
-required_libraries = Core ExecutionEngine JITLink Object OrcShared MC Passes
-                     RuntimeDyld Support Target TransformUtils
+required_libraries = Core ExecutionEngine JITLink Object OrcShared
+                     OrcTargetProcess MC Passes RuntimeDyld Support Target
+                     TransformUtils
