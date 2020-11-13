@@ -293,6 +293,13 @@ namespace {
                                               Align(16));
     }
 
+    /// SelectAddrImmX34 - Returns true if the address N can be represented by
+    /// a base register plus a signed 34-bit displacement. Suitable for use by
+    /// PSTXVP and friends.
+    bool SelectAddrImmX34(SDValue N, SDValue &Disp, SDValue &Base) {
+      return PPCLowering->SelectAddressRegImm34(N, Disp, Base, *CurDAG);
+    }
+
     // Select an address into a single register.
     bool SelectAddr(SDValue N, SDValue &Base) {
       Base = N;
