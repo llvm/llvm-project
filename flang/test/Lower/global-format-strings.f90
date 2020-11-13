@@ -9,6 +9,6 @@ program other
 1008 format('ok')
 end
 ! CHECK-LABEL: fir.global linkonce @_QQcl.28276F6B2729 constant
-! CHECK: %[[lit:.*]] = fir.string_lit "('ok')"(6) : !fir.char<1>
-! CHECK: fir.has_value %[[lit]] : !fir.array<6x!fir.char<1>>
+! CHECK: %[[lit:.*]] = fir.string_lit "('ok')"(6) : !fir.char<1,6>
+! CHECK: fir.has_value %[[lit]] : !fir.char<1,6>
 ! CHECK: }

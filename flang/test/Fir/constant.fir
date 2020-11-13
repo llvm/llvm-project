@@ -1,10 +1,10 @@
 // RUN: tco -emit-fir %s | tco | FileCheck %s
 
 // CHECK-LABEL: define [3 x i8] @x
-func @x() -> !fir.array<3x!fir.char<1>> {
-  %1 = fir.string_lit "xyz"(3) : !fir.char<1>
+func @x() -> !fir.char<1,3> {
+  %1 = fir.string_lit "xyz"(3) : !fir.char<1,3>
  // CHECK: ret [3 x i8] c"xyz"
-  return %1 : !fir.array<3x!fir.char<1>>
+  return %1 : !fir.char<1,3>
 }
 
 // CHECK-LABEL: define x86_fp80 @y()

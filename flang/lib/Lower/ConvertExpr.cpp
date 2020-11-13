@@ -737,8 +737,7 @@ private:
   genScalarLit(const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
                    Fortran::common::TypeCategory::Character, KIND>> &value,
                int64_t len) {
-    auto type = fir::SequenceType::get(
-        {len}, fir::CharacterType::get(builder.getContext(), KIND));
+    auto type = fir::CharacterType::get(builder.getContext(), KIND, len);
     auto consLit = [&]() -> fir::StringLitOp {
       auto context = builder.getContext();
       mlir::Attribute strAttr;
@@ -819,28 +818,21 @@ private:
     }
     if constexpr (TC == Fortran::common::TypeCategory::Character) {
       fir::SequenceType::Shape shape;
-      shape.push_back(con.LEN());
       shape.append(con.shape().begin(), con.shape().end());
-      auto chTy =
-          converter.genType(Fortran::common::TypeCategory::Character, KIND);
+      auto chTy = converter.genType(TC, KIND, {con.LEN()});
       auto arrayTy = fir::SequenceType::get(shape, chTy);
       mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
       Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
       do {
-        auto constant = fir::getBase(
+        auto charVal = fir::getBase(
             genScalarLit<Fortran::common::TypeCategory::Character, KIND>(
                 con.At(subscripts), con));
-        for (std::int64_t i = 0, L = con.LEN(); i < L; ++i) {
-          llvm::SmallVector<mlir::Value, 8> idx;
-          idx.push_back(builder.createIntegerConstant(getLoc(), idxTy, i));
-          auto charVal = builder.create<fir::ExtractValueOp>(getLoc(), chTy,
-                                                             constant, idx);
-          for (auto [dim, lb] : llvm::zip(subscripts, con.lbounds()))
-            idx.push_back(
-                builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
-          array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
-                                                     charVal, idx);
-        }
+        llvm::SmallVector<mlir::Value, 8> idx;
+        for (auto [dim, lb] : llvm::zip(subscripts, con.lbounds()))
+          idx.push_back(
+              builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
+        array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
+                                                   charVal, idx);
       } while (con.IncrementSubscripts(subscripts));
       auto len = builder.createIntegerConstant(getLoc(), idxTy, con.LEN());
       return fir::CharArrayBoxValue{array, len, extents, lbounds};
@@ -1210,8 +1202,12 @@ private:
         },
         [&](const Fortran::lower::SymbolBox::CharFullDim &arr)
             -> fir::ExtendedValue {
-          auto len = arr.getLen();
-          return fir::CharBoxValue(genFullDim(arr, len), len);
+          auto delta = arr.getLen();
+          // If the length is known in the type, fir.coordinate_of will
+          // already take the length into account.
+          if (Fortran::lower::CharacterExprHelper::hasConstantLengthInType(arr))
+            delta = one;
+          return fir::CharBoxValue(genFullDim(arr, delta), arr.getLen());
         },
         [&](const Fortran::lower::SymbolBox::Derived &arr)
             -> fir::ExtendedValue {

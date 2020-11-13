@@ -423,7 +423,7 @@ private:
                     getResultEntity(interface.side().getCallDescription()));
     auto lenTy = mlir::IndexType::get(&mlirContext);
     auto charRefTy = fir::ReferenceType::get(
-        fir::CharacterType::get(&mlirContext, type.kind()));
+        fir::CharacterType::getUnknownLen(&mlirContext, type.kind()));
     auto boxCharTy = fir::BoxCharType::get(&mlirContext, type.kind());
     addFirInput(charRefTy, resultPosition, Property::CharAddress);
     addFirInput(lenTy, resultPosition, Property::CharLength);
@@ -491,15 +491,15 @@ private:
 
     auto dynamicType = obj.type.type();
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      auto charTy = fir::CharacterType::get(&mlirContext, dynamicType.kind());
-      auto len = fir::SequenceType::getUnknownExtent();
+      auto len = fir::CharacterType::unknownLen();
       if (auto constantLen = toInt64(dynamicType.GetCharLength()))
         len = *constantLen;
-      fir::SequenceType::Shape shape(1, len);
-      auto bounds = getBounds(obj.type.shape());
-      shape.append(bounds.begin(), bounds.end());
-      auto seqType = fir::SequenceType::get(shape, charTy);
-      auto boxType = fir::BoxType::get(seqType);
+      mlir::Type type =
+          fir::CharacterType::get(&mlirContext, dynamicType.kind(), len);
+      fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
+      if (!bounds.empty())
+        type = fir::SequenceType::get(bounds, type);
+      auto boxType = fir::BoxType::get(type);
       addFirInput(boxType, nextPassedArgPosition(), Property::Box);
       addPassedArg(PassEntityBy::Box, entity);
     } else if (dynamicType.category() ==

@@ -18,10 +18,6 @@
 
 using namespace Fortran::runtime;
 
-static inline int64_t getLength(mlir::Type argTy) {
-  return argTy.cast<fir::SequenceType>().getShape()[0];
-}
-
 /// Helper function to recover the KIND from the FIR type.
 static int discoverKind(mlir::Type ty) {
   if (auto charTy = ty.dyn_cast<fir::CharacterType>())

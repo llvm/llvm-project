@@ -6,13 +6,13 @@
 subroutine test_array_format
   ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
   ! CHECK-DAG: %[[c10:.*]] = constant 10 : index
-  ! CHECK-DAG: %[[mem:.*]] = fir.alloca !fir.array<10x2x!fir.char<1>>
+  ! CHECK-DAG: %[[mem:.*]] = fir.alloca !fir.array<2x!fir.char<1,10>>
   character(10) :: array(2)
   array(1) ="(15HThis i"
   array(2) ="s a test.)"
   ! CHECK-DAG: %[[fmtLen:.*]] = muli %[[c10]], %[[c2]] : index
-  ! CHECK-DAG: %[[scalarFmt:.*]] = fir.convert %[[mem]] : (!fir.ref<!fir.array<10x2x!fir.char<1>>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-  ! CHECK-DAG: %[[fmtArg:.*]] = fir.convert %[[scalarFmt]] : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[scalarFmt:.*]] = fir.convert %[[mem]] : (!fir.ref<!fir.array<2x!fir.char<1,10>>>) -> !fir.ref<!fir.char<1,?>>
+  ! CHECK-DAG: %[[fmtArg:.*]] = fir.convert %[[scalarFmt]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[fmtLenArg:.*]] = fir.convert %[[fmtLen]] : (index) -> i64 
   ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], {{.*}}) 
   write(*, array) 
@@ -29,7 +29,7 @@ subroutine some()
   read (buffer, 10) greeting
 end
 ! CHECK-LABEL: fir.global linkonce @_QQcl.636F6D70696C6572
-! CHECK: %[[lit:.*]] = fir.string_lit "compiler"(8) : !fir.char<1>
-! CHECK: fir.has_value %[[lit]] : !fir.array<8x!fir.char<1>>
+! CHECK: %[[lit:.*]] = fir.string_lit "compiler"(8) : !fir.char<1,8>
+! CHECK: fir.has_value %[[lit]] : !fir.char<1,8>
 ! CHECK: }
 

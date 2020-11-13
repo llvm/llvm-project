@@ -57,8 +57,8 @@ end subroutine
 subroutine stop_char_lit
   ! CHECK-DAG: %[[false:.*]] = constant false
   ! CHECK-DAG: %[[five:.*]] = constant 5 : index
-  ! CHECK-DAG: %[[lit:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.array<5x!fir.char<1>>>
-  ! CHECK-DAG: %[[buff:.*]] = fir.convert %[[lit]] : (!fir.ref<!fir.array<5x!fir.char<1>>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[lit:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,5>>
+  ! CHECK-DAG: %[[buff:.*]] = fir.convert %[[lit]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[len:.*]] = fir.convert %[[five]] : (index) -> i64
   ! CHECK: fir.call @{{.*}}StopStatementText(%[[buff]], %[[len]], %[[false]], %[[false]]) :
   ! CHECK-NEXT: fir.unreachable
