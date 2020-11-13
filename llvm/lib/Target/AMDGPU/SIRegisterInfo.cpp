@@ -748,7 +748,6 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
                                          int Index,
                                          Register ValueReg,
                                          bool IsKill,
-                                         MCRegister ScratchRsrcReg,
                                          MCRegister ScratchOffsetReg,
                                          int64_t InstOffset,
                                          MachineMemOperand *MMO,
@@ -891,7 +890,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
                 .addReg(SubReg,
                         getDefRegState(!IsStore) | getKillRegState(IsKill));
       if (!IsFlat)
-        MIB.addReg(ScratchRsrcReg);
+        MIB.addReg(FuncInfo->getScratchRSrcReg());
 
       if (SOffset == AMDGPU::NoRegister) {
         if (!IsFlat)
@@ -1015,14 +1014,14 @@ void SIRegisterInfo::buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI,
     buildSpillLoadStore(MI, Opc,
           Index,
           VGPR, false,
-          MFI->getScratchRSrcReg(), FrameReg,
+          FrameReg,
           Offset * EltSize, MMO,
           RS);
   } else {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
     buildSpillLoadStore(MI, Opc, Index, VGPR,
-                        IsKill, MFI->getScratchRSrcReg(), FrameReg,
+                        IsKill, FrameReg,
                         Offset * EltSize, MMO, RS);
     // This only ever adds one VGPR spill
     MFI->addToSpilledVGPRs(1);
@@ -1360,7 +1359,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       buildSpillLoadStore(MI, Opc,
             Index,
             VData->getReg(), VData->isKill(),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc)->getReg(),
             FrameReg,
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
             *MI->memoperands_begin(),
@@ -1396,7 +1394,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       buildSpillLoadStore(MI, Opc,
             Index,
             VData->getReg(), VData->isKill(),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc)->getReg(),
             FrameReg,
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
             *MI->memoperands_begin(),

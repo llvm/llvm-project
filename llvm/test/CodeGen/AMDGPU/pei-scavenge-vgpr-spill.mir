@@ -29,6 +29,7 @@ body:             |
     ; GFX8: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
     ; GFX8: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294443008, implicit-def $scc
     ; GFX8: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
+    ; GFX8: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX8: $sgpr4 = S_ADD_U32 $sgpr33, 524544, implicit-def $scc
     ; GFX8: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.3, addrspace 5)
     ; GFX8: $vgpr3 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
@@ -46,6 +47,7 @@ body:             |
     ; GFX9: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
     ; GFX9: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294443008, implicit-def $scc
     ; GFX9: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
+    ; GFX9: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX9: $sgpr4 = S_ADD_U32 $sgpr33, 524544, implicit-def $scc
     ; GFX9: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.3, addrspace 5)
     ; GFX9: $vgpr3 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
@@ -62,11 +64,13 @@ body:             |
     ; GFX9-FLATSCR: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 8191, implicit-def $scc
     ; GFX9-FLATSCR: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294959104, implicit-def $scc
     ; GFX9-FLATSCR: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 24576, implicit-def $scc
+    ; GFX9-FLATSCR: $vgpr0 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX9-FLATSCR: $vcc_hi = S_ADD_U32 $sgpr33, 8192, implicit-def $scc
     ; GFX9-FLATSCR: $vgpr0 = V_OR_B32_e32 killed $vcc_hi, $vgpr1, implicit $exec
     ; GFX9-FLATSCR: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 24576, implicit-def $scc
     ; GFX9-FLATSCR: $sgpr33 = V_READLANE_B32 $vgpr2, 0
     ; GFX9-FLATSCR: S_ENDPGM 0, csr_amdgpu_allvgprs
+    $vgpr0 = V_MOV_B32_e32 %stack.0, implicit $exec
     $vgpr0 = V_OR_B32_e32 %stack.1, $vgpr1, implicit $exec
     S_ENDPGM 0, csr_amdgpu_allvgprs
 ...

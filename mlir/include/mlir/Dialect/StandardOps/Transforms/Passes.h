@@ -35,6 +35,9 @@ std::unique_ptr<Pass> createStdBufferizePass();
 /// Creates an instance of func bufferization pass.
 std::unique_ptr<Pass> createFuncBufferizePass();
 
+/// Creates an instance of tensor constant bufferization pass.
+std::unique_ptr<Pass> createTensorConstantBufferizePass();
+
 /// Creates an instance of the StdExpand pass that legalizes Std
 /// dialect ops to be convertible to LLVM. For example,
 /// `std.ceildivi_signed` gets transformed to a number of std operations,

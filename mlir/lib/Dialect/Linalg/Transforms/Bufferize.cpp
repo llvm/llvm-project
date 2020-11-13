@@ -40,6 +40,19 @@ static Value maybeConvertToIndex(Location loc, Value val, OpBuilder &b) {
   return b.create<IndexCastOp>(loc, val, b.getIndexType());
 }
 
+static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
+  auto memrefType = memref.getType().cast<MemRefType>();
+  SmallVector<Value, 4> dynOperands;
+  for (auto dim : llvm::enumerate(memrefType.getShape())) {
+    if (dim.value() == TensorType::kDynamicSize) {
+      dynOperands.push_back(b.create<DimOp>(loc, memref, dim.index()));
+    }
+  }
+  auto alloc = b.create<AllocOp>(loc, memrefType, dynOperands);
+  b.create<linalg::CopyOp>(loc, memref, alloc);
+  return alloc;
+}
+
 static LogicalResult
 allocateBuffersForResults(Location loc, LinalgOp linalgOp,
                           linalg::GenericOpAdaptor &adaptor,
@@ -65,19 +78,10 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
     // results.
     // TODO: update this assumption because the reality is more complex
     // under linalg on tensor based transformations.
-    bool foldedInitTensor = resultIndex < linalgOp.getNumInitTensors();
-    if (foldedInitTensor) {
-      Value initTensor = linalgOp.getInitTensor(resultIndex);
-      Value initBuffer = adaptor.init_tensors()[resultIndex];
-      SmallVector<Value, 4> dynOperands;
-      for (auto dim : llvm::enumerate(tensorShape)) {
-        if (dim.value() == TensorType::kDynamicSize) {
-          dynOperands.push_back(b.create<DimOp>(loc, initTensor, dim.index()));
-        }
-      }
-      auto alloc = b.create<AllocOp>(loc, memrefType, dynOperands);
-      b.create<linalg::CopyOp>(loc, initBuffer, alloc);
-      resultBuffers.push_back(alloc);
+    bool hasInitTensor = resultIndex < linalgOp.getNumInitTensors();
+    if (hasInitTensor) {
+      resultBuffers.push_back(
+          cloneMemref(loc, adaptor.init_tensors()[resultIndex], b));
       continue;
     }
 
@@ -303,7 +307,10 @@ public:
     Value sourceMemRef = adaptor.source();
     assert(sourceMemRef.getType().isa<MemRefType>());
 
-    Value destMemRef = adaptor.dest();
+    // For now, be conservative and copy the converted input memref.
+    // In general, the converted input memref here could be aliased or could
+    // point into constant memory, so mutating it would lead to miscompilations.
+    Value destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
     assert(destMemRef.getType().isa<MemRefType>());
 
     // Take a subview to copy the small memref.
@@ -315,60 +322,6 @@ public:
     // Copy the small memref.
     rewriter.create<linalg::CopyOp>(op.getLoc(), sourceMemRef, subview);
     rewriter.replaceOp(op, destMemRef);
-    return success();
-  }
-};
-
-/// TensorConstantOp conversion inserts a linearized 1-D vector constant that is
-/// stored in memory. A linalg.reshape is introduced to convert to the desired
-/// n-D buffer form.
-class TensorConstantOpConverter : public OpConversionPattern<ConstantOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const final {
-
-    RankedTensorType rankedTensorType =
-        op.getType().dyn_cast<RankedTensorType>();
-    if (!rankedTensorType)
-      return failure();
-    if (llvm::any_of(rankedTensorType.getShape(), [](int64_t s) {
-          return s == 0 || ShapedType::isDynamic(s);
-        }))
-      return failure();
-
-    int64_t nElements = 1;
-    for (int64_t s : rankedTensorType.getShape())
-      nElements *= s;
-    Type elementType = rankedTensorType.getElementType();
-    MemRefType memrefType =
-        getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
-    VectorType flatVectorType = VectorType::get({nElements}, elementType);
-    MemRefType memrefOfFlatVectorType = MemRefType::get({}, flatVectorType);
-    MemRefType flatMemrefType = MemRefType::get({nElements}, elementType);
-
-    Location loc = op.getLoc();
-    auto attr = op.getValue().cast<DenseElementsAttr>();
-    Value alloc =
-        rewriter.create<AllocOp>(loc, memrefOfFlatVectorType, ValueRange{});
-    Value cstVec = rewriter.create<ConstantOp>(loc, flatVectorType,
-                                               attr.reshape(flatVectorType));
-    rewriter.create<StoreOp>(loc, cstVec, alloc);
-
-    Value memref =
-        rewriter.create<vector::TypeCastOp>(loc, flatMemrefType, alloc);
-    if (rankedTensorType.getRank() > 1) {
-      // Introduce a linalg.reshape to flatten the memref.
-      AffineMap collapseAllDims = AffineMap::getMultiDimIdentityMap(
-          /*numDims=*/rankedTensorType.getRank(), op.getContext());
-      memref = rewriter.create<linalg::ReshapeOp>(
-          loc, memrefType, memref,
-          rewriter.getAffineMapArrayAttr(collapseAllDims));
-    }
-    rewriter.replaceOp(op, memref);
-
     return success();
   }
 };
@@ -384,7 +337,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
-    target.addLegalDialect<StandardOpsDialect, vector::VectorDialect>();
+    target.addLegalDialect<StandardOpsDialect>();
     target.addIllegalOp<SubTensorOp, SubTensorInsertOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
@@ -415,8 +368,7 @@ void mlir::linalg::populateLinalgBufferizePatterns(
   patterns.insert<
       // clang-format off
       SubTensorOpConverter,
-      SubTensorInsertOpConverter,
-      TensorConstantOpConverter
+      SubTensorInsertOpConverter
       // clang-format on
       >(typeConverter, context);
 }
