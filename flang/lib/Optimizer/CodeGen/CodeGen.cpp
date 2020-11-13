@@ -609,26 +609,29 @@ struct CmpcOpConversion : public FIROpConversion<fir::CmpcOp> {
     auto ctxt = cmp.getContext();
     auto kind = cmp.lhs().getType().cast<fir::ComplexType>().getFKind();
     auto ty = convertType(fir::RealType::get(ctxt, kind));
+    auto resTy = convertType(cmp.getType());
     auto loc = cmp.getLoc();
     auto pos0 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0), ctxt);
     SmallVector<mlir::Value, 2> rp{
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[0], pos0),
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[1],
                                                     pos0)};
-    auto rcp = rewriter.create<mlir::LLVM::FCmpOp>(loc, ty, rp, cmp.getAttrs());
+    auto rcp =
+        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, rp, cmp.getAttrs());
     auto pos1 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1), ctxt);
     SmallVector<mlir::Value, 2> ip{
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[0], pos1),
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, operands[1],
                                                     pos1)};
-    auto icp = rewriter.create<mlir::LLVM::FCmpOp>(loc, ty, ip, cmp.getAttrs());
+    auto icp =
+        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, ip, cmp.getAttrs());
     SmallVector<mlir::Value, 2> cp{rcp, icp};
     switch (cmp.getPredicate()) {
     case mlir::CmpFPredicate::OEQ: // .EQ.
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmp, ty, cp);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmp, resTy, cp);
       break;
     case mlir::CmpFPredicate::UNE: // .NE.
-      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmp, ty, cp);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmp, resTy, cp);
       break;
     default:
       rewriter.replaceOp(cmp, rcp.getResult());
