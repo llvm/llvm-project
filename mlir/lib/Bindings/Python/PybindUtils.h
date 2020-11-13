@@ -85,7 +85,7 @@ struct MlirDefaultingCaster {
       value = DefaultingTy{
           pybind11::cast<typename DefaultingTy::ReferrentTy &>(src)};
       return true;
-    } catch (std::exception &e) {
+    } catch (std::exception &) {
       return false;
     }
   }
