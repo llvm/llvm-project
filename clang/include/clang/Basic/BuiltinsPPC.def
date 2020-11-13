@@ -738,6 +738,8 @@ MMA_BUILTIN(pmxvbf16ger2pp, "vW512*VVi15i15i3", true)
 MMA_BUILTIN(pmxvbf16ger2pn, "vW512*VVi15i15i3", true)
 MMA_BUILTIN(pmxvbf16ger2np, "vW512*VVi15i15i3", true)
 MMA_BUILTIN(pmxvbf16ger2nn, "vW512*VVi15i15i3", true)
+MMA_BUILTIN(lxvp, "W256SLLiW256C*", false)
+MMA_BUILTIN(stxvp, "vW256SLLiW256C*", false)
 
 // FIXME: Obviously incomplete.
 
