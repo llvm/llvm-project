@@ -5,8 +5,8 @@ RUN: %lldb -b -s %S/Inputs/UdtLayoutTest.script -- %t.exe | FileCheck %s
 CHECK:(int) int C::abc = 123
 CHECK:(List [16]) ls = {
 CHECK:  [15] = {
-CHECK:    Prev = 0x00000000
-CHECK:    Next = 0x00000000
+CHECK:    Prev = nullptr
+CHECK:    Next = nullptr
 CHECK:    Value = {
 CHECK:      B<0> = {
 CHECK:        A = {
