@@ -141,6 +141,12 @@ TEST(RenameTest, WithinFileRename) {
           ~[[F^oo]]();
           void f([[F^oo]] x);
         };
+
+        template<typename T>
+        [[F^oo]]<T>::[[Fo^o]]() {}
+
+        template<typename T>
+        [[F^oo]]<T>::~[[Fo^o]]() {}
       )cpp",
 
       // Template class constructor.
@@ -152,6 +158,9 @@ TEST(RenameTest, WithinFileRename) {
           template<typename T>
           [[F^oo]](T t);
         };
+
+        template<typename T>
+        [[F^oo]]::[[Fo^o]]() {}
       )cpp",
 
       // Class in template argument.
@@ -196,6 +205,30 @@ TEST(RenameTest, WithinFileRename) {
           A().[[f^oo]]();
           B().[[f^oo]]();
           C().[[f^oo]]();
+        }
+      )cpp",
+
+      // Templated method instantiation.
+      R"cpp(
+        template<typename T>
+        class Foo {
+        public:
+          static T [[f^oo]]() {}
+        };
+
+        void bar() {
+          Foo<int>::[[f^oo]]();
+        }
+      )cpp",
+      R"cpp(
+        template<typename T>
+        class Foo {
+        public:
+          T [[f^oo]]() {}
+        };
+
+        void bar() {
+          Foo<int>().[[f^oo]]();
         }
       )cpp",
 
@@ -272,6 +305,80 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Templated class specialization.
+      R"cpp(
+        template<typename T, typename U=bool>
+        class [[Foo^]];
+
+        template<typename T, typename U>
+        class [[Foo^]] {};
+
+        template<typename T=int, typename U>
+        class [[Foo^]];
+      )cpp",
+      R"cpp(
+        template<typename T=float, typename U=int>
+        class [[Foo^]];
+
+        template<typename T, typename U>
+        class [[Foo^]] {};
+      )cpp",
+
+      // Function template specialization.
+      R"cpp(
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+
+        template<typename T, typename U>
+        U [[foo^]]() {};
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        U [[foo^]]() {};
+
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+      )cpp",
+      R"cpp(
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+
+        template<typename T, typename U>
+        U [[foo^]]();
+      )cpp",
+      R"cpp(
+        template <typename T>
+        void [[f^oo]](T t);
+
+        template <>
+        void [[f^oo]](int a);
+
+        void test() {
+          [[f^oo]]<double>(1);
+        }
+      )cpp",
+
+      // Variable template.
+      R"cpp(
+        template <typename T, int U>
+        bool [[F^oo]] = true;
+
+        // Explicit template specialization
+        template <>
+        bool [[F^oo]]<int, 0> = false;
+
+        // Partial template specialization
+        template <typename T>
+        bool [[F^oo]]<T, 1> = false;
+
+        void foo() {
+          // Ref to the explicit template specialization
+          [[F^oo]]<int, 0>;
+          // Ref to the primary template.
+          [[F^oo]]<double, 2>;
+        }
+      )cpp",
+
       // Complicated class type.
       R"cpp(
          // Forward declaration.
@@ -304,6 +411,19 @@ TEST(RenameTest, WithinFileRename) {
           reinterpret_cast<const [[^Foo]] *>(BazPointer)->getValue();
           static_cast<const [[^Foo]] &>(BazReference).getValue();
           static_cast<const [[^Foo]] *>(BazPointer)->getValue();
+        }
+      )cpp",
+
+      // Static class member.
+      R"cpp(
+        struct Foo {
+          static Foo *[[Static^Member]];
+        };
+
+        Foo* Foo::[[Static^Member]] = nullptr;
+
+        void foo() {
+          Foo* Pointer = Foo::[[Static^Member]];
         }
       )cpp",
 
@@ -586,6 +706,26 @@ TEST(RenameTest, WithinFileRename) {
 
         void bar() {
           ns::[[Old^Alias]] Bar;
+        }
+      )cpp",
+
+      // User defined conversion.
+      R"cpp(
+        class [[F^oo]] {
+        public:
+          [[F^oo]]() {}
+        };
+
+        class Baz {
+        public:
+          operator [[F^oo]]() {
+            return [[F^oo]]();
+          }
+        };
+
+        int main() {
+          Baz boo;
+          [[F^oo]] foo = static_cast<[[F^oo]]>(boo);
         }
       )cpp",
   };
