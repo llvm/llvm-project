@@ -1011,7 +1011,7 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
   // By default, we'll try and emit a CSEL.
   unsigned Opc = Is32Bit ? AArch64::CSELWr : AArch64::CSELXr;
   bool Optimized = false;
-  auto TryOptNegIntoSelect = [&Opc, &False, Is32Bit, &MRI]() {
+  auto TryFoldBinOpIntoSelect = [&Opc, &False, Is32Bit, &MRI]() {
     // Attempt to fold:
     //
     // sub = G_SUB 0, x
@@ -1019,10 +1019,27 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     //
     // Into:
     // select = CSNEG true, x, cc
-    if (!mi_match(False, MRI, m_Neg(m_Reg(False))))
-      return false;
-    Opc = Is32Bit ? AArch64::CSNEGWr : AArch64::CSNEGXr;
-    return true;
+    Register MatchReg;
+    if (mi_match(False, MRI, m_Neg(m_Reg(MatchReg)))) {
+      Opc = Is32Bit ? AArch64::CSNEGWr : AArch64::CSNEGXr;
+      False = MatchReg;
+      return true;
+    }
+
+    // Attempt to fold:
+    //
+    // xor = G_XOR x, -1
+    // select = G_SELECT cc, true, xor
+    //
+    // Into:
+    // select = CSINV true, x, cc
+    if (mi_match(False, MRI, m_Not(m_Reg(MatchReg)))) {
+      Opc = Is32Bit ? AArch64::CSINVWr : AArch64::CSINVXr;
+      False = MatchReg;
+      return true;
+    }
+
+    return false;
   };
 
   // Helper lambda which tries to use CSINC/CSINV for the instruction when its
@@ -1100,7 +1117,7 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     return false;
   };
 
-  Optimized |= TryOptNegIntoSelect();
+  Optimized |= TryFoldBinOpIntoSelect();
   Optimized |= TryOptSelectCst();
   auto SelectInst = MIB.buildInstr(Opc, {Dst}, {True, False}).addImm(CC);
   constrainSelectedInstRegOperands(*SelectInst, TII, TRI, RBI);
