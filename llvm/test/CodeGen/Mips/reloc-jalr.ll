@@ -105,6 +105,7 @@ entry:
 ; JALR-32:       .reloc ([[TMPLABEL:\$.+]]), R_MIPS_JALR, foo
 ; JALR-64:       .reloc [[TMPLABEL:\..+]], R_MIPS_JALR, foo
 ; JALR-MM:       .reloc ([[TMPLABEL:\$.+]]), R_MICROMIPS_JALR, foo
+; NORELOC-NOT:   .reloc
 ; JALR-ALL-NEXT: [[TMPLABEL]]:
 ; JALR-32R2-NEXT: 	jalr	$25
 ; JALR-64R2-NEXT: 	jalr	$25
@@ -124,6 +125,7 @@ entry:
 ; JALR-64:       .reloc [[TMPLABEL:\..+]], R_MIPS_JALR, foo
 ; JALR-MM:       .reloc ([[TMPLABEL:\$.+]]), R_MICROMIPS_JALR, foo
 ; JALR-ALL-NEXT: [[TMPLABEL]]:
+; NORELOC-NOT:   .reloc
 ; TAILCALL-32R2-NEXT: 	jr	$25
 ; TAILCALL-64R2-NEXT: 	jr	$25
 ; TAILCALL-MM-NEXT: 	jrc	$25
@@ -178,6 +180,7 @@ entry:
 ; JALR-ALL: .reloc {{.+}}MIPS_JALR, __tls_get_addr
 ; ALL-NOT: MIPS_JALR
 ; JALR-ALL: .reloc {{.+}}MIPS_JALR, __tls_get_addr
+; NORELOC-NOT:   .reloc
 ; ALL-NOT: _MIPS_JALR
   %func_gd = load void()*, void()** @tls_fnptr_gd
   call void %func_gd()
