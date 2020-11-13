@@ -1075,8 +1075,8 @@ define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 ; "%sub = i64 %i, %j, ret i64 %sub"
 ; gep1 and gep2 have only one use
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add i64 [[I:%.*]], 4200
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[I:%.*]], 4200
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[J:%.*]], 4200
 ; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;

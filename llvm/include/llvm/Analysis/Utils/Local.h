@@ -90,7 +90,8 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
     }
 
     if (Result)
-      Result = Builder->CreateAdd(Result, Offset, GEP->getName().str()+".offs");
+      Result = Builder->CreateAdd(Result, Offset, GEP->getName().str()+".offs",
+                                  false /*NUW*/, isInBounds /*NSW*/);
     else
       Result = Offset;
   }
