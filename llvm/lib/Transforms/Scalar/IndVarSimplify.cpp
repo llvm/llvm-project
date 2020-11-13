@@ -1385,6 +1385,33 @@ static void replaceWithInvariantCond(
   replaceExitCond(BI, NewCond, DeadInsts);
 }
 
+static bool optimizeLoopExitWithUnknownExitCount(
+    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB,
+    const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
+    ScalarEvolution *SE, SCEVExpander &Rewriter,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  if (SkipLastIter) {
+    const SCEV *One = SE->getOne(MaxIter->getType());
+    MaxIter = SE->getMinusSCEV(MaxIter, One);
+  }
+  ICmpInst::Predicate InvariantPred;
+  const SCEV *InvariantLHS, *InvariantRHS;
+  switch (analyzeCond(L, BI, SE, Inverted, MaxIter, InvariantPred, InvariantLHS,
+                      InvariantRHS)) {
+  case CanBeRemoved:
+    foldExit(L, ExitingBB, Inverted, DeadInsts);
+    return true;
+  case CanBeReplacedWithInvariant: {
+    replaceWithInvariantCond(L, ExitingBB, InvariantPred, InvariantLHS,
+                             InvariantRHS, Rewriter, DeadInsts);
+    return true;
+  }
+  case CannotOptimize:
+    return false;
+  }
+  llvm_unreachable("Unknown case!");
+}
+
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -1453,29 +1480,10 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      auto OptimizeCond = [this, L, BI, ExitingBB, MaxExitCount, &Rewriter](
-          bool Inverted, bool SkipLastIter) {
-        const SCEV *MaxIter = MaxExitCount;
-        if (SkipLastIter) {
-          const SCEV *One = SE->getOne(MaxIter->getType());
-          MaxIter = SE->getMinusSCEV(MaxIter, One);
-        }
-        ICmpInst::Predicate InvariantPred;
-        const SCEV *InvariantLHS, *InvariantRHS;
-        switch (analyzeCond(L, BI, SE, Inverted, MaxIter, InvariantPred,
-                            InvariantLHS, InvariantRHS)) {
-        case CanBeRemoved:
-          foldExit(L, ExitingBB, Inverted, DeadInsts);
-          return true;
-        case CanBeReplacedWithInvariant: {
-          replaceWithInvariantCond(L, ExitingBB, InvariantPred, InvariantLHS,
-                                   InvariantRHS, Rewriter, DeadInsts);
-          return true;
-        }
-        case CannotOptimize:
-          return false;
-        }
-        llvm_unreachable("Unknown case!");
+      auto OptimizeCond = [&](bool Inverted, bool SkipLastIter) {
+        return optimizeLoopExitWithUnknownExitCount(
+            L, BI, ExitingBB, MaxExitCount, Inverted, SkipLastIter, SE,
+            Rewriter, DeadInsts);
       };
 
       // TODO: We might have proved that we can skip the last iteration for
