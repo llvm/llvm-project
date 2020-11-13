@@ -15,11 +15,15 @@ namespace default_args {
   }
 
   template<typename T> struct default_delete {};
-  template<class T, class Deleter = default_delete<T>> class unique_ptr {};
+  template<class T, class Deleter = default_delete<T>> class unique_ptr {
+  public:
+    void f() { T::error(); } // expected-error {{no member named 'error' in 'default_args::basic_string<char>'}}
+  };
   template<class T, class Deleter> class unique_ptr<T[], Deleter> {};
   void test2() {
     unique_ptr<string> ups;
     f(ups).reset(); // expected-error {{no member named 'reset' in 'default_args::unique_ptr<default_args::basic_string<char>>'}}
+    f(ups).f(); // expected-note {{in instantiation of member function 'default_args::unique_ptr<default_args::basic_string<char>>::f' requested here}}
   }
 
   template<int A, int B = A> struct Z { int error[B]; }; // expected-error {{negative size}}
