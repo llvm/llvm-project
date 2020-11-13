@@ -682,9 +682,7 @@ static bool isBuildVectorConstantSplat(const MachineInstr &MI,
   const unsigned NumOps = MI.getNumOperands();
   for (unsigned I = 1; I != NumOps; ++I) {
     Register Element = MI.getOperand(I).getReg();
-    int64_t ElementValue;
-    if (!mi_match(Element, MRI, m_ICst(ElementValue)) ||
-        ElementValue != SplatValue)
+    if (!mi_match(Element, MRI, m_SpecificICst(SplatValue)))
       return false;
   }
 
