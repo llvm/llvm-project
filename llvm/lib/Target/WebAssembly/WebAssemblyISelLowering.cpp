@@ -69,6 +69,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
   setOperationAction(ISD::GlobalAddress, MVTPtr, Custom);
+  setOperationAction(ISD::GlobalTLSAddress, MVTPtr, Custom);
   setOperationAction(ISD::ExternalSymbol, MVTPtr, Custom);
   setOperationAction(ISD::JumpTable, MVTPtr, Custom);
   setOperationAction(ISD::BlockAddress, MVTPtr, Custom);
@@ -1170,6 +1171,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerFrameIndex(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return LowerGlobalTLSAddress(Op, DAG);
   case ISD::ExternalSymbol:
     return LowerExternalSymbol(Op, DAG);
   case ISD::JumpTable:
@@ -1276,6 +1279,49 @@ SDValue WebAssemblyTargetLowering::LowerFRAMEADDR(SDValue Op,
   Register FP =
       Subtarget->getRegisterInfo()->getFrameRegister(DAG.getMachineFunction());
   return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), FP, VT);
+}
+
+SDValue
+WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  const auto *GA = cast<GlobalAddressSDNode>(Op);
+  MVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  if (!MF.getSubtarget<WebAssemblySubtarget>().hasBulkMemory())
+    report_fatal_error("cannot use thread-local storage without bulk memory",
+                       false);
+
+  const GlobalValue *GV = GA->getGlobal();
+
+  // Currently Emscripten does not support dynamic linking with threads.
+  // Therefore, if we have thread-local storage, only the local-exec model
+  // is possible.
+  // TODO: remove this and implement proper TLS models once Emscripten
+  // supports dynamic linking with threads.
+  if (GV->getThreadLocalMode() != GlobalValue::LocalExecTLSModel &&
+      !Subtarget->getTargetTriple().isOSEmscripten()) {
+    report_fatal_error("only -ftls-model=local-exec is supported for now on "
+                       "non-Emscripten OSes: variable " +
+                           GV->getName(),
+                       false);
+  }
+
+  auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                                     : WebAssembly::GLOBAL_GET_I32;
+  const char *BaseName = MF.createExternalSymbolName("__tls_base");
+
+  SDValue BaseAddr(
+      DAG.getMachineNode(GlobalGet, DL, PtrVT,
+                         DAG.getTargetExternalSymbol(BaseName, PtrVT)),
+      0);
+
+  SDValue TLSOffset = DAG.getTargetGlobalAddress(
+      GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
+  SDValue SymAddr = DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT, TLSOffset);
+
+  return DAG.getNode(ISD::ADD, DL, PtrVT, BaseAddr, SymAddr);
 }
 
 SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,

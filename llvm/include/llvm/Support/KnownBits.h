@@ -326,7 +326,7 @@ public:
   KnownBits &operator^=(const KnownBits &RHS);
 
   /// Compute known bits for the absolute value.
-  KnownBits abs() const;
+  KnownBits abs(bool IntMinIsPoison = false) const;
 
   KnownBits byteSwap() {
     return KnownBits(Zero.byteSwap(), One.byteSwap());

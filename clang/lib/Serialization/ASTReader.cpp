@@ -2397,17 +2397,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
       // The top-level PCH is stale.
       StringRef TopLevelPCHName(ImportStack.back()->FileName);
-      unsigned DiagnosticKind =
-          moduleKindForDiagnostic(ImportStack.back()->Kind);
-      if (DiagnosticKind == 0)
-        Diag(diag::err_fe_pch_file_modified)
-            << Filename << TopLevelPCHName << FileChange;
-      else if (DiagnosticKind == 1)
-        Diag(diag::err_fe_module_file_modified)
-            << Filename << TopLevelPCHName << FileChange;
-      else
-        Diag(diag::err_fe_ast_file_modified)
-            << Filename << TopLevelPCHName << FileChange;
+      Diag(diag::err_fe_ast_file_modified)
+          << Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
+          << TopLevelPCHName << FileChange;
 
       // Print the import stack.
       if (ImportStack.size() > 1) {
