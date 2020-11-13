@@ -3437,12 +3437,12 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // flow and the no-overflow bits may not be valid for the expression in any
   // context. This can be fixed similarly to how these flags are handled for
   // adds.
-  SCEV::NoWrapFlags Wrap = GEP->isInBounds() ? SCEV::FlagNSW
-                                             : SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags OffsetWrap =
+      GEP->isInBounds() ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
 
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
-  SmallVector<const SCEV *, 4> AddOps{BaseExpr};
+  SmallVector<const SCEV *, 4> Offsets;
   for (const SCEV *IndexExpr : IndexExprs) {
     // Compute the (potentially symbolic) offset in bytes for this index.
     if (StructType *STy = dyn_cast<StructType>(CurTy)) {
@@ -3450,7 +3450,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       ConstantInt *Index = cast<SCEVConstant>(IndexExpr)->getValue();
       unsigned FieldNo = Index->getZExtValue();
       const SCEV *FieldOffset = getOffsetOfExpr(IntIdxTy, STy, FieldNo);
-      AddOps.push_back(FieldOffset);
+      Offsets.push_back(FieldOffset);
 
       // Update CurTy to the type of the field at Index.
       CurTy = STy->getTypeAtIndex(Index);
@@ -3470,13 +3470,23 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       IndexExpr = getTruncateOrSignExtend(IndexExpr, IntIdxTy);
 
       // Multiply the index by the element size to compute the element offset.
-      const SCEV *LocalOffset = getMulExpr(IndexExpr, ElementSize, Wrap);
-      AddOps.push_back(LocalOffset);
+      const SCEV *LocalOffset = getMulExpr(IndexExpr, ElementSize, OffsetWrap);
+      Offsets.push_back(LocalOffset);
     }
   }
 
-  // Add the base and all the offsets together.
-  return getAddExpr(AddOps, Wrap);
+  // Handle degenerate case of GEP without offsets.
+  if (Offsets.empty())
+    return BaseExpr;
+
+  // Add the offsets together, assuming nsw if inbounds.
+  const SCEV *Offset = getAddExpr(Offsets, OffsetWrap);
+  // Add the base address and the offset. We cannot use the nsw flag, as the
+  // base address is unsigned. However, if we know that the offset is
+  // non-negative, we can use nuw.
+  SCEV::NoWrapFlags BaseWrap = GEP->isInBounds() && isKnownNonNegative(Offset)
+                                   ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
+  return getAddExpr(BaseExpr, Offset, BaseWrap);
 }
 
 std::tuple<SCEV *, FoldingSetNodeID, void *>
