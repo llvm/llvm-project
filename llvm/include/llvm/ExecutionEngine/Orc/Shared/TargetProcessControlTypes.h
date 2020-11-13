@@ -158,7 +158,7 @@ public:
                                      uint64_t Size);
 
 private:
-  void zeroInit(CWrapperFunctionResult &R) {
+  static void zeroInit(CWrapperFunctionResult &R) {
     R.Size = 0;
     R.Data.ValuePtr = nullptr;
     R.Destroy = nullptr;
