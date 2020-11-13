@@ -1,0 +1,176 @@
+//------------------------------------------------------------------------------
+// See COPYRIGHT in top-level directory.
+//------------------------------------------------------------------------------
+
+/* ES Affinity */
+ABT_SET_AFFINITY
+    Aliases: ABT_ENV_SET_AFFINITY
+    Description: Enable ES affinity when configured with --enable-affinity.
+    Values: { 1, Y, 0, N }
+    Default: 1
+
+ABT_AFFINITY_TYPE
+    Aliases: ABT_ENV_AFFINITY_TYPE
+    Description: Determine how to bind ESs to cores.
+    Values: { default, chameleon, knc }
+    Default: default
+
+/* Logging and Debugging */
+ABT_USE_LOG
+    Aliases: ABT_ENV_USE_LOG
+    Description: Enable logging when configured with --enable-debug.
+    Values: { 1, Y, 0, N }
+    Default: 1  when configured with --enable-debug=log or --enable-debug=all
+             0  when configured with --enable-debug=most
+
+ABT_USE_DEBUG
+    Aliases: ABT_ENV_USE_DEBUG
+    Description: Enable debug messages when configured with --enable-debug.
+    Values: { 1, Y, 0, N }
+    Default: 1  when configured with --enable-debug=log or --enable-debug=all
+             0  when configured with --enable-debug=most
+
+ABT_USE_EVENT_DEBUG
+    Aliases: ABT_ENV_USE_EVENT_DEBUG
+    Description: Enable debug messages for events.
+                 This variable is effective when configured with
+                 --enable-power-event or --enable-publish-info.
+    Values: { 1, Y, 0, N }
+    Default: 1  when configured with --enable-debug=log or --enable-debug=all
+             0  when configured with --enable-debug=most
+
+ABT_PRINT_CONFIG
+    Aliases: ABT_ENV_PRINT_CONFIG
+    Description: Set whether to print the configuration on ABT_init().
+    Values: { 1, Y, 0, N }
+    Default: 0
+
+/* Execution Configurations */
+ABT_MAX_NUM_XSTREAMS
+    Aliases: ABT_ENV_MAX_NUM_XSTREAMS
+    Description: Set the maximum number of ESs that can be created.
+    Values: unsigned integer
+    Default: # of processors that OS provides (i.e., # of hardware threads)
+
+ABT_KEY_TABLE_SIZE
+    Aliases: ABT_ENV_KEY_TABLE_SIZE
+    Description: Set the default number of key table entries.
+    Values: unsigned integer
+    Default: 4
+
+ABT_THREAD_STACKSIZE
+    Aliases: ABT_ENV_THREAD_STACKSIZE
+    Description: Set ULT's default stack size.
+    Values: size_t
+    Default: 16384 (16KB)
+
+ABT_SCHED_STACKSIZE
+    Aliases: ABT_ENV_SCHED_STACKSIZE
+    Description: Set scheduler's default stack size.
+    Values: size_t
+    Default: 4194394 (4MB)
+
+ABT_SCHED_EVENT_FREQ
+    Aliases: ABT_ENV_SCHED_EVENT_FREQ
+    Description: Set the default event checking frequency for the scheduler.
+    Values: unsigned integer
+    Default: 50
+
+ABT_SCHED_SLEEP_NSEC
+    Aliases: ABT_ENV_SCHED_SLEEP_NSEC
+    Description: Set the default nanosleep value when making the scheduler
+                 sleep.
+    Values: long
+    Default: 100
+
+ABT_MUTEX_MAX_HANDOVERS
+    Aliases: ABT_ENV_MUTEX_MAX_HANDOVERS
+    Description: Set the maximum number of mutex handovers within an ES before
+                 giving up the mutex.
+    Values: unsigned integer
+    Default: 64
+
+ABT_MUTEX_MAX_WAKEUPS
+    Aliases: ABT_ENV_MUTEX_MAX_WAKEUPS
+    Description: Set the maximum number of ULTs to wake up at once in
+                 ABT_mutex_unlock() or ABT_mutex_unlock_de().
+    Values: unsigned integer
+    Default: 1
+
+ABT_CACHE_LINE_SIZE
+    Aliases: ABT_ENV_CACHE_LINE_SIZE
+    Description: Set the cache line size.
+    Values: unsigned integer
+    Default: 64
+
+ABT_OS_PAGE_SIZE
+    Aliases: ABT_ENV_OS_PAGE_SIZE
+    Description: Set the OS page size.
+    Values: unsigned integer
+    Default: 4096 (4KB)
+
+ABT_HUGE_PAGE_SIZE
+    Aliases: ABT_ENV_HUGE_PAGE_SIZE
+    Description: Set the huge page size.
+    Values: unsigned integer
+    Default: 2097152 (2MB)
+
+/* Memory Pool */
+ABT_MEM_PAGE_SIZE
+    Aliases: ABT_ENV_MEM_PAGE_SIZE
+    Description: Set the page size for memory allocation.
+    Values: unsigned integer
+    Default: 2097152 (2MB)
+
+ABT_MEM_STACK_PAGE_SIZE
+    Aliases: ABT_ENV_MEM_STACK_PAGE_SIZE
+    Description: Set the stack page size for memory allocation.
+    Values: size_t
+    Default: 8388608 (8MB)
+
+ABT_MEM_MAX_NUM_STACKS
+    Aliases: ABT_ENV_MEM_MAX_NUM_STACKS
+    Description: Set the maximum number of stacks that each ES can keep during
+                 execution.
+    Values: unsigned integer
+    Default: 65536
+
+ABT_MEM_LP_ALLOC
+    Aliases: ABT_ENV_MEM_LP_ALLOC
+    Description: How to allocate large pages.
+    Values: { malloc, mmap_rp, mmap_hp_rp, mmap_hp_thp, thp }
+    Default: mmap_hp_rp  if anonymous page is supported
+             malloc      otherwise
+
+/* Event Handling */
+ABT_POWER_EVENT_HOSTNAME
+    Aliases: ABT_ENV_POWER_EVENT_HOSTNAME
+    Description: Set the hostname for power management daemon.
+    Values: string
+    Default: localhost
+
+ABT_POWER_EVENT_PORT
+    Aliases: ABT_ENV_POWER_EVENT_PORT
+    Description: Set the port number for power management daemon.
+    Values: integer
+    Default: 60439
+
+ABT_PUBLISH_INFO
+    Aliases: ABT_ENV_PUBLISH_INFO
+    Description: Set whether to publish execution information.
+    Values: { 1, Y, 0, N }
+    Default: 1
+
+ABT_PUBLISH_FILENAME
+    Aliases: ABT_ENV_PUBLISH_FILENAME
+    Description: Set the filename for exec. information publishing.
+    Values: string
+    Default: beacon  if BEACON is used
+             stdout  otherwise
+
+ABT_PUBLISH_INTERVAL
+    Aliases: ABT_ENV_PUBLISH_INTERVAL
+    Description: Set the time interval for exec. information publishing.
+    Values: float
+    Default: 1.0
+

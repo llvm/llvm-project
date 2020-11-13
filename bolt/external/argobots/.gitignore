@@ -1,0 +1,60 @@
+# configure and make files
+Makefile.in
+Makefile
+aclocal.m4
+autom4te.cache/
+configure
+config.log
+config.status
+libtool
+src/include/abt_config.h
+src/include/abt_config.h.in
+stamp-h1
+Doxyfile
+maint/argobots.pc
+
+# m4 additions
+m4/ar-lib
+m4/compile
+m4/config.guess
+m4/config.sub
+m4/depcomp
+m4/install-sh
+m4/libtool.m4
+m4/ltmain.sh
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+m4/missing
+m4/test-driver
+
+# temporary directories
+.libs/
+.deps/
+.dirstamp
+
+# code builds
+libabt.la
+abt.h
+*.lo
+*.o
+*~
+
+# autogen.sh temporary files
+maint/Version
+README
+.tmp
+
+# editor temporary files
+.*.swp
+.*.swo
+
+# etc.
+.DS_Store
+doc/doxygen/
+*.log
+*.trs
+*.out
+*.files
+*.dSYM/

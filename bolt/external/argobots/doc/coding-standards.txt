@@ -1,0 +1,7 @@
+Argobots uses K&R style. The script maint/code-cleanup.sh can be used to
+cleanup whitespace, comments, and line-wrapping in existing source files.
+It is a good idea to run it on any newly created files in the git repo.
+
+For more information about coding standards, please refer to
+https://github.com/pmodels/argobots/wiki/Coding-Standards
+

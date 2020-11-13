@@ -1,0 +1,38 @@
+# -*- Mode: Makefile; -*-
+#
+# See LICENSE.txt in top-level directory.
+#
+
+CC=gcc
+CFLAGS=-g -Wall -O2 -fopenmp
+LDFLAGS=-lm -fopenmp
+
+PROGS = \
+	parallel_for_omp \
+	nested_parallel_for_omp \
+	nested_parallel_for_block_omp \
+	nested_parallel_for_irregular_omp \
+	task_single_producer_omp \
+	task_multiple_producer_omp \
+	task_nested_omp \
+	task_nested_lvl2_omp \
+	taskwait_omp \
+	taskyield_omp
+
+all: $(PROGS)
+
+clean:
+	rm -rf *.o *.dSYM $(PROGS)
+
+testing:
+	./parallel_for_omp
+	./nested_parallel_for_omp
+	./nested_parallel_for_block_omp
+	./nested_parallel_for_irregular_omp
+	./task_single_producer_omp
+	./task_multiple_producer_omp
+	./task_nested_omp
+	./task_nested_lvl2_omp
+	./taskwait_omp
+	./taskyield_omp
+

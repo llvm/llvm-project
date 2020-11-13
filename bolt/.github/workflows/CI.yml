@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-bolt:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        abt: [ yes, no ]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'true'
+    - name: cmake
+      run: |
+        mkdir build
+        cd build
+        cmake ../ -DLIBOMP_USE_ARGOBOTS=${{ matrix.abt }} -DOPENMP_ENABLE_WERROR=TRUE
+    - name: make
+      run: |
+        cd build
+        make -j 2
