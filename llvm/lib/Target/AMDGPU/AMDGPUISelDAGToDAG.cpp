@@ -1742,22 +1742,10 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
         // into two pieces that are both >= 0 or both <= 0.
 
         SDLoc DL(N);
-        uint64_t RemainderOffset = COffsetVal;
-        uint64_t ImmField = 0;
-        const unsigned NumBits = TII->getNumFlatOffsetBits(IsSigned);
-        if (IsSigned) {
-          // Use signed division by a power of two to truncate towards 0.
-          int64_t D = 1LL << (NumBits - 1);
-          RemainderOffset = (static_cast<int64_t>(COffsetVal) / D) * D;
-          ImmField = COffsetVal - RemainderOffset;
-        } else if (static_cast<int64_t>(COffsetVal) >= 0) {
-          ImmField = COffsetVal & maskTrailingOnes<uint64_t>(NumBits);
-          RemainderOffset = COffsetVal - ImmField;
-        }
-        assert(TII->isLegalFLATOffset(ImmField, AS, IsSigned));
-        assert(RemainderOffset + ImmField == COffsetVal);
+        uint64_t RemainderOffset;
 
-        OffsetVal = ImmField;
+        std::tie(OffsetVal, RemainderOffset)
+          = TII->splitFlatOffset(COffsetVal, AS, IsSigned);
 
         SDValue AddOffsetLo =
             getMaterializedScalarImm32(Lo_32(RemainderOffset), DL);
