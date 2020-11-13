@@ -1292,16 +1292,21 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
 enum ExitCondAnalysisResult {
   CanBeRemoved,
+  CanBeReplacedWithInvariant,
   CannotOptimize
 };
 
 /// If the condition of BI is trivially true during at least first MaxIter
 /// iterations, return CanBeRemoved.
+/// If the condition is equivalent to loop-invariant condition expressed as
+/// 'InvariantLHS `InvariantPred` InvariantRHS', fill them into respective
+/// output parameters and return CanBeReplacedWithInvariant.
 /// Otherwise, return CannotOptimize.
-static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
-                                          ScalarEvolution *SE,
-                                          bool ProvingLoopExit,
-                                          const SCEV *MaxIter) {
+static ExitCondAnalysisResult
+analyzeCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
+            bool ProvingLoopExit, const SCEV *MaxIter,
+            ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
+            const SCEV *&InvariantRHS) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   using namespace PatternMatch;
@@ -1330,9 +1335,6 @@ static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
   if (ProvingLoopExit)
     return CannotOptimize;
 
-  ICmpInst::Predicate InvariantPred;
-  const SCEV *InvariantLHS, *InvariantRHS;
-
   // Check if there is a loop-invariant predicate equivalent to our check.
   if (!SE->isLoopInvariantExitCondDuringFirstIterations(
            Pred, LHSS, RHSS, L, BI, MaxIter, InvariantPred, InvariantLHS,
@@ -1342,7 +1344,7 @@ static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI))
     return CanBeRemoved;
-  return CannotOptimize;
+  return CanBeReplacedWithInvariant;
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -1420,6 +1422,19 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     ReplaceExitCond(BI, NewCond);
   };
 
+  auto ReplaceWithInvariantCond = [&](
+      BasicBlock *ExitingBB, ICmpInst::Predicate InvariantPred,
+      const SCEV *InvariantLHS, const SCEV *InvariantRHS) {
+    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    Rewriter.setInsertPoint(BI);
+    auto *LHSV = Rewriter.expandCodeFor(InvariantLHS);
+    auto *RHSV = Rewriter.expandCodeFor(InvariantRHS);
+    IRBuilder<> Builder(BI);
+    auto *NewCond = Builder.CreateICmp(InvariantPred, LHSV, RHSV,
+                                       BI->getCondition()->getName());
+    ReplaceExitCond(BI, NewCond);
+  };
+
   bool Changed = false;
   bool SkipLastIter = false;
   SmallSet<const SCEV*, 8> DominatingExitCounts;
@@ -1429,17 +1444,26 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      auto OptimizeCond = [this, L, BI, ExitingBB, MaxExitCount, &FoldExit](
-          bool Inverted, bool SkipLastIter) {
+      auto OptimizeCond = [this, L, BI, ExitingBB, MaxExitCount, &FoldExit,
+                           &ReplaceWithInvariantCond](bool Inverted,
+                                                      bool SkipLastIter) {
         const SCEV *MaxIter = MaxExitCount;
         if (SkipLastIter) {
           const SCEV *One = SE->getOne(MaxIter->getType());
           MaxIter = SE->getMinusSCEV(MaxIter, One);
         }
-        switch (analyzeCond(L, BI, SE, Inverted, MaxIter)) {
+        ICmpInst::Predicate InvariantPred;
+        const SCEV *InvariantLHS, *InvariantRHS;
+        switch (analyzeCond(L, BI, SE, Inverted, MaxIter, InvariantPred,
+                            InvariantLHS, InvariantRHS)) {
         case CanBeRemoved:
           FoldExit(ExitingBB, Inverted);
           return true;
+        case CanBeReplacedWithInvariant: {
+          ReplaceWithInvariantCond(ExitingBB, InvariantPred, InvariantLHS,
+                                   InvariantRHS);
+          return true;
+        }
         case CannotOptimize:
           return false;
         }
