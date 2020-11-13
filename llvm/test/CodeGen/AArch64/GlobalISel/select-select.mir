@@ -345,3 +345,95 @@ body:             |
     %select:gpr(s64) = G_SELECT %cond(s1), %t, %f
     $x0 = COPY %select(s64)
     RET_ReallyLR implicit $x0
+
+...
+---
+name:            csneg_s32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; G_SELECT cc, true, (G_SUB 0, x) -> CSNEG true, x, cc
+
+    ; CHECK-LABEL: name: csneg_s32
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %reg1:gpr32 = COPY $w1
+    ; CHECK: %t:gpr32 = COPY $w2
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri %reg0, 0, implicit-def $nzcv
+    ; CHECK: %select:gpr32 = CSNEGWr %t, %reg1, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %select
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cond:gpr(s1) = G_TRUNC %reg0(s32)
+    %reg1:gpr(s32) = COPY $w1
+    %t:gpr(s32) = COPY $w2
+    %zero:gpr(s32) = G_CONSTANT i32 0
+    %sub:gpr(s32) = G_SUB %zero(s32), %reg1
+    %select:gpr(s32) = G_SELECT %cond(s1), %t, %sub
+    $w0 = COPY %select(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            csneg_s64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; G_SELECT cc, true, (G_SUB 0, x) -> CSNEG true, x, cc
+
+    ; CHECK-LABEL: name: csneg_s64
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: %reg0:gpr64 = COPY $x0
+    ; CHECK: %cond:gpr32 = COPY %reg0.sub_32
+    ; CHECK: %reg1:gpr64 = COPY $x1
+    ; CHECK: %t:gpr64 = COPY $x2
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri %cond, 0, implicit-def $nzcv
+    ; CHECK: %select:gpr64 = CSNEGXr %t, %reg1, 1, implicit $nzcv
+    ; CHECK: $x0 = COPY %select
+    ; CHECK: RET_ReallyLR implicit $x0
+    %reg0:gpr(s64) = COPY $x0
+    %cond:gpr(s1) = G_TRUNC %reg0(s64)
+    %reg1:gpr(s64) = COPY $x1
+    %t:gpr(s64) = COPY $x2
+    %zero:gpr(s64) = G_CONSTANT i64 0
+    %sub:gpr(s64) = G_SUB %zero(s64), %reg1
+    %select:gpr(s64) = G_SELECT %cond(s1), %t, %sub
+    $x0 = COPY %select(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            csneg_with_true_cst
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    ; We should prefer eliminating the G_SUB over eliminating the constant true
+    ; value.
+
+    ; CHECK-LABEL: name: csneg_with_true_cst
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %t:gpr32 = MOVi32imm 1
+    ; CHECK: %reg2:gpr32 = COPY $w2
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri %reg0, 0, implicit-def $nzcv
+    ; CHECK: %select:gpr32 = CSNEGWr %t, %reg2, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %select
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cond:gpr(s1) = G_TRUNC %reg0(s32)
+    %reg1:gpr(s32) = COPY $w1
+    %t:gpr(s32) = G_CONSTANT i32 1
+    %zero:gpr(s32) = G_CONSTANT i32 0
+    %reg2:gpr(s32) = COPY $w2
+    %sub:gpr(s32) = G_SUB %zero(s32), %reg2
+    %select:gpr(s32) = G_SELECT %cond(s1), %t, %sub
+    $w0 = COPY %select(s32)
+    RET_ReallyLR implicit $w0

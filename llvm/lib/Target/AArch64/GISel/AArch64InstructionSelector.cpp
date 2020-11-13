@@ -1010,12 +1010,29 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
 
   // By default, we'll try and emit a CSEL.
   unsigned Opc = Is32Bit ? AArch64::CSELWr : AArch64::CSELXr;
+  bool Optimized = false;
+  auto TryOptNegIntoSelect = [&Opc, &False, Is32Bit, &MRI]() {
+    // Attempt to fold:
+    //
+    // sub = G_SUB 0, x
+    // select = G_SELECT cc, true, sub
+    //
+    // Into:
+    // select = CSNEG true, x, cc
+    if (!mi_match(False, MRI, m_Neg(m_Reg(False))))
+      return false;
+    Opc = Is32Bit ? AArch64::CSNEGWr : AArch64::CSNEGXr;
+    return true;
+  };
 
   // Helper lambda which tries to use CSINC/CSINV for the instruction when its
   // true/false values are constants.
   // FIXME: All of these patterns already exist in tablegen. We should be
   // able to import these.
-  auto TryOptSelectCst = [&Opc, &True, &False, &CC, Is32Bit, &MRI]() {
+  auto TryOptSelectCst = [&Opc, &True, &False, &CC, Is32Bit, &MRI,
+                          &Optimized]() {
+    if (Optimized)
+      return false;
     auto TrueCst = getConstantVRegValWithLookThrough(True, MRI);
     auto FalseCst = getConstantVRegValWithLookThrough(False, MRI);
     if (!TrueCst && !FalseCst)
@@ -1083,7 +1100,8 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     return false;
   };
 
-  TryOptSelectCst();
+  Optimized |= TryOptNegIntoSelect();
+  Optimized |= TryOptSelectCst();
   auto SelectInst = MIB.buildInstr(Opc, {Dst}, {True, False}).addImm(CC);
   constrainSelectedInstRegOperands(*SelectInst, TII, TRI, RBI);
   return &*SelectInst;
