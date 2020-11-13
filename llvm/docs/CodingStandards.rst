@@ -748,8 +748,7 @@ Library Layering
 ^^^^^^^^^^^^^^^^
 
 A directory of header files (for example ``include/llvm/Foo``) defines a
-library (``Foo``). Dependencies between libraries are defined by the
-``LLVMBuild.txt`` file in their implementation (``lib/Foo``). One library (both
+library (``Foo``). One library (both
 its headers and implementation) should only use things from the libraries
 listed in its dependencies.
 
