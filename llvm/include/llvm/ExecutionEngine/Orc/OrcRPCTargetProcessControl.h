@@ -59,7 +59,7 @@ public:
       auto I = HostAllocs.find(Seg);
       assert(I != HostAllocs.end() && "No host allocation for segment");
       auto &HA = I->second;
-      return {HA.Mem.get(), HA.Size};
+      return {HA.Mem.get(), static_cast<size_t>(HA.Size)};
     }
 
     JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
@@ -153,6 +153,9 @@ public:
     HostAllocMap HostAllocs;
 
     for (auto &KV : Request) {
+      assert(KV.second.getContentSize() <= std::numeric_limits<size_t>::max() &&
+             "Content size is out-of-range for host");
+
       RMR.push_back({orcrpctpc::toWireProtectionFlags(
                          static_cast<sys::Memory::ProtectionFlags>(KV.first)),
                      KV.second.getContentSize() + KV.second.getZeroFillSize(),
