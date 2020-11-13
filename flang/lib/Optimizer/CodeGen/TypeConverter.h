@@ -149,18 +149,7 @@ public:
     parts.push_back(getDescFieldTypeModel<6>()(&getContext()));
     if (rank == unknownRank()) {
       if (auto seqTy = ele.dyn_cast<SequenceType>()) {
-        if (seqTy.getEleTy().isa<CharacterType>()) {
-          auto dim = seqTy.getDimension();
-          if (dim == 0) {
-            emitError(UnknownLoc::get(&getContext()))
-                << "missing length in character sequence type :" << eleTy;
-            rank = 0;
-          } else {
-            rank = dim - 1;
-          }
-        } else {
-          rank = seqTy.getDimension();
-        }
+        rank = seqTy.getDimension();
       } else {
         rank = 0;
       }
@@ -196,8 +185,11 @@ public:
 
   // fir.char<n>  -->  llvm<"ix*">   where ix is scaled by kind mapping
   mlir::LLVM::LLVMType convertCharType(fir::CharacterType charTy) {
-    return mlir::LLVM::LLVMType::getIntNTy(&getContext(),
-                                           characterBitsize(charTy));
+    auto iTy = mlir::LLVM::LLVMType::getIntNTy(&getContext(),
+                                               characterBitsize(charTy));
+    if (charTy.getLen() == fir::CharacterType::unknownLen())
+      return iTy;
+    return mlir::LLVM::LLVMType::getArrayTy(iTy, charTy.getLen());
   }
 
   // Convert a complex value's element type based on its Fortran kind.
@@ -226,6 +218,12 @@ public:
         kindMapping.getIntegerBitsize(kindMapping.defaultIntegerKind()));
   }
 
+  static bool hasDynamicSize(mlir::Type type) {
+    if (auto charTy = type.dyn_cast<fir::CharacterType>())
+      return charTy.getLen() == fir::CharacterType::unknownLen();
+    return false;
+  }
+
   template <typename A>
   mlir::LLVM::LLVMType convertPointerLike(A &ty) {
     mlir::Type eleTy = ty.getEleTy();
@@ -234,7 +232,7 @@ public:
     // degenerate the array and do not want a the type to become `T**` but
     // merely `T*`.
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
-      if (!seqTy.hasConstantShape()) {
+      if (!seqTy.hasConstantShape() || hasDynamicSize(seqTy.getEleTy())) {
         if (seqTy.hasConstantInterior())
           return unwrap(convertType(seqTy));
         eleTy = seqTy.getEleTy();
@@ -277,6 +275,8 @@ public:
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
   mlir::LLVM::LLVMType convertSequenceType(SequenceType seq) {
     auto baseTy = unwrap(convertType(seq.getEleTy()));
+    if (hasDynamicSize(seq.getEleTy()))
+      return baseTy.getPointerTo();
     auto shape = seq.getShape();
     auto constRows = seq.getConstantRows();
     if (constRows) {

@@ -563,15 +563,15 @@ struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
       // LLVMIR dialect knows how to lower the latter to LLVM IR
       auto arr = attr.cast<mlir::ArrayAttr>();
       auto size = constop.getSize().cast<mlir::IntegerAttr>().getInt();
-      auto eleTy = constop.getType().cast<fir::SequenceType>().getEleTy();
-      auto bits = lowerTy().characterBitsize(eleTy.cast<fir::CharacterType>());
-      auto charTy = rewriter.getIntegerType(bits);
-      auto det = mlir::VectorType::get({size}, charTy);
+      auto charTy = constop.getType().cast<fir::CharacterType>();
+      auto bits = lowerTy().characterBitsize(charTy);
+      auto intTy = rewriter.getIntegerType(bits);
+      auto det = mlir::VectorType::get({size}, intTy);
       // convert each character to a precise bitsize
       SmallVector<mlir::Attribute, 64> vec;
       for (auto a : arr.getValue())
         vec.push_back(mlir::IntegerAttr::get(
-            charTy, a.cast<mlir::IntegerAttr>().getValue().sextOrTrunc(bits)));
+            intTy, a.cast<mlir::IntegerAttr>().getValue().sextOrTrunc(bits)));
       auto dea = mlir::DenseElementsAttr::get(det, vec);
       rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(constop, ty, dea);
     }
@@ -971,10 +971,17 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     };
     auto doCharacter =
         [&](unsigned width,
-            int64_t len) -> std::tuple<mlir::Value, mlir::Value> {
+            mlir::Value len) -> std::tuple<mlir::Value, mlir::Value> {
       auto typeCode = fir::characterBitsToTypeCode(width);
-      return {this->genConstantOffset(loc, rewriter, len),
-              this->genConstantOffset(loc, rewriter, typeCode)};
+      auto typeCodeVal = this->genConstantOffset(loc, rewriter, typeCode);
+      if (width == 8)
+        return {len, typeCodeVal};
+      auto byteWidth = this->genConstantOffset(loc, rewriter, width / 8);
+      auto i64Ty =
+          mlir::LLVM::LLVMType::getInt64Ty(&this->lowerTy().getContext());
+      auto size =
+          rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, byteWidth, len);
+      return {size, typeCodeVal};
     };
     auto getKindMap = [&]() -> fir::KindMapping & {
       return this->lowerTy().getKindMap();
@@ -1001,26 +1008,19 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       auto ty = boxEleTy.cast<fir::ComplexType>();
       return doComplex(getKindMap().getRealBitsize(ty.getFKind()));
     }
-    if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>())
-      return doCharacter(getKindMap().getCharacterBitsize(ty.getFKind()),
-                         ty.getLen());
+    if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>()) {
+      auto charWidth = getKindMap().getCharacterBitsize(ty.getFKind());
+      if (ty.getLen() != fir::CharacterType::unknownLen()) {
+        auto len = this->genConstantOffset(loc, rewriter, ty.getLen());
+        return doCharacter(charWidth, len);
+      }
+      assert(!lenParams.empty());
+      return doCharacter(charWidth, lenParams[0]);
+    }
     if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>())
       return doLogical(getKindMap().getLogicalBitsize(ty.getFKind()));
     if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>()) {
-      if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>()) {
-        // TODO: assumes the row is the length of the CHARACTER. This is true by
-        // construction, but it may not hold after optimizations have run.
-        auto rowSize = seqTy.getShape()[0];
-        if (rowSize == fir::SequenceType::getUnknownExtent()) {
-          auto [_, tyCode] =
-              getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy());
-          return {lenParams[0], tyCode};
-        }
-        auto strTy = fir::CharacterType::get(rewriter.getContext(),
-                                             charTy.getFKind(), rowSize);
-        return getSizeAndTypeCode(loc, rewriter, strTy);
-      }
-      return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy());
+      return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy(), lenParams);
     }
     if (boxEleTy.isa<fir::RecordType>()) {
       TODO("");
@@ -1228,7 +1228,8 @@ struct ValueOpCommon {
       if (auto seq = ty.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
         const auto dim = getDimension(seq);
         if (dim > 1) {
-          std::reverse(attrs.begin() + i, attrs.begin() + i + dim);
+          auto ub = std::min(i + dim, end);
+          std::reverse(attrs.begin() + i, attrs.begin() + ub);
           i += dim - 1;
         }
         ty = getArrayElementType(seq);

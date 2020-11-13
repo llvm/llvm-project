@@ -185,16 +185,16 @@ subroutine ichar_test(c)
   ! CHECK-DAG: %[[unbox:.*]]:2 = fir.unboxchar
   ! CHECK-DAG: %[[J:.*]] = fir.alloca i32 {name = "{{.*}}Ej"}
   ! CHECK-DAG: %[[STR:.*]] = fir.alloca !fir.array{{.*}} {name = "{{.*}}Estr"}
-  ! CHECK: %[[BOX:.*]] = fir.convert %[[unbox]]#0 : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ref<!fir.char<1>> 
+  ! CHECK: %[[BOX:.*]] = fir.convert %[[unbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>> 
   ! CHECK: %[[CHAR:.*]] = fir.load %[[BOX]] : !fir.ref<!fir.char<1>>
-  ! CHECK: = fir.convert %[[CHAR]] : (!fir.char<1>) -> i32
+  ! CHECK: fir.extract_value %[[CHAR]], %c0{{.*}}
   print *, ichar(c)
   ! CHECK: fir.call @{{.*}}EndIoStatement
 
-  ! CHECK: %{{.*}} = fir.load %[[J]] : !fir.ref<i32>
+  ! CHECK-DAG: %{{.*}} = fir.load %[[J]] : !fir.ref<i32>
   ! CHECK: %[[ptr:.*]] = fir.coordinate_of %[[STR]], %
-  ! CHECK: %[[cast:.*]] = fir.convert %[[ptr]]
-  ! CHECK: fir.load %[[cast]] : !fir.ref<!fir.char<1>>
+  ! CHECK: %[[VAL:.*]] = fir.load %[[ptr]] : !fir.ref<!fir.char<1>>
+  ! CHECK: fir.extract_value %[[VAL]], %c0{{.*}}
   print *, ichar(str(J))
   ! CHECK: fir.call @{{.*}}EndIoStatement
 end subroutine

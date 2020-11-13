@@ -23,6 +23,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "mlir/IR/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 class Location;
@@ -55,9 +56,12 @@ struct Variable;
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using SymbolRef = common::Reference<const semantics::Symbol>;
 
+// Type for compile time constant length type parameters.
+using LenParameterTy = std::int64_t;
+
 /// Get a FIR type based on a category and kind.
 mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
-                      int kind);
+                      int kind, llvm::ArrayRef<LenParameterTy>);
 
 /// Translate a SomeExpr to an mlir::Type.
 mlir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,

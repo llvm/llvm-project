@@ -26,13 +26,6 @@ public:
       : builder{builder}, loc{loc} {}
   CharacterExprHelper(const CharacterExprHelper &) = delete;
 
-  /// Unless otherwise stated, all mlir::Value inputs of these pseudo-fir ops
-  /// must be of type:
-  /// - fir.boxchar<kind> (dynamic length character),
-  /// - fir.ref<fir.array<len x fir.char<kind>>> (character with compile time
-  ///      constant length),
-  /// - fir.array<len x fir.char<kind>> (compile time constant character)
-
   /// Copy the \p count first characters of \p src into \p dest.
   /// \p count can have any integer type.
   void createCopy(const fir::CharBoxValue &dest, const fir::CharBoxValue &src,
@@ -100,11 +93,11 @@ public:
 
   /// Return true if \p type is one of the following type
   /// - fir.boxchar<kind>
-  /// - fir.ref<fir.array<len x fir.char<kind>>>
-  /// - fir.array<len x fir.char<kind>>
+  /// - fir.ref<fir.char<kind,len>>
+  /// - fir.char<kind,len>
   static bool isCharacterScalar(mlir::Type type);
 
-  /// Does this extended value holds a !fir.array<len x ... fir.char<kind>>
+  /// Does this extended value base type is fir.char<kind,len>
   /// where len is not the unknown extent ?
   static bool hasConstantLengthInType(const fir::ExtendedValue &);
 
@@ -123,12 +116,13 @@ public:
   /// Character lengths. TODO: move this to FirOpBuilder?
   mlir::Type getLengthType() { return builder.getIndexType(); }
 
-  /// Create an extended value from:
+  /// Create an extended value from a value of type:
   /// - fir.boxchar<kind>
-  /// - fir.ref<fir.array<len x fir.char<kind>>>
-  /// - fir.array<len x fir.char<kind>>
-  /// - fir.char<kind>
-  /// - fir.ref<char<kind>>
+  /// - fir.ref<fir.char<kind,len>>
+  /// - fir.char<kind,len>
+  /// or the array versions:
+  /// - fir.ref<fir.array<n x...x fir.char<kind,len>>>
+  /// - fir.array<n x...x fir.char<kind,len>>
   ///
   /// Does the heavy lifting of converting the value \p character (along with an
   /// optional \p len value) to an extended value. If \p len is null, a length
@@ -140,10 +134,9 @@ public:
 
   /// Is `type` a sequence (array) of CHARACTER type? Return true for any of the
   /// following cases:
-  ///   - !fir.array<len x dim x ... x !fir.char<kind>>
-  ///   - !fir.array<dim x !fir.char<kind, len>>
-  ///   - !fir.ref<T>  where T is either of the first two cases
-  ///   - !fir.box<T>  where T is either of the first two cases
+  ///   - !fir.array<dim x ... x !fir.char<kind, len>>
+  ///   - !fir.ref<T>  where T is either of the first case
+  ///   - !fir.box<T>  where T is either of the first case
   ///
   /// In certain contexts, Fortran allows an array of CHARACTERs to be treated
   /// as if it were one longer CHARACTER scalar, each element append to the
@@ -159,15 +152,17 @@ public:
   /// above instead of fixing it when needed.
   fir::ExtendedValue cleanUpCharacterExtendedValue(const fir::ExtendedValue &);
 
+  /// Create fir.char<kind> singleton from \p code integer value.
+  mlir::Value createSingletonFromCode(mlir::Value code, int kind);
+  /// Returns integer value held in a character singleton.
+  mlir::Value extractCodeFromSingleton(mlir::Value singleton);
+
 private:
   /// FIXME: the implementation also needs a clean-up now that
   /// CharBoxValue are better propagated.
   fir::CharBoxValue materializeValue(mlir::Value str);
-  mlir::Type getReferenceType(const fir::CharBoxValue &c) const;
-  mlir::Type getReferenceType(mlir::Value str) const;
-  mlir::Type getSeqTy(const fir::CharBoxValue &c) const;
-  mlir::Type getSeqTy(mlir::Value str) const;
   mlir::Value getCharBoxBuffer(const fir::CharBoxValue &box);
+  mlir::Value createElementAddr(mlir::Value buffer, mlir::Value index);
   mlir::Value createLoadCharAt(mlir::Value buff, mlir::Value index);
   void createStoreCharAt(mlir::Value str, mlir::Value index, mlir::Value c);
   void createLengthOneAssign(const fir::CharBoxValue &lhs,

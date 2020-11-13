@@ -12,13 +12,17 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/Todo.h"
-#include "flang/Lower/Utils.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "flang-lower-type"
 
 //===--------------------------------------------------------------------===//
 // Intrinsic type translation helpers
@@ -37,9 +41,9 @@ static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
     case 8:
       return mlir::FloatType::getF64(context);
     case 10:
-      return fir::RealType::get(context, 10);
+      return mlir::FloatType::getF80(context);
     case 16:
-      return fir::RealType::get(context, 16);
+      return mlir::FloatType::getF128(context);
     }
   }
   llvm_unreachable("REAL type translation not implemented");
@@ -55,15 +59,15 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind) {
           Fortran::common::TypeCategory::Integer, kind)) {
     switch (kind) {
     case 1:
-      return mlir::IntegerType::get(getIntegerBits<1>(), context);
+      return mlir::IntegerType::get(context, getIntegerBits<1>());
     case 2:
-      return mlir::IntegerType::get(getIntegerBits<2>(), context);
+      return mlir::IntegerType::get(context, getIntegerBits<2>());
     case 4:
-      return mlir::IntegerType::get(getIntegerBits<4>(), context);
+      return mlir::IntegerType::get(context, getIntegerBits<4>());
     case 8:
-      return mlir::IntegerType::get(getIntegerBits<8>(), context);
+      return mlir::IntegerType::get(context, getIntegerBits<8>());
     case 16:
-      return mlir::IntegerType::get(getIntegerBits<16>(), context);
+      return mlir::IntegerType::get(context, getIntegerBits<16>());
     }
   }
   llvm_unreachable("INTEGER type translation not implemented");
@@ -76,10 +80,12 @@ static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
   return {};
 }
 
-static mlir::Type genCharacterType(mlir::MLIRContext *context, int KIND) {
+static mlir::Type genCharacterType(
+    mlir::MLIRContext *context, int KIND,
+    Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
-    return fir::CharacterType::get(context, KIND, 1);
+    return fir::CharacterType::get(context, KIND, len);
   return {};
 }
 
@@ -90,8 +96,10 @@ static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
   return {};
 }
 
-static mlir::Type genFIRType(mlir::MLIRContext *context,
-                             Fortran::common::TypeCategory tc, int kind) {
+static mlir::Type
+genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
+           int kind,
+           llvm::ArrayRef<Fortran::lower::LenParameterTy> lenParameters) {
   switch (tc) {
   case Fortran::common::TypeCategory::Real:
     return genRealType(context, kind);
@@ -102,6 +110,8 @@ static mlir::Type genFIRType(mlir::MLIRContext *context,
   case Fortran::common::TypeCategory::Logical:
     return genLogicalType(context, kind);
   case Fortran::common::TypeCategory::Character:
+    if (!lenParameters.empty())
+      return genCharacterType(context, kind, lenParameters[0]);
     return genCharacterType(context, kind);
   default:
     break;
@@ -139,10 +149,10 @@ struct TypeBuilder {
       TODO("Assumed rank expression type lowering");
 
     // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
-    auto baseType = genFIRType(context, category, dynamicType->kind());
+    llvm::SmallVector<Fortran::lower::LenParameterTy, 2> params;
+    translateLenParameters(params, category, expr);
+    auto baseType = genFIRType(context, category, dynamicType->kind(), params);
     fir::SequenceType::Shape shape;
-    if (category == Fortran::common::TypeCategory::Character)
-      shape.push_back(getCharacterLength(expr));
     translateShape(shape, std::move(*shapeExpr));
     if (!shape.empty())
       return fir::SequenceType::get(shape, baseType);
@@ -196,52 +206,71 @@ struct TypeBuilder {
                            bool isAlloc = false, bool isPtr = false) {
     auto loc = converter.genLocation(symbol.name());
     mlir::Type ty;
-    if (auto *type{symbol.GetType()}) {
+    // If the symbol is not the same as the ultimate one (i.e, it is host or use
+    // associated), all the symbol properties are the ones of the ultimate
+    // symbol but the volatile and asynchronous attributes that may differ. To
+    // avoid issues with helper functions that would not follow association
+    // links, the fir type is built based on the ultimate symbol. This relies
+    // on the fact volatile and asynchronous are not reflected in fir types.
+    const auto &ultimate = symbol.GetUltimate();
+    if (auto *type{ultimate.GetType()}) {
       if (auto *tySpec{type->AsIntrinsic()}) {
         int kind = toInt64(Fortran::common::Clone(tySpec->kind())).value();
-        ty = genFIRType(context, tySpec->category(), kind);
+        llvm::SmallVector<Fortran::lower::LenParameterTy, 2> params;
+        translateLenParameters(params, tySpec->category(), ultimate);
+        ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (auto *tySpec = type->AsDerived()) {
         std::vector<std::pair<std::string, mlir::Type>> ps;
         std::vector<std::pair<std::string, mlir::Type>> cs;
         auto &symbol = tySpec->typeSymbol();
+        // FIXME: mangle the type name, including KIND parameters, etc.
         auto rec = fir::RecordType::get(context, toStringRef(symbol.name()));
-        // TODO: use Fortran::semantics::ComponentIterator to go through
-        // components. or use similar mechanism. We probably want to go through
-        // the Ordered components.
-        TODO("lower derived type to fir types");
+
+        // Gather the record type fields.
+        // (1) The data components.
+        for (const auto &field :
+             Fortran::semantics::OrderedComponentIterator(*tySpec)) {
+          auto ty = genSymbolType(field);
+          // FIXME: may need to adjust the type `ty` here...
+          cs.emplace_back(field.name().ToString(), ty);
+        }
+        // (2) The LEN type parameters.
+        for (const auto &param : Fortran::semantics::OrderParameterDeclarations(
+                 tySpec->typeSymbol()))
+          if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
+              Fortran::common::TypeParamAttr::Len)
+            ps.emplace_back(param->name().ToString(), genSymbolType(*param));
+
         rec.finalize(ps, cs);
         ty = rec;
+        LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
       } else {
-        mlir::emitError(loc, "symbol's type must have a type spec");
-        return {};
+        fir::emitFatalError(loc, "symbol's type must have a type spec");
       }
     } else {
-      mlir::emitError(loc, "symbol must have a type");
-      return {};
+      fir::emitFatalError(loc, "symbol must have a type");
     }
-    if (symbol.IsObjectArray()) {
+    if (ultimate.IsObjectArray()) {
       auto shapeExpr = Fortran::evaluate::GetShapeHelper{
-          converter.getFoldingContext()}(symbol);
+          converter.getFoldingContext()}(ultimate);
       if (!shapeExpr)
         TODO("assumed rank symbol type lowering");
       fir::SequenceType::Shape shape;
-      if (symbol.GetType()->category() ==
-          Fortran::semantics::DeclTypeSpec::Character)
-        shape.push_back(getCharacterLength(symbol));
       translateShape(shape, std::move(*shapeExpr));
       ty = fir::SequenceType::get(shape, ty);
     }
 
-    if (ty.isa<fir::CharacterType>()) {
-      auto charLen = getCharacterLength(symbol);
-      fir::SequenceType::Shape shape = {charLen};
-      ty = fir::SequenceType::get(shape, ty);
-    }
-
-    if (isPtr || Fortran::semantics::IsPointer(symbol))
-      ty = fir::PointerType::get(ty);
-    else if (isAlloc || Fortran::semantics::IsAllocatable(symbol))
-      ty = fir::HeapType::get(ty);
+    if (Fortran::semantics::IsPointer(symbol))
+      return fir::BoxType::get(fir::PointerType::get(ty));
+    if (Fortran::semantics::IsAllocatable(symbol))
+      return fir::BoxType::get(fir::HeapType::get(ty));
+    // isPtr and isAlloc are variable that were promoted to be on the
+    // heap or to be pointers, but they do not have Fortran allocatable
+    // or pointer semantics, so do not use box for them.
+    if (isPtr)
+      return fir::PointerType::get(ty);
+    if (isAlloc)
+      return fir::HeapType::get(ty);
     return ty;
   }
 
@@ -260,7 +289,18 @@ struct TypeBuilder {
       return *len;
     return fir::SequenceType::getUnknownExtent();
   }
-  fir::SequenceType::Extent
+
+  template <typename T>
+  void translateLenParameters(
+      llvm::SmallVectorImpl<Fortran::lower::LenParameterTy> &params,
+      Fortran::common::TypeCategory category, const T &exprOrSym) {
+    if (category == Fortran::common::TypeCategory::Character)
+      params.push_back(getCharacterLength(exprOrSym));
+    else if (category == Fortran::common::TypeCategory::Derived)
+      TODO("lowering derived type length parameters");
+    return;
+  }
+  Fortran::lower::LenParameterTy
   getCharacterLength(const Fortran::semantics::Symbol &symbol) {
     auto *type = symbol.GetType();
     if (!type ||
@@ -279,7 +319,7 @@ struct TypeBuilder {
     }
     llvm_unreachable("unknown character kind");
   }
-  fir::SequenceType::Extent
+  Fortran::lower::LenParameterTy
   getCharacterLength(const Fortran::lower::SomeExpr &expr) {
     // Do not use dynamic type length here. We would miss constant
     // lengths opportunities because dynamic type only has the length
@@ -303,8 +343,9 @@ struct TypeBuilder {
 
 mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,
                                       Fortran::common::TypeCategory tc,
-                                      int kind) {
-  return genFIRType(context, tc, kind);
+                                      int kind,
+                                      llvm::ArrayRef<LenParameterTy> params) {
+  return genFIRType(context, tc, kind, params);
 }
 
 mlir::Type Fortran::lower::translateSomeExprToFIRType(

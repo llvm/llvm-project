@@ -75,12 +75,12 @@ entry rr(n2)
   rr = rr + n2
 end
 
-! CHECK-LABEL: func @_QPhh(%arg0: !fir.ref<!fir.char<1>>, %arg1: index, %arg2: !fir.boxchar<1>) -> !fir.boxchar<1>
+! CHECK-LABEL: func @_QPhh(%arg0: !fir.ref<!fir.char<1,?>>, %arg1: index, %arg2: !fir.boxchar<1>) -> !fir.boxchar<1>
 function hh(c1)
   character(10) c1, hh, qq
   hh = c1
   return
-! CHECK-LABEL: func @_QPqq(%arg0: !fir.ref<!fir.char<1>>, %arg1: index, %arg2: !fir.boxchar<1>) -> !fir.boxchar<1>
+! CHECK-LABEL: func @_QPqq(%arg0: !fir.ref<!fir.char<1,?>>, %arg1: index, %arg2: !fir.boxchar<1>) -> !fir.boxchar<1>
 entry qq(c1)
   qq = c1
 end

@@ -17,6 +17,7 @@
 #include "flang/Lower/Support/BoxValue.h"
 #include "flang/Lower/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace Fortran {
 namespace common {
@@ -104,8 +105,10 @@ public:
   virtual mlir::Type genType(SymbolRef) = 0;
   /// Generate the type from a category
   virtual mlir::Type genType(Fortran::common::TypeCategory tc) = 0;
-  /// Generate the type from a category and kind
-  virtual mlir::Type genType(Fortran::common::TypeCategory tc, int kind) = 0;
+  /// Generate the type from a category and kind and length parameters.
+  virtual mlir::Type
+  genType(Fortran::common::TypeCategory tc, int kind,
+          llvm::ArrayRef<std::int64_t> lenParameters = llvm::None) = 0;
   /// Generate the type from a Variable
   virtual mlir::Type genType(const pft::Variable &) = 0;
 

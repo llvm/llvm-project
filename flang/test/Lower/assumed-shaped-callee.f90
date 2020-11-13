@@ -51,37 +51,37 @@ subroutine test_assumed_shape_3(x)
 end subroutine
 
 ! Constant length
-! func @_QPtest_assumed_shape_char(%arg0: !fir.box<!fir.array<10x?x!fir.char<1>>>)
+! func @_QPtest_assumed_shape_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,10>>>)
 subroutine test_assumed_shape_char(c)
   character(10) :: c(:)
-  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<10x?x!fir.char<1>>>) -> !fir.ref<!fir.array<10x?x!fir.char<1>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 
-  ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<10x?x!fir.char<1>>>, index) -> (index, index, index)
+  ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = constant 1 : index
 
   print *, c
   ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<10x?x!fir.char<1>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10x?x!fir.char<1>>>
+  ! CHECK: fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
 end subroutine
 
 ! Assumed length
-! CHECK-LABEL: func @_QPtest_assumed_shape_char_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1>>>)
+! CHECK-LABEL: func @_QPtest_assumed_shape_char_2(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>)
 subroutine test_assumed_shape_char_2(c)
   character(*) :: c(:)
-  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?x?x!fir.char<1>>>) -> !fir.ref<!fir.array<?x?x!fir.char<1>>>
-  ! CHECK: %[[len:.*]] = fir.box_elesize %arg0 : (!fir.box<!fir.array<?x?x!fir.char<1>>>) -> index
+  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
+  ! CHECK: %[[len:.*]] = fir.box_elesize %arg0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 
-  ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x?x!fir.char<1>>>, index) -> (index, index, index)
+  ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = constant 1 : index
 
   print *, c
   ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: fir.embox %[[addr]](%[[shape]]) typeparams %[[len]] : (!fir.ref<!fir.array<?x?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x?x!fir.char<1>>>
+  ! CHECK: fir.embox %[[addr]](%[[shape]]) typeparams %[[len]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 end subroutine
 
 
 ! lower bounds all 1.
-! CHECK: func @_QPtest_assumed_shape_char_3(%arg0: !fir.box<!fir.array<?x?x?x!fir.char<1>>>)
+! CHECK: func @_QPtest_assumed_shape_char_3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 subroutine test_assumed_shape_char_3(c)
   character(*) :: c(1:, 1:)
   ! CHECK: fir.box_addr

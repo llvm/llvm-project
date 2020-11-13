@@ -275,13 +275,16 @@ public:
   mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
     return Fortran::lower::translateSymbolToFIRType(*this, sym);
   }
-  mlir::Type genType(Fortran::common::TypeCategory tc,
-                     int kind) override final {
-    return Fortran::lower::getFIRType(&getMLIRContext(), tc, kind);
+  mlir::Type
+  genType(Fortran::common::TypeCategory tc, int kind,
+          llvm::ArrayRef<std::int64_t> lenParameters) override final {
+    return Fortran::lower::getFIRType(&getMLIRContext(), tc, kind,
+                                      lenParameters);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
     return Fortran::lower::getFIRType(
-        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc));
+        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc),
+        llvm::None);
   }
 
   mlir::Location getCurrentLocation() override final { return toLocation(); }
@@ -1773,9 +1776,6 @@ private:
         auto symTy = genType(var);
         if (symTy.isa<fir::CharacterType>()) {
           if (auto chLit = getCharacterLiteralCopy(details->init().value())) {
-            fir::SequenceType::Shape len;
-            len.push_back(std::get<std::size_t>(*chLit));
-            symTy = fir::SequenceType::get(len, symTy);
             auto init = builder->getStringAttr(std::get<std::string>(*chLit));
             global = builder->createGlobal(loc, symTy, globalName, linkage,
                                            init, isConst);

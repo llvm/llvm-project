@@ -60,21 +60,8 @@ public:
     if (auto boxTy = embox.getType().dyn_cast<BoxType>())
       if (auto seqTy = boxTy.getEleTy().dyn_cast<SequenceType>())
         if (seqTy.hasConstantShape())
-          if (!scalarCharacter(seqTy))
-            return rewriteStaticShape(embox, rewriter, seqTy);
+          return rewriteStaticShape(embox, rewriter, seqTy);
     return mlir::failure();
-  }
-
-  static bool scalarCharacter(SequenceType seqTy) {
-    if (auto eleTy = seqTy.getEleTy().dyn_cast<CharacterType>())
-      return seqTy.getDimension() == 1;
-    return false;
-  }
-
-  /// For element type `char<K>` the row is the LEN and must not be included in
-  /// the shape structure.
-  static std::size_t charAdjust(SequenceType seqTy) {
-    return seqTy.getEleTy().isa<CharacterType>() ? 1 : 0;
   }
 
   mlir::LogicalResult rewriteStaticShape(EmboxOp embox,
@@ -83,13 +70,13 @@ public:
     auto loc = embox.getLoc();
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     auto idxTy = rewriter.getIndexType();
-    for (auto ext : llvm::drop_begin(seqTy.getShape(), charAdjust(seqTy))) {
+    for (auto ext : seqTy.getShape()) {
       auto iAttr = rewriter.getIndexAttr(ext);
       auto extVal = rewriter.create<mlir::ConstantOp>(loc, idxTy, iAttr);
       shapeOpers.push_back(extVal);
     }
     mlir::NamedAttrList attrs;
-    auto rank = seqTy.getDimension() - charAdjust(seqTy);
+    auto rank = seqTy.getDimension();
     auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
     attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
     auto zeroAttr = rewriter.getIntegerAttr(idxTy, 0);
