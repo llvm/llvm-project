@@ -64,11 +64,9 @@ static inline void __kmp_strncpy_truncate(char *buffer, size_t buf_size,
                                           char const *src, size_t src_size) {
   if (src_size >= buf_size) {
     src_size = buf_size - 1;
-    KMP_STRNCPY_S(buffer, buf_size, src, src_size);
-    buffer[buf_size - 1] = '\0';
-  } else {
-    KMP_STRNCPY_S(buffer, buf_size, src, src_size);
   }
+  KMP_STRNCPY_S(buffer, buf_size, src, src_size);
+  buffer[src_size] = '\0';
 }
 
 #endif // KMP_SAFE_C_API_H
