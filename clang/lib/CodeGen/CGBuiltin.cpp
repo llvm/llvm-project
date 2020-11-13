@@ -16497,24 +16497,24 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow_in_catch);
     return Builder.CreateCall(Callee);
   }
-  case WebAssembly::BI__builtin_wasm_atomic_wait_i32: {
+  case WebAssembly::BI__builtin_wasm_memory_atomic_wait32: {
     Value *Addr = EmitScalarExpr(E->getArg(0));
     Value *Expected = EmitScalarExpr(E->getArg(1));
     Value *Timeout = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_wait_i32);
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_atomic_wait32);
     return Builder.CreateCall(Callee, {Addr, Expected, Timeout});
   }
-  case WebAssembly::BI__builtin_wasm_atomic_wait_i64: {
+  case WebAssembly::BI__builtin_wasm_memory_atomic_wait64: {
     Value *Addr = EmitScalarExpr(E->getArg(0));
     Value *Expected = EmitScalarExpr(E->getArg(1));
     Value *Timeout = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_wait_i64);
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_atomic_wait64);
     return Builder.CreateCall(Callee, {Addr, Expected, Timeout});
   }
-  case WebAssembly::BI__builtin_wasm_atomic_notify: {
+  case WebAssembly::BI__builtin_wasm_memory_atomic_notify: {
     Value *Addr = EmitScalarExpr(E->getArg(0));
     Value *Count = EmitScalarExpr(E->getArg(1));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_notify);
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_atomic_notify);
     return Builder.CreateCall(Callee, {Addr, Count});
   }
   case WebAssembly::BI__builtin_wasm_trunc_s_i32_f32:

@@ -55,22 +55,22 @@ void rethrow_in_catch(void) {
   // WEBASSEMBLY64: call void @llvm.wasm.rethrow.in.catch()
 }
 
-int atomic_wait_i32(int *addr, int expected, long long timeout) {
-  return __builtin_wasm_atomic_wait_i32(addr, expected, timeout);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.atomic.wait.i32(i32* %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
-  // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.wait.i32(i32* %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
+int memory_atomic_wait32(int *addr, int expected, long long timeout) {
+  return __builtin_wasm_memory_atomic_wait32(addr, expected, timeout);
+  // WEBASSEMBLY32: call i32 @llvm.wasm.memory.atomic.wait32(i32* %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
+  // WEBASSEMBLY64: call i32 @llvm.wasm.memory.atomic.wait32(i32* %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
 }
 
-int atomic_wait_i64(long long *addr, long long expected, long long timeout) {
-  return __builtin_wasm_atomic_wait_i64(addr, expected, timeout);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.atomic.wait.i64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
-  // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.wait.i64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+int memory_atomic_wait64(long long *addr, long long expected, long long timeout) {
+  return __builtin_wasm_memory_atomic_wait64(addr, expected, timeout);
+  // WEBASSEMBLY32: call i32 @llvm.wasm.memory.atomic.wait64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+  // WEBASSEMBLY64: call i32 @llvm.wasm.memory.atomic.wait64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
 }
 
-unsigned int atomic_notify(int *addr, unsigned int count) {
-  return __builtin_wasm_atomic_notify(addr, count);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
-  // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
+unsigned int memory_atomic_notify(int *addr, unsigned int count) {
+  return __builtin_wasm_memory_atomic_notify(addr, count);
+  // WEBASSEMBLY32: call i32 @llvm.wasm.memory.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
+  // WEBASSEMBLY64: call i32 @llvm.wasm.memory.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
 }
 
 int trunc_s_i32_f32(float f) {
