@@ -277,10 +277,9 @@ private:
   bool stripThreadLocals(Module &M) {
     bool Stripped = false;
     for (auto &GV : M.globals()) {
-      if (GV.getThreadLocalMode() !=
-          GlobalValue::ThreadLocalMode::NotThreadLocal) {
+      if (GV.isThreadLocal()) {
         Stripped = true;
-        GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
+        GV.setThreadLocal(false);
       }
     }
     return Stripped;
