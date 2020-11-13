@@ -149,7 +149,8 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
 
     SDValue TLSBaseSym = CurDAG->getTargetExternalSymbol("__tls_base", PtrVT);
     SDValue TLSOffsetSym = CurDAG->getTargetGlobalAddress(
-        GA->getGlobal(), DL, PtrVT, GA->getOffset(), 0);
+        GA->getGlobal(), DL, PtrVT, GA->getOffset(),
+        WebAssemblyII::MO_TLS_BASE_REL);
 
     MachineSDNode *TLSBase =
         CurDAG->getMachineNode(GlobalGetIns, DL, PtrVT, TLSBaseSym);

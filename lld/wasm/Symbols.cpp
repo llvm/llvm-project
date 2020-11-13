@@ -257,14 +257,8 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
 
 uint64_t DefinedData::getVirtualAddress() const {
   LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  if (segment) {
-    // For thread local data, the symbol location is relative to the start of
-    // the .tdata section, since they are used as offsets from __tls_base.
-    // Hence, we do not add in segment->outputSeg->startVA.
-    if (segment->outputSeg->name == ".tdata")
-      return segment->outputSegmentOffset + offset;
+  if (segment)
     return segment->outputSeg->startVA + segment->outputSegmentOffset + offset;
-  }
   return offset;
 }
 
