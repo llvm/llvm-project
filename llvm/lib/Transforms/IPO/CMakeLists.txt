@@ -47,7 +47,7 @@ add_llvm_component_library(LLVMipo
   omp_gen
 
   COMPONENT_NAME
-  ipo
+  IPO
 
   LINK_COMPONENTS
   AggressiveInstCombine
