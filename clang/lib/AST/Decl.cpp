@@ -1627,7 +1627,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
     if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
       OS << Spec->getName();
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-      printTemplateArgumentList(OS, TemplateArgs.asArray(), P);
+      printTemplateArgumentList(
+          OS, TemplateArgs.asArray(), P,
+          Spec->getSpecializedTemplate()->getTemplateParameters());
     } else if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
       if (ND->isAnonymousNamespace()) {
         OS << (P.MSVCFormatting ? "`anonymous namespace\'"
