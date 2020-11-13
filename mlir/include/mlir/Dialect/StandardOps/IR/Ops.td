@@ -991,10 +991,10 @@ def CmpFPredicateAttr : I64EnumAttr<
 }
 
 def CmpFOp : Std_Op<"cmpf",
-    [NoSideEffect, SameTypeOperands,
-     SameOperandsAndResultShape, TypesMatchWith<
+    [NoSideEffect, SameTypeOperands, ElementwiseMappable,
+     TypesMatchWith<
        "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">, ElementwiseMappable]> {
+       "lhs", "result", "getI1SameShape($_self)">]> {
   let summary = "floating-point comparison operation";
   let description = [{
     The `cmpf` operation compares its two operands according to the float
@@ -1075,10 +1075,10 @@ def CmpIPredicateAttr : I64EnumAttr<
 }
 
 def CmpIOp : Std_Op<"cmpi",
-    [NoSideEffect, SameTypeOperands,
-     SameOperandsAndResultShape, TypesMatchWith<
+    [NoSideEffect, SameTypeOperands, ElementwiseMappable,
+     TypesMatchWith<
        "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">, ElementwiseMappable]> {
+       "lhs", "result", "getI1SameShape($_self)">]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -2799,7 +2799,7 @@ def SignedShiftRightOp : IntArithmeticOp<"shift_right_signed"> {
 //===----------------------------------------------------------------------===//
 
 def SignExtendIOp : Std_Op<"sexti",
-    [NoSideEffect, SameOperandsAndResultShape, ElementwiseMappable]> {
+    [NoSideEffect, ElementwiseMappable]> {
   let summary = "integer sign extension operation";
   let description = [{
     The integer sign extension operation takes an integer input of
@@ -3665,9 +3665,7 @@ def TransposeOp : Std_Op<"transpose", [NoSideEffect]>,
 // TruncateIOp
 //===----------------------------------------------------------------------===//
 
-def TruncateIOp : Std_Op<"trunci", [NoSideEffect,
-                                    SameOperandsAndResultShape,
-                                    ElementwiseMappable]> {
+def TruncateIOp : Std_Op<"trunci", [NoSideEffect, ElementwiseMappable]> {
   let summary = "integer truncation operation";
   let description = [{
     The integer truncation operation takes an integer input of
@@ -3934,9 +3932,7 @@ def XOrOp : IntArithmeticOp<"xor", [Commutative]> {
 // ZeroExtendIOp
 //===----------------------------------------------------------------------===//
 
-def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect,
-                                     SameOperandsAndResultShape,
-                                     ElementwiseMappable]> {
+def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, ElementwiseMappable]> {
   let summary = "integer zero extension operation";
   let description = [{
     The integer zero extension operation takes an integer input of
