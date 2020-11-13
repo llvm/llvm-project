@@ -40,6 +40,19 @@ static Value maybeConvertToIndex(Location loc, Value val, OpBuilder &b) {
   return b.create<IndexCastOp>(loc, val, b.getIndexType());
 }
 
+static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
+  auto memrefType = memref.getType().cast<MemRefType>();
+  SmallVector<Value, 4> dynOperands;
+  for (auto dim : llvm::enumerate(memrefType.getShape())) {
+    if (dim.value() == TensorType::kDynamicSize) {
+      dynOperands.push_back(b.create<DimOp>(loc, memref, dim.index()));
+    }
+  }
+  auto alloc = b.create<AllocOp>(loc, memrefType, dynOperands);
+  b.create<linalg::CopyOp>(loc, memref, alloc);
+  return alloc;
+}
+
 static LogicalResult
 allocateBuffersForResults(Location loc, LinalgOp linalgOp,
                           linalg::GenericOpAdaptor &adaptor,
@@ -65,19 +78,10 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
     // results.
     // TODO: update this assumption because the reality is more complex
     // under linalg on tensor based transformations.
-    bool foldedInitTensor = resultIndex < linalgOp.getNumInitTensors();
-    if (foldedInitTensor) {
-      Value initTensor = linalgOp.getInitTensor(resultIndex);
-      Value initBuffer = adaptor.init_tensors()[resultIndex];
-      SmallVector<Value, 4> dynOperands;
-      for (auto dim : llvm::enumerate(tensorShape)) {
-        if (dim.value() == TensorType::kDynamicSize) {
-          dynOperands.push_back(b.create<DimOp>(loc, initTensor, dim.index()));
-        }
-      }
-      auto alloc = b.create<AllocOp>(loc, memrefType, dynOperands);
-      b.create<linalg::CopyOp>(loc, initBuffer, alloc);
-      resultBuffers.push_back(alloc);
+    bool hasInitTensor = resultIndex < linalgOp.getNumInitTensors();
+    if (hasInitTensor) {
+      resultBuffers.push_back(
+          cloneMemref(loc, adaptor.init_tensors()[resultIndex], b));
       continue;
     }
 
@@ -303,7 +307,10 @@ public:
     Value sourceMemRef = adaptor.source();
     assert(sourceMemRef.getType().isa<MemRefType>());
 
-    Value destMemRef = adaptor.dest();
+    // For now, be conservative and copy the converted input memref.
+    // In general, the converted input memref here could be aliased or could
+    // point into constant memory, so mutating it would lead to miscompilations.
+    Value destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
     assert(destMemRef.getType().isa<MemRefType>());
 
     // Take a subview to copy the small memref.
