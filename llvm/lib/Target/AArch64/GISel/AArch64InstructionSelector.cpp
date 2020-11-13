@@ -225,6 +225,9 @@ private:
                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitTST(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitSelect(Register Dst, Register LHS, Register RHS,
+                           AArch64CC::CondCode CC,
+                           MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitExtractVectorElt(Optional<Register> DstReg,
                                      const RegisterBank &DstRB, LLT ScalarTy,
                                      Register VecReg, unsigned LaneIdx,
@@ -983,17 +986,107 @@ static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
   return GenericOpc;
 }
 
-static unsigned selectSelectOpc(MachineInstr &I, MachineRegisterInfo &MRI,
-                                const RegisterBankInfo &RBI) {
-  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-  bool IsFP = (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() !=
-               AArch64::GPRRegBankID);
-  LLT Ty = MRI.getType(I.getOperand(0).getReg());
-  if (Ty == LLT::scalar(32))
-    return IsFP ? AArch64::FCSELSrrr : AArch64::CSELWr;
-  else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64))
-    return IsFP ? AArch64::FCSELDrrr : AArch64::CSELXr;
-  return 0;
+MachineInstr *
+AArch64InstructionSelector::emitSelect(Register Dst, Register True,
+                                       Register False, AArch64CC::CondCode CC,
+                                       MachineIRBuilder &MIB) const {
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  assert(RBI.getRegBank(False, MRI, TRI)->getID() ==
+             RBI.getRegBank(True, MRI, TRI)->getID() &&
+         "Expected both select operands to have the same regbank?");
+  LLT Ty = MRI.getType(True);
+  if (Ty.isVector())
+    return nullptr;
+  const unsigned Size = Ty.getSizeInBits();
+  assert((Size == 32 || Size == 64) &&
+         "Expected 32 bit or 64 bit select only?");
+  const bool Is32Bit = Size == 32;
+  if (RBI.getRegBank(True, MRI, TRI)->getID() != AArch64::GPRRegBankID) {
+    unsigned Opc = Is32Bit ? AArch64::FCSELSrrr : AArch64::FCSELDrrr;
+    auto FCSel = MIB.buildInstr(Opc, {Dst}, {True, False}).addImm(CC);
+    constrainSelectedInstRegOperands(*FCSel, TII, TRI, RBI);
+    return &*FCSel;
+  }
+
+  // By default, we'll try and emit a CSEL.
+  unsigned Opc = Is32Bit ? AArch64::CSELWr : AArch64::CSELXr;
+
+  // Helper lambda which tries to use CSINC/CSINV for the instruction when its
+  // true/false values are constants.
+  // FIXME: All of these patterns already exist in tablegen. We should be
+  // able to import these.
+  auto TryOptSelectCst = [&Opc, &True, &False, &CC, Is32Bit, &MRI]() {
+    auto TrueCst = getConstantVRegValWithLookThrough(True, MRI);
+    auto FalseCst = getConstantVRegValWithLookThrough(False, MRI);
+    if (!TrueCst && !FalseCst)
+      return false;
+
+    Register ZReg = Is32Bit ? AArch64::WZR : AArch64::XZR;
+    if (TrueCst && FalseCst) {
+      auto T = TrueCst->Value;
+      auto F = FalseCst->Value;
+
+      if (T == 0 && F == 1) {
+        // G_SELECT cc, 0, 1 -> CSINC zreg, zreg, cc
+        Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
+        True = ZReg;
+        False = ZReg;
+        return true;
+      }
+
+      if (T == 0 && F == -1) {
+        // G_SELECT cc 0, -1 -> CSINV zreg, zreg cc
+        Opc = Is32Bit ? AArch64::CSINVWr : AArch64::CSINVXr;
+        True = ZReg;
+        False = ZReg;
+        return true;
+      }
+    }
+
+    if (TrueCst) {
+      auto T = TrueCst->Value;
+      if (T == 1) {
+        // G_SELECT cc, 1, f -> CSINC f, zreg, inv_cc
+        Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
+        True = False;
+        False = ZReg;
+        CC = AArch64CC::getInvertedCondCode(CC);
+        return true;
+      }
+
+      if (T == -1) {
+        // G_SELECT cc, -1, f -> CSINV f, zreg, inv_cc
+        Opc = Is32Bit ? AArch64::CSINVWr : AArch64::CSINVXr;
+        True = False;
+        False = ZReg;
+        CC = AArch64CC::getInvertedCondCode(CC);
+        return true;
+      }
+    }
+
+    if (FalseCst) {
+      auto F = FalseCst->Value;
+      if (F == 1) {
+        // G_SELECT cc, t, 1 -> CSINC t, zreg, cc
+        Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
+        False = ZReg;
+        return true;
+      }
+
+      if (F == -1) {
+        // G_SELECT cc, t, -1 -> CSINC t, zreg, cc
+        Opc = Is32Bit ? AArch64::CSINVWr : AArch64::CSINVXr;
+        False = ZReg;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  TryOptSelectCst();
+  auto SelectInst = MIB.buildInstr(Opc, {Dst}, {True, False}).addImm(CC);
+  constrainSelectedInstRegOperands(*SelectInst, TII, TRI, RBI);
+  return &*SelectInst;
 }
 
 /// Returns true if \p P is an unsigned integer comparison predicate.
@@ -2831,25 +2924,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (tryOptSelect(I))
       return true;
 
-    Register CSelOpc = selectSelectOpc(I, MRI, RBI);
     // Make sure to use an unused vreg instead of wzr, so that the peephole
     // optimizations will be able to optimize these.
+    MachineIRBuilder MIB(I);
     Register DeadVReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-    MachineInstr &TstMI =
-        *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ANDSWri))
-             .addDef(DeadVReg)
-             .addUse(CondReg)
-             .addImm(AArch64_AM::encodeLogicalImmediate(1, 32));
-
-    MachineInstr &CSelMI = *BuildMI(MBB, I, I.getDebugLoc(), TII.get(CSelOpc))
-                                .addDef(I.getOperand(0).getReg())
-                                .addUse(TReg)
-                                .addUse(FReg)
-                                .addImm(AArch64CC::NE);
-
-    constrainSelectedInstRegOperands(TstMI, TII, TRI, RBI);
-    constrainSelectedInstRegOperands(CSelMI, TII, TRI, RBI);
-
+    auto TstMI = MIB.buildInstr(AArch64::ANDSWri, {DeadVReg}, {CondReg})
+                     .addImm(AArch64_AM::encodeLogicalImmediate(1, 32));
+    constrainSelectedInstRegOperands(*TstMI, TII, TRI, RBI);
+    if (!emitSelect(I.getOperand(0).getReg(), TReg, FReg, AArch64CC::NE, MIB))
+      return false;
     I.eraseFromParent();
     return true;
   }
@@ -4132,9 +4215,6 @@ AArch64InstructionSelector::emitCSetForICMP(Register DefReg, unsigned Pred,
 bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
   MachineIRBuilder MIB(I);
   MachineRegisterInfo &MRI = *MIB.getMRI();
-  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-  Register SrcReg1 = I.getOperand(2).getReg();
-  Register SrcReg2 = I.getOperand(3).getReg();
   // We want to recognize this pattern:
   //
   // $z = G_FCMP pred, $x, $y
@@ -4218,37 +4298,8 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
   }
 
   // Emit the select.
-  // We may also be able to emit a CSINC if the RHS operand is a 1.
-  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg1, MRI, TRI);
-  auto ValAndVReg =
-      getConstantVRegValWithLookThrough(SrcReg2, MRI);
-
-  if (SrcRB.getID() == AArch64::GPRRegBankID && ValAndVReg &&
-      ValAndVReg->Value == 1) {
-    unsigned Size = MRI.getType(SrcReg1).getSizeInBits();
-    unsigned Opc = 0;
-    Register Zero;
-    if (Size == 64) {
-      Opc = AArch64::CSINCXr;
-      Zero = AArch64::XZR;
-    } else {
-      Opc = AArch64::CSINCWr;
-      Zero = AArch64::WZR;
-    }
-    auto CSINC =
-        MIB.buildInstr(Opc, {I.getOperand(0).getReg()}, {SrcReg1, Zero})
-            .addImm(CondCode);
-    constrainSelectedInstRegOperands(*CSINC, TII, TRI, RBI);
-    I.eraseFromParent();
-    return true;
-  }
-
-  unsigned CSelOpc = selectSelectOpc(I, MRI, RBI);
-  auto CSel =
-      MIB.buildInstr(CSelOpc, {I.getOperand(0).getReg()},
-                     {I.getOperand(2).getReg(), I.getOperand(3).getReg()})
-          .addImm(CondCode);
-  constrainSelectedInstRegOperands(*CSel, TII, TRI, RBI);
+  emitSelect(I.getOperand(0).getReg(), I.getOperand(2).getReg(),
+             I.getOperand(3).getReg(), CondCode, MIB);
   I.eraseFromParent();
   return true;
 }
