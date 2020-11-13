@@ -8,10 +8,7 @@
 define void @masked_scatter_nxv2i8_unscaled_64bit_offsets(<vscale x 2 x i8> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv2i8_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1b { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x i8*>
@@ -22,10 +19,7 @@ define void @masked_scatter_nxv2i8_unscaled_64bit_offsets(<vscale x 2 x i8> %dat
 define void @masked_scatter_nxv2i16_unscaled_64bit_offsets(<vscale x 2 x i16> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv2i16_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x i16*>
@@ -36,10 +30,7 @@ define void @masked_scatter_nxv2i16_unscaled_64bit_offsets(<vscale x 2 x i16> %d
 define void @masked_scatter_nxv2i32_unscaled_64bit_offsets(<vscale x 2 x i32> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv2i32_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x i32*>
@@ -50,10 +41,7 @@ define void @masked_scatter_nxv2i32_unscaled_64bit_offsets(<vscale x 2 x i32> %d
 define void @masked_scatter_nxv2i64_unscaled_64bit_offsets(<vscale x 2 x i64> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv2i64_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x i64*>
@@ -64,10 +52,7 @@ define void @masked_scatter_nxv2i64_unscaled_64bit_offsets(<vscale x 2 x i64> %d
 define void @masked_scatter_nxv2f16_unscaled_64bit_offsets(<vscale x 2 x half> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv2f16_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x half*>
@@ -78,10 +63,7 @@ define void @masked_scatter_nxv2f16_unscaled_64bit_offsets(<vscale x 2 x half> %
 define void @masked_scatter_nxv2bf16_unscaled_64bit_offsets(<vscale x 2 x bfloat> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv2bf16_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x bfloat*>
@@ -92,10 +74,7 @@ define void @masked_scatter_nxv2bf16_unscaled_64bit_offsets(<vscale x 2 x bfloat
 define void @masked_scatter_nxv2f32_unscaled_64bit_offsets(<vscale x 2 x float> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv2f32_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x float*>
@@ -106,10 +85,7 @@ define void @masked_scatter_nxv2f32_unscaled_64bit_offsets(<vscale x 2 x float> 
 define void @masked_scatter_nxv2f64_unscaled_64bit_offsets(<vscale x 2 x double> %data, i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv2f64_unscaled_64bit_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z1.d, z2.d, z1.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x8, z1.d]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, z1.d]
 ; CHECK-NEXT:    ret
   %byte_ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
   %ptrs = bitcast <vscale x 2 x i8*> %byte_ptrs to <vscale x 2 x double*>

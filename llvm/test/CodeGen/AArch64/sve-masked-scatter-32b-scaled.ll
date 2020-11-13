@@ -166,15 +166,7 @@ define void @masked_scatter_nxv2f64_zext(<vscale x 2 x double> %data, double* %b
 define void @masked_scatter_nxv4i16_sext(<vscale x 4 x i16> %data, i16* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv4i16_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z1.d, sxtw #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, sxtw #1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr i16, i16* %base, <vscale x 4 x i64> %ext
@@ -185,15 +177,7 @@ define void @masked_scatter_nxv4i16_sext(<vscale x 4 x i16> %data, i16* %base, <
 define void @masked_scatter_nxv4i32_sext(<vscale x 4 x i32> %data, i32* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv4i32_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1w { z3.d }, p2, [x0, z1.d, sxtw #2]
-; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z2.d, sxtw #2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, z1.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i64> %ext
@@ -204,15 +188,7 @@ define void @masked_scatter_nxv4i32_sext(<vscale x 4 x i32> %data, i32* %base, <
 define void @masked_scatter_nxv4f16_sext(<vscale x 4 x half> %data, half* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv4f16_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z1.d, sxtw #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, sxtw #1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr half, half* %base, <vscale x 4 x i64> %ext
@@ -223,15 +199,7 @@ define void @masked_scatter_nxv4f16_sext(<vscale x 4 x half> %data, half* %base,
 define void @masked_scatter_nxv4bf16_sext(<vscale x 4 x bfloat> %data, bfloat* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv4bf16_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z1.d, sxtw #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, sxtw #1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr bfloat, bfloat* %base, <vscale x 4 x i64> %ext
@@ -242,15 +210,7 @@ define void @masked_scatter_nxv4bf16_sext(<vscale x 4 x bfloat> %data, bfloat* %
 define void @masked_scatter_nxv4f32_sext(<vscale x 4 x float> %data, float* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv4f32_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1w { z3.d }, p2, [x0, z1.d, sxtw #2]
-; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z2.d, sxtw #2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, z1.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %ext = sext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr float, float* %base, <vscale x 4 x i64> %ext
@@ -261,15 +221,7 @@ define void @masked_scatter_nxv4f32_sext(<vscale x 4 x float> %data, float* %bas
 define void @masked_scatter_nxv4i16_zext(<vscale x 4 x i16> %data, i16* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv4i16_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z1.d, uxtw #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, uxtw #1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, uxtw #1]
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr i16, i16* %base, <vscale x 4 x i64> %ext
@@ -280,15 +232,7 @@ define void @masked_scatter_nxv4i16_zext(<vscale x 4 x i16> %data, i16* %base, <
 define void @masked_scatter_nxv4i32_zext(<vscale x 4 x i32> %data, i32* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv4i32_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1w { z3.d }, p2, [x0, z1.d, uxtw #2]
-; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z2.d, uxtw #2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, z1.s, uxtw #2]
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr i32, i32* %base, <vscale x 4 x i64> %ext
@@ -299,15 +243,7 @@ define void @masked_scatter_nxv4i32_zext(<vscale x 4 x i32> %data, i32* %base, <
 define void @masked_scatter_nxv4f16_zext(<vscale x 4 x half> %data, half* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind {
 ; CHECK-LABEL: masked_scatter_nxv4f16_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z1.d, uxtw #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, uxtw #1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, uxtw #1]
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr half, half* %base, <vscale x 4 x i64> %ext
@@ -318,15 +254,7 @@ define void @masked_scatter_nxv4f16_zext(<vscale x 4 x half> %data, half* %base,
 define void @masked_scatter_nxv4bf16_zext(<vscale x 4 x bfloat> %data, bfloat* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv4bf16_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z1.d, uxtw #1]
-; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z2.d, uxtw #1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, z1.s, uxtw #1]
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr bfloat, bfloat* %base, <vscale x 4 x i64> %ext
@@ -337,15 +265,7 @@ define void @masked_scatter_nxv4bf16_zext(<vscale x 4 x bfloat> %data, bfloat* %
 define void @masked_scatter_nxv4f32_zext(<vscale x 4 x float> %data, float* %base, <vscale x 4 x i32> %indexes, <vscale x 4 x i1> %masks) nounwind #0 {
 ; CHECK-LABEL: masked_scatter_nxv4f32_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    uunpkhi z2.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1w { z3.d }, p2, [x0, z1.d, uxtw #2]
-; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z2.d, uxtw #2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, z1.s, uxtw #2]
 ; CHECK-NEXT:    ret
   %ext = zext <vscale x 4 x i32> %indexes to <vscale x 4 x i64>
   %ptrs = getelementptr float, float* %base, <vscale x 4 x i64> %ext
