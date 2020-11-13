@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMOrcJIT
   TargetProcessControl.cpp
   ThreadSafeModule.cpp
   TPCDynamicLibrarySearchGenerator.cpp
+  TPCEHFrameRegistrar.cpp
   TPCIndirectionUtils.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
@@ -30,6 +31,9 @@ add_llvm_component_library(LLVMOrcJIT
   DEPENDS
   intrinsics_gen
   )
+
+add_subdirectory(Shared)
+add_subdirectory(TargetProcess)
 
 target_link_libraries(LLVMOrcJIT
   PRIVATE

@@ -18,5 +18,5 @@
 type = Tool
 name = llvm-jitlink
 parent = Tools
-required_libraries = JITLink BinaryFormat MC Object RuntimeDyld Support
-                     all-targets
+required_libraries = JITLink BinaryFormat MC Object OrcJIT OrcTargetProcess
+                     Support all-targets

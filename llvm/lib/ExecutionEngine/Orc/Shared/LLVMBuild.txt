@@ -1,4 +1,4 @@
-;===- ./tools/lli/LLVMBuild.txt --------------------------------*- Conf -*--===;
+;===- ./lib/ExecutionEngine/Orc/Shared/LLVMBuild.txt ------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,24 +14,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = ChildTarget
-
 [component_0]
-type = Tool
-name = lli
-parent = Tools
-required_libraries =
- AsmParser
- BitReader
- IRReader
- Instrumentation
- Interpreter
- MCJIT
- OrcJIT
- OrcShared
- OrcTargetProcess
- Native
- NativeCodeGen
- SelectionDAG
- TransformUtils
+type = Library
+name = OrcShared
+parent = OrcJIT
+required_libraries = Support
