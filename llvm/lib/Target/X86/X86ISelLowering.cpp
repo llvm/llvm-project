@@ -23884,8 +23884,8 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
     StoredVal = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, StoredVal);
     // Make sure we store zeros in the extra bits.
     if (NumElts < 8)
-      StoredVal = DAG.getZeroExtendInReg(StoredVal, dl,
-                                         MVT::getIntegerVT(NumElts));
+      StoredVal = DAG.getZeroExtendInReg(
+          StoredVal, dl, EVT::getIntegerVT(*DAG.getContext(), NumElts));
 
     return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
                         St->getPointerInfo(), St->getOriginalAlign(),
