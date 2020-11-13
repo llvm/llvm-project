@@ -45,7 +45,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx git
+RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx git gdb
 
 # Install the most recently released LLVM
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
