@@ -124,7 +124,8 @@ static void removeDoneExport(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (IntrinsicInst *Intrin = llvm::dyn_cast<IntrinsicInst>(&I)) {
-        if (Intrin->getIntrinsicID() == Intrinsic::amdgcn_exp) {
+        if (Intrin->getIntrinsicID() == Intrinsic::amdgcn_exp ||
+            Intrin->getIntrinsicID() == Intrinsic::amdgcn_exp_row) {
           Intrin->setArgOperand(6, BoolFalse); // done
         } else if (Intrin->getIntrinsicID() == Intrinsic::amdgcn_exp_compr) {
           Intrin->setArgOperand(4, BoolFalse); // done
