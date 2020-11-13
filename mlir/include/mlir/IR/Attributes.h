@@ -684,10 +684,9 @@ public:
     /// point type, or is a potentially user defined floating point type. The
     /// latter allows for supporting users that have custom types defined for
     /// bfloat16/half/etc.
-    static inline constexpr bool value =
-        llvm::is_one_of<T, float, double>::value ||
-        (std::numeric_limits<T>::is_specialized &&
-         !std::numeric_limits<T>::is_integer);
+    static constexpr bool value = llvm::is_one_of<T, float, double>::value ||
+                                  (std::numeric_limits<T>::is_specialized &&
+                                   !std::numeric_limits<T>::is_integer);
   };
 
   /// Method for support type inquiry through isa, cast and dyn_cast.
