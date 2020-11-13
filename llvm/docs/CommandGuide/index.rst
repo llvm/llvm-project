@@ -73,7 +73,6 @@ Developer Tools
    FileCheck
    tblgen
    lit
-   llvm-build
    llvm-exegesis
    llvm-pdbutil
    llvm-locstats

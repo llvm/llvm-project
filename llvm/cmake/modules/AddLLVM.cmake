@@ -616,6 +616,13 @@ function(llvm_add_library name)
     endif()
   endif()
 
+  if(ARG_STATIC)
+    set(libtype PUBLIC)
+  else()
+    # We can use PRIVATE since SO knows its dependent libs.
+    set(libtype PRIVATE)
+  endif()
+
   if(ARG_MODULE AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS AND ARG_PLUGIN_TOOL AND (WIN32 OR CYGWIN))
     # On DLL platforms symbols are imported from the tool by linking against it.
     set(llvm_libs ${ARG_PLUGIN_TOOL})
@@ -630,19 +637,19 @@ function(llvm_add_library name)
     endif()
   else()
     # Components have not been defined explicitly in CMake, so add the
-    # dependency information for this library as defined by LLVMBuild.
+    # dependency information for this library through their name, and let
+    # LLVMBuildResolveComponentsLink resolve the mapping.
     #
     # It would be nice to verify that we have the dependencies for this library
     # name, but using get_property(... SET) doesn't suffice to determine if a
     # property has been set to an empty value.
-    get_property(lib_deps GLOBAL PROPERTY LLVMBUILD_LIB_DEPS_${name})
-  endif()
+    set_property(TARGET ${name} PROPERTY LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS} ${LLVM_LINK_COMPONENTS})
 
-  if(ARG_STATIC)
-    set(libtype PUBLIC)
-  else()
-    # We can use PRIVATE since SO knows its dependent libs.
-    set(libtype PRIVATE)
+    # These two properties are internal properties only used to make sure the
+    # link step applied in LLVMBuildResolveComponentsLink uses the same
+    # properties as the target_link_libraries call below.
+    set_property(TARGET ${name} PROPERTY LLVM_LINK_LIBS ${ARG_LINK_LIBS})
+    set_property(TARGET ${name} PROPERTY LLVM_LIBTYPE ${libtype})
   endif()
 
   target_link_libraries(${name} ${libtype}
@@ -723,8 +730,49 @@ function(add_llvm_install_targets target)
   endif()
 endfunction()
 
+# Define special targets that behave like a component group. They don't have any
+# source attached but other components can add themselves to them. If the
+# component supports is a Target and it supports JIT compilation, HAS_JIT must
+# be passed. One can use ADD_TO_COMPONENT option from add_llvm_component_library
+# to link extra component into an existing group.
+function(add_llvm_component_group name)
+  cmake_parse_arguments(ARG "HAS_JIT" "" "LINK_COMPONENTS" ${ARGN})
+  add_custom_target(${name})
+  if(ARG_HAS_JIT)
+    set_property(TARGET ${name} PROPERTY COMPONENT_HAS_JIT ON)
+  endif()
+  if(ARG_LINK_COMPONENTS)
+    set_property(TARGET ${name} PROPERTY LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
+  endif()
+endfunction()
+
+# An LLVM component is a cmake target with the following cmake properties
+# eventually set:
+#   - LLVM_COMPONENT_NAME: the name of the component, which can be the name of
+#     the associated library or the one specified through COMPONENT_NAME
+#   - LLVM_LINK_COMPONENTS: a list of component this component depends on
+#   - COMPONENT_HAS_JIT: (only for group component) whether this target group
+#     supports JIT compilation
+# Additionnaly, the ADD_TO_COMPONENT <component> option make it possible to add this
+# component to the LLVM_LINK_COMPONENTS of <component>.
 function(add_llvm_component_library name)
-  add_llvm_library(${name} COMPONENT_LIB ${ARGN})
+  cmake_parse_arguments(ARG
+    ""
+    "COMPONENT_NAME;ADD_TO_COMPONENT"
+    ""
+    ${ARGN})
+  add_llvm_library(${name} COMPONENT_LIB ${ARG_UNPARSED_ARGUMENTS})
+  string(REGEX REPLACE "^LLVM" "" component_name ${name})
+  set_property(TARGET ${name} PROPERTY LLVM_COMPONENT_NAME ${component_name})
+
+  if(ARG_COMPONENT_NAME)
+    set_property(GLOBAL PROPERTY LLVM_COMPONENT_NAME_${ARG_COMPONENT_NAME} ${component_name})
+  endif()
+
+  if(ARG_ADD_TO_COMPONENT)
+    set_property(TARGET ${ARG_ADD_TO_COMPONENT} APPEND PROPERTY LLVM_LINK_COMPONENTS ${component_name})
+  endif()
+
 endfunction()
 
 macro(add_llvm_library name)

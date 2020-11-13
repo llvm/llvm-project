@@ -12,6 +12,14 @@ add_llvm_component_library(LLVMIntelJITEvents
   jitprofiling.c
 
   LINK_LIBS ${LLVM_INTEL_JIT_LIBS}
+
+  LINK_COMPONENTS
+  CodeGen
+  Core
+  DebugInfoDWARF
+  Support
+  Object
+  ExecutionEngine
 )
 
 add_dependencies(LLVMIntelJITEvents LLVMCodeGen)
