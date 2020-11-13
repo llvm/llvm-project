@@ -529,7 +529,7 @@ define void @test_can_predicate_simple_unsigned_inverted(i32* %p, i32* %arr) {
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
 ; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
-; CHECK-NEXT:    [[RANGE_CHECK1:%.*]] = icmp ult i32 [[TMP0]], [[LEN]]
+; CHECK-NEXT:    [[RANGE_CHECK1:%.*]] = icmp uge i32 [[TMP0]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK1]], label [[FAIL:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, i32* [[P]], i32 [[IV]]
