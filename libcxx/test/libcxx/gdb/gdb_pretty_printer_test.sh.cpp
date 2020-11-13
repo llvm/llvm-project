@@ -6,11 +6,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// REQUIRES: libcxx_gdb
-//
+
+// REQUIRES: host-has-gdb
+// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: c++03
+
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
-// RUN: %{libcxx_gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
+// RUN: %{gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
 
 #include <bitset>
 #include <deque>
@@ -60,15 +63,15 @@
 #else
 #define OPT_NONE __attribute__((optnone))
 #endif
-void StopForDebugger(void *value, void *check) OPT_NONE;
-void StopForDebugger(void *value, void *check)  {}
+void StopForDebugger(void *, void *) OPT_NONE;
+void StopForDebugger(void *, void *)  {}
 
 
 // Prevents the compiler optimizing away the parameter in the caller function.
 template <typename Type>
-void MarkAsLive(Type &&t) OPT_NONE;
+void MarkAsLive(Type &&) OPT_NONE;
 template <typename Type>
-void MarkAsLive(Type &&t) {}
+void MarkAsLive(Type &&) {}
 
 // In all of the Compare(Expression)PrettyPrintTo(Regex/Chars) functions below,
 // the python script sets a breakpoint just before the call to StopForDebugger,
@@ -643,7 +646,7 @@ void streampos_test() {
       test1, "std::fpos with stream offset:5 with state: {count:0 value:0}");
 }
 
-int main(int argc, char* argv[]) {
+int main(int, char**) {
   framework_self_test();
 
   string_test();
