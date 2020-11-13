@@ -191,15 +191,15 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   const SCEV *S = SE->getSCEVAtScope(ICmp->getOperand(IVOperIdx), ICmpLoop);
   const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
 
-  ICmpInst::Predicate InvariantPredicate;
-  const SCEV *InvariantLHS, *InvariantRHS;
-
   auto *PN = dyn_cast<PHINode>(IVOperand);
   if (!PN)
     return false;
-  if (!SE->isLoopInvariantPredicate(Pred, S, X, L, InvariantPredicate,
-                                    InvariantLHS, InvariantRHS))
+  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L);
+  if (!LIP)
     return false;
+  ICmpInst::Predicate InvariantPredicate = LIP->Pred;
+  const SCEV *InvariantLHS = LIP->LHS;
+  const SCEV *InvariantRHS = LIP->RHS;
 
   // Rewrite the comparison to a loop invariant comparison if it can be done
   // cheaply, where cheaply means "we don't need to emit any new

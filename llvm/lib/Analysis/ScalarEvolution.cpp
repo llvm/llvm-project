@@ -9552,15 +9552,15 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   }
 }
 
-bool ScalarEvolution::isLoopInvariantPredicate(
-    ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
-    ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
-    const SCEV *&InvariantRHS) {
+Optional<ScalarEvolution::LoopInvariantPredicate>
+ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
+                                           const SCEV *LHS, const SCEV *RHS,
+                                           const Loop *L) {
 
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
     if (!isLoopInvariant(LHS, L))
-      return false;
+      return None;
 
     std::swap(LHS, RHS);
     Pred = ICmpInst::getSwappedPredicate(Pred);
@@ -9568,11 +9568,11 @@ bool ScalarEvolution::isLoopInvariantPredicate(
 
   const SCEVAddRecExpr *ArLHS = dyn_cast<SCEVAddRecExpr>(LHS);
   if (!ArLHS || ArLHS->getLoop() != L)
-    return false;
+    return None;
 
   auto MonotonicType = getMonotonicPredicateType(ArLHS, Pred);
   if (!MonotonicType)
-    return false;
+    return None;
   // If the predicate "ArLHS `Pred` RHS" monotonically increases from false to
   // true as the loop iterates, and the backedge is control dependent on
   // "ArLHS `Pred` RHS" == true then we can reason as follows:
@@ -9594,19 +9594,15 @@ bool ScalarEvolution::isLoopInvariantPredicate(
   auto P = Increasing ? Pred : ICmpInst::getInversePredicate(Pred);
 
   if (!isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
-    return false;
+    return None;
 
-  InvariantPred = Pred;
-  InvariantLHS = ArLHS->getStart();
-  InvariantRHS = RHS;
-  return true;
+  return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(), RHS);
 }
 
-bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
+Optional<ScalarEvolution::LoopInvariantPredicate>
+ScalarEvolution::getLoopInvariantExitCondDuringFirstIterations(
     ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
-    const Instruction *Context, const SCEV *MaxIter,
-    ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
-    const SCEV *&InvariantRHS) {
+    const Instruction *Context, const SCEV *MaxIter) {
   // Try to prove the following set of facts:
   // - The predicate is monotonic in the iteration space.
   // - If the check does not fail on the 1st iteration:
@@ -9617,7 +9613,7 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
     if (!isLoopInvariant(LHS, L))
-      return false;
+      return None;
 
     std::swap(LHS, RHS);
     Pred = ICmpInst::getSwappedPredicate(Pred);
@@ -9625,22 +9621,19 @@ bool ScalarEvolution::isLoopInvariantExitCondDuringFirstIterations(
 
   auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
   if (!AR || AR->getLoop() != L)
-    return false;
+    return None;
 
   if (!getMonotonicPredicateType(AR, Pred, MaxIter, Context))
-    return false;
+    return None;
 
   // Value of IV on suggested last iteration.
   const SCEV *Last = AR->evaluateAtIteration(MaxIter, *this);
   // Does it still meet the requirement?
   if (!isKnownPredicateAt(Pred, Last, RHS, Context))
-    return false;
+    return None;
 
   // Everything is fine.
-  InvariantPred = Pred;
-  InvariantLHS = AR->getStart();
-  InvariantRHS = RHS;
-  return true;
+  return ScalarEvolution::LoopInvariantPredicate(Pred, AR->getStart(), RHS);
 }
 
 bool ScalarEvolution::isKnownPredicateViaConstantRanges(
