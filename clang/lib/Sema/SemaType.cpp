@@ -8223,7 +8223,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       if (attr.isCXX11Attribute() && TAL == TAL_DeclChunk)
         state.getSema().Diag(attr.getLoc(),
                              diag::warn_unknown_attribute_ignored)
-            << attr;
+            << attr << attr.getRange();
       break;
 
     case ParsedAttr::IgnoredAttribute:
