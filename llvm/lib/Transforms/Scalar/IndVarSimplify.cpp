@@ -1303,17 +1303,41 @@ enum ExitCondAnalysisResult {
 /// output parameters and return CanBeReplacedWithInvariant.
 /// Otherwise, return CannotOptimize.
 static ExitCondAnalysisResult
-analyzeCond(const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHSS,
-            const SCEV *RHSS, BranchInst *Context, ScalarEvolution *SE,
-            const SCEV *MaxIter, ICmpInst::Predicate &InvariantPred,
-            const SCEV *&InvariantLHS, const SCEV *&InvariantRHS) {
+analyzeCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
+            bool ProvingLoopExit, const SCEV *MaxIter,
+            ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
+            const SCEV *&InvariantRHS) {
+  ICmpInst::Predicate Pred;
+  Value *LHS, *RHS;
+  using namespace PatternMatch;
+  BasicBlock *TrueSucc, *FalseSucc;
+  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
+    return CannotOptimize;
+
+  assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
+         "Not a loop exit!");
+
+  // 'LHS pred RHS' should now mean that we stay in loop.
+  if (L->contains(FalseSucc))
+    Pred = CmpInst::getInversePredicate(Pred);
+
+  // If we are proving loop exit, invert the predicate.
+  if (ProvingLoopExit)
+    Pred = CmpInst::getInversePredicate(Pred);
+
+  const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
+  const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
-  if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, Context))
+  if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
     return CanBeRemoved;
 
+  if (ProvingLoopExit)
+    return CannotOptimize;
+
   // Check if there is a loop-invariant predicate equivalent to our check.
-  auto LIP = SE->getLoopInvariantExitCondDuringFirstIterations(
-      Pred, LHSS, RHSS, L, Context, MaxIter);
+  auto LIP = SE->getLoopInvariantExitCondDuringFirstIterations(Pred, LHSS, RHSS,
+                                                               L, BI, MaxIter);
   if (!LIP)
     return CannotOptimize;
   InvariantPred = LIP->Pred;
@@ -1321,8 +1345,7 @@ analyzeCond(const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHSS,
   InvariantRHS = LIP->RHS;
 
   // Can we prove it to be trivially true?
-  if (SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS,
-                             Context))
+  if (SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI))
     return CanBeRemoved;
   return CanBeReplacedWithInvariant;
 }
@@ -1367,36 +1390,14 @@ static bool optimizeLoopExitWithUnknownExitCount(
     const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
     ScalarEvolution *SE, SCEVExpander &Rewriter,
     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
-  ICmpInst::Predicate Pred;
-  Value *LHS, *RHS;
-  using namespace PatternMatch;
-  BasicBlock *TrueSucc, *FalseSucc;
-  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
-                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
-    return false;
-
-  assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
-         "Not a loop exit!");
-
-  // 'LHS pred RHS' should now mean that we stay in loop.
-  if (L->contains(FalseSucc))
-    Pred = CmpInst::getInversePredicate(Pred);
-
-  // If we are proving loop exit, invert the predicate.
-  if (Inverted)
-    Pred = CmpInst::getInversePredicate(Pred);
-
-  const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
-  const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
-
   if (SkipLastIter) {
     const SCEV *One = SE->getOne(MaxIter->getType());
     MaxIter = SE->getMinusSCEV(MaxIter, One);
   }
   ICmpInst::Predicate InvariantPred;
   const SCEV *InvariantLHS, *InvariantRHS;
-  switch (analyzeCond(L, Pred, LHSS, RHSS, BI, SE, MaxIter, InvariantPred,
-                      InvariantLHS, InvariantRHS)) {
+  switch (analyzeCond(L, BI, SE, Inverted, MaxIter, InvariantPred, InvariantLHS,
+                      InvariantRHS)) {
   case CanBeRemoved:
     foldExit(L, ExitingBB, Inverted, DeadInsts);
     return true;
