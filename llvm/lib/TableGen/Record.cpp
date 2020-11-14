@@ -2574,6 +2574,46 @@ Init *RecordKeeper::getNewAnonymousName() {
   return StringInit::get("anonymous_" + utostr(AnonCounter++));
 }
 
+// These functions implement the phase timing facility. Starting a timer
+// when one is already running stops the running one.
+
+void RecordKeeper::startTimer(StringRef Name) {
+  if (TimingGroup) {
+    if (LastTimer && LastTimer->isRunning()) {
+      LastTimer->stopTimer();
+      if (BackendTimer) {
+        LastTimer->clear();
+        BackendTimer = false;
+      }
+    }
+
+    LastTimer = new Timer("", Name, *TimingGroup);
+    LastTimer->startTimer();
+  }
+}
+
+void RecordKeeper::stopTimer() {
+  if (TimingGroup) {
+    assert(LastTimer && "No phase timer was started");
+    LastTimer->stopTimer();
+  }
+}
+
+void RecordKeeper::startBackendTimer(StringRef Name) {
+  if (TimingGroup) {
+    startTimer(Name);
+    BackendTimer = true;
+  }
+}
+
+void RecordKeeper::stopBackendTimer() {
+  if (TimingGroup) {
+    if (BackendTimer)
+      stopTimer();
+      BackendTimer = false;
+  }
+}
+
 std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
     const ArrayRef<StringRef> ClassNames) const {
   SmallVector<Record *, 2> ClassRecs;
