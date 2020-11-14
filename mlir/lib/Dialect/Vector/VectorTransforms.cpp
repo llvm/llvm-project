@@ -50,7 +50,7 @@ using llvm::dbgs;
 // Helper to find an index in an affine map.
 static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
   for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
-    int64_t idx = map.getResult(i).cast<AffineDimExpr>().getPosition();
+    int64_t idx = map.getDimPosition(i);
     if (idx == index)
       return i;
   }
@@ -76,7 +76,7 @@ static AffineMap adjustMap(AffineMap map, int64_t index,
   auto *ctx = rewriter.getContext();
   SmallVector<AffineExpr, 4> results;
   for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
-    int64_t idx = map.getResult(i).cast<AffineDimExpr>().getPosition();
+    int64_t idx = map.getDimPosition(i);
     if (idx == index)
       continue;
     // Re-insert remaining indices, but renamed when occurring
@@ -2016,16 +2016,13 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
   int64_t iterIndex = -1;
   int64_t dimSize = -1;
   if (lhsIndex >= 0) {
-    iterIndex = iMap[0].getResult(lhsIndex).cast<AffineDimExpr>().getPosition();
-    assert(
-        (rhsIndex < 0 ||
-         iterIndex ==
-             iMap[1].getResult(rhsIndex).cast<AffineDimExpr>().getPosition()) &&
-        "parallel index should be free in LHS or batch in LHS/RHS");
+    iterIndex = iMap[0].getDimPosition(lhsIndex);
+    assert((rhsIndex < 0 || iterIndex == iMap[1].getDimPosition(rhsIndex)) &&
+           "parallel index should be free in LHS or batch in LHS/RHS");
     dimSize = lhsType.getDimSize(lhsIndex);
   } else {
     assert(rhsIndex >= 0 && "missing parallel index");
-    iterIndex = iMap[1].getResult(rhsIndex).cast<AffineDimExpr>().getPosition();
+    iterIndex = iMap[1].getDimPosition(rhsIndex);
     dimSize = rhsType.getDimSize(rhsIndex);
   }
   assert(iterIndex >= 0 && "parallel index not listed in operand mapping");
