@@ -13,7 +13,7 @@
 
 // Define the kinds of options.
 
-class OptionKind<string name, int precedence = 0, bit sentinel = 0> {
+class OptionKind<string name, int precedence = 0, bit sentinel = false> {
   string Name = name;
   // The kind precedence, kinds with lower precedence are matched first.
   int Precedence = precedence;
@@ -24,9 +24,9 @@ class OptionKind<string name, int precedence = 0, bit sentinel = 0> {
 // An option group.
 def KIND_GROUP : OptionKind<"Group">;
 // The input option kind.
-def KIND_INPUT : OptionKind<"Input", 1, 1>;
+def KIND_INPUT : OptionKind<"Input", 1, true>;
 // The unknown option kind.
-def KIND_UNKNOWN : OptionKind<"Unknown", 2, 1>;
+def KIND_UNKNOWN : OptionKind<"Unknown", 2, true>;
 // A flag with no values.
 def KIND_FLAG : OptionKind<"Flag">;
 // An option which prefixes its (single) value.
@@ -99,7 +99,7 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   list<string> AliasArgs = [];
   code KeyPath = ?;
   code DefaultValue = ?;
-  bit ShouldAlwaysEmit = 0;
+  bit ShouldAlwaysEmit = false;
   code NormalizerRetTy = ?;
   code NormalizedValuesScope = "";
   code Normalizer = "";
@@ -175,7 +175,7 @@ class MarshallingInfoBitfieldFlag<code keypath, code value>
 class IsNegative {
   // todo: create & apply a normalizer for negative flags
 }
-class AlwaysEmit { bit ShouldAlwaysEmit = 1; }
+class AlwaysEmit { bit ShouldAlwaysEmit = true; }
 class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
