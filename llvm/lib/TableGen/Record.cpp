@@ -2608,9 +2608,10 @@ void RecordKeeper::startBackendTimer(StringRef Name) {
 
 void RecordKeeper::stopBackendTimer() {
   if (TimingGroup) {
-    if (BackendTimer)
+    if (BackendTimer) {
       stopTimer();
       BackendTimer = false;
+    }
   }
 }
 
