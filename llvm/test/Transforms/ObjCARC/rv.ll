@@ -427,6 +427,31 @@ lpad:
   resume { i8*, i32 } %4
 }
 
+; The second retainRV/autoreleaseRV pair can be removed since the call to
+; @returner is a tail call.
+
+; CHECK-LABEL: define i8* @test30(
+; CHECK: %[[V0:.*]] = call i8* @returner()
+; CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[V0]])
+; CHECK-NEXT: call i8* @llvm.objc.autoreleaseReturnValue(i8* %[[V0]])
+; CHECK-NEXT: ret i8* %[[V0]]
+; CHECK: %[[V3:.*]] = tail call i8* @returner()
+; CHECK-NEXT: ret i8* %[[V3]]
+
+define i8* @test30(i1 %cond) {
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  %v0 = call i8* @returner()
+  %v1 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %v0)
+  %v2 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %v0)
+  ret i8* %v0
+bb1:
+  %v3 = tail call i8* @returner()
+  %v4 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %v3)
+  %v5 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %v3)
+  ret i8* %v3
+}
+
 !0 = !{}
 
 ; CHECK: attributes [[NUW]] = { nounwind }
