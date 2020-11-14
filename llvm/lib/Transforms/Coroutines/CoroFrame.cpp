@@ -791,8 +791,11 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   case coro::ABI::Async: {
     Shape.AsyncLowering.FrameOffset =
         alignTo(Shape.AsyncLowering.ContextHeaderSize, Shape.FrameAlign);
+    // Also make the final context size a multiple of the context alignment to
+    // make allocation easier for allocators.
     Shape.AsyncLowering.ContextSize =
-        Shape.AsyncLowering.FrameOffset + Shape.FrameSize;
+        alignTo(Shape.AsyncLowering.FrameOffset + Shape.FrameSize,
+                Shape.AsyncLowering.getContextAlignment());
     if (Shape.AsyncLowering.getContextAlignment() < Shape.FrameAlign) {
       report_fatal_error(
           "The alignment requirment of frame variables cannot be higher than "
