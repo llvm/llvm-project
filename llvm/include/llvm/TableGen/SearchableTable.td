@@ -103,7 +103,7 @@ class GenericTable {
   string PrimaryKeyName;
 
   // See SearchIndex.EarlyOut
-  bit PrimaryKeyEarlyOut = 0;
+  bit PrimaryKeyEarlyOut = false;
 }
 
 // Define a record derived from this class to generate an additional search
@@ -124,7 +124,7 @@ class SearchIndex {
   // instructions.
   //
   // Can only be used when the first field is an integral (non-string) type.
-  bit EarlyOut = 0;
+  bit EarlyOut = false;
 }
 
 // Legacy table type with integrated enum.
