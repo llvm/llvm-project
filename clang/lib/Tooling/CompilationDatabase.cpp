@@ -199,22 +199,6 @@ public:
   SmallVector<std::string, 2> UnusedInputs;
 };
 
-// Unary functor for asking "Given a StringRef S1, does there exist a string
-// S2 in Arr where S1 == S2?"
-struct MatchesAny {
-  MatchesAny(ArrayRef<std::string> Arr) : Arr(Arr) {}
-
-  bool operator() (StringRef S) {
-    for (const std::string *I = Arr.begin(), *E = Arr.end(); I != E; ++I)
-      if (*I == S)
-        return true;
-    return false;
-  }
-
-private:
-  ArrayRef<std::string> Arr;
-};
-
 // Filter of tools unused flags such as -no-integrated-as and -Wa,*.
 // They are not used for syntax checking, and could confuse targets
 // which don't support these options.
@@ -292,8 +276,7 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   // up with no jobs but then this is the user's fault.
   Args.push_back("placeholder.cpp");
 
-  Args.erase(std::remove_if(Args.begin(), Args.end(), FilterUnusedFlags()),
-             Args.end());
+  llvm::erase_if(Args, FilterUnusedFlags());
 
   const std::unique_ptr<driver::Compilation> Compilation(
       NewDriver->BuildCompilation(Args));
@@ -320,15 +303,14 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
     return false;
   }
 
-  // Remove all compilation input files from the command line. This is
-  // necessary so that getCompileCommands() can construct a command line for
-  // each file.
-  std::vector<const char *>::iterator End = std::remove_if(
-      Args.begin(), Args.end(), MatchesAny(CompileAnalyzer.Inputs));
-
-  // Remove all inputs deemed unused for compilation.
-  End = std::remove_if(Args.begin(), End, MatchesAny(DiagClient.UnusedInputs));
-
+  // Remove all compilation input files from the command line and inputs deemed
+  // unused for compilation. This is necessary so that getCompileCommands() can
+  // construct a command line for each file.
+  std::vector<const char *>::iterator End =
+      llvm::remove_if(Args, [&](StringRef S) {
+        return llvm::is_contained(CompileAnalyzer.Inputs, S) ||
+               llvm::is_contained(DiagClient.UnusedInputs, S);
+      });
   // Remove the -c add above as well. It will be at the end right now.
   assert(strcmp(*(End - 1), "-c") == 0);
   --End;
