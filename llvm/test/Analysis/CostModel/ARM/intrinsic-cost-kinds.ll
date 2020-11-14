@@ -98,8 +98,8 @@ define void @log2(float %a, <16 x float> %va) {
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'log2'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.log2.f32(float %a)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.log2.f32(float %a)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'log2'
