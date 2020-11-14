@@ -1,5 +1,6 @@
 ; RUN: opt -mtriple=arm-arm-none-eabi -consthoist -S < %s | FileCheck %s
-; RUN: opt -mtriple=arm-arm-none-eabi -consthoist -pgso -S < %s | FileCheck %s -check-prefix=PGSO
+; RUN: opt -mtriple=arm-arm-none-eabi -consthoist -pgso -S < %s -enable-new-pm=0 | FileCheck %s -check-prefix=PGSO
+; RUN: opt -mtriple=arm-arm-none-eabi -passes='require<profile-summary>,consthoist' -pgso -S < %s | FileCheck %s -check-prefix=PGSO
 ; RUN: opt -mtriple=arm-arm-none-eabi -consthoist -pgso=false -S < %s | FileCheck %s -check-prefix=NPGSO
 
 ; There are different candidates here for the base constant: 1073876992 and
