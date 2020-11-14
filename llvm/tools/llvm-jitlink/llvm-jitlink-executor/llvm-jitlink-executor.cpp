@@ -48,6 +48,7 @@ int openListener(std::string Host, int Port) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   printErrorAndExit("listen option not supported");
+  return 0;
 #else
   int SockFD = socket(PF_INET, SOCK_STREAM, 0);
   struct sockaddr_in ServerAddr, ClientAddr;
