@@ -469,7 +469,7 @@ public:
                             VPTransformState &State);
 
   /// Widen a single select instruction within the innermost loop.
-  void widenSelectInstruction(SelectInst &I, VPUser &Operands,
+  void widenSelectInstruction(SelectInst &I, VPValue *VPDef, VPUser &Operands,
                               bool InvariantCond, VPTransformState &State);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
@@ -4686,7 +4686,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
   }
 }
 
-void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
+void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I, VPValue *VPDef,
                                                  VPUser &Operands,
                                                  bool InvariantCond,
                                                  VPTransformState &State) {
@@ -4705,7 +4705,7 @@ void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
     Value *Op0 = State.get(Operands.getOperand(1), Part);
     Value *Op1 = State.get(Operands.getOperand(2), Part);
     Value *Sel = Builder.CreateSelect(Cond, Op0, Op1);
-    VectorLoopValueMap.setVectorValue(&I, Part, Sel);
+    State.set(VPDef, &I, Sel, Part);
     addMetadata(Sel, &I);
   }
 }
@@ -7636,16 +7636,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
 
   // If the tail is to be folded by masking, the primary induction variable, if
   // exists needs to be represented in VPlan for it to model early-exit masking.
-  // Also, both the Phi and the live-out instruction of each reduction are
-  // required in order to introduce a select between them in VPlan.
-  if (CM.foldTailByMasking()) {
-    if (Legal->getPrimaryInduction())
-      NeedDef.insert(Legal->getPrimaryInduction());
-    for (auto &Reduction : Legal->getReductionVars()) {
-      NeedDef.insert(Reduction.first);
-      NeedDef.insert(Reduction.second.getLoopExitInstr());
-    }
-  }
+  if (CM.foldTailByMasking() && Legal->getPrimaryInduction())
+    NeedDef.insert(Legal->getPrimaryInduction());
 
   // Collect instructions from the original loop that will become trivially dead
   // in the vectorized loop. We don't need to vectorize these instructions. For
@@ -7858,8 +7850,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     for (auto &Reduction : Legal->getReductionVars()) {
       if (CM.isInLoopReduction(Reduction.first))
         continue;
-      VPValue *Phi = Plan->getVPValue(Reduction.first);
-      VPValue *Red = Plan->getVPValue(Reduction.second.getLoopExitInstr());
+      VPValue *Phi = Plan->getOrAddVPValue(Reduction.first);
+      VPValue *Red = Plan->getOrAddVPValue(Reduction.second.getLoopExitInstr());
       Builder.createNaryOp(Instruction::Select, {Cond, Red, Phi});
     }
   }
@@ -8003,7 +7995,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(Ingredient, *this, InvariantCond, State);
+  State.ILV->widenSelectInstruction(*cast<SelectInst>(getUnderlyingInstr()),
+                                    this, *this, InvariantCond, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {

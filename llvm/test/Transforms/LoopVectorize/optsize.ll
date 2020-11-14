@@ -341,6 +341,29 @@ for.end:                                        ; preds = %for.body
   ret void
 }
 
+; Make sure we do not crash while building the VPlan for the loop with the
+; select below.
+define i32 @PR48142(i32* %ptr.start, i32* %ptr.end) optsize {
+; CHECK-LABEL: PR48142
+; CHECK-NOT: vector.body
+entry:
+  br label %for.body
+
+for.body:
+  %i.014 = phi i32 [ 20, %entry ], [ %cond, %for.body ]
+  %ptr.iv = phi i32* [ %ptr.start, %entry ], [ %ptr.next, %for.body ]
+  %cmp4 = icmp slt i32 %i.014, 99
+  %cond = select i1 %cmp4, i32 99, i32 %i.014
+  store i32 0, i32* %ptr.iv
+  %ptr.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
+  %cmp.not = icmp eq i32* %ptr.next, %ptr.end
+  br i1 %cmp.not, label %exit, label %for.body
+
+exit:
+  %res = phi i32 [ %cond, %for.body ]
+  ret i32 %res
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
