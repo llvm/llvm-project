@@ -404,9 +404,6 @@ namespace clang {
     bool StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D);
     /// Specialized handler for unsupported backend feature diagnostic.
     void UnsupportedDiagHandler(const llvm::DiagnosticInfoUnsupported &D);
-    /// Specialized handler for misexpect warnings.
-    /// Note that misexpect remarks are emitted through ORE
-    void MisExpectDiagHandler(const llvm::DiagnosticInfoMisExpect &D);
     /// Specialized handlers for optimization remarks.
     /// Note that these handlers only accept remarks and they always handle
     /// them.
@@ -674,36 +671,6 @@ void BackendConsumer::UnsupportedDiagHandler(
         << Filename << Line << Column;
 }
 
-void BackendConsumer::MisExpectDiagHandler(
-    const llvm::DiagnosticInfoMisExpect &D) {
-  StringRef Filename;
-  unsigned Line, Column;
-  bool BadDebugInfo = false;
-  FullSourceLoc Loc;
-  std::string Msg;
-  raw_string_ostream MsgStream(Msg);
-  DiagnosticPrinterRawOStream DP(MsgStream);
-
-  // Context will be nullptr for IR input files, we will construct the diag
-  // message from llvm::DiagnosticInfoMisExpect.
-  if (Context != nullptr) {
-    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
-    MsgStream << D.getMsg();
-  } else {
-    DiagnosticPrinterRawOStream DP(MsgStream);
-    D.print(DP);
-  }
-  Diags.Report(Loc, diag::warn_profile_data_misexpect) << MsgStream.str();
-
-  if (BadDebugInfo)
-    // If we were not able to translate the file:line:col information
-    // back to a SourceLocation, at least emit a note stating that
-    // we could not translate this location. This can happen in the
-    // case of #line directives.
-    Diags.Report(Loc, diag::note_fe_backend_invalid_loc)
-        << Filename << Line << Column;
-}
-
 void BackendConsumer::EmitOptimizationMessage(
     const llvm::DiagnosticInfoOptimizationBase &D, unsigned DiagID) {
   // We only support warnings and remarks.
@@ -880,9 +847,6 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     return;
   case llvm::DK_Unsupported:
     UnsupportedDiagHandler(cast<DiagnosticInfoUnsupported>(DI));
-    return;
-  case llvm::DK_MisExpect:
-    MisExpectDiagHandler(cast<DiagnosticInfoMisExpect>(DI));
     return;
   default:
     // Plugin IDs are not bound to any value as they are set dynamically.

@@ -375,16 +375,5 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
   return OS.str();
 }
 
-DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
-                                                 Twine &Msg)
-    : DiagnosticInfoWithLocationBase(DK_MisExpect, DS_Warning,
-                                     *Inst->getParent()->getParent(),
-                                     Inst->getDebugLoc()),
-      Msg(Msg) {}
-
-void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {
-  DP << getLocationStr() << ": " << getMsg();
-}
-
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}

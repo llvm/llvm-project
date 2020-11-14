@@ -79,7 +79,6 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/MisExpect.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1625,8 +1624,6 @@ void SampleProfileLoader::propagateWeights(Function &F) {
         }
       }
     }
-
-    misexpect::verifyMisExpect(TI, Weights, TI->getContext());
 
     uint64_t TempWeight;
     // Only set weights if there is at least one non-zero weight.
