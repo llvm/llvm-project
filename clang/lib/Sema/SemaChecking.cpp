@@ -2696,6 +2696,8 @@ bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
       kind = diag::err_preserve_enum_value_invalid;
     }
     ReturnUnsignedInt = false;
+  } else if (BuiltinID == BPF::BI__builtin_btf_type_id) {
+    ReturnUnsignedInt = false;
   }
 
   if (InvalidArg) {
