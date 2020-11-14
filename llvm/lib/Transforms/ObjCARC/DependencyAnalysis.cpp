@@ -213,10 +213,10 @@ llvm::objcarc::FindDependencies(DependenceKind Flavor,
                                 const Value *Arg,
                                 BasicBlock *StartBB, Instruction *StartInst,
                                 SmallPtrSetImpl<Instruction *> &DependingInsts,
-                                SmallPtrSetImpl<const BasicBlock *> &Visited,
                                 ProvenanceAnalysis &PA) {
   BasicBlock::iterator StartPos = StartInst->getIterator();
 
+  SmallPtrSet<const BasicBlock *, 4> Visited;
   SmallVector<std::pair<BasicBlock *, BasicBlock::iterator>, 4> Worklist;
   Worklist.push_back(std::make_pair(StartBB, StartPos));
   do {
