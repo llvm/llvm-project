@@ -65,6 +65,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -1310,6 +1311,14 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     };
     HWASanPass(SanitizerKind::HWAddress, false);
     HWASanPass(SanitizerKind::KernelHWAddress, true);
+
+    if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
+      PB.registerOptimizerLastEPCallback(
+          [this](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(
+                DataFlowSanitizerPass(LangOpts.SanitizerBlacklistFiles));
+          });
+    }
 
     if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
