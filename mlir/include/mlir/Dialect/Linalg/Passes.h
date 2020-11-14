@@ -48,7 +48,7 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
 
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.
-std::unique_ptr<OperationPass<ModuleOp>> createLinalgBufferizePass();
+std::unique_ptr<OperationPass<FuncOp>> createLinalgBufferizePass();
 
 /// Populate patterns that convert `ElementwiseMappable` ops to linalg
 /// parallel loops.
