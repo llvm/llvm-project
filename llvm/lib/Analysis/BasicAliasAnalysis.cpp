@@ -1293,10 +1293,9 @@ AliasResult BasicAAResult::aliasGEP(
         aliasCheck(UnderlyingV1, LocationSize::unknown(), AAMDNodes(),
                    UnderlyingV2, LocationSize::unknown(), AAMDNodes(), AAQI);
 
-    // For GEPs with identical sizes and offsets, we can preserve the size
-    // and AAInfo when performing the alias check on the underlying objects.
-    if (BaseAlias == MayAlias && V1Size == V2Size &&
-        GEP1BaseOffset == GEP2BaseOffset &&
+    // For GEPs with identical offsets, we can preserve the size and AAInfo
+    // when performing the alias check on the underlying objects.
+    if (BaseAlias == MayAlias && GEP1BaseOffset == GEP2BaseOffset &&
         DecompGEP1.VarIndices == DecompGEP2.VarIndices) {
       AliasResult PreciseBaseAlias = aliasCheck(
           UnderlyingV1, V1Size, V1AAInfo, UnderlyingV2, V2Size, V2AAInfo, AAQI);
