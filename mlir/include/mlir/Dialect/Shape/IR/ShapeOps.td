@@ -178,7 +178,7 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
   let arguments = (ins IndexTensor:$input);
   let results = (outs Shape_ShapeType:$result);
 
-  let assemblyFormat = "attr-dict $input `:` type($input)";
+  let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
 def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
@@ -204,7 +204,7 @@ def Shape_IsBroadcastableOp : Shape_Op<"is_broadcastable", [Commutative]> {
                        Shape_ShapeOrExtentTensorType:$rhs);
   let results = (outs I1:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs) `,` type($rhs)";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
 }
 
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
@@ -216,7 +216,7 @@ def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
   let results = (outs Shape_SizeOrIndexType:$rank);
 
-  let assemblyFormat = "$shape `:` type($shape) `->` type($rank) attr-dict";
+  let assemblyFormat = "$shape attr-dict `:` type($shape) `->` type($rank)";
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -236,7 +236,7 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$input);
   let results = (outs IndexTensor:$result);
 
-  let assemblyFormat = "attr-dict $input `:` type($input) `->` type($result)";
+  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($result)";
 
   let hasFolder = 1;
 }
@@ -250,8 +250,8 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape,
                        Shape_SizeOrIndexType:$dim);
   let results = (outs Shape_SizeOrIndexType:$extent);
-  let assemblyFormat = "$shape `,` $dim `:` type($shape) `,` type($dim) `->` "
-                       "type($extent) attr-dict";
+  let assemblyFormat = "$shape `,` $dim attr-dict `:` type($shape) `,` type($dim) `->` "
+                       "type($extent)";
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
@@ -334,7 +334,7 @@ def Shape_MulOp : Shape_Op<"mul", [Commutative, NoSideEffect]> {
   let results = (outs Shape_SizeOrIndexType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` type($lhs) `,` type($rhs) `->` type($result) attr-dict
+    $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
 
   let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
@@ -356,7 +356,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
 
   let builders = [OpBuilderDAG<(ins "Value":$shape)>];
 
-  let assemblyFormat = "$shape `:` type($shape) `->` type($result) attr-dict";
+  let assemblyFormat = "$shape attr-dict `:` type($shape) `->` type($result)";
 
   let hasFolder = 1;
   let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
@@ -421,7 +421,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  let assemblyFormat = "$arg `:` type($arg) `->` type($result) attr-dict";
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($result)";
 
   let builders = [OpBuilderDAG<(ins "Value":$arg)>];
 
@@ -702,7 +702,7 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
                        Shape_ShapeOrExtentTensorType:$rhs);
   let results = (outs Shape_WitnessType:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
