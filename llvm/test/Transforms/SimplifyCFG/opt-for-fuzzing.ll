@@ -1,4 +1,5 @@
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -S | FileCheck %s
 
 define i32 @foo(i32 %x) optforfuzzing {
 entry:

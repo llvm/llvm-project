@@ -245,6 +245,11 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   Options.AC = &AM.getResult<AssumptionAnalysis>(F);
+  if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
+    Options.setSimplifyCondBranch(false).setFoldTwoEntryPHINode(false);
+  } else {
+    Options.setSimplifyCondBranch(true).setFoldTwoEntryPHINode(true);
+  }
   if (!simplifyFunctionCFG(F, TTI, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
