@@ -82,7 +82,9 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
 
   // For standalone condition variables and for "or" binary operations we simply
   // remove the inner `if`.
-  const auto *BinOpCond = dyn_cast<BinaryOperator>(InnerIf->getCond());
+  const auto *BinOpCond =
+      dyn_cast<BinaryOperator>(InnerIf->getCond()->IgnoreParenImpCasts());
+
   if (isa<DeclRefExpr>(InnerIf->getCond()->IgnoreParenImpCasts()) ||
       (BinOpCond && BinOpCond->getOpcode() == BO_LOr)) {
     SourceLocation IfBegin = InnerIf->getBeginLoc();
@@ -129,7 +131,8 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
     // For "and" binary operations we remove the "and" operation with the
     // condition variable from the inner if.
   } else {
-    const auto *CondOp = cast<BinaryOperator>(InnerIf->getCond());
+    const auto *CondOp =
+        cast<BinaryOperator>(InnerIf->getCond()->IgnoreParenImpCasts());
     const auto *LeftDRE =
         dyn_cast<DeclRefExpr>(CondOp->getLHS()->IgnoreParenImpCasts());
     if (LeftDRE && LeftDRE->getDecl() == CondVar) {
