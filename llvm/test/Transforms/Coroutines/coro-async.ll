@@ -99,8 +99,8 @@ entry:
 }
 
 ; Make sure we update the async function pointer
-; CHECK: @my_async_function_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 168 }
-; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 168 }
+; CHECK: @my_async_function_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
+; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
 ; CHECK-LABEL: define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) {
 ; CHECK: entry:
