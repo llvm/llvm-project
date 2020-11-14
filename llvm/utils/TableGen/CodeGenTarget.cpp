@@ -433,8 +433,6 @@ CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
 }
 
 void CodeGenTarget::ReadInstructions() const {
-  NamedRegionTimer T("Read Instructions", "Time spent reading instructions",
-                     "CodeGenTarget", "CodeGenTarget", TimeRegions);
   std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
   if (Insts.size() <= 2)
     PrintFatalError("No 'Instruction' subclasses defined!");

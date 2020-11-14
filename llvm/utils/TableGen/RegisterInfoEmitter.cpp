@@ -1616,9 +1616,16 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 
 void RegisterInfoEmitter::run(raw_ostream &OS) {
   CodeGenRegBank &RegBank = Target.getRegBank();
+  Records.startTimer("Print enums");
   runEnums(OS, Target, RegBank);
+
+  Records.startTimer("Print MC registers");
   runMCDesc(OS, Target, RegBank);
+
+  Records.startTimer("Print header fragment");
   runTargetHeader(OS, Target, RegBank);
+
+  Records.startTimer("Print target registers");
   runTargetDesc(OS, Target, RegBank);
 
   if (RegisterInfoDebug)

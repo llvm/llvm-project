@@ -346,8 +346,6 @@ void CombineRule::declareMatchData(StringRef PatternSymbol, StringRef Type,
 }
 
 bool CombineRule::parseDefs() {
-  NamedRegionTimer T("parseDefs", "Time spent parsing the defs", "Rule Parsing",
-                     "Time spent on rule parsing", TimeRegions);
   DagInit *Defs = TheDef.getValueAsDag("Defs");
 
   if (Defs->getOperatorAsDef(TheDef.getLoc())->getName() != "defs") {
@@ -488,8 +486,6 @@ bool CombineRule::parseWipMatchOpcodeMatcher(const CodeGenTarget &Target,
   return false;
 }
 bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
-  NamedRegionTimer T("parseMatcher", "Time spent parsing the matcher",
-                     "Rule Parsing", "Time spent on rule parsing", TimeRegions);
   StringMap<std::vector<VarInfo>> NamedEdgeDefs;
   StringMap<std::vector<VarInfo>> NamedEdgeUses;
   DagInit *Matchers = TheDef.getValueAsDag("Match");
@@ -593,6 +589,7 @@ bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
 }
 
 class GICombinerEmitter {
+  RecordKeeper &Records;
   StringRef Name;
   const CodeGenTarget &Target;
   Record *Combiner;
@@ -626,7 +623,7 @@ public:
 GICombinerEmitter::GICombinerEmitter(RecordKeeper &RK,
                                      const CodeGenTarget &Target,
                                      StringRef Name, Record *Combiner)
-    : Name(Name), Target(Target), Combiner(Combiner) {}
+    : Records(RK), Name(Name), Target(Target), Combiner(Combiner) {}
 
 void GICombinerEmitter::emitNameMatcher(raw_ostream &OS) const {
   std::vector<std::pair<std::string, std::string>> Cases;
@@ -850,6 +847,7 @@ static void emitAdditionalHelperMethodArguments(raw_ostream &OS,
 }
 
 void GICombinerEmitter::run(raw_ostream &OS) {
+  Records.startTimer("Gather rules");
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (StopAfterParse) {
     MatchDagCtx.print(errs());
@@ -861,11 +859,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     PrintFatalError(Combiner->getLoc(), "Failed to parse one or more rules");
   LLVM_DEBUG(dbgs() << "Optimizing tree for " << Rules.size() << " rules\n");
   std::unique_ptr<GIMatchTree> Tree;
+  Records.startTimer("Optimize combiner");
   {
-    NamedRegionTimer T("Optimize", "Time spent optimizing the combiner",
-                       "Code Generation", "Time spent generating code",
-                       TimeRegions);
-
     GIMatchTreeBuilder TreeBuilder(0);
     for (const auto &Rule : Rules) {
       bool HadARoot = false;
@@ -887,9 +882,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     return;
   }
 
-  NamedRegionTimer T("Emit", "Time spent emitting the combiner",
-                     "Code Generation", "Time spent generating code",
-                     TimeRegions);
+  Records.startTimer("Emit combiner");
   OS << "#ifdef " << Name.upper() << "_GENCOMBINERHELPER_DEPS\n"
      << "#include \"llvm/ADT/SparseBitVector.h\"\n"
      << "namespace llvm {\n"
