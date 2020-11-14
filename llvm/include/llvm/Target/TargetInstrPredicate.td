@@ -11,7 +11,7 @@
 // MCInstPredicate definitions are used by target scheduling models to describe
 // constraints on instructions.
 //
-// Here is an example of an MCInstPredicate definition in tablegen:
+// Here is an example of an MCInstPredicate definition in TableGen:
 //
 // def MCInstPredicateExample : CheckAll<[
 //    CheckOpcode<[BLR]>,
@@ -319,8 +319,8 @@ class DepBreakingClass<list<Instruction> opcodes, MCInstPredicate pred,
 //  - A list of subtarget hooks (Delegates) that are called from this function.
 //
 class STIPredicateDecl<string name, MCInstPredicate default = FalsePred,
-                       bit overrides = 1, bit expandForMC = 1,
-                       bit updatesOpcodeMask = 0,
+                       bit overrides = true, bit expandForMC = true,
+                       bit updatesOpcodeMask = false,
                        list<STIPredicateDecl> delegates = []> {
   string Name = name;
 
@@ -355,7 +355,7 @@ class STIPredicate<STIPredicateDecl declaration,
 
 // Convenience classes and definitions used by processor scheduling models to
 // describe dependency breaking instructions and move elimination candidates.
-let UpdatesOpcodeMask = 1 in {
+let UpdatesOpcodeMask = true in {
 
 def IsZeroIdiomDecl : STIPredicateDecl<"isZeroIdiom">;
 
