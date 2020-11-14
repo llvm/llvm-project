@@ -336,7 +336,7 @@ static LogicalResult verifyOutputShape(
       VectorType v = pair.first;
       auto map = pair.second;
       for (unsigned idx = 0, e = v.getRank(); idx < e; ++idx) {
-        unsigned pos = map.getResult(idx).cast<AffineDimExpr>().getPosition();
+        unsigned pos = map.getDimPosition(idx);
         if (!extents[pos])
           extents[pos] = getAffineConstantExpr(v.getShape()[idx], ctx);
       }
@@ -785,8 +785,7 @@ static Value foldExtractOpFromInsertChainAndTranspose(ExtractOp extractOp) {
     if (insertedPos.size() == extractedPos.size()) {
       bool fold = true;
       for (unsigned idx = 0, sz = extractedPos.size(); idx < sz; ++idx) {
-        auto pos =
-            permutationMap.getResult(idx).cast<AffineDimExpr>().getPosition();
+        auto pos = permutationMap.getDimPosition(idx);
         if (pos >= sz || insertedPos[pos] != extractedPos[idx]) {
           fold = false;
           break;
