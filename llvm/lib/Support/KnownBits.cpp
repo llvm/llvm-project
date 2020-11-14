@@ -233,21 +233,23 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
-KnownBits KnownBits::abs() const {
+KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   // If the source's MSB is zero then we know the rest of the bits already.
   if (isNonNegative())
     return *this;
 
-  // Assume we know nothing.
+  // Absolute value preserves trailing zero count.
   KnownBits KnownAbs(getBitWidth());
+  KnownAbs.Zero.setLowBits(countMinTrailingZeros());
 
-  // We only know that the absolute values's MSB will be zero iff there is
-  // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
-  APInt Val = One;
-  Val.clearSignBit();
-  if (!Val.isNullValue())
+  // We only know that the absolute values's MSB will be zero if INT_MIN is
+  // poison, or there is a set bit that isn't the sign bit (otherwise it could
+  // be INT_MIN).
+  if (IntMinIsPoison || (!One.isNullValue() && !One.isMinSignedValue()))
     KnownAbs.Zero.setSignBit();
 
+  // FIXME: Handle known negative input?
+  // FIXME: Calculate the negated Known bits and combine them?
   return KnownAbs;
 }
 
