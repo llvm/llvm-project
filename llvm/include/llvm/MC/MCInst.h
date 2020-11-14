@@ -181,7 +181,7 @@ public:
   MCOperand &getOperand(unsigned i) { return Operands[i]; }
   unsigned getNumOperands() const { return Operands.size(); }
 
-  void addOperand(const MCOperand &Op) { Operands.push_back(Op); }
+  void addOperand(const MCOperand Op) { Operands.push_back(Op); }
 
   using iterator = SmallVectorImpl<MCOperand>::iterator;
   using const_iterator = SmallVectorImpl<MCOperand>::const_iterator;
