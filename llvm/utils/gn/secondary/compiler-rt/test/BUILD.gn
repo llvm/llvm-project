@@ -55,6 +55,7 @@ write_cmake_config("lit_common_configured") {
     "COMPILER_RT_HAS_LLD_PYBOOL=True",
     "COMPILER_RT_HAS_GWP_ASAN_PYBOOL=False",
     "HAVE_RPC_XDR_H=0",
+    "ANDROID_API_LEVEL=$android_api_level",
     "ANDROID_SERIAL_FOR_TESTING=$android_serial_for_testing",
   ]
 
