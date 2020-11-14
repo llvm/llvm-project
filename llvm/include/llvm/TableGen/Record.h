@@ -24,9 +24,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/timer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
