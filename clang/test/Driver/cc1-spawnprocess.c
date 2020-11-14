@@ -40,3 +40,8 @@
 
 // Three jobs, thus integrated-cc1 is disabled.
 // RUN: %clang -fintegrated-cc1 -c %t1.cpp %t2.cpp %t3.cpp -### 2>&1 | FileCheck %s --check-prefix=NO
+
+// -fintegrated-cc1 works with cc1as.
+// RUN: echo > %t.s
+// RUN: %clang -fintegrated-cc1 -fintegrated-as -c -### %t.s 2>&1 | FileCheck %s --check-prefix=YES
+// RUN: %clang -fno-integrated-cc1 -c -### %t.s 2>&1 | FileCheck %s --check-prefix=NO
