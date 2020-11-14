@@ -227,6 +227,10 @@ AffineExpr AffineMap::getResult(unsigned idx) const {
   return map->results[idx];
 }
 
+unsigned AffineMap::getDimPosition(unsigned idx) const {
+  return getResult(idx).cast<AffineDimExpr>().getPosition();
+}
+
 /// Folds the results of the application of an affine map on the provided
 /// operands to a constant if possible. Returns false if the folding happens,
 /// true otherwise.
