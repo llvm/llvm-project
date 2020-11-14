@@ -16,6 +16,9 @@ declare <16 x i32> @llvm.smax.v16i32(<16 x i32>, <16 x i32>)
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <16 x float> @llvm.fmuladd.v16f32(<16 x float>, <16 x float>, <16 x float>)
 
+declare float @llvm.log2.f32(float)
+declare <16 x float> @llvm.log2.v16f32(<16 x float>)
+
 declare i32 @llvm.cttz.i32(i32, i1)
 declare <16 x i32> @llvm.cttz.v16i32(<16 x i32>, i1)
 
@@ -80,6 +83,32 @@ define void @fmuladd(float %a, float %b, float %c, <16 x float> %va, <16 x float
 ;
   %s = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
   %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
+  ret void
+}
+
+define void @log2(float %a, <16 x float> %va) {
+; THRU-LABEL: 'log2'
+; THRU-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.log2.f32(float %a)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; LATE-LABEL: 'log2'
+; LATE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %s = call float @llvm.log2.f32(float %a)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE-LABEL: 'log2'
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.log2.f32(float %a)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE_LATE-LABEL: 'log2'
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.log2.f32(float %a)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %s = call float @llvm.log2.f32(float %a)
+  %v = call <16 x float> @llvm.log2.v16f32(<16 x float> %va)
   ret void
 }
 
