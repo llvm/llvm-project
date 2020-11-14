@@ -682,6 +682,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
   return std::nullopt;
 }
 
+// Check conformance of the passed shapes.  Only return true if we can verify
+// that they conform
 bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
     const Shape &right, const char *leftIs, const char *rightIs) {
   int n{GetRank(left)};
@@ -693,15 +695,16 @@ bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
       return false;
     } else {
       for (int j{0}; j < n; ++j) {
-        if (auto leftDim{ToInt64(left[j])}) {
-          if (auto rightDim{ToInt64(right[j])}) {
-            if (*leftDim != *rightDim) {
-              messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
-                           "but %4$s has extent %5$jd"_err_en_US,
-                  j + 1, leftIs, *leftDim, rightIs, *rightDim);
-              return false;
-            }
-          }
+        auto leftDim{ToInt64(left[j])};
+        auto rightDim{ToInt64(right[j])};
+        if (!leftDim || !rightDim) {
+          return false;
+        }
+        if (*leftDim != *rightDim) {
+          messages.Say("Dimension %1$d of %2$s has extent %3$jd, "
+                       "but %4$s has extent %5$jd"_err_en_US,
+              j + 1, leftIs, *leftDim, rightIs, *rightDim);
+          return false;
         }
       }
     }
