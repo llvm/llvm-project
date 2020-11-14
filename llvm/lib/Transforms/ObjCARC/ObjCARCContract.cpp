@@ -161,20 +161,11 @@ bool ObjCARCContract::contractAutorelease(Function &F, Instruction *Autorelease,
 
   // Check that there are no instructions between the retain and the autorelease
   // (such as an autorelease_pop) which may change the count.
-  CallInst *Retain = nullptr;
-  SmallPtrSet<Instruction *, 4> DependingInstructions;
-
-  if (Class == ARCInstKind::AutoreleaseRV)
-    FindDependencies(RetainAutoreleaseRVDep, Arg, Autorelease->getParent(),
-                     Autorelease, DependingInstructions, PA);
-  else
-    FindDependencies(RetainAutoreleaseDep, Arg, Autorelease->getParent(),
-                     Autorelease, DependingInstructions, PA);
-
-  if (DependingInstructions.size() != 1)
-    return false;
-
-  Retain = dyn_cast_or_null<CallInst>(*DependingInstructions.begin());
+  DependenceKind DK = Class == ARCInstKind::AutoreleaseRV
+                          ? RetainAutoreleaseRVDep
+                          : RetainAutoreleaseDep;
+  auto *Retain = dyn_cast_or_null<CallInst>(
+      findSingleDependency(DK, Arg, Autorelease->getParent(), Autorelease, PA));
 
   if (!Retain || GetBasicARCInstKind(Retain) != ARCInstKind::Retain ||
       GetArgRCIdentityRoot(Retain) != Arg)
