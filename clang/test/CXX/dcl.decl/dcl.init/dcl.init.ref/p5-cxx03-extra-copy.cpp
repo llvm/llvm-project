@@ -22,7 +22,7 @@ struct X3 {
   X3(); // expected-note{{requires 0 arguments, but 1 was provided}}
 
 private:
-  X3(X3&); // expected-note{{candidate constructor not viable: expects an l-value for 1st argument}}
+  X3(X3&); // expected-note{{candidate constructor not viable: expects an lvalue for 1st argument}}
 };
 
 // Check for instantiation of default arguments
