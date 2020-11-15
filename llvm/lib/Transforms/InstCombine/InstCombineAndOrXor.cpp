@@ -114,47 +114,39 @@ static Value *SimplifyBSwap(BinaryOperator &I,
   return Builder.CreateCall(F, BinOp);
 }
 
-/// This handles expressions of the form ((val OP C1) & C2).  Where
-/// the Op parameter is 'OP', OpRHS is 'C1', and AndRHS is 'C2'.
-Instruction *InstCombinerImpl::OptAndOp(BinaryOperator *Op, ConstantInt *OpRHS,
-                                        ConstantInt *AndRHS,
+/// This handles expressions of the form ((X + OpRHS) & AndRHS).
+Instruction *InstCombinerImpl::OptAndOp(BinaryOperator *Op, ConstantInt *AndRHS,
                                         BinaryOperator &TheAnd) {
-  Value *X = Op->getOperand(0);
+  Value *X;
+  const APInt *C;
+  if (!match(Op, m_OneUse(m_Add(m_Value(X), m_APInt(C)))))
+    return nullptr;
 
-  switch (Op->getOpcode()) {
-  default: break;
-  case Instruction::Add:
-    if (Op->hasOneUse()) {
-      // Adding a one to a single bit bit-field should be turned into an XOR
-      // of the bit.  First thing to check is to see if this AND is with a
-      // single bit constant.
-      const APInt &AndRHSV = AndRHS->getValue();
+  // Adding a one to a single bit bit-field should be turned into an XOR
+  // of the bit.  First thing to check is to see if this AND is with a
+  // single bit constant.
+  const APInt &AndRHSV = AndRHS->getValue();
 
-      // If there is only one bit set.
-      if (AndRHSV.isPowerOf2()) {
-        // Ok, at this point, we know that we are masking the result of the
-        // ADD down to exactly one bit.  If the constant we are adding has
-        // no bits set below this bit, then we can eliminate the ADD.
-        const APInt& AddRHS = OpRHS->getValue();
+  // If there is only one bit set.
+  if (AndRHSV.isPowerOf2()) {
+    // Ok, at this point, we know that we are masking the result of the
+    // ADD down to exactly one bit.  If the constant we are adding has
+    // no bits set below this bit, then we can eliminate the ADD.
 
-        // Check to see if any bits below the one bit set in AndRHSV are set.
-        if ((AddRHS & (AndRHSV - 1)).isNullValue()) {
-          // If not, the only thing that can effect the output of the AND is
-          // the bit specified by AndRHSV.  If that bit is set, the effect of
-          // the XOR is to toggle the bit.  If it is clear, then the ADD has
-          // no effect.
-          if ((AddRHS & AndRHSV).isNullValue()) { // Bit is not set, noop
-            return replaceOperand(TheAnd, 0, X);
-          } else {
-            // Pull the XOR out of the AND.
-            Value *NewAnd = Builder.CreateAnd(X, AndRHS);
-            NewAnd->takeName(Op);
-            return BinaryOperator::CreateXor(NewAnd, AndRHS);
-          }
-        }
-      }
+    // Check to see if any bits below the one bit set in AndRHSV are set.
+    if ((*C & (AndRHSV - 1)).isNullValue()) {
+      // If not, the only thing that can effect the output of the AND is
+      // the bit specified by AndRHSV.  If that bit is set, the effect of
+      // the XOR is to toggle the bit.  If it is clear, then the ADD has
+      // no effect.
+      if ((*C & AndRHSV).isNullValue()) // Bit is not set, noop
+        return replaceOperand(TheAnd, 0, X);
+
+      // Pull the XOR out of the AND.
+      Value *NewAnd = Builder.CreateAnd(X, AndRHS);
+      NewAnd->takeName(Op);
+      return BinaryOperator::CreateXor(NewAnd, AndRHS);
     }
-    break;
   }
   return nullptr;
 }
@@ -1868,9 +1860,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         }
       }
 
-      if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1)))
-        if (Instruction *Res = OptAndOp(Op0I, Op0CI, AndRHS, I))
-          return Res;
+      if (Instruction *Res = OptAndOp(Op0I, AndRHS, I))
+        return Res;
     }
   }
 
