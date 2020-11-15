@@ -69,6 +69,18 @@ Pass *llvm::createRedundantDbgInstEliminationPass() {
   return new RedundantDbgInstElimination();
 }
 
+PreservedAnalyses
+RedundantDbgInstEliminationPass::run(Function &F, FunctionAnalysisManager &AM) {
+  bool Changed = false;
+  for (auto &BB : F)
+    Changed |= RemoveRedundantDbgInstrs(&BB);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 //===--------------------------------------------------------------------===//
 // DeadCodeElimination pass implementation
 //
