@@ -2184,13 +2184,16 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
 
   // builtin types
   case tok::kw_short:
-    DS.SetTypeSpecWidth(DeclSpec::TSW_short, Loc, PrevSpec, DiagID, Policy);
+    DS.SetTypeSpecWidth(TypeSpecifierWidth::Short, Loc, PrevSpec, DiagID,
+                        Policy);
     break;
   case tok::kw_long:
-    DS.SetTypeSpecWidth(DeclSpec::TSW_long, Loc, PrevSpec, DiagID, Policy);
+    DS.SetTypeSpecWidth(TypeSpecifierWidth::Long, Loc, PrevSpec, DiagID,
+                        Policy);
     break;
   case tok::kw___int64:
-    DS.SetTypeSpecWidth(DeclSpec::TSW_longlong, Loc, PrevSpec, DiagID, Policy);
+    DS.SetTypeSpecWidth(TypeSpecifierWidth::LongLong, Loc, PrevSpec, DiagID,
+                        Policy);
     break;
   case tok::kw_signed:
     DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec, DiagID);
