@@ -118,7 +118,7 @@ public:
   /// dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
 
-  /// Return the LLVMContext in which this type was uniqued.
+  /// Return the MLIRContext in which this type was uniqued.
   MLIRContext *getContext() const;
 
   /// Get the dialect this type is registered to.
