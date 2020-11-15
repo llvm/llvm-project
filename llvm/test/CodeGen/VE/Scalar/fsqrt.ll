@@ -81,18 +81,18 @@ declare fp128 @llvm.sqrt.f128(fp128)
 ; Function Attrs: norecurse nounwind readnone
 define float @fsqrt_float_zero() {
 ; CHECK-LABEL: fsqrt_float_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, 0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret float 0.000000e+00
 }
 
 ; Function Attrs: norecurse nounwind readnone
 define double @fsqrt_double_zero() {
 ; CHECK-LABEL: fsqrt_double_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, 0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret double 0.000000e+00
 }
 
@@ -117,18 +117,18 @@ define fp128 @fsqrt_quad_zero() {
 ; Function Attrs: norecurse nounwind readnone
 define float @fsqrt_float_const() {
 ; CHECK-LABEL: fsqrt_float_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, -4194304
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret float 0xFFF8000000000000
 }
 
 ; Function Attrs: norecurse nounwind readnone
 define double @fsqrt_double_const() {
 ; CHECK-LABEL: fsqrt_double_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, -524288
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret double 0xFFF8000000000000
 }
 

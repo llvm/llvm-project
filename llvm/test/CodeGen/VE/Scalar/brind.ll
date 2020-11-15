@@ -3,7 +3,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @brind(i32 signext %0) {
 ; CHECK-LABEL: brind:
-; CHECK:       .LBB{{[0-9]+}}_6:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or %s1, 1, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s1, %s0, %s1
 ; CHECK-NEXT:    lea %s2, .Ltmp0@lo
@@ -23,17 +23,18 @@ define signext i32 @brind(i32 signext %0) {
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT:    or %s0, -1, (0)1
-; CHECK-NEXT:    br.l.t .LBB{{[0-9]+}}_4
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .Ltmp2: # Block address taken
 ; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s0, 2, (0)1
-; CHECK-NEXT:    br.l.t .LBB{{[0-9]+}}_4
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
 ; CHECK-NEXT:  .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s0, 1, (0)1
-; CHECK-NEXT:  .LBB{{[0-9]+}}_4: # %.split
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %2 = icmp eq i32 %0, 1
   %3 = select i1 %2, i8* blockaddress(@brind, %6), i8* blockaddress(@brind, %8)
   %4 = icmp eq i32 %0, 0

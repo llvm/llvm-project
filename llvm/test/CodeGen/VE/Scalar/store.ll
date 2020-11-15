@@ -3,10 +3,10 @@
 ; Function Attrs: norecurse nounwind readonly
 define void @storef128(fp128* nocapture %0, fp128 %1) {
 ; CHECK-LABEL: storef128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s2, 8(, %s0)
 ; CHECK-NEXT:    st %s3, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store fp128 %1, fp128* %0, align 16
   ret void
 }
@@ -14,9 +14,9 @@ define void @storef128(fp128* nocapture %0, fp128 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storef64(double* nocapture %0, double %1) {
 ; CHECK-LABEL: storef64:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store double %1, double* %0, align 16
   ret void
 }
@@ -24,9 +24,9 @@ define void @storef64(double* nocapture %0, double %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storef32(float* nocapture %0, float %1) {
 ; CHECK-LABEL: storef32:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stu %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store float %1, float* %0, align 16
   ret void
 }
@@ -34,10 +34,10 @@ define void @storef32(float* nocapture %0, float %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei128(i128* nocapture %0, i128 %1) {
 ; CHECK-LABEL: storei128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s2, 8(, %s0)
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store i128 %1, i128* %0, align 16
   ret void
 }
@@ -45,9 +45,9 @@ define void @storei128(i128* nocapture %0, i128 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei64(i64* nocapture %0, i64 %1) {
 ; CHECK-LABEL: storei64:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store i64 %1, i64* %0, align 16
   ret void
 }
@@ -55,9 +55,9 @@ define void @storei64(i64* nocapture %0, i64 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei32(i32* nocapture %0, i32 %1) {
 ; CHECK-LABEL: storei32:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stl %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store i32 %1, i32* %0, align 16
   ret void
 }
@@ -65,9 +65,9 @@ define void @storei32(i32* nocapture %0, i32 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei32tr(i32* nocapture %0, i64 %1) {
 ; CHECK-LABEL: storei32tr:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stl %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = trunc i64 %1 to i32
   store i32 %3, i32* %0, align 16
   ret void
@@ -76,9 +76,9 @@ define void @storei32tr(i32* nocapture %0, i64 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei16(i16* nocapture %0, i16 %1) {
 ; CHECK-LABEL: storei16:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st2b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store i16 %1, i16* %0, align 16
   ret void
 }
@@ -86,9 +86,9 @@ define void @storei16(i16* nocapture %0, i16 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei16tr(i16* nocapture %0, i64 %1) {
 ; CHECK-LABEL: storei16tr:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st2b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = trunc i64 %1 to i16
   store i16 %3, i16* %0, align 16
   ret void
@@ -97,9 +97,9 @@ define void @storei16tr(i16* nocapture %0, i64 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei8(i8* nocapture %0, i8 %1) {
 ; CHECK-LABEL: storei8:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   store i8 %1, i8* %0, align 16
   ret void
 }
@@ -107,9 +107,9 @@ define void @storei8(i8* nocapture %0, i8 %1) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei8tr(i8* nocapture %0, i64 %1) {
 ; CHECK-LABEL: storei8tr:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st1b %s1, (, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = trunc i64 %1 to i8
   store i8 %3, i8* %0, align 16
   ret void
