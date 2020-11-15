@@ -36,4 +36,38 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalias %x, float* %z) nounwind uwtable {
+; CHECK: N0 [label =
+; CHECK-NEXT: "for.body:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:      "WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
+; CHECK-NEXT:      "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
+; CHECK-NEXT:      "WIDEN\l""  %cmp = icmp %arrayidx, %z\l" +
+; CHECK-NEXT:      "WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>\l" +
+; CHECK-NEXT:      "WIDEN\l""  %add = fadd %lv, %sel\l" +
+; CHECK-NEXT:      "CLONE %arrayidx2 = getelementptr %x, %iv\l" +
+; CHECK-NEXT:      "WIDEN store ir<%arrayidx2>, ir<%add>\l"
+; CHECK-NEXT:   ]
+
+entry:
+  %cmp6 = icmp sgt i64 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %y, i64 %iv
+  %lv = load float, float* %arrayidx, align 4
+  %cmp = icmp eq float* %arrayidx, %z
+  %sel = select i1 %cmp, float 10.0, float 20.0
+  %add = fadd float %lv, %sel
+  %arrayidx2 = getelementptr inbounds float, float* %x, i64 %iv
+  store float %add, float* %arrayidx2, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 declare float @llvm.sqrt.f32(float) nounwind readnone
