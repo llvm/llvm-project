@@ -199,7 +199,7 @@ void TypeLocWriter::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   if (TL.needsExtraLocalData()) {
     Record.push_back(TL.getWrittenTypeSpec());
     Record.push_back(TL.getWrittenSignSpec());
-    Record.push_back(TL.getWrittenWidthSpec());
+    Record.push_back(static_cast<uint64_t>(TL.getWrittenWidthSpec()));
     Record.push_back(TL.hasModeAttr());
   }
 }
