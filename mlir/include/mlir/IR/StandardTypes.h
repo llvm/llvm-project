@@ -682,8 +682,8 @@ inline bool TensorType::classof(Type type) {
 /// outer dimension is `1` and the distance between two consecutive elements
 /// along the inner dimension is `64`.
 ///
-/// If a simple strided form cannot be extracted from the composition of the
-/// layout map, returns llvm::None.
+/// Returns whether a simple strided form can be extracted from the composition
+/// of the layout map.
 ///
 /// The convention is that the strides for dimensions d0, .. dn appear in
 /// order to make indexing intuitive into the result.
