@@ -336,51 +336,6 @@ define i8 @test15(i8 %A) {
   ret i8 %C
 }
 
-; Only one bit set
-define i8 @test16(i8 %A) {
-; CHECK-LABEL: @test16(
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 16
-; CHECK-NEXT:    [[C:%.*]] = xor i8 [[B]], 16
-; CHECK-NEXT:    ret i8 [[C]]
-;
-  %B = add i8 %A, 16
-  %C = and i8 %B, 16
-  ret i8 %C
-}
-
-define <2 x i8> @test16_uniform(<2 x i8> %A) {
-; CHECK-LABEL: @test16_uniform(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> [[A:%.*]], <i8 16, i8 16>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[B]], <i8 16, i8 16>
-; CHECK-NEXT:    ret <2 x i8> [[C]]
-;
-  %B = add <2 x i8> %A, <i8 16, i8 16>
-  %C = and <2 x i8> %B, <i8 16, i8 16>
-  ret <2 x i8> %C
-}
-
-define <2 x i8> @test16_undef(<2 x i8> %A) {
-; CHECK-LABEL: @test16_undef(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> [[A:%.*]], <i8 16, i8 undef>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[B]], <i8 16, i8 undef>
-; CHECK-NEXT:    ret <2 x i8> [[C]]
-;
-  %B = add <2 x i8> %A, <i8 16, i8 undef>
-  %C = and <2 x i8> %B, <i8 16, i8 undef>
-  ret <2 x i8> %C
-}
-
-define <2 x i8> @test16_nonuniform(<2 x i8> %A) {
-; CHECK-LABEL: @test16_nonuniform(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> [[A:%.*]], <i8 16, i8 4>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[B]], <i8 16, i8 4>
-; CHECK-NEXT:    ret <2 x i8> [[C]]
-;
-  %B = add <2 x i8> %A, <i8 16, i8 4>
-  %C = and <2 x i8> %B, <i8 16, i8 4>
-  ret <2 x i8> %C
-}
-
 define i32 @test17(i32 %A) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[C:%.*]] = sub i32 0, [[A:%.*]]

@@ -707,8 +707,8 @@ public:
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, ICmpInst &ICI);
 
-  Instruction *OptAndOp(BinaryOperator *Op, ConstantInt *OpRHS,
-                        ConstantInt *AndRHS, BinaryOperator &TheAnd);
+  Instruction *OptAndOp(BinaryOperator *Op, ConstantInt *AndRHS,
+                        BinaryOperator &TheAnd);
 
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);
