@@ -83,8 +83,8 @@ namespace test1 {
     void baz(A &d); // expected-note {{candidate function not viable: 1st argument ('const test1::A') would lose const qualifier}}
     void baz(int i); // expected-note {{candidate function not viable: no known conversion from 'const test1::A' to 'int' for 1st argument}} 
 
-    void ref() &&;   // expected-note {{expects an r-value for object argument}} expected-note {{requires 0 arguments, but 1 was provided}}
-    void ref(int) &; // expected-note {{expects an l-value for object argument}} expected-note {{requires 1 argument, but 0 were provided}}
+    void ref() &&;   // expected-note {{expects an rvalue for object argument}} expected-note {{requires 0 arguments, but 1 was provided}}
+    void ref(int) &; // expected-note {{expects an lvalue for object argument}} expected-note {{requires 1 argument, but 0 were provided}}
 
     // PR 11857
     void foo(int n); // expected-note {{candidate function not viable: requires single argument 'n', but 2 arguments were provided}}

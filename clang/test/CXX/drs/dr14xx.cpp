@@ -411,17 +411,17 @@ namespace dr1467 {  // dr1467: 3.7 c++11
   // When the array size is 4 the call will attempt to bind an lvalue to an
   // rvalue and fail. Therefore #2 will be called. (rsmith will bring this
   // issue to CWG)
-  void f(const char(&&)[4]);              // expected-note 2 {{expects an r-value}} expected-note 3 {{no known conversion}}
+  void f(const char(&&)[4]);              // expected-note 2 {{expects an rvalue}} expected-note 3 {{no known conversion}}
   void f(const char(&&)[5]) = delete;     // expected-note 2 {{candidate function has been explicitly deleted}} expected-note 3 {{no known conversion}}
-  void f(const wchar_t(&&)[4]);           // expected-note {{expects an r-value}} expected-note 4 {{no known conversion}}
+  void f(const wchar_t(&&)[4]);           // expected-note {{expects an rvalue}} expected-note 4 {{no known conversion}}
   void f(const wchar_t(&&)[5]) = delete;  // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
 #if __cplusplus >= 202002L
-  void f2(const char8_t(&&)[4]);          // expected-note {{expects an r-value}}
+  void f2(const char8_t(&&)[4]);          // expected-note {{expects an rvalue}}
   void f2(const char8_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}}
 #endif
-  void f(const char16_t(&&)[4]);          // expected-note {{expects an r-value}} expected-note 4 {{no known conversion}}
+  void f(const char16_t(&&)[4]);          // expected-note {{expects an rvalue}} expected-note 4 {{no known conversion}}
   void f(const char16_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
-  void f(const char32_t(&&)[4]);          // expected-note {{expects an r-value}} expected-note 4 {{no known conversion}}
+  void f(const char32_t(&&)[4]);          // expected-note {{expects an rvalue}} expected-note 4 {{no known conversion}}
   void f(const char32_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
   void g() {
     f({"abc"});       // expected-error {{call to deleted function 'f'}}
