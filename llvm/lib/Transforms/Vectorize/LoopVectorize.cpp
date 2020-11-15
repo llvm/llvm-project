@@ -485,8 +485,8 @@ public:
 
   /// Vectorize a single GetElementPtrInst based on information gathered and
   /// decisions taken during planning.
-  void widenGEP(GetElementPtrInst *GEP, VPUser &Indices, unsigned UF,
-                ElementCount VF, bool IsPtrLoopInvariant,
+  void widenGEP(GetElementPtrInst *GEP, VPValue *VPDef, VPUser &Indices,
+                unsigned UF, ElementCount VF, bool IsPtrLoopInvariant,
                 SmallBitVector &IsIndexLoopInvariant, VPTransformState &State);
 
   /// Vectorize a single PHINode in a block. This method handles the induction
@@ -4288,9 +4288,9 @@ void InnerLoopVectorizer::fixNonInductionPHIs() {
   }
 }
 
-void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPUser &Operands,
-                                   unsigned UF, ElementCount VF,
-                                   bool IsPtrLoopInvariant,
+void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
+                                   VPUser &Operands, unsigned UF,
+                                   ElementCount VF, bool IsPtrLoopInvariant,
                                    SmallBitVector &IsIndexLoopInvariant,
                                    VPTransformState &State) {
   // Construct a vector GEP by widening the operands of the scalar GEP as
@@ -8004,7 +8004,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  State.ILV->widenGEP(GEP, *this, State.UF, State.VF, IsPtrLoopInvariant,
+  State.ILV->widenGEP(cast<GetElementPtrInst>(getUnderlyingInstr()), this,
+                      *this, State.UF, State.VF, IsPtrLoopInvariant,
                       IsIndexLoopInvariant, State);
 }
 
