@@ -32,7 +32,11 @@ General Options
 
 .. option:: -help
 
- Print a summary of command line options.
+ Print a description of the command line options.
+
+.. option:: -help-list
+
+  Print a description of the command line options in a simple list format.
 
 .. option:: -D=macroname
 
@@ -79,11 +83,15 @@ General Options
 
 .. option:: -stats
 
-  Enable statistics output.
+  Print a report with any statistics collected by the backend.
 
 .. option:: -time-phases
 
   Time the parser and backend phases and print a report.
+
+.. option:: -version
+
+ Show the version number of the program.
 
 .. option:: -write-if-changed
 
@@ -300,11 +308,6 @@ llvm-tblgen Options
 .. option:: -print-sets
 
  Print expanded sets for testing DAG exprs.
-
-.. option:: -version
-
- Show the version number of the program.
-
 
 clang-tblgen Options
 ~~~~~~~~~~~~~~~~~~~~
