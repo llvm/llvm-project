@@ -3728,20 +3728,20 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // type-specifier
     case tok::kw_short:
-      isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_short, Loc, PrevSpec,
+      isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::Short, Loc, PrevSpec,
                                       DiagID, Policy);
       break;
     case tok::kw_long:
-      if (DS.getTypeSpecWidth() != DeclSpec::TSW_long)
-        isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_long, Loc, PrevSpec,
+      if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Long)
+        isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::Long, Loc, PrevSpec,
                                         DiagID, Policy);
       else
-        isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_longlong, Loc, PrevSpec,
-                                        DiagID, Policy);
+        isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::LongLong, Loc,
+                                        PrevSpec, DiagID, Policy);
       break;
     case tok::kw___int64:
-        isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_longlong, Loc, PrevSpec,
-                                        DiagID, Policy);
+      isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::LongLong, Loc,
+                                      PrevSpec, DiagID, Policy);
       break;
     case tok::kw_signed:
       isInvalid = DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,

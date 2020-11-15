@@ -249,13 +249,6 @@ public:
   static const TSCS TSCS_thread_local = clang::TSCS_thread_local;
   static const TSCS TSCS__Thread_local = clang::TSCS__Thread_local;
 
-  // Import type specifier width enumeration and constants.
-  typedef TypeSpecifierWidth TSW;
-  static const TSW TSW_unspecified = clang::TSW_unspecified;
-  static const TSW TSW_short = clang::TSW_short;
-  static const TSW TSW_long = clang::TSW_long;
-  static const TSW TSW_longlong = clang::TSW_longlong;
-
   enum TSC {
     TSC_unspecified,
     TSC_imaginary,
@@ -342,7 +335,7 @@ private:
   unsigned SCS_extern_in_linkage_spec : 1;
 
   // type-specifier
-  /*TSW*/unsigned TypeSpecWidth : 2;
+  /*TypeSpecifierWidth*/ unsigned TypeSpecWidth : 2;
   /*TSC*/unsigned TypeSpecComplex : 2;
   /*TSS*/unsigned TypeSpecSign : 2;
   /*TST*/unsigned TypeSpecType : 6;
@@ -434,17 +427,17 @@ public:
   DeclSpec(AttributeFactory &attrFactory)
       : StorageClassSpec(SCS_unspecified),
         ThreadStorageClassSpec(TSCS_unspecified),
-        SCS_extern_in_linkage_spec(false), TypeSpecWidth(TSW_unspecified),
+        SCS_extern_in_linkage_spec(false),
+        TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
         TypeSpecComplex(TSC_unspecified), TypeSpecSign(TSS_unspecified),
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
-        TypeQualifiers(TQ_unspecified),
-        FS_inline_specified(false), FS_forceinline_specified(false),
-        FS_virtual_specified(false), FS_noreturn_specified(false),
-        Friend_specified(false), ConstexprSpecifier(CSK_unspecified),
-        FS_explicit_specifier(), Attrs(attrFactory), writtenBS(),
-        ObjCQualifiers(nullptr) {}
+        TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
+        FS_forceinline_specified(false), FS_virtual_specified(false),
+        FS_noreturn_specified(false), Friend_specified(false),
+        ConstexprSpecifier(CSK_unspecified), FS_explicit_specifier(),
+        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -476,7 +469,9 @@ public:
   }
 
   // type-specifier
-  TSW getTypeSpecWidth() const { return (TSW)TypeSpecWidth; }
+  TypeSpecifierWidth getTypeSpecWidth() const {
+    return static_cast<TypeSpecifierWidth>(TypeSpecWidth);
+  }
   TSC getTypeSpecComplex() const { return (TSC)TypeSpecComplex; }
   TSS getTypeSpecSign() const { return (TSS)TypeSpecSign; }
   TST getTypeSpecType() const { return (TST)TypeSpecType; }
@@ -542,7 +537,7 @@ public:
   static const char *getSpecifierName(DeclSpec::TQ Q);
   static const char *getSpecifierName(DeclSpec::TSS S);
   static const char *getSpecifierName(DeclSpec::TSC C);
-  static const char *getSpecifierName(DeclSpec::TSW W);
+  static const char *getSpecifierName(TypeSpecifierWidth W);
   static const char *getSpecifierName(DeclSpec::SCS S);
   static const char *getSpecifierName(DeclSpec::TSCS S);
   static const char *getSpecifierName(ConstexprSpecKind C);
@@ -626,7 +621,7 @@ public:
   /// Return true if any type-specifier has been found.
   bool hasTypeSpecifier() const {
     return getTypeSpecType() != DeclSpec::TST_unspecified ||
-           getTypeSpecWidth() != DeclSpec::TSW_unspecified ||
+           getTypeSpecWidth() != TypeSpecifierWidth::Unspecified ||
            getTypeSpecComplex() != DeclSpec::TSC_unspecified ||
            getTypeSpecSign() != DeclSpec::TSS_unspecified;
   }
@@ -659,8 +654,9 @@ public:
                            const PrintingPolicy &Policy);
   bool SetStorageClassSpecThread(TSCS TSC, SourceLocation Loc,
                                  const char *&PrevSpec, unsigned &DiagID);
-  bool SetTypeSpecWidth(TSW W, SourceLocation Loc, const char *&PrevSpec,
-                        unsigned &DiagID, const PrintingPolicy &Policy);
+  bool SetTypeSpecWidth(TypeSpecifierWidth W, SourceLocation Loc,
+                        const char *&PrevSpec, unsigned &DiagID,
+                        const PrintingPolicy &Policy);
   bool SetTypeSpecComplex(TSC C, SourceLocation Loc, const char *&PrevSpec,
                           unsigned &DiagID);
   bool SetTypeSpecSign(TSS S, SourceLocation Loc, const char *&PrevSpec,
