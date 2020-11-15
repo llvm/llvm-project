@@ -1049,11 +1049,13 @@ define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, <2 x i32>* %p) {
   ret <2 x i32> %and
 }
 
+; Multi-use demanded bits - 'add' doesn't change 'and'
+
 define i8 @lowmask_add(i8 %x) {
 ; CHECK-LABEL: @lowmask_add(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 32
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, -64 ; 0xc0
@@ -1061,6 +1063,8 @@ define i8 @lowmask_add(i8 %x) {
   %r = and i8 %a, 32 ; 0x20
   ret i8 %r
 }
+
+; Negative test - mask overlaps low bit of add
 
 define i8 @not_lowmask_add(i8 %x) {
 ; CHECK-LABEL: @not_lowmask_add(
@@ -1075,6 +1079,8 @@ define i8 @not_lowmask_add(i8 %x) {
   ret i8 %r
 }
 
+; Negative test - mask overlaps low bit of add
+
 define i8 @not_lowmask_add2(i8 %x) {
 ; CHECK-LABEL: @not_lowmask_add2(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -96
@@ -1088,11 +1094,13 @@ define i8 @not_lowmask_add2(i8 %x) {
   ret i8 %r
 }
 
+; Multi-use demanded bits - 'add' doesn't change 'and'
+
 define <2 x i8> @lowmask_add_splat(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @lowmask_add_splat(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 32, i8 32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 32, i8 32>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
