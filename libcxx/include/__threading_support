@@ -293,7 +293,7 @@ struct __libcpp_timed_backoff_policy {
       else if(__elapsed > chrono::microseconds(4))
         __libcpp_thread_yield();
       else
-        ; // poll
+        {} // poll
       return false;
   }
 };
