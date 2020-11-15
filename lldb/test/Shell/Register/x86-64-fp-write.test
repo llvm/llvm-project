@@ -14,10 +14,8 @@ register write fop 0x0033
 # the exact addresses do not matter, we want just to verify FXSAVE
 # note: fxrstor64 apparently truncates this to 48 bits, and sign extends
 #       the highest bits, so let's keep the value safely below
-register write fiseg 0x00000567
-register write fioff 0x89abcdef
-register write foseg 0x00000a98
-register write fooff 0x76543210
+register write fip 0x0000056789abcdef
+register write fdp 0x00000a9876543210
 
 register write st0 "{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x80 0x00 0x40}"
 register write st1 "{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x3f 0x00 0x00}"
