@@ -214,7 +214,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
         unsigned ArgIdx = std::distance(Call->arg_begin(), AI);
         MemoryLocation ArgLoc =
             MemoryLocation::getForArgument(Call, ArgIdx, TLI);
-        AliasResult ArgAlias = alias(ArgLoc, Loc);
+        AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI);
         if (ArgAlias != NoAlias) {
           ModRefInfo ArgMask = getArgModRefInfo(Call, ArgIdx);
           AllArgsMask = unionModRef(AllArgsMask, ArgMask);
