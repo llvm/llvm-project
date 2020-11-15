@@ -12,7 +12,7 @@ body:
   %conv2 = zext i16 %dec2 to i32
   %conv = zext i16 %dec to i32
 ; CHECK:   %conv = zext i16 %dec to i32
-; CHECK-NEXT: -->  {(zext i16 (-1 + %a) to i32),+,65535}<nuw><%body>
+; CHECK-NEXT: -->  {(zext i16 (-1 + %a) to i32),+,65535}<nuw><nsw><%body>
 ; CHECK-NOT:  -->  {(65535 + (zext i16 %a to i32)),+,65535}<nuw><%body>
 
   br label %cond
