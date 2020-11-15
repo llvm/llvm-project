@@ -877,7 +877,7 @@ namespace dr177 { // dr177: yes
   // expected-error@-2 {{no viable constructor copying variable}}
 #endif
 
-  struct C { C(C&); }; // expected-note {{not viable: no known conversion from 'dr177::D' to 'dr177::C &'}}
+  struct C { C(C&); }; // expected-note {{not viable: expects an l-value for 1st argument}}
   struct D : C {};
   struct E { operator D(); };
   E e;
