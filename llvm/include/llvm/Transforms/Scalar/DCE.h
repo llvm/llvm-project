@@ -23,6 +23,12 @@ class DCEPass : public PassInfoMixin<DCEPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
+class RedundantDbgInstEliminationPass
+    : public PassInfoMixin<RedundantDbgInstEliminationPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 }
 
 #endif // LLVM_TRANSFORMS_SCALAR_DCE_H
