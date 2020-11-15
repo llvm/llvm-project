@@ -1,4 +1,6 @@
 # XFAIL: system-windows
+# Darwin uses the legacy behavior of reporting abridged ftag value,
+# it is covered by TestRegisters.py::fp_special_purpose_register_read.
 # XFAIL: system-darwin
 # REQUIRES: native && target-x86_64
 # RUN: %clangxx_host -g %p/Inputs/x86-fp-read.cpp -o %t
@@ -15,9 +17,7 @@ print &zero
 register read --all
 # CHECK-DAG: fctrl = 0x037b
 # CHECK-DAG: fstat = 0x8084
-# TODO: the following value is incorrect, it's a bug in the way
-# FXSAVE/XSAVE is interpreted
-# CHECK-DAG: ftag = 0x007f
+# CHECK-DAG: ftag = 0xea58
 # CHECK-DAG: fop = 0x0033
 # CHECK-DAG: fip = [[FDIV]]
 # CHECK-DAG: fdp = [[ZERO]]
