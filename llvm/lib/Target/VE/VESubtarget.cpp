@@ -47,7 +47,7 @@ VESubtarget::VESubtarget(const Triple &TT, const std::string &CPU,
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       FrameLowering(*this) {}
 
-int VESubtarget::getAdjustedFrameSize(int frameSize) const {
+uint64_t VESubtarget::getAdjustedFrameSize(uint64_t FrameSize) const {
 
   // VE stack frame:
   //
@@ -93,10 +93,10 @@ int VESubtarget::getAdjustedFrameSize(int frameSize) const {
   //  16(fp) | Thread pointer register (%tp=%s14)           |
   //         +----------------------------------------------+
 
-  frameSize += 176;                   // for RSA, RA, and FP
-  frameSize = alignTo(frameSize, 16); // requires 16 bytes alignment
+  FrameSize += 176;                   // For RSA, RA, and FP.
+  FrameSize = alignTo(FrameSize, 16); // Requires 16 bytes alignment.
 
-  return frameSize;
+  return FrameSize;
 }
 
 bool VESubtarget::enableMachineScheduler() const { return true; }
