@@ -1389,10 +1389,16 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_int: {
     if (DS.getTypeSpecSign() != DeclSpec::TSS_unsigned) {
       switch (DS.getTypeSpecWidth()) {
-      case DeclSpec::TSW_unspecified: Result = Context.IntTy; break;
-      case DeclSpec::TSW_short:       Result = Context.ShortTy; break;
-      case DeclSpec::TSW_long:        Result = Context.LongTy; break;
-      case DeclSpec::TSW_longlong:
+      case TypeSpecifierWidth::Unspecified:
+        Result = Context.IntTy;
+        break;
+      case TypeSpecifierWidth::Short:
+        Result = Context.ShortTy;
+        break;
+      case TypeSpecifierWidth::Long:
+        Result = Context.LongTy;
+        break;
+      case TypeSpecifierWidth::LongLong:
         Result = Context.LongLongTy;
 
         // 'long long' is a C99 or C++11 feature.
@@ -1408,10 +1414,16 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       }
     } else {
       switch (DS.getTypeSpecWidth()) {
-      case DeclSpec::TSW_unspecified: Result = Context.UnsignedIntTy; break;
-      case DeclSpec::TSW_short:       Result = Context.UnsignedShortTy; break;
-      case DeclSpec::TSW_long:        Result = Context.UnsignedLongTy; break;
-      case DeclSpec::TSW_longlong:
+      case TypeSpecifierWidth::Unspecified:
+        Result = Context.UnsignedIntTy;
+        break;
+      case TypeSpecifierWidth::Short:
+        Result = Context.UnsignedShortTy;
+        break;
+      case TypeSpecifierWidth::Long:
+        Result = Context.UnsignedLongTy;
+        break;
+      case TypeSpecifierWidth::LongLong:
         Result = Context.UnsignedLongLongTy;
 
         // 'long long' is a C99 or C++11 feature.
@@ -1442,17 +1454,17 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_accum: {
     switch (DS.getTypeSpecWidth()) {
-      case DeclSpec::TSW_short:
-        Result = Context.ShortAccumTy;
-        break;
-      case DeclSpec::TSW_unspecified:
-        Result = Context.AccumTy;
-        break;
-      case DeclSpec::TSW_long:
-        Result = Context.LongAccumTy;
-        break;
-      case DeclSpec::TSW_longlong:
-        llvm_unreachable("Unable to specify long long as _Accum width");
+    case TypeSpecifierWidth::Short:
+      Result = Context.ShortAccumTy;
+      break;
+    case TypeSpecifierWidth::Unspecified:
+      Result = Context.AccumTy;
+      break;
+    case TypeSpecifierWidth::Long:
+      Result = Context.LongAccumTy;
+      break;
+    case TypeSpecifierWidth::LongLong:
+      llvm_unreachable("Unable to specify long long as _Accum width");
     }
 
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
@@ -1465,17 +1477,17 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_fract: {
     switch (DS.getTypeSpecWidth()) {
-      case DeclSpec::TSW_short:
-        Result = Context.ShortFractTy;
-        break;
-      case DeclSpec::TSW_unspecified:
-        Result = Context.FractTy;
-        break;
-      case DeclSpec::TSW_long:
-        Result = Context.LongFractTy;
-        break;
-      case DeclSpec::TSW_longlong:
-        llvm_unreachable("Unable to specify long long as _Fract width");
+    case TypeSpecifierWidth::Short:
+      Result = Context.ShortFractTy;
+      break;
+    case TypeSpecifierWidth::Unspecified:
+      Result = Context.FractTy;
+      break;
+    case TypeSpecifierWidth::Long:
+      Result = Context.LongFractTy;
+      break;
+    case TypeSpecifierWidth::LongLong:
+      llvm_unreachable("Unable to specify long long as _Fract width");
     }
 
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
@@ -1515,7 +1527,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float:   Result = Context.FloatTy; break;
   case DeclSpec::TST_double:
-    if (DS.getTypeSpecWidth() == DeclSpec::TSW_long)
+    if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Long)
       Result = Context.LongDoubleTy;
     else
       Result = Context.DoubleTy;
@@ -1554,8 +1566,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // If the type is deprecated or unavailable, diagnose it.
     S.DiagnoseUseOfDecl(D, DS.getTypeSpecTypeNameLoc());
 
-    assert(DS.getTypeSpecWidth() == 0 && DS.getTypeSpecComplex() == 0 &&
-           DS.getTypeSpecSign() == 0 && "No qualifiers on tag names!");
+    assert(DS.getTypeSpecWidth() == TypeSpecifierWidth::Unspecified &&
+           DS.getTypeSpecComplex() == 0 && DS.getTypeSpecSign() == 0 &&
+           "No qualifiers on tag names!");
 
     // TypeQuals handled by caller.
     Result = Context.getTypeDeclType(D);
@@ -1568,7 +1581,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_typename: {
-    assert(DS.getTypeSpecWidth() == 0 && DS.getTypeSpecComplex() == 0 &&
+    assert(DS.getTypeSpecWidth() == TypeSpecifierWidth::Unspecified &&
+           DS.getTypeSpecComplex() == 0 &&
            DS.getTypeSpecSign() == 0 &&
            "Can't handle qualifiers on typedef names yet!");
     Result = S.GetTypeFromParser(DS.getRepAsType());
@@ -5870,7 +5884,7 @@ namespace {
         // Try to have a meaningful source location.
         if (TL.getWrittenSignSpec() != TSS_unspecified)
           TL.expandBuiltinRange(DS.getTypeSpecSignLoc());
-        if (TL.getWrittenWidthSpec() != TSW_unspecified)
+        if (TL.getWrittenWidthSpec() != TypeSpecifierWidth::Unspecified)
           TL.expandBuiltinRange(DS.getTypeSpecWidthRange());
       }
     }

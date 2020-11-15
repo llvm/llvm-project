@@ -37,12 +37,7 @@ namespace clang {
   };
 
   /// Specifies the width of a type, e.g., short, long, or long long.
-  enum TypeSpecifierWidth {
-    TSW_unspecified,
-    TSW_short,
-    TSW_long,
-    TSW_longlong
-  };
+  enum class TypeSpecifierWidth { Unspecified, Short, Long, LongLong };
 
   /// Specifies the signedness of a type, e.g., signed or unsigned.
   enum TypeSpecifierSign {
@@ -106,7 +101,7 @@ namespace clang {
     static_assert(TST_error < 1 << 6, "Type bitfield not wide enough for TST");
     /*DeclSpec::TST*/ unsigned Type  : 6;
     /*DeclSpec::TSS*/ unsigned Sign  : 2;
-    /*DeclSpec::TSW*/ unsigned Width : 2;
+    /*TypeSpecifierWidth*/ unsigned Width : 2;
     unsigned ModeAttr : 1;
   };
 
