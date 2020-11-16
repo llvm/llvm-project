@@ -262,8 +262,28 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)) {
+          native_thread, CreateRegisterInfoInterface(target_arch)),
+      m_regset_offsets({0}) {
   assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
+  std::array<uint32_t, MaxRegSet + 1> first_regnos;
+
+  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+    first_regnos[FPRegSet] = lldb_fctrl_i386;
+    first_regnos[DBRegSet] = lldb_dr0_i386;
+    break;
+  case llvm::Triple::x86_64:
+    first_regnos[FPRegSet] = lldb_fctrl_x86_64;
+    first_regnos[DBRegSet] = lldb_dr0_x86_64;
+    break;
+  default:
+    llvm_unreachable("Unhandled target architecture.");
+  }
+
+  for (int i: {FPRegSet, DBRegSet})
+    m_regset_offsets[i] = GetRegisterInfoInterface()
+                              .GetRegisterInfo()[first_regnos[i]]
+                              .byte_offset;
 }
 
 uint32_t NativeRegisterContextFreeBSD_x86_64::GetRegisterSetCount() const {
@@ -429,15 +449,9 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
 
   switch (set) {
   case GPRegSet:
-    reg_value.SetBytes(m_gpr.data() + reg_info->byte_offset,
-                       reg_info->byte_size, endian::InlHostByteOrder());
-    break;
   case FPRegSet:
-    reg_value.SetBytes(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
-                       reg_info->byte_size, endian::InlHostByteOrder());
-    break;
   case DBRegSet:
-    reg_value.SetBytes(m_dbr.data() + reg_info->byte_offset - GetDBROffset(),
+    reg_value.SetBytes(GetOffsetRegSetData(set, reg_info->byte_offset),
                        reg_info->byte_size, endian::InlHostByteOrder());
     break;
   case YMMRegSet: {
@@ -495,15 +509,9 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
 
   switch (set) {
   case GPRegSet:
-    ::memcpy(m_gpr.data() + reg_info->byte_offset, reg_value.GetBytes(),
-             reg_value.GetByteSize());
-    break;
   case FPRegSet:
-    ::memcpy(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
-             reg_value.GetBytes(), reg_value.GetByteSize());
-    break;
   case DBRegSet:
-    ::memcpy(m_dbr.data() + reg_info->byte_offset - GetDBROffset(),
+    ::memcpy(GetOffsetRegSetData(set, reg_info->byte_offset),
              reg_value.GetBytes(), reg_value.GetByteSize());
     break;
   case YMMRegSet: {
@@ -595,36 +603,25 @@ llvm::Error NativeRegisterContextFreeBSD_x86_64::CopyHardwareWatchpointsFrom(
   return res.ToError();
 }
 
-size_t NativeRegisterContextFreeBSD_x86_64::GetFPROffset() const {
-  uint32_t regno;
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86:
-    regno = lldb_fctrl_i386;
+uint8_t *
+NativeRegisterContextFreeBSD_x86_64::GetOffsetRegSetData(uint32_t set,
+                                                         size_t reg_offset) {
+  uint8_t *base;
+  switch (set) {
+  case GPRegSet:
+    base = m_gpr.data();
     break;
-  case llvm::Triple::x86_64:
-    regno = lldb_fctrl_x86_64;
+  case FPRegSet:
+    base = m_fpr.data();
     break;
-  default:
-    llvm_unreachable("Unhandled target architecture.");
+  case DBRegSet:
+    base = m_dbr.data();
+    break;
+  case YMMRegSet:
+    llvm_unreachable("GetRegSetData() is unsuitable for this regset.");
   }
-
-  return GetRegisterInfoInterface().GetRegisterInfo()[regno].byte_offset;
-}
-
-size_t NativeRegisterContextFreeBSD_x86_64::GetDBROffset() const {
-  uint32_t regno;
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86:
-    regno = lldb_dr0_i386;
-    break;
-  case llvm::Triple::x86_64:
-    regno = lldb_dr0_x86_64;
-    break;
-  default:
-    llvm_unreachable("Unhandled target architecture.");
-  }
-
-  return GetRegisterInfoInterface().GetRegisterInfo()[regno].byte_offset;
+  assert(reg_offset >= m_regset_offsets[set]);
+  return base + (reg_offset - m_regset_offsets[set]);
 }
 
 llvm::Optional<NativeRegisterContextFreeBSD_x86_64::YMMSplitPtr>
