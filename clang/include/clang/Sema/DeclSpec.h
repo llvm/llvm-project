@@ -431,8 +431,10 @@ public:
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
         FS_noreturn_specified(false), Friend_specified(false),
-        ConstexprSpecifier(CSK_unspecified), FS_explicit_specifier(),
-        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
+        ConstexprSpecifier(
+            static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
+        FS_explicit_specifier(), Attrs(attrFactory), writtenBS(),
+        ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -755,11 +757,11 @@ public:
 
   SourceLocation getConstexprSpecLoc() const { return ConstexprLoc; }
   bool hasConstexprSpecifier() const {
-    return ConstexprSpecifier != CSK_unspecified;
+    return getConstexprSpecifier() != ConstexprSpecKind::Unspecified;
   }
 
   void ClearConstexprSpec() {
-    ConstexprSpecifier = CSK_unspecified;
+    ConstexprSpecifier = static_cast<unsigned>(ConstexprSpecKind::Unspecified);
     ConstexprLoc = SourceLocation();
   }
 
