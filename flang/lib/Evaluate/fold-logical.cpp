@@ -134,11 +134,13 @@ Expr<LogicalResult> FoldOperation(
           Satisfies(relation.opr, folded->first.CompareSigned(folded->second));
     } else if constexpr (T::category == TypeCategory::Real) {
       result = Satisfies(relation.opr, folded->first.Compare(folded->second));
+    } else if constexpr (T::category == TypeCategory::Complex) {
+      result = (relation.opr == RelationalOperator::EQ) ==
+          folded->first.Equals(folded->second);
     } else if constexpr (T::category == TypeCategory::Character) {
       result = Satisfies(relation.opr, Compare(folded->first, folded->second));
     } else {
-      static_assert(T::category != TypeCategory::Complex &&
-          T::category != TypeCategory::Logical);
+      static_assert(T::category != TypeCategory::Logical);
     }
     return Expr<LogicalResult>{Constant<LogicalResult>{result}};
   }
