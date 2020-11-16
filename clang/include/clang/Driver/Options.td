@@ -1347,7 +1347,7 @@ def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>, Flags<[CoreO
   Alias<fcf_protection_EQ>, AliasArgs<["full"]>,
   HelpText<"Enable cf-protection in 'full' mode">;
 
-defm xray_instrument : OptInFFlag<"xray-instrument", "Generate XRay instrumentation sleds on function entry and exit">;
+defm xray_instrument : OptInFFlag<"xray-instrument", "Generate XRay instrumentation sleds on function entry and exit", "", "", [], "LangOpts->XRayInstrument">;
 
 def fxray_instruction_threshold_EQ :
   JoinedOrSeparate<["-"], "fxray-instruction-threshold=">,
@@ -1375,15 +1375,15 @@ def fxray_modes :
   HelpText<"List of modes to link in by default into XRay instrumented binaries.">;
 
 defm xray_always_emit_customevents : OptInFFlag<"xray-always-emit-customevents",
-  "Always emit __xray_customevent(...) calls even if the containing function is not always instrumented">;
+  "Always emit __xray_customevent(...) calls even if the containing function is not always instrumented", "", "", [], "LangOpts->XRayAlwaysEmitCustomEvents">;
 
 defm xray_always_emit_typedevents : OptInFFlag<"xray-always-emit-typedevents",
-  "Always emit __xray_typedevent(...) calls even if the containing function is not always instrumented">;
+  "Always emit __xray_typedevent(...) calls even if the containing function is not always instrumented", "", "", [], "LangOpts->XRayAlwaysEmitTypedEvents">;
 
 defm xray_ignore_loops : OptInFFlag<"xray-ignore-loops",
-  "Don't instrument functions with loops unless they also meet the minimum function size">;
+  "Don't instrument functions with loops unless they also meet the minimum function size", "", "", [], "CodeGenOpts.XRayIgnoreLoops">;
 defm xray_function_index : OptOutFFlag<"xray-function-index", "",
-  "Omit function index section at the expense of single-function patching performance">;
+  "Omit function index section at the expense of single-function patching performance", "", [], "CodeGenOpts.XRayOmitFunctionIndex">;
 
 def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
   Flags<[CC1Option]>,
