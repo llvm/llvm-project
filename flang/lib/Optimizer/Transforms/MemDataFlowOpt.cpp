@@ -19,120 +19,106 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
-#define DEBUG_TYPE "flang-memref-dataflow-opt"
+#define DEBUG_TYPE "fir-memref-dataflow-opt"
 
 namespace {
 
-template <typename Trait>
-llvm::SmallVector<mlir::Operation *, 8>
-getParentOpsWithTrait(mlir::Operation *op) {
-  llvm::SmallVector<mlir::Operation *, 8> parentLoops;
-  while ((op = op->getParentOp())) {
-    if (op->hasTrait<Trait>())
-      parentLoops.push_back(op);
-  }
-  return parentLoops;
+template <typename OpT>
+static std::vector<OpT> getSpecificUsers(mlir::Value v) {
+  std::vector<OpT> ops;
+  for (auto *user : v.getUsers())
+    if (auto op = dyn_cast<OpT>(user))
+      ops.push_back(op);
+  return ops;
 }
-
-#if 0
-unsigned getNumCommonSurroundingOps(
-    const llvm::SmallVectorImpl<mlir::Operation *> OpsA,
-    const llvm::SmallVectorImpl<mlir::Operation *> OpsB) {
-  unsigned numCommonOps = 0;
-  unsigned minNumOps = std::min(OpsA.size(), OpsB.size());
-  for (unsigned i = 0; i < minNumOps; ++i) {
-    if (OpsA[i] != OpsB[i])
-      break;
-    numCommonOps++;
-  }
-  return numCommonOps;
-}
-#endif
 
 /// This is based on MLIR's MemRefDataFlowOpt which is specialized on AffineRead
 /// and AffineWrite interface
 template <typename ReadOp, typename WriteOp>
 class LoadStoreForwarding {
 public:
-  LoadStoreForwarding(mlir::DominanceInfo *di, mlir::PostDominanceInfo *pdi)
-      : domInfo(di), postDomInfo(pdi) {}
-  llvm::Optional<WriteOp>
-  findStoreToForward(ReadOp loadOp, llvm::SmallVectorImpl<WriteOp> &&storeOps) {
-    llvm::SmallVector<Operation *, 8> forwadingCandidates;
-    llvm::SmallVector<Operation *, 8> storesWithDependence;
+  LoadStoreForwarding(mlir::DominanceInfo *di) : domInfo(di) {}
 
-    for (auto &storeOp : storeOps) {
-      if (accessDependence(loadOp, storeOp))
-        storesWithDependence.push_back(storeOp.getOperation());
-      if (equivalentAccess(loadOp, storeOp) &&
-          domInfo->dominates(storeOp.getOperation(), loadOp.getOperation()))
-        forwadingCandidates.push_back(storeOp.getOperation());
-    }
+  // FIXME: This algorithm has a bug. It ignores escaping references between a
+  // store and a load.
+  llvm::Optional<WriteOp> findStoreToForward(ReadOp loadOp,
+                                             std::vector<WriteOp> &&storeOps) {
+    llvm::SmallVector<WriteOp, 8> candidateSet;
 
-    llvm::Optional<WriteOp> lastWriteStoreOp;
-    for (auto *storeOp : forwadingCandidates) {
-      if (llvm::all_of(storesWithDependence, [&](mlir::Operation *depStore) {
-            return postDomInfo->postDominates(storeOp, depStore);
-          })) {
-        lastWriteStoreOp = cast<WriteOp>(storeOp);
+    for (auto &storeOp : storeOps)
+      if (domInfo->dominates(storeOp, loadOp))
+        candidateSet.push_back(storeOp);
+
+    if (candidateSet.size() == 0)
+      return {};
+
+    llvm::Optional<WriteOp> nearestStore;
+    for (auto candidate : candidateSet) {
+      auto nearerThan = [&](WriteOp otherStore) {
+        if (candidate == otherStore)
+          return false;
+        auto rv = domInfo->properlyDominates(candidate, otherStore);
+        if (rv) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "candidate " << candidate << " is not the nearest to "
+                     << loadOp << " because " << otherStore << " is closer\n");
+        }
+        return rv;
+      };
+      if (!llvm::any_of(candidateSet, nearerThan)) {
+        nearestStore = mlir::cast<WriteOp>(candidate);
         break;
       }
     }
-    return lastWriteStoreOp;
+    if (!nearestStore) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "load " << loadOp << " has " << candidateSet.size()
+          << " store candidates, but this algorithm can't find a best.\n");
+    }
+    return nearestStore;
   }
-  llvm::Optional<ReadOp>
-  findReadForWrite(WriteOp storeOp, llvm::SmallVectorImpl<ReadOp> &&loadOps) {
-    llvm::SmallVector<Operation *, 8> useCandidates;
-    llvm::SmallVector<Operation *, 8> dependences;
+
+  llvm::Optional<ReadOp> findReadForWrite(WriteOp storeOp,
+                                          std::vector<ReadOp> &&loadOps) {
     for (auto &loadOp : loadOps) {
-      if (equivalentAccess(loadOp, storeOp) &&
-          postDomInfo->postDominates(loadOp, storeOp))
-        return {loadOp};
+      if (domInfo->dominates(storeOp, loadOp))
+        return loadOp;
     }
     return {};
   }
-  bool equivalentAccess(ReadOp loadOp, WriteOp storeOp) { return true; }
-  bool accessDependence(ReadOp loadOp, WriteOp storeOp) { return true; }
 
 private:
   mlir::DominanceInfo *domInfo;
-  mlir::PostDominanceInfo *postDomInfo;
 };
-
-template <typename OpT>
-llvm::SmallVector<OpT, 8> getSpecificUsers(mlir::Value v) {
-  llvm::SmallVector<OpT, 8> ops;
-  for (auto *user : v.getUsers()) {
-    if (auto op = dyn_cast<OpT>(user))
-      ops.push_back(op);
-  }
-  return ops;
-}
 
 class MemDataFlowOpt : public fir::MemRefDataFlowOptBase<MemDataFlowOpt> {
 public:
   void runOnFunction() override {
     mlir::FuncOp f = getFunction();
 
-    auto domInfo = &getAnalysis<mlir::DominanceInfo>();
-    auto postDomInfo = &getAnalysis<mlir::PostDominanceInfo>();
-    LoadStoreForwarding<fir::LoadOp, fir::StoreOp> lsf(domInfo, postDomInfo);
+    auto *domInfo = &getAnalysis<mlir::DominanceInfo>();
+    LoadStoreForwarding<fir::LoadOp, fir::StoreOp> lsf(domInfo);
     f.walk([&](fir::LoadOp loadOp) {
       auto maybeStore = lsf.findStoreToForward(
           loadOp, getSpecificUsers<fir::StoreOp>(loadOp.memref()));
       if (maybeStore) {
-        LLVM_DEBUG(llvm::dbgs() << "FlangMemDataFlowOpt: erasing loadOp with "
-                                   "value from store\n";
-                   loadOp.dump(); maybeStore.getValue().dump(););
-        loadOp.getResult().replaceAllUsesWith(maybeStore.getValue().value());
+        auto storeOp = maybeStore.getValue();
+        LLVM_DEBUG(llvm::dbgs() << "FlangMemDataFlowOpt: In " << f.getName()
+                                << " erasing load " << loadOp
+                                << " with value from " << storeOp << '\n');
+        loadOp.getResult().replaceAllUsesWith(storeOp.value());
         loadOp.erase();
       }
     });
     f.walk([&](fir::AllocaOp alloca) {
       for (auto &storeOp : getSpecificUsers<fir::StoreOp>(alloca.getResult())) {
         if (!lsf.findReadForWrite(
-                storeOp, getSpecificUsers<fir::LoadOp>(storeOp.memref())))
+                storeOp, getSpecificUsers<fir::LoadOp>(storeOp.memref()))) {
+          LLVM_DEBUG(llvm::dbgs() << "FlangMemDataFlowOpt: In " << f.getName()
+                                  << " erasing store " << storeOp << '\n');
           storeOp.erase();
+        }
       }
     });
   }

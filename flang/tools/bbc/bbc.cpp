@@ -259,11 +259,15 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
            << outputName;
 
   // Otherwise run the default passes.
-  mlir::PassManager pm(mlirModule.getContext());
+  mlir::PassManager pm(&ctx, mlir::OpPassManager::Nesting::Implicit);
+  pm.enableVerifier(/*verifyPasses=*/true);
   mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
     // run the command-line specified pipeline
-    passPipeline.addToPipeline(pm);
+    passPipeline.addToPipeline(pm, [&](const llvm::Twine &msg) {
+      mlir::emitError(mlir::UnknownLoc::get(&ctx)) << msg;
+      return mlir::failure();
+    });
   } else if (emitFIR) {
     // --emit-fir: Build the IR, verify it, and dump the IR if the IR passes
     // verification. Use --dump-module-on-failure to dump invalid IR.
@@ -281,27 +285,27 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
     // simplify the IR
-    pm.addPass(fir::createArrayValueCopyPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createArrayValueCopyPass());
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addPass(fir::createCSEPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
     pm.addPass(mlir::createInlinerPass());
     pm.addPass(mlir::createCSEPass());
 
     // convert control flow to CFG form
-    pm.addPass(fir::createFirToCfgPass());
-    pm.addPass(fir::createControlFlowLoweringPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createFirToCfgPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createControlFlowLoweringPass());
     pm.addPass(mlir::createLowerToCFGPass());
 
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addPass(fir::createCSEPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
   }
 
   if (emitLLVM) {
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
-    pm.addPass(fir::createFirCodeGenRewritePass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
     pm.addPass(fir::createFIRToLLVMPass(nameUniquer));
-    
+
     std::error_code ec;
     llvm::ToolOutputFile outFile(outputName + ".ll", ec,
                                  llvm::sys::fs::OF_None);
