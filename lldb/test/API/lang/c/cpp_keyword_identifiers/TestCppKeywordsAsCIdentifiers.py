@@ -7,6 +7,8 @@ class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # FIXME: Clang on Windows somehow thinks static_assert is a C keyword.
+    @skipIfWindows
     @no_debug_info_test
     def test(self):
         self.build()
