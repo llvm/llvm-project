@@ -2,11 +2,11 @@
 ; RUN: llc -mtriple=i386-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=32-ALL,32-GOOD-RA
 ; RUN: llc -mtriple=i386-linux-gnu -verify-machineinstrs -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefixes=32-ALL,32-FAST-RA
 
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=64-ALL,64-GOOD-RA
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefixes=64-ALL,64-FAST-RA
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf %s -o - | FileCheck %s --check-prefixes=64-ALL,64-GOOD-RA-SAHF
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefixes=64-ALL,64-FAST-RA-SAHF
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mcpu=corei7 %s -o - | FileCheck %s --check-prefixes=64-ALL,64-GOOD-RA-SAHF
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mcpu=corei7 %s -o - | FileCheck %s --check-prefix=64-ALL
 
 declare i32 @foo()
 declare i32 @bar(i64)
