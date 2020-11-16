@@ -8,6 +8,7 @@
 
 from libcxx.test.dsl import *
 import re
+import shutil
 import sys
 
 _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_build_version__' not in compilerMacros(cfg)
@@ -128,6 +129,15 @@ DEFAULT_FEATURES += [
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
   Feature(name='linux', when=lambda cfg: '__linux__' in compilerMacros(cfg)),
   Feature(name='netbsd', when=lambda cfg: '__NetBSD__' in compilerMacros(cfg))
+]
+
+
+# Detect whether GDB is on the system, and if so add a substitution to access it.
+DEFAULT_FEATURES += [
+  Feature(name='host-has-gdb',
+    when=lambda cfg: shutil.which('gdb') is not None,
+    actions=[AddSubstitution('%{gdb}', lambda cfg: shutil.which('gdb'))]
+  )
 ]
 
 
