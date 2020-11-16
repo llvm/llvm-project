@@ -1094,8 +1094,8 @@ bool DeclSpec::SetConstexprSpec(ConstexprSpecKind ConstexprKind,
 }
 
 void DeclSpec::SaveWrittenBuiltinSpecs() {
-  writtenBS.Sign = getTypeSpecSign();
-  writtenBS.Width = getTypeSpecWidth();
+  writtenBS.Sign = static_cast<int>(getTypeSpecSign());
+  writtenBS.Width = static_cast<int>(getTypeSpecWidth());
   writtenBS.Type = getTypeSpecType();
   // Search the list of attributes for the presence of a mode attribute.
   writtenBS.ModeAttr = getAttributes().hasAttribute(ParsedAttr::AT_Mode);
