@@ -51,6 +51,13 @@ AARCH64_ARCH("armv8.6-a", ARMV8_6A, "8.6-A", "v8.6a",
               AArch64::AEK_RDM  | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4  | AArch64::AEK_SHA3 | AArch64::AEK_BF16    |
               AArch64::AEK_SHA2 | AArch64::AEK_AES  | AArch64::AEK_I8MM))
+AARCH64_ARCH("armv8.7-a", ARMV8_7A, "8.7-A", "v8.7a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
+              AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
 // For v8-R, we do not enable crypto and align with GCC that enables a more
 // minimal set of optional architecture extensions.
 AARCH64_ARCH("armv8-r", ARMV8R, "8-R", "v8r",
@@ -99,6 +106,7 @@ AARCH64_ARCH_EXT_NAME("i8mm",         AArch64::AEK_I8MM,        "+i8mm",  "-i8mm
 AARCH64_ARCH_EXT_NAME("f32mm",        AArch64::AEK_F32MM,       "+f32mm", "-f32mm")
 AARCH64_ARCH_EXT_NAME("f64mm",        AArch64::AEK_F64MM,       "+f64mm", "-f64mm")
 AARCH64_ARCH_EXT_NAME("tme",          AArch64::AEK_TME,         "+tme",   "-tme")
+AARCH64_ARCH_EXT_NAME("ls64",         AArch64::AEK_LS64,        "+ls64",  "-ls64")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME

@@ -1103,6 +1103,8 @@ TEST(TargetParserTest, testAArch64Arch) {
                               ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testAArch64Arch("armv8.6-a", "generic", "v8.6a",
                               ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv8.7-a", "generic", "v8.7a",
+                              ARMBuildAttrs::CPUArch::v8_A));
 }
 
 bool testAArch64Extension(StringRef CPUName, AArch64::ArchKind AK,
