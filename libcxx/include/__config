@@ -125,11 +125,6 @@
 #  endif
 #endif
 
-#ifdef _LIBCPP_TRIVIAL_PAIR_COPY_CTOR
-#error "_LIBCPP_TRIVIAL_PAIR_COPY_CTOR" is no longer supported. \
-       use _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR instead
-#endif
-
 #if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
