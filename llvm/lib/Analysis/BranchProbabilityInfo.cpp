@@ -1182,6 +1182,8 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
 }
 
 void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
+  LLVM_DEBUG(dbgs() << "eraseBlock " << BB->getName() << "\n");
+
   // Note that we cannot use successors of BB because the terminator of BB may
   // have changed when eraseBlock is called as a BasicBlockCallbackVH callback.
   // Instead we remove prob data for the block by iterating successors by their
