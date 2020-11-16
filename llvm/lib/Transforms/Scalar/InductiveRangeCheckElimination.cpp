@@ -110,14 +110,11 @@ static cl::opt<bool> PrintChangedLoops("irce-print-changed-loops", cl::Hidden,
 static cl::opt<bool> PrintRangeChecks("irce-print-range-checks", cl::Hidden,
                                       cl::init(false));
 
-static cl::opt<int> MaxExitProbReciprocal("irce-max-exit-prob-reciprocal",
-                                          cl::Hidden, cl::init(10));
-
 static cl::opt<bool> SkipProfitabilityChecks("irce-skip-profitability-checks",
                                              cl::Hidden, cl::init(false));
 
-static cl::opt<unsigned> MinRuntimeIterations("min-runtime-iterations",
-                                              cl::Hidden, cl::init(3));
+static cl::opt<unsigned> MinRuntimeIterations("irce-min-runtime-iterations",
+                                              cl::Hidden, cl::init(10));
 
 static cl::opt<bool> AllowUnsignedLatchCondition("irce-allow-unsigned-latch",
                                                  cl::Hidden, cl::init(true));
@@ -1871,7 +1868,7 @@ InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L,
     return true;
   BranchProbability ExitProbability =
       BPI->getEdgeProbability(LS.Latch, LS.LatchBrExitIdx);
-  if (ExitProbability > BranchProbability(1, MaxExitProbReciprocal)) {
+  if (ExitProbability > BranchProbability(1, MinRuntimeIterations)) {
     LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
                       << "the exit probability is too big " << ExitProbability
                       << "\n";);
