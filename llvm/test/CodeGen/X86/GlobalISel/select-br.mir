@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu    -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64
-# RUN: llc -mtriple=i386-linux-gnu      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnu    -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=i386-linux-gnu      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
   define void @uncondbr() {
