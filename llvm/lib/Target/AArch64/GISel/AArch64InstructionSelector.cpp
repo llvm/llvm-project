@@ -5035,9 +5035,19 @@ AArch64InstructionSelector::selectExtendedSHL(
     return None;
 
   unsigned OffsetOpc = OffsetInst->getOpcode();
-  if (OffsetOpc != TargetOpcode::G_SHL && OffsetOpc != TargetOpcode::G_MUL)
-    return None;
+  bool LookedThroughZExt = false;
+  if (OffsetOpc != TargetOpcode::G_SHL && OffsetOpc != TargetOpcode::G_MUL) {
+    // Try to look through a ZEXT.
+    if (OffsetOpc != TargetOpcode::G_ZEXT || !WantsExt)
+      return None;
 
+    OffsetInst = MRI.getVRegDef(OffsetInst->getOperand(1).getReg());
+    OffsetOpc = OffsetInst->getOpcode();
+    LookedThroughZExt = true;
+
+    if (OffsetOpc != TargetOpcode::G_SHL && OffsetOpc != TargetOpcode::G_MUL)
+      return None;
+  }
   // Make sure that the memory op is a valid size.
   int64_t LegalShiftVal = Log2_32(SizeInBytes);
   if (LegalShiftVal == 0)
@@ -5088,20 +5098,23 @@ AArch64InstructionSelector::selectExtendedSHL(
 
   unsigned SignExtend = 0;
   if (WantsExt) {
-    // Check if the offset is defined by an extend.
-    MachineInstr *ExtInst = getDefIgnoringCopies(OffsetReg, MRI);
-    auto Ext = getExtendTypeForInst(*ExtInst, MRI, true);
-    if (Ext == AArch64_AM::InvalidShiftExtend)
-      return None;
+    // Check if the offset is defined by an extend, unless we looked through a
+    // G_ZEXT earlier.
+    if (!LookedThroughZExt) {
+      MachineInstr *ExtInst = getDefIgnoringCopies(OffsetReg, MRI);
+      auto Ext = getExtendTypeForInst(*ExtInst, MRI, true);
+      if (Ext == AArch64_AM::InvalidShiftExtend)
+        return None;
 
-    SignExtend = isSignExtendShiftType(Ext) ? 1 : 0;
-    // We only support SXTW for signed extension here.
-    if (SignExtend && Ext != AArch64_AM::SXTW)
-      return None;
+      SignExtend = isSignExtendShiftType(Ext) ? 1 : 0;
+      // We only support SXTW for signed extension here.
+      if (SignExtend && Ext != AArch64_AM::SXTW)
+        return None;
+      OffsetReg = ExtInst->getOperand(1).getReg();
+    }
 
     // Need a 32-bit wide register here.
     MachineIRBuilder MIB(*MRI.getVRegDef(Root.getReg()));
-    OffsetReg = ExtInst->getOperand(1).getReg();
     OffsetReg = narrowExtendRegIfNeeded(OffsetReg, MIB);
   }
 
