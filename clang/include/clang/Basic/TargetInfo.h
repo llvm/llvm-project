@@ -218,6 +218,8 @@ protected:
 
   unsigned HasAArch64SVETypes : 1;
 
+  unsigned AllowAMDGPUUnsafeFPAtomics : 1;
+
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;
@@ -856,6 +858,10 @@ public:
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
   bool hasAArch64SVETypes() const { return HasAArch64SVETypes; }
+
+  /// Returns whether or not the AMDGPU unsafe floating point atomics are
+  /// allowed.
+  bool allowAMDGPUUnsafeFPAtomics() const { return AllowAMDGPUUnsafeFPAtomics; }
 
   /// For ARM targets returns a mask defining which coprocessors are configured
   /// as Custom Datapath.
