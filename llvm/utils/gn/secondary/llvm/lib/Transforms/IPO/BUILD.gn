@@ -20,6 +20,7 @@ static_library("IPO") {
   ]
   sources = [
     "AlwaysInliner.cpp",
+    "Annotation2Metadata.cpp",
     "ArgumentPromotion.cpp",
     "Attributor.cpp",
     "AttributorAttributes.cpp",
