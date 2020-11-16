@@ -56,18 +56,14 @@ static int hasReductionCallback;
 class ArcherFlags {
 public:
 #if (LLVM_VERSION) >= 40
-  int flush_shadow;
+  int flush_shadow{0};
 #endif
-  int print_max_rss;
-  int verbose;
-  int enabled;
+  int print_max_rss{0};
+  int verbose{0};
+  int enabled{1};
+  int ignore_serial{0};
 
-  ArcherFlags(const char *env)
-      :
-#if (LLVM_VERSION) >= 40
-        flush_shadow(0),
-#endif
-        print_max_rss(0), verbose(0), enabled(1) {
+  ArcherFlags(const char *env) {
     if (env) {
       std::vector<std::string> tokens;
       std::string token;
@@ -87,6 +83,8 @@ public:
         if (sscanf(it->c_str(), "verbose=%d", &verbose))
           continue;
         if (sscanf(it->c_str(), "enable=%d", &enabled))
+          continue;
+        if (sscanf(it->c_str(), "ignore_serial=%d", &ignore_serial))
           continue;
         std::cerr << "Illegal values for ARCHER_OPTIONS variable: " << token
                   << std::endl;
@@ -410,7 +408,7 @@ struct TaskData {
   bool InBarrier;
 
   /// Whether this task is an included task.
-  bool Included;
+  int TaskType{0};
 
   /// Index of which barrier to use next.
   char BarrierIndex;
@@ -443,8 +441,8 @@ struct TaskData {
   int execution;
   int freed;
 
-  TaskData(TaskData *Parent)
-      : InBarrier(false), Included(false), BarrierIndex(0), RefCount(1),
+  TaskData(TaskData *Parent, int taskType)
+      : InBarrier(false), TaskType(taskType), BarrierIndex(0), RefCount(1),
         Parent(Parent), ImplicitTask(nullptr), Team(Parent->Team),
         TaskGroup(nullptr), DependencyCount(0), execution(0), freed(0) {
     if (Parent != nullptr) {
@@ -455,8 +453,8 @@ struct TaskData {
     }
   }
 
-  TaskData(ParallelData *Team = nullptr)
-      : InBarrier(false), Included(false), BarrierIndex(0), RefCount(1),
+  TaskData(ParallelData *Team, int taskType)
+      : InBarrier(false), TaskType(taskType), BarrierIndex(0), RefCount(1),
         Parent(nullptr), ImplicitTask(this), Team(Team), TaskGroup(nullptr),
         DependencyCount(0), execution(1), freed(0) {}
 
@@ -464,6 +462,17 @@ struct TaskData {
     TsanDeleteClock(&Task);
     TsanDeleteClock(&Taskwait);
   }
+
+  bool isIncluded() { return TaskType & ompt_task_undeferred; }
+  bool isUntied() { return TaskType & ompt_task_untied; }
+  bool isFinal() { return TaskType & ompt_task_final; }
+  bool isMergable() { return TaskType & ompt_task_mergeable; }
+  bool isMerged() { return TaskType & ompt_task_merged; }
+
+  bool isExplicit() { return TaskType & ompt_task_explicit; }
+  bool isImplicit() { return TaskType & ompt_task_implicit; }
+  bool isInitial() { return TaskType & ompt_task_initial; }
+  bool isTarget() { return TaskType & ompt_task_target; }
 
   void *GetTaskPtr() { return &Task; }
 
@@ -517,11 +526,15 @@ static void ompt_tsan_parallel_begin(ompt_data_t *parent_task_data,
   parallel_data->ptr = Data;
 
   TsanHappensBefore(Data->GetParallelPtr());
+  if (archer_flags->ignore_serial && ToTaskData(parent_task_data)->isInitial())
+    TsanIgnoreWritesEnd();
 }
 
 static void ompt_tsan_parallel_end(ompt_data_t *parallel_data,
                                    ompt_data_t *task_data, int flag,
                                    const void *codeptr_ra) {
+  if (archer_flags->ignore_serial && ToTaskData(task_data)->isInitial())
+    TsanIgnoreWritesBegin();
   ParallelData *Data = ToParallelData(parallel_data);
   TsanHappensAfter(Data->GetBarrierPtr(0));
   TsanHappensAfter(Data->GetBarrierPtr(1));
@@ -546,7 +559,7 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
     if (type & ompt_task_initial) {
       parallel_data->ptr = new ParallelData(nullptr);
     }
-    task_data->ptr = new TaskData(ToParallelData(parallel_data));
+    task_data->ptr = new TaskData(ToParallelData(parallel_data), type);
     TsanHappensAfter(ToParallelData(parallel_data)->GetParallelPtr());
     TsanFuncEntry(ToParallelData(parallel_data)->codePtr);
     break;
@@ -727,14 +740,13 @@ static void ompt_tsan_task_create(
     ParallelData *PData = new ParallelData(nullptr);
     parallel_data->ptr = PData;
 
-    Data = new TaskData(PData);
+    Data = new TaskData(PData, type);
     new_task_data->ptr = Data;
   } else if (type & ompt_task_undeferred) {
-    Data = new TaskData(ToTaskData(parent_task_data));
+    Data = new TaskData(ToTaskData(parent_task_data), type);
     new_task_data->ptr = Data;
-    Data->Included = true;
   } else if (type & ompt_task_explicit || type & ompt_task_target) {
-    Data = new TaskData(ToTaskData(parent_task_data));
+    Data = new TaskData(ToTaskData(parent_task_data), type);
     new_task_data->ptr = Data;
 
     // Use the newly created address. We cannot use a single address from the
@@ -801,7 +813,7 @@ static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
       prior_task_status == ompt_task_late_fulfill) {
     // Included tasks are executed sequentially, no need to track
     // synchronization
-    if (!FromTask->Included) {
+    if (!FromTask->isIncluded()) {
       // Task will finish before a barrier in the surrounding parallel region
       // ...
       ParallelData *PData = FromTask->Team;
@@ -976,10 +988,14 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
             "Warning: please export "
             "TSAN_OPTIONS='ignore_noninstrumented_modules=1' "
             "to avoid false positive reports from the OpenMP runtime!\n");
+  if (archer_flags->ignore_serial)
+    TsanIgnoreWritesBegin();
   return 1; // success
 }
 
 static void ompt_tsan_finalize(ompt_data_t *tool_data) {
+  if (archer_flags->ignore_serial)
+    TsanIgnoreWritesEnd();
   if (archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);

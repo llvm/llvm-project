@@ -340,6 +340,11 @@ public:
   }
   /// @}
 
+  /// Adds an !annotation metadata node with \p Annotation to this instruction.
+  /// If this instruction already has !annotation metadata, append \p Annotation
+  /// to the existing node.
+  void addAnnotationMetadata(StringRef Annotation);
+
   /// Sets the metadata on this instruction from the AAMDNodes structure.
   void setAAMetadata(const AAMDNodes &N);
 
