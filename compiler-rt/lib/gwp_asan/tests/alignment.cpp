@@ -9,6 +9,8 @@
 #include "gwp_asan/tests/harness.h"
 #include "gwp_asan/utilities.h"
 
+#include <vector>
+
 TEST(AlignmentTest, PowerOfTwo) {
   std::vector<std::pair<size_t, size_t>> AskedSizeToAlignedSize = {
       {1, 1},   {2, 2},   {3, 4},       {4, 4},       {5, 8},   {7, 8},

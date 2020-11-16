@@ -8,6 +8,8 @@
 
 #include "gwp_asan/tests/harness.h"
 
+#include <set>
+
 void singleByteGoodAllocDealloc(gwp_asan::GuardedPoolAllocator *GPA) {
   void *Ptr = GPA->allocate(1);
   EXPECT_NE(nullptr, Ptr);
