@@ -6073,7 +6073,7 @@ LegalizerHelper::lowerShlSat(MachineInstr &MI) {
   } else {
     SatVal = MIRBuilder.buildConstant(Ty, APInt::getMaxValue(BW));
   }
-  auto Ov = MIRBuilder.buildICmp(CmpInst::ICMP_NE, Ty, LHS, Orig);
+  auto Ov = MIRBuilder.buildICmp(CmpInst::ICMP_NE, BoolTy, LHS, Orig);
   MIRBuilder.buildSelect(Res, Ov, SatVal, Result);
 
   MI.eraseFromParent();
