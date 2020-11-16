@@ -40,11 +40,7 @@ namespace clang {
   enum class TypeSpecifierWidth { Unspecified, Short, Long, LongLong };
 
   /// Specifies the signedness of a type, e.g., signed or unsigned.
-  enum TypeSpecifierSign {
-    TSS_unspecified,
-    TSS_signed,
-    TSS_unsigned
-  };
+  enum class TypeSpecifierSign { Unspecified, Signed, Unsigned };
 
   enum class TypeSpecifiersPipe { Unspecified, Pipe };
 
