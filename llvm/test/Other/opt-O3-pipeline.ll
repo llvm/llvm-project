@@ -27,6 +27,7 @@
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT:   ModulePass Manager
+; CHECK-NEXT:     Annotation2Metadata
 ; CHECK-NEXT:     Force set function attributes
 ; CHECK-NEXT:     Infer set function attributes
 ; CHECK-NEXT:     FunctionPass Manager

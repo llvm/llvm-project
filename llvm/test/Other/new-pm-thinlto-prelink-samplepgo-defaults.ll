@@ -29,6 +29,7 @@
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
+; CHECK-O-NEXT: Running pass: Annotation2Metadata
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass>
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy

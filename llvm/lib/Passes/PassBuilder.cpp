@@ -74,6 +74,7 @@
 #include "llvm/Transforms/Coroutines/CoroElide.h"
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/Annotation2Metadata.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
@@ -1248,6 +1249,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM(DebugLogging);
 
+  // Convert @llvm.global.annotations to !annotation metadata.
+  MPM.addPass(Annotation2MetadataPass());
+
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
@@ -1278,6 +1282,9 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
          "Must request optimizations for the default pipeline!");
 
   ModulePassManager MPM(DebugLogging);
+
+  // Convert @llvm.global.annotations to !annotation metadata.
+  MPM.addPass(Annotation2MetadataPass());
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
@@ -1324,6 +1331,9 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, bool DebugLogging,
     const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM(DebugLogging);
+
+  // Convert @llvm.global.annotations to !annotation metadata.
+  MPM.addPass(Annotation2MetadataPass());
 
   if (ImportSummary) {
     // These passes import type identifier resolutions for whole-program
@@ -1378,6 +1388,9 @@ ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM(DebugLogging);
+
+  // Convert @llvm.global.annotations to !annotation metadata.
+  MPM.addPass(Annotation2MetadataPass());
 
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type

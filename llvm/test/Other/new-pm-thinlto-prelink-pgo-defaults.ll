@@ -31,6 +31,7 @@
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
+; CHECK-O-NEXT: Running pass: Annotation2Metadata
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
