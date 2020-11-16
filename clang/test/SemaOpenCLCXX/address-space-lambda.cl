@@ -1,4 +1,5 @@
-//RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -ast-dump -verify | FileCheck %s
+//RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -ast-dump -verify=expected,nowin32 | FileCheck %s
+//RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -ast-dump -verify=expected,win32 -triple i386-windows | FileCheck %s
 
 //CHECK: CXXMethodDecl {{.*}} constexpr operator() 'int (__private int){{.*}} const __generic'
 auto glambda = [](auto a) { return a; };
@@ -31,12 +32,12 @@ __kernel void test_qual() {
 //CHECK: |-CXXMethodDecl {{.*}} constexpr operator() 'void () {{.*}}const __generic'
   auto priv2 = []() __generic {};
   priv2();
-  auto priv3 = []() __global {}; //expected-note{{candidate function not viable: 'this' object is in address space '__private', but method expects object in address space '__global'}} //expected-note{{conversion candidate of type 'void (*)()'}}
+  auto priv3 = []() __global {}; //expected-note{{candidate function not viable: 'this' object is in address space '__private', but method expects object in address space '__global'}} //nowin32-note{{conversion candidate of type 'void (*)()'}}//win32-note{{conversion candidate of type 'void (*)() __attribute__((thiscall))'}}
   priv3(); //expected-error{{no matching function for call to object of type}}
 
-  __constant auto const1 = []() __private{}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in address space '__private'}} //expected-note{{conversion candidate of type 'void (*)()'}}
+  __constant auto const1 = []() __private{}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in address space '__private'}} //nowin32-note{{conversion candidate of type 'void (*)()'}} //win32-note{{conversion candidate of type 'void (*)() __attribute__((thiscall))'}}
   const1(); //expected-error{{no matching function for call to object of type '__constant (lambda at}}
-  __constant auto const2 = []() __generic{}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in address space '__generic'}} //expected-note{{conversion candidate of type 'void (*)()'}}
+  __constant auto const2 = []() __generic{}; //expected-note{{candidate function not viable: 'this' object is in address space '__constant', but method expects object in address space '__generic'}} //nowin32-note{{conversion candidate of type 'void (*)()'}} //win32-note{{conversion candidate of type 'void (*)() __attribute__((thiscall))'}}
   const2(); //expected-error{{no matching function for call to object of type '__constant (lambda at}}
 //CHECK: |-CXXMethodDecl {{.*}} constexpr operator() 'void () {{.*}}const __constant'
   __constant auto const3 = []() __constant{};
