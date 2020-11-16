@@ -97,6 +97,66 @@ def RetCC_VE_C : CallingConv<[
                                    [SX0, SX1, SX3, SX5]>>,
 ]>;
 
+///// Custom fastcc /////
+//
+// This passes vector params and return values in registers.  Scalar values are
+// handled conforming to the standard cc.
+def CC_VE_Fast : CallingConv<[
+  // vector --> generic vector registers
+  CCIfType<[v2i32,   v2i64,   v2f32,   v2f64,
+            v4i32,   v4i64,   v4f32,   v4f64,
+            v8i32,   v8i64,   v8f32,   v8f64,
+            v16i32,  v16i64,  v16f32,  v16f64,
+            v32i32,  v32i64,  v32f32,  v32f64,
+            v64i32,  v64i64,  v64f32,  v64f64,
+            v128i32, v128i64, v128f32, v128f64,
+            v256i32, v256f32, v256i64, v256f64],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+  // TODO: make this conditional on packed mode
+  CCIfType<[v512i32, v512f32],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+
+  // vector mask --> generic vector mask registers
+  CCIfType<[v256i1],
+           CCAssignToReg<[VM1, VM2, VM3, VM4, VM5, VM6, VM7]>>,
+
+  // pair of vector mask --> generic vector mask registers
+  CCIfType<[v512i1],
+           CCAssignToRegWithShadow<[VMP1, VMP2, VMP3],
+                                   [VM1, VM1, VM3]>>,
+
+  // Follow the standard C CC for scalars.
+  CCDelegateTo<CC_VE_C>
+]>;
+
+def RetCC_VE_Fast : CallingConv<[
+  // vector --> generic vector registers
+  CCIfType<[v2i32,   v2i64,   v2f32,   v2f64,
+            v4i32,   v4i64,   v4f32,   v4f64,
+            v8i32,   v8i64,   v8f32,   v8f64,
+            v16i32,  v16i64,  v16f32,  v16f64,
+            v32i32,  v32i64,  v32f32,  v32f64,
+            v64i32,  v64i64,  v64f32,  v64f64,
+            v128i32, v128i64, v128f32, v128f64,
+            v256i32, v256f32, v256i64, v256f64],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+  // TODO: make this conditional on packed mode
+  CCIfType<[v512i32, v512f32],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+
+  // vector mask --> generic vector mask registers
+  CCIfType<[v256i1],
+           CCAssignToReg<[VM1, VM2, VM3, VM4, VM5, VM6, VM7]>>,
+
+  // pair of vector mask --> generic vector mask registers
+  CCIfType<[v512i1],
+           CCAssignToRegWithShadow<[VMP1, VMP2, VMP3],
+                                   [VM1, VM1, VM3]>>,
+
+  // Follow the standard C CC for scalars.
+  CCDelegateTo<RetCC_VE_C>
+]>;
+
 // Callee-saved registers
 def CSR : CalleeSavedRegs<(add (sequence "SX%u", 18, 33))>;
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
