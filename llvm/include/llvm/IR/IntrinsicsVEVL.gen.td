@@ -78,3 +78,5 @@ let TargetPrefix = "ve" in def int_ve_vl_vstl2dot_vssl : GCCBuiltin<"__builtin_v
 let TargetPrefix = "ve" in def int_ve_vl_vstl2dot_vssml : GCCBuiltin<"__builtin_ve_vl_vstl2dot_vssml">, Intrinsic<[], [LLVMType<v256f64>, LLVMType<i64>, llvm_ptr_ty, LLVMType<v256i1>, LLVMType<i32>], [IntrWriteMem]>;
 let TargetPrefix = "ve" in def int_ve_vl_vstl2dncot_vssl : GCCBuiltin<"__builtin_ve_vl_vstl2dncot_vssl">, Intrinsic<[], [LLVMType<v256f64>, LLVMType<i64>, llvm_ptr_ty, LLVMType<i32>], [IntrWriteMem]>;
 let TargetPrefix = "ve" in def int_ve_vl_vstl2dncot_vssml : GCCBuiltin<"__builtin_ve_vl_vstl2dncot_vssml">, Intrinsic<[], [LLVMType<v256f64>, LLVMType<i64>, llvm_ptr_ty, LLVMType<v256i1>, LLVMType<i32>], [IntrWriteMem]>;
+let TargetPrefix = "ve" in def int_ve_vl_pfchv_ssl : GCCBuiltin<"__builtin_ve_vl_pfchv_ssl">, Intrinsic<[], [LLVMType<i64>, llvm_ptr_ty, LLVMType<i32>], [IntrInaccessibleMemOrArgMemOnly]>;
+let TargetPrefix = "ve" in def int_ve_vl_pfchvnc_ssl : GCCBuiltin<"__builtin_ve_vl_pfchvnc_ssl">, Intrinsic<[], [LLVMType<i64>, llvm_ptr_ty, LLVMType<i32>], [IntrInaccessibleMemOrArgMemOnly]>;

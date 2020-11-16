@@ -1122,27 +1122,35 @@ static void *init_cond(void *c, bool force = false) {
   return (void*)cond;
 }
 
+namespace {
 struct CondMutexUnlockCtx {
   ScopedInterceptor *si;
   ThreadState *thr;
   uptr pc;
   void *m;
+  void *c;
+  void *t;
+  int (*fn)(void *c, void *m, void *abstime);
+
+  int Cancel() const { return fn(c, m, t); }
+  void Unlock() const;
 };
 
-static void cond_mutex_unlock(CondMutexUnlockCtx *arg) {
+void CondMutexUnlockCtx::Unlock() const {
   // pthread_cond_wait interceptor has enabled async signal delivery
   // (see BlockingCall below). Disable async signals since we are running
   // tsan code. Also ScopedInterceptor and BlockingCall destructors won't run
   // since the thread is cancelled, so we have to manually execute them
   // (the thread still can run some user code due to pthread_cleanup_push).
-  ThreadSignalContext *ctx = SigCtx(arg->thr);
+  ThreadSignalContext *ctx = SigCtx(thr);
   CHECK_EQ(atomic_load(&ctx->in_blocking_func, memory_order_relaxed), 1);
   atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
-  MutexPostLock(arg->thr, arg->pc, (uptr)arg->m, MutexFlagDoPreLockOnPostLock);
+  MutexPostLock(thr, pc, (uptr)m, MutexFlagDoPreLockOnPostLock);
   // Undo BlockingCall ctor effects.
-  arg->thr->ignore_interceptors--;
-  arg->si->~ScopedInterceptor();
+  thr->ignore_interceptors--;
+  si->~ScopedInterceptor();
 }
+}  // namespace
 
 INTERCEPTOR(int, pthread_cond_init, void *c, void *a) {
   void *cond = init_cond(c, true);
@@ -1156,7 +1164,7 @@ static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
                      void *m, void *t) {
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
   MutexUnlock(thr, pc, (uptr)m);
-  CondMutexUnlockCtx arg = {si, thr, pc, m};
+  CondMutexUnlockCtx arg = {si, thr, pc, m, c, t, fn};
   int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
   // See test/tsan/cond_cancel.cpp.
@@ -1164,7 +1172,10 @@ static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
     // Enable signal delivery while the thread is blocked.
     BlockingCall bc(thr);
     res = call_pthread_cancel_with_cleanup(
-        fn, c, m, t, (void (*)(void *arg))cond_mutex_unlock, &arg);
+        [](void *arg) -> int {
+          return ((const CondMutexUnlockCtx *)arg)->Cancel();
+        },
+        [](void *arg) { ((const CondMutexUnlockCtx *)arg)->Unlock(); }, &arg);
   }
   if (res == errno_EOWNERDEAD) MutexRepair(thr, pc, (uptr)m);
   MutexPostLock(thr, pc, (uptr)m, MutexFlagDoPreLockOnPostLock);

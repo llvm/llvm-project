@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRMatchers.h"
-#include "TestCompiler.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Parse/ParseAST.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -21,16 +27,81 @@ using namespace llvm;
 
 namespace {
 
-struct TBAATestCompiler : public TestCompiler {
-  TBAATestCompiler(clang::LangOptions LO, clang::CodeGenOptions CGO)
-    : TestCompiler(LO, CGO) {}
-  static clang::CodeGenOptions getCommonCodeGenOpts() {
-    clang::CodeGenOptions CGOpts;
-    CGOpts.StructPathTBAA = 1;
-    CGOpts.OptimizationLevel = 1;
-    return CGOpts;
+struct TestCompiler {
+  LLVMContext Context;
+  clang::CompilerInstance compiler;
+  clang::CodeGenerator *CG = nullptr;
+  llvm::Module *M = nullptr;
+  unsigned PtrSize = 0;
+
+  void init(const char *TestProgram) {
+    compiler.createDiagnostics();
+    compiler.getCodeGenOpts().StructPathTBAA = 1;
+    compiler.getCodeGenOpts().OptimizationLevel = 1;
+
+    std::string TrStr = llvm::Triple::normalize(llvm::sys::getProcessTriple());
+    llvm::Triple Tr(TrStr);
+    Tr.setOS(Triple::Linux);
+    Tr.setVendor(Triple::VendorType::UnknownVendor);
+    Tr.setEnvironment(Triple::EnvironmentType::UnknownEnvironment);
+    compiler.getTargetOpts().Triple = Tr.getTriple();
+    compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
+        compiler.getDiagnostics(),
+        std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
+
+    const clang::TargetInfo &TInfo = compiler.getTarget();
+    PtrSize = TInfo.getPointerWidth(0) / 8;
+
+    compiler.createFileManager();
+    compiler.createSourceManager(compiler.getFileManager());
+    compiler.createPreprocessor(clang::TU_Prefix);
+
+    compiler.createASTContext();
+
+    CG = CreateLLVMCodeGen(
+        compiler.getDiagnostics(),
+        "main-module",
+        compiler.getHeaderSearchOpts(),
+        compiler.getPreprocessorOpts(),
+        compiler.getCodeGenOpts(),
+        Context);
+    compiler.setASTConsumer(std::unique_ptr<clang::ASTConsumer>(CG));
+
+    compiler.createSema(clang::TU_Prefix, nullptr);
+
+    clang::SourceManager &sm = compiler.getSourceManager();
+    sm.setMainFileID(sm.createFileID(
+        llvm::MemoryBuffer::getMemBuffer(TestProgram), clang::SrcMgr::C_User));
+  }
+
+  const BasicBlock *compile() {
+    clang::ParseAST(compiler.getSema(), false, false);
+    M = CG->GetModule();
+
+    // Do not expect more than one function definition.
+    auto FuncPtr = M->begin();
+    for (; FuncPtr != M->end(); ++FuncPtr)
+      if (!FuncPtr->isDeclaration())
+        break;
+    assert(FuncPtr != M->end());
+    const llvm::Function &Func = *FuncPtr;
+    ++FuncPtr;
+    for (; FuncPtr != M->end(); ++FuncPtr)
+      if (!FuncPtr->isDeclaration())
+        break;
+    assert(FuncPtr == M->end());
+
+    // The function must consist of single basic block.
+    auto BBPtr = Func.begin();
+    assert(Func.begin() != Func.end());
+    const BasicBlock &BB = *BBPtr;
+    ++BBPtr;
+    assert(BBPtr == Func.end());
+
+    return &BB;
   }
 };
+
 
 auto OmnipotentCharC = MMTuple(
   MMString("omnipotent char"),
@@ -61,8 +132,8 @@ TEST(TBAAMetadataTest, BasicTypes) {
     }
   )**";
 
-  clang::LangOptions LO;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().C11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -157,9 +228,8 @@ TEST(TBAAMetadataTest, CFields) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.C11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().C11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -279,9 +349,8 @@ TEST(TBAAMetadataTest, CTypedefFields) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.C11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().C11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -372,9 +441,8 @@ TEST(TBAAMetadataTest, CTypedefFields2) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.C11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().C11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -466,9 +534,8 @@ TEST(TBAAMetadataTest, CTypedefFields3) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.C11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().C11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -568,10 +635,9 @@ TEST(TBAAMetadataTest, CXXFields) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -691,10 +757,9 @@ TEST(TBAAMetadataTest, CXXTypedefFields) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -792,10 +857,9 @@ TEST(TBAAMetadataTest, StructureFields) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -874,10 +938,9 @@ TEST(TBAAMetadataTest, ArrayFields) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -953,10 +1016,9 @@ TEST(TBAAMetadataTest, BaseClass) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -1032,10 +1094,9 @@ TEST(TBAAMetadataTest, PolymorphicClass) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -1109,10 +1170,9 @@ TEST(TBAAMetadataTest, VirtualBase) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 
@@ -1195,10 +1255,9 @@ TEST(TBAAMetadataTest, TemplSpec) {
     }
   )**";
 
-  clang::LangOptions LO;
-  LO.CPlusPlus = 1;
-  LO.CPlusPlus11 = 1;
-  TBAATestCompiler Compiler(LO, TBAATestCompiler::getCommonCodeGenOpts());
+  TestCompiler Compiler;
+  Compiler.compiler.getLangOpts().CPlusPlus = 1;
+  Compiler.compiler.getLangOpts().CPlusPlus11 = 1;
   Compiler.init(TestProgram);
   const BasicBlock *BB = Compiler.compile();
 

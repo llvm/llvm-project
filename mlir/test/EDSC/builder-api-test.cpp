@@ -1223,7 +1223,7 @@ TEST_FUNC(builder_loop_for_yield) {
                                  [&](Value iv, ValueRange args) {
                                    Value sum = args[0] + args[1];
                                    return scf::ValueVector{args[1], sum};
-                                 });
+                                 }).getResults();
   results[0] + results[1];
 
   // clang-format off
