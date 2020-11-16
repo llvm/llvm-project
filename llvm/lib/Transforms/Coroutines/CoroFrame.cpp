@@ -864,12 +864,66 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   }
 
   void visitStoreInst(StoreInst &SI) {
-    // Base visit function will handle escape setting.
-    Base::visitStoreInst(SI);
-
     // Regardless whether the alias of the alloca is the value operand or the
     // pointer operand, we need to assume the alloca is been written.
     handleMayWrite(SI);
+
+    if (SI.getValueOperand() != U->get())
+      return;
+
+    // We are storing the pointer into a memory location, potentially escaping.
+    // As an optimization, we try to detect simple cases where it doesn't
+    // actually escape, for example:
+    //   %ptr = alloca ..
+    //   %addr = alloca ..
+    //   store %ptr, %addr
+    //   %x = load %addr
+    //   ..
+    // If %addr is only used by loading from it, we could simply treat %x as
+    // another alias of %ptr, and not considering %ptr being escaped.
+    auto IsSimpleStoreThenLoad = [&]() {
+      auto *AI = dyn_cast<AllocaInst>(SI.getPointerOperand());
+      // If the memory location we are storing to is not an alloca, it
+      // could be an alias of some other memory locations, which is difficult
+      // to analyze.
+      if (!AI)
+        return false;
+      // StoreAliases contains aliases of the memory location stored into.
+      SmallVector<Instruction *, 4> StoreAliases = {AI};
+      while (!StoreAliases.empty()) {
+        Instruction *I = StoreAliases.back();
+        StoreAliases.pop_back();
+        for (User *U : I->users()) {
+          // If we are loading from the memory location, we are creating an
+          // alias of the original pointer.
+          if (auto *LI = dyn_cast<LoadInst>(U)) {
+            enqueueUsers(*LI);
+            handleAlias(*LI);
+            continue;
+          }
+          // If we are overriding the memory location, the pointer certainly
+          // won't escape.
+          if (auto *S = dyn_cast<StoreInst>(U))
+            if (S->getPointerOperand() == I)
+              continue;
+          if (auto *II = dyn_cast<IntrinsicInst>(U))
+            if (II->isLifetimeStartOrEnd())
+              continue;
+          // BitCastInst creats aliases of the memory location being stored
+          // into.
+          if (auto *BI = dyn_cast<BitCastInst>(U)) {
+            StoreAliases.push_back(BI);
+            continue;
+          }
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    if (!IsSimpleStoreThenLoad())
+      PI.setEscaped(&SI);
   }
 
   // All mem intrinsics modify the data.
