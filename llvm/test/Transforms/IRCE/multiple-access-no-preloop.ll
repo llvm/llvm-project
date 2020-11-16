@@ -60,4 +60,4 @@ define void @multiple_access_no_preloop(
 ; CHECK: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 
 !0 = !{i32 0, i32 2147483647}
-!1 = !{!"branch_weights", i32 64, i32 4}
+!1 = !{!"branch_weights", i32 128, i32 4}
