@@ -46,10 +46,7 @@ namespace clang {
     TSS_unsigned
   };
 
-  enum TypeSpecifiersPipe {
-    TSP_unspecified,
-    TSP_pipe
-  };
+  enum class TypeSpecifiersPipe { Unspecified, Pipe };
 
   /// Specifies the kind of type.
   enum TypeSpecifierType {
