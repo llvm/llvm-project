@@ -220,17 +220,16 @@ void BranchProbabilityInfo::SccInfo::calculateSccBlockType(const BasicBlock *BB,
   assert(getSCCNum(BB) == SccNum);
   uint32_t BlockType = Inner;
 
-  if (llvm::any_of(make_range(pred_begin(BB), pred_end(BB)),
-                   [&](const BasicBlock *Pred) {
+  if (llvm::any_of(predecessors(BB), [&](const BasicBlock *Pred) {
         // Consider any block that is an entry point to the SCC as
         // a header.
         return getSCCNum(Pred) != SccNum;
       }))
     BlockType |= Header;
 
-  if (llvm::any_of(
-          make_range(succ_begin(BB), succ_end(BB)),
-          [&](const BasicBlock *Succ) { return getSCCNum(Succ) != SccNum; }))
+  if (llvm::any_of(successors(BB), [&](const BasicBlock *Succ) {
+        return getSCCNum(Succ) != SccNum;
+      }))
     BlockType |= Exiting;
 
   // Lazily compute the set of headers for a given SCC and cache the results
