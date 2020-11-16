@@ -248,14 +248,16 @@ NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch)),
-      m_gpr(), m_fpr(), m_dbr() {}
+      m_fpr(), m_dbr() {
+  assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
+}
 
 // CONSIDER after local and llgs debugging are merged, register set support can
 // be moved into a base x86-64 class with IsRegisterSetAvailable made virtual.
 uint32_t NativeRegisterContextFreeBSD_x86_64::GetRegisterSetCount() const {
   uint32_t sets = 0;
   for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
-    if (GetSetForNativeRegNum(set_index) != -1)
+    if (GetSetForNativeRegNum(set_index))
       ++sets;
   }
 
@@ -276,38 +278,6 @@ NativeRegisterContextFreeBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
 
 static constexpr int RegNumX86ToX86_64(int regnum) {
   switch (regnum) {
-  case lldb_eax_i386:
-    return lldb_rax_x86_64;
-  case lldb_ebx_i386:
-    return lldb_rbx_x86_64;
-  case lldb_ecx_i386:
-    return lldb_rcx_x86_64;
-  case lldb_edx_i386:
-    return lldb_rdx_x86_64;
-  case lldb_edi_i386:
-    return lldb_rdi_x86_64;
-  case lldb_esi_i386:
-    return lldb_rsi_x86_64;
-  case lldb_ebp_i386:
-    return lldb_rbp_x86_64;
-  case lldb_esp_i386:
-    return lldb_rsp_x86_64;
-  case lldb_eip_i386:
-    return lldb_rip_x86_64;
-  case lldb_eflags_i386:
-    return lldb_rflags_x86_64;
-  case lldb_cs_i386:
-    return lldb_cs_x86_64;
-  case lldb_fs_i386:
-    return lldb_fs_x86_64;
-  case lldb_gs_i386:
-    return lldb_gs_x86_64;
-  case lldb_ss_i386:
-    return lldb_ss_x86_64;
-  case lldb_ds_i386:
-    return lldb_ds_x86_64;
-  case lldb_es_i386:
-    return lldb_es_x86_64;
   case lldb_fctrl_i386:
     return lldb_fctrl_x86_64;
   case lldb_fstat_i386:
@@ -387,9 +357,8 @@ static constexpr int RegNumX86ToX86_64(int regnum) {
   }
 }
 
-int NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
-    int reg_num) const {
-
+llvm::Optional<enum NativeRegisterContextFreeBSD_x86_64::RegSetKind>
+NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(int reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     if (reg_num >= k_first_gpr_i386 && reg_num <= k_last_gpr_i386)
@@ -399,9 +368,9 @@ int NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
     if (reg_num >= k_first_avx_i386 && reg_num <= k_last_avx_i386)
       return XSaveRegSet; // AVX
     if (reg_num >= k_first_mpxr_i386 && reg_num <= k_last_mpxr_i386)
-      return -1; // MPXR
+      return llvm::None; // MPXR
     if (reg_num >= k_first_mpxc_i386 && reg_num <= k_last_mpxc_i386)
-      return -1; // MPXC
+      return llvm::None; // MPXC
     if (reg_num >= k_first_dbr_i386 && reg_num <= k_last_dbr_i386)
       return DBRegSet; // DBR
     break;
@@ -413,9 +382,9 @@ int NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
     if (reg_num >= k_first_avx_x86_64 && reg_num <= k_last_avx_x86_64)
       return XSaveRegSet; // AVX
     if (reg_num >= k_first_mpxr_x86_64 && reg_num <= k_last_mpxr_x86_64)
-      return -1; // MPXR
+      return llvm::None; // MPXR
     if (reg_num >= k_first_mpxc_x86_64 && reg_num <= k_last_mpxc_x86_64)
-      return -1; // MPXC
+      return llvm::None; // MPXC
     if (reg_num >= k_first_dbr_x86_64 && reg_num <= k_last_dbr_x86_64)
       return DBRegSet; // DBR
     break;
@@ -430,7 +399,7 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
-                                               &m_gpr);
+                                               m_gpr.data());
   case FPRegSet:
 #if defined(__x86_64__)
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETFPREGS, m_thread.GetID(),
@@ -471,7 +440,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
-                                               &m_gpr);
+                                               m_gpr.data());
   case FPRegSet:
 #if defined(__x86_64__)
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETFPREGS, m_thread.GetID(),
@@ -512,13 +481,30 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  int set = GetSetForNativeRegNum(reg);
-  if (set == -1) {
+  llvm::Optional<enum RegSetKind> opt_set = GetSetForNativeRegNum(reg);
+  if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
     error.SetErrorStringWithFormat("register \"%s\" is in unrecognized set",
                                    reg_info->name);
     return error;
+  }
+
+  enum RegSetKind set = opt_set.getValue();
+  error = ReadRegisterSet(set);
+  if (error.Fail())
+    return error;
+
+  switch (set) {
+  case GPRegSet:
+    reg_value.SetBytes(m_gpr.data() + reg_info->byte_offset,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    return error;
+  case FPRegSet:
+  case XSaveRegSet:
+  case DBRegSet:
+    // legacy logic
+    break;
   }
 
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
@@ -531,134 +517,7 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     llvm_unreachable("Unhandled target architecture.");
   }
 
-  error = ReadRegisterSet(set);
-  if (error.Fail())
-    return error;
-
   switch (reg) {
-#if defined(__x86_64__)
-  case lldb_rax_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rax;
-    break;
-  case lldb_rbx_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rbx;
-    break;
-  case lldb_rcx_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rcx;
-    break;
-  case lldb_rdx_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rdx;
-    break;
-  case lldb_rdi_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rdi;
-    break;
-  case lldb_rsi_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rsi;
-    break;
-  case lldb_rbp_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rbp;
-    break;
-  case lldb_rsp_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rsp;
-    break;
-  case lldb_r8_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r8;
-    break;
-  case lldb_r9_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r9;
-    break;
-  case lldb_r10_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r10;
-    break;
-  case lldb_r11_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r11;
-    break;
-  case lldb_r12_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r12;
-    break;
-  case lldb_r13_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r13;
-    break;
-  case lldb_r14_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r14;
-    break;
-  case lldb_r15_x86_64:
-    reg_value = (uint64_t)m_gpr.r_r15;
-    break;
-  case lldb_rip_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rip;
-    break;
-  case lldb_rflags_x86_64:
-    reg_value = (uint64_t)m_gpr.r_rflags;
-    break;
-  case lldb_cs_x86_64:
-    reg_value = (uint64_t)m_gpr.r_cs;
-    break;
-  case lldb_fs_x86_64:
-    reg_value = (uint16_t)m_gpr.r_fs;
-    break;
-  case lldb_gs_x86_64:
-    reg_value = (uint16_t)m_gpr.r_gs;
-    break;
-  case lldb_ss_x86_64:
-    reg_value = (uint64_t)m_gpr.r_ss;
-    break;
-  case lldb_ds_x86_64:
-    reg_value = (uint16_t)m_gpr.r_ds;
-    break;
-  case lldb_es_x86_64:
-    reg_value = (uint16_t)m_gpr.r_es;
-    break;
-#else
-  case lldb_rax_x86_64:
-    reg_value = (uint32_t)m_gpr.r_eax;
-    break;
-  case lldb_rbx_x86_64:
-    reg_value = (uint32_t)m_gpr.r_ebx;
-    break;
-  case lldb_rcx_x86_64:
-    reg_value = (uint32_t)m_gpr.r_ecx;
-    break;
-  case lldb_rdx_x86_64:
-    reg_value = (uint32_t)m_gpr.r_edx;
-    break;
-  case lldb_rdi_x86_64:
-    reg_value = (uint32_t)m_gpr.r_edi;
-    break;
-  case lldb_rsi_x86_64:
-    reg_value = (uint32_t)m_gpr.r_esi;
-    break;
-  case lldb_rsp_x86_64:
-    reg_value = (uint32_t)m_gpr.r_esp;
-    break;
-  case lldb_rbp_x86_64:
-    reg_value = (uint32_t)m_gpr.r_ebp;
-    break;
-  case lldb_rip_x86_64:
-    reg_value = (uint32_t)m_gpr.r_eip;
-    break;
-  case lldb_rflags_x86_64:
-    reg_value = (uint32_t)m_gpr.r_eflags;
-    break;
-  case lldb_cs_x86_64:
-    reg_value = (uint32_t)m_gpr.r_cs;
-    break;
-  case lldb_fs_x86_64:
-    reg_value = (uint16_t)m_gpr.r_fs;
-    break;
-  case lldb_gs_x86_64:
-    reg_value = (uint16_t)m_gpr.r_gs;
-    break;
-  case lldb_ss_x86_64:
-    reg_value = (uint32_t)m_gpr.r_ss;
-    break;
-  case lldb_ds_x86_64:
-    reg_value = (uint16_t)m_gpr.r_ds;
-    break;
-  case lldb_es_x86_64:
-    reg_value = (uint16_t)m_gpr.r_es;
-    break;
-#endif
 #if defined(__x86_64__)
 // the 32-bit field carries more detail, so we don't have to reinvent
 // the wheel
@@ -822,13 +681,30 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     return error;
   }
 
-  int set = GetSetForNativeRegNum(reg);
-  if (set == -1) {
+  llvm::Optional<enum RegSetKind> opt_set = GetSetForNativeRegNum(reg);
+  if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
     error.SetErrorStringWithFormat("register \"%s\" is in unrecognized set",
                                    reg_info->name);
     return error;
+  }
+
+  enum RegSetKind set = opt_set.getValue();
+  error = ReadRegisterSet(set);
+  if (error.Fail())
+    return error;
+
+  switch (set) {
+  case GPRegSet:
+    ::memcpy(m_gpr.data() + reg_info->byte_offset, reg_value.GetBytes(),
+             reg_value.GetByteSize());
+    return WriteRegisterSet(set);
+  case FPRegSet:
+  case XSaveRegSet:
+  case DBRegSet:
+    // legacy logic
+    break;
   }
 
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
@@ -841,134 +717,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     llvm_unreachable("Unhandled target architecture.");
   }
 
-  error = ReadRegisterSet(set);
-  if (error.Fail())
-    return error;
-
   switch (reg) {
-#if defined(__x86_64__)
-  case lldb_rax_x86_64:
-    m_gpr.r_rax = reg_value.GetAsUInt64();
-    break;
-  case lldb_rbx_x86_64:
-    m_gpr.r_rbx = reg_value.GetAsUInt64();
-    break;
-  case lldb_rcx_x86_64:
-    m_gpr.r_rcx = reg_value.GetAsUInt64();
-    break;
-  case lldb_rdx_x86_64:
-    m_gpr.r_rdx = reg_value.GetAsUInt64();
-    break;
-  case lldb_rdi_x86_64:
-    m_gpr.r_rdi = reg_value.GetAsUInt64();
-    break;
-  case lldb_rsi_x86_64:
-    m_gpr.r_rsi = reg_value.GetAsUInt64();
-    break;
-  case lldb_rbp_x86_64:
-    m_gpr.r_rbp = reg_value.GetAsUInt64();
-    break;
-  case lldb_rsp_x86_64:
-    m_gpr.r_rsp = reg_value.GetAsUInt64();
-    break;
-  case lldb_r8_x86_64:
-    m_gpr.r_r8 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r9_x86_64:
-    m_gpr.r_r9 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r10_x86_64:
-    m_gpr.r_r10 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r11_x86_64:
-    m_gpr.r_r11 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r12_x86_64:
-    m_gpr.r_r12 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r13_x86_64:
-    m_gpr.r_r13 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r14_x86_64:
-    m_gpr.r_r14 = reg_value.GetAsUInt64();
-    break;
-  case lldb_r15_x86_64:
-    m_gpr.r_r15 = reg_value.GetAsUInt64();
-    break;
-  case lldb_rip_x86_64:
-    m_gpr.r_rip = reg_value.GetAsUInt64();
-    break;
-  case lldb_rflags_x86_64:
-    m_gpr.r_rflags = reg_value.GetAsUInt64();
-    break;
-  case lldb_cs_x86_64:
-    m_gpr.r_cs = reg_value.GetAsUInt64();
-    break;
-  case lldb_fs_x86_64:
-    m_gpr.r_fs = reg_value.GetAsUInt16();
-    break;
-  case lldb_gs_x86_64:
-    m_gpr.r_gs = reg_value.GetAsUInt16();
-    break;
-  case lldb_ss_x86_64:
-    m_gpr.r_ss = reg_value.GetAsUInt64();
-    break;
-  case lldb_ds_x86_64:
-    m_gpr.r_ds = reg_value.GetAsUInt16();
-    break;
-  case lldb_es_x86_64:
-    m_gpr.r_es = reg_value.GetAsUInt16();
-    break;
-#else
-  case lldb_rax_x86_64:
-    m_gpr.r_eax = reg_value.GetAsUInt32();
-    break;
-  case lldb_rbx_x86_64:
-    m_gpr.r_ebx = reg_value.GetAsUInt32();
-    break;
-  case lldb_rcx_x86_64:
-    m_gpr.r_ecx = reg_value.GetAsUInt32();
-    break;
-  case lldb_rdx_x86_64:
-    m_gpr.r_edx = reg_value.GetAsUInt32();
-    break;
-  case lldb_rdi_x86_64:
-    m_gpr.r_edi = reg_value.GetAsUInt32();
-    break;
-  case lldb_rsi_x86_64:
-    m_gpr.r_esi = reg_value.GetAsUInt32();
-    break;
-  case lldb_rsp_x86_64:
-    m_gpr.r_esp = reg_value.GetAsUInt32();
-    break;
-  case lldb_rbp_x86_64:
-    m_gpr.r_ebp = reg_value.GetAsUInt32();
-    break;
-  case lldb_rip_x86_64:
-    m_gpr.r_eip = reg_value.GetAsUInt32();
-    break;
-  case lldb_rflags_x86_64:
-    m_gpr.r_eflags = reg_value.GetAsUInt32();
-    break;
-  case lldb_cs_x86_64:
-    m_gpr.r_cs = reg_value.GetAsUInt32();
-    break;
-  case lldb_fs_x86_64:
-    m_gpr.r_fs = reg_value.GetAsUInt16();
-    break;
-  case lldb_gs_x86_64:
-    m_gpr.r_gs = reg_value.GetAsUInt16();
-    break;
-  case lldb_ss_x86_64:
-    m_gpr.r_ss = reg_value.GetAsUInt32();
-    break;
-  case lldb_ds_x86_64:
-    m_gpr.r_ds = reg_value.GetAsUInt16();
-    break;
-  case lldb_es_x86_64:
-    m_gpr.r_es = reg_value.GetAsUInt16();
-    break;
-#endif
   case lldb_fctrl_x86_64:
     FPR_ENV(en_cw) = reg_value.GetAsUInt16();
     break;
@@ -1114,7 +863,7 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  ::memcpy(dst, &m_gpr, GetRegisterInfoInterface().GetGPRSize());
+  ::memcpy(dst, m_gpr.data(), GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
 
   return error;
@@ -1147,7 +896,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteAllRegisterValues(
                                    __FUNCTION__);
     return error;
   }
-  ::memcpy(&m_gpr, src, GetRegisterInfoInterface().GetGPRSize());
+  ::memcpy(m_gpr.data(), src, GetRegisterInfoInterface().GetGPRSize());
 
   error = WriteRegisterSet(GPRegSet);
   if (error.Fail())
