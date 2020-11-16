@@ -46,12 +46,11 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8
 ; MUBUF-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
 ; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v3
-; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v2, s4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
-; MUBUF-NEXT:    v_mov_b32_e32 v3, s5
-; MUBUF-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; MUBUF-NEXT:    v_mov_b32_e32 v2, 0
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
+; MUBUF-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; MUBUF-NEXT:    s_endpgm
 ;
 ; FLATSCR-LABEL: local_stack_offset_uses_sp:
@@ -79,10 +78,9 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; FLATSCR-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
+; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    v_mov_b32_e32 v3, s1
-; FLATSCR-NEXT:    v_mov_b32_e32 v2, s0
-; FLATSCR-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; FLATSCR-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; FLATSCR-NEXT:    s_endpgm
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)

@@ -11,7 +11,7 @@
 ; GFX8: v_mad_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
 ; GFX9: v_mad_legacy_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
 ; GFX10: v_mad_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
-; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, v[[R]]
+; GCN: {{flat|global}}_store_short v{{.+}}, v[[R]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @mad_u16(
     i16 addrspace(1)* %r,

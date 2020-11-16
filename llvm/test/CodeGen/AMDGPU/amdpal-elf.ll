@@ -22,9 +22,9 @@
 ; ELF: }
 
 ; GFX10-W32: NumSGPRsForWavesPerEU: 4
-; GFX10-W32: NumVGPRsForWavesPerEU: 3
+; GFX10-W32: NumVGPRsForWavesPerEU: 1
 ; GFX10-W64: NumSGPRsForWavesPerEU: 2
-; GFX10-W64: NumVGPRsForWavesPerEU: 3
+; GFX10-W64: NumVGPRsForWavesPerEU: 1
 
 define amdgpu_kernel void @simple(i32 addrspace(1)* %out) {
 entry:

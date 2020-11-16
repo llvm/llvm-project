@@ -32,12 +32,11 @@ define amdgpu_kernel void @s_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, 
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v2, s0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v1, s0, v1
+; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
   store <2 x half> %result, <2 x half> addrspace(1)* %out
@@ -71,11 +70,10 @@ define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(<2 x half> addrspace(1)
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v2, s0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v1, s0, s0
+; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %x)
   store <2 x half> %result, <2 x half> addrspace(1)* %out

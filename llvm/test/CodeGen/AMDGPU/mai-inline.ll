@@ -3,7 +3,7 @@
 ; GCN-LABEL: {{^}}accvgpr_write_read:
 ; GFX908: v_accvgpr_write [[AREG:a[0-9]+]], 1
 ; GFX908: v_accvgpr_read [[VREG:v[0-9]+]], [[AREG]]
-; GFX908: global_store_dword {{[^,]+}}, [[VREG]], off
+; GFX908: global_store_dword v{{[0-9]+}}, [[VREG]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @accvgpr_write_read(float addrspace(1)* %arg) {
 bb:
   %in.1 = load float, float addrspace(1)* %arg
