@@ -18,6 +18,8 @@
 #include <machine/reg.h>
 // clang-format on
 
+#include <array>
+
 #include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/NativeRegisterContextWatchpoint_x86.h"
@@ -55,14 +57,19 @@ public:
 
 private:
   // Private member types.
-  enum { GPRegSet, FPRegSet, XSaveRegSet, DBRegSet };
+  enum RegSetKind {
+    GPRegSet,
+    FPRegSet,
+    XSaveRegSet,
+    DBRegSet,
+  };
   enum {
     YMMXSaveSet,
     MaxXSaveSet = YMMXSaveSet,
   };
 
   // Private member variables.
-  struct reg m_gpr;
+  std::array<uint8_t, sizeof(struct reg)> m_gpr;
 #if defined(__x86_64__)
   struct fpreg m_fpr;
 #else
@@ -72,7 +79,7 @@ private:
   std::vector<uint8_t> m_xsave;
   std::array<uint32_t, MaxXSaveSet + 1> m_xsave_offsets;
 
-  int GetSetForNativeRegNum(int reg_num) const;
+  llvm::Optional<enum RegSetKind> GetSetForNativeRegNum(int reg_num) const;
   int GetDR(int num) const;
 
   Status ReadRegisterSet(uint32_t set);
