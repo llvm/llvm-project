@@ -165,7 +165,6 @@ public:
   void Enter(const parser::OmpScheduleClause &);
 
 private:
-
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
 
@@ -175,6 +174,10 @@ private:
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
+
+  void CheckDependList(const parser::DataRef &);
+  void CheckDependArraySection(
+      const common::Indirection<parser::ArrayElement> &, const parser::Name &);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
