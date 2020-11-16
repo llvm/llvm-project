@@ -246,20 +246,20 @@ unsigned VPIntrinsic::GetFunctionalOpcodeForVP(Intrinsic::ID ID) {
   default:
     return Instruction::Call;
 
-#define HANDLE_VP_TO_OC(VPID, OC)                                              \
+#define HANDLE_VP_TO_OPC(VPID, OPC)                                            \
   case Intrinsic::VPID:                                                        \
-    return Instruction::OC;
+    return Instruction::OPC;
 #include "llvm/IR/VPIntrinsics.def"
   }
 }
 
-Intrinsic::ID VPIntrinsic::GetForOpcode(unsigned OC) {
-  switch (OC) {
+Intrinsic::ID VPIntrinsic::GetForOpcode(unsigned IROPC) {
+  switch (IROPC) {
   default:
     return Intrinsic::not_intrinsic;
 
-#define HANDLE_VP_TO_OC(VPID, OC)                                              \
-  case Instruction::OC:                                                        \
+#define HANDLE_VP_TO_OPC(VPID, OPC)                                            \
+  case Instruction::OPC:                                                       \
     return Intrinsic::VPID;
 #include "llvm/IR/VPIntrinsics.def"
   }
