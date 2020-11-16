@@ -752,6 +752,9 @@
 // RUN: %clang -target aarch64 -march=armv8-a+ras -### -c %s 2>&1 | FileCheck -check-prefix=V8ARAS -check-prefix=GENERIC %s
 // V8ARAS: "-target-feature" "+ras"
 
+// RUN: %clang -target aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s
+// NEOVERSE-N2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
+
 // ================== Check whether -march accepts mixed-case values.
 // RUN: %clang -target aarch64_be -march=ARMV8.1A -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A-BE %s
 // RUN: %clang -target aarch64_be -march=ARMV8.1-A -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A-BE %s
