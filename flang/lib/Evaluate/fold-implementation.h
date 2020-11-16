@@ -1236,6 +1236,15 @@ Expr<TO> FoldOperation(
               }
               return ScalarConstantToExpr(std::move(converted.value));
             }
+          } else if constexpr (TO::category == TypeCategory::Complex) {
+            if constexpr (Operand::category == TypeCategory::Complex) {
+              return FoldOperation(ctx,
+                  ComplexConstructor<TO::kind>{
+                      AsExpr(Convert<typename TO::Part>{AsCategoryExpr(
+                          Constant<typename Operand::Part>{value->REAL()})}),
+                      AsExpr(Convert<typename TO::Part>{AsCategoryExpr(
+                          Constant<typename Operand::Part>{value->AIMAG()})})});
+            }
           } else if constexpr (TO::category == TypeCategory::Character &&
               Operand::category == TypeCategory::Character) {
             if (auto converted{ConvertString<Scalar<TO>>(std::move(*value))}) {
