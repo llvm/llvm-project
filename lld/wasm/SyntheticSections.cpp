@@ -54,6 +54,12 @@ public:
 
 } // namespace
 
+bool DylinkSection::isNeeded() const {
+  return config->isPic ||
+         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic ||
+         !symtab->sharedFiles.empty();
+}
+
 void DylinkSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 

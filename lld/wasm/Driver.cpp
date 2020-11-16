@@ -335,6 +335,8 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
     StringRef s = arg->getValue();
     if (s == "ignore-all")
       return UnresolvedPolicy::Ignore;
+    if (s == "import-dynamic")
+      return UnresolvedPolicy::ImportDynamic;
     if (s == "report-all")
       return errorOrWarn;
     error("unknown --unresolved-symbols value: " + s);
@@ -527,6 +529,11 @@ static void checkOptions(opt::InputArgList &args) {
     // -pie will change meaning when Module Linking is implemented.
     if (config->pie) {
       warn("creating PIEs, with -pie, is not yet stable");
+    }
+
+    if (config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
+      warn("dynamic imports are not yet stable "
+           "(--unresolved-symbols=import-dynamic)");
     }
   }
 

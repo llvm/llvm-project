@@ -75,7 +75,7 @@ protected:
 class DylinkSection : public SyntheticSection {
 public:
   DylinkSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "dylink.0") {}
-  bool isNeeded() const override { return config->isPic; }
+  bool isNeeded() const override;
   void writeBody() override;
 
   uint32_t memAlign = 0;

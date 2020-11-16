@@ -92,6 +92,21 @@ WebAssembly-specific options:
      this is trivial.  For direct function calls, the linker will generate a
      trapping stub function in place of the undefined function.
 
+  import-dynamic:
+
+     Undefined symbols generate WebAssembly imports, including undefined data
+     symbols.  This is somewhat similar to the --import-undefined option but
+     works all symbol types.  This options puts limitations on the type of
+     relocations that are allowed for imported data symbols.  Relocations that
+     require absolute data addresses (i.e. All R_WASM_MEMORY_ADDR_I32) will
+     generate an error if they cannot be resolved statically.  For clang/llvm
+     this means inputs should be compiled with `-fPIC` (i.e. `pic` or
+     `dynamic-no-pic` relocation models).  This options is useful for linking
+     binaries that are themselves static (non-relocatable) but whose undefined
+     symbols are resolved by a dynamic linker.  Since the dynamic linking API is
+     experimental, this option currently requires `--experimental-pic` to also
+     be specified.
+
 .. option:: --import-memory
 
   Import memory from the environment.
