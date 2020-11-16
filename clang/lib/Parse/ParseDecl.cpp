@@ -2438,7 +2438,7 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   // Issue diagnostic and remove constexpr specifier if present.
   if (DS.hasConstexprSpecifier() && DSC != DeclSpecContext::DSC_condition) {
     Diag(DS.getConstexprSpecLoc(), diag::err_typename_invalid_constexpr)
-        << DS.getConstexprSpecifier();
+        << static_cast<int>(DS.getConstexprSpecifier());
     DS.ClearConstexprSpec();
   }
 }
@@ -3679,13 +3679,16 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // constexpr, consteval, constinit specifiers
     case tok::kw_constexpr:
-      isInvalid = DS.SetConstexprSpec(CSK_constexpr, Loc, PrevSpec, DiagID);
+      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, Loc,
+                                      PrevSpec, DiagID);
       break;
     case tok::kw_consteval:
-      isInvalid = DS.SetConstexprSpec(CSK_consteval, Loc, PrevSpec, DiagID);
+      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Consteval, Loc,
+                                      PrevSpec, DiagID);
       break;
     case tok::kw_constinit:
-      isInvalid = DS.SetConstexprSpec(CSK_constinit, Loc, PrevSpec, DiagID);
+      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constinit, Loc,
+                                      PrevSpec, DiagID);
       break;
 
     // type-specifier

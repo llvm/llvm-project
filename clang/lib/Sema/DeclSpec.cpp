@@ -588,10 +588,14 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
 
 const char *DeclSpec::getSpecifierName(ConstexprSpecKind C) {
   switch (C) {
-  case CSK_unspecified: return "unspecified";
-  case CSK_constexpr:   return "constexpr";
-  case CSK_consteval:   return "consteval";
-  case CSK_constinit:   return "constinit";
+  case ConstexprSpecKind::Unspecified:
+    return "unspecified";
+  case ConstexprSpecKind::Constexpr:
+    return "constexpr";
+  case ConstexprSpecKind::Consteval:
+    return "consteval";
+  case ConstexprSpecKind::Constinit:
+    return "constinit";
   }
   llvm_unreachable("Unknown ConstexprSpecKind");
 }
@@ -1085,10 +1089,10 @@ bool DeclSpec::setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
 bool DeclSpec::SetConstexprSpec(ConstexprSpecKind ConstexprKind,
                                 SourceLocation Loc, const char *&PrevSpec,
                                 unsigned &DiagID) {
-  if (getConstexprSpecifier() != CSK_unspecified)
+  if (getConstexprSpecifier() != ConstexprSpecKind::Unspecified)
     return BadSpecifier(ConstexprKind, getConstexprSpecifier(), PrevSpec,
                         DiagID);
-  ConstexprSpecifier = ConstexprKind;
+  ConstexprSpecifier = static_cast<unsigned>(ConstexprKind);
   ConstexprLoc = Loc;
   return false;
 }
@@ -1354,11 +1358,11 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   else if (TypeSpecType == TST_char16 || TypeSpecType == TST_char32)
     S.Diag(TSTLoc, diag::warn_cxx98_compat_unicode_type)
       << (TypeSpecType == TST_char16 ? "char16_t" : "char32_t");
-  if (getConstexprSpecifier() == CSK_constexpr)
+  if (getConstexprSpecifier() == ConstexprSpecKind::Constexpr)
     S.Diag(ConstexprLoc, diag::warn_cxx98_compat_constexpr);
-  else if (getConstexprSpecifier() == CSK_consteval)
+  else if (getConstexprSpecifier() == ConstexprSpecKind::Consteval)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
-  else if (getConstexprSpecifier() == CSK_constinit)
+  else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
   // C++ [class.friend]p6:
   //   No storage-class-specifier shall appear in the decl-specifier-seq

@@ -4599,10 +4599,10 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
     if (Tag)
       Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_tag)
           << GetDiagnosticTypeSpecifierID(DS.getTypeSpecType())
-          << DS.getConstexprSpecifier();
+          << static_cast<int>(DS.getConstexprSpecifier());
     else
       Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_wrong_decl_kind)
-          << DS.getConstexprSpecifier();
+          << static_cast<int>(DS.getConstexprSpecifier());
     // Don't emit warnings after this error.
     return TagD;
   }
@@ -6082,7 +6082,7 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
         << getLangOpts().CPlusPlus17;
   if (D.getDeclSpec().hasConstexprSpecifier())
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
-        << 1 << D.getDeclSpec().getConstexprSpecifier();
+        << 1 << static_cast<int>(D.getDeclSpec().getConstexprSpecifier());
 
   if (D.getName().Kind != UnqualifiedIdKind::IK_Identifier) {
     if (D.getName().Kind == UnqualifiedIdKind::IK_DeductionGuideName)
@@ -7124,16 +7124,16 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   }
 
   switch (D.getDeclSpec().getConstexprSpecifier()) {
-  case CSK_unspecified:
+  case ConstexprSpecKind::Unspecified:
     break;
 
-  case CSK_consteval:
+  case ConstexprSpecKind::Consteval:
     Diag(D.getDeclSpec().getConstexprSpecLoc(),
-        diag::err_constexpr_wrong_decl_kind)
-      << D.getDeclSpec().getConstexprSpecifier();
+         diag::err_constexpr_wrong_decl_kind)
+        << static_cast<int>(D.getDeclSpec().getConstexprSpecifier());
     LLVM_FALLTHROUGH;
 
-  case CSK_constexpr:
+  case ConstexprSpecKind::Constexpr:
     NewVD->setConstexpr(true);
     MaybeAddCUDAConstantAttr(NewVD);
     // C++1z [dcl.spec.constexpr]p1:
@@ -7145,7 +7145,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD->setImplicitlyInline();
     break;
 
-  case CSK_constinit:
+  case ConstexprSpecKind::Constinit:
     if (!NewVD->hasGlobalStorage())
       Diag(D.getDeclSpec().getConstexprSpecLoc(),
            diag::err_constinit_local_variable);
@@ -8424,7 +8424,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
 
     NewFD = FunctionDecl::Create(SemaRef.Context, DC, D.getBeginLoc(), NameInfo,
                                  R, TInfo, SC, isInline, HasPrototype,
-                                 CSK_unspecified,
+                                 ConstexprSpecKind::Unspecified,
                                  /*TrailingRequiresClause=*/nullptr);
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
@@ -8435,11 +8435,11 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
   ExplicitSpecifier ExplicitSpecifier = D.getDeclSpec().getExplicitSpecifier();
 
   ConstexprSpecKind ConstexprKind = D.getDeclSpec().getConstexprSpecifier();
-  if (ConstexprKind == CSK_constinit) {
+  if (ConstexprKind == ConstexprSpecKind::Constinit) {
     SemaRef.Diag(D.getDeclSpec().getConstexprSpecLoc(),
                  diag::err_constexpr_wrong_decl_kind)
-        << ConstexprKind;
-    ConstexprKind = CSK_unspecified;
+        << static_cast<int>(ConstexprKind);
+    ConstexprKind = ConstexprSpecKind::Unspecified;
     D.getMutableDeclSpec().ClearConstexprSpec();
   }
   Expr *TrailingRequiresClause = D.getTrailingRequiresClause();
@@ -9103,8 +9103,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
     }
 
-    if (ConstexprSpecKind ConstexprKind =
-            D.getDeclSpec().getConstexprSpecifier()) {
+    ConstexprSpecKind ConstexprKind = D.getDeclSpec().getConstexprSpecifier();
+    if (ConstexprKind != ConstexprSpecKind::Unspecified) {
       // C++11 [dcl.constexpr]p2: constexpr functions and constexpr constructors
       // are implicitly inline.
       NewFD->setImplicitlyInline();
@@ -9113,15 +9113,18 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // be either constructors or to return a literal type. Therefore,
       // destructors cannot be declared constexpr.
       if (isa<CXXDestructorDecl>(NewFD) &&
-          (!getLangOpts().CPlusPlus20 || ConstexprKind == CSK_consteval)) {
+          (!getLangOpts().CPlusPlus20 ||
+           ConstexprKind == ConstexprSpecKind::Consteval)) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_constexpr_dtor)
-            << ConstexprKind;
-        NewFD->setConstexprKind(getLangOpts().CPlusPlus20 ? CSK_unspecified : CSK_constexpr);
+            << static_cast<int>(ConstexprKind);
+        NewFD->setConstexprKind(getLangOpts().CPlusPlus20
+                                    ? ConstexprSpecKind::Unspecified
+                                    : ConstexprSpecKind::Constexpr);
       }
       // C++20 [dcl.constexpr]p2: An allocation function, or a
       // deallocation function shall not be declared with the consteval
       // specifier.
-      if (ConstexprKind == CSK_consteval &&
+      if (ConstexprKind == ConstexprSpecKind::Consteval &&
           (NewFD->getOverloadedOperator() == OO_New ||
            NewFD->getOverloadedOperator() == OO_Array_New ||
            NewFD->getOverloadedOperator() == OO_Delete ||
@@ -9129,7 +9132,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         Diag(D.getDeclSpec().getConstexprSpecLoc(),
              diag::err_invalid_consteval_decl_kind)
             << NewFD;
-        NewFD->setConstexprKind(CSK_constexpr);
+        NewFD->setConstexprKind(ConstexprSpecKind::Constexpr);
       }
     }
 
@@ -10988,7 +10991,7 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
     Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_main)
         << FD->isConsteval()
         << FixItHint::CreateRemoval(DS.getConstexprSpecLoc());
-    FD->setConstexprKind(CSK_unspecified);
+    FD->setConstexprKind(ConstexprSpecKind::Unspecified);
   }
 
   if (getLangOpts().OpenCL) {
@@ -13514,7 +13517,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
         << getLangOpts().CPlusPlus17;
   if (DS.hasConstexprSpecifier())
     Diag(DS.getConstexprSpecLoc(), diag::err_invalid_constexpr)
-        << 0 << D.getDeclSpec().getConstexprSpecifier();
+        << 0 << static_cast<int>(D.getDeclSpec().getConstexprSpecifier());
 
   DiagnoseFunctionSpecifiers(DS);
 
