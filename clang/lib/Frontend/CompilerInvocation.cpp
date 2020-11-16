@@ -256,7 +256,7 @@ static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
 
 template <typename T, typename U>
 static T mergeForwardValue(T KeyPath, U Value) {
-  return static_cast<T>(Value);
+  return Value;
 }
 
 template <typename T, typename U> static T mergeMaskValue(T KeyPath, U Value) {
@@ -3773,22 +3773,24 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
   {                                                                            \
     this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
     if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags))      \
-      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
+      this->KEYPATH = MERGER(                                                  \
+          this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
   }
 
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
     NEG_SPELLING)                                                              \
   {                                                                            \
     if (auto MaybeValue =                                                      \
             NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
-      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
+      this->KEYPATH = MERGER(                                                  \
+          this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
     else                                                                       \
       this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                    \
   }
@@ -4048,7 +4050,7 @@ void CompilerInvocation::generateCC1CommandLine(
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
   if (((FLAGS) & options::CC1Option) &&                                        \
       (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != (DEFAULT_VALUE))) {          \
     DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));   \
@@ -4057,7 +4059,7 @@ void CompilerInvocation::generateCC1CommandLine(
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
     NEG_SPELLING)                                                              \
   if (((FLAGS)&options::CC1Option) &&                                          \
       (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != DEFAULT_VALUE)) {            \
