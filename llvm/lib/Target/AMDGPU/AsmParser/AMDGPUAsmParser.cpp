@@ -1354,6 +1354,11 @@ private:
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
   SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
 
+  SMLoc getOperandLoc(std::function<bool(const AMDGPUOperand&)> Test,
+                      const OperandVector &Operands) const;
+  SMLoc getImmLoc(AMDGPUOperand::ImmTy Type, const OperandVector &Operands) const;
+  SMLoc getRegLoc(unsigned Reg, const OperandVector &Operands) const;
+
   bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
@@ -3339,7 +3344,6 @@ bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst) {
     if (Inst.getOperand(AMDGPU::getNamedOperandIdx(Inst.getOpcode(), Name))
             .getImm() &
         SISrcMods::ABS) {
-      Error(getLoc(), "ABS not allowed in VOP3B instructions");
       return false;
     }
   }
@@ -3598,7 +3602,8 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
 }
 
 SMLoc AMDGPUAsmParser::getSMEMOffsetLoc(const OperandVector &Operands) const {
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+  // Start with second operand because SMEM Offset cannot be dst or src0.
+  for (unsigned i = 2, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isSMEMOffset())
       return Op.getStartLoc();
@@ -3760,7 +3765,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
   if (!validateLdsDirect(Inst)) {
-    Error(IDLoc,
+    Error(getRegLoc(AMDGPU::LDS_DIRECT, Operands),
       "invalid use of lds_direct");
     return false;
   }
@@ -3785,18 +3790,18 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateIntClampSupported(Inst)) {
-    Error(IDLoc,
+    Error(getImmLoc(AMDGPUOperand::ImmTyClampSI, Operands),
       "integer clamping is not supported on this GPU");
     return false;
   }
   if (!validateOpSel(Inst)) {
-    Error(IDLoc,
+    Error(getImmLoc(AMDGPUOperand::ImmTyOpSel, Operands),
       "invalid op_sel operand");
     return false;
   }
   // For MUBUF/MTBUF d16 is a part of opcode, so there is nothing to validate.
   if (!validateMIMGD16(Inst)) {
-    Error(IDLoc,
+    Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "d16 modifier is not supported on this GPU");
     return false;
   }
@@ -3815,12 +3820,12 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateMIMGAtomicDMask(Inst)) {
-    Error(IDLoc,
+    Error(getImmLoc(AMDGPUOperand::ImmTyDMask, Operands),
       "invalid atomic image dmask");
     return false;
   }
   if (!validateMIMGGatherDMask(Inst)) {
-    Error(IDLoc,
+    Error(getImmLoc(AMDGPUOperand::ImmTyDMask, Operands),
       "invalid image_gather dmask: only one bit must be set");
     return false;
   }
@@ -3838,6 +3843,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateDivScale(Inst)) {
+    Error(IDLoc, "ABS not allowed in VOP3B instructions");
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
@@ -6077,6 +6083,33 @@ AMDGPUAsmParser::getTokenStr() const {
 void
 AMDGPUAsmParser::lex() {
   Parser.Lex();
+}
+
+SMLoc
+AMDGPUAsmParser::getOperandLoc(std::function<bool(const AMDGPUOperand&)> Test,
+                               const OperandVector &Operands) const {
+  for (unsigned i = Operands.size() - 1; i > 0; --i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    if (Test(Op))
+      return Op.getStartLoc();
+  }
+  return ((AMDGPUOperand &)*Operands[0]).getStartLoc();
+}
+
+SMLoc
+AMDGPUAsmParser::getImmLoc(AMDGPUOperand::ImmTy Type,
+                           const OperandVector &Operands) const {
+  auto Test = [=](const AMDGPUOperand& Op) { return Op.isImmTy(Type); };
+  return getOperandLoc(Test, Operands);
+}
+
+SMLoc
+AMDGPUAsmParser::getRegLoc(unsigned Reg,
+                           const OperandVector &Operands) const {
+  auto Test = [=](const AMDGPUOperand& Op) {
+    return Op.isRegKind() && Op.getReg() == Reg;
+  };
+  return getOperandLoc(Test, Operands);
 }
 
 //===----------------------------------------------------------------------===//

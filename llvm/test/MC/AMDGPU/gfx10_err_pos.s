@@ -75,12 +75,12 @@ ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 4, 1, 2, 3)
 s_atc_probe_buffer 0x1, s[8:11], -1
 // CHECK: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe_buffer 0x1, s[8:11], -1
-// CHECK-NEXT:{{^}}                   ^
+// CHECK-NEXT:{{^}}                                 ^
 
 s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
 // CHECK: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
-// CHECK-NEXT:{{^}}                   ^
+// CHECK-NEXT:{{^}}                                 ^
 
 s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
 // CHECK: error: expected a 20-bit unsigned offset
@@ -93,7 +93,7 @@ s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
 s_atc_probe 0x7, s[4:5], 0x1FFFFF
 // CHECK: error: expected a 21-bit signed offset
 // CHECK-NEXT:{{^}}s_atc_probe 0x7, s[4:5], 0x1FFFFF
-// CHECK-NEXT:{{^}}            ^
+// CHECK-NEXT:{{^}}                         ^
 
 s_atomic_swap s5, s[2:3], 0x1FFFFF
 // CHECK: error: expected a 21-bit signed offset
@@ -606,7 +606,7 @@ v_cvt_f64_i32 v[5:6], s1 mul:3
 v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
 // CHECK: error: invalid op_sel operand
 // CHECK-NEXT:{{^}}v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                                ^
 
 //==============================================================================
 // invalid op_sel value.
@@ -711,7 +711,7 @@ v_ceil_f32 v0, --1
 v_ashrrev_i16 v0, lds_direct, v0
 // CHECK: error: invalid use of lds_direct
 // CHECK-NEXT:{{^}}v_ashrrev_i16 v0, lds_direct, v0
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                  ^
 
 //==============================================================================
 // lane id must be in the interval [0,group size - 1]

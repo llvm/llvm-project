@@ -14,7 +14,7 @@ image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 a16
 s_atc_probe 0x7, s[4:5], -1
 // CHECK: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe 0x7, s[4:5], -1
-// CHECK-NEXT:{{^}}            ^
+// CHECK-NEXT:{{^}}                         ^
 
 s_store_dword s1, s[2:3], 0xFFFFFFFFFFF00000
 // CHECK: error: expected a 20-bit unsigned offset

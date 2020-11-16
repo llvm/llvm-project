@@ -9,6 +9,14 @@ s_add_u32 null, null, null
 // CHECK-NEXT:{{^}}          ^
 
 //==============================================================================
+// ABS not allowed in VOP3B instructions
+
+v_div_scale_f64  v[24:25], vcc, -|v[22:23]|, v[22:23], v[20:21]
+// CHECK: error: ABS not allowed in VOP3B instructions
+// CHECK-NEXT:{{^}}v_div_scale_f64  v[24:25], vcc, -|v[22:23]|, v[22:23], v[20:21]
+// CHECK-NEXT:{{^}}^
+
+//==============================================================================
 // duplicate VGPR index mode
 
 s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC1,DST)
@@ -90,7 +98,7 @@ image_atomic_add v252, v2, s[8:15]
 image_atomic_cmpswap v[4:7], v[192:195], s[28:35] dmask:0xe tfe
 // CHECK: error: invalid atomic image dmask
 // CHECK-NEXT:{{^}}image_atomic_cmpswap v[4:7], v[192:195], s[28:35] dmask:0xe tfe
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                                                  ^
 
 //==============================================================================
 // invalid image_gather dmask: only one bit must be set
@@ -98,7 +106,7 @@ image_atomic_cmpswap v[4:7], v[192:195], s[28:35] dmask:0xe tfe
 image_gather4_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x3
 // CHECK: error: invalid image_gather dmask: only one bit must be set
 // CHECK-NEXT:{{^}}image_gather4_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x3
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                                                   ^
 
 //==============================================================================
 // invalid immediate: only 4-bit values are legal
