@@ -67,10 +67,6 @@ using namespace llvm;
 
 STATISTIC(NumCSParams, "Number of dbg call site params created");
 
-static cl::opt<bool>
-DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
-                         cl::desc("Disable debug info printing"));
-
 static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
     "use-dwarf-ranges-base-address-specifier", cl::Hidden,
     cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
@@ -1122,7 +1118,7 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
 void DwarfDebug::beginModule(Module *M) {
   DebugHandlerBase::beginModule(M);
 
-  if (!Asm || !MMI->hasDebugInfo() || DisableDebugInfoPrinting)
+  if (!Asm || !MMI->hasDebugInfo())
     return;
 
   unsigned NumDebugCUs = std::distance(M->debug_compile_units_begin(),
@@ -1390,9 +1386,8 @@ void DwarfDebug::endModule() {
   }
 
   // If we aren't actually generating debug info (check beginModule -
-  // conditionalized on !DisableDebugInfoPrinting and the presence of the
-  // llvm.dbg.cu metadata node)
-  if (!Asm || !MMI->hasDebugInfo() || DisableDebugInfoPrinting)
+  // conditionalized on the presence of the llvm.dbg.cu metadata node)
+  if (!Asm || !MMI->hasDebugInfo())
     return;
 
   // Finalize the debug info for the module.
