@@ -620,11 +620,11 @@ static bool FlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
                             LoopInfo *LI, ScalarEvolution *SE,
                             AssumptionCache *AC,
                             const TargetTransformInfo *TTI) {
-  Function *F = FI.OuterLoop->getHeader()->getParent();
-  LLVM_DEBUG(dbgs() << "Loop flattening running on outer loop "
-                    << FI.OuterLoop->getHeader()->getName() << " and inner loop "
-                    << FI.InnerLoop->getHeader()->getName() << " in "
-                    << F->getName() << "\n");
+  LLVM_DEBUG(
+      dbgs() << "Loop flattening running on outer loop "
+             << FI.OuterLoop->getHeader()->getName() << " and inner loop "
+             << FI.InnerLoop->getHeader()->getName() << " in "
+             << FI.OuterLoop->getHeader()->getParent()->getName() << "\n");
 
   if (!CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI))
     return false;
