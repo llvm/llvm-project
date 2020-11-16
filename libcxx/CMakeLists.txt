@@ -175,14 +175,17 @@ option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
+set(LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION "default" CACHE STRING
+  "Override the implementation to use for comparing typeinfos. By default, this
+   is detected automatically by the library, but this option allows overriding
+   which implementation is used unconditionally.
 
-set(LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION "" CACHE STRING "The implementation of typeinfo comparison to use.")
-set(TYPEINFO_COMPARISON_VALUES ";1;2")
-set_property(CACHE LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION PROPERTY STRINGS ${TYPEINFO_COMPARISON_VALUES})
-list(FIND TYPEINFO_COMPARISON_VALUES "${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" IS_VALID_DEFAULT)
-if (${IS_VALID_DEFAULT} EQUAL -1)
+   See the documentation in <libcxx/include/typeinfo> for details on what each
+   value means.")
+set(TYPEINFO_COMPARISON_VALUES "default;1;2;3")
+if (NOT ("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" IN_LIST TYPEINFO_COMPARISON_VALUES))
   message(FATAL_ERROR "Value '${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}' is not a valid value for
-          LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION")
+                       LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION")
 endif()
 
 option(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT "Enable per TU ABI insulation by default. To be used by vendors." OFF)
@@ -841,10 +844,9 @@ config_define_if_not(LIBCXX_ENABLE_STDOUT _LIBCPP_HAS_NO_STDOUT)
 config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
 config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 config_define_if_not(LIBCXX_ENABLE_THREAD_UNSAFE_C_FUNCTIONS _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS)
-if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "")
+if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
   config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()
-
 config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define_if(LIBCXX_HAS_WIN32_THREAD_API _LIBCPP_HAS_THREAD_API_WIN32)
