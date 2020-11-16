@@ -63,11 +63,11 @@ void registerTestConstantFold();
 void registerTestConvVectorization();
 void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
+void registerTestDecomposeCallGraphTypes();
 void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
-void registerTestFinalizingBufferizePass();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestInterfaces();
 void registerTestLinalgCodegenStrategy();
@@ -130,10 +130,10 @@ void registerTestPasses() {
   test::registerTestConvertGPUKernelToHsacoPass();
 #endif
   test::registerTestConvVectorization();
+  test::registerTestDecomposeCallGraphTypes();
   test::registerTestDominancePass();
   test::registerTestDynamicPipelinePass();
   test::registerTestExpandTanhPass();
-  test::registerTestFinalizingBufferizePass();
   test::registerTestGpuParallelLoopMappingPass();
   test::registerTestInterfaces();
   test::registerTestLinalgCodegenStrategy();
