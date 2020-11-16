@@ -78,7 +78,8 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   }
   if (CGF.CGM.stopAutoInit())
     return;
-  CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
+  auto *I = CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
+  I->addAnnotationMetadata("auto-init");
 }
 
 /// getBuiltinLibFunction - Given a builtin id for a function like
