@@ -24,6 +24,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/LoopUtils.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -171,10 +172,27 @@ void GenerateLoopNest<scf::ForOp>::doit(
     ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions>) {
+    Optional<LinalgLoopDistributionOptions> distributionOptions) {
+  // Create procInfo so it dominate loops, if appropriate.
+  OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
+  Location loc = edsc::ScopedContext::getLocation();
+  SmallVector<ProcInfo, 2> procInfo;
+  if (distributionOptions.hasValue())
+    procInfo = distributionOptions->procInfo(builder, loc, ArrayRef<Range>{});
+
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
-  edsc::loopNestBuilder(lbs, ubs, steps, iterArgInitValues, bodyBuilderFn);
+  LoopNest loopNest =
+      edsc::loopNestBuilder(lbs, ubs, steps, iterArgInitValues, bodyBuilderFn);
+
+  if (!distributionOptions.hasValue() || loopNest.loops.empty())
+    return;
+
+  // TODO: support distributionMethod, which is currently ignored.
+  for (auto it : llvm::zip(loopNest.loops, procInfo,
+                           distributionOptions->distributionMethod))
+    mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
+                          std::get<1>(it).nprocs);
 }
 
 /// Specialization to build affine "for" nest.

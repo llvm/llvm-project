@@ -409,6 +409,22 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
         LinalgMarker(Identifier::get("distribute6", context),
                      Identifier::get("after_distribute6", context)));
   }
+
+  {
+    LinalgLoopDistributionOptions cyclicNprocsEqNiters;
+    cyclicNprocsEqNiters.distributionMethod.resize(
+        2, DistributionMethod::CyclicNumProcsEqNumIters);
+    cyclicNprocsEqNiters.procInfo =
+        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+        context,
+        LinalgTilingOptions()
+            .setTileSizes({8, 8, 4})
+            .setLoopType(LinalgTilingLoopType::Loops)
+            .setDistributionOptions(cyclicNprocsEqNiters),
+        LinalgMarker(Identifier::get("tensors_distribute1", context),
+                     Identifier::get("tensors_after_distribute1", context)));
+  }
 }
 
 static void
