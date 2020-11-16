@@ -12,14 +12,16 @@ target triple = "bpf"
 ; Function Attrs: noinline nounwind optnone
 define dso_local i32 @foo() #0 !dbg !9 {
 entry:
-  %0 = call i32 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !12, !llvm.preserve.access.index !4
-  %1 = call i32 @llvm.bpf.preserve.type.info(i32 1, i64 0), !dbg !13, !llvm.preserve.access.index !14
-  %add = add i32 %0, %1, !dbg !17
-  ret i32 %add, !dbg !18
+  %0 = call i64 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !11, !llvm.preserve.access.index !4
+  %1 = call i32 @llvm.bpf.preserve.type.info(i32 1, i64 0), !dbg !12, !llvm.preserve.access.index !13
+  %conv = zext i32 %1 to i64, !dbg !12
+  %add = add i64 %0, %conv, !dbg !16
+  %conv1 = trunc i64 %add to i32, !dbg !11
+  ret i32 %conv1, !dbg !17
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.btf.type.id(i32, i64) #1
+declare i64 @llvm.bpf.btf.type.id(i32, i64) #1
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.bpf.preserve.type.info(i32, i64) #1
@@ -40,13 +42,12 @@ attributes #1 = { nounwind readnone }
 !6 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = !{i32 1, !"wchar_size", i32 4}
 !8 = !{!"clang version 12.0.0"}
-!9 = distinct !DISubprogram(name: "foo", scope: !10, file: !10, line: 2, type: !11, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
-!10 = !DIFile(filename: "C:/src/tmp/a.c", directory: "")
-!11 = !DISubroutineType(types: !3)
-!12 = !DILocation(line: 2, column: 21, scope: !9)
-!13 = !DILocation(line: 2, column: 51, scope: !9)
-!14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "ss", file: !10, line: 1, size: 32, elements: !15)
-!15 = !{!16}
-!16 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !14, file: !10, line: 1, baseType: !4, size: 32)
-!17 = !DILocation(line: 2, column: 49, scope: !9)
-!18 = !DILocation(line: 2, column: 14, scope: !9)
+!9 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, type: !10, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+!10 = !DISubroutineType(types: !3)
+!11 = !DILocation(line: 2, column: 20, scope: !9)
+!12 = !DILocation(line: 2, column: 50, scope: !9)
+!13 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "ss", file: !1, line: 1, size: 32, elements: !14)
+!14 = !{!15}
+!15 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !13, file: !1, line: 1, baseType: !4, size: 32)
+!16 = !DILocation(line: 2, column: 48, scope: !9)
+!17 = !DILocation(line: 2, column: 13, scope: !9)
