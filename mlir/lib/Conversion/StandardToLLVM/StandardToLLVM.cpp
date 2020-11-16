@@ -1987,21 +1987,7 @@ private:
 
   LogicalResult match(Operation *op) const override {
     MemRefType memRefType = getMemRefResultType(op);
-    if (isSupportedMemRefType(memRefType))
-      return success();
-
-    int64_t offset;
-    SmallVector<int64_t, 4> strides;
-    if (failed(getStridesAndOffset(memRefType, strides, offset)))
-      return failure();
-
-    // Dynamic strides are ok if they can be deduced from dynamic sizes (which
-    // is guaranteed when getStridesAndOffset succeeded. Dynamic offset however
-    // can never be alloc'ed.
-    if (offset == MemRefType::getDynamicStrideOrOffset())
-      return failure();
-
-    return success();
+    return success(isSupportedMemRefType(memRefType));
   }
 
   // An `alloc` is converted into a definition of a memref descriptor value and
