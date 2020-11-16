@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Metadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
 #include "SymbolTableListTraitsImpl.h"
@@ -38,7 +39,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
@@ -1303,6 +1304,27 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   }
 
   Value::setMetadata(KindID, Node);
+}
+
+void Instruction::addAnnotationMetadata(StringRef Name) {
+  MDBuilder MDB(getContext());
+
+  auto *Existing = getMetadata(LLVMContext::MD_annotation);
+  SmallVector<Metadata *, 4> Names;
+  bool AppendName = true;
+  if (Existing) {
+    auto *Tuple = cast<MDTuple>(Existing);
+    for (auto &N : Tuple->operands()) {
+      if (cast<MDString>(N.get())->getString() == Name)
+        AppendName = false;
+      Names.push_back(N.get());
+    }
+  }
+  if (AppendName)
+    Names.push_back(MDB.createString(Name));
+
+  MDNode *MD = MDTuple::get(getContext(), Names);
+  setMetadata(LLVMContext::MD_annotation, MD);
 }
 
 void Instruction::setAAMetadata(const AAMDNodes &N) {
