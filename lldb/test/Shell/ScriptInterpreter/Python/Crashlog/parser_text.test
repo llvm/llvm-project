@@ -4,7 +4,7 @@
 # CHECK-LABEL: {{S}}KIP BEYOND CHECKS
 script
 import crashlog
-crash_log_parser = crashlog.CrashLogParser
+crash_log_parser = crashlog.TextCrashLogParser
 crash_log = crashlog.CrashLog
 images = [
 "0x10b60b000 - 0x10f707fff com.apple.LLDB.framework (1.1000.11.38.2 - 1000.11.38.2) <96E36F5C-1A83-39A1-8713-5FDD9701C3F1> /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB",
