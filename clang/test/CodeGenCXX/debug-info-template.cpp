@@ -1,4 +1,4 @@
-// RUN: %clang -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++11 | FileCheck %s
+// RUN: %clang -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
 
 // CHECK: @tci = dso_local global %"struct.TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>::nested" zeroinitializer, align 1, !dbg [[TCI:![0-9]+]]
 // CHECK: @tcn = dso_local global %struct.TC zeroinitializer, align 1, !dbg [[TCN:![0-9]+]]
@@ -156,3 +156,26 @@ struct PaddingAtEndTemplate {
 };
 
 PaddingAtEndTemplate<&PaddedObj> PaddedTemplateObj;
+
+struct ClassTemplateArg {
+  int a;
+  float f;
+};
+template<ClassTemplateArg A> struct ClassTemplateArgTemplate {
+  static constexpr const ClassTemplateArg &Arg = A;
+};
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ClassTemplateArgTemplate<{1, 2.000000e+00}>", {{.*}}, templateParams: ![[CLASS_TEMP_ARGS:[0-9]*]],
+// CHECK: ![[CLASS_TEMP_ARG_CONST_REF_TYPE:[0-9]*]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: ![[CLASS_TEMP_ARG_CONST_TYPE:[0-9]*]],
+// CHECK: ![[CLASS_TEMP_ARG_CONST_TYPE]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: ![[CLASS_TEMP_ARG_TYPE:[0-9]*]])
+// CHECK: ![[CLASS_TEMP_ARG_TYPE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "ClassTemplateArg",
+// CHECK: ![[CLASS_TEMP_ARGS]] = !{![[CLASS_TEMP_ARG:[0-9]*]]}
+// CHECK: ![[CLASS_TEMP_ARG]] = !DITemplateValueParameter(name: "A", type: ![[CLASS_TEMP_ARG_TYPE]], value: %{{[^ *]+}} { i32 1, float 2.000000e+00 })
+ClassTemplateArgTemplate<ClassTemplateArg{1, 2.0f}> ClassTemplateArgObj;
+
+template<const ClassTemplateArg&> struct ClassTemplateArgRefTemplate {};
+ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ClassTemplateArgRefTemplate<<template param ClassTemplateArg{1, 2.000000e+00}> >", {{.*}}, templateParams: ![[CLASS_TEMP_REF_ARGS:[0-9]*]],
+// CHECK: ![[CLASS_TEMP_REF_ARGS]] = !{![[CLASS_TEMP_REF_ARG:[0-9]*]]}
+// CHECK: ![[CLASS_TEMP_REF_ARG]] = !DITemplateValueParameter(type: ![[CLASS_TEMP_ARG_CONST_REF_TYPE]], value: %{{.*}}* @_ZTAXtl16ClassTemplateArgLi1ELf40000000EEE)
