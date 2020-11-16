@@ -18,6 +18,7 @@
 ; CHECK:      Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT:   ModulePass Manager
+; CHECK-NEXT:     Annotation2Metadata
 ; CHECK-NEXT:     Force set function attributes
 ; CHECK-NEXT:     CallGraph Construction
 ; CHECK-NEXT:     Call Graph SCC Pass Manager

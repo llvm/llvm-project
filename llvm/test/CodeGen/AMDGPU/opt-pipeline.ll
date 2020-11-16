@@ -19,6 +19,7 @@
 ; GCN-O0-NEXT: Assumption Cache Tracker
 ; GCN-O0-NEXT: Profile summary info
 ; GCN-O0-NEXT:   ModulePass Manager
+; GCN-O0-NEXT:     Annotation2Metadata
 ; GCN-O0-NEXT:     Force set function attributes
 ; GCN-O0-NEXT:     CallGraph Construction
 ; GCN-O0-NEXT:     Call Graph SCC Pass Manager
@@ -59,6 +60,7 @@
 ; GCN-O1-NEXT: Assumption Cache Tracker
 ; GCN-O1-NEXT: Profile summary info
 ; GCN-O1-NEXT:   ModulePass Manager
+; GCN-O1-NEXT:     Annotation2Metadata
 ; GCN-O1-NEXT:     Force set function attributes
 ; GCN-O1-NEXT:     Infer set function attributes
 ; GCN-O1-NEXT:     Unify multiple OpenCL metadata due to linking
@@ -369,6 +371,7 @@
 ; GCN-O2-NEXT: Assumption Cache Tracker
 ; GCN-O2-NEXT: Profile summary info
 ; GCN-O2-NEXT:   ModulePass Manager
+; GCN-O2-NEXT:     Annotation2Metadata
 ; GCN-O2-NEXT:     Force set function attributes
 ; GCN-O2-NEXT:     Infer set function attributes
 ; GCN-O2-NEXT:     Unify multiple OpenCL metadata due to linking
@@ -727,6 +730,7 @@
 ; GCN-O3-NEXT: Assumption Cache Tracker
 ; GCN-O3-NEXT: Profile summary info
 ; GCN-O3-NEXT:   ModulePass Manager
+; GCN-O3-NEXT:     Annotation2Metadata
 ; GCN-O3-NEXT:     Force set function attributes
 ; GCN-O3-NEXT:     Infer set function attributes
 ; GCN-O3-NEXT:     Unify multiple OpenCL metadata due to linking
