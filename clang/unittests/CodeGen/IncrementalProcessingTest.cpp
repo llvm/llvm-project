@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestCompiler.h"
+
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -108,52 +110,32 @@ const Function* getGlobalInit(llvm::Module& M) {
 }
 
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
-    LLVMContext Context;
-    CompilerInstance compiler;
+    clang::LangOptions LO;
+    LO.CPlusPlus = 1;
+    LO.CPlusPlus11 = 1;
+    TestCompiler Compiler(LO);
+    clang::CompilerInstance &CI = Compiler.compiler;
+    CI.getPreprocessor().enableIncrementalProcessing();
+    CI.setASTConsumer(std::move(Compiler.CG));
+    clang::CodeGenerator& CG =
+      static_cast<clang::CodeGenerator&>(CI.getASTConsumer());
+    CI.createSema(clang::TU_Prefix, nullptr);
 
-    compiler.createDiagnostics();
-    compiler.getLangOpts().CPlusPlus = 1;
-    compiler.getLangOpts().CPlusPlus11 = 1;
-
-    compiler.getTargetOpts().Triple = llvm::Triple::normalize(
-        llvm::sys::getProcessTriple());
-    compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
-      compiler.getDiagnostics(),
-      std::make_shared<clang::TargetOptions>(
-        compiler.getTargetOpts())));
-
-    compiler.createFileManager();
-    compiler.createSourceManager(compiler.getFileManager());
-    compiler.createPreprocessor(clang::TU_Prefix);
-    compiler.getPreprocessor().enableIncrementalProcessing();
-
-    compiler.createASTContext();
-
-    CodeGenerator* CG =
-        CreateLLVMCodeGen(
-            compiler.getDiagnostics(),
-            "main-module",
-            compiler.getHeaderSearchOpts(),
-            compiler.getPreprocessorOpts(),
-            compiler.getCodeGenOpts(),
-            Context);
-    compiler.setASTConsumer(std::unique_ptr<ASTConsumer>(CG));
-    compiler.createSema(clang::TU_Prefix, nullptr);
-    Sema& S = compiler.getSema();
+    Sema& S = CI.getSema();
 
     std::unique_ptr<Parser> ParseOP(new Parser(S.getPreprocessor(), S,
                                                /*SkipFunctionBodies*/ false));
     Parser &P = *ParseOP.get();
 
     std::array<std::unique_ptr<llvm::Module>, 3> M;
-    M[0] = IncrementalParseAST(compiler, P, *CG, nullptr);
+    M[0] = IncrementalParseAST(CI, P, CG, nullptr);
     ASSERT_TRUE(M[0]);
 
-    M[1] = IncrementalParseAST(compiler, P, *CG, TestProgram1);
+    M[1] = IncrementalParseAST(CI, P, CG, TestProgram1);
     ASSERT_TRUE(M[1]);
     ASSERT_TRUE(M[1]->getFunction("funcForProg1"));
 
-    M[2] = IncrementalParseAST(compiler, P, *CG, TestProgram2);
+    M[2] = IncrementalParseAST(CI, P, CG, TestProgram2);
     ASSERT_TRUE(M[2]);
     ASSERT_TRUE(M[2]->getFunction("funcForProg2"));
     // First code should not end up in second module:
