@@ -98,6 +98,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 } // namespace
 
@@ -114,4 +115,9 @@ void VEPassConfig::addIRPasses() {
 bool VEPassConfig::addInstSelector() {
   addPass(createVEISelDag(getVETargetMachine()));
   return false;
+}
+
+void VEPassConfig::addPreEmitPass() {
+  // LVLGen should be called after scheduling and register allocation
+  addPass(createLVLGenPass());
 }
