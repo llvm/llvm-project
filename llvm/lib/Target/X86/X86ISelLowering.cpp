@@ -30730,6 +30730,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(V);
     return;
   }
+  case ISD::BITREVERSE:
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    assert(Subtarget.hasXOP() && "Expected XOP");
+    // We can use VPPERM by copying to a vector register and back. We'll need
+    // to move the scalar in two i32 pieces.
+    Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
+    return;
   }
 }
 
