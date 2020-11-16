@@ -767,8 +767,7 @@ BoolCmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
   CmpIOpAdaptor cmpIOpOperands(operands);
 
   Type operandType = cmpIOp.lhs().getType();
-  if (!operandType.isa<IntegerType>() ||
-      operandType.cast<IntegerType>().getWidth() != 1)
+  if (!isBoolScalarOrVector(operandType))
     return failure();
 
   switch (cmpIOp.getPredicate()) {
@@ -794,8 +793,7 @@ CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
   CmpIOpAdaptor cmpIOpOperands(operands);
 
   Type operandType = cmpIOp.lhs().getType();
-  if (operandType.isa<IntegerType>() &&
-      operandType.cast<IntegerType>().getWidth() == 1)
+  if (isBoolScalarOrVector(operandType))
     return failure();
 
   switch (cmpIOp.getPredicate()) {
