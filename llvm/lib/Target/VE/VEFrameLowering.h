@@ -39,8 +39,9 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
 
-  bool hasBP(const MachineFunction &MF) const;
   bool hasFP(const MachineFunction &MF) const override;
+  bool hasBP(const MachineFunction &MF) const;
+
   // VE reserves argument space always for call sites in the function
   // immediately on entry of the current function.
   bool hasReservedCallFrame(const MachineFunction &MF) const override {

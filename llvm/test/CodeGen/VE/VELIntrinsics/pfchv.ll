@@ -8,11 +8,11 @@
 ; Function Attrs: nounwind
 define void @pfchv_vssl(i8* %0, i64 %1) {
 ; CHECK-LABEL: pfchv_vssl:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    pfchv %s1, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   tail call void @llvm.ve.vl.pfchv.ssl(i64 %1, i8* %0, i32 256)
   ret void
 }
@@ -23,11 +23,11 @@ declare void @llvm.ve.vl.pfchv.ssl(i64, i8*, i32)
 ; Function Attrs: nounwind
 define void @pfchv_vssl_imm(i8* %0) {
 ; CHECK-LABEL: pfchv_vssl_imm:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    pfchv 8, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   tail call void @llvm.ve.vl.pfchv.ssl(i64 8, i8* %0, i32 256)
   ret void
 }
@@ -35,11 +35,11 @@ define void @pfchv_vssl_imm(i8* %0) {
 ; Function Attrs: nounwind
 define void @pfchvnc_vssl(i8* %0, i64 %1) {
 ; CHECK-LABEL: pfchvnc_vssl:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s2, 256
 ; CHECK-NEXT:    lvl %s2
 ; CHECK-NEXT:    pfchv.nc %s1, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   tail call void @llvm.ve.vl.pfchvnc.ssl(i64 %1, i8* %0, i32 256)
   ret void
 }
@@ -50,11 +50,11 @@ declare void @llvm.ve.vl.pfchvnc.ssl(i64, i8*, i32)
 ; Function Attrs: nounwind
 define void @pfchvnc_vssl_imm(i8* %0) {
 ; CHECK-LABEL: pfchvnc_vssl_imm:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    pfchv.nc 8, %s0
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   tail call void @llvm.ve.vl.pfchvnc.ssl(i64 8, i8* %0, i32 256)
   ret void
 }

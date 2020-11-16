@@ -47,68 +47,68 @@ define fastcc float @stack_stack_arg_i32f32_r9(i32 %p0, float %p1, i32 %p2, floa
 ; v0-to-v0 passthrough case without vreg copy.
 define fastcc <256 x i32> @vreg_arg_v256i32_r0(<256 x i32> %p0) {
 ; CHECK-LABEL: vreg_arg_v256i32_r0:
-; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p0
 }
 
 define fastcc <256 x i32> @vreg_arg_v256i32_r1(<256 x i32> %p0, <256 x i32> %p1) {
 ; CHECK-LABEL: vreg_arg_v256i32_r1:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v0, (0)1, %v1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p1
 }
 
 define fastcc <256 x i32> @vreg_arg_v256i32_r2(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2) {
 ; CHECK-LABEL: vreg_arg_v256i32_r2:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v0, (0)1, %v2
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p2
 }
 
 define fastcc <256 x i32> @vreg_arg_v256i32_r3(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2, <256 x i32> %p3) {
 ; CHECK-LABEL: vreg_arg_v256i32_r3:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v0, (0)1, %v3
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p3
 }
 
 define fastcc <256 x i32> @vreg_arg_v256i32_r4(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2, <256 x i32> %p3, <256 x i32> %p4) {
 ; CHECK-LABEL: vreg_arg_v256i32_r4:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v0, (0)1, %v4
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p4
 }
 
 define fastcc <256 x i32> @vreg_arg_v256i32_r5(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2, <256 x i32> %p3, <256 x i32> %p4, <256 x i32> %p5) {
 ; CHECK-LABEL: vreg_arg_v256i32_r5:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v0, (0)1, %v5
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p5
 }
 
 define fastcc <256 x i32> @vreg_arg_v256i32_r6(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2, <256 x i32> %p3, <256 x i32> %p4, <256 x i32> %p5, <256 x i32> %p6) {
 ; CHECK-LABEL: vreg_arg_v256i32_r6:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v0, (0)1, %v6
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret <256 x i32> %p6
 }
 
