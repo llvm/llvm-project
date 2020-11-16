@@ -1828,10 +1828,26 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
-    // TODO: Could split larger constant into VGPR offset.
     if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, true)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
+    } else if (!LHS->isDivergent() && COffsetVal > 0) {
+      SDLoc SL(N);
+      // saddr + large_offset -> saddr + (voffset = large_offset & ~MaxOffset) +
+      //                         (large_offset & MaxOffset);
+      int64_t SplitImmOffset, RemainderOffset;
+      std::tie(SplitImmOffset, RemainderOffset)
+        = TII->splitFlatOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, true);
+
+      if (isUInt<32>(RemainderOffset)) {
+        SDNode *VMov = CurDAG->getMachineNode(
+          AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
+          CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
+        VOffset = SDValue(VMov, 0);
+        SAddr = LHS;
+        Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+        return true;
+      }
     }
   }
 

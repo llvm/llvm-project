@@ -991,9 +991,8 @@ entry:
 ; CIVI: s_mov_b32 [[SREG:s[0-9]+]], 0x11940
 ; CIVI: buffer_atomic_cmpswap_x2 v[{{[0-9]+}}:{{[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], [[SREG]]{{$}}
 
-; GFX9: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0x11000,
-; GFX9: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
-; GFX9: global_atomic_cmpswap_x2 v[{{[0-9]+:[0-9]+}}], v{{\[[0-9]+:[0-9]+\]}}, off offset:2368{{$}}
+; GFX9: v_mov_b32_e32 [[VOFFSET:v[0-9]+]], 0x11000{{$}}
+; GFX9: global_atomic_cmpswap_x2 [[VOFFSET]], v[{{[0-9]+:[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}} offset:2368{{$}}
 define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(i64 addrspace(1)* %out, i64 %in, i64 %old) {
 entry:
   %gep = getelementptr i64, i64 addrspace(1)* %out, i64 9000
