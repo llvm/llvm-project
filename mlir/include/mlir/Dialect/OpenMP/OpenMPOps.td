@@ -15,6 +15,9 @@
 #define OPENMP_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenMP/OmpCommon.td"
 
 def OpenMP_Dialect : Dialect {
@@ -24,6 +27,10 @@ def OpenMP_Dialect : Dialect {
 
 class OpenMP_Op<string mnemonic, list<OpTrait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
+
+// Type which can be constraint accepting standard integers, indices and
+// LLVM integer types.
+def IntLikeType : AnyTypeOf<[AnyInteger, Index, LLVM_AnyInteger]>;
 
 //===----------------------------------------------------------------------===//
 // 2.6 parallel Construct
@@ -100,6 +107,91 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.9.2 Workshare Loop Construct
+//===----------------------------------------------------------------------===//
+
+def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
+  let summary = "workshare loop construct";
+  let description = [{
+    The workshare loop construct specifies that the iterations of the loop(s)
+    will be executed in parallel by threads in the current context. These
+    iterations are spread across threads that already exist in the enclosing
+    parallel region.
+
+    The body region can contain any number of blocks. The region is terminated
+    by "omp.yield" instruction without operands.
+
+    ```
+      omp.wsloop (%i1, %i2) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
+    ```
+
+    `private_vars`, `firstprivate_vars`, `lastprivate_vars` and `linear_vars`
+    arguments are variadic list of operands that specify the data sharing
+    attributes of the list of values. The `linear_step_vars` operand
+    additionally specifies the step for each associated linear operand. Note
+    that the `linear_vars` and `linear_step_vars` variadic lists should contain
+    the same number of elements.
+
+    The optional `schedule_val` attribute specifies the loop schedule for this
+    loop, determining how the loop is distributed across the parallel threads.
+    The optional `schedule_chunk_var` associated with this determines further
+    controls this distribution.
+
+    The optional `collapse_val` attribute specifies the number of loops which
+    are collapsed to form the worksharing loop.
+
+    The `nowait` attribute, when present, signifies that there should be no
+    implicit barrier at the end of the loop.
+
+    The optional `ordered_val` attribute specifies how many loops are associated
+    with the do loop construct.
+
+    The optional `order` attribute specifies which order the iterations of the
+    associate loops are executed in. Currently the only option for this
+    attribute is "concurrent".
+  }];
+
+  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
+             Variadic<IntLikeType>:$upperBound,
+             Variadic<IntLikeType>:$step,
+             Variadic<AnyType>:$private_vars,
+             Variadic<AnyType>:$firstprivate_vars,
+             Variadic<AnyType>:$lastprivate_vars,
+             Variadic<AnyType>:$linear_vars,
+             Variadic<AnyType>:$linear_step_vars,
+             OptionalAttr<ScheduleKind>:$schedule_val,
+             Optional<AnyType>:$schedule_chunk_var,
+             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
+             OptionalAttr<UnitAttr>:$nowait,
+             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
+             OptionalAttr<OrderKind>:$order_val);
+
+  let regions = (region AnyRegion:$region);
+}
+
+def YieldOp : OpenMP_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
+                                  HasParent<"WsLoopOp">]> {
+  let summary = "loop yield and termination operation";
+  let description = [{
+    "omp.yield" yields SSA values from the OpenMP dialect op region and
+    terminates the region. The semantics of how the values are yielded is
+    defined by the parent operation.
+    If "omp.yield" has any operands, the operands must match the parent
+    operation's results.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+
+  let assemblyFormat = [{ ( `(` $results^ `:` type($results) `)` )? attr-dict}];
 }
 
 //===----------------------------------------------------------------------===//
