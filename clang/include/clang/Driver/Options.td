@@ -266,6 +266,12 @@ multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
                MarshallingInfoFlag<keypath, defaults>;
 }
 
+multiclass BooleanMarshalledFFlag<string name, code keypath, code default_value, string pos_help = "", string neg_help=""> {
+  def fno_#NAME : Flag<["-"], "fno-"#name>, HelpText<neg_help>;
+  def f#NAME : Flag<["-"], "f"#name>, HelpText<pos_help>,
+    MarshallingInfoBooleanFlag<keypath, default_value, !cast<Option>("fno_"#NAME)>;
+}
+
 /////////
 // Options
 
@@ -1342,9 +1348,9 @@ def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
   HelpText<"Enables the global instruction selector">;
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
   Alias<fglobal_isel>;
-def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
-  Group<f_clang_Group>, Flags<[CC1Option]>,
-  HelpText<"Enables an experimental new pass manager in LLVM.">;
+defm experimental_new_pass_manager : BooleanMarshalledFFlag<"experimental-new-pass-manager", "CodeGenOpts.ExperimentalNewPassManager",
+  "static_cast<unsigned>(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER)", "Enables an experimental new pass manager in LLVM.",
+  "Disables an experimental new pass manager in LLVM.">, Group<f_clang_Group>, Flags<[CC1Option]>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Enables experimental strict floating point in LLVM.">,
@@ -1646,9 +1652,6 @@ def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_clang_Group>,
   HelpText<"Disables the global instruction selector">;
 def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_Group>,
   Alias<fno_global_isel>;
-def fno_experimental_new_pass_manager : Flag<["-"], "fno-experimental-new-pass-manager">,
-  Group<f_clang_Group>, Flags<[CC1Option]>,
-  HelpText<"Disables an experimental new pass manager in LLVM.">;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Use the given vector functions library">, Values<"Accelerate,libmvec,MASSV,SVML,none">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
