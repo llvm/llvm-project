@@ -429,7 +429,17 @@ s_mov_b64 s[10:11], s[1:0]
 ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
 // CHECK: error: group size must be a power of two
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
-// CHECK-NEXT:{{^}}                                              ^
+// CHECK-NEXT:{{^}}                                               ^
+
+ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
+// CHECK: error: group size must be a power of two
+// CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
+// CHECK-NEXT:{{^}}                                             ^
+
+ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
+// CHECK: error: group size must be a power of two
+// CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
+// CHECK-NEXT:{{^}}                                          ^
 
 //==============================================================================
 // group size must be in the interval [1,16]

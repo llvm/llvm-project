@@ -1419,6 +1419,11 @@ public:
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
   OperandMatchResultTy parseBoolReg(OperandVector &Operands);
 
+  bool parseSwizzleOperand(int64_t &Op,
+                           const unsigned MinVal,
+                           const unsigned MaxVal,
+                           const StringRef ErrMsg,
+                           SMLoc &Loc);
   bool parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
                             const unsigned MinVal,
                             const unsigned MaxVal,
@@ -6092,22 +6097,35 @@ encodeBitmaskPerm(const unsigned AndMask,
 }
 
 bool
+AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op,
+                                     const unsigned MinVal,
+                                     const unsigned MaxVal,
+                                     const StringRef ErrMsg,
+                                     SMLoc &Loc) {
+  if (!skipToken(AsmToken::Comma, "expected a comma")) {
+    return false;
+  }
+  Loc = Parser.getTok().getLoc();
+  if (!parseExpr(Op)) {
+    return false;
+  }
+  if (Op < MinVal || Op > MaxVal) {
+    Error(Loc, ErrMsg);
+    return false;
+  }
+
+  return true;
+}
+
+bool
 AMDGPUAsmParser::parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
                                       const unsigned MinVal,
                                       const unsigned MaxVal,
                                       const StringRef ErrMsg) {
+  SMLoc Loc;
   for (unsigned i = 0; i < OpNum; ++i) {
-    if (!skipToken(AsmToken::Comma, "expected a comma")){
+    if (!parseSwizzleOperand(Op[i], MinVal, MaxVal, ErrMsg, Loc))
       return false;
-    }
-    SMLoc ExprLoc = Parser.getTok().getLoc();
-    if (!parseExpr(Op[i])) {
-      return false;
-    }
-    if (Op[i] < MinVal || Op[i] > MaxVal) {
-      Error(ExprLoc, ErrMsg);
-      return false;
-    }
   }
 
   return true;
@@ -6133,22 +6151,24 @@ bool
 AMDGPUAsmParser::parseSwizzleBroadcast(int64_t &Imm) {
   using namespace llvm::AMDGPU::Swizzle;
 
-  SMLoc S = Parser.getTok().getLoc();
+  SMLoc Loc;
   int64_t GroupSize;
   int64_t LaneIdx;
 
-  if (!parseSwizzleOperands(1, &GroupSize,
-                            2, 32,
-                            "group size must be in the interval [2,32]")) {
+  if (!parseSwizzleOperand(GroupSize,
+                           2, 32,
+                           "group size must be in the interval [2,32]",
+                           Loc)) {
     return false;
   }
   if (!isPowerOf2_64(GroupSize)) {
-    Error(S, "group size must be a power of two");
+    Error(Loc, "group size must be a power of two");
     return false;
   }
-  if (parseSwizzleOperands(1, &LaneIdx,
-                           0, GroupSize - 1,
-                           "lane id must be in the interval [0,group size - 1]")) {
+  if (parseSwizzleOperand(LaneIdx,
+                          0, GroupSize - 1,
+                          "lane id must be in the interval [0,group size - 1]",
+                          Loc)) {
     Imm = encodeBitmaskPerm(BITMASK_MAX - GroupSize + 1, LaneIdx, 0);
     return true;
   }
@@ -6159,15 +6179,17 @@ bool
 AMDGPUAsmParser::parseSwizzleReverse(int64_t &Imm) {
   using namespace llvm::AMDGPU::Swizzle;
 
-  SMLoc S = Parser.getTok().getLoc();
+  SMLoc Loc;
   int64_t GroupSize;
 
-  if (!parseSwizzleOperands(1, &GroupSize,
-      2, 32, "group size must be in the interval [2,32]")) {
+  if (!parseSwizzleOperand(GroupSize,
+                           2, 32,
+                           "group size must be in the interval [2,32]",
+                           Loc)) {
     return false;
   }
   if (!isPowerOf2_64(GroupSize)) {
-    Error(S, "group size must be a power of two");
+    Error(Loc, "group size must be a power of two");
     return false;
   }
 
@@ -6179,15 +6201,17 @@ bool
 AMDGPUAsmParser::parseSwizzleSwap(int64_t &Imm) {
   using namespace llvm::AMDGPU::Swizzle;
 
-  SMLoc S = Parser.getTok().getLoc();
+  SMLoc Loc;
   int64_t GroupSize;
 
-  if (!parseSwizzleOperands(1, &GroupSize,
-      1, 16, "group size must be in the interval [1,16]")) {
+  if (!parseSwizzleOperand(GroupSize,
+                           1, 16,
+                           "group size must be in the interval [1,16]",
+                           Loc)) {
     return false;
   }
   if (!isPowerOf2_64(GroupSize)) {
-    Error(S, "group size must be a power of two");
+    Error(Loc, "group size must be a power of two");
     return false;
   }
 
