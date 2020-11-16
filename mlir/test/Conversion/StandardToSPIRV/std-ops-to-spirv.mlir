@@ -327,6 +327,15 @@ func @boolcmpi(%arg0 : i1, %arg1 : i1) {
   return
 }
 
+// CHECK-LABEL: @vecboolcmpi
+func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+  // CHECK: spv.LogicalEqual
+  %0 = cmpi "eq", %arg0, %arg1 : vector<4xi1>
+  // CHECK: spv.LogicalNotEqual
+  %1 = cmpi "ne", %arg0, %arg1 : vector<4xi1>
+  return
+}
+
 } // end module
 
 // -----
