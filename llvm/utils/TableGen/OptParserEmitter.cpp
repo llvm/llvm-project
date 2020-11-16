@@ -114,7 +114,7 @@ struct SimpleEnumValueTable {
     OS << ", ";
     emitScopedNormalizedValue(OS, DefaultValue);
     OS << ", ";
-    emitScopedNormalizedValue(OS, NormalizerRetTy);
+    OS << NormalizerRetTy;
     OS << ", ";
     OS << Normalizer;
     OS << ", ";

@@ -3832,7 +3832,7 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
   HelpText<"The relocation model to use">, Values<"static,pic,ropi,rwpi,ropi-rwpi,dynamic-no-pic">,
   NormalizedValuesScope<"llvm::Reloc">,
   NormalizedValues<["Static", "PIC_", "ROPI", "RWPI", "ROPI_RWPI", "DynamicNoPIC"]>,
-  MarshallingInfoString<"CodeGenOpts.RelocationModel", "PIC_", "Model">,
+  MarshallingInfoString<"CodeGenOpts.RelocationModel", "PIC_", "llvm::Reloc::Model">,
   AutoNormalizeEnum;
 def fno_math_builtin : Flag<["-"], "fno-math-builtin">,
   HelpText<"Disable implicit builtin knowledge of math functions">;
@@ -4262,12 +4262,13 @@ def no_emit_llvm_uselists : Flag<["-"], "no-emit-llvm-uselists">,
 
 def mt_migrate_directory : Separate<["-"], "mt-migrate-directory">,
   HelpText<"Directory for temporary files produced during ARC or ObjC migration">;
-def arcmt_check : Flag<["-"], "arcmt-check">,
-  HelpText<"Check for ARC migration issues that need manual handling">;
-def arcmt_modify : Flag<["-"], "arcmt-modify">,
-  HelpText<"Apply modifications to files to conform to ARC">;
-def arcmt_migrate : Flag<["-"], "arcmt-migrate">,
-  HelpText<"Apply modifications and produces temporary files that conform to ARC">;
+
+def arcmt_action_EQ : Joined<["-"], "arcmt-action=">, Flags<[CC1Option, NoDriverOption]>,
+  HelpText<"The ARC migration action to take">, Values<"check,modify,migrate">,
+  NormalizedValuesScope<"FrontendOptions">,
+  NormalizedValues<["ARCMT_Check", "ARCMT_Modify", "ARCMT_Migrate"]>,
+  MarshallingInfoString<"FrontendOpts.ARCMTAction", "ARCMT_None", "unsigned">,
+  AutoNormalizeEnumJoined;
 
 def opt_record_file : Separate<["-"], "opt-record-file">,
   HelpText<"File name to use for YAML optimization record output">;
