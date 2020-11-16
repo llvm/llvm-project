@@ -1568,7 +1568,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     S.DiagnoseUseOfDecl(D, DS.getTypeSpecTypeNameLoc());
 
     assert(DS.getTypeSpecWidth() == TypeSpecifierWidth::Unspecified &&
-           DS.getTypeSpecComplex() == 0 && DS.getTypeSpecSign() == 0 &&
+           DS.getTypeSpecComplex() == 0 &&
+           DS.getTypeSpecSign() == TypeSpecifierSign::Unspecified &&
            "No qualifiers on tag names!");
 
     // TypeQuals handled by caller.
@@ -1584,7 +1585,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_typename: {
     assert(DS.getTypeSpecWidth() == TypeSpecifierWidth::Unspecified &&
            DS.getTypeSpecComplex() == 0 &&
-           DS.getTypeSpecSign() == 0 &&
+           DS.getTypeSpecSign() == TypeSpecifierSign::Unspecified &&
            "Can't handle qualifiers on typedef names yet!");
     Result = S.GetTypeFromParser(DS.getRepAsType());
     if (Result.isNull()) {
