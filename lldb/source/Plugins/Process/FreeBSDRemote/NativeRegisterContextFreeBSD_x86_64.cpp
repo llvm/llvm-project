@@ -248,7 +248,7 @@ NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch)),
-      m_fpr(), m_dbr() {
+      m_dbr() {
   assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
 }
 
@@ -278,53 +278,6 @@ NativeRegisterContextFreeBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
 
 static constexpr int RegNumX86ToX86_64(int regnum) {
   switch (regnum) {
-  case lldb_fctrl_i386:
-    return lldb_fctrl_x86_64;
-  case lldb_fstat_i386:
-    return lldb_fstat_x86_64;
-  case lldb_ftag_i386:
-    return lldb_ftag_x86_64;
-  case lldb_fop_i386:
-    return lldb_fop_x86_64;
-  case lldb_fiseg_i386:
-    return lldb_fiseg_x86_64;
-  case lldb_fioff_i386:
-    return lldb_fioff_x86_64;
-  case lldb_foseg_i386:
-    return lldb_foseg_x86_64;
-  case lldb_fooff_i386:
-    return lldb_fooff_x86_64;
-  case lldb_mxcsr_i386:
-    return lldb_mxcsr_x86_64;
-  case lldb_mxcsrmask_i386:
-    return lldb_mxcsrmask_x86_64;
-  case lldb_st0_i386:
-  case lldb_st1_i386:
-  case lldb_st2_i386:
-  case lldb_st3_i386:
-  case lldb_st4_i386:
-  case lldb_st5_i386:
-  case lldb_st6_i386:
-  case lldb_st7_i386:
-    return lldb_st0_x86_64 + regnum - lldb_st0_i386;
-  case lldb_mm0_i386:
-  case lldb_mm1_i386:
-  case lldb_mm2_i386:
-  case lldb_mm3_i386:
-  case lldb_mm4_i386:
-  case lldb_mm5_i386:
-  case lldb_mm6_i386:
-  case lldb_mm7_i386:
-    return lldb_mm0_x86_64 + regnum - lldb_mm0_i386;
-  case lldb_xmm0_i386:
-  case lldb_xmm1_i386:
-  case lldb_xmm2_i386:
-  case lldb_xmm3_i386:
-  case lldb_xmm4_i386:
-  case lldb_xmm5_i386:
-  case lldb_xmm6_i386:
-  case lldb_xmm7_i386:
-    return lldb_xmm0_x86_64 + regnum - lldb_xmm0_i386;
   case lldb_ymm0_i386:
   case lldb_ymm1_i386:
   case lldb_ymm2_i386:
@@ -403,10 +356,10 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
   case FPRegSet:
 #if defined(__x86_64__)
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETFPREGS, m_thread.GetID(),
-                                               &m_fpr);
+                                               m_fpr.data());
 #else
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETXMMREGS, m_thread.GetID(),
-                                               &m_fpr);
+                                               m_fpr.data());
 #endif
   case DBRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETDBREGS, m_thread.GetID(),
@@ -444,10 +397,10 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
   case FPRegSet:
 #if defined(__x86_64__)
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETFPREGS, m_thread.GetID(),
-                                               &m_fpr);
+                                               m_fpr.data());
 #else
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETXMMREGS, m_thread.GetID(),
-                                               &m_fpr);
+                                               m_fpr.data());
 #endif
   case DBRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
@@ -501,6 +454,9 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
                        reg_info->byte_size, endian::InlHostByteOrder());
     return error;
   case FPRegSet:
+    reg_value.SetBytes(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    return error;
   case XSaveRegSet:
   case DBRegSet:
     // legacy logic
@@ -518,99 +474,6 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   }
 
   switch (reg) {
-#if defined(__x86_64__)
-// the 32-bit field carries more detail, so we don't have to reinvent
-// the wheel
-#define FPR_ENV(x) ((struct envxmm32 *)m_fpr.fpr_env)->x
-#else
-#define FPR_ENV(x) ((struct envxmm *)m_fpr.xmm_env)->x
-#endif
-  case lldb_fctrl_x86_64:
-    reg_value = (uint16_t)FPR_ENV(en_cw);
-    break;
-  case lldb_fstat_x86_64:
-    reg_value = (uint16_t)FPR_ENV(en_sw);
-    break;
-  case lldb_ftag_x86_64:
-    reg_value = (uint16_t)FPR_ENV(en_tw);
-    break;
-  case lldb_fop_x86_64:
-    reg_value = (uint16_t)FPR_ENV(en_opcode);
-    break;
-  case lldb_fiseg_x86_64:
-    reg_value = (uint32_t)FPR_ENV(en_fcs);
-    break;
-  case lldb_fioff_x86_64:
-    reg_value = (uint32_t)FPR_ENV(en_fip);
-    break;
-  case lldb_foseg_x86_64:
-    reg_value = (uint32_t)FPR_ENV(en_fos);
-    break;
-  case lldb_fooff_x86_64:
-    reg_value = (uint32_t)FPR_ENV(en_foo);
-    break;
-  case lldb_mxcsr_x86_64:
-    reg_value = (uint32_t)FPR_ENV(en_mxcsr);
-    break;
-  case lldb_mxcsrmask_x86_64:
-    reg_value = (uint32_t)FPR_ENV(en_mxcsr_mask);
-    break;
-  case lldb_st0_x86_64:
-  case lldb_st1_x86_64:
-  case lldb_st2_x86_64:
-  case lldb_st3_x86_64:
-  case lldb_st4_x86_64:
-  case lldb_st5_x86_64:
-  case lldb_st6_x86_64:
-  case lldb_st7_x86_64:
-#if defined(__x86_64__)
-    reg_value.SetBytes(&m_fpr.fpr_acc[reg - lldb_st0_x86_64],
-                       reg_info->byte_size, endian::InlHostByteOrder());
-#else
-    reg_value.SetBytes(&m_fpr.xmm_acc[reg - lldb_st0_x86_64],
-                       reg_info->byte_size, endian::InlHostByteOrder());
-#endif
-    break;
-  case lldb_mm0_x86_64:
-  case lldb_mm1_x86_64:
-  case lldb_mm2_x86_64:
-  case lldb_mm3_x86_64:
-  case lldb_mm4_x86_64:
-  case lldb_mm5_x86_64:
-  case lldb_mm6_x86_64:
-  case lldb_mm7_x86_64:
-#if defined(__x86_64__)
-    reg_value.SetBytes(&m_fpr.fpr_acc[reg - lldb_mm0_x86_64],
-                       reg_info->byte_size, endian::InlHostByteOrder());
-#else
-    reg_value.SetBytes(&m_fpr.xmm_acc[reg - lldb_mm0_x86_64],
-                       reg_info->byte_size, endian::InlHostByteOrder());
-#endif
-    break;
-  case lldb_xmm0_x86_64:
-  case lldb_xmm1_x86_64:
-  case lldb_xmm2_x86_64:
-  case lldb_xmm3_x86_64:
-  case lldb_xmm4_x86_64:
-  case lldb_xmm5_x86_64:
-  case lldb_xmm6_x86_64:
-  case lldb_xmm7_x86_64:
-  case lldb_xmm8_x86_64:
-  case lldb_xmm9_x86_64:
-  case lldb_xmm10_x86_64:
-  case lldb_xmm11_x86_64:
-  case lldb_xmm12_x86_64:
-  case lldb_xmm13_x86_64:
-  case lldb_xmm14_x86_64:
-  case lldb_xmm15_x86_64:
-#if defined(__x86_64__)
-    reg_value.SetBytes(&m_fpr.fpr_xacc[reg - lldb_xmm0_x86_64],
-                       reg_info->byte_size, endian::InlHostByteOrder());
-#else
-    reg_value.SetBytes(&m_fpr.xmm_reg[reg - lldb_xmm0_x86_64],
-                       reg_info->byte_size, endian::InlHostByteOrder());
-#endif
-    break;
   case lldb_ymm0_x86_64:
   case lldb_ymm1_x86_64:
   case lldb_ymm2_x86_64:
@@ -701,6 +564,9 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
              reg_value.GetByteSize());
     return WriteRegisterSet(set);
   case FPRegSet:
+    ::memcpy(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
+             reg_value.GetBytes(), reg_value.GetByteSize());
+    return WriteRegisterSet(set);
   case XSaveRegSet:
   case DBRegSet:
     // legacy logic
@@ -718,92 +584,6 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
   }
 
   switch (reg) {
-  case lldb_fctrl_x86_64:
-    FPR_ENV(en_cw) = reg_value.GetAsUInt16();
-    break;
-  case lldb_fstat_x86_64:
-    FPR_ENV(en_sw) = reg_value.GetAsUInt16();
-    break;
-  case lldb_ftag_x86_64:
-    FPR_ENV(en_tw) = reg_value.GetAsUInt16();
-    break;
-  case lldb_fop_x86_64:
-    FPR_ENV(en_opcode) = reg_value.GetAsUInt16();
-    break;
-  case lldb_fiseg_x86_64:
-    FPR_ENV(en_fcs) = reg_value.GetAsUInt32();
-    break;
-  case lldb_fioff_x86_64:
-    FPR_ENV(en_fip) = reg_value.GetAsUInt32();
-    break;
-  case lldb_foseg_x86_64:
-    FPR_ENV(en_fos) = reg_value.GetAsUInt32();
-    break;
-  case lldb_fooff_x86_64:
-    FPR_ENV(en_foo) = reg_value.GetAsUInt32();
-    break;
-  case lldb_mxcsr_x86_64:
-    FPR_ENV(en_mxcsr) = reg_value.GetAsUInt32();
-    break;
-  case lldb_mxcsrmask_x86_64:
-    FPR_ENV(en_mxcsr_mask) = reg_value.GetAsUInt32();
-    break;
-  case lldb_st0_x86_64:
-  case lldb_st1_x86_64:
-  case lldb_st2_x86_64:
-  case lldb_st3_x86_64:
-  case lldb_st4_x86_64:
-  case lldb_st5_x86_64:
-  case lldb_st6_x86_64:
-  case lldb_st7_x86_64:
-#if defined(__x86_64__)
-    ::memcpy(&m_fpr.fpr_acc[reg - lldb_st0_x86_64], reg_value.GetBytes(),
-             reg_value.GetByteSize());
-#else
-    ::memcpy(&m_fpr.xmm_acc[reg - lldb_st0_x86_64], reg_value.GetBytes(),
-             reg_value.GetByteSize());
-#endif
-    break;
-  case lldb_mm0_x86_64:
-  case lldb_mm1_x86_64:
-  case lldb_mm2_x86_64:
-  case lldb_mm3_x86_64:
-  case lldb_mm4_x86_64:
-  case lldb_mm5_x86_64:
-  case lldb_mm6_x86_64:
-  case lldb_mm7_x86_64:
-#if defined(__x86_64__)
-    ::memcpy(&m_fpr.fpr_acc[reg - lldb_mm0_x86_64], reg_value.GetBytes(),
-             reg_value.GetByteSize());
-#else
-    ::memcpy(&m_fpr.xmm_acc[reg - lldb_mm0_x86_64], reg_value.GetBytes(),
-             reg_value.GetByteSize());
-#endif
-    break;
-  case lldb_xmm0_x86_64:
-  case lldb_xmm1_x86_64:
-  case lldb_xmm2_x86_64:
-  case lldb_xmm3_x86_64:
-  case lldb_xmm4_x86_64:
-  case lldb_xmm5_x86_64:
-  case lldb_xmm6_x86_64:
-  case lldb_xmm7_x86_64:
-  case lldb_xmm8_x86_64:
-  case lldb_xmm9_x86_64:
-  case lldb_xmm10_x86_64:
-  case lldb_xmm11_x86_64:
-  case lldb_xmm12_x86_64:
-  case lldb_xmm13_x86_64:
-  case lldb_xmm14_x86_64:
-  case lldb_xmm15_x86_64:
-#if defined(__x86_64__)
-    ::memcpy(&m_fpr.fpr_xacc[reg - lldb_xmm0_x86_64], reg_value.GetBytes(),
-             reg_value.GetByteSize());
-#else
-    ::memcpy(&m_fpr.xmm_reg[reg - lldb_xmm0_x86_64], reg_value.GetBytes(),
-             reg_value.GetByteSize());
-#endif
-    break;
   case lldb_ymm0_x86_64:
   case lldb_ymm1_x86_64:
   case lldb_ymm2_x86_64:
@@ -931,6 +711,22 @@ llvm::Error NativeRegisterContextFreeBSD_x86_64::CopyHardwareWatchpointsFrom(
     res = WriteRegisterSet(DBRegSet);
   }
   return res.ToError();
+}
+
+size_t NativeRegisterContextFreeBSD_x86_64::GetFPROffset() const {
+  uint32_t regno;
+  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+    regno = lldb_fctrl_i386;
+    break;
+  case llvm::Triple::x86_64:
+    regno = lldb_fctrl_x86_64;
+    break;
+  default:
+    llvm_unreachable("Unhandled target architecture.");
+  }
+
+  return GetRegisterInfoInterface().GetRegisterInfo()[regno].byte_offset;
 }
 
 #endif // defined(__x86_64__)
