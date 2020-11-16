@@ -21,7 +21,7 @@
 TARGET_BUILTIN(__builtin_preserve_field_info, "Ui.", "t", "")
 
 // Get BTF type id.
-TARGET_BUILTIN(__builtin_btf_type_id, "Ui.", "t", "")
+TARGET_BUILTIN(__builtin_btf_type_id, "LUi.", "t", "")
 
 // Get type information.
 TARGET_BUILTIN(__builtin_preserve_type_info, "Ui.", "t", "")
