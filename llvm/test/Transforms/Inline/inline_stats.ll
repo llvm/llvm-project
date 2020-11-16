@@ -6,8 +6,11 @@
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s -check-prefix=CHECK-BASIC -check-prefix=CHECK
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s -check-prefix="CHECK-VERBOSE" -check-prefix=CHECK
 
-; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s -check-prefix=WRAPPER-BASIC -check-prefix=WRAPPER
-; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s -check-prefix=WRAPPER-VERBOSE -check-prefix=WRAPPER
+; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s -check-prefix=CHECK-BASIC -check-prefix=CHECK
+; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s -check-prefix="CHECK-VERBOSE" -check-prefix=CHECK
+
+; RUN: opt -S -passes=always-inliner-wrapper,inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s -check-prefix=WRAPPER-BASIC -check-prefix=WRAPPER
+; RUN: opt -S -passes=always-inliner-wrapper,inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s -check-prefix=WRAPPER-VERBOSE -check-prefix=WRAPPER
 
 ; CHECK: ------- Dumping inliner stats for [<stdin>] -------
 ; CHECK-BASIC-NOT: -- List of inlined functions:
