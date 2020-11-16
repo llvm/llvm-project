@@ -67,7 +67,7 @@ int main() {
 // LAMBDA: ret
 #pragma omp master taskloop simd private(g, sivar)
   for (int i = 0; i < 10; ++i) {
-    // LAMBDA: define {{.+}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG_PTR:%.+]])
+    // LAMBDA: define {{.+}} void [[INNER_LAMBDA:@.+]](%{{.+}}* {{[^,]*}} [[ARG_PTR:%.+]])
     // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
     // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
     // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -153,7 +153,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_DOUBLE_TY]],
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[LOC:%.+]])
 
-// CHECK: call {{.*}} [[S_DOUBLE_TY_DEF_CONSTR:@.+]]([[S_DOUBLE_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_DOUBLE_TY_DEF_CONSTR:@.+]]([[S_DOUBLE_TY]]* {{[^,]*}} [[TEST]])
 
 // Do not store original variables in capture struct.
 // CHECK-NOT: getelementptr inbounds [[CAP_MAIN_TY]],
@@ -176,14 +176,14 @@ int main() {
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: getelementptr inbounds [2 x [[S_DOUBLE_TY]]], [2 x [[S_DOUBLE_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i{{.+}} 2
-// CHECK: call void [[S_DOUBLE_TY_DEF_CONSTR]]([[S_DOUBLE_TY]]* [[S_ARR_CUR:%.+]])
+// CHECK: call void [[S_DOUBLE_TY_DEF_CONSTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[S_ARR_CUR:%.+]])
 // CHECK: getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* [[S_ARR_CUR]], i{{.+}} 1
 // CHECK: icmp eq
 // CHECK: br i1
 
 // var;
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
-// CHECK: call void [[S_DOUBLE_TY_DEF_CONSTR]]([[S_DOUBLE_TY]]* [[PRIVATE_VAR_REF:%.+]])
+// CHECK: call void [[S_DOUBLE_TY_DEF_CONSTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF:%.+]])
 
 // Provide pointer to destructor function, which will destroy private variables at the end of the task.
 // CHECK: [[DESTRUCTORS_REF:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], [[KMP_TASK_T_TY]]* [[TASK]], i{{.+}} 0, i{{.+}} 3
@@ -267,11 +267,11 @@ int main() {
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_MAIN_TY]], [[KMP_TASK_MAIN_TY]]* [[RES_KMP_TASK:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
-// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* [[PRIVATE_VAR_REF]])
+// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF]])
 // CHECK: getelementptr inbounds [2 x [[S_DOUBLE_TY]]], [2 x [[S_DOUBLE_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i{{.+}} 2
 // CHECK: [[PRIVATE_S_ARR_ELEM_REF:%.+]] = getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i{{.+}} -1
-// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* [[PRIVATE_S_ARR_ELEM_REF]])
+// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[PRIVATE_S_ARR_ELEM_REF]])
 // CHECK: icmp eq
 // CHECK: br i1
 // CHECK: ret i32
@@ -284,7 +284,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]],
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[LOC:%.+]])
 
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
 
 // Do not store original variables in capture struct.
 // CHECK-NOT: getelementptr inbounds [[CAP_TMAIN_TY]],
@@ -307,14 +307,14 @@ int main() {
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
-// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* [[S_ARR_CUR:%.+]])
+// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_CUR:%.+]])
 // CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_CUR]], i{{.+}} 1
 // CHECK: icmp eq
 // CHECK: br i1
 
 // var;
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
-// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* [[PRIVATE_VAR_REF:%.+]])
+// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF:%.+]])
 
 // Provide pointer to destructor function, which will destroy private variables at the end of the task.
 // CHECK: [[DESTRUCTORS_REF:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], [[KMP_TASK_T_TY]]* [[TASK]], i{{.+}} 0, i{{.+}} 3
@@ -393,11 +393,11 @@ int main() {
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], [[KMP_TASK_TMAIN_TY]]* [[RES_KMP_TASK:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
-// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[PRIVATE_VAR_REF]])
+// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF]])
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
 // CHECK: [[PRIVATE_S_ARR_ELEM_REF:%.+]] = getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} -1
-// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[PRIVATE_S_ARR_ELEM_REF]])
+// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[PRIVATE_S_ARR_ELEM_REF]])
 // CHECK: icmp eq
 // CHECK: br i1
 // CHECK: ret i32

@@ -37,7 +37,7 @@ struct Y : Z, W, virtual V {};
 
 void f(const Y &y) {
   // CHECK-LABEL: @"?f@@YAXABUY@@@Z"
-  // CHECK: call x86_thiscallcc %struct.Y* @"??0Y@@QAE@ABU0@@Z"(%struct.Y* %[[mem:.*]], %struct.Y*
+  // CHECK: call x86_thiscallcc %struct.Y* @"??0Y@@QAE@ABU0@@Z"(%struct.Y* {{[^,]*}} %[[mem:.*]], %struct.Y*
   // CHECK: %[[cast:.*]] = bitcast %struct.Y* %[[mem]] to i8*
   // CHECK: call void @_CxxThrowException(i8* %[[cast]], %eh.ThrowInfo* @"_TI5?AUY@@")
   throw y;

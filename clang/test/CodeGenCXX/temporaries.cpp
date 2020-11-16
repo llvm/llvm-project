@@ -400,22 +400,22 @@ namespace Elision {
     // CHECK-NEXT: [[T1:%.*]] = alloca [[A]], align 8
 
     // CHECK-NEXT: call void @_ZN7Elision3fooEv()
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[I]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[I]])
     A i = (foo(), A());
 
     // CHECK-NEXT: call void @_ZN7Elision4fooAEv([[A]]* sret([[A]]) align 8 [[T0]])
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[J]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[T0]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[J]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[T0]])
     A j = (fooA(), A());
 
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[T1]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[T1]])
     // CHECK-NEXT: call void @_ZN7Elision4fooAEv([[A]]* sret([[A]]) align 8 [[K]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[T1]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[T1]])
     A k = (A(), fooA());
 
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[K]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[J]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[I]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[K]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[J]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[I]])
   }
 
 
@@ -424,22 +424,22 @@ namespace Elision {
     // CHECK:      [[I:%.*]] = alloca [[A]], align 8
     // CHECK-NEXT: [[J:%.*]] = alloca [[A]], align 8
 
-    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* [[I]])
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* [[I]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
+    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[I]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[I]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
     A i = (c ? A() : x);
 
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* [[J]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
-    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* [[J]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[J]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[J]])
     A j = (c ? x : A());
 
-    // CHECK:      call void @_ZN7Elision1AD1Ev([[A]]* [[J]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[I]])
+    // CHECK:      call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[J]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[I]])
   }
 
   // CHECK: define void @_ZN7Elision5test2Ev([[A]]* noalias sret([[A]]) align 8
   A test2() {
     // CHECK:      call void @_ZN7Elision3fooEv()
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[RET:%.*]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET:%.*]])
     // CHECK-NEXT: ret void
     return (foo(), A());
   }
@@ -447,12 +447,12 @@ namespace Elision {
   // CHECK: define void @_ZN7Elision5test3EiNS_1AE([[A]]* noalias sret([[A]]) align 8
   A test3(int v, A x) {
     if (v < 5)
-    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* [[RET:%.*]])
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* [[RET]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
+    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET:%.*]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
       return (v < 0 ? A() : x);
     else
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* [[RET]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
-    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* [[RET]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+    // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET]])
       return (v > 10 ? x : A());
 
     // CHECK:      ret void
@@ -463,13 +463,13 @@ namespace Elision {
     // CHECK:      [[X:%.*]] = alloca [[A]], align 8
     // CHECK-NEXT: [[XS:%.*]] = alloca [2 x [[A]]], align 16
 
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[X]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[X]])
     A x;
 
     // CHECK-NEXT: [[XS0:%.*]] = getelementptr inbounds [2 x [[A]]], [2 x [[A]]]* [[XS]], i64 0, i64 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[XS0]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[XS0]])
     // CHECK-NEXT: [[XS1:%.*]] = getelementptr inbounds [[A]], [[A]]* [[XS0]], i64 1
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* [[XS1]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[XS1]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
     A xs[] = { A(), x };
 
     // CHECK-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [2 x [[A]]], [2 x [[A]]]* [[XS]], i32 0, i32 0
@@ -477,11 +477,11 @@ namespace Elision {
     // CHECK-NEXT: br label
     // CHECK:      [[AFTER:%.*]] = phi [[A]]*
     // CHECK-NEXT: [[CUR:%.*]] = getelementptr inbounds [[A]], [[A]]* [[AFTER]], i64 -1
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[CUR]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[CUR]])
     // CHECK-NEXT: [[T0:%.*]] = icmp eq [[A]]* [[CUR]], [[BEGIN]]
     // CHECK-NEXT: br i1 [[T0]],
 
-    // CHECK:      call void @_ZN7Elision1AD1Ev([[A]]* [[X]])
+    // CHECK:      call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[X]])
   }
 
   // rdar://problem/8433352
@@ -494,27 +494,27 @@ namespace Elision {
     // CHECK-NEXT: [[BT1:%.*]] = alloca [[B]], align 8
     // CHECK-NEXT: [[BT2:%.*]] = alloca [[B]], align 8
 
-    // CHECK:      call void @_ZN7Elision1BC1Ev([[B]]* [[BT0]])
+    // CHECK:      call void @_ZN7Elision1BC1Ev([[B]]* {{[^,]*}} [[BT0]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], [[B]]* [[BT0]], i32 0, i32 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* [[AT0]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[AT0]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE([[A]]* [[AT0]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[AT0]])
-    // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* [[BT0]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[AT0]])
+    // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* {{[^,]*}} [[BT0]])
     takeA(B().a);
 
-    // CHECK-NEXT: call void @_ZN7Elision1BC1Ev([[B]]* [[BT1]])
+    // CHECK-NEXT: call void @_ZN7Elision1BC1Ev([[B]]* {{[^,]*}} [[BT1]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], [[B]]* [[BT1]], i32 0, i32 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* [[X]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
-    // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* [[BT1]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[X]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
+    // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* {{[^,]*}} [[BT1]])
     A x = B().a;
 
-    // CHECK-NEXT: call void @_ZN7Elision1BC1Ev([[B]]* [[BT2]])
+    // CHECK-NEXT: call void @_ZN7Elision1BC1Ev([[B]]* {{[^,]*}} [[BT2]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], [[B]]* [[BT2]], i32 0, i32 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* [[RET:%.*]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
-    // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* [[BT2]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET:%.*]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
+    // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* {{[^,]*}} [[BT2]])
     return B().a;
 
-    // CHECK:      call void @_ZN7Elision1AD1Ev([[A]]* [[X]])
+    // CHECK:      call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[X]])
   }
 
   // Reduced from webkit.
@@ -523,9 +523,9 @@ namespace Elision {
   void test6(const C *x) {
     // CHECK:      [[T0:%.*]] = alloca [[A]], align 8
     // CHECK:      [[X:%.*]] = load [[C]]*, [[C]]** {{%.*}}, align 8
-    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv([[A]]* sret([[A]]) align 8 [[T0]], [[C]]* [[X]])
-    // CHECK-NEXT: call void @_ZNK7Elision1A3fooEv([[A]]* [[T0]])
-    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[T0]])
+    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv([[A]]* sret([[A]]) align 8 [[T0]], [[C]]* {{[^,]*}} [[X]])
+    // CHECK-NEXT: call void @_ZNK7Elision1A3fooEv([[A]]* {{[^,]*}} [[T0]])
+    // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[T0]])
     // CHECK-NEXT: ret void
     A(*x).foo();
   }
@@ -542,19 +542,19 @@ namespace PR8623 {
     // CHECK:      store i1 false, i1* [[LCONS]]
     // CHECK-NEXT: store i1 false, i1* [[RCONS]]
     // CHECK-NEXT: br i1
-    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* [[TMP]], i32 2)
+    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* {{[^,]*}} [[TMP]], i32 2)
     // CHECK-NEXT: store i1 true, i1* [[LCONS]]
     // CHECK-NEXT: br label
-    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* [[TMP]], i32 3)
+    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* {{[^,]*}} [[TMP]], i32 3)
     // CHECK-NEXT: store i1 true, i1* [[RCONS]]
     // CHECK-NEXT: br label
     // CHECK:      load i1, i1* [[RCONS]]
     // CHECK-NEXT: br i1
-    // CHECK:      call void @_ZN6PR86231AD1Ev([[A]]* [[TMP]])
+    // CHECK:      call void @_ZN6PR86231AD1Ev([[A]]* {{[^,]*}} [[TMP]])
     // CHECK-NEXT: br label
     // CHECK:      load i1, i1* [[LCONS]]
     // CHECK-NEXT: br i1
-    // CHECK:      call void @_ZN6PR86231AD1Ev([[A]]* [[TMP]])
+    // CHECK:      call void @_ZN6PR86231AD1Ev([[A]]* {{[^,]*}} [[TMP]])
     // CHECK-NEXT: br label
     // CHECK:      ret void
     b ? A(2) : A(3);
@@ -572,7 +572,7 @@ namespace PR11365 {
 
     // CHECK: [[PHI:%.*]] = phi
     // CHECK-NEXT: [[ELEM:%.*]] = getelementptr inbounds [[A]], [[A]]* [[PHI]], i64 -1
-    // CHECK-NEXT: call void @_ZN7PR113651AD1Ev([[A]]* [[ELEM]])
+    // CHECK-NEXT: call void @_ZN7PR113651AD1Ev([[A]]* {{[^,]*}} [[ELEM]])
     // CHECK-NEXT: icmp eq [[A]]* [[ELEM]], [[BEGIN]]
     // CHECK-NEXT: br i1
     (void) (A [3]) {};

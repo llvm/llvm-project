@@ -178,7 +178,7 @@ int main() {
 
 // CHECK: define internal {{.*}}void [[REGION]](
 // CHECK: [[SSS_PRIV:%.+]] = alloca %struct.SSS,
-// CHECK: invoke {{.*}} @_ZN3SSSIiEC1Ev(%struct.SSS* [[SSS_PRIV]])
+// CHECK: invoke {{.*}} @_ZN3SSSIiEC1Ev(%struct.SSS* {{[^,]*}} [[SSS_PRIV]])
 // CHECK-NOT: {{call |invoke }}
 // CHECK: call {{.*}}i32 @__kmpc_reduce_nowait(
 

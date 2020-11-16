@@ -105,9 +105,9 @@ namespace test_block_in_lambda {
   // CHECK:      [[THIS:%.*]] = load [[LAMBDA_T:%.*]]*, [[LAMBDA_T:%.*]]**
   // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[LAMBDA_T]], [[LAMBDA_T]]* [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_({{.*}}* [[BLOCK_CAPTURED]], {{.*}}* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]], {{.*}}* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
   // CHECK-NEXT: call void @_ZN20test_block_in_lambda9takeBlockEU13block_pointerFvvE(void ()* [[T0]])
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AD1Ev({{.*}}* [[BLOCK_CAPTURED]])
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AD1Ev({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]])
   // CHECK-NEXT: ret void
 }

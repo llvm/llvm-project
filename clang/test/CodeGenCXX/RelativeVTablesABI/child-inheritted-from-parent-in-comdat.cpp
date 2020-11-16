@@ -24,12 +24,12 @@
 // CHECK: @_ZTV1B = unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1B.local
 // CHECK: @_ZTV1A = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
 
-// CHECK:      define void @_ZN1B3fooEv(%class.B* nocapture %this) unnamed_addr
+// CHECK:      define void @_ZN1B3fooEv(%class.B* nocapture {{[^,]*}} %this) unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK:      define hidden void @_ZN1B3fooEv.stub(%class.B* nocapture %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1B3fooEv.stub(%class.B* nocapture {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

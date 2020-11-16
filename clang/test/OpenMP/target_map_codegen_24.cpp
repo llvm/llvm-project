@@ -118,7 +118,7 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: [[VAL1:%.+]] = load [[ST]]*, [[ST]]** [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA00]], [[CA00]]* [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store [[ST]]* [[VAL1]], [[ST]]** [[VALADDR1]],
-// CK25: call void {{.*}}[[LAMBDA:@.+]]{{.*}}([[CA00]]* [[CA]])
+// CK25: call void {{.*}}[[LAMBDA:@.+]]{{.*}}([[CA00]]* {{[^,]*}} [[CA]])
 
 // CK25: define {{.+}}[[LAMBDA]]
 
@@ -127,7 +127,7 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: [[VAL1:%.+]] = load i32*, i32** [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA01]], [[CA01]]* [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store i32* [[VAL1]], i32** [[VALADDR1]],
-// CK25: call void {{.*}}[[LAMBDA2:@.+]]{{.*}}([[CA01]]* [[CA]])
+// CK25: call void {{.*}}[[LAMBDA2:@.+]]{{.*}}([[CA01]]* {{[^,]*}} [[CA]])
 
 // CK25: define {{.+}}[[LAMBDA2]]
 #endif // CK25

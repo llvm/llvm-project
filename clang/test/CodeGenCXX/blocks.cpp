@@ -127,9 +127,9 @@ namespace test4 {
   // CHECK: [[TMP:%.*]] = alloca [[A:%.*]], align 1
   // CHECK-NEXT: store i8* [[BLOCKDESC:%.*]], i8** {{.*}}, align 8
   // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]* }>*
-  // CHECK:      call void @_ZN5test41AC1Ev([[A]]* [[TMP]])
+  // CHECK:      call void @_ZN5test41AC1Ev([[A]]* {{[^,]*}} [[TMP]])
   // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* [[TMP]])
-  // CHECK-NEXT: call void @_ZN5test41AD1Ev([[A]]* [[TMP]])
+  // CHECK-NEXT: call void @_ZN5test41AD1Ev([[A]]* {{[^,]*}} [[TMP]])
   // CHECK-NEXT: ret void
 }
 
@@ -159,7 +159,7 @@ namespace test5 {
   // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca [[A]]*, align 8
   // CHECK-NEXT: [[T0:%.*]] = zext i1
   // CHECK-NEXT: store i8 [[T0]], i8* [[COND]], align 1
-  // CHECK-NEXT: call void @_ZN5test51AC1Ev([[A]]* [[X]])
+  // CHECK-NEXT: call void @_ZN5test51AC1Ev([[A]]* {{[^,]*}} [[X]])
   // CHECK-NEXT: [[T0:%.*]] = load i8, i8* [[COND]], align 1
   // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
   // CHECK-NEXT: store i1 false, i1* [[CLEANUP_ACTIVE]]
@@ -167,7 +167,7 @@ namespace test5 {
 
   // CHECK-NOT:  br
   // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* [[CAPTURE]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* {{[^,]*}} [[CAPTURE]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
   // CHECK-NEXT: store i1 true, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: store [[A]]* [[CAPTURE]], [[A]]** [[COND_CLEANUP_SAVE]], align 8
   // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
@@ -180,9 +180,9 @@ namespace test5 {
   // CHECK-NEXT: [[T0:%.*]] = load i1, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T0]]
   // CHECK:      [[T3:%.*]] = load [[A]]*, [[A]]** [[COND_CLEANUP_SAVE]], align 8
-  // CHECK-NEXT: call void @_ZN5test51AD1Ev([[A]]* [[T3]])
+  // CHECK-NEXT: call void @_ZN5test51AD1Ev([[A]]* {{[^,]*}} [[T3]])
   // CHECK-NEXT: br label
-  // CHECK:      call void @_ZN5test51AD1Ev([[A]]* [[X]])
+  // CHECK:      call void @_ZN5test51AD1Ev([[A]]* {{[^,]*}} [[X]])
   // CHECK-NEXT: ret void
 }
 
@@ -204,9 +204,9 @@ namespace test6 {
 
   // CHECK-LABEL:    define void @_ZN5test64testEv()
   // CHECK:      [[TEMP:%.*]] = alloca [[A:%.*]], align 1
-  // CHECK-NEXT: call void @_ZN5test61AC1Ev([[A]]* [[TEMP]])
+  // CHECK-NEXT: call void @_ZN5test61AC1Ev([[A]]* {{[^,]*}} [[TEMP]])
   // CHECK-NEXT: call void @_ZN5test63fooERKNS_1AEU13block_pointerFvvE(
-  // CHECK-NEXT: call void @_ZN5test61AD1Ev([[A]]* [[TEMP]])
+  // CHECK-NEXT: call void @_ZN5test61AD1Ev([[A]]* {{[^,]*}} [[TEMP]])
   // CHECK-NEXT: call void @_ZN5test63barEv()
   // CHECK-NEXT: ret void
 }

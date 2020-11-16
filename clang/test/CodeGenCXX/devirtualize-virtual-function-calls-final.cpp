@@ -175,7 +175,7 @@ namespace Test8 {
   // CHECK-LABEL: define i32 @_ZN5Test84testEPNS_1CE
   int test(C *c) {
     // CHECK: %[[THIS:.*]] = phi
-    // CHECK-NEXT: call i32 @_ZN5Test81B3fooEv(%"struct.Test8::B"* %[[THIS]])
+    // CHECK-NEXT: call i32 @_ZN5Test81B3fooEv(%"struct.Test8::B"* {{[^,]*}} %[[THIS]])
     return static_cast<B*>(c)->foo();
   }
 }

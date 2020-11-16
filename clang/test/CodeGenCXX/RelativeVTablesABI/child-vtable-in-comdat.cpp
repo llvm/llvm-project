@@ -30,11 +30,11 @@
 
 // CHECK: define hidden void @_ZN1B3fooEv.stub(%class.B* {{.*}}%0) unnamed_addr #{{[0-9]+}} comdat
 
-// CHECK: declare void @_ZN1A3fooEv(%class.A*) unnamed_addr
+// CHECK: declare void @_ZN1A3fooEv(%class.A* {{[^,]*}}) unnamed_addr
 
-// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   tail call void @_ZN1A3fooEv(%class.A* %0)
+// CHECK-NEXT:   tail call void @_ZN1A3fooEv(%class.A* {{[^,]*}} %0)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

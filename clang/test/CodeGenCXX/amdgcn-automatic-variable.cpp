@@ -67,8 +67,8 @@ public:
 void func3() {
   // CHECK: %[[a:.*]] = alloca %class.A, align 4, addrspace(5)
   // CHECK: %[[r0:.*]] = addrspacecast %class.A addrspace(5)* %[[a]] to %class.A*
-  // CHECK: call void @_ZN1AC1Ev(%class.A* %[[r0]])
-  // CHECK: call void @_ZN1AD1Ev(%class.A* %[[r0]])
+  // CHECK: call void @_ZN1AC1Ev(%class.A* {{[^,]*}} %[[r0]])
+  // CHECK: call void @_ZN1AD1Ev(%class.A* {{[^,]*}} %[[r0]])
   A a;
 }
 

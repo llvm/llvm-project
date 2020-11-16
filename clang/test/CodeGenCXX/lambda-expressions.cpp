@@ -178,7 +178,7 @@ namespace pr28595 {
     // CHECK: icmp eq %[[A]]* %[[DST_0_0]], %[[DST_I_J]]
     // CHECK: %[[T0:.*]] = phi %[[A]]*
     // CHECK: %[[T1:.*]] = getelementptr inbounds %[[A]], %[[A]]* %[[T0]], i64 -1
-    // CHECK: call void @_ZN7pr285951AD1Ev(%[[A]]* %[[T1]])
+    // CHECK: call void @_ZN7pr285951AD1Ev(%[[A]]* {{[^,]*}} %[[T1]])
     // CHECK: icmp eq %[[A]]* %[[T1]], %[[DST_0_0]]
     (void) [array]{};
   }

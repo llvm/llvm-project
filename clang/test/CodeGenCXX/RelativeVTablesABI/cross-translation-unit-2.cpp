@@ -13,23 +13,23 @@
 // CHECK: @_ZTV1B = unnamed_addr alias { [4 x i32] }, { [4 x i32] }* @_ZTV1B.local
 
 // A::bar() is defined outside of the module that defines the vtable for A
-// CHECK:      define void @_ZN1A3barEv(%class.A* nocapture %this) unnamed_addr
+// CHECK:      define void @_ZN1A3barEv(%class.A* nocapture {{[^,]*}} %this) unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK:      define void @_ZN1B3fooEv(%class.B* nocapture %this) unnamed_addr
+// CHECK:      define void @_ZN1B3fooEv(%class.B* nocapture {{[^,]*}} %this) unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
 // The stubs for B::foo() and A::bar() are hidden
-// CHECK:      define hidden void @_ZN1B3fooEv.stub(%class.B* nocapture %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1B3fooEv.stub(%class.B* nocapture {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK:      define hidden void @_ZN1A3barEv.stub(%class.A* nocapture %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1A3barEv.stub(%class.A* nocapture {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
