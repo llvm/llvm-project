@@ -1905,6 +1905,14 @@ private:
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
+  /// Try to prove NSW on \p AR by proving facts about conditions known  on
+  /// entry and backedge.
+  SCEV::NoWrapFlags proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR);
+
+  /// Try to prove NUW on \p AR by proving facts about conditions known on
+  /// entry and backedge.
+  SCEV::NoWrapFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
+
   Optional<MonotonicPredicateType> getMonotonicPredicateTypeImpl(
       const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,
       Optional<const SCEV *> NumIter, const Instruction *Context);
