@@ -39,6 +39,8 @@ std::pair<size_t, size_t> GetRegParams(RegisterInfoInterface &ctx,
   EXPECT_THAT(                                                                 \
       GetRegParams(reg_ctx, lldb_##regname##_x86_64),                          \
       ::testing::Pair(offsetof(reg, r_##regname), sizeof(reg::r_##regname)))
+#define EXPECT_DBR_X86_64(num)                                                 \
+  EXPECT_OFF(dr##num##_x86_64, offsetof(dbreg, dr[num]), sizeof(dbreg::dr[num]))
 
 TEST(RegisterContextFreeBSDTest, x86_64) {
   ArchSpec arch{"x86_64-unknown-freebsd"};
@@ -119,6 +121,16 @@ TEST(RegisterContextFreeBSDTest, x86_64) {
   EXPECT_OFF(xmm13_x86_64, 0x170, 16);
   EXPECT_OFF(xmm14_x86_64, 0x180, 16);
   EXPECT_OFF(xmm15_x86_64, 0x190, 16);
+
+  base_offset = reg_ctx.GetRegisterInfo()[lldb_dr0_x86_64].byte_offset;
+  EXPECT_DBR_X86_64(0);
+  EXPECT_DBR_X86_64(1);
+  EXPECT_DBR_X86_64(2);
+  EXPECT_DBR_X86_64(3);
+  EXPECT_DBR_X86_64(4);
+  EXPECT_DBR_X86_64(5);
+  EXPECT_DBR_X86_64(6);
+  EXPECT_DBR_X86_64(7);
 }
 
 #endif // defined(__x86_64__)
@@ -129,6 +141,9 @@ TEST(RegisterContextFreeBSDTest, x86_64) {
   EXPECT_THAT(GetRegParams(reg_ctx, lldb_##regname##_i386),                    \
               ::testing::Pair(offsetof(native_i386_regs, r_##regname),         \
                               sizeof(native_i386_regs::r_##regname)))
+#define EXPECT_DBR_I386(num)                                                   \
+  EXPECT_OFF(dr##num##_i386, offsetof(native_i386_dbregs, dr[num]),            \
+             sizeof(native_i386_dbregs::dr[num]))
 
 TEST(RegisterContextFreeBSDTest, i386) {
   ArchSpec arch{"i686-unknown-freebsd"};
@@ -136,8 +151,10 @@ TEST(RegisterContextFreeBSDTest, i386) {
 
 #if defined(__i386__)
   using native_i386_regs = ::reg;
+  using native_i386_dbregs = ::dbreg;
 #else
   using native_i386_regs = ::reg32;
+  using native_i386_dbregs = ::dbreg32;
 #endif
 
   EXPECT_GPR_I386(fs);
@@ -199,6 +216,16 @@ TEST(RegisterContextFreeBSDTest, i386) {
   EXPECT_OFF(xmm5_i386, 0xF0, 16);
   EXPECT_OFF(xmm6_i386, 0x100, 16);
   EXPECT_OFF(xmm7_i386, 0x110, 16);
+
+  base_offset = reg_ctx.GetRegisterInfo()[lldb_dr0_i386].byte_offset;
+  EXPECT_DBR_I386(0);
+  EXPECT_DBR_I386(1);
+  EXPECT_DBR_I386(2);
+  EXPECT_DBR_I386(3);
+  EXPECT_DBR_I386(4);
+  EXPECT_DBR_I386(5);
+  EXPECT_DBR_I386(6);
+  EXPECT_DBR_I386(7);
 }
 
 #endif // defined(__i386__) || defined(__x86_64__)

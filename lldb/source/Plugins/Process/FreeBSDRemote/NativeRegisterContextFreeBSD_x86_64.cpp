@@ -247,8 +247,7 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)),
-      m_dbr() {
+          native_thread, CreateRegisterInfoInterface(target_arch)) {
   assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
 }
 
@@ -296,15 +295,6 @@ static constexpr int RegNumX86ToX86_64(int regnum) {
     return lldb_bndcfgu_x86_64;
   case lldb_bndstatus_i386:
     return lldb_bndstatus_x86_64;
-  case lldb_dr0_i386:
-  case lldb_dr1_i386:
-  case lldb_dr2_i386:
-  case lldb_dr3_i386:
-  case lldb_dr4_i386:
-  case lldb_dr5_i386:
-  case lldb_dr6_i386:
-  case lldb_dr7_i386:
-    return lldb_dr0_x86_64 + regnum - lldb_dr0_i386;
   default:
     llvm_unreachable("Unhandled i386 register.");
   }
@@ -363,7 +353,7 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
 #endif
   case DBRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETDBREGS, m_thread.GetID(),
-                                               &m_dbr);
+                                               m_dbr.data());
   case XSaveRegSet: {
     struct ptrace_xstate_info info;
     Status ret = NativeProcessFreeBSD::PtraceWrapper(
@@ -404,7 +394,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
 #endif
   case DBRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
-                                               &m_dbr);
+                                               m_dbr.data());
   case XSaveRegSet:
     // ReadRegisterSet() must always be called before WriteRegisterSet().
     assert(m_xsave.size() > 0);
@@ -457,8 +447,11 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value.SetBytes(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
                        reg_info->byte_size, endian::InlHostByteOrder());
     return error;
-  case XSaveRegSet:
   case DBRegSet:
+    reg_value.SetBytes(m_dbr.data() + reg_info->byte_offset - GetDBROffset(),
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    return error;
+  case XSaveRegSet:
     // legacy logic
     break;
   }
@@ -507,16 +500,6 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     }
     break;
   }
-  case lldb_dr0_x86_64:
-  case lldb_dr1_x86_64:
-  case lldb_dr2_x86_64:
-  case lldb_dr3_x86_64:
-  case lldb_dr4_x86_64:
-  case lldb_dr5_x86_64:
-  case lldb_dr6_x86_64:
-  case lldb_dr7_x86_64:
-    reg_value = (uint64_t)m_dbr.dr[reg - lldb_dr0_x86_64];
-    break;
   default:
     llvm_unreachable("Reading unknown/unsupported register");
   }
@@ -567,8 +550,11 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     ::memcpy(m_fpr.data() + reg_info->byte_offset - GetFPROffset(),
              reg_value.GetBytes(), reg_value.GetByteSize());
     return WriteRegisterSet(set);
-  case XSaveRegSet:
   case DBRegSet:
+    ::memcpy(m_dbr.data() + reg_info->byte_offset - GetDBROffset(),
+             reg_value.GetBytes(), reg_value.GetByteSize());
+    return WriteRegisterSet(set);
+  case XSaveRegSet:
     // legacy logic
     break;
   }
@@ -616,16 +602,6 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     }
     break;
   }
-  case lldb_dr0_x86_64:
-  case lldb_dr1_x86_64:
-  case lldb_dr2_x86_64:
-  case lldb_dr3_x86_64:
-  case lldb_dr4_x86_64:
-  case lldb_dr5_x86_64:
-  case lldb_dr6_x86_64:
-  case lldb_dr7_x86_64:
-    m_dbr.dr[reg - lldb_dr0_x86_64] = reg_value.GetAsUInt64();
-    break;
   default:
     llvm_unreachable("Reading unknown/unsupported register");
   }
@@ -686,25 +662,15 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteAllRegisterValues(
   return error;
 }
 
-int NativeRegisterContextFreeBSD_x86_64::GetDR(int num) const {
-  assert(num >= 0 && num <= 7);
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::x86:
-    return lldb_dr0_i386 + num;
-  case llvm::Triple::x86_64:
-    return lldb_dr0_x86_64 + num;
-  default:
-    llvm_unreachable("Unhandled target architecture.");
-  }
-}
-
 llvm::Error NativeRegisterContextFreeBSD_x86_64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextFreeBSD &source) {
   auto &r_source = static_cast<NativeRegisterContextFreeBSD_x86_64 &>(source);
-  Status res = r_source.ReadRegisterSet(DBRegSet);
+  // NB: This implicitly reads the whole dbreg set.
+  RegisterValue dr7;
+  Status res = r_source.ReadRegister(GetDR(7), dr7);
   if (!res.Fail()) {
     // copy dbregs only if any watchpoints were set
-    if ((r_source.m_dbr.dr[7] & 0xFF) == 0)
+    if ((dr7.GetAsUInt64() & 0xFF) == 0)
       return llvm::Error::success();
 
     m_dbr = r_source.m_dbr;
@@ -721,6 +687,22 @@ size_t NativeRegisterContextFreeBSD_x86_64::GetFPROffset() const {
     break;
   case llvm::Triple::x86_64:
     regno = lldb_fctrl_x86_64;
+    break;
+  default:
+    llvm_unreachable("Unhandled target architecture.");
+  }
+
+  return GetRegisterInfoInterface().GetRegisterInfo()[regno].byte_offset;
+}
+
+size_t NativeRegisterContextFreeBSD_x86_64::GetDBROffset() const {
+  uint32_t regno;
+  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+    regno = lldb_dr0_i386;
+    break;
+  case llvm::Triple::x86_64:
+    regno = lldb_dr0_x86_64;
     break;
   default:
     llvm_unreachable("Unhandled target architecture.");
