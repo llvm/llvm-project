@@ -123,7 +123,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
 
     // pm.addPass(fir::createMemToRegPass());
-    pm.addPass(fir::createFirCodeGenRewritePass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
     pm.addPass(fir::createFIRToLLVMPass());
     pm.addPass(fir::createLLVMDialectToLLVMPass(out.os()));
