@@ -918,6 +918,7 @@ include "ARMScheduleSwift.td"
 include "ARMScheduleR52.td"
 include "ARMScheduleA57.td"
 include "ARMScheduleM4.td"
+include "ARMScheduleM7.td"
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -1159,8 +1160,9 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor]>;
 
-def : ProcNoItin<"cortex-m7",                           [ARMv7em,
-                                                         FeatureFPARMv8_D16]>;
+def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
+                                                         FeatureFPARMv8_D16,
+                                                         FeatureUseMISched]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
                                                          FeatureNoMovt]>;
