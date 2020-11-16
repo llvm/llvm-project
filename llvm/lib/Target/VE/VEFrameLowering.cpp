@@ -38,10 +38,10 @@ void VEFrameLowering::emitPrologueInsns(MachineFunction &MF,
                                         MachineBasicBlock::iterator MBBI,
                                         uint64_t NumBytes,
                                         bool RequireFPUpdate) const {
-
-  DebugLoc dl;
+  DebugLoc DL;
   const VEInstrInfo &TII =
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
   // Insert following codes here as prologue
   //
   //    st %fp, 0(,%sp)
@@ -50,36 +50,33 @@ void VEFrameLowering::emitPrologueInsns(MachineFunction &MF,
   //    st %plt, 32(,%sp)
   //    st %s17, 40(,%sp) iff this function is using s17 as BP
   //    or %fp, 0, %sp
-
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
+  BuildMI(MBB, MBBI, DL, TII.get(VE::STrii))
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(0)
       .addReg(VE::SX9);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
+  BuildMI(MBB, MBBI, DL, TII.get(VE::STrii))
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(8)
       .addReg(VE::SX10);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
+  BuildMI(MBB, MBBI, DL, TII.get(VE::STrii))
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(24)
       .addReg(VE::SX15);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
+  BuildMI(MBB, MBBI, DL, TII.get(VE::STrii))
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(32)
       .addReg(VE::SX16);
   if (hasBP(MF))
-    BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
+    BuildMI(MBB, MBBI, DL, TII.get(VE::STrii))
         .addReg(VE::SX11)
         .addImm(0)
         .addImm(40)
         .addReg(VE::SX17);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::ORri), VE::SX9)
-      .addReg(VE::SX11)
-      .addImm(0);
+  BuildMI(MBB, MBBI, DL, TII.get(VE::ORri), VE::SX9).addReg(VE::SX11).addImm(0);
 }
 
 void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
@@ -87,10 +84,10 @@ void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
                                         MachineBasicBlock::iterator MBBI,
                                         uint64_t NumBytes,
                                         bool RequireFPUpdate) const {
-
-  DebugLoc dl;
+  DebugLoc DL;
   const VEInstrInfo &TII =
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
   // Insert following codes here as epilogue
   //
   //    or %sp, 0, %fp
@@ -99,28 +96,25 @@ void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
   //    ld %plt, 24(,%sp)
   //    ld %lr, 8(,%sp)
   //    ld %fp, 0(,%sp)
-
-  BuildMI(MBB, MBBI, dl, TII.get(VE::ORri), VE::SX11)
-      .addReg(VE::SX9)
-      .addImm(0);
+  BuildMI(MBB, MBBI, DL, TII.get(VE::ORri), VE::SX11).addReg(VE::SX9).addImm(0);
   if (hasBP(MF))
-    BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX17)
+    BuildMI(MBB, MBBI, DL, TII.get(VE::LDrii), VE::SX17)
         .addReg(VE::SX11)
         .addImm(0)
         .addImm(40);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX16)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::LDrii), VE::SX16)
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(32);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX15)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::LDrii), VE::SX15)
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(24);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX10)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::LDrii), VE::SX10)
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(8);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX9)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::LDrii), VE::SX9)
       .addReg(VE::SX11)
       .addImm(0)
       .addImm(0);
@@ -131,12 +125,12 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                        MachineBasicBlock::iterator MBBI,
                                        int64_t NumBytes,
                                        MaybeAlign MaybeAlign) const {
-  DebugLoc dl;
+  DebugLoc DL;
   const VEInstrInfo &TII =
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   if (NumBytes >= -64 && NumBytes < 63) {
-    BuildMI(MBB, MBBI, dl, TII.get(VE::ADDSLri), VE::SX11)
+    BuildMI(MBB, MBBI, DL, TII.get(VE::ADDSLri), VE::SX11)
         .addReg(VE::SX11)
         .addImm(NumBytes);
     return;
@@ -147,21 +141,21 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
   //   lea     %s13,%lo(NumBytes)
   //   and     %s13,%s13,(32)0
   //   lea.sl  %sp,%hi(NumBytes)(%sp, %s13)
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LEAzii), VE::SX13)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::LEAzii), VE::SX13)
       .addImm(0)
       .addImm(0)
       .addImm(Lo_32(NumBytes));
-  BuildMI(MBB, MBBI, dl, TII.get(VE::ANDrm), VE::SX13)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::ANDrm), VE::SX13)
       .addReg(VE::SX13)
       .addImm(M0(32));
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LEASLrri), VE::SX11)
+  BuildMI(MBB, MBBI, DL, TII.get(VE::LEASLrri), VE::SX11)
       .addReg(VE::SX11)
       .addReg(VE::SX13)
       .addImm(Hi_32(NumBytes));
 
   if (MaybeAlign) {
     // and %sp, %sp, Align-1
-    BuildMI(MBB, MBBI, dl, TII.get(VE::ANDrm), VE::SX11)
+    BuildMI(MBB, MBBI, DL, TII.get(VE::ANDrm), VE::SX11)
         .addReg(VE::SX11)
         .addImm(M1(64 - Log2_64(MaybeAlign.valueOrOne().value())));
   }
@@ -169,7 +163,7 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
 
 void VEFrameLowering::emitSPExtend(MachineFunction &MF, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const {
-  DebugLoc dl;
+  DebugLoc DL;
   const VEInstrInfo &TII =
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
@@ -198,9 +192,8 @@ void VEFrameLowering::emitSPExtend(MachineFunction &MF, MachineBasicBlock &MBB,
   // EXTEND_STACK_GUARD pseudo will be simply eliminated by ExpandPostRA
   // pass.  This pseudo is required to be at the next of EXTEND_STACK
   // pseudo in order to protect iteration loop in ExpandPostRA.
-
-  BuildMI(MBB, MBBI, dl, TII.get(VE::EXTEND_STACK));
-  BuildMI(MBB, MBBI, dl, TII.get(VE::EXTEND_STACK_GUARD));
+  BuildMI(MBB, MBBI, DL, TII.get(VE::EXTEND_STACK));
+  BuildMI(MBB, MBBI, DL, TII.get(VE::EXTEND_STACK_GUARD));
 }
 
 void VEFrameLowering::emitPrologue(MachineFunction &MF,
@@ -210,10 +203,11 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   const VEInstrInfo &TII = *STI.getInstrInfo();
   const VERegisterInfo &RegInfo = *STI.getRegisterInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
+  bool NeedsStackRealignment = RegInfo.needsStackRealignment(MF);
+
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
-  DebugLoc dl;
-  bool NeedsStackRealignment = RegInfo.needsStackRealignment(MF);
+  DebugLoc DL;
 
   // FIXME: unfortunately, returning false from canRealignStack
   // actually just causes needsStackRealignment to return false,
@@ -240,7 +234,7 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   // Update stack size with corrected value.
   MFI.setStackSize(NumBytes);
 
-  // Emit Prologue instructions to save %lr
+  // Emit Prologue instructions to save multiple registers.
   emitPrologueInsns(MF, MBB, MBBI, NumBytes, true);
 
   // Emit stack adjust instructions
@@ -250,7 +244,7 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (hasBP(MF)) {
     // Copy SP to BP.
-    BuildMI(MBB, MBBI, dl, TII.get(VE::ORri), VE::SX17)
+    BuildMI(MBB, MBBI, DL, TII.get(VE::ORri), VE::SX17)
         .addReg(VE::SX11)
         .addImm(0);
   }
@@ -263,12 +257,12 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   // Emit ".cfi_def_cfa_register 30".
   unsigned CFIIndex =
       MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, RegFP));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
   // Emit ".cfi_window_save".
   CFIIndex = MF.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 }
 
@@ -290,12 +284,11 @@ MachineBasicBlock::iterator VEFrameLowering::eliminateCallFramePseudoInstr(
 void VEFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  DebugLoc dl = MBBI->getDebugLoc();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   uint64_t NumBytes = MFI.getStackSize();
 
-  // Emit Epilogue instructions to restore %lr
+  // Emit Epilogue instructions to restore multiple registers.
   emitEpilogueInsns(MF, MBB, MBBI, NumBytes, true);
 }
 
