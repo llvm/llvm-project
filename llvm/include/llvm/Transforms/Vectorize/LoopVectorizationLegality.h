@@ -289,6 +289,19 @@ public:
   /// Returns true if the value V is uniform within the loop.
   bool isUniform(Value *V);
 
+  /// A uniform memory op is a load or store which accesses the same memory
+  /// location on all lanes.
+  bool isUniformMemOp(Instruction &I) {
+    Value *Ptr = getLoadStorePointerOperand(&I);
+    if (!Ptr)
+      return false;
+    // Note: There's nothing inherent which prevents predicated loads and
+    // stores from being uniform.  The current lowering simply doesn't handle
+    // it; in particular, the cost model distinguishes scatter/gather from
+    // scalar w/predication, and we currently rely on the scalar path.
+    return isUniform(Ptr) && !blockNeedsPredication(I.getParent());
+  }
+
   /// Returns the information that we collected about runtime memory check.
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return LAI->getRuntimePointerChecking();
