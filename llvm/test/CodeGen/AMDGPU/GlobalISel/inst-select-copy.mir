@@ -21,9 +21,9 @@ body: |
     ; WAVE32-LABEL: name: copy
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; WAVE32: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
     ; WAVE32: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; WAVE32: GLOBAL_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32: GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[DEF]], [[COPY]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %0:sgpr(p1) = COPY $sgpr2_sgpr3
     %1:vgpr(p1) = COPY %0
     %2:vgpr(s32) = G_IMPLICIT_DEF

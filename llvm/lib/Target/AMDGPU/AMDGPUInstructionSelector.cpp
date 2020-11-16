@@ -3536,20 +3536,40 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
     return None;
 
   // Match the variable offset.
-  if (AddrDef->MI->getOpcode() != AMDGPU::G_PTR_ADD)
-    return None;
+  if (AddrDef->MI->getOpcode() != AMDGPU::G_PTR_ADD) {
+    // FIXME: We should probably have folded COPY (G_IMPLICIT_DEF) earlier, and
+    // drop this.
+    if (AddrDef->MI->getOpcode() == AMDGPU::G_IMPLICIT_DEF ||
+        AddrDef->MI->getOpcode() == AMDGPU::G_CONSTANT)
+      return None;
+
+    // It's cheaper to materialize a single 32-bit zero for vaddr than the two
+    // moves required to copy a 64-bit SGPR to VGPR.
+    const Register SAddr = AddrDef->Reg;
+    if (!isSGPR(SAddr))
+      return None;
+
+    MachineInstr *MI = Root.getParent();
+    MachineBasicBlock *MBB = MI->getParent();
+    Register VOffset = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
+            VOffset)
+      .addImm(0);
+
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(SAddr); },    // saddr
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },  // voffset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+    }};
+  }
 
   // Look through the SGPR->VGPR copy.
-  Register PtrBaseSrc =
+  Register SAddr =
     getSrcRegIgnoringCopies(AddrDef->MI->getOperand(1).getReg(), *MRI);
-  if (!PtrBaseSrc)
+  if (!SAddr || !isSGPR(SAddr))
     return None;
 
-  const RegisterBank *BaseRB = RBI.getRegBank(PtrBaseSrc, *MRI, TRI);
-  if (BaseRB->getID() != AMDGPU::SGPRRegBankID)
-    return None;
-
-  Register SAddr = PtrBaseSrc;
   Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
 
   // It's possible voffset is an SGPR here, but the copy to VGPR will be

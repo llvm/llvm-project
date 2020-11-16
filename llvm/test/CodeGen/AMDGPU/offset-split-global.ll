@@ -632,10 +632,9 @@ define amdgpu_kernel void @global_inst_salu_offset_1(i8 addrspace(1)* %p) {
 ; GFX9-LABEL: global_inst_salu_offset_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:1
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
@@ -643,11 +642,10 @@ define amdgpu_kernel void @global_inst_salu_offset_1(i8 addrspace(1)* %p) {
 ; GFX10-LABEL: global_inst_salu_offset_1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:1
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-NEXT:    s_endpgm
@@ -661,10 +659,9 @@ define amdgpu_kernel void @global_inst_salu_offset_11bit_max(i8 addrspace(1)* %p
 ; GFX9-LABEL: global_inst_salu_offset_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:2047
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
@@ -672,11 +669,10 @@ define amdgpu_kernel void @global_inst_salu_offset_11bit_max(i8 addrspace(1)* %p
 ; GFX10-LABEL: global_inst_salu_offset_11bit_max:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:2047
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-NEXT:    s_endpgm
@@ -690,10 +686,9 @@ define amdgpu_kernel void @global_inst_salu_offset_12bit_max(i8 addrspace(1)* %p
 ; GFX9-LABEL: global_inst_salu_offset_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:4095
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
@@ -745,10 +740,9 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_11bit_max(i8 addrspace(1)
 ; GFX9-LABEL: global_inst_salu_offset_neg_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2048
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:-2048
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
@@ -756,11 +750,10 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_11bit_max(i8 addrspace(1)
 ; GFX10-LABEL: global_inst_salu_offset_neg_11bit_max:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2048
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:-2048
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-NEXT:    s_endpgm
@@ -774,10 +767,9 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_12bit_max(i8 addrspace(1)
 ; GFX9-LABEL: global_inst_salu_offset_neg_12bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-4096
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:-4096
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
@@ -834,10 +826,9 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_11bit_max(i8 addrspace(1)*
 ; GFX9-LABEL: global_inst_salu_offset_2x_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:4095
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
@@ -916,10 +907,9 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_11bit_max(i8 addrspace
 ; GFX9-LABEL: global_inst_salu_offset_2x_neg_11bit_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-4096
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1] offset:-4096
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm

@@ -62,10 +62,9 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, i32 
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    v_and_or_b32 v1, v2, v3, s8
 ; GFX9-NEXT:    image_load v[0:4], v[0:1], s[0:7] dmask:0xf unorm a16 tfe
-; GFX9-NEXT:    v_mov_b32_e32 v5, s10
-; GFX9-NEXT:    v_mov_b32_e32 v6, s11
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_store_dword v[5:6], v4, off
+; GFX9-NEXT:    global_store_dword v5, v4, s[10:11]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -84,12 +83,11 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, i32 
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    v_mov_b32_e32 v5, s10
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    image_load v[0:4], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16 tfe
-; GFX10-NEXT:    v_mov_b32_e32 v6, s11
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_dword v[5:6], v4, off
+; GFX10-NEXT:    global_store_dword v5, v4, s[10:11]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.3d.sl_v4f32i32s.i16(i32 15, i16 %s, i16 %t, i16 %r, <8 x i32> %rsrc, i32 1, i32 0)
@@ -116,10 +114,9 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    v_and_or_b32 v1, v2, v3, s8
 ; GFX9-NEXT:    image_load v[0:4], v[0:1], s[0:7] dmask:0xf unorm a16 tfe lwe
-; GFX9-NEXT:    v_mov_b32_e32 v5, s10
-; GFX9-NEXT:    v_mov_b32_e32 v6, s11
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_store_dword v[5:6], v4, off
+; GFX9-NEXT:    global_store_dword v5, v4, s[10:11]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -138,12 +135,11 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    v_mov_b32_e32 v5, s10
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    image_load v[0:4], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16 tfe lwe
-; GFX10-NEXT:    v_mov_b32_e32 v6, s11
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_dword v[5:6], v4, off
+; GFX10-NEXT:    global_store_dword v5, v4, s[10:11]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.3d.sl_v4f32i32s.i16(i32 15, i16 %s, i16 %t, i16 %r, <8 x i32> %rsrc, i32 3, i32 0)

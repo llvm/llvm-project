@@ -8,13 +8,26 @@
 ; No vgpr offset, constants
 ; --------------------------------------------------------------------------------
 
+; SGPR base only
+define amdgpu_ps float @global_load_saddr_i8_offset_0(i8 addrspace(1)* inreg %sbase) {
+; GCN-LABEL: global_load_saddr_i8_offset_0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    global_load_ubyte v0, v0, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ; return to shader part epilog
+  %load = load i8, i8 addrspace(1)* %sbase
+  %zext = zext i8 %load to i32
+  %to.vgpr = bitcast i32 %zext to float
+  ret float %to.vgpr
+}
+
 ; SGPR base with maximum gfx9 immediate offset
 define amdgpu_ps float @global_load_saddr_i8_offset_4095(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_4095:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:4095
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -65,9 +78,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4097(i8 addrspace(1)* inreg 
 define amdgpu_ps float @global_load_saddr_i8_offset_neg4096(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_neg4096:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-4096
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:-4096
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -141,9 +153,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4098(i8 addrspace(1)* inr
 define amdgpu_ps float @global_load_saddr_i8_offset_2048(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_2048:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2048
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:2048
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -164,9 +175,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_2048(i8 addrspace(1)* inreg 
 define amdgpu_ps float @global_load_saddr_i8_offset_2049(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_2049:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2049
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:2049
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -187,9 +197,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_2049(i8 addrspace(1)* inreg 
 define amdgpu_ps float @global_load_saddr_i8_offset_2050(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_2050:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2050
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:2050
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -210,9 +219,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_2050(i8 addrspace(1)* inreg 
 define amdgpu_ps float @global_load_saddr_i8_offset_neg2048(i8 addrspace(1)* inreg %sbase) {
 ; GCN-LABEL: global_load_saddr_i8_offset_neg2048:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2048
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:-2048
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 -2048
@@ -226,9 +234,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg2048(i8 addrspace(1)* inr
 define amdgpu_ps float @global_load_saddr_i8_offset_neg2049(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_neg2049:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2049
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:-2049
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -250,9 +257,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg2049(i8 addrspace(1)* inr
 define amdgpu_ps float @global_load_saddr_i8_offset_neg2050(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_neg2050:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2050
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3] offset:-2050
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -2314,6 +2320,45 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128
   %build = insertelement <2 x i16> %reg, i16 %sext.load, i32 1
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
+}
+
+; --------------------------------------------------------------------------------
+; or-with-constant as add
+; --------------------------------------------------------------------------------
+
+; Check add-as-or with split 64-bit or.
+define amdgpu_ps float @global_load_saddr_i8_offset_or_i64_imm_offset_16(i8 addrspace(6)* inreg %sbase, i32 %idx) {
+; GCN-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_or_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    global_load_ubyte v0, v[0:1], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ; return to shader part epilog
+  %zext.idx = zext i32 %idx to i64
+  %or = or i64 %zext.idx, 16
+  %addr = inttoptr i64 %or to i8 addrspace(1)*
+  %load = load i8, i8 addrspace(1)* %addr
+  %zext = zext i8 %load to i32
+  %to.vgpr = bitcast i32 %zext to float
+  ret float %to.vgpr
+}
+
+define amdgpu_ps float @global_load_saddr_i8_offset_or_i64_imm_offset_4160(i8 addrspace(6)* inreg %sbase, i32 %idx) {
+; GCN-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_4160:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_or_b32_e32 v0, 0x1040, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    global_load_ubyte v0, v[0:1], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ; return to shader part epilog
+  %zext.idx = zext i32 %idx to i64
+  %or = or i64 %zext.idx, 4160
+  %addr = inttoptr i64 %or to i8 addrspace(1)*
+  %load = load i8, i8 addrspace(1)* %addr
+  %zext = zext i8 %load to i32
+  %to.vgpr = bitcast i32 %zext to float
+  ret float %to.vgpr
 }
 
 !0 = !{i32 0, i32 1073741824} ; (1 << 30)

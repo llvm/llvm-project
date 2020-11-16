@@ -38,23 +38,21 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x10
 ; GCN-NEXT:    s_add_u32 s5, s32, 0x1000
+; GCN-NEXT:    s_add_u32 s8, s5, 4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-NEXT:    s_add_u32 s8, s5, 4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshl_b32 s4, s4, 2
 ; GCN-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
-; GCN-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-NEXT:    v_mov_b32_e32 v2, s8
+; GCN-NEXT:    v_mov_b32_e32 v2, 1
+; GCN-NEXT:    v_mov_b32_e32 v3, s8
 ; GCN-NEXT:    s_add_u32 s4, s5, s4
-; GCN-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
-; GCN-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v2, v1, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    global_store_dword v[0:1], v2, off
+; GCN-NEXT:    v_add_u32_e32 v0, v2, v0
+; GCN-NEXT:    global_store_dword v1, v0, s[6:7]
 ; GCN-NEXT:  BB0_3: ; %bb.2
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
@@ -119,17 +117,15 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_lshl_b32 s4, s4, 2
 ; GCN-NEXT:    v_mov_b32_e32 v2, s5
 ; GCN-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
-; GCN-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-NEXT:    v_mov_b32_e32 v2, s8
+; GCN-NEXT:    v_mov_b32_e32 v2, 1
+; GCN-NEXT:    v_mov_b32_e32 v3, s8
 ; GCN-NEXT:    s_add_u32 s4, s5, s4
-; GCN-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
-; GCN-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen
+; GCN-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v2, v1, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    global_store_dword v[0:1], v2, off
+; GCN-NEXT:    v_add_u32_e32 v0, v2, v0
+; GCN-NEXT:    global_store_dword v1, v0, s[6:7]
 ; GCN-NEXT:  BB1_2: ; %bb.1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off

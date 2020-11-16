@@ -17,10 +17,10 @@ declare i64 @llvm.readcyclecounter() #0
 ; GETREG-DAG:  v_mov_b32_e32 v[[ZERO:[0-9]+]], 0
 ; GETREG-DAG:  s_getreg_b32 [[CNT1:s[0-9]+]], hwreg(HW_REG_SHADER_CYCLES, 0, 20)
 ; GETREG-DAG:  v_mov_b32_e32 v[[VCNT1:[0-9]+]], [[CNT1]]
-; GETREG:      global_store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[VCNT1]]:[[ZERO]]], off
+; GETREG:      global_store_dwordx2 v{{.+}}, v{{\[}}[[VCNT1]]:[[ZERO]]]
 ; GETREG:      s_getreg_b32 [[CNT2:s[0-9]+]], hwreg(HW_REG_SHADER_CYCLES, 0, 20)
 ; GETREG:      v_mov_b32_e32 v[[VCNT2:[0-9]+]], [[CNT2]]
-; GETREG:      global_store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[VCNT2]]:[[ZERO]]], off
+; GETREG:      global_store_dwordx2 v{{.+}}, v{{\[}}[[VCNT2]]:[[ZERO]]]
 
 define amdgpu_kernel void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
   %cycle0 = call i64 @llvm.readcyclecounter()

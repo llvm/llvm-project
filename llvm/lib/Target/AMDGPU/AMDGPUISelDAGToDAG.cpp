@@ -1821,10 +1821,9 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  if (CurDAG->isBaseWithConstantOffset(Addr)) {
-    SDValue LHS = Addr.getOperand(0);
-    SDValue RHS = Addr.getOperand(1);
 
+  SDValue LHS, RHS;
+  if (isBaseWithConstantOffset64(Addr, LHS, RHS)) {
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
@@ -1852,11 +1851,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   }
 
   // Match the variable offset.
-  if (Addr.getOpcode() != ISD::ADD)
-    return false;
+  if (Addr.getOpcode() != ISD::ADD) {
+    if (Addr->isDivergent() || Addr.getOpcode() == ISD::UNDEF ||
+        isa<ConstantSDNode>(Addr))
+      return false;
 
-  SDValue LHS = Addr.getOperand(0);
-  SDValue RHS = Addr.getOperand(1);
+    // It's cheaper to materialize a single 32-bit zero for vaddr than the two
+    // moves required to copy a 64-bit SGPR to VGPR.
+    SAddr = Addr;
+    SDNode *VMov = CurDAG->getMachineNode(
+      AMDGPU::V_MOV_B32_e32, SDLoc(Addr), MVT::i32,
+      CurDAG->getTargetConstant(0, SDLoc(), MVT::i32));
+    VOffset = SDValue(VMov, 0);
+    Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+    return true;
+  }
+
+  LHS = Addr.getOperand(0);
+  RHS = Addr.getOperand(1);
 
   if (!LHS->isDivergent()) {
     // add (i64 sgpr), (zero_extend (i32 vgpr))

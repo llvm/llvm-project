@@ -18,7 +18,7 @@
 ; WAVE64:    .sgpr_count:     8
 ; WAVE32:    .sgpr_count:     10
 ; CHECK:     .symbol:         test.kd
-; CHECK:     .vgpr_count:     6
+; CHECK:     .vgpr_count:     {{3|6}}
 ; WAVE64:    .wavefront_size: 64
 ; WAVE32:    .wavefront_size: 32
 define amdgpu_kernel void @test(
@@ -50,8 +50,8 @@ entry:
 ; CHECK:   .name:       num_spilled_sgprs
 ; GFX700:   .sgpr_spill_count: 38
 ; GFX803:   .sgpr_spill_count: 22
-; GFX900:   .sgpr_spill_count: 22
-; GFX1010:  .sgpr_spill_count: 22
+; GFX900:   .sgpr_spill_count: 48
+; GFX1010:  .sgpr_spill_count: 48
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32],
@@ -88,7 +88,7 @@ entry:
 
 ; CHECK:   .name:       num_spilled_vgprs
 ; CHECK:   .symbol:     num_spilled_vgprs.kd
-; CHECK:   .vgpr_spill_count: 14
+; CHECK:   .vgpr_spill_count: {{13|14}}
 define amdgpu_kernel void @num_spilled_vgprs() #1 {
   %val0 = load volatile float, float addrspace(1)* @var
   %val1 = load volatile float, float addrspace(1)* @var
