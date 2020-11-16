@@ -21,6 +21,18 @@ static bool hasExplanation(const RewriteRule::Case &C) {
 }
 #endif
 
+static void verifyRule(const RewriteRule &Rule) {
+  assert(llvm::all_of(Rule.Cases, hasExplanation) &&
+         "clang-tidy checks must have an explanation by default;"
+         " explicitly provide an empty explanation if none is desired");
+}
+
+TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Inserter(
+          Options.getLocalOrGlobal("IncludeStyle", IncludeSorter::IS_LLVM)) {}
+
 // This constructor cannot dispatch to the simpler one (below), because, in
 // order to get meaningful results from `getLangOpts` and `Options`, we need the
 // `ClangTidyCheck()` constructor to have been called. If we were to dispatch,
@@ -31,24 +43,21 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(
                                         const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), Rule(MakeRule(getLangOpts(), Options)),
-      Inserter(
-          Options.getLocalOrGlobal("IncludeStyle", IncludeSorter::IS_LLVM)) {
-  if (Rule)
-    assert(llvm::all_of(Rule->Cases, hasExplanation) &&
-           "clang-tidy checks must have an explanation by default;"
-           " explicitly provide an empty explanation if none is desired");
+    : TransformerClangTidyCheck(Name, Context) {
+  if (Optional<RewriteRule> R = MakeRule(getLangOpts(), Options))
+    setRule(std::move(*R));
 }
 
 TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
                                                      StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), Rule(std::move(R)),
-      Inserter(
-          Options.getLocalOrGlobal("IncludeStyle", IncludeSorter::IS_LLVM)) {
-  assert(llvm::all_of(Rule->Cases, hasExplanation) &&
-         "clang-tidy checks must have an explanation by default;"
-         " explicitly provide an empty explanation if none is desired");
+    : TransformerClangTidyCheck(Name, Context) {
+  setRule(std::move(R));
+}
+
+void TransformerClangTidyCheck::setRule(transformer::RewriteRule R) {
+  verifyRule(R);
+  Rule = std::move(R);
 }
 
 void TransformerClangTidyCheck::registerPPCallbacks(
@@ -58,8 +67,8 @@ void TransformerClangTidyCheck::registerPPCallbacks(
 
 void TransformerClangTidyCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  if (Rule)
-    for (auto &Matcher : transformer::detail::buildMatchers(*Rule))
+  if (!Rule.Cases.empty())
+    for (auto &Matcher : transformer::detail::buildMatchers(Rule))
       Finder->addDynamicMatcher(Matcher, this);
 }
 
@@ -68,8 +77,7 @@ void TransformerClangTidyCheck::check(
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  assert(Rule && "check() should not fire if Rule is None");
-  RewriteRule::Case Case = transformer::detail::findSelectedCase(Result, *Rule);
+  RewriteRule::Case Case = transformer::detail::findSelectedCase(Result, Rule);
   Expected<SmallVector<transformer::Edit, 1>> Edits = Case.Edits(Result);
   if (!Edits) {
     llvm::errs() << "Rewrite failed: " << llvm::toString(Edits.takeError())
