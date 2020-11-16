@@ -877,7 +877,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
   }
 
   if (isPipe) {
-    TypeSpecPipe = TSP_pipe;
+    TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
   }
   return false;
 }
