@@ -5,9 +5,9 @@
 ; Memset is interesting because it is an ExternalSymbol reference instead of a
 ; GlobalValue. Make sure we do the right GOT load for 64-bit large.
 
-; RUN: llc < %s -relocation-model=pic    -code-model=small  | FileCheck %s --check-prefix=CHECK --check-prefix=SMALL-PIC
-; RUN: llc < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
-; RUN: llc < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
+; RUN: llc < %s -relocation-model=pic    -code-model=small  | FileCheck %s --check-prefix=SMALL-PIC
+; RUN: llc < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=MEDIUM-PIC
+; RUN: llc < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=LARGE-PIC
 
 ; Generated from this C source:
 ;
