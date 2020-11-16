@@ -247,11 +247,6 @@ class Configuration(object):
                 # using this feature. (Also see llvm.org/PR32730)
                 self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
 
-        libcxx_gdb = self.get_lit_conf('libcxx_gdb')
-        if libcxx_gdb and 'NOTFOUND' not in libcxx_gdb:
-            self.config.available_features.add('libcxx_gdb')
-            self.cxx.libcxx_gdb = libcxx_gdb
-
         target_triple = getattr(self.config, 'target_triple', None)
         if target_triple:
             if re.match(r'^x86_64.*-apple', target_triple):
@@ -599,8 +594,6 @@ class Configuration(object):
             '--env {}'.format(env_vars)
         ]
         sub.append(('%{exec}', '{} {} -- '.format(self.executor, ' '.join(exec_args))))
-        if self.get_lit_conf('libcxx_gdb'):
-            sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 
     def configure_triple(self):
         # Get or infer the target triple.
