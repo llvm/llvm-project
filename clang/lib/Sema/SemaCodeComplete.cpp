@@ -4256,7 +4256,7 @@ void Sema::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
       DS.getParsedSpecifiers() == DeclSpec::PQ_TypeSpecifier &&
       DS.getTypeSpecType() == DeclSpec::TST_typename &&
       DS.getTypeSpecComplex() == DeclSpec::TSC_unspecified &&
-      DS.getTypeSpecSign() == DeclSpec::TSS_unspecified &&
+      DS.getTypeSpecSign() == TypeSpecifierSign::Unspecified &&
       !DS.isTypeAltiVecVector() && S &&
       (S->getFlags() & Scope::DeclScope) != 0 &&
       (S->getFlags() & (Scope::ClassScope | Scope::TemplateParamScope |
