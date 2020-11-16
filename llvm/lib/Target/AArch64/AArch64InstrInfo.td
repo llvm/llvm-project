@@ -155,6 +155,8 @@ def HasXS            : Predicate<"Subtarget->hasXS()">,
                        AssemblerPredicate<(all_of FeatureXS), "xs">;
 def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
                        AssemblerPredicate<(all_of FeatureWFxT), "wfxt">;
+def HasLS64          : Predicate<"Subtarget->hasLS64()">,
+                       AssemblerPredicate<(all_of FeatureLS64), "ls64">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -7743,6 +7745,15 @@ let AddedComplexity = 10 in {
 
   // FIXME: add patterns to generate vector by element dot product.
   // FIXME: add SVE dot-product patterns.
+}
+
+let Predicates = [HasLS64] in {
+  def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
+                                          (outs GPR64x8:$Rt)>;
+  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64sp:$Rn, GPR64x8:$Rt),
+                                          (outs)>;
+  def ST64BV:   Store64BV<0b011, "st64bv">;
+  def ST64BV0:  Store64BV<0b010, "st64bv0">;
 }
 
 include "AArch64InstrAtomics.td"

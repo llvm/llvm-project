@@ -11255,6 +11255,35 @@ multiclass STOPregister<string asm, string instr> {
                     !cast<Instruction>(instr # "X")>;
 }
 
+class LoadStore64B_base<bits<3> opc, string asm_inst, string asm_ops,
+                        dag iops, dag oops, list<dag> pat>
+    : I<oops, iops, asm_inst, asm_ops, "", pat>,
+      Sched<[]> /* FIXME: fill in scheduling details once known */ {
+  bits<5> Rt;
+  bits<5> Rn;
+  let Inst{31-21} = 0b11111000001;
+  let Inst{15}    = 1;
+  let Inst{14-12} = opc;
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rt;
+
+  let Predicates = [HasV8_7a];
+}
+
+class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
+                      list<dag> pat = []>
+    : LoadStore64B_base<opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
+  let Inst{20-16} = 0b11111;
+}
+
+class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
+    : LoadStore64B_base<opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
+                       (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
+  bits<5> Rs;
+  let Inst{20-16} = Rs;
+}
+
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
