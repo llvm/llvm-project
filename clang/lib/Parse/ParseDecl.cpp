@@ -3706,11 +3706,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                       PrevSpec, DiagID, Policy);
       break;
     case tok::kw_signed:
-      isInvalid = DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,
-                                     DiagID);
+      isInvalid =
+          DS.SetTypeSpecSign(TypeSpecifierSign::Signed, Loc, PrevSpec, DiagID);
       break;
     case tok::kw_unsigned:
-      isInvalid = DS.SetTypeSpecSign(DeclSpec::TSS_unsigned, Loc, PrevSpec,
+      isInvalid = DS.SetTypeSpecSign(TypeSpecifierSign::Unsigned, Loc, PrevSpec,
                                      DiagID);
       break;
     case tok::kw__Complex:

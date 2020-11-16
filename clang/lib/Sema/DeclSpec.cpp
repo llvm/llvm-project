@@ -525,12 +525,14 @@ const char *DeclSpec::getSpecifierName(TSC C) {
   llvm_unreachable("Unknown typespec!");
 }
 
-
-const char *DeclSpec::getSpecifierName(TSS S) {
+const char *DeclSpec::getSpecifierName(TypeSpecifierSign S) {
   switch (S) {
-  case TSS_unspecified: return "unspecified";
-  case TSS_signed:      return "signed";
-  case TSS_unsigned:    return "unsigned";
+  case TypeSpecifierSign::Unspecified:
+    return "unspecified";
+  case TypeSpecifierSign::Signed:
+    return "signed";
+  case TypeSpecifierSign::Unsigned:
+    return "unsigned";
   }
   llvm_unreachable("Unknown typespec!");
 }
@@ -709,12 +711,11 @@ bool DeclSpec::SetTypeSpecComplex(TSC C, SourceLocation Loc,
   return false;
 }
 
-bool DeclSpec::SetTypeSpecSign(TSS S, SourceLocation Loc,
-                               const char *&PrevSpec,
-                               unsigned &DiagID) {
-  if (TypeSpecSign != TSS_unspecified)
-    return BadSpecifier(S, (TSS)TypeSpecSign, PrevSpec, DiagID);
-  TypeSpecSign = S;
+bool DeclSpec::SetTypeSpecSign(TypeSpecifierSign S, SourceLocation Loc,
+                               const char *&PrevSpec, unsigned &DiagID) {
+  if (getTypeSpecSign() != TypeSpecifierSign::Unspecified)
+    return BadSpecifier(S, getTypeSpecSign(), PrevSpec, DiagID);
+  TypeSpecSign = static_cast<unsigned>(S);
   TSSLoc = Loc;
   return false;
 }
@@ -877,7 +878,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
   }
 
   if (isPipe) {
-    TypeSpecPipe = TSP_pipe;
+    TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
   }
   return false;
 }
@@ -1093,8 +1094,8 @@ bool DeclSpec::SetConstexprSpec(ConstexprSpecKind ConstexprKind,
 }
 
 void DeclSpec::SaveWrittenBuiltinSpecs() {
-  writtenBS.Sign = getTypeSpecSign();
-  writtenBS.Width = TypeSpecWidth;
+  writtenBS.Sign = static_cast<int>(getTypeSpecSign());
+  writtenBS.Width = static_cast<int>(getTypeSpecWidth());
   writtenBS.Type = getTypeSpecType();
   // Search the list of attributes for the presence of a mode attribute.
   writtenBS.ModeAttr = getAttributes().hasAttribute(ParsedAttr::AT_Mode);
@@ -1116,7 +1117,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // If decltype(auto) is used, no other type specifiers are permitted.
   if (TypeSpecType == TST_decltype_auto &&
       (getTypeSpecWidth() != TypeSpecifierWidth::Unspecified ||
-       TypeSpecComplex != TSC_unspecified || TypeSpecSign != TSS_unspecified ||
+       TypeSpecComplex != TSC_unspecified ||
+       getTypeSpecSign() != TypeSpecifierSign::Unspecified ||
        TypeAltiVecVector || TypeAltiVecPixel || TypeAltiVecBool ||
        TypeQualifiers)) {
     const unsigned NumLocs = 9;
@@ -1137,7 +1139,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     }
     TypeSpecWidth = static_cast<unsigned>(TypeSpecifierWidth::Unspecified);
     TypeSpecComplex = TSC_unspecified;
-    TypeSpecSign = TSS_unspecified;
+    TypeSpecSign = static_cast<unsigned>(TypeSpecifierSign::Unspecified);
     TypeAltiVecVector = TypeAltiVecPixel = TypeAltiVecBool = false;
     TypeQualifiers = 0;
     S.Diag(TSTLoc, diag::err_decltype_auto_cannot_be_combined)
@@ -1149,9 +1151,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   if (TypeAltiVecVector) {
     if (TypeAltiVecBool) {
       // Sign specifiers are not allowed with vector bool. (PIM 2.1)
-      if (TypeSpecSign != TSS_unspecified) {
+      if (getTypeSpecSign() != TypeSpecifierSign::Unspecified) {
         S.Diag(TSSLoc, diag::err_invalid_vector_bool_decl_spec)
-          << getSpecifierName((TSS)TypeSpecSign);
+            << getSpecifierName(getTypeSpecSign());
       }
       // Only char/int are valid with vector bool prior to Power10.
       // Power10 adds instructions that produce vector bool data
@@ -1186,7 +1188,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       if ((TypeSpecType == TST_char) || (TypeSpecType == TST_int) ||
           (TypeSpecType == TST_int128) ||
           (getTypeSpecWidth() != TypeSpecifierWidth::Unspecified))
-        TypeSpecSign = TSS_unsigned;
+        TypeSpecSign = static_cast<unsigned>(TypeSpecifierSign::Unsigned);
     } else if (TypeSpecType == TST_double) {
       // vector long double and vector long long double are never allowed.
       // vector double is OK for Power7 and later, and ZVector.
@@ -1222,7 +1224,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     if (TypeAltiVecPixel) {
       //TODO: perform validation
       TypeSpecType = TST_int;
-      TypeSpecSign = TSS_unsigned;
+      TypeSpecSign = static_cast<unsigned>(TypeSpecifierSign::Unsigned);
       TypeSpecWidth = static_cast<unsigned>(TypeSpecifierWidth::Short);
       TypeSpecOwned = false;
     }
@@ -1232,7 +1234,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       TypeSpecType == TST_accum || TypeSpecType == TST_fract;
 
   // signed/unsigned are only valid with int/char/wchar_t/_Accum.
-  if (TypeSpecSign != TSS_unspecified) {
+  if (getTypeSpecSign() != TypeSpecifierSign::Unspecified) {
     if (TypeSpecType == TST_unspecified)
       TypeSpecType = TST_int; // unsigned -> unsigned int, signed -> signed int.
     else if (TypeSpecType != TST_int && TypeSpecType != TST_int128 &&
@@ -1241,7 +1243,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       S.Diag(TSSLoc, diag::err_invalid_sign_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       // signed double -> double.
-      TypeSpecSign = TSS_unspecified;
+      TypeSpecSign = static_cast<unsigned>(TypeSpecifierSign::Unspecified);
     }
   }
 

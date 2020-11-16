@@ -255,12 +255,6 @@ public:
     TSC_complex
   };
 
-  // Import type specifier sign enumeration and constants.
-  typedef TypeSpecifierSign TSS;
-  static const TSS TSS_unspecified = clang::TSS_unspecified;
-  static const TSS TSS_signed = clang::TSS_signed;
-  static const TSS TSS_unsigned = clang::TSS_unsigned;
-
   // Import type specifier type enumeration and constants.
   typedef TypeSpecifierType TST;
   static const TST TST_unspecified = clang::TST_unspecified;
@@ -429,7 +423,8 @@ public:
         ThreadStorageClassSpec(TSCS_unspecified),
         SCS_extern_in_linkage_spec(false),
         TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
-        TypeSpecComplex(TSC_unspecified), TypeSpecSign(TSS_unspecified),
+        TypeSpecComplex(TSC_unspecified),
+        TypeSpecSign(static_cast<unsigned>(TypeSpecifierSign::Unspecified)),
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
@@ -473,7 +468,9 @@ public:
     return static_cast<TypeSpecifierWidth>(TypeSpecWidth);
   }
   TSC getTypeSpecComplex() const { return (TSC)TypeSpecComplex; }
-  TSS getTypeSpecSign() const { return (TSS)TypeSpecSign; }
+  TypeSpecifierSign getTypeSpecSign() const {
+    return static_cast<TypeSpecifierSign>(TypeSpecSign);
+  }
   TST getTypeSpecType() const { return (TST)TypeSpecType; }
   bool isTypeAltiVecVector() const { return TypeAltiVecVector; }
   bool isTypeAltiVecPixel() const { return TypeAltiVecPixel; }
@@ -535,7 +532,7 @@ public:
   static const char *getSpecifierName(DeclSpec::TST T,
                                       const PrintingPolicy &Policy);
   static const char *getSpecifierName(DeclSpec::TQ Q);
-  static const char *getSpecifierName(DeclSpec::TSS S);
+  static const char *getSpecifierName(TypeSpecifierSign S);
   static const char *getSpecifierName(DeclSpec::TSC C);
   static const char *getSpecifierName(TypeSpecifierWidth W);
   static const char *getSpecifierName(DeclSpec::SCS S);
@@ -623,7 +620,7 @@ public:
     return getTypeSpecType() != DeclSpec::TST_unspecified ||
            getTypeSpecWidth() != TypeSpecifierWidth::Unspecified ||
            getTypeSpecComplex() != DeclSpec::TSC_unspecified ||
-           getTypeSpecSign() != DeclSpec::TSS_unspecified;
+           getTypeSpecSign() != TypeSpecifierSign::Unspecified;
   }
 
   /// Return a bitmask of which flavors of specifiers this
@@ -659,8 +656,8 @@ public:
                         const PrintingPolicy &Policy);
   bool SetTypeSpecComplex(TSC C, SourceLocation Loc, const char *&PrevSpec,
                           unsigned &DiagID);
-  bool SetTypeSpecSign(TSS S, SourceLocation Loc, const char *&PrevSpec,
-                       unsigned &DiagID);
+  bool SetTypeSpecSign(TypeSpecifierSign S, SourceLocation Loc,
+                       const char *&PrevSpec, unsigned &DiagID);
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
                        unsigned &DiagID, const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
