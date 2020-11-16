@@ -2,7 +2,7 @@
 # crash
 RUN: %cpp_compiler %S/UncaughtException.cpp -o %t-UncaughtException
 
-RUN: not %run %t-UncaughtException 2>&1 | FileCheck %s
+RUN: ASAN_OPTIONS=allocator_may_return_null=1 not %run %t-UncaughtException 2>&1 | FileCheck %s
 
 CHECK: ERROR: libFuzzer: deadly signal
 CHECK: Test unit written to ./crash
