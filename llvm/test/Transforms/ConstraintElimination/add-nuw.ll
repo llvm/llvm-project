@@ -237,6 +237,103 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+define void @test.decompose.nonconst(i8 %a, i8 %b, i8 %c, i8 %d) {
+; CHECK-LABEL: @test.decompose.nonconst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_0:%.*]] = icmp uge i8 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[AND_0:%.*]] = and i1 [[C_0]], [[C_1]]
+; CHECK-NEXT:    br i1 [[AND_0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[A]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8 [[B]], 0
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    br i1 [[AND_1]], label [[IF_THEN_2:%.*]], label [[IF_END]]
+; CHECK:       if.then.2:
+; CHECK-NEXT:    [[ADD_0:%.*]] = add nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8 [[ADD_0]], [[C]]
+; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], [[A]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_0]], [[C]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[A]], [[D:%.*]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[ADD_2]], [[C]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    ret void
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.0 = icmp uge i8 %a, %c
+  %c.1 = icmp uge i8 %b, %c
+  %and.0 = and i1 %c.0, %c.1
+  br i1 %and.0, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %c.2 = icmp uge i8 %a, 0
+  %c.3 = icmp uge i8 %b, 0
+  %and.1 = and i1 %c.2, %c.3
+  br i1 %and.1, label %if.then.2, label %if.end
+
+if.then.2:
+  %add.0 = add nuw i8 %a, %b
+  %t.0 = icmp uge i8 %add.0, %c
+  call void @use(i1 %t.0)
+  %add.1 = add nuw i8 %a, %a
+  %t.1 = icmp uge i8 %add.0, %c
+  call void @use(i1 %t.1)
+  %add.2 = add nuw i8 %a, %d
+  %c.4 = icmp uge i8 %add.2, %c
+  call void @use(i1 %c.4)
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+define void @test.decompose.nonconst.no.null.check(i8 %a, i8 %b, i8 %c, i8 %d) {
+; CHECK-LABEL: @test.decompose.nonconst.no.null.check(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_0:%.*]] = icmp uge i8 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[B:%.*]], [[C]]
+; CHECK-NEXT:    [[AND_0:%.*]] = and i1 [[C_0]], [[C_1]]
+; CHECK-NEXT:    br i1 [[AND_0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[ADD_0:%.*]] = add nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8 [[ADD_0]], [[C]]
+; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], [[A]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_0]], [[C]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[A]], [[D:%.*]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[ADD_2]], [[C]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    ret void
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.0 = icmp uge i8 %a, %c
+  %c.1 = icmp uge i8 %b, %c
+  %and.0 = and i1 %c.0, %c.1
+  br i1 %and.0, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %add.0 = add nuw i8 %a, %b
+  %t.0 = icmp uge i8 %add.0, %c
+  call void @use(i1 %t.0)
+  %add.1 = add nuw i8 %a, %a
+  %t.1 = icmp uge i8 %add.0, %c
+  call void @use(i1 %t.1)
+  %add.2 = add nuw i8 %a, %d
+  %c.4 = icmp uge i8 %add.2, %c
+  call void @use(i1 %c.4)
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
 
 declare void @use(i1)
 declare void @llvm.trap()
