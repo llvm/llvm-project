@@ -14,7 +14,7 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
-mlir::scf::ValueVector
+mlir::scf::LoopNest
 mlir::edsc::loopNestBuilder(ValueRange lbs, ValueRange ubs, ValueRange steps,
                             function_ref<void(ValueRange)> fun) {
   // Delegates actual construction to scf::buildLoopNest by wrapping `fun` into
@@ -29,7 +29,7 @@ mlir::edsc::loopNestBuilder(ValueRange lbs, ValueRange ubs, ValueRange steps,
       });
 }
 
-mlir::scf::ValueVector
+mlir::scf::LoopNest
 mlir::edsc::loopNestBuilder(Value lb, Value ub, Value step,
                             function_ref<void(Value)> fun) {
   // Delegates to the ValueRange-based version by wrapping the lambda.
@@ -42,7 +42,7 @@ mlir::edsc::loopNestBuilder(Value lb, Value ub, Value step,
                          wrapper);
 }
 
-mlir::scf::ValueVector mlir::edsc::loopNestBuilder(
+mlir::scf::LoopNest mlir::edsc::loopNestBuilder(
     Value lb, Value ub, Value step, ValueRange iterArgInitValues,
     function_ref<scf::ValueVector(Value, ValueRange)> fun) {
   // Delegates actual construction to scf::buildLoopNest by wrapping `fun` into
@@ -61,7 +61,7 @@ mlir::scf::ValueVector mlir::edsc::loopNestBuilder(
       });
 }
 
-mlir::scf::ValueVector mlir::edsc::loopNestBuilder(
+mlir::scf::LoopNest mlir::edsc::loopNestBuilder(
     ValueRange lbs, ValueRange ubs, ValueRange steps,
     ValueRange iterArgInitValues,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> fun) {
