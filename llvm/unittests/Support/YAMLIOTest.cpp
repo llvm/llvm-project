@@ -3101,3 +3101,15 @@ TEST(YAMLIO, TestUnknownDirective) {
   EXPECT_FALSE(yin2.setCurrentDocument());
   EXPECT_TRUE(yin2.error());
 }
+
+TEST(YAMLIO, TestEmptyAlias) {
+  Input yin("&");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestEmptyAnchor) {
+  Input yin("*");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+}

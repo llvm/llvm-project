@@ -1423,7 +1423,7 @@ bool Scanner::scanAliasOrAnchor(bool IsAlias) {
     ++Column;
   }
 
-  if (Start == Current) {
+  if (Start + 1 == Current) {
     setError("Got empty alias or anchor", Start);
     return false;
   }
