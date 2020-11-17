@@ -2,6 +2,26 @@
 // Vector Instructions
 //===----------------------------------------------------------------------===//
 
+// Pseudo instructions for VM512 modifications
+//
+// Specifies hasSideEffects = 0 to disable UnmodeledSideEffects.
+
+let hasSideEffects = 0 in {
+  let Constraints = "$vx = $vd", DisableEncoding = "$vd" in {
+    def LVMyir_y : Pseudo<(outs VM512:$vx), (ins uimm3:$sy, I64:$sz, VM512:$vd),
+                          "# pseudo LVM $vx, $sy, $sz, $vd">;
+    def LVMyim_y : Pseudo<(outs VM512:$vx),
+                          (ins uimm3:$sy, mimm:$sz, VM512:$vd),
+                          "# pseudo LVM $vx, $sy, $sz, $vd">;
+  }
+  def LVMyir : Pseudo<(outs VM512:$vx), (ins uimm3:$sy, I64:$sz),
+                      "# pseudo LVM $vx, $sy, $sz">;
+  def LVMyim : Pseudo<(outs VM512:$vx), (ins uimm3:$sy, mimm:$sz),
+                      "# pseudo LVM $vx, $sy, $sz">;
+  def SVMyi : Pseudo<(outs I64:$sx), (ins VM512:$vz, uimm3:$sy),
+                     "# pseudo SVM $sx, $vz, $sy">;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //
