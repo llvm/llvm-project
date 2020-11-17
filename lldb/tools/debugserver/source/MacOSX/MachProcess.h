@@ -78,12 +78,14 @@ public:
   };
 
   // Child process control
-  pid_t AttachForDebug(pid_t pid, char *err_str, size_t err_len);
+  pid_t AttachForDebug(pid_t pid, bool unmask_signals, char *err_str,
+                       size_t err_len);
   pid_t LaunchForDebug(const char *path, char const *argv[], char const *envp[],
                        const char *working_directory, const char *stdin_path,
                        const char *stdout_path, const char *stderr_path,
                        bool no_stdio, nub_launch_flavor_t launch_flavor,
-                       int disable_aslr, const char *event_data, DNBError &err);
+                       int disable_aslr, const char *event_data,
+                       bool unmask_signals, DNBError &err);
 
   static uint32_t GetCPUTypeForLocalProcess(pid_t pid);
   static pid_t ForkChildForPTraceDebugging(const char *path, char const *argv[],
@@ -107,7 +109,7 @@ public:
   pid_t BoardServiceLaunchForDebug(const char *app_bundle_path,
                                    char const *argv[], char const *envp[],
                                    bool no_stdio, bool disable_aslr,
-                                   const char *event_data,
+                                   const char *event_data, bool unmask_signals,
                                    DNBError &launch_err);
   pid_t BoardServiceForkChildForPTraceDebugging(
       const char *path, char const *argv[], char const *envp[], bool no_stdio,
@@ -128,7 +130,7 @@ public:
 #ifdef WITH_SPRINGBOARD
   pid_t SBLaunchForDebug(const char *app_bundle_path, char const *argv[],
                          char const *envp[], bool no_stdio, bool disable_aslr,
-                         DNBError &launch_err);
+                         bool unmask_signals, DNBError &launch_err);
   static pid_t SBForkChildForPTraceDebugging(const char *path,
                                              char const *argv[],
                                              char const *envp[], bool no_stdio,

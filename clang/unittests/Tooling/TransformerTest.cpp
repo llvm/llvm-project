@@ -1219,7 +1219,7 @@ void testIt()
 
   auto RewriteOutput =
       CodePrefix + RangeLoop + LoopBody + RangeLoop + LoopBody + CodeSuffix;
-  {
+
     auto MatchedLoop = forStmt(
         has(declStmt(
             hasSingleDecl(varDecl(hasInitializer(integerLiteral(equals(0))))
@@ -1244,8 +1244,55 @@ void testIt()
 
     testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
                     RewriteInput);
-  }
-  {
+
+}
+
+TEST_F(TransformerTest, ImplicitNodes_ForStmt2) {
+
+  std::string CodePrefix = R"cpp(
+struct NonTrivial {
+    NonTrivial() {}
+    NonTrivial(NonTrivial&) {}
+    NonTrivial& operator=(NonTrivial const&) { return *this; }
+
+    ~NonTrivial() {}
+};
+
+struct ContainsArray {
+    NonTrivial arr[2];
+    ContainsArray& operator=(ContainsArray const&) = default;
+};
+
+void testIt()
+{
+    ContainsArray ca1;
+    ContainsArray ca2;
+    ca2 = ca1;
+)cpp";
+
+  auto CodeSuffix = "}";
+
+  auto LoopBody = R"cpp(
+    {
+
+    }
+)cpp";
+
+  auto RawLoop = "for (auto i = 0; i != 5; ++i)";
+
+  auto RangeLoop = "for (auto i : boost::irange(5))";
+
+  // Expect to rewrite the raw loop to the ranged loop.
+  // This works in TK_IgnoreUnlessSpelledInSource mode, but TK_AsIs
+  // mode also matches the hidden for loop generated in the copy assignment
+  // operator of ContainsArray. Transformer then fails to transform the code at
+  // all.
+
+  auto RewriteInput =
+      CodePrefix + RawLoop + LoopBody + RawLoop + LoopBody + CodeSuffix;
+
+  auto RewriteOutput =
+      CodePrefix + RangeLoop + LoopBody + RangeLoop + LoopBody + CodeSuffix;
     auto MatchedLoop = forStmt(
         hasLoopInit(declStmt(
             hasSingleDecl(varDecl(hasInitializer(integerLiteral(equals(0))))
@@ -1270,7 +1317,7 @@ void testIt()
 
     testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
                     RewriteInput);
-  }
+
 }
 
 TEST_F(TransformerTest, TemplateInstantiation) {

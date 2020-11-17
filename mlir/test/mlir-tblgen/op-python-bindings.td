@@ -31,7 +31,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:   if variadic2 is not None: operands.append(variadic2)
   // CHECK:   operand_segment_sizes.append(0 if variadic2 is None else 1)
   // CHECK:   attributes["operand_segment_sizes"] = _ir.DenseElementsAttr.get(operand_segment_sizes,
-  // CHECK:       context=Location.current.context if loc is None else loc.context)
+  // CHECK:       context=_get_default_loc_context(loc))
   // CHECK:   super().__init__(_ir.Operation.create(
   // CHECK:     "test.attr_sized_operands", attributes=attributes, operands=operands, results=results,
   // CHECK:     loc=loc, ip=ip))
@@ -77,7 +77,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:   if variadic2 is not None: results.append(variadic2)
   // CHECK:   result_segment_sizes.append(0 if variadic2 is None else 1)
   // CHECK:   attributes["result_segment_sizes"] = _ir.DenseElementsAttr.get(result_segment_sizes,
-  // CHECK:       context=Location.current.context if loc is None else loc.context)
+  // CHECK:       context=_get_default_loc_context(loc))
   // CHECK:   super().__init__(_ir.Operation.create(
   // CHECK:     "test.attr_sized_results", attributes=attributes, operands=operands, results=results,
   // CHECK:     loc=loc, ip=ip))
@@ -118,7 +118,7 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:   attributes["i32attr"] = i32attr
   // CHECK:   if optionalF32Attr is not None: attributes["optionalF32Attr"] = optionalF32Attr
   // CHECK:   if bool(unitAttr): attributes["unitAttr"] = _ir.UnitAttr.get(
-  // CHECK:     _ir.Location.current.context if loc is None else loc.context)
+  // CHECK:     _get_default_loc_context(loc))
   // CHECK:   attributes["in"] = in_
   // CHECK:   super().__init__(_ir.Operation.create(
   // CHECK:     "test.attributed_op", attributes=attributes, operands=operands, results=results,
@@ -156,7 +156,7 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK:   operands.append(_gen_arg_0)
   // CHECK:   operands.append(_gen_arg_2)
   // CHECK:   if bool(in_): attributes["in"] = _ir.UnitAttr.get(
-  // CHECK:     _ir.Location.current.context if loc is None else loc.context)
+  // CHECK:     _get_default_loc_context(loc))
   // CHECK:   if is_ is not None: attributes["is"] = is_
   // CHECK:   super().__init__(_ir.Operation.create(
   // CHECK:     "test.attributed_op_with_operands", attributes=attributes, operands=operands, results=results,

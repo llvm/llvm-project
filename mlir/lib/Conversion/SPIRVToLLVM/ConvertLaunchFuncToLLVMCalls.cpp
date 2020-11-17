@@ -211,10 +211,10 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // Calculate the size of the memref and get the pointer to the allocated
       // buffer.
       SmallVector<Value, 4> sizes;
+      SmallVector<Value, 4> strides;
+      Value sizeBytes;
       getMemRefDescriptorSizes(loc, memRefType, operand.value(), rewriter,
-                               sizes);
-      Value size = getCumulativeSizeInBytes(loc, memRefType.getElementType(),
-                                            sizes, rewriter);
+                               sizes, strides, sizeBytes);
       MemRefDescriptor descriptor(operand.value());
       Value src = descriptor.allocatedPtr(rewriter, loc);
 
@@ -244,12 +244,12 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // src, dst and size so that we can copy data back after emulating the
       // kernel call.
       Value dst = rewriter.create<LLVM::AddressOfOp>(loc, dstGlobal);
-      copy(loc, dst, src, size, rewriter);
+      copy(loc, dst, src, sizeBytes, rewriter);
 
       CopyInfo info;
       info.dst = dst;
       info.src = src;
-      info.size = size;
+      info.size = sizeBytes;
       copyInfo.push_back(info);
     }
     // Create a call to the kernel and copy the data back.

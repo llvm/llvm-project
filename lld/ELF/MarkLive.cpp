@@ -56,7 +56,7 @@ private:
   void mark();
 
   template <class RelTy>
-  void resolveReloc(InputSectionBase &sec, RelTy &rel, bool isLSDA);
+  void resolveReloc(InputSectionBase &sec, RelTy &rel, bool fromFDE);
 
   template <class RelTy>
   void scanEhFrameSection(EhInputSection &eh, ArrayRef<RelTy> rels);
@@ -89,7 +89,7 @@ static uint64_t getAddend(InputSectionBase &sec,
 template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
-                                  bool isLSDA) {
+                                  bool fromFDE) {
   Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
 
   // If a symbol is referenced in a live section, it is used.
@@ -104,7 +104,16 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     if (d->isSection())
       offset += getAddend<ELFT>(sec, rel);
 
-    if (!isLSDA || !(relSec->flags & SHF_EXECINSTR))
+    // fromFDE being true means this is referenced by a FDE in a .eh_frame
+    // piece. The relocation points to the described function or to a LSDA. We
+    // only need to keep the LSDA live, so ignore anything that points to
+    // executable sections. If the LSDA is in a section group, we ignore the
+    // relocation as well because (a) if the associated text section is live,
+    // the LSDA will be retained due to section group rules (b) if the
+    // associated text section should be discarded, marking the LSDA will
+    // unnecessarily retain the text section.
+    if (!(fromFDE &&
+          ((relSec->flags & SHF_EXECINSTR) || relSec->nextInSectionGroup)))
       enqueue(relSec, offset);
     return;
   }
@@ -148,9 +157,6 @@ void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
       continue;
     }
 
-    // This is a FDE. The relocations point to the described function or to
-    // a LSDA. We only need to keep the LSDA alive, so ignore anything that
-    // points to executable sections.
     uint64_t pieceEnd = piece.inputOff + piece.size;
     for (size_t j = firstRelI, end2 = rels.size();
          j < end2 && rels[j].r_offset < pieceEnd; ++j)
