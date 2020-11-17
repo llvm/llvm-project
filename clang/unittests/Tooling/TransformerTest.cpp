@@ -1264,9 +1264,9 @@ void testIt()
                  cat("auto ", name("loopVar"), " : boost::irange(",
                      node("upperBoundExpr"), ")"));
 
-    testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedLoop),
-                      RewriteRule),
-             RewriteInput, RewriteOutput);
+    // testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedLoop),
+    //                   RewriteRule),
+    //          RewriteInput, RewriteOutput);
 
     testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
                     RewriteInput);
