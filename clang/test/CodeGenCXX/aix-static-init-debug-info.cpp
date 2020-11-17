@@ -15,7 +15,7 @@ X v;
 
 // CHECK: define internal void @__cxx_global_var_init() [[ATTR:#[0-9]+]] !dbg ![[DBGVAR16:[0-9]+]] {
 // CHECK: entry:
-// CHECK:   call void @_ZN1XC1Ev(%struct.X* @v), !dbg ![[DBGVAR19:[0-9]+]]
+// CHECK:   call void @_ZN1XC1Ev(%struct.X* {{[^,]*}} @v), !dbg ![[DBGVAR19:[0-9]+]]
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor_v) [[ATTR:#[0-9]+]], !dbg ![[DBGVAR19b:[0-9]+]]
 // CHECK:   ret void, !dbg ![[DBGVAR19]]
 // CHECK: }

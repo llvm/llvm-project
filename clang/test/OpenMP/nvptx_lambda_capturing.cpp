@@ -40,7 +40,7 @@
 // CLASS: [[THIS_REF:%.+]] = getelementptr inbounds [[CAP1]], [[CAP1]]* [[L]], i32 0, i32 0
 // CLASS: store [[S]]* [[S_:%.+]], [[S]]** [[THIS_REF]],
 // CLASS: [[L:%.+]] = load [[CAP1]]*, [[CAP1]]** [[L_ADDR]],
-// CLASS: call i32 [[LAMBDA1:@.+foo.+]]([[CAP1]]* [[L]])
+// CLASS: call i32 [[LAMBDA1:@.+foo.+]]([[CAP1]]* {{[^,]*}} [[L]])
 // CLASS: ret void
 
 // CLASS: define weak void @__omp_offloading_{{.+}}foo{{.+}}_l69([[S]]* %{{.+}}, [[CAP1]]* nonnull align 8 dereferenceable(8) %{{.+}})
@@ -50,7 +50,7 @@
 // CLASS: [[THIS_REF:%.+]] = getelementptr inbounds [[CAP1]], [[CAP1]]* [[L]], i32 0, i32 0
 // CLASS: store [[S]]* %{{.+}}, [[S]]** [[THIS_REF]],
 // CLASS: [[L:%.+]] = load [[CAP1]]*, [[CAP1]]** [[L_ADDR]],
-// CLASS: call i32 [[LAMBDA1]]([[CAP1]]* [[L]])
+// CLASS: call i32 [[LAMBDA1]]([[CAP1]]* {{[^,]*}} [[L]])
 // CLASS: ret void
 
 template <typename T>
@@ -94,7 +94,7 @@ struct S {
 // FUN: [[A_CAP:%.+]] = getelementptr inbounds [[CAP2]], [[CAP2]]* [[L]], i32 0, i32 4
 // FUN: store i32* %{{.+}}, i32** [[A_CAP]],
 // FUN: [[L:%.+]] = load [[CAP2]]*, [[CAP2]]** [[L_ADDR]],
-// FUN: call i64 [[LAMBDA2:@.+main.+]]([[CAP2]]* [[L]])
+// FUN: call i64 [[LAMBDA2:@.+main.+]]([[CAP2]]* {{[^,]*}} [[L]])
 // FUN: ret void
 
 // FUN: define weak void @__omp_offloading_{{.+}}_main_l126(i32* nonnull align 4 dereferenceable(4) %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}} i32* nonnull align 4 dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [[CAP2]]* nonnull align 8 dereferenceable(40) %{{.+}})
@@ -112,7 +112,7 @@ struct S {
 // FUN: [[A_CAP:%.+]] = getelementptr inbounds [[CAP2]], [[CAP2]]* [[L]], i32 0, i32 4
 // FUN: store i32* %{{.+}}, i32** [[A_CAP]],
 // FUN: [[L:%.+]] = load [[CAP2]]*, [[CAP2]]** [[L_ADDR]],
-// FUN: call i64 [[LAMBDA2]]([[CAP2]]* [[L]])
+// FUN: call i64 [[LAMBDA2]]([[CAP2]]* {{[^,]*}} [[L]])
 // FUN: ret void
 
 int main(int argc, char **argv) {

@@ -106,7 +106,7 @@ void xyz() {
   // CHECK: br label %[[ARRAY_INIT:.+]]
   // CHECK: [[ARRAY_INIT]]:
   // CHECK: [[S_CUR:%.+]] = phi %struct.S* [ [[S_BEGIN]], %{{.+}} ], [ [[S_NEXT:%.+]], %[[ARRAY_INIT]] ]
-  // CHECK: call void [[CONSTR:@.+]](%struct.S* [[S_CUR]])
+  // CHECK: call void [[CONSTR:@.+]](%struct.S* {{[^,]*}} [[S_CUR]])
   // CHECK: [[S_NEXT]] = getelementptr inbounds %struct.S, %struct.S* [[S_CUR]], i{{.+}} 1
   // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[S_NEXT]], [[S_END]]
   // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[ARRAY_INIT]]
@@ -135,7 +135,7 @@ void xyz() {
     // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[ARRAY_INIT:[^,]+]]
     // CHECK: [[ARRAY_INIT]]:
     // CHECK: [[S_CUR:%.+]] = phi %struct.S* [ [[S_BEGIN]], %[[OMP_BODY]] ], [ [[S_NEXT:%.+]], %[[ARRAY_INIT]] ]
-    // CHECK: call void [[CONSTR]](%struct.S* [[S_CUR]])
+    // CHECK: call void [[CONSTR]](%struct.S* {{[^,]*}} [[S_CUR]])
     // CHECK: [[S_NEXT]] = getelementptr {{.*}}%struct.S, %struct.S* [[S_CUR]], i{{.+}} 1
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[S_NEXT]], [[S_END]]
     // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[ARRAY_INIT]]
@@ -172,7 +172,7 @@ void xyz() {
     // CHECK: br label %[[BODY:[^,]+]]
     // CHECK: [[BODY]]:
     // CHECK: [[CUR:%.+]] = phi %struct.S* [ [[TEMP_ARR_BEG]], %[[REDUCE]] ], [ [[NEXT:%.+]], %[[BODY]] ]
-    // CHECK: call void [[CONSTR]](%struct.S* [[CUR]])
+    // CHECK: call void [[CONSTR]](%struct.S* {{[^,]*}} [[CUR]])
     // CHECK: [[NEXT]] = getelementptr inbounds %struct.S, %struct.S* [[CUR]], i64 1
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[NEXT]], [[TEMP_ARR_END]]
     // CHECK: br i1 [[IS_DONE]], label %[[EXIT:[^,]+]], label %[[BODY]]
@@ -186,7 +186,7 @@ void xyz() {
     // CHECK: [[BODY]]:
     // CHECK: [[CUR_SRC:%.+]] = phi %struct.S* [ [[LHS_BEGIN]], %{{.+}} ], [ [[SRC_NEXT:%.+]], %[[BODY]] ]
     // CHECK: [[CUR_DEST:%.+]] = phi %struct.S* [ [[TEMP_ARR_BEG]], %{{.+}} ], [ [[DEST_NEXT:%.+]], %[[BODY]] ]
-    // CHECK: call {{.*}}%struct.S* [[S_COPY:@.+]](%struct.S* [[CUR_DEST]], %struct.S* {{.*}}[[CUR_SRC]])
+    // CHECK: call {{.*}}%struct.S* [[S_COPY:@.+]](%struct.S* {{[^,]*}} [[CUR_DEST]], %struct.S* {{.*}}[[CUR_SRC]])
     // CHECK: [[DEST_NEXT:%.+]] = getelementptr %struct.S, %struct.S* [[CUR_DEST]], i32 1
     // CHECK: [[SRC_NEXT:%.+]] = getelementptr %struct.S, %struct.S* [[CUR_SRC]], i32 1
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[DEST_NEXT]], [[TEMP_ARR_END]]
@@ -200,8 +200,8 @@ void xyz() {
     // CHECK: [[ARRAY_REDUCE_COPY]]:
     // CHECK: [[SRC_CUR:%.+]] = phi %struct.S* [ [[RHS_BEGIN]], %[[EXIT]] ], [ [[SRC_NEXT:%.+]], %[[ARRAY_REDUCE_COPY]] ]
     // CHECK: [[DEST_CUR:%.+]] = phi %struct.S* [ [[LHS_BEGIN]], %[[EXIT]] ], [ [[DEST_NEXT:%.+]], %[[ARRAY_REDUCE_COPY]] ]
-    // CHECK: [[SUM:%.+]] = call {{.*}}%struct.S* @{{.+}}(%struct.S* [[DEST_CUR]], %struct.S* {{.*}}[[SRC_CUR]])
-    // CHECK: call {{.*}}%struct.S* [[S_COPY]](%struct.S* [[DEST_CUR]], %struct.S* {{.*}}[[SUM]])
+    // CHECK: [[SUM:%.+]] = call {{.*}}%struct.S* @{{.+}}(%struct.S* {{[^,]*}} [[DEST_CUR]], %struct.S* {{.*}}[[SRC_CUR]])
+    // CHECK: call {{.*}}%struct.S* [[S_COPY]](%struct.S* {{[^,]*}} [[DEST_CUR]], %struct.S* {{.*}}[[SUM]])
     // CHECK: [[DEST_NEXT]] = getelementptr {{.*}}%struct.S, %struct.S* [[DEST_CUR]], i{{.+}} 1
     // CHECK: [[SRC_NEXT]] = getelementptr {{.*}}%struct.S, %struct.S* [[SRC_CUR]], i{{.+}} 1
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[DEST_NEXT]], [[LHS_END]]
@@ -216,7 +216,7 @@ void xyz() {
     // CHECK: [[BODY]]:
     // CHECK: [[CUR_SRC:%.+]] = phi %struct.S* [ [[TEMP_ARR_BEG]], %[[DONE]] ], [ [[SRC_NEXT:%.+]], %[[BODY]] ]
     // CHECK: [[CUR_DEST:%.+]] = phi %struct.S* [ [[RHS_BEGIN]], %[[DONE]] ], [ [[DEST_NEXT:%.+]], %[[BODY]] ]
-    // CHECK: call {{.*}}%struct.S* [[S_COPY]](%struct.S* [[CUR_DEST]], %struct.S* {{.*}}[[CUR_SRC]])
+    // CHECK: call {{.*}}%struct.S* [[S_COPY]](%struct.S* {{[^,]*}} [[CUR_DEST]], %struct.S* {{.*}}[[CUR_SRC]])
     // CHECK: [[DEST_NEXT]] = getelementptr %struct.S, %struct.S* [[CUR_DEST]], i32 1
     // CHECK: [[SRC_NEXT]] = getelementptr %struct.S, %struct.S* [[CUR_SRC]], i32 1
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[DEST_NEXT]], [[RHS_END]]
@@ -230,7 +230,7 @@ void xyz() {
     // CHECK: [[BODY]]:
     // CHECK: [[CUR:%.+]] = phi %struct.S* [ [[TEMP_ARR_END]], %[[DONE]] ], [ [[PREV:%.+]], %[[BODY]] ]
     // CHECK: [[PREV]] = getelementptr inbounds %struct.S, %struct.S* [[CUR]], i64 -1
-    // CHECK: call void [[DESTR:@.+]](%struct.S* [[PREV]])
+    // CHECK: call void [[DESTR:@.+]](%struct.S* {{[^,]*}} [[PREV]])
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[PREV]], [[TEMP_ARR_BEG]]
     // CHECK: br i1 [[IS_DONE]], label %[[EXIT:[^,]+]], label %[[BODY]]
     // CHECK: [[EXIT]]:
@@ -256,7 +256,7 @@ void xyz() {
     // CHECK: [[ARRAY_DESTR]]:
     // CHECK: [[S_CUR:%.+]] = phi %struct.S* [ [[S_END]], %[[CONTINUE]] ], [ [[S_PREV:%.+]], %[[ARRAY_DESTR]] ]
     // CHECK: [[S_PREV]] = getelementptr {{.*}}%struct.S, %struct.S* [[S_CUR]], i{{.+}} -1
-    // CHECK: call void [[DESTR]](%struct.S* [[S_PREV]])
+    // CHECK: call void [[DESTR]](%struct.S* {{[^,]*}} [[S_PREV]])
     // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.S* [[S_PREV]], [[S_BEGIN]]
     // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[ARRAY_DESTR]]
     // CHECK: [[DONE]]:

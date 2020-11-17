@@ -364,12 +364,12 @@ struct __declspec(dllimport) ClassWithNonDllImportField { using X = ClassWithDto
 struct __declspec(dllimport) ClassWithNonDllImportBase : public ClassWithDtor { };
 USECLASS(ClassWithNonDllImportField);
 USECLASS(ClassWithNonDllImportBase);
-// MO1-DAG: declare dllimport x86_thiscallcc void @"??1ClassWithNonDllImportBase@@QAE@XZ"(%struct.ClassWithNonDllImportBase*)
-// MO1-DAG: declare dllimport x86_thiscallcc void @"??1ClassWithNonDllImportField@@QAE@XZ"(%struct.ClassWithNonDllImportField*)
+// MO1-DAG: declare dllimport x86_thiscallcc void @"??1ClassWithNonDllImportBase@@QAE@XZ"(%struct.ClassWithNonDllImportBase* {{[^,]*}})
+// MO1-DAG: declare dllimport x86_thiscallcc void @"??1ClassWithNonDllImportField@@QAE@XZ"(%struct.ClassWithNonDllImportField* {{[^,]*}})
 struct ClassWithCtor { ClassWithCtor() {} };
 struct __declspec(dllimport) ClassWithNonDllImportFieldWithCtor { ClassWithCtor t; };
 USECLASS(ClassWithNonDllImportFieldWithCtor);
-// MO1-DAG: declare dllimport x86_thiscallcc %struct.ClassWithNonDllImportFieldWithCtor* @"??0ClassWithNonDllImportFieldWithCtor@@QAE@XZ"(%struct.ClassWithNonDllImportFieldWithCtor* returned)
+// MO1-DAG: declare dllimport x86_thiscallcc %struct.ClassWithNonDllImportFieldWithCtor* @"??0ClassWithNonDllImportFieldWithCtor@@QAE@XZ"(%struct.ClassWithNonDllImportFieldWithCtor* {{[^,]*}} returned {{[^,]*}})
 struct ClassWithImplicitDtor { __declspec(dllimport) ClassWithImplicitDtor(); ClassWithDtor member; };
 __declspec(dllimport) inline void ReferencingDtorThroughDefinition() { ClassWithImplicitDtor x; };
 USE(ReferencingDtorThroughDefinition)

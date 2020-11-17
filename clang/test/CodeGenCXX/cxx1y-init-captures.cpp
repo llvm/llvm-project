@@ -66,7 +66,7 @@ int h(int a) {
   // CHECK: load i32, i32* %[[A_ADDR]],
   // CHECK: store i32
   //
-  // CHECK: call i32 @"_ZZ1hiENK3$_2clEv"({{.*}}* %[[OUTER]])
+  // CHECK: call i32 @"_ZZ1hiENK3$_2clEv"({{.*}}* {{[^,]*}} %[[OUTER]])
   return [&b(a), c(a)] {
     // CHECK-LABEL: define internal i32 @"_ZZ1hiENK3$_2clEv"(
     // CHECK: %[[OUTER_ADDR:.*]] = alloca
@@ -86,7 +86,7 @@ int h(int a) {
     // CHECK-NEXT: load i32, i32* %
     // CHECK-NEXT: store i32
     //
-    // CHECK: call i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"({{.*}}* %[[INNER]])
+    // CHECK: call i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"({{.*}}* {{[^,]*}} %[[INNER]])
     return [=, &c] {
       // CHECK-LABEL: define internal void @"_ZZ1fvEN3$_0D2Ev"(
       // CHECK: call void @_ZN1SD1Ev(

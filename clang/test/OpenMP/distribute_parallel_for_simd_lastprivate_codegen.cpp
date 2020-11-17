@@ -208,7 +208,7 @@ int main() {
       // LAMBDA: store i{{[0-9]+}}* [[SVAR_PRIVATE]], i{{[0-9]+}}** [[SVAR_PRIVATE_ADDR_REF]]
       // LAMBDA: [[SFVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
       // LAMBDA: store float* [[SFVAR_PRIVATE]], float** [[SFVAR_PRIVATE_ADDR_REF]]
-      // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
+      // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}* {{[^,]*}} [[ARG]])
 
       // LAMBDA: call {{.*}}void @__kmpc_for_static_fini(
 
@@ -232,7 +232,7 @@ int main() {
       // LAMBDA: ret
 
       [&]() {
-	// LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+	// LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* {{[^,]*}} [[ARG_PTR:%.+]])
 	// LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
 	g = 2;
 	g1 = 2;
@@ -278,7 +278,7 @@ int main() {
 
 // CHECK: define{{.*}} i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOAD_FUN:@.+]](i{{[0-9]+}} {{.+}}, [2 x i{{[0-9]+}}]* {{.+}}, [2 x [[S_FLOAT_TY]]]* {{.+}}, [[S_FLOAT_TY]]* {{.+}}, i{{[0-9]+}} {{.+}})
 // CHECK: ret
@@ -332,13 +332,13 @@ int main() {
 // CHECK: br label %[[S_ARR_CST_LOOP:.+]]
 // CHECK: [[S_ARR_CST_LOOP]]:
 // CHECK: [[S_ARR_CTOR:%.+]] = phi {{.+}}
-// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* [[S_ARR_CTOR]])
+// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[S_ARR_CTOR]])
 // CHECK: [[S_ARR_NEXT:%.+]] = getelementptr {{.+}} [[S_ARR_CTOR]],
 // CHECK: [[S_ARR_DONE:%.+]] = icmp {{.+}} [[S_ARR_NEXT]], [[S_ARR_END]]
 // CHECK: br i1 [[S_ARR_DONE]], label %[[S_ARR_CST_END:.+]], label %[[S_ARR_CST_LOOP]]
 // CHECK: [[S_ARR_CST_END]]:
 // CHECK: [[TMP_REF:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** %
-// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK: store [[S_FLOAT_TY]]* [[VAR_PRIV]], [[S_FLOAT_TY]]** [[TMP_PRIV]],
 
 // the distribute loop
@@ -429,13 +429,13 @@ int main() {
 // CHECK: br label %[[S_ARR_CST_LOOP:.+]]
 // CHECK: [[S_ARR_CST_LOOP]]:
 // CHECK: [[S_ARR_CTOR:%.+]] = phi {{.+}}
-// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* [[S_ARR_CTOR]])
+// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[S_ARR_CTOR]])
 // CHECK: [[S_ARR_NEXT:%.+]] = getelementptr {{.+}} [[S_ARR_CTOR]],
 // CHECK: [[S_ARR_DONE:%.+]] = icmp {{.+}} [[S_ARR_NEXT]], [[S_ARR_END]]
 // CHECK: br i1 [[S_ARR_DONE]], label %[[S_ARR_CST_END:.+]], label %[[S_ARR_CST_LOOP]]
 // CHECK: [[S_ARR_CST_END]]:
 // CHECK: [[VAR_ADDR_REF:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** %
-// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK: call void [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK: store [[S_FLOAT_TY]]* [[VAR_PRIV]], [[S_FLOAT_TY]]** [[TMP_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
@@ -493,7 +493,7 @@ int main() {
 // template tmain
 // CHECK: define{{.*}} i{{[0-9]+}} [[TMAIN_INT:@.+]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOAD_FUN_1:@.+]](i{{[0-9]+}} {{.+}}, [2 x i{{[0-9]+}}]* {{.+}}, [2 x [[S_INT_TY]]]* {{.+}}, [[S_INT_TY]]* {{.+}})
 // CHECK: ret
@@ -623,13 +623,13 @@ int main() {
 // CHECK: br label %[[S_ARR_CST_LOOP:.+]]
 // CHECK: [[S_ARR_CST_LOOP]]:
 // CHECK: [[S_ARR_CTOR:%.+]] = phi {{.+}}
-// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* [[S_ARR_CTOR]])
+// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_CTOR]])
 // CHECK: [[S_ARR_NEXT:%.+]] = getelementptr {{.+}} [[S_ARR_CTOR]],
 // CHECK: [[S_ARR_DONE:%.+]] = icmp {{.+}} [[S_ARR_NEXT]], [[S_ARR_END]]
 // CHECK: br i1 [[S_ARR_DONE]], label %[[S_ARR_CST_END:.+]], label %[[S_ARR_CST_LOOP]]
 // CHECK: [[S_ARR_CST_END]]:
 // CHECK: [[VAR_ADDR_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
-// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK: call void [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK: store [[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]** [[TMP_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(

@@ -3,7 +3,7 @@
 // This was a problem in Sema, but only shows up as noinline missing
 // in CodeGen.
 
-// CHECK: define linkonce_odr {{.*}}void @_ZN6VectorIiE13growStorageByEv(%struct.Vector* %this) [[NI:#[0-9]+]]
+// CHECK: define linkonce_odr {{.*}}void @_ZN6VectorIiE13growStorageByEv(%struct.Vector* {{[^,]*}} %this) [[NI:#[0-9]+]]
 
 template <class Ty> struct Vector  {
   void growStorageBy();

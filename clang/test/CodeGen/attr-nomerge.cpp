@@ -19,7 +19,7 @@ void foo(int i) {
 // CHECK: call zeroext i1 @_Z3barv() #[[NOMERGEATTR]]
 // CHECK: call zeroext i1 @_Z3barv() #[[NOMERGEATTR]]
 // CHECK: call void @_Z1fbb({{.*}}) #[[NOMERGEATTR]]
-// CHECK: call void @"_ZZ3fooiENK3$_0clEv"(%class.anon* %ref.tmp) #[[NOMERGEATTR]]
+// CHECK: call void @"_ZZ3fooiENK3$_0clEv"(%class.anon* {{[^,]*}} %ref.tmp) #[[NOMERGEATTR]]
 // CHECK: call zeroext i1 @_Z3barv() #[[NOMERGEATTR]]
 // CHECK: call zeroext i1 @_Z3barv() #[[NOMERGEATTR]]
 // CHECK: call zeroext i1 @_Z3barv() #[[NOMERGEATTR]]

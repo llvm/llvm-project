@@ -65,15 +65,15 @@ namespace PR18097 {
     };
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* nonnull @_ZN7PR180977dynamic1aE, i32 1)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* nonnull {{[^,]*}} @_ZN7PR180977dynamic1aE, i32 1)
     _Atomic(X) a = X(1);
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* nonnull @_ZN7PR180977dynamic1bE, i32 2)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* nonnull {{[^,]*}} @_ZN7PR180977dynamic1bE, i32 2)
     _Atomic(X) b(X(2));
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* nonnull @_ZN7PR180977dynamic1cE, i32 3)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* nonnull {{[^,]*}} @_ZN7PR180977dynamic1cE, i32 3)
     _Atomic(X) c{X(3)};
 
     struct Y {
@@ -81,7 +81,7 @@ namespace PR18097 {
       _Atomic(int) b;
     };
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* getelementptr inbounds ({{.*}}, {{.*}}* @_ZN7PR180977dynamic1yE, i32 0, i32 0), i32 4)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* {{[^,]*}} getelementptr inbounds ({{.*}}, {{.*}}* @_ZN7PR180977dynamic1yE, i32 0, i32 0), i32 4)
     // CHECK: store i32 5, i32* getelementptr inbounds ({{.*}}, {{.*}}* @_ZN7PR180977dynamic1yE, i32 0, i32 1)
     Y y = { X(4), 5 };
   }

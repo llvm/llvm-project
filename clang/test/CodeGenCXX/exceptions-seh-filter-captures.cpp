@@ -44,7 +44,7 @@ void S::test_method() {
   }
 }
 
-// CHECK-LABEL: define dso_local void @"?test_method@S@@QEAAXXZ"(%struct.S* %this)
+// CHECK-LABEL: define dso_local void @"?test_method@S@@QEAAXXZ"(%struct.S* {{[^,]*}} %this)
 // CHECK: @llvm.localescape(i32* %[[l1_addr:[^, ]*]])
 // CHECK: store i32 13, i32* %[[l1_addr]], align 4
 // CHECK: invoke void @might_crash()
@@ -69,7 +69,7 @@ void test_lambda() {
   lambda();
 }
 
-// CHECK-LABEL: define internal void @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ"(%class.anon* %this)
+// CHECK-LABEL: define internal void @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ"(%class.anon* {{[^,]*}} %this)
 // CHECK: @llvm.localescape(i32* %[[l2_addr:[^, ]*]])
 // CHECK: store i32 42, i32* %[[l2_addr]], align 4
 // CHECK: invoke void @might_crash()

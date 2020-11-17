@@ -174,7 +174,7 @@ int bar(int n){
 
 
 //
-// CHECK: define {{.*}}[[FS1]]([[S1]]* {{%.+}}, i32 {{[^%]*}}[[PARM:%.+]])
+// CHECK: define {{.*}}[[FS1]]([[S1]]* {{[^,]*}} {{%.+}}, i32 {{[^%]*}}[[PARM:%.+]])
 //
 // CHECK-DAG:   store i32 [[PARM]], i32* [[N_ADDR:%.+]], align
 // CHECK:       store i32 1, i32* [[B:%.+]], align

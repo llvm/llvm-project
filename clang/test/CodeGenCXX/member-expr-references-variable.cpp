@@ -32,7 +32,7 @@ void scalarStaticVariableInMemberExpr(Struct *ptr, Struct &ref) {
 // CHECK: load %struct.Struct*, %struct.Struct** %{{.*}}, align 8
 // CHECK: call void @_Z3useiPKc(i32 4, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[STR]], i32 0, i32 0))
   use(5, Struct(2).name);
-// CHECK: call void @_ZN6StructC1Ei(%struct.Struct* %{{.*}}, i32 2)
+// CHECK: call void @_ZN6StructC1Ei(%struct.Struct* {{[^,]*}} %{{.*}}, i32 2)
 // CHECK: call void @_Z3useiPKc(i32 5, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[STR]], i32 0, i32 0))
   use(6, getPtr()->name);
 // CHECK: call %struct.Struct* @_Z6getPtrv()
@@ -70,7 +70,7 @@ void complexStaticVariableInMemberExpr(Struct *ptr, Struct &ref) {
 // CHECK: %[[vector3:.*]] = load <2 x float>, <2 x float>* %[[cast3]], align 4
 // CHECK: call void @_Z3useiCf(i32 4, <2 x float> %[[vector3]])
   use(5, Struct(2).complexValue);
-// CHECK: call void @_ZN6StructC1Ei(%struct.Struct* %{{.*}}, i32 2)
+// CHECK: call void @_ZN6StructC1Ei(%struct.Struct* {{[^,]*}} %{{.*}}, i32 2)
 // CHECK: store float 4.200000e+01, float* %[[coerce4:.*]].{{.*}}, align 4
 // CHECK: store float 0.000000e+00, float* %[[coerce4]].{{.*}}, align 4
 // CHECK: %[[cast4:.*]] = bitcast { float, float }* %[[coerce4]] to <2 x float>*

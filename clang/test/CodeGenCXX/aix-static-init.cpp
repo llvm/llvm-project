@@ -43,7 +43,7 @@ namespace test4 {
 
 // CHECK: define internal void @__cxx_global_var_init() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* @_ZN5test12t1E)
+// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t1E)
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor__ZN5test12t1E)
 // CHECK:   ret void
 // CHECK: }
@@ -74,7 +74,7 @@ namespace test4 {
 
 // CHECK: define internal void @__cxx_global_var_init.1() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* @_ZN5test12t2E)
+// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t2E)
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor__ZN5test12t2E)
 // CHECK:   ret void
 // CHECK: }
@@ -145,7 +145,7 @@ namespace test4 {
 // CHECK:   br i1 %tobool, label %init, label %init.end
 
 // CHECK: init:
-// CHECK:   call void @_ZN5test45Test4C1Ev(%"struct.test4::Test4"* @_ZZN5test41fEvE11staticLocal)
+// CHECK:   call void @_ZN5test45Test4C1Ev(%"struct.test4::Test4"* {{[^,]*}} @_ZZN5test41fEvE11staticLocal)
 // CHECK:   %2 = call i32 @atexit(void ()* @__dtor__ZZN5test41fEvE11staticLocal)
 // CHECK:   call void @__cxa_guard_release(i64* @_ZGVZN5test41fEvE11staticLocal)
 // CHECK:   br label %init.end
