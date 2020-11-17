@@ -22,75 +22,75 @@ using namespace mlir::detail;
 // Type
 //===----------------------------------------------------------------------===//
 
-bool Type::isBF16() { return isa<BFloat16Type>(); }
-bool Type::isF16() { return isa<Float16Type>(); }
-bool Type::isF32() { return isa<Float32Type>(); }
-bool Type::isF64() { return isa<Float64Type>(); }
+bool Type::isBF16() const { return isa<BFloat16Type>(); }
+bool Type::isF16() const { return isa<Float16Type>(); }
+bool Type::isF32() const { return isa<Float32Type>(); }
+bool Type::isF64() const { return isa<Float64Type>(); }
 
-bool Type::isIndex() { return isa<IndexType>(); }
+bool Type::isIndex() const { return isa<IndexType>(); }
 
 /// Return true if this is an integer type with the specified width.
-bool Type::isInteger(unsigned width) {
+bool Type::isInteger(unsigned width) const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.getWidth() == width;
   return false;
 }
 
-bool Type::isSignlessInteger() {
+bool Type::isSignlessInteger() const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.isSignless();
   return false;
 }
 
-bool Type::isSignlessInteger(unsigned width) {
+bool Type::isSignlessInteger(unsigned width) const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.isSignless() && intTy.getWidth() == width;
   return false;
 }
 
-bool Type::isSignedInteger() {
+bool Type::isSignedInteger() const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.isSigned();
   return false;
 }
 
-bool Type::isSignedInteger(unsigned width) {
+bool Type::isSignedInteger(unsigned width) const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.isSigned() && intTy.getWidth() == width;
   return false;
 }
 
-bool Type::isUnsignedInteger() {
+bool Type::isUnsignedInteger() const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.isUnsigned();
   return false;
 }
 
-bool Type::isUnsignedInteger(unsigned width) {
+bool Type::isUnsignedInteger(unsigned width) const {
   if (auto intTy = dyn_cast<IntegerType>())
     return intTy.isUnsigned() && intTy.getWidth() == width;
   return false;
 }
 
-bool Type::isSignlessIntOrIndex() {
+bool Type::isSignlessIntOrIndex() const {
   return isSignlessInteger() || isa<IndexType>();
 }
 
-bool Type::isSignlessIntOrIndexOrFloat() {
+bool Type::isSignlessIntOrIndexOrFloat() const {
   return isSignlessInteger() || isa<IndexType, FloatType>();
 }
 
-bool Type::isSignlessIntOrFloat() {
+bool Type::isSignlessIntOrFloat() const {
   return isSignlessInteger() || isa<FloatType>();
 }
 
-bool Type::isIntOrIndex() { return isa<IntegerType>() || isIndex(); }
+bool Type::isIntOrIndex() const { return isa<IntegerType>() || isIndex(); }
 
-bool Type::isIntOrFloat() { return isa<IntegerType, FloatType>(); }
+bool Type::isIntOrFloat() const { return isa<IntegerType, FloatType>(); }
 
-bool Type::isIntOrIndexOrFloat() { return isIntOrFloat() || isIndex(); }
+bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
 
-unsigned Type::getIntOrFloatBitWidth() {
+unsigned Type::getIntOrFloatBitWidth() const {
   assert(isIntOrFloat() && "only integers and floats have a bitwidth");
   if (auto intType = dyn_cast<IntegerType>())
     return intType.getWidth();
