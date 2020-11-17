@@ -270,7 +270,6 @@ TEST_CAST_VECTOR(bfloat16)
 TEST_CAST_COMMON(bool)
 
 // Test the implicit conversion only applies to valid types
-fixed_int8_t to_fixed_int8_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_int8_t' (vector of {{[0-9]+}} 'signed char' values)}}
 fixed_bool_t to_fixed_bool_t__from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
 
 svint64_t to_svint64_t__from_gnu_int32_t(gnu_int32_t x) { return x; } // expected-error-re {{returning 'gnu_int32_t' (vector of {{[0-9]+}} 'int32_t' values) from a function with incompatible result type 'svint64_t' (aka '__SVInt64_t')}}
