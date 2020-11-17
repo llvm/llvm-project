@@ -1393,7 +1393,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   if (!DecompGEP1.VarIndices.empty()) {
     APInt Modulo(MaxPointerSize, 0);
-    bool AllPositive = true;
+    bool AllNonNegative = GEP1BaseOffset.isNonNegative();
+    bool AllNonPositive = GEP1BaseOffset.isNonPositive();
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
 
       // Try to distinguish something like &A[i][1] against &A[42][0].
@@ -1402,7 +1403,7 @@ AliasResult BasicAAResult::aliasGEP(
       // be ^'ing Modulo with itself later.
       Modulo |= DecompGEP1.VarIndices[i].Scale;
 
-      if (AllPositive) {
+      if (AllNonNegative || AllNonPositive) {
         // If the Value could change between cycles, then any reasoning about
         // the Value this cycle may not hold in the next cycle. We'll just
         // give up if we can't determine conditions that hold for every cycle:
@@ -1419,12 +1420,11 @@ AliasResult BasicAAResult::aliasGEP(
         SignKnownZero |= IsZExt;
         SignKnownOne &= !IsZExt;
 
-        // If the variable begins with a zero then we know it's
-        // positive, regardless of whether the value is signed or
-        // unsigned.
         APInt Scale = DecompGEP1.VarIndices[i].Scale;
-        AllPositive =
-            (SignKnownZero && Scale.sge(0)) || (SignKnownOne && Scale.slt(0));
+        AllNonNegative &= (SignKnownZero && Scale.isNonNegative()) ||
+                          (SignKnownOne && Scale.isNonPositive());
+        AllNonPositive &= (SignKnownZero && Scale.isNonPositive()) ||
+                          (SignKnownOne && Scale.isNonNegative());
       }
     }
 
@@ -1439,12 +1439,19 @@ AliasResult BasicAAResult::aliasGEP(
         (Modulo - ModOffset).uge(V1Size.getValue()))
       return NoAlias;
 
-    // If we know all the variables are positive, then GEP1 >= GEP1BasePtr.
-    // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
-    // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
-    if (AllPositive && GEP1BaseOffset.sgt(0) &&
-        V2Size != LocationSize::unknown() &&
+    // If we know all the variables are non-negative, then the total offset is
+    // also non-negative and >= GEP1BaseOffset. We have the following layout:
+    // [0, V2Size) ... [TotalOffset, TotalOffer+V1Size]
+    // If GEP1BaseOffset >= V2Size, the accesses don't alias.
+    if (AllNonNegative && V2Size != LocationSize::unknown() &&
         GEP1BaseOffset.uge(V2Size.getValue()))
+      return NoAlias;
+    // Similarly, if the variables are non-positive, then the total offset is
+    // also non-positive and <= GEP1BaseOffset. We have the following layout:
+    // [TotalOffset, TotalOffset+V1Size) ... [0, V2Size)
+    // If -GEP1BaseOffset >= V1Size, the accesses don't alias.
+    if (AllNonPositive && V1Size != LocationSize::unknown() &&
+        (-GEP1BaseOffset).uge(V1Size.getValue()))
       return NoAlias;
 
     if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
