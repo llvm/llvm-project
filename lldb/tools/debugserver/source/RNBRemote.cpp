@@ -3927,8 +3927,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       }
       const bool ignore_existing = true;
       attach_pid = DNBProcessAttachWait(
-          attach_name.c_str(), m_ctx.LaunchFlavor(), ignore_existing, NULL,
-          1000, err_str, sizeof(err_str), RNBRemoteShouldCancelCallback);
+          &m_ctx, attach_name.c_str(), ignore_existing, NULL, 1000, err_str,
+          sizeof(err_str), RNBRemoteShouldCancelCallback);
 
     } else if (strstr(p, "vAttachOrWait;") == p) {
       p += strlen("vAttachOrWait;");
@@ -3939,8 +3939,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       }
       const bool ignore_existing = false;
       attach_pid = DNBProcessAttachWait(
-          attach_name.c_str(), m_ctx.LaunchFlavor(), ignore_existing, NULL,
-          1000, err_str, sizeof(err_str), RNBRemoteShouldCancelCallback);
+          &m_ctx, attach_name.c_str(), ignore_existing, NULL, 1000, err_str,
+          sizeof(err_str), RNBRemoteShouldCancelCallback);
     } else if (strstr(p, "vAttachName;") == p) {
       p += strlen("vAttachName;");
       if (!GetProcessNameFrom_vAttach(p, attach_name)) {
@@ -3948,7 +3948,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             __FILE__, __LINE__, p, "non-hex char in arg on 'vAttachName' pkt");
       }
 
-      attach_pid = DNBProcessAttachByName(attach_name.c_str(), NULL, err_str,
+      attach_pid = DNBProcessAttachByName(attach_name.c_str(), NULL,
+                                          Context().GetUnmaskSignals(), err_str,
                                           sizeof(err_str));
 
     } else if (strstr(p, "vAttach;") == p) {
@@ -3961,7 +3962,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         struct timespec attach_timeout_abstime;
         DNBTimer::OffsetTimeOfDay(&attach_timeout_abstime, 30, 0);
         attach_pid = DNBProcessAttach(pid_attaching_to, &attach_timeout_abstime,
-                                      err_str, sizeof(err_str));
+                                      false, err_str, sizeof(err_str));
       }
     } else {
       return HandlePacket_UNIMPLEMENTED(p);
