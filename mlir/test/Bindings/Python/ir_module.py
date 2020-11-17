@@ -60,12 +60,12 @@ run(testCreateEmpty)
 # Note that this does not test that the print path converts unicode properly
 # because MLIR asm always normalizes it to the hex encoding.
 # CHECK-LABEL: TEST: testRoundtripUnicode
-# CHECK: func @roundtripUnicode()
+# CHECK: func private @roundtripUnicode()
 # CHECK: foo = "\F0\9F\98\8A"
 def testRoundtripUnicode():
   ctx = Context()
   module = Module.parse(r"""
-    func @roundtripUnicode() attributes { foo = "😊" }
+    func private @roundtripUnicode() attributes { foo = "😊" }
   """, ctx)
   print(str(module))
 
