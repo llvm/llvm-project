@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import argparse
 
 
 class CrashLogPatcher:
@@ -12,10 +13,11 @@ class CrashLogPatcher:
     SYMBOL_REGEX = re.compile(r'^([0-9a-fA-F]+) T _(.*)$')
     UUID_REGEX = re.compile(r'UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*')
 
-    def __init__(self, data, binary, offsets):
+    def __init__(self, data, binary, offsets, json):
         self.data = data
         self.binary = binary
         self.offsets = offsets
+        self.json = json
 
     def patch_executable(self):
         self.data = self.data.replace("@EXEC@", self.binary)
@@ -39,22 +41,32 @@ class CrashLogPatcher:
                 if symbol in self.offsets:
                     patch_addr = int(m.group(1), 16) + int(
                         self.offsets[symbol])
-                    self.data = self.data.replace("@{}@".format(symbol),
-                                                  str(hex(patch_addr)))
+                    if self.json:
+                        patch_addr = patch_addr - 0x100000000
+                        representation = int
+                    else:
+                        representation = hex
+                    self.data = self.data.replace(
+                        "@{}@".format(symbol), str(representation(patch_addr)))
 
 
 if __name__ == '__main__':
-    binary = sys.argv[1]
-    crashlog = sys.argv[2]
-    offsets = json.loads(sys.argv[3]) if len(sys.argv) > 3 else None
+    parser = argparse.ArgumentParser(description='Crashlog Patcher')
+    parser.add_argument('--binary', required=True)
+    parser.add_argument('--crashlog', required=True)
+    parser.add_argument('--offsets', required=True)
+    parser.add_argument('--json', default=False, action='store_true')
+    args = parser.parse_args()
 
-    with open(crashlog, 'r') as file:
+    offsets = json.loads(args.offsets)
+
+    with open(args.crashlog, 'r') as file:
         data = file.read()
 
-    p = CrashLogPatcher(data, binary, offsets)
+    p = CrashLogPatcher(data, args.binary, offsets, args.json)
     p.patch_executable()
     p.patch_uuid()
     p.patch_addresses()
 
-    with open(crashlog, 'w') as file:
+    with open(args.crashlog, 'w') as file:
         file.write(p.data)
