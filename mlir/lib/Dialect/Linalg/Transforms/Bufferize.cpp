@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 
