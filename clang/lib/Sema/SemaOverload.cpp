@@ -1644,11 +1644,12 @@ static bool IsVectorConversion(Sema &S, QualType FromType,
     }
   }
 
-  if ((ToType->isSizelessBuiltinType() || FromType->isSizelessBuiltinType()) &&
-      S.Context.areCompatibleSveTypes(FromType, ToType)) {
-    ICK = ICK_SVE_Vector_Conversion;
-    return true;
-  }
+  if (ToType->isSizelessBuiltinType() || FromType->isSizelessBuiltinType())
+    if (S.Context.areCompatibleSveTypes(FromType, ToType) ||
+        S.Context.areLaxCompatibleSveTypes(FromType, ToType)) {
+      ICK = ICK_SVE_Vector_Conversion;
+      return true;
+    }
 
   // We can perform the conversion between vector types in the following cases:
   // 1)vector types are equivalent AltiVec and GCC vector types

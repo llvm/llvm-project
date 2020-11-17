@@ -8574,6 +8574,41 @@ bool ASTContext::areCompatibleSveTypes(QualType FirstType,
          IsValidCast(SecondType, FirstType);
 }
 
+bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
+                                          QualType SecondType) {
+  assert(((FirstType->isSizelessBuiltinType() && SecondType->isVectorType()) ||
+          (FirstType->isVectorType() && SecondType->isSizelessBuiltinType())) &&
+         "Expected SVE builtin type and vector type!");
+
+  auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
+    if (!FirstType->getAs<BuiltinType>())
+      return false;
+
+    const auto *VecTy = SecondType->getAs<VectorType>();
+    if (VecTy &&
+        VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector) {
+      const LangOptions::LaxVectorConversionKind LVCKind =
+          getLangOpts().getLaxVectorConversions();
+
+      // If -flax-vector-conversions=all is specified, the types are
+      // certainly compatible.
+      if (LVCKind == LangOptions::LaxVectorConversionKind::All)
+        return true;
+
+      // If -flax-vector-conversions=integer is specified, the types are
+      // compatible if the elements are integer types.
+      if (LVCKind == LangOptions::LaxVectorConversionKind::Integer)
+        return VecTy->getElementType().getCanonicalType()->isIntegerType() &&
+               FirstType->getSveEltType(*this)->isIntegerType();
+    }
+
+    return false;
+  };
+
+  return IsLaxCompatible(FirstType, SecondType) ||
+         IsLaxCompatible(SecondType, FirstType);
+}
+
 bool ASTContext::hasDirectOwnershipQualifier(QualType Ty) const {
   while (true) {
     // __strong id
