@@ -20,6 +20,16 @@ a:
 b:
   mov r1, r1
 
+// Non-executable sections do not contribute address ranges.
+  .section .rodata, "a"
+c:
+  mov r2, r2
+
+// Non-SHF_ALLOC sections do not contribute address ranges.
+  .section nonalloc, "x"
+d:
+  mov r3, r3
+
 // DWARF: .debug_abbrev contents:
 // DWARF: Abbrev table for offset: 0x00000000
 // DWARF: [1] DW_TAG_compile_unit DW_CHILDREN_yes
