@@ -114,7 +114,7 @@ func @nested_unused() -> (index) {
 
 // -----
 
-func @side_effect() {}
+func private @side_effect() {}
 func @all_unused() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
@@ -140,7 +140,7 @@ func @all_unused() {
 
 // -----
 
-func @make_i32() -> i32
+func private @make_i32() -> i32
 
 func @for_yields_2(%lb : index, %ub : index, %step : index) -> i32 {
   %a = call @make_i32() : () -> (i32)

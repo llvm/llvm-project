@@ -28,4 +28,4 @@ func @main() {
   return
 }
 
-func @print_memref_f32(%ptr : memref<*xf32>)
+func private @print_memref_f32(%ptr : memref<*xf32>)

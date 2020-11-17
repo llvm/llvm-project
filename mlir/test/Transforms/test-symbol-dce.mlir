@@ -21,9 +21,6 @@ module attributes {test.simple} {
   func @public_function() {
     "foo.return"() {uses = [@live_private_function, @live_nested_function]} : () -> ()
   }
-
-  // CHECK: func public @public_function_explicit
-  func public @public_function_explicit()
 }
 
 // -----

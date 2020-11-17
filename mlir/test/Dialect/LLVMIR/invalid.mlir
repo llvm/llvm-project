@@ -153,7 +153,7 @@ func @call_unknown_symbol() {
 
 // -----
 
-func @standard_func_callee()
+func private @standard_func_callee()
 
 func @call_non_llvm() {
   // expected-error@+1 {{'llvm.call' op 'standard_func_callee' does not reference a valid LLVM function}}

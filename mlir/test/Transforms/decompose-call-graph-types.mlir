@@ -39,8 +39,8 @@ func @recursive_decomposition(%arg0: tuple<tuple<tuple<i1>>>) -> tuple<tuple<tup
 
 // Test case: Check decomposition of calls.
 
-// CHECK-LABEL:   func @callee(i1, i32) -> (i1, i32)
-func @callee(tuple<i1, i32>) -> tuple<i1, i32>
+// CHECK-LABEL:   func private @callee(i1, i32) -> (i1, i32)
+func private @callee(tuple<i1, i32>) -> tuple<i1, i32>
 
 // CHECK-LABEL:   func @caller(
 // CHECK-SAME:                 %[[ARG0:.*]]: i1,
@@ -62,8 +62,8 @@ func @caller(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
 
 // Test case: Type that decomposes to nothing (that is, a 1:0 decomposition).
 
-// CHECK-LABEL:   func @callee()
-func @callee(tuple<>) -> tuple<>
+// CHECK-LABEL:   func private @callee()
+func private @callee(tuple<>) -> tuple<>
 // CHECK-LABEL:   func @caller() {
 // CHECK:           call @callee() : () -> ()
 // CHECK:           return
@@ -92,8 +92,8 @@ func @unconverted_op_result() -> tuple<i1, i32> {
 // Test case: Check mixed decomposed and non-decomposed args.
 // This makes sure to test the cases if 1:0, 1:1, and 1:N decompositions.
 
-// CHECK-LABEL:   func @callee(i1, i2, i3, i4, i5, i6) -> (i1, i2, i3, i4, i5, i6)
-func @callee(tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6)
+// CHECK-LABEL:   func private @callee(i1, i2, i3, i4, i5, i6) -> (i1, i2, i3, i4, i5, i6)
+func private @callee(tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6)
 
 // CHECK-LABEL:   func @caller(
 // CHECK-SAME:                 %[[I1:.*]]: i1,

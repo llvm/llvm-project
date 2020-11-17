@@ -389,7 +389,7 @@ func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 // -----
 
 // BAREPTR: llvm.func @foo(!llvm.ptr<i8>) -> !llvm.ptr<i8>
-func @foo(memref<10xi8>) -> memref<20xi8>
+func private @foo(memref<10xi8>) -> memref<20xi8>
 
 // BAREPTR-LABEL: func @check_memref_func_call
 // BAREPTR-SAME:    %[[in:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
@@ -415,7 +415,7 @@ func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
 // -----
 
 // BAREPTR: llvm.func @goo(!llvm.float) -> !llvm.float
-func @goo(f32) -> f32
+func private @goo(f32) -> f32
 
 // BAREPTR-LABEL: func @check_scalar_func_call
 // BAREPTR-SAME:    %[[in:.*]]: !llvm.float)
@@ -431,8 +431,8 @@ func @check_scalar_func_call(%in : f32) {
 // convention. Check that the conversion to the LLVM-IR dialect doesn't happen
 // in the presence of unranked memrefs when using such a calling convention.
 
-// BAREPTR: func @hoo(memref<*xi8>) -> memref<*xi8>
-func @hoo(memref<*xi8>) -> memref<*xi8>
+// BAREPTR: func private @hoo(memref<*xi8>) -> memref<*xi8>
+func private @hoo(memref<*xi8>) -> memref<*xi8>
 
 // BAREPTR-LABEL: func @check_unranked_memref_func_call(%{{.*}}: memref<*xi8>) -> memref<*xi8>
 func @check_unranked_memref_func_call(%in: memref<*xi8>) -> memref<*xi8> {
