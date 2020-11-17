@@ -63,7 +63,7 @@
 #elif defined(__wasm__)
 #  define _LIBCPP_OBJECT_FORMAT_WASM  1
 #else
-#  error Unknown object file format
+   // ... add new file formats here ...
 #endif
 
 #if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
