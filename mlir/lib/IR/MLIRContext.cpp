@@ -83,57 +83,6 @@ void mlir::registerMLIRContextCLOptions() {
 }
 
 //===----------------------------------------------------------------------===//
-// Builtin Dialect
-//===----------------------------------------------------------------------===//
-
-namespace {
-struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  LogicalResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (attr.isa<AffineMapAttr>()) {
-      os << "map";
-      return success();
-    }
-    if (attr.isa<IntegerSetAttr>()) {
-      os << "set";
-      return success();
-    }
-    if (attr.isa<LocationAttr>()) {
-      os << "loc";
-      return success();
-    }
-    return failure();
-  }
-};
-
-/// A builtin dialect to define types/etc that are necessary for the validity of
-/// the IR.
-struct BuiltinDialect : public Dialect {
-  BuiltinDialect(MLIRContext *context)
-      : Dialect(/*name=*/"", context, TypeID::get<BuiltinDialect>()) {
-    addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
-             FunctionType, IndexType, IntegerType, MemRefType,
-             UnrankedMemRefType, NoneType, OpaqueType, RankedTensorType,
-             TupleType, UnrankedTensorType, VectorType>();
-    addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
-                  DenseStringElementsAttr, DictionaryAttr, FloatAttr,
-                  SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
-                  OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
-                  UnitAttr>();
-    addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
-                  UnknownLoc>();
-    addInterfaces<BuiltinOpAsmDialectInterface>();
-
-    // TODO: These operations should be moved to a different dialect when they
-    // have been fully decoupled from the core.
-    addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
-  }
-  static StringRef getDialectNamespace() { return ""; }
-};
-} // end anonymous namespace.
-
-//===----------------------------------------------------------------------===//
 // Locking Utilities
 //===----------------------------------------------------------------------===//
 

@@ -147,9 +147,9 @@ public:
   void replaceUsesOfWith(Value from, Value to);
 
   /// Replace all uses of results of this operation with the provided 'values'.
-  template <typename ValuesT,
-            typename = decltype(std::declval<ValuesT>().begin())>
-  void replaceAllUsesWith(ValuesT &&values) {
+  template <typename ValuesT>
+  std::enable_if_t<!std::is_convertible<ValuesT, Operation *>::value>
+  replaceAllUsesWith(ValuesT &&values) {
     assert(std::distance(values.begin(), values.end()) == getNumResults() &&
            "expected 'values' to correspond 1-1 with the number of results");
 
