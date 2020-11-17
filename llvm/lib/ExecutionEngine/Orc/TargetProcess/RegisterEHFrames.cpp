@@ -9,6 +9,7 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 
+#include "llvm/Config/config.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Compiler.h"
