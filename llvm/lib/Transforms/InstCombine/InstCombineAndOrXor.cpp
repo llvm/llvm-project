@@ -119,20 +119,12 @@ Instruction *InstCombinerImpl::OptAndOp(BinaryOperator *Op, ConstantInt *AndRHS,
                                         BinaryOperator &TheAnd) {
   Value *X;
   const APInt *C;
-  if (!match(Op, m_Add(m_Value(X), m_APInt(C))))
+  if (!match(Op, m_OneUse(m_Add(m_Value(X), m_APInt(C)))))
     return nullptr;
 
-  // If we are adding zeros to every bit below a mask, the add has no effect:
-  // (X + HighC) & LowMaskC --> X & LowMaskC
-  const APInt &AndRHSV = AndRHS->getValue();
-  unsigned Ctlz = AndRHSV.countLeadingZeros();
-  unsigned BitWidth = AndRHSV.getBitWidth();
-  APInt LowMask(APInt::getLowBitsSet(BitWidth, BitWidth - Ctlz));
-  if ((*C & LowMask).isNullValue())
-    return BinaryOperator::CreateAnd(X, TheAnd.getOperand(1));
-
   // If there is only one bit set.
-  if (AndRHSV.isPowerOf2() && Op->hasOneUse()) {
+  const APInt &AndRHSV = AndRHS->getValue();
+  if (AndRHSV.isPowerOf2()) {
     // Ok, at this point, we know that we are masking the result of the
     // ADD down to exactly one bit.  If the constant we are adding has
     // no bits set below this bit, then we can eliminate the ADD.
@@ -1807,9 +1799,10 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         return BinaryOperator::Create(BinOp, NewLHS, Y);
       }
     }
+
+    unsigned Width = Ty->getScalarSizeInBits();
     const APInt *ShiftC;
     if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC)))))) {
-      unsigned Width = Ty->getScalarSizeInBits();
       if (*C == APInt::getLowBitsSet(Width, Width - ShiftC->getZExtValue())) {
         // We are clearing high bits that were potentially set by sext+ashr:
         // and (sext (ashr X, ShiftC)), C --> lshr (sext X), ShiftC
@@ -1817,6 +1810,16 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         Constant *ShAmtC = ConstantInt::get(Ty, ShiftC->zext(Width));
         return BinaryOperator::CreateLShr(Sext, ShAmtC);
       }
+    }
+
+    const APInt *AddC;
+    if (match(Op0, m_Add(m_Value(X), m_APInt(AddC)))) {
+      // If we add zeros to every bit below a mask, the add has no effect:
+      // (X + AddC) & LowMaskC --> X & LowMaskC
+      unsigned Ctlz = C->countLeadingZeros();
+      APInt LowMask(APInt::getLowBitsSet(Width, Width - Ctlz));
+      if ((*AddC & LowMask).isNullValue())
+        return BinaryOperator::CreateAnd(X, Op1);
     }
   }
 
