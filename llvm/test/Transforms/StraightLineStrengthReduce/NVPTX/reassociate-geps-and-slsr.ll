@@ -1,5 +1,6 @@
 ; RUN: opt < %s -separate-const-offset-from-gep -slsr -gvn -S | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix=PTX
+; RUN: opt < %s -passes="separate-const-offset-from-gep,slsr,gvn" -S | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
