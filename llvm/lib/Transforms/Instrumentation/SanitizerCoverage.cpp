@@ -522,7 +522,7 @@ static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
   if (succ_empty(BB))
     return false;
 
-  return llvm::all_of(successors(BB), [BB, DT](const BasicBlock *SUCC) {
+  return llvm::all_of(successors(BB), [&](const BasicBlock *SUCC) {
     return DT->dominates(BB, SUCC);
   });
 }
@@ -533,7 +533,7 @@ static bool isFullPostDominator(const BasicBlock *BB,
   if (pred_empty(BB))
     return false;
 
-  return llvm::all_of(predecessors(BB), [BB, PDT](const BasicBlock *PRED) {
+  return llvm::all_of(predecessors(BB), [&](const BasicBlock *PRED) {
     return PDT->dominates(BB, PRED);
   });
 }
