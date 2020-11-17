@@ -584,40 +584,58 @@ static std::string getRpath(opt::InputArgList &args) {
 
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
-static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
+static void setUnresolvedSymbolPolicy(opt::InputArgList &args) {
   UnresolvedPolicy errorOrWarn = args.hasFlag(OPT_error_unresolved_symbols,
                                               OPT_warn_unresolved_symbols, true)
                                      ? UnresolvedPolicy::ReportError
                                      : UnresolvedPolicy::Warn;
+  // -shared implies -unresolved-symbols=ignore-all because missing
+  // symbols are likely to be resolved at runtime.
+  bool diagRegular = !config->shared, diagShlib = !config->shared;
 
-  // Process the last of -unresolved-symbols, -no-undefined or -z defs.
-  for (auto *arg : llvm::reverse(args)) {
+  for (const opt::Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_unresolved_symbols: {
       StringRef s = arg->getValue();
-      if (s == "ignore-all" || s == "ignore-in-object-files")
-        return UnresolvedPolicy::Ignore;
-      if (s == "ignore-in-shared-libs" || s == "report-all")
-        return errorOrWarn;
-      error("unknown --unresolved-symbols value: " + s);
-      continue;
+      if (s == "ignore-all") {
+        diagRegular = false;
+        diagShlib = false;
+      } else if (s == "ignore-in-object-files") {
+        diagRegular = false;
+        diagShlib = true;
+      } else if (s == "ignore-in-shared-libs") {
+        diagRegular = true;
+        diagShlib = false;
+      } else if (s == "report-all") {
+        diagRegular = true;
+        diagShlib = true;
+      } else {
+        error("unknown --unresolved-symbols value: " + s);
+      }
+      break;
     }
     case OPT_no_undefined:
-      return errorOrWarn;
+      diagRegular = true;
+      break;
     case OPT_z:
       if (StringRef(arg->getValue()) == "defs")
-        return errorOrWarn;
-      if (StringRef(arg->getValue()) == "undefs")
-        return UnresolvedPolicy::Ignore;
-      continue;
+        diagRegular = true;
+      else if (StringRef(arg->getValue()) == "undefs")
+        diagRegular = false;
+      break;
+    case OPT_allow_shlib_undefined:
+      diagShlib = false;
+      break;
+    case OPT_no_allow_shlib_undefined:
+      diagShlib = true;
+      break;
     }
   }
 
-  // -shared implies -unresolved-symbols=ignore-all because missing
-  // symbols are likely to be resolved at runtime using other DSOs.
-  if (config->shared)
-    return UnresolvedPolicy::Ignore;
-  return errorOrWarn;
+  config->unresolvedSymbols =
+      diagRegular ? errorOrWarn : UnresolvedPolicy::Ignore;
+  config->unresolvedSymbolsInShlib =
+      diagShlib ? errorOrWarn : UnresolvedPolicy::Ignore;
 }
 
 static Target2Policy getTarget2(opt::InputArgList &args) {
@@ -913,9 +931,6 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||
       hasZOption(args, "muldefs");
-  config->allowShlibUndefined =
-      args.hasFlag(OPT_allow_shlib_undefined, OPT_no_allow_shlib_undefined,
-                   args.hasArg(OPT_shared));
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->bsymbolicFunctions = args.hasArg(OPT_Bsymbolic_functions);
@@ -1051,7 +1066,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->unique = args.hasArg(OPT_unique);
   config->useAndroidRelrTags = args.hasFlag(
       OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
-  config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->warnBackrefs =
       args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
   config->warnCommon = args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
@@ -1086,6 +1100,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
+  setUnresolvedSymbolPolicy(args);
 
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
