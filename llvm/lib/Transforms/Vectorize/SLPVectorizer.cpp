@@ -1765,7 +1765,7 @@ private:
                           ArrayRef<unsigned> ReorderIndices = None) {
     assert(!(Bundle && EntryState == TreeEntry::NeedToGather) &&
            "Need to gather vectorized entry?");
-    assert(!Bundle && EntryState != TreeEntry::NeedToGather &&
+    assert((Bundle || EntryState == TreeEntry::NeedToGather) &&
            "Need to vectorize gather entry?");
     VectorizableTree.push_back(std::make_unique<TreeEntry>(VectorizableTree));
     TreeEntry *Last = VectorizableTree.back().get();
