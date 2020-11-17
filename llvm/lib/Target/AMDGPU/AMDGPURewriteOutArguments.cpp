@@ -304,8 +304,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         BasicBlock *BB = RI->getParent();
 
         MemDepResult Q = MDA->getPointerDependencyFrom(
-            MemoryLocation(OutArg, LocationSize::unknown()), true, BB->end(),
-            BB, RI);
+            MemoryLocation::getBeforeOrAfter(OutArg), true, BB->end(), BB, RI);
         StoreInst *SI = nullptr;
         if (Q.isDef())
           SI = dyn_cast<StoreInst>(Q.getInst());

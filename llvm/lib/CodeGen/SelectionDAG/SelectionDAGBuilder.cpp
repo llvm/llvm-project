@@ -4358,7 +4358,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML;
   if (VT.isScalableVector())
-    ML = MemoryLocation(PtrOperand, LocationSize::unknown());
+    ML = MemoryLocation::getAfter(PtrOperand);
   else
     ML = MemoryLocation(PtrOperand, LocationSize::precise(
                            DAG.getDataLayout().getTypeStoreSize(I.getType())),
