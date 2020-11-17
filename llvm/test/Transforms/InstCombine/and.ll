@@ -1166,8 +1166,8 @@ define <2 x i8> @lowmask_add_vec(<2 x i8> %x, <2 x i8>* %p) {
 ; Only one bit set
 define i8 @flip_masked_bit(i8 %A) {
 ; CHECK-LABEL: @flip_masked_bit(
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 16
-; CHECK-NEXT:    [[C:%.*]] = xor i8 [[B]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], 16
+; CHECK-NEXT:    [[C:%.*]] = xor i8 [[TMP1]], 16
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %B = add i8 %A, 16
@@ -1177,8 +1177,8 @@ define i8 @flip_masked_bit(i8 %A) {
 
 define <2 x i8> @flip_masked_bit_uniform(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_uniform(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> [[A:%.*]], <i8 16, i8 16>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[B]], <i8 16, i8 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 16, i8 16>
+; CHECK-NEXT:    [[C:%.*]] = xor <2 x i8> [[TMP1]], <i8 16, i8 16>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = add <2 x i8> %A, <i8 16, i8 16>
