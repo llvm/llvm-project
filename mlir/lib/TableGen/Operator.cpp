@@ -147,7 +147,7 @@ Operator::arg_range Operator::getArgs() const {
 
 StringRef Operator::getArgName(int index) const {
   DagInit *argumentValues = def.getValueAsDag("arguments");
-  return argumentValues->getArgName(index)->getValue();
+  return argumentValues->getArgNameStr(index);
 }
 
 auto Operator::getArgDecorators(int index) const -> var_decorator_range {

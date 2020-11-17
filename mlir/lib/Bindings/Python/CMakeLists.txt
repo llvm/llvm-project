@@ -1,5 +1,15 @@
 include(AddMLIRPythonExtension)
 add_custom_target(MLIRBindingsPythonExtension)
+
+################################################################################
+# Generate dialect-specific bindings.
+################################################################################
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonStandardOps
+  StandardOps.td
+  std)
+add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonStandardOps)
+
 ################################################################################
 # Copy python source tree.
 ################################################################################
@@ -18,8 +28,6 @@ add_custom_target(MLIRBindingsPythonSources ALL
   DEPENDS ${PY_SRC_FILES}
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonSources)
-
-add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonIncGen)
 
 foreach(PY_SRC_FILE ${PY_SRC_FILES})
   set(PY_DEST_FILE "${PROJECT_BINARY_DIR}/python/${PY_SRC_FILE}")
