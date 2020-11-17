@@ -1153,11 +1153,10 @@ void AsmPrinter::emitFunctionBody() {
   int NumInstsInFunction = 0;
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
-    DenseMap<unsigned, unsigned> OpcodeCounts;
+    DenseMap<StringRef, unsigned> MnemonicCounts;
     for (auto &MI : MBB) {
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
@@ -1221,7 +1220,10 @@ void AsmPrinter::emitFunctionBody() {
       default:
         emitInstruction(&MI);
         if (CanDoExtraAnalysis) {
-          auto I = OpcodeCounts.insert({MI.getOpcode(), 0u});
+          MCInst MCI;
+          MCI.setOpcode(MI.getOpcode());
+          auto Name = OutStreamer->getMnemonic(MCI);
+          auto I = MnemonicCounts.insert({Name, 0u});
           I.first->second++;
         }
         break;
@@ -1273,24 +1275,25 @@ void AsmPrinter::emitFunctionBody() {
       MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InstructionMix",
                                           MBB.begin()->getDebugLoc(), &MBB);
 
-      // Generate instruction mix remark. First, convert opcodes to string
-      // names, then sort them in descending order by count and name.
-      SmallVector<std::pair<std::string, unsigned>, 128> OpcodeCountsVec;
-      for (auto &KV : OpcodeCounts) {
-        auto Name = (Twine("INST_") + TII->getName(KV.first)).str();
-        OpcodeCountsVec.emplace_back(Name, KV.second);
-      }
-      sort(OpcodeCountsVec, [](const std::pair<std::string, unsigned> &A,
-                               const std::pair<std::string, unsigned> &B) {
+      // Generate instruction mix remark. First, sort counts in descending order
+      // by count and name.
+      SmallVector<std::pair<StringRef, unsigned>, 128> MnemonicVec;
+      for (auto &KV : MnemonicCounts)
+        MnemonicVec.emplace_back(KV.first, KV.second);
+
+      sort(MnemonicVec, [](const std::pair<StringRef, unsigned> &A,
+                           const std::pair<StringRef, unsigned> &B) {
         if (A.second > B.second)
           return true;
         if (A.second == B.second)
-          return A.first < B.first;
+          return StringRef(A.first) < StringRef(B.first);
         return false;
       });
       R << "BasicBlock: " << ore::NV("BasicBlock", MBB.getName()) << "\n";
-      for (auto &KV : OpcodeCountsVec)
-        R << KV.first << ": " << ore::NV(KV.first, KV.second) << "\n";
+      for (auto &KV : MnemonicVec) {
+        auto Name = (Twine("INST_") + KV.first.trim()).str();
+        R << KV.first << ": " << ore::NV(Name, KV.second) << "\n";
+      }
       ORE->emit(R);
     }
   }
