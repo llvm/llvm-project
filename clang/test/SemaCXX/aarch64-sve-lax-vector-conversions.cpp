@@ -20,6 +20,8 @@ void allowed_with_integer_lax_conversions() {
   // -flax-vector-conversions={integer,all}.
   fi32 = si64;
   // lax-vector-none-error@-1 {{assigning to 'fixed_int32_t' (vector of 16 'int' values) from incompatible type}}
+  si64 = fi32;
+  // lax-vector-none-error@-1 {{assigning to 'svint64_t' (aka '__SVInt64_t') from incompatible type}}
 }
 
 void allowed_with_all_lax_conversions() {
@@ -31,4 +33,7 @@ void allowed_with_all_lax_conversions() {
   ff32 = sf64;
   // lax-vector-none-error@-1 {{assigning to 'fixed_float32_t' (vector of 16 'float' values) from incompatible type}}
   // lax-vector-integer-error@-2 {{assigning to 'fixed_float32_t' (vector of 16 'float' values) from incompatible type}}
+  sf64 = ff32;
+  // lax-vector-none-error@-1 {{assigning to 'svfloat64_t' (aka '__SVFloat64_t') from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'svfloat64_t' (aka '__SVFloat64_t') from incompatible type}}
 }
