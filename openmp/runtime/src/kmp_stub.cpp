@@ -371,6 +371,12 @@ void *omp_calloc(size_t nmemb, size_t size,
   i;
   return calloc(nmemb, size);
 }
+void *omp_realloc(void *ptr, size_t size,
+                  const omp_allocator_handle_t allocator,
+                  const omp_allocator_handle_t free_allocator) {
+  i;
+  return realloc(ptr, size);
+}
 void omp_free(void *ptr, const omp_allocator_handle_t allocator) {
   i;
   free(ptr);
