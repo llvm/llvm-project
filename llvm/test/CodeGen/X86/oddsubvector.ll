@@ -2,10 +2,10 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+sse2 | FileCheck %s --check-prefixes=SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512-SLOW
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512-FAST
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f | FileCheck %s --check-prefix=AVX512
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f,+fast-variable-shuffle | FileCheck %s --check-prefix=AVX512
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+xop | FileCheck %s --check-prefixes=AVX,XOP
 
 define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
@@ -162,7 +162,7 @@ define void @PR42833() {
 ; SSE2-NEXT:    movdqa c+{{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    movdqa c+{{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    addl b(%rip), %eax
+; SSE2-NEXT:    addl {{.*}}(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    paddd %xmm0, %xmm3
@@ -198,7 +198,7 @@ define void @PR42833() {
 ; SSE42-NEXT:    movdqa c+{{.*}}(%rip), %xmm0
 ; SSE42-NEXT:    movdqa c+{{.*}}(%rip), %xmm1
 ; SSE42-NEXT:    movd %xmm1, %eax
-; SSE42-NEXT:    addl b(%rip), %eax
+; SSE42-NEXT:    addl {{.*}}(%rip), %eax
 ; SSE42-NEXT:    movd %eax, %xmm2
 ; SSE42-NEXT:    paddd %xmm1, %xmm2
 ; SSE42-NEXT:    movdqa d+{{.*}}(%rip), %xmm3
@@ -232,7 +232,7 @@ define void @PR42833() {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa c+{{.*}}(%rip), %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    addl b(%rip), %eax
+; AVX1-NEXT:    addl {{.*}}(%rip), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
@@ -265,7 +265,7 @@ define void @PR42833() {
 ;
 ; AVX2-LABEL: PR42833:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl b(%rip), %eax
+; AVX2-NEXT:    movl {{.*}}(%rip), %eax
 ; AVX2-NEXT:    vmovdqu c+{{.*}}(%rip), %ymm0
 ; AVX2-NEXT:    addl c+{{.*}}(%rip), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
@@ -288,7 +288,7 @@ define void @PR42833() {
 ;
 ; AVX512-LABEL: PR42833:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movl b(%rip), %eax
+; AVX512-NEXT:    movl {{.*}}(%rip), %eax
 ; AVX512-NEXT:    vmovdqu c+{{.*}}(%rip), %ymm0
 ; AVX512-NEXT:    vmovdqu64 c+{{.*}}(%rip), %zmm1
 ; AVX512-NEXT:    addl c+{{.*}}(%rip), %eax
@@ -314,7 +314,7 @@ define void @PR42833() {
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa c+{{.*}}(%rip), %xmm0
 ; XOP-NEXT:    vmovd %xmm0, %eax
-; XOP-NEXT:    addl b(%rip), %eax
+; XOP-NEXT:    addl {{.*}}(%rip), %eax
 ; XOP-NEXT:    vmovd %eax, %xmm1
 ; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
