@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {

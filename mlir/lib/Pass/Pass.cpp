@@ -12,9 +12,9 @@
 
 #include "mlir/Pass/Pass.h"
 #include "PassDetail.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
