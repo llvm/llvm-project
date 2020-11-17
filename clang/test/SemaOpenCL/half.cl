@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value -triple spir-unknown-unknown
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value -triple spir-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header
 
-#pragma OPENCL EXTENSION cl_khr_fp16 : disable
 constant float f = 1.0h; // expected-error{{half precision constant requires cl_khr_fp16}}
 
 half half_disabled(half *p, // expected-error{{declaring function return value of type 'half' is not allowed}}
