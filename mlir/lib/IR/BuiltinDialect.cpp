@@ -1,4 +1,4 @@
-//===- Function.cpp - MLIR Function Classes -------------------------------===//
+//===- BuiltinDialect.cpp - MLIR Builtin Dialect --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/FunctionImplementation.h"
-#include "llvm/ADT/BitVector.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Twine.h"
 
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// Function Operation.
+// Builtin Dialect
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  LogicalResult getAlias(Attribute attr, raw_ostream &os) const override {
+    if (attr.isa<AffineMapAttr>()) {
+      os << "map";
+      return success();
+    }
+    if (attr.isa<IntegerSetAttr>()) {
+      os << "set";
+      return success();
+    }
+    if (attr.isa<LocationAttr>()) {
+      os << "loc";
+      return success();
+    }
+    return failure();
+  }
+};
+} // end anonymous namespace.
+
+/// A builtin dialect to define types/etc that are necessary for the validity of
+/// the IR.
+void BuiltinDialect::initialize() {
+  addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
+           FunctionType, IndexType, IntegerType, MemRefType, UnrankedMemRefType,
+           NoneType, OpaqueType, RankedTensorType, TupleType,
+           UnrankedTensorType, VectorType>();
+  addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
+                DenseStringElementsAttr, DictionaryAttr, FloatAttr,
+                SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
+                OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
+                UnitAttr>();
+  addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
+                UnknownLoc>();
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/IR/BuiltinOps.cpp.inc"
+      >();
+  addInterfaces<BuiltinOpAsmDialectInterface>();
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
 //===----------------------------------------------------------------------===//
 
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
@@ -41,14 +87,14 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
   return func;
 }
 
-void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
                    ArrayRef<MutableDictionaryAttr> argAttrs) {
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder.getStringAttr(name));
-  result.addAttribute(getTypeAttrName(), TypeAttr::get(type));
-  result.attributes.append(attrs.begin(), attrs.end());
-  result.addRegion();
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(name));
+  state.addAttribute(getTypeAttrName(), TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
 
   if (argAttrs.empty())
     return;
@@ -56,12 +102,10 @@ void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
   SmallString<8> argAttrName;
   for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
     if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
-      result.addAttribute(getArgAttrName(i, argAttrName), argDict);
+      state.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 
-/// Parsing/Printing methods.
-
-ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &result) {
   auto buildFuncType = [](Builder &builder, ArrayRef<Type> argTypes,
                           ArrayRef<Type> results, impl::VariadicFlag,
                           std::string &) {
@@ -72,25 +116,25 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
                                    buildFuncType);
 }
 
-void FuncOp::print(OpAsmPrinter &p) {
-  FunctionType fnType = getType();
-  impl::printFunctionLikeOp(p, *this, fnType.getInputs(), /*isVariadic=*/false,
+static void print(FuncOp op, OpAsmPrinter &p) {
+  FunctionType fnType = op.getType();
+  impl::printFunctionLikeOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
                             fnType.getResults());
 }
 
-LogicalResult FuncOp::verify() {
+static LogicalResult verify(FuncOp op) {
   // If this function is external there is nothing to do.
-  if (isExternal())
+  if (op.isExternal())
     return success();
 
   // Verify that the argument list of the function and the arg list of the entry
   // block line up.  The trait already verified that the number of arguments is
   // the same between the signature and the block.
-  auto fnInputTypes = getType().getInputs();
-  Block &entryBlock = front();
+  auto fnInputTypes = op.getType().getInputs();
+  Block &entryBlock = op.front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
     if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
-      return emitOpError("type of entry block argument #")
+      return op.emitOpError("type of entry block argument #")
              << i << '(' << entryBlock.getArgument(i).getType()
              << ") must match the type of the corresponding argument in "
              << "function signature(" << fnInputTypes[i] << ')';
@@ -152,3 +196,46 @@ FuncOp FuncOp::clone() {
   BlockAndValueMapping mapper;
   return clone(mapper);
 }
+
+//===----------------------------------------------------------------------===//
+// ModuleOp
+//===----------------------------------------------------------------------===//
+
+void ModuleOp::build(OpBuilder &builder, OperationState &state,
+                     Optional<StringRef> name) {
+  ensureTerminator(*state.addRegion(), builder, state.location);
+  if (name) {
+    state.attributes.push_back(builder.getNamedAttr(
+        mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));
+  }
+}
+
+/// Construct a module from the given context.
+ModuleOp ModuleOp::create(Location loc, Optional<StringRef> name) {
+  OpBuilder builder(loc->getContext());
+  return builder.create<ModuleOp>(loc, name);
+}
+
+static LogicalResult verify(ModuleOp op) {
+  // Check that none of the attributes are non-dialect attributes, except for
+  // the symbol related attributes.
+  for (auto attr : op.getAttrs()) {
+    if (!attr.first.strref().contains('.') &&
+        !llvm::is_contained(
+            ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
+                                mlir::SymbolTable::getVisibilityAttrName()},
+            attr.first.strref()))
+      return op.emitOpError()
+             << "can only contain dialect-specific attributes, found: '"
+             << attr.first << "'";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "mlir/IR/BuiltinOps.cpp.inc"

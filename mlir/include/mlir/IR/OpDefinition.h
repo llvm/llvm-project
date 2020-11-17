@@ -787,6 +787,132 @@ class VariadicSuccessors
 };
 
 //===----------------------------------------------------------------------===//
+// SingleBlockImplicitTerminator
+
+/// This class provides APIs and verifiers for ops with regions having a single
+/// block that must terminate with `TerminatorOpType`.
+template <typename TerminatorOpType>
+struct SingleBlockImplicitTerminator {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  private:
+    /// Builds a terminator operation without relying on OpBuilder APIs to avoid
+    /// cyclic header inclusion.
+    static Operation *buildTerminator(OpBuilder &builder, Location loc) {
+      OperationState state(loc, TerminatorOpType::getOperationName());
+      TerminatorOpType::build(builder, state);
+      return Operation::create(state);
+    }
+
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
+        Region &region = op->getRegion(i);
+
+        // Empty regions are fine.
+        if (region.empty())
+          continue;
+
+        // Non-empty regions must contain a single basic block.
+        if (std::next(region.begin()) != region.end())
+          return op->emitOpError("expects region #")
+                 << i << " to have 0 or 1 blocks";
+
+        Block &block = region.front();
+        if (block.empty())
+          return op->emitOpError() << "expects a non-empty block";
+        Operation &terminator = block.back();
+        if (isa<TerminatorOpType>(terminator))
+          continue;
+
+        return op->emitOpError("expects regions to end with '" +
+                               TerminatorOpType::getOperationName() +
+                               "', found '" +
+                               terminator.getName().getStringRef() + "'")
+                   .attachNote()
+               << "in custom textual format, the absence of terminator implies "
+                  "'"
+               << TerminatorOpType::getOperationName() << '\'';
+      }
+
+      return success();
+    }
+
+    /// Ensure that the given region has the terminator required by this trait.
+    /// If OpBuilder is provided, use it to build the terminator and notify the
+    /// OpBuilder litsteners accordingly. If only a Builder is provided, locally
+    /// construct an OpBuilder with no listeners; this should only be used if no
+    /// OpBuilder is available at the call site, e.g., in the parser.
+    static void ensureTerminator(Region &region, Builder &builder,
+                                 Location loc) {
+      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
+                                           buildTerminator);
+    }
+    static void ensureTerminator(Region &region, OpBuilder &builder,
+                                 Location loc) {
+      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
+                                           buildTerminator);
+    }
+
+    Block *getBody(unsigned idx = 0) {
+      Region &region = this->getOperation()->getRegion(idx);
+      assert(!region.empty() && "unexpected empty region");
+      return &region.front();
+    }
+    Region &getBodyRegion(unsigned idx = 0) {
+      return this->getOperation()->getRegion(idx);
+    }
+
+    //===------------------------------------------------------------------===//
+    // Single Region Utilities
+    //===------------------------------------------------------------------===//
+
+    /// The following are a set of methods only enabled when the parent
+    /// operation has a single region. Each of these methods take an additional
+    /// template parameter that represents the concrete operation so that we
+    /// can use SFINAE to disable the methods for non-single region operations.
+    template <typename OpT, typename T = void>
+    using enable_if_single_region =
+        typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT, Block::iterator> begin() {
+      return getBody()->begin();
+    }
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT, Block::iterator> end() {
+      return getBody()->end();
+    }
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT, Operation &> front() {
+      return *begin();
+    }
+
+    /// Insert the operation into the back of the body, before the terminator.
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT> push_back(Operation *op) {
+      insert(Block::iterator(getBody()->getTerminator()), op);
+    }
+
+    /// Insert the operation at the given insertion point. Note: The operation
+    /// is never inserted after the terminator, even if the insertion point is
+    /// end().
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT> insert(Operation *insertPt, Operation *op) {
+      insert(Block::iterator(insertPt), op);
+    }
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT> insert(Block::iterator insertPt,
+                                        Operation *op) {
+      auto *body = getBody();
+      if (insertPt == body->end())
+        insertPt = Block::iterator(body->getTerminator());
+      body->getOperations().insert(insertPt, op);
+    }
+  };
+};
+
+//===----------------------------------------------------------------------===//
 // Misc Traits
 
 /// This class provides verification for ops that are known to have the same
@@ -1034,78 +1160,6 @@ public:
       return op->emitOpError("is expected to have regions");
     return success();
   }
-};
-
-/// This class provides APIs and verifiers for ops with regions having a single
-/// block that must terminate with `TerminatorOpType`.
-template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
-  template <typename ConcreteType>
-  class Impl : public TraitBase<ConcreteType, Impl> {
-  private:
-    /// Builds a terminator operation without relying on OpBuilder APIs to avoid
-    /// cyclic header inclusion.
-    static Operation *buildTerminator(OpBuilder &builder, Location loc) {
-      OperationState state(loc, TerminatorOpType::getOperationName());
-      TerminatorOpType::build(builder, state);
-      return Operation::create(state);
-    }
-
-  public:
-    static LogicalResult verifyTrait(Operation *op) {
-      for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
-        Region &region = op->getRegion(i);
-
-        // Empty regions are fine.
-        if (region.empty())
-          continue;
-
-        // Non-empty regions must contain a single basic block.
-        if (std::next(region.begin()) != region.end())
-          return op->emitOpError("expects region #")
-                 << i << " to have 0 or 1 blocks";
-
-        Block &block = region.front();
-        if (block.empty())
-          return op->emitOpError() << "expects a non-empty block";
-        Operation &terminator = block.back();
-        if (isa<TerminatorOpType>(terminator))
-          continue;
-
-        return op->emitOpError("expects regions to end with '" +
-                               TerminatorOpType::getOperationName() +
-                               "', found '" +
-                               terminator.getName().getStringRef() + "'")
-                   .attachNote()
-               << "in custom textual format, the absence of terminator implies "
-                  "'"
-               << TerminatorOpType::getOperationName() << '\'';
-      }
-
-      return success();
-    }
-
-    /// Ensure that the given region has the terminator required by this trait.
-    /// If OpBuilder is provided, use it to build the terminator and notify the
-    /// OpBuilder litsteners accordingly. If only a Builder is provided, locally
-    /// construct an OpBuilder with no listeners; this should only be used if no
-    /// OpBuilder is available at the call site, e.g., in the parser.
-    static void ensureTerminator(Region &region, Builder &builder,
-                                 Location loc) {
-      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
-                                           buildTerminator);
-    }
-    static void ensureTerminator(Region &region, OpBuilder &builder,
-                                 Location loc) {
-      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
-                                           buildTerminator);
-    }
-
-    Block *getBody(unsigned idx = 0) {
-      Region &region = this->getOperation()->getRegion(idx);
-      assert(!region.empty() && "unexpected empty region");
-      return &region.front();
-    }
-  };
 };
 
 /// This class provides a verifier for ops that are expecting their parent
