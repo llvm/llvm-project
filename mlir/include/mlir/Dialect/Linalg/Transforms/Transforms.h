@@ -771,6 +771,12 @@ LogicalResult applyStagedPatterns(
     const FrozenRewritePatternList &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 
+//===----------------------------------------------------------------------===//
+// Support for sparse tensor code generation.
+//===----------------------------------------------------------------------===//
+void populateSparsificationPatterns(MLIRContext *context,
+                                    OwningRewritePatternList &patterns);
+
 } // namespace linalg
 } // namespace mlir
 
