@@ -7686,10 +7686,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Try to vectorize the incoming values of the PHI, to catch reductions
       // that feed into PHIs.
       for (unsigned I = 0, E = P->getNumIncomingValues(); I != E; I++) {
-        // Skip if the incoming block is the current BB for now.
+        // Skip if the incoming block is the current BB for now. Also, bypass
+        // unreachable IR for efficiency and to avoid crashing.
         // TODO: Collect the skipped incoming values and try to vectorize them
         // after processing BB.
-        if (BB == P->getIncomingBlock(I))
+        if (BB == P->getIncomingBlock(I) ||
+            !DT->isReachableFromEntry(P->getIncomingBlock(I)))
           continue;
 
         Changed |= vectorizeRootInstruction(nullptr, P->getIncomingValue(I),
