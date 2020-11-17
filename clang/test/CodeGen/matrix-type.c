@@ -156,3 +156,21 @@ void matrix_struct(Matrix *a, Matrix *b) {
   // CHECK-NEXT:    ret void
   b->Data = a->Data;
 }
+
+typedef double dx4x4_t __attribute__((matrix_type(4, 4)));
+void matrix_inline_asm_memory_readwrite() {
+  // CHECK-LABEL: define void @matrix_inline_asm_memory_readwrite()
+  // CHECK-NEXT:  entry:
+  // CHECK-NEXT:    [[ALLOCA:%.+]] = alloca [16 x double], align 8
+  // CHECK-NEXT:    [[PTR:%.+]] = bitcast [16 x double]* [[ALLOCA]] to <16 x double>*
+  // CHECK-NEXT:    [[VAL:%.+]] = load <16 x double>, <16 x double>* [[PTR]], align 8
+  // FIXME: Pointer element type does not match the vector type.
+  // CHECK-NEXT:    call void asm sideeffect "", "=*r|m,0,~{memory},~{dirflag},~{fpsr},~{flags}"([16 x double]* [[ALLOCA]], <16 x double> [[VAL]])
+  // CHECK-NEXT:    ret void
+
+  dx4x4_t m;
+  asm volatile(""
+               : "+r,m"(m)
+               :
+               : "memory");
+}
