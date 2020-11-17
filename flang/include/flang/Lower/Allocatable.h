@@ -23,7 +23,7 @@ struct DeallocateStmt;
 namespace Fortran::lower {
 class AbstractConverter;
 namespace pft {
-class Variable;
+struct Variable;
 }
 
 /// Generate fir to initialize the box (descriptor) of an allocatable variable.
