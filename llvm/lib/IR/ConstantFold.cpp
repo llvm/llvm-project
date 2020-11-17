@@ -2042,17 +2042,17 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     }
   } else if (auto *C1VTy = dyn_cast<VectorType>(C1->getType())) {
 
-    // Do not iterate on scalable vector. The number of elements is unknown at
-    // compile-time.
-    if (isa<ScalableVectorType>(C1VTy))
-      return nullptr;
-
     // Fast path for splatted constants.
     if (Constant *C1Splat = C1->getSplatValue())
       if (Constant *C2Splat = C2->getSplatValue())
         return ConstantVector::getSplat(
             C1VTy->getElementCount(),
             ConstantExpr::getCompare(pred, C1Splat, C2Splat));
+
+    // Do not iterate on scalable vector. The number of elements is unknown at
+    // compile-time.
+    if (isa<ScalableVectorType>(C1VTy))
+      return nullptr;
 
     // If we can constant fold the comparison of each element, constant fold
     // the whole vector comparison.
