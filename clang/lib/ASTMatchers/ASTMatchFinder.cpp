@@ -153,7 +153,7 @@ public:
     Stmt *StmtToTraverse = StmtNode;
     if (auto *ExprNode = dyn_cast_or_null<Expr>(StmtNode)) {
       auto *LambdaNode = dyn_cast_or_null<LambdaExpr>(StmtNode);
-      if (LambdaNode && !Finder->isTraversalAsIs())
+      if (LambdaNode && Finder->isTraversalIgnoringImplicitNodes())
         StmtToTraverse = LambdaNode;
       else
         StmtToTraverse =
@@ -230,7 +230,7 @@ public:
     return traverse(TAL);
   }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
-    if (Finder->isTraversalAsIs())
+    if (!Finder->isTraversalIgnoringImplicitNodes())
       return VisitorBase::TraverseLambdaExpr(Node);
     if (!Node)
       return true;
