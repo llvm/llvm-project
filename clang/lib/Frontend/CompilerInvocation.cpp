@@ -14,6 +14,7 @@
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -66,6 +67,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -1501,11 +1503,24 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
         << "-fdiagnostics-show-hotness";
 
-  Opts.DiagnosticsHotnessThreshold = getLastArgUInt64Value(
-      Args, options::OPT_fdiagnostics_hotness_threshold_EQ, 0);
-  if (Opts.DiagnosticsHotnessThreshold > 0 && !UsingProfile)
-    Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
-        << "-fdiagnostics-hotness-threshold=";
+  // Parse remarks hotness threshold. Valid value is either integer or 'auto'.
+  if (auto *arg =
+          Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
+    auto ResultOrErr =
+        llvm::remarks::parseHotnessThresholdOption(arg->getValue());
+
+    if (!ResultOrErr) {
+      Diags.Report(diag::err_drv_invalid_diagnotics_hotness_threshold)
+          << "-fdiagnostics-hotness-threshold=";
+    } else {
+      Opts.DiagnosticsHotnessThreshold = *ResultOrErr;
+      if ((!Opts.DiagnosticsHotnessThreshold.hasValue() ||
+           Opts.DiagnosticsHotnessThreshold.getValue() > 0) &&
+          !UsingProfile)
+        Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
+            << "-fdiagnostics-hotness-threshold=";
+    }
+  }
 
   // If the user requested to use a sample profile for PGO, then the
   // backend will need to track source location information so the profile

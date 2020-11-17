@@ -237,6 +237,9 @@ public:
   /// included in optimization diagnostics.
   void setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold);
 
+  /// Return if hotness threshold is requested from PSI.
+  bool isDiagnosticsHotnessThresholdSetFromPSI() const;
+
   /// The "main remark streamer" used by all the specialized remark streamers.
   /// This streamer keeps generic remark metadata in memory throughout the life
   /// of the LLVMContext. This metadata may be emitted in a section in object
