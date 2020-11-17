@@ -1053,7 +1053,7 @@ define i8 @lowmask_add(i8 %x) {
 ; CHECK-LABEL: @lowmask_add(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 32
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, -64 ; 0xc0
@@ -1076,7 +1076,7 @@ define i8 @lowmask_add_2_uses(i8 %x) {
 ; CHECK-LABEL: @lowmask_add_2_uses(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 63
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 63
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, -64 ; 0xc0
