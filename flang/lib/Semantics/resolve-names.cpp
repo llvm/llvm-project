@@ -4995,14 +4995,18 @@ bool ConstructVisitor::Pre(const parser::AcSpec &x) {
   return false;
 }
 
+// Section 19.4, paragraph 5 says that each ac-do-variable has the scope of the
+// enclosing ac-implied-do
 bool ConstructVisitor::Pre(const parser::AcImpliedDo &x) {
   auto &values{std::get<std::list<parser::AcValue>>(x.t)};
   auto &control{std::get<parser::AcImpliedDoControl>(x.t)};
   auto &type{std::get<std::optional<parser::IntegerTypeSpec>>(control.t)};
   auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
+  PushScope(Scope::Kind::ImpliedDos, nullptr);
   DeclareStatementEntity(bounds.name.thing.thing, type);
   Walk(bounds);
   Walk(values);
+  PopScope();
   return false;
 }
 
