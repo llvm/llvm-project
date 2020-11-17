@@ -56,6 +56,18 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
   return OS;
 }
 
+VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
+    : SubclassID(SC), UnderlyingVal(UV), Def(Def) {
+  if (Def)
+    Def->addDefinedValue(this);
+}
+
+VPValue::~VPValue() {
+  assert(Users.empty() && "trying to delete a VPValue with remaining users");
+  if (Def)
+    Def->removeDefinedValue(this);
+}
+
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
   if (const VPInstruction *Instr = dyn_cast<VPInstruction>(this))
     Instr->print(OS, SlotTracker);
