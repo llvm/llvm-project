@@ -518,7 +518,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   OrigBlock->getInstList().erase(SI);
 
   // If the Default block has no more predecessors just add it to DeleteList.
-  if (pred_begin(OldDefault) == pred_end(OldDefault))
+  if (pred_empty(OldDefault))
     DeleteList.insert(OldDefault);
 }
 
