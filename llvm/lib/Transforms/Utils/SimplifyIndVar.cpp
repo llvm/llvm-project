@@ -1568,6 +1568,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
 
   // Check that all uses are either s/zext, or narrow def (in case of we are
   // widening the IV increment).
+  SmallVector<Instruction *, 4> ExtUsers;
   for (Use &U : NarrowUse->uses()) {
     if (U.getUser() == NarrowDef)
       continue;
@@ -1578,6 +1579,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       User = dyn_cast<ZExtInst>(U.getUser());
     if (!User || User->getType() != WideType)
       return false;
+    ExtUsers.push_back(User);
   }
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
@@ -1600,15 +1602,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   WideBO->copyIRFlags(NarrowBO);
   ExtendKindMap[NarrowUse] = ExtKind;
 
-  for (Use &U : NarrowUse->uses()) {
-    // Ignore narrow def: it will be removed after the transform.
-    if (U.getUser() == NarrowDef)
-      continue;
-    Instruction *User = nullptr;
-    if (ExtKind == SignExtended)
-      User = cast<SExtInst>(U.getUser());
-    else
-      User = cast<ZExtInst>(U.getUser());
+  for (Instruction *User : ExtUsers) {
     assert(User->getType() == WideType && "Checked before!");
     LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
                       << *WideBO << "\n");
