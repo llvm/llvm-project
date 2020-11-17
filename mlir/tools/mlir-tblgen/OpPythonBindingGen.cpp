@@ -28,7 +28,7 @@ constexpr const char *fileHeader = R"Py(
 
 import array
 from . import _cext
-from . import _segmented_accessor, _equally_sized_accessor
+from . import _segmented_accessor, _equally_sized_accessor, _get_default_loc_context
 _ir = _cext.ir
 )Py";
 
@@ -410,7 +410,7 @@ constexpr const char *segmentDeclarationTemplate =
 /// Template for attaching segment sizes to the attribute list.
 constexpr const char *segmentAttributeTemplate =
     R"Py(attributes["{0}_segment_sizes"] = _ir.DenseElementsAttr.get({0}_segment_sizes,
-      context=Location.current.context if loc is None else loc.context))Py";
+      context=_get_default_loc_context(loc)))Py";
 
 /// Template for appending the unit size to the segment sizes.
 ///   {0} is either 'operand' or 'result';
@@ -443,7 +443,7 @@ constexpr const char *initOptionalAttributeTemplate =
 
 constexpr const char *initUnitAttributeTemplate =
     R"Py(if bool({1}): attributes["{0}"] = _ir.UnitAttr.get(
-      _ir.Location.current.context if loc is None else loc.context))Py";
+      _get_default_loc_context(loc)))Py";
 
 /// Populates `builderArgs` with the Python-compatible names of builder function
 /// arguments, first the results, then the intermixed attributes and operands in
