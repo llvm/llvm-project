@@ -1062,6 +1062,29 @@ define i8 @lowmask_add(i8 %x) {
   ret i8 %r
 }
 
+define i8 @lowmask_add_2(i8 %x) {
+; CHECK-LABEL: @lowmask_add_2(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X:%.*]], 63
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -64 ; 0xc0
+  %r = and i8 %a, 63 ; 0x3f
+  ret i8 %r
+}
+
+define i8 @lowmask_add_2_uses(i8 %x) {
+; CHECK-LABEL: @lowmask_add_2_uses(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], 63
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -64 ; 0xc0
+  call void @use8(i8 %a)
+  %r = and i8 %a, 63 ; 0x3f
+  ret i8 %r
+}
+
 define i8 @not_lowmask_add(i8 %x) {
 ; CHECK-LABEL: @not_lowmask_add(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
