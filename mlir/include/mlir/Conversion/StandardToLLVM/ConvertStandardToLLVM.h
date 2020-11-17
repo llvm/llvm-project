@@ -505,17 +505,17 @@ protected:
 
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-  Value getStridedElementPtr(Location loc, Type elementTypePtr,
-                             Value descriptor, ValueRange indices,
-                             ArrayRef<int64_t> strides, int64_t offset,
+  Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
+                             ValueRange indices,
                              ConversionPatternRewriter &rewriter) const;
 
-  /// Returns if the givem memref type is supported.
-  bool isSupportedMemRefType(MemRefType type) const;
-
+  // Forwards to getStridedElementPtr. TODO: remove.
   Value getDataPtr(Location loc, MemRefType type, Value memRefDesc,
                    ValueRange indices,
                    ConversionPatternRewriter &rewriter) const;
+
+  /// Returns if the givem memref type is supported.
+  bool isSupportedMemRefType(MemRefType type) const;
 
   /// Returns the type of a pointer to an element of the memref.
   Type getElementPtrType(MemRefType type) const;

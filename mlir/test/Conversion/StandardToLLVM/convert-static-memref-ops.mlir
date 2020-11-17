@@ -234,14 +234,10 @@ func @static_dealloc(%static: memref<10x8xf32>) {
 // BAREPTR-LABEL: func @zero_d_load(%{{.*}}: !llvm.ptr<float>) -> !llvm.float
 func @zero_d_load(%arg0: memref<f32>) -> f32 {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[c0]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  %{{.*}} = llvm.load %[[addr]] : !llvm.ptr<float>
+// CHECK-NEXT:  %{{.*}} = llvm.load %[[ptr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// BAREPTR-NEXT: %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[c0]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT: llvm.load %[[addr:.*]] : !llvm.ptr<float>
+// BAREPTR-NEXT: llvm.load %[[ptr:.*]] : !llvm.ptr<float>
   %0 = load %arg0[] : memref<f32>
   return %0 : f32
 }
@@ -257,24 +253,16 @@ func @zero_d_load(%arg0: memref<f32>) -> f32 {
 // BAREPTR-SAME: (%[[A:.*]]: !llvm.ptr<float>, %[[I:.*]]: !llvm.i64, %[[J:.*]]: !llvm.i64) {
 func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-NEXT: %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-// BAREPTR-NEXT: %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-// BAREPTR-NEXT: %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 // BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT: llvm.load %[[addr]] : !llvm.ptr<float>
   %0 = load %static[%i, %j] : memref<10x42xf32>
@@ -288,14 +276,10 @@ func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 // BAREPTR-SAME: (%[[A:.*]]: !llvm.ptr<float>, %[[val:.*]]: !llvm.float)
 func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
+// CHECK-NEXT:  llvm.store %{{.*}}, %[[ptr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64)>
-// BAREPTR-NEXT: %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-// BAREPTR-NEXT: llvm.store %[[val]], %[[addr]] : !llvm.ptr<float>
+// BAREPTR-NEXT: llvm.store %[[val]], %[[ptr]] : !llvm.ptr<float>
   store %arg1, %arg0[] : memref<f32>
   return
 }
@@ -318,24 +302,16 @@ func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 // BAREPTR-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
 
 // BAREPTR:      %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-NEXT: %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[st0:.*]] = llvm.mlir.constant(42 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-// BAREPTR-NEXT: %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-// BAREPTR-NEXT: %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// BAREPTR-NEXT: %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+// BAREPTR-NEXT: %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 // BAREPTR-NEXT: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT: llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
   store %val, %static[%i, %j] : memref<10x42xf32>

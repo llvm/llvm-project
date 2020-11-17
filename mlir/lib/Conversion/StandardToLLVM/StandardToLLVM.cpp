@@ -1042,39 +1042,45 @@ Value ConvertToLLVMPattern::createIndexConstant(
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
-    Location loc, Type elementTypePtr, Value descriptor, ValueRange indices,
-    ArrayRef<int64_t> strides, int64_t offset,
-    ConversionPatternRewriter &rewriter) const {
-  MemRefDescriptor memRefDescriptor(descriptor);
-
-  Value base = memRefDescriptor.alignedPtr(rewriter, loc);
-  Value offsetValue = offset == MemRefType::getDynamicStrideOrOffset()
-                          ? memRefDescriptor.offset(rewriter, loc)
-                          : createIndexConstant(rewriter, loc, offset);
-
-  for (int i = 0, e = indices.size(); i < e; ++i) {
-    Value stride = strides[i] == MemRefType::getDynamicStrideOrOffset()
-                       ? memRefDescriptor.stride(rewriter, loc, i)
-                       : createIndexConstant(rewriter, loc, strides[i]);
-    Value additionalOffset =
-        rewriter.create<LLVM::MulOp>(loc, indices[i], stride);
-    offsetValue =
-        rewriter.create<LLVM::AddOp>(loc, offsetValue, additionalOffset);
-  }
-  return rewriter.create<LLVM::GEPOp>(loc, elementTypePtr, base, offsetValue);
-}
-
-Value ConvertToLLVMPattern::getDataPtr(
     Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
     ConversionPatternRewriter &rewriter) const {
-  LLVM::LLVMType ptrType = MemRefDescriptor(memRefDesc).getElementPtrType();
+
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto successStrides = getStridesAndOffset(type, strides, offset);
   assert(succeeded(successStrides) && "unexpected non-strided memref");
   (void)successStrides;
-  return getStridedElementPtr(loc, ptrType, memRefDesc, indices, strides,
-                              offset, rewriter);
+
+  MemRefDescriptor memRefDescriptor(memRefDesc);
+  Value base = memRefDescriptor.alignedPtr(rewriter, loc);
+
+  Value index;
+  if (offset != 0) // Skip if offset is zero.
+    index = offset == MemRefType::getDynamicStrideOrOffset()
+                ? memRefDescriptor.offset(rewriter, loc)
+                : createIndexConstant(rewriter, loc, offset);
+
+  for (int i = 0, e = indices.size(); i < e; ++i) {
+    Value increment = indices[i];
+    if (strides[i] != 1) { // Skip if stride is 1.
+      Value stride = strides[i] == MemRefType::getDynamicStrideOrOffset()
+                         ? memRefDescriptor.stride(rewriter, loc, i)
+                         : createIndexConstant(rewriter, loc, strides[i]);
+      increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
+    }
+    index =
+        index ? rewriter.create<LLVM::AddOp>(loc, index, increment) : increment;
+  }
+
+  LLVM::LLVMType elementPtrType = memRefDescriptor.getElementPtrType();
+  return index ? rewriter.create<LLVM::GEPOp>(loc, elementPtrType, base, index)
+               : base;
+}
+
+Value ConvertToLLVMPattern::getDataPtr(
+    Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
+    ConversionPatternRewriter &rewriter) const {
+  return getStridedElementPtr(loc, type, memRefDesc, indices, rewriter);
 }
 
 // Check if the MemRefType `type` is supported by the lowering. We currently
@@ -3044,8 +3050,9 @@ struct LoadOpLowering : public LoadStoreOpLowering<LoadOp> {
     LoadOp::Adaptor transformed(operands);
     auto type = loadOp.getMemRefType();
 
-    Value dataPtr = getDataPtr(op->getLoc(), type, transformed.memref(),
-                               transformed.indices(), rewriter);
+    Value dataPtr =
+        getStridedElementPtr(op->getLoc(), type, transformed.memref(),
+                             transformed.indices(), rewriter);
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, dataPtr);
     return success();
   }
@@ -3062,8 +3069,9 @@ struct StoreOpLowering : public LoadStoreOpLowering<StoreOp> {
     auto type = cast<StoreOp>(op).getMemRefType();
     StoreOp::Adaptor transformed(operands);
 
-    Value dataPtr = getDataPtr(op->getLoc(), type, transformed.memref(),
-                               transformed.indices(), rewriter);
+    Value dataPtr =
+        getStridedElementPtr(op->getLoc(), type, transformed.memref(),
+                             transformed.indices(), rewriter);
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, transformed.value(),
                                                dataPtr);
     return success();
@@ -3082,8 +3090,9 @@ struct PrefetchOpLowering : public LoadStoreOpLowering<PrefetchOp> {
     PrefetchOp::Adaptor transformed(operands);
     auto type = prefetchOp.getMemRefType();
 
-    Value dataPtr = getDataPtr(op->getLoc(), type, transformed.memref(),
-                               transformed.indices(), rewriter);
+    Value dataPtr =
+        getStridedElementPtr(op->getLoc(), type, transformed.memref(),
+                             transformed.indices(), rewriter);
 
     // Replace with llvm.prefetch.
     auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
@@ -3788,8 +3797,9 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
     AtomicRMWOp::Adaptor adaptor(operands);
     auto resultType = adaptor.value().getType();
     auto memRefType = atomicOp.getMemRefType();
-    auto dataPtr = getDataPtr(op->getLoc(), memRefType, adaptor.memref(),
-                              adaptor.indices(), rewriter);
+    auto dataPtr =
+        getStridedElementPtr(op->getLoc(), memRefType, adaptor.memref(),
+                             adaptor.indices(), rewriter);
     rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
         op, resultType, *maybeKind, dataPtr, adaptor.value(),
         LLVM::AtomicOrdering::acq_rel);
@@ -3854,8 +3864,8 @@ struct GenericAtomicRMWOpLowering
     // Compute the loaded value and branch to the loop block.
     rewriter.setInsertionPointToEnd(initBlock);
     auto memRefType = atomicOp.memref().getType().cast<MemRefType>();
-    auto dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
-                              adaptor.indices(), rewriter);
+    auto dataPtr = getStridedElementPtr(loc, memRefType, adaptor.memref(),
+                                        adaptor.indices(), rewriter);
     Value init = rewriter.create<LLVM::LoadOp>(loc, dataPtr);
     rewriter.create<LLVM::BrOp>(loc, init, loopBlock);
 
