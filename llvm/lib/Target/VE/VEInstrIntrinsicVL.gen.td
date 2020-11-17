@@ -162,3 +162,7 @@ def : Pat<(int_ve_vl_pfchv_ssl i64:$sy, i64:$sz, i32:$vl), (PFCHVrrl i64:$sy, i6
 def : Pat<(int_ve_vl_pfchv_ssl simm7:$I, i64:$sz, i32:$vl), (PFCHVirl (LO7 $I), i64:$sz, i32:$vl)>;
 def : Pat<(int_ve_vl_pfchvnc_ssl i64:$sy, i64:$sz, i32:$vl), (PFCHVNCrrl i64:$sy, i64:$sz, i32:$vl)>;
 def : Pat<(int_ve_vl_pfchvnc_ssl simm7:$I, i64:$sz, i32:$vl), (PFCHVNCirl (LO7 $I), i64:$sz, i32:$vl)>;
+def : Pat<(int_ve_vl_lvm_mmss v256i1:$ptm, uimm6:$N, i64:$sz), (LVMir_m (ULO7 $N), i64:$sz, v256i1:$ptm)>;
+def : Pat<(int_ve_vl_lvm_MMss v512i1:$ptm, uimm6:$N, i64:$sz), (LVMyir_y (ULO7 $N), i64:$sz, v512i1:$ptm)>;
+def : Pat<(int_ve_vl_svm_sms v256i1:$vmz, uimm6:$N), (SVMmi v256i1:$vmz, (ULO7 $N))>;
+def : Pat<(int_ve_vl_svm_sMs v512i1:$vmz, uimm6:$N), (SVMyi v512i1:$vmz, (ULO7 $N))>;
