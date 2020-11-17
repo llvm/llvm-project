@@ -121,7 +121,7 @@ struct UnsignedWrapper {
 void test_column_major_load_stride_wrapper(int *Ptr, UnsignedWrapper &W) {
   // CHECK-LABEL:  define void @_Z37test_column_major_load_stride_wrapperPiR15UnsignedWrapper(i32* %Ptr, %struct.UnsignedWrapper* nonnull align 1 dereferenceable(1) %W)
   // CHECK:         [[W:%.*]] = load %struct.UnsignedWrapper*, %struct.UnsignedWrapper** %W.addr, align 8
-  // CHECK-NEXT:    [[STRIDE:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* [[W]])
+  // CHECK-NEXT:    [[STRIDE:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* {{[^,]*}} [[W]])
   // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = zext i32 [[STRIDE]] to i64
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
   // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
@@ -225,7 +225,7 @@ void test_column_major_store_stride_wrapper(int *Ptr, UnsignedWrapper &W) {
   // CHECK:         [[M:%.*]] = load <4 x i32>, <4 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
   // CHECK-NEXT:    [[W:%.*]] = load %struct.UnsignedWrapper*, %struct.UnsignedWrapper** %W.addr, align 8
-  // CHECK-NEXT:    [[IDX:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* [[W]])
+  // CHECK-NEXT:    [[IDX:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* {{[^,]*}} [[W]])
   // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
   // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v4i32(<4 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 2, i32 2)
 

@@ -8,7 +8,7 @@
 // CHECK-NEXT:   %vtable1 = load i8*, i8** [[this]]
 // CHECK-NEXT:   [[func_ptr:%[0-9]+]] = tail call i8* @llvm.load.relative.i32(i8* %vtable1, i32 0)
 // CHECK-NEXT:   [[func:%[0-9]+]] = bitcast i8* [[func_ptr]] to void (%class.A*)*
-// CHECK-NEXT:   tail call void [[func]](%class.A* %a)
+// CHECK-NEXT:   tail call void [[func]](%class.A* {{[^,]*}} %a)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

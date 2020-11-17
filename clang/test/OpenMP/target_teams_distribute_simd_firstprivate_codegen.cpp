@@ -132,7 +132,7 @@ int main() {
     // LAMBDA: call void [[INNER_LAMBDA:@.+]](
     // LAMBDA: call void @__kmpc_for_static_fini(
     [&]() {
-      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]]({{.+}} [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
       g = 2;
       g1 = 2;

@@ -25,23 +25,23 @@ void parallel_atomic_ewc() {
   St s;
 #pragma omp parallel
   {
-      // CHECK: invoke void @_ZN2StC1Ev(%struct.St* [[TEMP_ST_ADDR:%.+]])
-      // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
+      // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK: [[SCALAR_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic
       // CHECK: store i32 [[SCALAR_VAL]], i32* @b
-      // CHECK98: invoke void @_ZN2StD1Ev(%struct.St* [[TEMP_ST_ADDR]])
-      // CHECK11: call void @_ZN2StD1Ev(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK98: invoke void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
+      // CHECK11: call void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
 #pragma omp atomic read
       b = St().get();
-      // CHECK-DAG: invoke void @_ZN2StC1Ev(%struct.St* [[TEMP_ST_ADDR:%.+]])
-      // CHECK-DAG: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK-DAG: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
+      // CHECK-DAG: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK-DAG: [[B_VAL:%.+]] = load i32, i32* @b
       // CHECK: store atomic i32 [[B_VAL]], i32* [[SCALAR_ADDR]] monotonic
-      // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
 #pragma omp atomic write
       St().get() = b;
-      // CHECK: invoke void @_ZN2StC1Ev(%struct.St* [[TEMP_ST_ADDR:%.+]])
-      // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
+      // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK: [[B_VAL:%.+]] = load i32, i32* @b
       // CHECK: [[OLD_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic,
       // CHECK: br label %[[OMP_UPDATE:.+]]
@@ -55,13 +55,13 @@ void parallel_atomic_ewc() {
       // CHECK: [[COND:%.+]] = extractvalue { i32, i1 } [[RES]], 1
       // CHECK: br i1 [[COND]], label %[[OMP_DONE:.+]], label %[[OMP_UPDATE]]
       // CHECK: [[OMP_DONE]]
-      // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
 #pragma omp atomic
       St().get() %= b;
 #pragma omp atomic
       s.field++;
-      // CHECK: invoke void @_ZN2StC1Ev(%struct.St* [[TEMP_ST_ADDR:%.+]])
-      // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
+      // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK: [[B_VAL:%.+]] = load i32, i32* @b
       // CHECK: [[OLD_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic,
       // CHECK: br label %[[OMP_UPDATE:.+]]
@@ -76,7 +76,7 @@ void parallel_atomic_ewc() {
       // CHECK: br i1 [[COND]], label %[[OMP_DONE:.+]], label %[[OMP_UPDATE]]
       // CHECK: [[OMP_DONE]]
       // CHECK: store i32 [[NEW_CALC_VAL]], i32* @a,
-      // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* [[TEMP_ST_ADDR]])
+      // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
 #pragma omp atomic capture
       a = St().get() %= b;
     }

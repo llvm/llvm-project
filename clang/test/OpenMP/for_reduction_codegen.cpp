@@ -91,7 +91,7 @@ int main() {
     // LAMBDA: store double 1.0{{.+}}, double* [[G_PRIVATE_ADDR]],
     // LAMBDA: [[G_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
     // LAMBDA: store double* [[G_PRIVATE_ADDR]], double** [[G_PRIVATE_ADDR_REF]]
-    // LAMBDA: call void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
+    // LAMBDA: call void [[INNER_LAMBDA:@.+]](%{{.+}}* {{[^,]*}} [[ARG]])
     // LAMBDA: call void @__kmpc_for_static_fini(
 
     // LAMBDA: [[G_PRIV_REF:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[RED_LIST]], i64 0, i64 0
@@ -117,7 +117,7 @@ int main() {
     // LAMBDA: [[REDUCTION_DONE]]
     // LAMBDA: ret void
     [&]() {
-      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* {{[^,]*}} [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
       g = 2;
       g1 = 2;
@@ -262,7 +262,7 @@ int main() {
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, float*, [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]*, float*, [2 x i32]*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, i64, i32*, [2 x i32]*, [10 x [4 x [[S_FLOAT_TY]]]]*)* [[MAIN_MICROTASK1:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, i64, i32*, [10 x [4 x [[S_FLOAT_TY]]]]*)* [[MAIN_MICROTASK2:@.+]] to void
@@ -302,10 +302,10 @@ int main() {
 // CHECK: [[VAR_REF:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** %
 
 // For & reduction operation initial value of private variable is ones in all bits.
-// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 
 // For && reduction operation initial value of private variable is 1.0.
-// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* [[VAR1_PRIV]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_PRIV]])
 
 // For min reduction operation initial value of private variable is largest repesentable value.
 // CHECK: store float 0x47EFFFFFE0000000, float* [[T_VAR1_PRIV]],
@@ -351,23 +351,23 @@ int main() {
 // CHECK: store float [[UP]], float* [[T_VAR_REF]],
 
 // var = var.operator &(var_reduction);
-// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_REF]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
 
 // var1 = var1.operator &&(var1_reduction);
-// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* [[VAR1_REF]])
+// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_REF]])
 // CHECK: [[VAR1_BOOL:%.+]] = fcmp une float [[TO_FLOAT]], 0.0
 // CHECK: br i1 [[VAR1_BOOL]], label %[[TRUE:.+]], label %[[END2:.+]]
 // CHECK: [[TRUE]]
-// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* [[VAR1_PRIV]])
+// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_PRIV]])
 // CHECK: [[VAR1_REDUCTION_BOOL:%.+]] = fcmp une float [[TO_FLOAT]], 0.0
 // CHECK: br label %[[END2]]
 // CHECK: [[END2]]
 // CHECK: [[COND_LVALUE:%.+]] = phi i1 [ false, %{{.+}} ], [ [[VAR1_REDUCTION_BOOL]], %[[TRUE]] ]
 // CHECK: [[CONV:%.+]] = uitofp i1 [[COND_LVALUE]] to float
-// CHECK:  call void @{{.+}}([[S_FLOAT_TY]]* [[COND_LVALUE:%.+]], float [[CONV]])
+// CHECK:  call void @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[COND_LVALUE:%.+]], float [[CONV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR1_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[COND_LVALUE]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -405,7 +405,7 @@ int main() {
 
 // var = var.operator &(var_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_REF]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -413,17 +413,17 @@ int main() {
 
 // var1 = var1.operator &&(var1_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* [[VAR1_REF]])
+// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_REF]])
 // CHECK: [[VAR1_BOOL:%.+]] = fcmp une float [[TO_FLOAT]], 0.0
 // CHECK: br i1 [[VAR1_BOOL]], label %[[TRUE:.+]], label %[[END2:.+]]
 // CHECK: [[TRUE]]
-// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* [[VAR1_PRIV]])
+// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_PRIV]])
 // CHECK: [[VAR1_REDUCTION_BOOL:%.+]] = fcmp une float [[TO_FLOAT]], 0.0
 // CHECK: br label %[[END2]]
 // CHECK: [[END2]]
 // CHECK: [[COND_LVALUE:%.+]] = phi i1 [ false, %{{.+}} ], [ [[VAR1_REDUCTION_BOOL]], %[[TRUE]] ]
 // CHECK: [[CONV:%.+]] = uitofp i1 [[COND_LVALUE]] to float
-// CHECK:  call void @{{.+}}([[S_FLOAT_TY]]* [[COND_LVALUE:%.+]], float [[CONV]])
+// CHECK:  call void @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[COND_LVALUE:%.+]], float [[CONV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR1_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[COND_LVALUE]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -453,7 +453,7 @@ int main() {
 // break;
 // CHECK: br label %[[RED_DONE]]
 // CHECK: [[RED_DONE]]
-// CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 
@@ -509,23 +509,23 @@ int main() {
 // CHECK: store float [[UP]], float* [[T_VAR_LHS]],
 
 // var_lhs = var_lhs.operator &(var_rhs);
-// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_LHS]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_RHS]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_LHS]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_RHS]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_LHS]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
 
 // var1_lhs = var1_lhs.operator &&(var1_rhs);
-// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* [[VAR1_LHS]])
+// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_LHS]])
 // CHECK: [[VAR1_BOOL:%.+]] = fcmp une float [[TO_FLOAT]], 0.0
 // CHECK: br i1 [[VAR1_BOOL]], label %[[TRUE:.+]], label %[[END2:.+]]
 // CHECK: [[TRUE]]
-// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* [[VAR1_RHS]])
+// CHECK: [[TO_FLOAT:%.+]] = call float @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_RHS]])
 // CHECK: [[VAR1_REDUCTION_BOOL:%.+]] = fcmp une float [[TO_FLOAT]], 0.0
 // CHECK: br label %[[END2]]
 // CHECK: [[END2]]
 // CHECK: [[COND_LVALUE:%.+]] = phi i1 [ false, %{{.+}} ], [ [[VAR1_REDUCTION_BOOL]], %[[TRUE]] ]
 // CHECK: [[CONV:%.+]] = uitofp i1 [[COND_LVALUE]] to float
-// CHECK:  call void @{{.+}}([[S_FLOAT_TY]]* [[COND_LVALUE:%.+]], float [[CONV]])
+// CHECK:  call void @{{.+}}([[S_FLOAT_TY]]* {{[^,]*}} [[COND_LVALUE:%.+]], float [[CONV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR1_LHS]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[COND_LVALUE]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -573,7 +573,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_PRIV]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* %
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* {{[^,]*}} %
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 
@@ -629,7 +629,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* {{[^,]*}} %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -659,7 +659,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* {{[^,]*}} %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: call void @__kmpc_end_critical(
@@ -675,7 +675,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_PRIV]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* %
+// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* {{[^,]*}} %
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[ARRS_PRIV]]
 // CHECK: br i1 [[DONE]],
 // CHECK: call void @llvm.stackrestore(i8*
@@ -732,7 +732,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* {{[^,]*}} %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -768,7 +768,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[BEGIN]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* %
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* {{[^,]*}} %
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
 // CHECK: br i1 [[DONE]],
 // CHECK: [[LHS_BEGIN:%.+]] = bitcast [10 x [4 x [[S_FLOAT_TY]]]]* %{{.+}} to [[S_FLOAT_TY]]*
@@ -823,7 +823,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[LHS_BEGIN]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* {{[^,]*}} %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -853,7 +853,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* {{[^,]*}} %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: call void @__kmpc_end_critical(
@@ -869,7 +869,7 @@ int main() {
 // CHECK: [[END:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[BEGIN]], i64 40
 // CHECK: br
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* %
+// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* {{[^,]*}} %
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[BEGIN]]
 // CHECK: br i1 [[DONE]],
 // CHECK: call void @llvm.stackrestore(i8*
@@ -922,7 +922,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* {{[^,]*}} %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -1217,7 +1217,7 @@ int main() {
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT_42]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [[S_INT_TY]]*, [[S_INT_TY]]*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*)* [[TMAIN_MICROTASK:@.+]] to void
 // Not interested in this one:
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4,
@@ -1252,10 +1252,10 @@ int main() {
 
 // For & reduction operation initial value of private variable is ones in all bits.
 // CHECK: [[VAR_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
-// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 
 // For && reduction operation initial value of private variable is 1.0.
-// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[VAR1_PRIV]])
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[VAR1_PRIV]])
 
 // For min reduction operation initial value of private variable is largest repesentable value.
 // CHECK: store i{{[0-9]+}} 2147483647, i{{[0-9]+}}* [[T_VAR1_PRIV]],
@@ -1300,23 +1300,23 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[UP]], i{{[0-9]+}}* [[T_VAR_REF]],
 
 // var = var.operator &(var_reduction);
-// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR_REF]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
 
 // var1 = var1.operator &&(var1_reduction);
-// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* [[VAR1_REF]])
+// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR1_REF]])
 // CHECK: [[VAR1_BOOL:%.+]] = icmp ne i{{[0-9]+}} [[TO_INT]], 0
 // CHECK: br i1 [[VAR1_BOOL]], label %[[TRUE:.+]], label %[[END2:.+]]
 // CHECK: [[TRUE]]
-// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* [[VAR1_PRIV]])
+// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR1_PRIV]])
 // CHECK: [[VAR1_REDUCTION_BOOL:%.+]] = icmp ne i{{[0-9]+}} [[TO_INT]], 0
 // CHECK: br label %[[END2]]
 // CHECK: [[END2]]
 // CHECK: [[COND_LVALUE:%.+]] = phi i1 [ false, %{{.+}} ], [ [[VAR1_REDUCTION_BOOL]], %[[TRUE]] ]
 // CHECK: [[CONV:%.+]] = zext i1 [[COND_LVALUE]] to i32
-// CHECK:  call void @{{.+}}([[S_INT_TY]]* [[COND_LVALUE:%.+]], i32 [[CONV]])
+// CHECK:  call void @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[COND_LVALUE:%.+]], i32 [[CONV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR1_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[COND_LVALUE]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -1342,7 +1342,7 @@ int main() {
 
 // var = var.operator &(var_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR_REF]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -1350,17 +1350,17 @@ int main() {
 
 // var1 = var1.operator &&(var1_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* [[VAR1_REF]])
+// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR1_REF]])
 // CHECK: [[VAR1_BOOL:%.+]] = icmp ne i{{[0-9]+}} [[TO_INT]], 0
 // CHECK: br i1 [[VAR1_BOOL]], label %[[TRUE:.+]], label %[[END2:.+]]
 // CHECK: [[TRUE]]
-// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* [[VAR1_PRIV]])
+// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR1_PRIV]])
 // CHECK: [[VAR1_REDUCTION_BOOL:%.+]] = icmp ne i{{[0-9]+}} [[TO_INT]], 0
 // CHECK: br label %[[END2]]
 // CHECK: [[END2]]
 // CHECK: [[COND_LVALUE:%.+]] = phi i1 [ false, %{{.+}} ], [ [[VAR1_REDUCTION_BOOL]], %[[TRUE]] ]
 // CHECK: [[CONV:%.+]] = zext i1 [[COND_LVALUE]] to i32
-// CHECK:  call void @{{.+}}([[S_INT_TY]]* [[COND_LVALUE:%.+]], i32 [[CONV]])
+// CHECK:  call void @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[COND_LVALUE:%.+]], i32 [[CONV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR1_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[COND_LVALUE]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -1373,7 +1373,7 @@ int main() {
 // break;
 // CHECK: br label %[[RED_DONE]]
 // CHECK: [[RED_DONE]]
-// CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: ret void
 
@@ -1427,23 +1427,23 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[UP]], i{{[0-9]+}}* [[T_VAR_LHS]],
 
 // var_lhs = var_lhs.operator &(var_rhs);
-// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_LHS]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_RHS]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR_LHS]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_RHS]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR_LHS]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
 
 // var1_lhs = var1_lhs.operator &&(var1_rhs);
-// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* [[VAR1_LHS]])
+// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR1_LHS]])
 // CHECK: [[VAR1_BOOL:%.+]] = icmp ne i{{[0-9]+}} [[TO_INT]], 0
 // CHECK: br i1 [[VAR1_BOOL]], label %[[TRUE:.+]], label %[[END2:.+]]
 // CHECK: [[TRUE]]
-// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* [[VAR1_RHS]])
+// CHECK: [[TO_INT:%.+]] = call i{{[0-9]+}} @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[VAR1_RHS]])
 // CHECK: [[VAR1_REDUCTION_BOOL:%.+]] = icmp ne i{{[0-9]+}} [[TO_INT]], 0
 // CHECK: br label %[[END2]]
 // CHECK: [[END2]]
 // CHECK: [[COND_LVALUE:%.+]] = phi i1 [ false, %{{.+}} ], [ [[VAR1_REDUCTION_BOOL]], %[[TRUE]] ]
 // CHECK: [[CONV:%.+]] = zext i1 [[COND_LVALUE]] to i32
-// CHECK:  call void @{{.+}}([[S_INT_TY]]* [[COND_LVALUE:%.+]], i32 [[CONV]])
+// CHECK:  call void @{{.+}}([[S_INT_TY]]* {{[^,]*}} [[COND_LVALUE:%.+]], i32 [[CONV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR1_LHS]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[COND_LVALUE]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)

@@ -27,7 +27,7 @@ void g() {
   h();
   // CHECK-NOT: call
 
-  // CHECK: call void @_ZN1AD1Ev({{.*}}* %[[A]])
+  // CHECK: call void @_ZN1AD1Ev({{.*}}* {{[^,]*}} %[[A]])
   // CHECK-NOT: call
   // CHECK-LABEL: }
 }
@@ -45,7 +45,7 @@ void h() {
   // CHECK: call {{.*}} @_Z1f1A({{.*}}* %[[A]])
   f(f());
   // CHECK-NOT: call
-  // CHECK: call void @_ZN1AD1Ev({{.*}}* %[[A]])
+  // CHECK: call void @_ZN1AD1Ev({{.*}}* {{[^,]*}} %[[A]])
 
   // CHECK: call void @_Z1hv(
   h();

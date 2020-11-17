@@ -13,16 +13,16 @@ class C {
   void bar4() __attribute__((aligned(1024)));
 } c;
 
-// CHECK: define void @_ZN1C4bar1Ev(%class.C* %this) unnamed_addr [[NUW]] align 2
+// CHECK: define void @_ZN1C4bar1Ev(%class.C* {{[^,]*}} %this) unnamed_addr [[NUW]] align 2
 void C::bar1() { }
 
-// CHECK: define void @_ZN1C4bar2Ev(%class.C* %this) unnamed_addr [[NUW]] align 2
+// CHECK: define void @_ZN1C4bar2Ev(%class.C* {{[^,]*}} %this) unnamed_addr [[NUW]] align 2
 void C::bar2() { }
 
-// CHECK: define void @_ZN1C4bar3Ev(%class.C* %this) unnamed_addr [[NUW]] align 1024
+// CHECK: define void @_ZN1C4bar3Ev(%class.C* {{[^,]*}} %this) unnamed_addr [[NUW]] align 1024
 void C::bar3() { }
 
-// CHECK: define void @_ZN1C4bar4Ev(%class.C* %this) [[NUW]] align 1024
+// CHECK: define void @_ZN1C4bar4Ev(%class.C* {{[^,]*}} %this) [[NUW]] align 1024
 void C::bar4() { }
 
 // PR6635
