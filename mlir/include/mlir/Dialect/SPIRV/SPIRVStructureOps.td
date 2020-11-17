@@ -22,7 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
+def SPV_AddressOfOp : SPV_Op<"mlir.addressof", [InFunctionScope, NoSideEffect]> {
   let summary = "Get the address of a global variable.";
 
   let description = [{
@@ -37,14 +37,14 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-address-of-op ::= ssa-id `=` `spv._address_of` symbol-ref-id
+    spv-address-of-op ::= ssa-id `=` `spv.mlir.addressof` symbol-ref-id
                                      `:` spirv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv._address_of @global_var : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @global_var : !spv.ptr<f32, Input>
     ```
   }];
 

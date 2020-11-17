@@ -264,7 +264,7 @@ spv.module Logical GLSL450 {
 
 // CHECK-NEXT:     spv.globalVariable @foo_1
 // CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv._address_of @foo_1
+// CHECK-NEXT:       spv.mlir.addressof @foo_1
 // CHECK-NEXT:       spv.Load
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -281,7 +281,7 @@ spv.module Logical GLSL450 {
   spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @bar() -> f32 "None" {
-    %0 = spv._address_of @foo : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
     spv.ReturnValue %1 : f32
   }
@@ -297,7 +297,7 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
 // CHECK-NEXT:     spv.globalVariable @foo_1
 // CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv._address_of @foo_1
+// CHECK-NEXT:       spv.mlir.addressof @foo_1
 // CHECK-NEXT:       spv.Load
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
@@ -312,7 +312,7 @@ spv.module Logical GLSL450 {
   spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
 
   spv.func @bar() -> f32 "None" {
-    %0 = spv._address_of @foo : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
     spv.ReturnValue %1 : f32
   }
