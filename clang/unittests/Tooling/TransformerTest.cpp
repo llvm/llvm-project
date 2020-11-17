@@ -1245,6 +1245,32 @@ void testIt()
     testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
                     RewriteInput);
   }
+  {
+    auto MatchedLoop = forStmt(
+        hasLoopInit(declStmt(
+            hasSingleDecl(varDecl(hasInitializer(integerLiteral(equals(0))))
+                              .bind("loopVar")))),
+        hasCondition(binaryOperator(hasOperatorName("!="),
+                                    hasLHS(ignoringImplicit(declRefExpr(to(
+                                        varDecl(equalsBoundNode("loopVar")))))),
+                                    hasRHS(expr().bind("upperBoundExpr")))),
+        hasIncrement(unaryOperator(hasOperatorName("++"),
+                                   hasUnaryOperand(declRefExpr(to(
+                                       varDecl(equalsBoundNode("loopVar"))))))
+                         .bind("incrementOp")));
+
+    auto RewriteRule =
+        changeTo(transformer::enclose(node("loopVar"), node("incrementOp")),
+                 cat("auto ", name("loopVar"), " : boost::irange(",
+                     node("upperBoundExpr"), ")"));
+
+    testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedLoop),
+                      RewriteRule),
+             RewriteInput, RewriteOutput);
+
+    testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
+                    RewriteInput);
+  }
 }
 
 TEST_F(TransformerTest, TemplateInstantiation) {

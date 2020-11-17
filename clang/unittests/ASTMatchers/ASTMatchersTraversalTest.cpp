@@ -2368,6 +2368,13 @@ struct HasCtorInits : NoSpecialMethods, NonTrivial
   HasCtorInits() : NoSpecialMethods(), m_i(42) {}
 };
 
+struct CtorInitsNonTrivial : NonTrivial
+{
+  int m_i;
+  NonTrivial m_nt;
+  CtorInitsNonTrivial() : NonTrivial(), m_i(42) {}
+};
+
 )cpp";
   {
     auto M = cxxRecordDecl(hasName("NoSpecialMethods"),
@@ -2393,6 +2400,35 @@ struct HasCtorInits : NoSpecialMethods, NonTrivial
     M = cxxRecordDecl(hasName("NoSpecialMethods"), has(cxxDestructorDecl()));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+
+    M = cxxRecordDecl(hasName("NoSpecialMethods"),
+                      hasMethod(cxxConstructorDecl(isCopyConstructor())));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+
+    M = cxxRecordDecl(hasName("NoSpecialMethods"),
+                      hasMethod(cxxMethodDecl(isCopyAssignmentOperator())));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+
+    M = cxxRecordDecl(hasName("NoSpecialMethods"),
+                      hasMethod(cxxConstructorDecl(isDefaultConstructor())));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+
+    M = cxxRecordDecl(hasName("NoSpecialMethods"),
+                      hasMethod(cxxDestructorDecl()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // Because the copy-assignment operator is not spelled in the
+    // source (ie, isImplicit()), we don't match it
+    auto M =
+        cxxOperatorCallExpr(hasType(cxxRecordDecl(hasName("NoSpecialMethods"))),
+                            callee(cxxMethodDecl(isCopyAssignmentOperator())));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
   {
     // Compiler generates a forStmt to copy the array
@@ -2413,6 +2449,24 @@ struct HasCtorInits : NoSpecialMethods, NonTrivial
 
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MDef)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MDef)));
+
+    auto MBody = cxxMethodDecl(MDecl, hasBody(compoundStmt()));
+
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MBody)));
+    EXPECT_FALSE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MBody)));
+
+    auto MIsDefn = cxxMethodDecl(MDecl, isDefinition());
+
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MIsDefn)));
+    EXPECT_TRUE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MIsDefn)));
+
+    auto MIsInline = cxxMethodDecl(MDecl, isInline());
+
+    EXPECT_FALSE(matches(Code, traverse(TK_AsIs, MIsInline)));
+    EXPECT_FALSE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MIsInline)));
 
     // The parameter of the defaulted method can still be matched.
     auto MParm =
@@ -2436,18 +2490,33 @@ struct HasCtorInits : NoSpecialMethods, NonTrivial
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
   {
+    auto M = cxxConstructorDecl(hasName("HasCtorInits"),
+                                hasAnyConstructorInitializer(cxxCtorInitializer(
+                                    forField(hasName("m_nt")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M =
+        cxxConstructorDecl(hasName("HasCtorInits"),
+                           forEachConstructorInitializer(
+                               cxxCtorInitializer(forField(hasName("m_nt")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
     auto M = cxxConstructorDecl(
-        hasName("HasCtorInits"),
-        has(cxxCtorInitializer(withInitializer(cxxConstructExpr(hasDeclaration(
-            cxxConstructorDecl(hasName("NoSpecialMethods"))))))));
+        hasName("CtorInitsNonTrivial"),
+        has(cxxCtorInitializer(withInitializer(cxxConstructExpr(
+            hasDeclaration(cxxConstructorDecl(hasName("NonTrivial"))))))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
   {
     auto M = cxxConstructorDecl(
         hasName("HasCtorInits"),
-        has(cxxCtorInitializer(withInitializer(cxxConstructExpr(
-            hasDeclaration(cxxConstructorDecl(hasName("NonTrivial"))))))));
+        has(cxxCtorInitializer(withInitializer(cxxConstructExpr(hasDeclaration(
+            cxxConstructorDecl(hasName("NoSpecialMethods"))))))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
@@ -2573,13 +2642,37 @@ void callDefaultArg()
   hasDefaultArg(42);
 }
 )cpp";
+  auto hasDefaultArgCall = [](auto InnerMatcher) {
+    return callExpr(callee(functionDecl(hasName("hasDefaultArg"))),
+                    InnerMatcher);
+  };
   {
-    auto M = callExpr(has(integerLiteral(equals(42))));
+    auto M = hasDefaultArgCall(has(integerLiteral(equals(42))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
   {
-    auto M = callExpr(has(cxxDefaultArgExpr()));
+    auto M = hasDefaultArgCall(has(cxxDefaultArgExpr()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = hasDefaultArgCall(argumentCountIs(2));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = hasDefaultArgCall(argumentCountIs(1));
+    EXPECT_FALSE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = hasDefaultArgCall(hasArgument(1, cxxDefaultArgExpr()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = hasDefaultArgCall(hasAnyArgument(cxxDefaultArgExpr()));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
