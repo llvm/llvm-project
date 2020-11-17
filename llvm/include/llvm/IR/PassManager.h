@@ -571,7 +571,7 @@ public:
   }
 
   /// Returns if the pass manager contains any passes.
-  bool isEmpty() { return Passes.empty(); }
+  bool isEmpty() const { return Passes.empty(); }
 
   static bool isRequired() { return true; }
 
