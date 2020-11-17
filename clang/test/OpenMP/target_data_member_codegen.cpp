@@ -25,14 +25,15 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK: [[MAPTYPES:@.+]] = private unnamed_addr constant [1 x i64] zeroinitializer
+// CHECK-DAG: [[SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 {{8|4}}]
+// CHECK-DAG: [[MAPTYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 3]
 struct S {
     double *p;
 };
 
 // CHECK-LABEL: @main
 int main() {
-  // CHECK: call i32 @__tgt_target_mapper(i64 -1, i8* @.{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPTYPES]], i32 0, i32 0), i8** null)
+  // CHECK: call i32 @__tgt_target_mapper(i64 -1, i8* @.{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPTYPES]], i32 0, i32 0), i8** null)
     S s;
 #pragma omp target map(s.p)
     { }
