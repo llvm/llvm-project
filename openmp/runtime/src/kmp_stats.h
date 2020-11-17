@@ -422,7 +422,7 @@ public:
   void setOffset(double d) { offset = d; }
 
   void reset() {
-    minVal = std::numeric_limits<double>::max();
+    minVal = (std::numeric_limits<double>::max)();
     maxVal = -minVal;
     meanVal = 0.0;
     m2 = 0.0;
