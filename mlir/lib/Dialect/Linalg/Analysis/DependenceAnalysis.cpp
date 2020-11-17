@@ -43,6 +43,9 @@ Value Aliases::find(Value v) {
     if (!defOp)
       return v;
 
+    if (isa<TensorToMemrefOp>(defOp))
+      return v;
+
     if (auto memEffect = dyn_cast<MemoryEffectOpInterface>(defOp)) {
       // Collect all memory effects on `v`.
       SmallVector<MemoryEffects::EffectInstance, 1> effects;
