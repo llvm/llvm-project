@@ -1418,7 +1418,7 @@ void JSONNodeDumper::VisitFixedPointLiteral(const FixedPointLiteral *FPL) {
   JOS.attribute("value", FPL->getValueAsString(/*Radix=*/10));
 }
 void JSONNodeDumper::VisitFloatingLiteral(const FloatingLiteral *FL) {
-  llvm::SmallVector<char, 16> Buffer;
+  llvm::SmallString<16> Buffer;
   FL->getValue().toString(Buffer);
   JOS.attribute("value", Buffer);
 }

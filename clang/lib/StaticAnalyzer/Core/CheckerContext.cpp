@@ -93,7 +93,7 @@ StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
   if (Loc.isMacroID())
     return Lexer::getImmediateMacroName(Loc, getSourceManager(),
                                              getLangOpts());
-  SmallVector<char, 16> buf;
+  SmallString<16> buf;
   return Lexer::getSpelling(Loc, buf, getSourceManager(), getLangOpts());
 }
 
