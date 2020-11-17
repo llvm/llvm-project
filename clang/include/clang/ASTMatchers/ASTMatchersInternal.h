@@ -1060,7 +1060,7 @@ public:
 
   virtual ASTContext &getASTContext() const = 0;
 
-  virtual bool IsMatchingInTemplateInstantiationNotSpelledInSource() const = 0;
+  virtual bool IsMatchingInASTNodeNotSpelledInSource() const = 0;
 
   bool isTraversalIgnoringImplicitNodes() const;
 

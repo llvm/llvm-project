@@ -497,7 +497,7 @@ public:
                           const DynTypedMatcher &Matcher,
                           BoundNodesTreeBuilder *Builder, int MaxDepth,
                           TraversalKind Traversal, BindKind Bind) {
-    bool ScopedTraversal = TraversingTemplateInstantiationNotSpelledInSource;
+    bool ScopedTraversal = TraversingASTNodeNotSpelledInSource;
 
     if (const auto *CTSD = Node.get<ClassTemplateSpecializationDecl>()) {
       int SK = CTSD->getSpecializationKind();
@@ -506,7 +506,7 @@ public:
         ScopedTraversal = true;
     }
 
-    TemplateInstantiationNotSpelledInSourceScope RAII(this, ScopedTraversal);
+    ASTNodeNotSpelledInSourceScope RAII(this, ScopedTraversal);
 
     MatchChildASTVisitor Visitor(
       &Matcher, this, Builder, MaxDepth, Traversal, Bind);
@@ -592,38 +592,38 @@ public:
   bool shouldVisitTemplateInstantiations() const { return true; }
   bool shouldVisitImplicitCode() const { return true; }
 
-  bool IsMatchingInTemplateInstantiationNotSpelledInSource() const override {
-    return TraversingTemplateInstantiationNotSpelledInSource;
+  bool IsMatchingInASTNodeNotSpelledInSource() const override {
+    return TraversingASTNodeNotSpelledInSource;
   }
 
   bool TraverseTemplateInstantiations(ClassTemplateDecl *D) {
-    TemplateInstantiationNotSpelledInSourceScope RAII(this, true);
+    ASTNodeNotSpelledInSourceScope RAII(this, true);
     return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
         D);
   }
 
   bool TraverseTemplateInstantiations(VarTemplateDecl *D) {
-    TemplateInstantiationNotSpelledInSourceScope RAII(this, true);
+    ASTNodeNotSpelledInSourceScope RAII(this, true);
     return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
         D);
   }
 
   bool TraverseTemplateInstantiations(FunctionTemplateDecl *D) {
-    TemplateInstantiationNotSpelledInSourceScope RAII(this, true);
+    ASTNodeNotSpelledInSourceScope RAII(this, true);
     return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
         D);
   }
 
 private:
-  bool TraversingTemplateInstantiationNotSpelledInSource = false;
+  bool TraversingASTNodeNotSpelledInSource = false;
 
-  struct TemplateInstantiationNotSpelledInSourceScope {
-    TemplateInstantiationNotSpelledInSourceScope(MatchASTVisitor *V, bool B)
-        : MV(V), MB(V->TraversingTemplateInstantiationNotSpelledInSource) {
-      V->TraversingTemplateInstantiationNotSpelledInSource = B;
+  struct ASTNodeNotSpelledInSourceScope {
+    ASTNodeNotSpelledInSourceScope(MatchASTVisitor *V, bool B)
+        : MV(V), MB(V->TraversingASTNodeNotSpelledInSource) {
+      V->TraversingASTNodeNotSpelledInSource = B;
     }
-    ~TemplateInstantiationNotSpelledInSourceScope() {
-      MV->TraversingTemplateInstantiationNotSpelledInSource = MB;
+    ~ASTNodeNotSpelledInSourceScope() {
+      MV->TraversingASTNodeNotSpelledInSource = MB;
     }
 
   private:
