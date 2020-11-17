@@ -92,6 +92,15 @@ public:
 
   /// Custom Lower {
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  unsigned getJumpTableEncoding() const override;
+  const MCExpr *LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
+                                          const MachineBasicBlock *MBB,
+                                          unsigned Uid,
+                                          MCContext &Ctx) const override;
+  SDValue getPICJumpTableRelocBase(SDValue Table,
+                                   SelectionDAG &DAG) const override;
+  // VE doesn't need getPICJumpTableRelocBaseExpr since it is used for only
+  // EK_LabelDifference32.
 
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -99,6 +108,7 @@ public:
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerToTLSGeneralDynamicModel(SDValue Op, SelectionDAG &DAG) const;
