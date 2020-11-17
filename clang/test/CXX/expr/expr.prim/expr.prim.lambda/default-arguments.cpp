@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify=expected,nowin32
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify=expected,win32 -triple i386-windows
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify -triple i386-windows
 
 void defargs() {
   auto l1 = [](int i, int j = 17, int k = 18) { return i + j + k; };
@@ -44,9 +44,12 @@ template void defargs_in_template_unused(NoDefaultCtor);  // expected-note{{in i
 template<typename T>
 void defargs_in_template_used() {
   auto l1 = [](const T& value = T()) { }; // expected-error{{no matching constructor for initialization of 'NoDefaultCtor'}} \
-                                          // expected-note{{candidate function not viable: requires single argument 'value', but no arguments were provided}} \
-                                          // nowin32-note{{conversion candidate of type 'void (*)(const NoDefaultCtor &)'}}\
-                                          // win32-note{{conversion candidate of type 'void (*)(const NoDefaultCtor &) __attribute__((thiscall))'}}
+                                          // expected-note{{candidate function not viable: requires single argument 'value', but no arguments were provided}}
+#if defined(_WIN32) && !defined(_WIN64)
+                                          // expected-note@46{{conversion candidate of type 'void (*)(const NoDefaultCtor &) __attribute__((thiscall))'}}
+#else
+                                          // expected-note@46{{conversion candidate of type 'void (*)(const NoDefaultCtor &)'}}
+#endif
   l1(); // expected-error{{no matching function for call to object of type '(lambda at }}
 }
 
