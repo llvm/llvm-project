@@ -324,6 +324,7 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
 #if KMP_STATS_ENABLED
   if (previous_state == stats_state_e::SERIAL_REGION) {
     KMP_EXCHANGE_PARTITIONED_TIMER(OMP_serial);
+    KMP_SET_THREAD_STATE(previous_state);
   } else {
     KMP_POP_PARTITIONED_TIMER();
   }
@@ -436,6 +437,7 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
 #if KMP_STATS_ENABLED
   if (previous_state == stats_state_e::SERIAL_REGION) {
     KMP_EXCHANGE_PARTITIONED_TIMER(OMP_serial);
+    KMP_SET_THREAD_STATE(previous_state);
   } else {
     KMP_POP_PARTITIONED_TIMER();
   }
