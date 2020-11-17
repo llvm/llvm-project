@@ -13,7 +13,7 @@
 // RUN: mlir-opt %s -test-vector-to-forloop | FileCheck %s -check-prefix=TRANSFORM
 
 
-func @print_memref_f32(memref<*xf32>)
+func private @print_memref_f32(memref<*xf32>)
 
 func @alloc_1d_filled_inc_f32(%arg0: index, %arg1: f32) -> memref<?xf32> {
   %c0 = constant 0 : index

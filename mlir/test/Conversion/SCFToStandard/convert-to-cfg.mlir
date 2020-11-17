@@ -314,7 +314,7 @@ func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
   return %r : f32
 }
 
-func @generate() -> i64
+func private @generate() -> i64
 
 // CHECK-LABEL: @simple_parallel_reduce_loop
 // CHECK-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[INIT:.*]]: f32

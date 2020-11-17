@@ -47,17 +47,17 @@ func @non_memref_types() -> (i1, memref<f32>, i32) {
   return %0, %1, %2 : i1, memref<f32>, i32
 }
 
-// CHECK: func @external_function(memref<f32>)
-func @external_function() -> (memref<f32>)
-// CHECK: func @result_attrs(memref<f32> {test.some_attr})
-func @result_attrs() -> (memref<f32> {test.some_attr})
-// CHECK: func @mixed_result_attrs(memref<1xf32>, memref<2xf32> {test.some_attr}, memref<3xf32>)
-func @mixed_result_attrs() -> (memref<1xf32>, memref<2xf32> {test.some_attr}, memref<3xf32>)
+// CHECK: func private @external_function(memref<f32>)
+func private @external_function() -> (memref<f32>)
+// CHECK: func private @result_attrs(memref<f32> {test.some_attr})
+func private @result_attrs() -> (memref<f32> {test.some_attr})
+// CHECK: func private @mixed_result_attrs(memref<1xf32>, memref<2xf32> {test.some_attr}, memref<3xf32>)
+func private @mixed_result_attrs() -> (memref<1xf32>, memref<2xf32> {test.some_attr}, memref<3xf32>)
 
 // -----
 
-// CHECK-LABEL: func @callee(memref<1xf32>)
-func @callee() -> memref<1xf32>
+// CHECK-LABEL: func private @callee(memref<1xf32>)
+func private @callee() -> memref<1xf32>
 
 // CHECK-LABEL:   func @call_basic() {
 // CHECK:           %[[OUTPARAM:.*]] = alloc() : memref<1xf32>
@@ -73,8 +73,8 @@ func @call_basic() {
 
 // -----
 
-// CHECK-LABEL: func @callee(memref<1xf32>, memref<2xf32>)
-func @callee() -> (memref<1xf32>, memref<2xf32>)
+// CHECK-LABEL: func private @callee(memref<1xf32>, memref<2xf32>)
+func private @callee() -> (memref<1xf32>, memref<2xf32>)
 
 // CHECK-LABEL:   func @call_multiple_result() {
 // CHECK:           %[[RESULT0:.*]] = alloc() : memref<1xf32>
@@ -89,8 +89,8 @@ func @call_multiple_result() {
 
 // -----
 
-// CHECK-LABEL: func @callee(memref<1xf32>) -> (i1, i32)
-func @callee() -> (i1, memref<1xf32>, i32)
+// CHECK-LABEL: func private @callee(memref<1xf32>) -> (i1, i32)
+func private @callee() -> (i1, memref<1xf32>, i32)
 
 // CHECK-LABEL:   func @call_non_memref_result() {
 // CHECK:           %[[RESULT0:.*]] = alloc() : memref<1xf32>
@@ -104,7 +104,7 @@ func @call_non_memref_result() {
 
 // -----
 
-func @callee() -> (memref<?xf32>)
+func private @callee() -> (memref<?xf32>)
 
 func @call_non_memref_result() {
   // expected-error @+1 {{cannot create out param for dynamically shaped result}}

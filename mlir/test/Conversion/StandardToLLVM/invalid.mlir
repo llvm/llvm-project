@@ -33,8 +33,8 @@ func @mlir_cast_to_llvm_vec(%0 : vector<1x1xf32>) -> !llvm.vec<1 x float> {
 // -----
 
 // Should not crash on unsupported types in function signatures.
-func @unsupported_signature() -> tensor<10 x i32>
+func private @unsupported_signature() -> tensor<10 x i32>
 
 // -----
 
-func @partially_supported_signature() -> (vector<10 x i32>, tensor<10 x i32>)
+func private @partially_supported_signature() -> (vector<10 x i32>, tensor<10 x i32>)

@@ -7,7 +7,7 @@ module attributes {gpu.container_module} {
     gpu.func @kernel() kernel { gpu.return }
   }
 
-  func @foo() -> ()
+  func private @foo() -> ()
 
   // CHECK-LABEL:func @async(%{{.*}}: index)
   func @async(%sz : index) {
