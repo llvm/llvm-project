@@ -34,7 +34,7 @@
   "termination" : {"reason":"Namespace SIGNAL, Code 0xb","signal":"Segmentation fault: 11","byProc":"exc handler","code":11,"namespace":"SIGNAL","byPid":2187,"flags":0},
   "asi" : ["dyld2 mode"],
   "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":0,"task_for_pid":2067},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
-  "threads" : [{"triggered":true,"id":22172,"queue":"com.apple.main-thread","frames":[[0,16240],[0,16265],[0,16292],[1,87601]]}],
+  "threads" : [{"triggered":true,"id":22172,"queue":"com.apple.main-thread","frames":[[0,@foo@],[0,@bar@],[0,@main@],[1,87601]]}],
   "threadState" : {
   "r13" : 0,
   "rax" : 0,
@@ -64,7 +64,7 @@
   "usedImages" : [
   [
     "@UUID@",
-    0,
+    4294967296,
     "P"
   ],
   [
