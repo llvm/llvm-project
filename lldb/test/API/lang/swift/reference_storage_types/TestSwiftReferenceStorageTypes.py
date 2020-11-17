@@ -28,6 +28,7 @@ class TestSwiftReferenceStorageTypes(TestBase):
         TestBase.setUp(self)
 
     @decorators.skipIf(archs=['ppc64le']) #SR-10215
+    @skipIfLinux # rdar://problem/71506440
     @swiftTest
     def test_swift_reference_storage_types(self):
         """Test weak, unowned and unmanaged types"""
