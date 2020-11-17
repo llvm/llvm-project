@@ -20,7 +20,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Support/KindMapping.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinDialect.h"
 
 namespace fir {
 struct NameUniquer;

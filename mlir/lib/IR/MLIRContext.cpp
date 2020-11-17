@@ -16,13 +16,12 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Function.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/ThreadLocalCache.h"
@@ -81,57 +80,6 @@ void mlir::registerMLIRContextCLOptions() {
   // Make sure that the options struct has been initialized.
   *clOptions;
 }
-
-//===----------------------------------------------------------------------===//
-// Builtin Dialect
-//===----------------------------------------------------------------------===//
-
-namespace {
-struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  LogicalResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (attr.isa<AffineMapAttr>()) {
-      os << "map";
-      return success();
-    }
-    if (attr.isa<IntegerSetAttr>()) {
-      os << "set";
-      return success();
-    }
-    if (attr.isa<LocationAttr>()) {
-      os << "loc";
-      return success();
-    }
-    return failure();
-  }
-};
-
-/// A builtin dialect to define types/etc that are necessary for the validity of
-/// the IR.
-struct BuiltinDialect : public Dialect {
-  BuiltinDialect(MLIRContext *context)
-      : Dialect(/*name=*/"", context, TypeID::get<BuiltinDialect>()) {
-    addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
-             FunctionType, IndexType, IntegerType, MemRefType,
-             UnrankedMemRefType, NoneType, OpaqueType, RankedTensorType,
-             TupleType, UnrankedTensorType, VectorType>();
-    addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
-                  DenseStringElementsAttr, DictionaryAttr, FloatAttr,
-                  SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
-                  OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
-                  UnitAttr>();
-    addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
-                  UnknownLoc>();
-    addInterfaces<BuiltinOpAsmDialectInterface>();
-
-    // TODO: These operations should be moved to a different dialect when they
-    // have been fully decoupled from the core.
-    addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
-  }
-  static StringRef getDialectNamespace() { return ""; }
-};
-} // end anonymous namespace.
 
 //===----------------------------------------------------------------------===//
 // Locking Utilities
