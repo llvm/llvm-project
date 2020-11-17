@@ -5,7 +5,7 @@
 // CHECK-DAG: #[[$SET_7_11:.*]] = affine_set<(d0, d1) : (d0 * 7 + d1 * 5 + 88 == 0, d0 * 5 - d1 * 11 + 60 == 0, d0 * 11 + d1 * 7 - 24 == 0, d0 * 7 + d1 * 5 + 88 == 0)>
 
 // An external function that we will use in bodies to avoid DCE.
-func @external() -> ()
+func private @external() -> ()
 
 // CHECK-LABEL: func @test_gaussian_elimination_empty_set0() {
 func @test_gaussian_elimination_empty_set0() {
@@ -236,7 +236,7 @@ func @test_empty_set(%N : index) {
 // -----
 
 // An external function that we will use in bodies to avoid DCE.
-func @external() -> ()
+func private @external() -> ()
 
 // CHECK-DAG: #[[$SET:.*]] = affine_set<()[s0] : (s0 >= 0, -s0 + 50 >= 0)
 // CHECK-DAG: #[[$EMPTY_SET:.*]] = affine_set<() : (1 == 0)
@@ -273,8 +273,6 @@ func @affine.apply(%N : index) {
 }
 
 // -----
-
-// CHECK-DAG: #[[MAP_0D:.*]] = affine_map<() -> ()>
 
 // CHECK-LABEL: func @simplify_zero_dim_map
 func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {

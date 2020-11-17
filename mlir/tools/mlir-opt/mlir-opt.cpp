@@ -48,6 +48,7 @@ void registerTestReducer();
 void registerTestSpirvEntryPointABIPass();
 void registerTestSpirvModuleCombinerPass();
 void registerTestTraitsPass();
+void registerTosaTestQuantUtilAPIPass();
 void registerVectorizerTestPass();
 
 namespace test {
@@ -62,12 +63,11 @@ void registerTestConstantFold();
 void registerTestConvVectorization();
 void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
+void registerTestDecomposeCallGraphTypes();
 void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
-void registerTestExpandMemRefReshapePass();
 void registerTestExpandTanhPass();
-void registerTestFinalizingBufferizePass();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestInterfaces();
 void registerTestLinalgCodegenStrategy();
@@ -81,6 +81,8 @@ void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
+void registerTestNumberOfBlockExecutionsPass();
+void registerTestNumberOfOperationExecutionsPass();
 void registerTestOpaqueLoc();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
@@ -111,6 +113,7 @@ void registerTestPasses() {
   registerTestSpirvModuleCombinerPass();
   registerTestTraitsPass();
   registerVectorizerTestPass();
+  registerTosaTestQuantUtilAPIPass();
 
   test::registerConvertCallOpPass();
   test::registerInliner();
@@ -127,11 +130,10 @@ void registerTestPasses() {
   test::registerTestConvertGPUKernelToHsacoPass();
 #endif
   test::registerTestConvVectorization();
+  test::registerTestDecomposeCallGraphTypes();
   test::registerTestDominancePass();
   test::registerTestDynamicPipelinePass();
-  test::registerTestExpandMemRefReshapePass();
   test::registerTestExpandTanhPass();
-  test::registerTestFinalizingBufferizePass();
   test::registerTestGpuParallelLoopMappingPass();
   test::registerTestInterfaces();
   test::registerTestLinalgCodegenStrategy();
@@ -145,8 +147,9 @@ void registerTestPasses() {
   test::registerTestLoopUnrollingPass();
   test::registerTestMemRefDependenceCheck();
   test::registerTestMemRefStrideCalculation();
+  test::registerTestNumberOfBlockExecutionsPass();
+  test::registerTestNumberOfOperationExecutionsPass();
   test::registerTestOpaqueLoc();
-  test::registerTestPreparationPassWithAllowedMemrefResults();
   test::registerTestRecursiveTypesPass();
   test::registerTestSCFUtilsPass();
   test::registerTestVectorConversions();

@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __dfsan;
 
@@ -405,6 +406,22 @@ dfsan_dump_labels(int fd) {
     }
     WriteToFile(fd, "\n", 1);
   }
+}
+
+#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp) \
+  BufferedStackTrace stack;                 \
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
+
+void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
+                                                 void *context,
+                                                 bool request_fast,
+                                                 u32 max_depth) {
+  Unwind(max_depth, pc, bp, context, 0, 0, false);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
+  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME());
+  stack.Print();
 }
 
 void Flags::SetDefaults() {

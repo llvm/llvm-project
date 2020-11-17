@@ -14,6 +14,34 @@
 using namespace lldb_private;
 using namespace lldb;
 
+static int lldb_print(lua_State *L) {
+  int n = lua_gettop(L);
+  lua_getglobal(L, "io");
+  lua_getfield(L, -1, "stdout");
+  lua_getfield(L, -1, "write");
+  for (int i = 1; i <= n; i++) {
+    lua_pushvalue(L, -1); // write()
+    lua_pushvalue(L, -3); // io.stdout
+    luaL_tolstring(L, i, nullptr);
+    lua_pushstring(L, i != n ? "\t" : "\n");
+    lua_call(L, 3, 0);
+  }
+  return 0;
+}
+
+Lua::Lua() : m_lua_state(luaL_newstate()) {
+  assert(m_lua_state);
+  luaL_openlibs(m_lua_state);
+  luaopen_lldb(m_lua_state);
+  lua_pushcfunction(m_lua_state, lldb_print);
+  lua_setglobal(m_lua_state, "print");
+}
+
+Lua::~Lua() {
+  assert(m_lua_state);
+  lua_close(m_lua_state);
+}
+
 llvm::Error Lua::Run(llvm::StringRef buffer) {
   int error =
       luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer") ||

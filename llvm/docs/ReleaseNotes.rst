@@ -74,6 +74,13 @@ Changes to the LLVM IR
 Changes to building LLVM
 ------------------------
 
+* The internal ``llvm-build`` Python script and the associated ``LLVMBuild.txt``
+  files used to describe the LLVM component structure have been removed and
+  replaced by a pure ``CMake`` approach, where each component stores extra
+  properties in the created targets. These properties are processed once all
+  components are defined to resolve library dependencies and produce the header
+  expected by llvm-config.
+
 Changes to TableGen
 -------------------
 

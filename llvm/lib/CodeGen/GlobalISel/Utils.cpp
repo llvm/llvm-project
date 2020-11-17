@@ -351,15 +351,8 @@ llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
   return MI->getOperand(1).getFPImm();
 }
 
-namespace {
-struct DefinitionAndSourceRegister {
-  MachineInstr *MI;
-  Register Reg;
-};
-} // namespace
-
-static Optional<DefinitionAndSourceRegister>
-getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
+Optional<DefinitionAndSourceRegister>
+llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
   auto *DefMI = MRI.getVRegDef(Reg);
   auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
@@ -689,9 +682,7 @@ static bool isBuildVectorConstantSplat(const MachineInstr &MI,
   const unsigned NumOps = MI.getNumOperands();
   for (unsigned I = 1; I != NumOps; ++I) {
     Register Element = MI.getOperand(I).getReg();
-    int64_t ElementValue;
-    if (!mi_match(Element, MRI, m_ICst(ElementValue)) ||
-        ElementValue != SplatValue)
+    if (!mi_match(Element, MRI, m_SpecificICst(SplatValue)))
       return false;
   }
 

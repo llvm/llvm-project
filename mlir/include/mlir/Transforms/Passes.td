@@ -214,6 +214,10 @@ def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
     Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
            /*default=*/"1024",
            "Define the maximum size in bytes to promote allocations to stack.">,
+    Option<"bitwidthOfIndexType", "bitwidth-of-index-type", "unsigned",
+           /*default=*/"64",
+           "Define the bitwidth of the index type. Used for size estimation.">,
+
   ];
 }
 
@@ -570,11 +574,11 @@ def SymbolDCE : Pass<"symbol-dce"> {
     For example, consider the following input:
 
     ```mlir
-    func @dead_private_function() attributes { sym_visibility = "private" }
-    func @live_private_function() attributes { sym_visibility = "private" }
+    func private @dead_private_function()
+    func private @live_private_function()
 
     // Note: The `public` isn't necessary here, as this is the default.
-    func @public_function() attributes { sym_visibility = "public" } {
+    func public @public_function() {
       "foo.return"() {uses = [@live_private_function]} : () -> ()
     }
     ```
@@ -586,9 +590,9 @@ def SymbolDCE : Pass<"symbol-dce"> {
     are no links to known-live operations. After running, we get the expected:
 
     ```mlir
-    func @live_private_function() attributes { sym_visibility = "private" }
+    func private @live_private_function()
 
-    func @public_function() attributes { sym_visibility = "public" } {
+    func public @public_function() {
       "foo.return"() {uses = [@live_private_function]} : () -> ()
     }
     ```

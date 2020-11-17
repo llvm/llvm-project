@@ -792,6 +792,11 @@ template <typename T> struct HasDefaults2 {
 };
 template struct HasDefaults2<void>; // expected-note {{in instantiation of member function 'HasDefaults2<void>::HasDefaults2' requested here}}
 
+template <typename T> struct __declspec(dllexport) HasDefaults3 { // expected-note{{in instantiation of default function argument expression for 'HasDefaults3<void>' required here}}
+  HasDefaults3(int x = sizeof(T)) {} // expected-error {{invalid application of 'sizeof'}}
+};
+template <> HasDefaults3<void>::HasDefaults3(int) {};
+
 #endif
 
 //===----------------------------------------------------------------------===//

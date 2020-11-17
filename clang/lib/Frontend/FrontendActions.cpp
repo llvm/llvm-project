@@ -467,7 +467,10 @@ private:
     Entry.Event = BeginInstantiation ? "Begin" : "End";
     if (auto *NamedTemplate = dyn_cast_or_null<NamedDecl>(Inst.Entity)) {
       llvm::raw_string_ostream OS(Entry.Name);
-      NamedTemplate->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      PrintingPolicy Policy = TheSema.Context.getPrintingPolicy();
+      // FIXME: Also ask for FullyQualifiedNames?
+      Policy.SuppressDefaultTemplateArgs = false;
+      NamedTemplate->getNameForDiagnostic(OS, Policy, true);
       const PresumedLoc DefLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.Entity->getLocation());
       if(!DefLoc.isInvalid())

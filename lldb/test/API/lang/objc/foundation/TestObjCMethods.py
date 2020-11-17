@@ -16,7 +16,6 @@ from lldbsuite.test import lldbutil
 file_index = 0
 
 
-@skipUnlessDarwin
 class FoundationTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

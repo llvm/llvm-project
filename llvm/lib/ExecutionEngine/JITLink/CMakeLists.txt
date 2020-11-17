@@ -17,9 +17,10 @@ add_llvm_component_library(LLVMJITLink
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  BinaryFormat
+  Object
+  OrcTargetProcess
+  Support
   )
- 
-target_link_libraries(LLVMJITLink
-  PRIVATE
-  LLVMObject
-)

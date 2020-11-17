@@ -1,0 +1,11 @@
+# UNSUPPORTED: system-windows
+
+# Synchronous
+# RUN: %lldb -o 'platform select remote-gdb-server' -o 'process connect connect://localhost:4321' 2>&1 | FileCheck %s
+
+# Asynchronous
+# RUN: echo -e 'platform select remote-gdb-server\nprocess connect connect://localhost:4321' | %lldb 2>&1 | FileCheck %s
+
+# CHECK: Platform: remote-gdb-server
+# CHECK: Connected: no
+# CHECK: error: Failed to connect port

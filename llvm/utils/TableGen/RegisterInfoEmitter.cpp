@@ -127,7 +127,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     OS << "  " << Reg.getName() << " = " << Reg.EnumValue << ",\n";
   assert(Registers.size() == Registers.back().EnumValue &&
          "Register enum value mismatch!");
-  OS << "  NUM_TARGET_REGS \t// " << Registers.size()+1 << "\n";
+  OS << "  NUM_TARGET_REGS // " << Registers.size()+1 << "\n";
   OS << "};\n";
   if (!Namespace.empty())
     OS << "} // end namespace " << Namespace << "\n";
@@ -146,7 +146,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     for (const auto &RC : RegisterClasses)
       OS << "  " << RC.getName() << "RegClassID"
          << " = " << RC.EnumValue << ",\n";
-    OS << "\n  };\n";
+    OS << "\n};\n";
     if (!Namespace.empty())
       OS << "} // end namespace " << Namespace << "\n\n";
   }
@@ -323,7 +323,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
   OS << "/// Get the dimensions of register pressure impacted by this "
      << "register class.\n"
      << "/// Returns a -1 terminated array of pressure set IDs\n"
-     << "const int* " << ClassName << "::\n"
+     << "const int *" << ClassName << "::\n"
      << "getRegClassPressureSets(const TargetRegisterClass *RC) const {\n";
   OS << "  static const " << getMinimalTypeForRange(PSetsSeqs.size() - 1, 32)
      << " RCSetStartTable[] = {\n    ";
@@ -337,7 +337,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
   OS << "/// Get the dimensions of register pressure impacted by this "
      << "register unit.\n"
      << "/// Returns a -1 terminated array of pressure set IDs\n"
-     << "const int* " << ClassName << "::\n"
+     << "const int *" << ClassName << "::\n"
      << "getRegUnitPressureSets(unsigned RegUnit) const {\n"
      << "  assert(RegUnit < " << RegBank.getNumNativeRegUnits()
      << " && \"invalid register unit\");\n";
@@ -1167,7 +1167,7 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
        << "  LaneBitmask reverseComposeSubRegIndexLaneMaskImpl"
        << "(unsigned, LaneBitmask) const override;\n"
        << "  const TargetRegisterClass *getSubClassWithSubReg"
-       << "(const TargetRegisterClass*, unsigned) const override;\n";
+       << "(const TargetRegisterClass *, unsigned) const override;\n";
   }
   OS << "  const RegClassWeight &getRegClassWeight("
      << "const TargetRegisterClass *RC) const override;\n"
@@ -1436,7 +1436,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   }
 
   OS << "\nnamespace {\n";
-  OS << "  const TargetRegisterClass* const RegisterClasses[] = {\n";
+  OS << "  const TargetRegisterClass *const RegisterClasses[] = {\n";
   for (const auto &RC : RegisterClasses)
     OS << "    &" << RC.getQualifiedName() << "RegClass,\n";
   OS << "  };\n";
@@ -1616,9 +1616,16 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 
 void RegisterInfoEmitter::run(raw_ostream &OS) {
   CodeGenRegBank &RegBank = Target.getRegBank();
+  Records.startTimer("Print enums");
   runEnums(OS, Target, RegBank);
+
+  Records.startTimer("Print MC registers");
   runMCDesc(OS, Target, RegBank);
+
+  Records.startTimer("Print header fragment");
   runTargetHeader(OS, Target, RegBank);
+
+  Records.startTimer("Print target registers");
   runTargetDesc(OS, Target, RegBank);
 
   if (RegisterInfoDebug)

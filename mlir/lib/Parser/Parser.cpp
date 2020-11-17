@@ -12,8 +12,8 @@
 
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "llvm/ADT/DenseMap.h"
@@ -183,9 +183,15 @@ public:
   Operation *parseGenericOperation(Block *insertBlock,
                                    Block::iterator insertPt);
 
+  /// Parse an optional trailing location for the given operation.
+  ///
+  ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
+  ///
+  ParseResult parseTrailingOperationLocation(Operation *op);
+
   /// This is the structure of a result specifier in the assembly syntax,
   /// including the name, number of results, and location.
-  typedef std::tuple<StringRef, unsigned, SMLoc> ResultRecord;
+  using ResultRecord = std::tuple<StringRef, unsigned, SMLoc>;
 
   /// Parse an operation instance that is in the op-defined custom form.
   /// resultInfo specifies information about the "%name =" specifiers.
@@ -297,6 +303,10 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
+  /// A set of operations whose locations reference aliases that have yet to
+  /// be resolved.
+  SmallVector<std::pair<Operation *, Token>, 8> opsWithDeferredLocs;
+
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
 
@@ -331,6 +341,22 @@ ParseResult OperationParser::finalize() {
       emitError(loc, "use of undeclared SSA value name");
     }
     return failure();
+  }
+
+  // Resolve the locations of any deferred operations.
+  auto &attributeAliases = getState().symbols.attributeAliasDefinitions;
+  for (std::pair<Operation *, Token> &it : opsWithDeferredLocs) {
+    llvm::SMLoc tokLoc = it.second.getLoc();
+    StringRef identifier = it.second.getSpelling().drop_front();
+    Attribute attr = attributeAliases.lookup(identifier);
+    if (!attr)
+      return emitError(tokLoc) << "operation location alias was never defined";
+
+    LocationAttr locAttr = attr.dyn_cast<LocationAttr>();
+    if (!locAttr)
+      return emitError(tokLoc)
+             << "expected location, but found '" << attr << "'";
+    it.first->setLoc(locAttr);
   }
 
   return success();
@@ -817,11 +843,11 @@ Operation *OperationParser::parseGenericOperation() {
       return nullptr;
   }
 
-  // Parse a location if one is present.
-  if (parseOptionalTrailingLocation(result.location))
+  // Create the operation and try to parse a location for it.
+  Operation *op = opBuilder.createOperation(result);
+  if (parseTrailingOperationLocation(op))
     return nullptr;
-
-  return opBuilder.createOperation(result);
+  return op;
 }
 
 Operation *OperationParser::parseGenericOperation(Block *insertBlock,
@@ -994,9 +1020,19 @@ public:
     return parser.parseToken(Token::less, "expected '<'");
   }
 
+  /// Parse a '<' token if present.
+  ParseResult parseOptionalLess() override {
+    return success(parser.consumeIf(Token::less));
+  }
+
   /// Parse a '>' token.
   ParseResult parseGreater() override {
     return parser.parseToken(Token::greater, "expected '>'");
+  }
+
+  /// Parse a '>' token if present.
+  ParseResult parseOptionalGreater() override {
+    return success(parser.consumeIf(Token::greater));
   }
 
   /// Parse a `(` token.
@@ -1019,11 +1055,6 @@ public:
     return success(parser.consumeIf(Token::r_paren));
   }
 
-  /// Parses a '?' if present.
-  ParseResult parseOptionalQuestion() override {
-    return success(parser.consumeIf(Token::question));
-  }
-
   /// Parse a `[` token.
   ParseResult parseLSquare() override {
     return parser.parseToken(Token::l_square, "expected '['");
@@ -1042,6 +1073,36 @@ public:
   /// Parses a ']' if present.
   ParseResult parseOptionalRSquare() override {
     return success(parser.consumeIf(Token::r_square));
+  }
+
+  /// Parses a '?' token.
+  ParseResult parseQuestion() override {
+    return parser.parseToken(Token::question, "expected '?'");
+  }
+
+  /// Parses a '?' token if present.
+  ParseResult parseOptionalQuestion() override {
+    return success(parser.consumeIf(Token::question));
+  }
+
+  /// Parses a '+' token.
+  ParseResult parsePlus() override {
+    return parser.parseToken(Token::plus, "expected '+'");
+  }
+
+  /// Parses a '+' token if present.
+  ParseResult parseOptionalPlus() override {
+    return success(parser.consumeIf(Token::plus));
+  }
+
+  /// Parses a '*' token.
+  ParseResult parseStar() override {
+    return parser.parseToken(Token::star, "expected '*'");
+  }
+
+  /// Parses a '*' token if present.
+  ParseResult parseOptionalStar() override {
+    return success(parser.consumeIf(Token::star));
   }
 
   //===--------------------------------------------------------------------===//
@@ -1134,6 +1195,24 @@ public:
     *keyword = parser.getTokenSpelling();
     parser.consumeToken();
     return success();
+  }
+
+  /// Parse a keyword if it is one of the 'allowedKeywords'.
+  ParseResult
+  parseOptionalKeyword(StringRef *keyword,
+                       ArrayRef<StringRef> allowedKeywords) override {
+    // Check that the current token is a keyword.
+    if (!isCurrentTokenAKeyword())
+      return failure();
+
+    StringRef currentKeyword = parser.getTokenSpelling();
+    if (llvm::is_contained(allowedKeywords, currentKeyword)) {
+      *keyword = currentKeyword;
+      parser.consumeToken();
+      return success();
+    }
+
+    return failure();
   }
 
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
@@ -1570,12 +1649,56 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   if (opAsmParser.didEmitError())
     return nullptr;
 
-  // Parse a location if one is present.
-  if (parseOptionalTrailingLocation(opState.location))
+  // Otherwise, create the operation and try to parse a location for it.
+  Operation *op = opBuilder.createOperation(opState);
+  if (parseTrailingOperationLocation(op))
     return nullptr;
+  return op;
+}
 
-  // Otherwise, we succeeded.  Use the state it parsed as our op information.
-  return opBuilder.createOperation(opState);
+ParseResult OperationParser::parseTrailingOperationLocation(Operation *op) {
+  // If there is a 'loc' we parse a trailing location.
+  if (!consumeIf(Token::kw_loc))
+    return success();
+  if (parseToken(Token::l_paren, "expected '(' in location"))
+    return failure();
+  Token tok = getToken();
+
+  // Check to see if we are parsing a location alias.
+  LocationAttr directLoc;
+  if (tok.is(Token::hash_identifier)) {
+    consumeToken();
+
+    StringRef identifier = tok.getSpelling().drop_front();
+    if (identifier.contains('.')) {
+      return emitError(tok.getLoc())
+             << "expected location, but found dialect attribute: '#"
+             << identifier << "'";
+    }
+
+    // If this alias can be resolved, do it now.
+    Attribute attr =
+        getState().symbols.attributeAliasDefinitions.lookup(identifier);
+    if (attr) {
+      if (!(directLoc = attr.dyn_cast<LocationAttr>()))
+        return emitError(tok.getLoc())
+               << "expected location, but found '" << attr << "'";
+    } else {
+      // Otherwise, remember this operation and resolve its location later.
+      opsWithDeferredLocs.emplace_back(op, tok);
+    }
+
+    // Otherwise, we parse the location directly.
+  } else if (parseLocationInstance(directLoc)) {
+    return failure();
+  }
+
+  if (parseToken(Token::r_paren, "expected ')' in location"))
+    return failure();
+
+  if (directLoc)
+    op->setLoc(directLoc);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

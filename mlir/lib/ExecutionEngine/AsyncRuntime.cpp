@@ -15,6 +15,7 @@
 
 #ifdef MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
 
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <iostream>
@@ -33,15 +34,52 @@ struct AsyncToken {
   std::vector<std::function<void()>> awaiters;
 };
 
+struct AsyncGroup {
+  std::atomic<int> pendingTokens{0};
+  std::atomic<int> rank{0};
+  std::mutex mu;
+  std::condition_variable cv;
+  std::vector<std::function<void()>> awaiters;
+};
+
 // Create a new `async.token` in not-ready state.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncToken *mlirAsyncRuntimeCreateToken() {
+extern "C" AsyncToken *mlirAsyncRuntimeCreateToken() {
   AsyncToken *token = new AsyncToken;
   return token;
 }
 
+// Create a new `async.group` in empty state.
+extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncGroup *mlirAsyncRuntimeCreateGroup() {
+  AsyncGroup *group = new AsyncGroup;
+  return group;
+}
+
+extern "C" MLIR_ASYNCRUNTIME_EXPORT int64_t
+mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token, AsyncGroup *group) {
+  std::unique_lock<std::mutex> lockToken(token->mu);
+  std::unique_lock<std::mutex> lockGroup(group->mu);
+
+  group->pendingTokens.fetch_add(1);
+
+  auto onTokenReady = [group]() {
+    // Run all group awaiters if it was the last token in the group.
+    if (group->pendingTokens.fetch_sub(1) == 1) {
+      group->cv.notify_all();
+      for (auto &awaiter : group->awaiters)
+        awaiter();
+    }
+  };
+
+  if (token->ready)
+    onTokenReady();
+  else
+    token->awaiters.push_back([onTokenReady]() { onTokenReady(); });
+
+  return group->rank.fetch_add(1);
+}
+
 // Switches `async.token` to ready state and runs all awaiters.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
+extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
   token->ready = true;
   token->cv.notify_all();
@@ -49,16 +87,20 @@ mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
     awaiter();
 }
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
+extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
   if (!token->ready)
     token->cv.wait(lock, [token] { return token->ready; });
-  delete token;
 }
 
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
+mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
+  std::unique_lock<std::mutex> lock(group->mu);
+  if (group->pendingTokens != 0)
+    group->cv.wait(lock, [group] { return group->pendingTokens == 0; });
+}
+
+extern "C" void mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
 #if LLVM_ENABLE_THREADS
   std::thread thread([handle, resume]() { (*resume)(handle); });
   thread.detach();
@@ -67,14 +109,13 @@ mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
 #endif
 }
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token, CoroHandle handle,
-                                     CoroResume resume) {
+extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
+                                                     CoroHandle handle,
+                                                     CoroResume resume) {
   std::unique_lock<std::mutex> lock(token->mu);
 
-  auto execute = [token, handle, resume]() {
+  auto execute = [handle, resume]() {
     mlirAsyncRuntimeExecute(handle, resume);
-    delete token;
   };
 
   if (token->ready)
@@ -83,12 +124,26 @@ mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token, CoroHandle handle,
     token->awaiters.push_back([execute]() { execute(); });
 }
 
+extern "C" MLIR_ASYNCRUNTIME_EXPORT void
+mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group, CoroHandle handle,
+                                          CoroResume resume) {
+  std::unique_lock<std::mutex> lock(group->mu);
+
+  auto execute = [handle, resume]() {
+    mlirAsyncRuntimeExecute(handle, resume);
+  };
+
+  if (group->pendingTokens == 0)
+    execute();
+  else
+    group->awaiters.push_back([execute]() { execute(); });
+}
+
 //===----------------------------------------------------------------------===//
 // Small async runtime support library for testing.
 //===----------------------------------------------------------------------===//
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimePrintCurrentThreadId() {
+extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
   static thread_local std::thread::id thisId = std::this_thread::get_id();
   std::cout << "Current thread id: " << thisId << "\n";
 }

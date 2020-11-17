@@ -134,7 +134,7 @@ int main() {
     // TLS-LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}*
 
     [&]() {
-      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* {{[^,]*}} [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
       g = 2;
       // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
@@ -232,7 +232,7 @@ int main() {
 
 // CHECK-LABEL: @main
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* [[TEST]], [[S_FLOAT_TY]]*
+// CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]], [[S_FLOAT_TY]]*
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 0, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*)* [[MAIN_MICROTASK:@.+]] to void (i32*, i32*, ...)*))
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 0, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*)* [[MAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*))
 // CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT:@.+]]()
@@ -241,7 +241,7 @@ int main() {
 
 // TLS-CHECK-LABEL: @main
 // TLS-CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// TLS-CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* [[TEST]], [[S_FLOAT_TY]]*
+// TLS-CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]], [[S_FLOAT_TY]]*
 // TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [2 x i32]*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*)* [[MAIN_MICROTASK:@.+]] to void (i32*, i32*, ...)*),
 // TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*)* [[MAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*),
 // TLS-CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT:@.+]]()
@@ -306,7 +306,7 @@ int main() {
 
 // threadprivate_var = var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[VAR]]
-// CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{%.+}}, [[S_FLOAT_TY]]* {{.*}}[[VAR]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{[^,]*}} {{%.+}}, [[S_FLOAT_TY]]* {{.*}}[[VAR]])
 // CHECK: [[DONE]]
 
 // TLS-CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN]]([[S_FLOAT_TY]]* {{.*}}[[VAR]], [[S_FLOAT_TY]]* {{.*}}[[MASTER_REF4]])
@@ -358,7 +358,7 @@ int main() {
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* [[TEST]], [[S_INT_TY]]*
+// CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]], [[S_INT_TY]]*
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 0, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*)* [[TMAIN_MICROTASK:@.+]] to void (i32*, i32*, ...)*))
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 0, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*)* [[TMAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*))
 // CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
@@ -366,7 +366,7 @@ int main() {
 
 // TLS-CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // TLS-CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// TLS-CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* [[TEST]], [[S_INT_TY]]*
+// TLS-CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]], [[S_INT_TY]]*
 // TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[TMAIN_MICROTASK:@.+]] to void (i32*, i32*, ...)*),
 // TLS-CHECK:     call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*)* [[TMAIN_MICROTASK1:@.+]] to void (i32*, i32*, ...)*),
 //
@@ -428,7 +428,7 @@ int main() {
 
 // threadprivate_var = var;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_VAR]]
-// CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{%.+}}, [[S_INT_TY]]* {{.*}}[[TMAIN_VAR]])
+// CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{[^,]*}} {{%.+}}, [[S_INT_TY]]* {{.*}}[[TMAIN_VAR]])
 // CHECK: [[DONE]]
 
 // TLS-CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN]]([[S_INT_TY]]* {{.*}}[[TMAIN_VAR]], [[S_INT_TY]]* {{.*}}[[MASTER_REF3]])
@@ -495,13 +495,13 @@ void array_func() {
 // ARRAY: @__kmpc_fork_call(
 // ARRAY: call i8* @__kmpc_threadprivate_cached(
 // ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 bitcast ([2 x i32]* @{{.+}} to i8*), i64 8, i1 false)
-// ARRAY: call nonnull align 4 dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* nonnull align 4 dereferenceable(8) %{{.+}})
+// ARRAY: call nonnull align 4 dereferenceable(8) %struct.St* @{{.+}}(%struct.St* {{[^,]*}} %{{.+}}, %struct.St* nonnull align 4 dereferenceable(8) %{{.+}})
 
 // TLS-ARRAY: @__kmpc_fork_call(
 // TLS-ARRAY: [[REFT:%.+]] = load [2 x i32]*, [2 x i32]** [[ADDR:%.+]],
 // TLS-ARRAY: [[REF:%.+]] = bitcast [2 x i32]* [[REFT]] to i8*
 // TLS-ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 bitcast ([2 x i32]* @{{.+}} to i8*), i8* align 4 [[REF]], i64 8, i1 false)
-// TLS-ARRAY: call nonnull align 4 dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* nonnull align 4 dereferenceable(8) %{{.+}})
+// TLS-ARRAY: call nonnull align 4 dereferenceable(8) %struct.St* @{{.+}}(%struct.St* {{[^,]*}} %{{.+}}, %struct.St* nonnull align 4 dereferenceable(8) %{{.+}})
 
 #pragma omp threadprivate(a, s)
 #pragma omp parallel copyin(a, s)

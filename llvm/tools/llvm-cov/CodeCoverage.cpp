@@ -399,9 +399,9 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
       return "";
     SmallString<128> NativePath;
     sys::path::native(Path, NativePath);
+    sys::path::remove_dots(NativePath, true);
     if (!sys::path::is_separator(NativePath.back()))
       NativePath += sys::path::get_separator();
-    sys::path::remove_dots(NativePath, true);
     return NativePath.c_str();
   };
   std::string RemapFrom = nativeWithTrailing(PathRemapping->first);

@@ -165,8 +165,8 @@ define amdgpu_kernel void @reorder_smrd_load_local_store_smrd_load(i32 addrspace
 ; CI: buffer_load_dword
 ; CI: buffer_store_dword
 
-; GFX9: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:4
-; GFX9: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:12
+; GFX9: global_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4
+; GFX9: global_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:12
 ; GFX9: ds_write_b32
 define amdgpu_kernel void @reorder_global_load_local_store_global_load(i32 addrspace(1)* %out, i32 addrspace(3)* %lptr, i32 addrspace(1)* %ptr0) #0 {
   %ptr1 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i64 1
@@ -216,11 +216,11 @@ define amdgpu_kernel void @reorder_local_offsets(i32 addrspace(1)* nocapture %ou
 ; CI: buffer_store_dword
 ; CI: s_endpgm
 
-; GFX9-DAG: global_load_dword {{v[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:400
-; GFX9-DAG: global_load_dword {{v[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:408
-; GFX9-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, off offset:12
-; GFX9-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, off offset:400
-; GFX9-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, off offset:408
+; GFX9-DAG: global_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:400
+; GFX9-DAG: global_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:408
+; GFX9-DAG: global_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:12
+; GFX9-DAG: global_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:400
+; GFX9-DAG: global_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:408
 ; GFX9: global_store_dword
 ; GFX9: s_endpgm
 define amdgpu_kernel void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(1)* noalias nocapture %ptr0) #0 {

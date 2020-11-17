@@ -125,10 +125,6 @@ Symbols:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .rel.dyn
-      - Section: .relr.dyn
-      - Section: .plt
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic

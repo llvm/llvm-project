@@ -3,31 +3,34 @@
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @br_jt(i32 signext %0) {
 ; CHECK-LABEL: br_jt:
-; CHECK:       .LBB{{[0-9]+}}_11:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    brlt.w 2, %s0, .LBB{{[0-9]+}}_3
+; CHECK-NEXT:    brlt.w 2, %s0, .LBB{{[0-9]+}}_4
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    breq.w 1, %s0, .LBB{{[0-9]+}}_2
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    brne.w 2, %s0, .LBB{{[0-9]+}}_9
-; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    breq.w 1, %s0, .LBB{{[0-9]+}}_8
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.w 2, %s0, .LBB{{[0-9]+}}_7
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    or %s0, 0, (0)1
-; CHECK-NEXT:    br.l.t .LBB{{[0-9]+}}_9
-; CHECK-NEXT:  .LBB{{[0-9]+}}_3:
-; CHECK-NEXT:    breq.w 3, %s0, .LBB{{[0-9]+}}_7
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    brne.w 4, %s0, .LBB{{[0-9]+}}_9
-; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    or %s0, 7, (0)1
-; CHECK-NEXT:    br.l.t .LBB{{[0-9]+}}_9
-; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s0, 3, (0)1
-; CHECK-NEXT:    br.l.t .LBB{{[0-9]+}}_9
-; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
-; CHECK-NEXT:    or %s0, 4, (0)1
-; CHECK-NEXT:  .LBB{{[0-9]+}}_9:
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
+; CHECK-NEXT:    breq.w 3, %s0, .LBB{{[0-9]+}}_9
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    brne.w 4, %s0, .LBB{{[0-9]+}}_7
+; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    or %s0, 7, (0)1
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
+; CHECK-NEXT:    or %s0, 3, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB{{[0-9]+}}_9:
+; CHECK-NEXT:    or %s0, 4, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
   switch i32 %0, label %5 [
     i32 1, label %6
     i32 2, label %2

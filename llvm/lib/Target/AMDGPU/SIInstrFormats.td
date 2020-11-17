@@ -205,11 +205,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let SchedRW = [Write32Bit];
 
-  field bits<1> DisableSIDecoder = 0;
-  field bits<1> DisableVIDecoder = 0;
-  field bits<1> DisableDecoder = 0;
-
-  let isAsmParserOnly = !ne(DisableDecoder{0}, {0});
   let AsmVariantName = AMDGPUAsmVariants.Default;
 
   // Avoid changing source registers in a way that violates constant bus read limitations.
@@ -326,9 +321,7 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe {
 class EXPe : Enc64 {
   bits<4> en;
   bits<6> tgt;
-  bits<1> compr;
   bits<1> done;
-  bits<1> vm;
   bits<8> src0;
   bits<8> src1;
   bits<8> src2;
@@ -336,14 +329,21 @@ class EXPe : Enc64 {
 
   let Inst{3-0} = en;
   let Inst{9-4} = tgt;
-  let Inst{10} = compr;
   let Inst{11} = done;
-  let Inst{12} = vm;
   let Inst{31-26} = 0x3e;
   let Inst{39-32} = src0;
   let Inst{47-40} = src1;
   let Inst{55-48} = src2;
   let Inst{63-56} = src3;
+}
+
+// Pre-GFX11 encoding has compr and vm bits.
+class EXPe_ComprVM : EXPe {
+  bits<1> compr;
+  bits<1> vm;
+
+  let Inst{10} = compr;
+  let Inst{12} = vm;
 }
 
 let Uses = [EXEC] in {
@@ -366,17 +366,6 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let mayStore = 0;
   let hasSideEffects = 0;
   let VALU = 1;
-}
-
-class EXPCommon<dag outs, dag ins, string asm, list<dag> pattern> :
-  InstSI<outs, ins, asm, pattern> {
-  let EXP = 1;
-  let EXP_CNT = 1;
-  let mayLoad = 0; // Set to 1 if done bit is set.
-  let mayStore = 1;
-  let UseNamedOperandTable = 1;
-  let Uses = [EXEC];
-  let SchedRW = [WriteExport];
 }
 
 } // End Uses = [EXEC]

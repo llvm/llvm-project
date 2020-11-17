@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -strip-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -mlir-print-local-scope -strip-debuginfo | FileCheck %s
 // This test verifies that debug locations are stripped.
 
 #set0 = affine_set<(d0) : (1 == 0)>

@@ -519,29 +519,23 @@ bool ModuleSanitizerCoverage::instrumentModule(
 
 // True if block has successors and it dominates all of them.
 static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
-  if (succ_begin(BB) == succ_end(BB))
+  if (succ_empty(BB))
     return false;
 
-  for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
-    if (!DT->dominates(BB, SUCC))
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(successors(BB), [&](const BasicBlock *SUCC) {
+    return DT->dominates(BB, SUCC);
+  });
 }
 
 // True if block has predecessors and it postdominates all of them.
 static bool isFullPostDominator(const BasicBlock *BB,
                                 const PostDominatorTree *PDT) {
-  if (pred_begin(BB) == pred_end(BB))
+  if (pred_empty(BB))
     return false;
 
-  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
-    if (!PDT->dominates(BB, PRED))
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(predecessors(BB), [&](const BasicBlock *PRED) {
+    return PDT->dominates(BB, PRED);
+  });
 }
 
 static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,

@@ -1738,9 +1738,6 @@ void PPCAIXAsmPrinter::ValidateGV(const GlobalVariable *GV) {
   if (GV->isThreadLocal())
     report_fatal_error("Thread local not yet supported on AIX.");
 
-  if (GV->hasSection())
-    report_fatal_error("Custom section for Data not yet supported.");
-
   if (GV->hasComdat())
     report_fatal_error("COMDAT not yet supported by AIX.");
 }
@@ -1811,10 +1808,12 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   MCSymbol *EmittedInitSym = GVSym;
   emitLinkage(GV, EmittedInitSym);
   emitAlignment(getGVAlignment(GV, DL), GV);
+
   // When -fdata-sections is enabled, every GlobalVariable will
   // be put into its own csect; therefore, label is not necessary here.
-  if (!TM.getDataSections())
+  if (!TM.getDataSections() || GV->hasSection()) {
     OutStreamer->emitLabel(EmittedInitSym);
+  }
 
   // Emit aliasing label for global variable.
   llvm::for_each(GOAliasMap[GV], [this](const GlobalAlias *Alias) {

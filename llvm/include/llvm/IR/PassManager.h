@@ -570,6 +570,9 @@ public:
       Passes.emplace_back(std::move(P));
   }
 
+  /// Returns if the pass manager contains any passes.
+  bool isEmpty() const { return Passes.empty(); }
+
   static bool isRequired() { return true; }
 
 protected:

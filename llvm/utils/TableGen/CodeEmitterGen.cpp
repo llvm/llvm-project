@@ -483,7 +483,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
       << "    Inst = Inst.zext(" << BitWidth << ");\n"
       << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
       << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-      << "  LoadIntFromMemory(Inst, (uint8_t*)&InstBits[opcode * " << NumWords
+      << "  LoadIntFromMemory(Inst, (uint8_t *)&InstBits[opcode * " << NumWords
       << "], " << NumBytes << ");\n"
       << "  APInt &Value = Inst;\n"
       << "  APInt &op = Scratch;\n"
@@ -643,9 +643,9 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "    report_fatal_error(Msg.str());\n"
     << "  }\n"
     << "#else\n"
-    << "// Silence unused variable warning on targets that don't use MCII for "
+    << "  // Silence unused variable warning on targets that don't use MCII for "
        "other purposes (e.g. BPF).\n"
-    << "(void)MCII;\n"
+    << "  (void)MCII;\n"
     << "#endif // NDEBUG\n";
   o << "}\n";
   o << "#endif\n";

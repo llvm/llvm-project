@@ -13,8 +13,8 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Parser.h"
@@ -478,6 +478,10 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 //===----------------------------------------------------------------------===//
 // Value API.
 //===----------------------------------------------------------------------===//
+
+int mlirValueEqual(MlirValue value1, MlirValue value2) {
+  return unwrap(value1) == unwrap(value2);
+}
 
 int mlirValueIsABlockArgument(MlirValue value) {
   return unwrap(value).isa<BlockArgument>();

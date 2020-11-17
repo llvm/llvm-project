@@ -139,6 +139,13 @@ add_llvm_component_library(LLVMDebugInfoPDB
 
   ADDITIONAL_HEADER_DIRS
   ${LIBPDB_ADDITIONAL_HEADER_DIRS}
+
+  LINK_COMPONENTS
+  BinaryFormat
+  Object
+  Support
+  DebugInfoCodeView
+  DebugInfoMSF
   )
 
 target_link_libraries(LLVMDebugInfoPDB INTERFACE "${LIBPDB_ADDITIONAL_LIBRARIES}")

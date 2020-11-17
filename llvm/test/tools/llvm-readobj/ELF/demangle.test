@@ -216,17 +216,13 @@ DynamicSymbols:
   - Name:    _Z3fooi
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    VAddr: 0x0
-    Sections:
-      - Section: .dynstr
-      - Section: .dynsym
-      - Section: .rela.dyn
-      - Section: .dynamic
-      - Section: .text.foo
-  - Type:  PT_DYNAMIC
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x0
+    FirstSec: .dynstr
+    LastSec:  .text.foo
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic

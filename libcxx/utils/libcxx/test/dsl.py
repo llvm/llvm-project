@@ -350,6 +350,26 @@ class AddOptionalWarningFlag(ConfigAction):
     return 'add {} to %{{compile_flags}}'.format(self._getFlag(config))
 
 
+class AddSubstitution(ConfigAction):
+  """
+  This action adds the given substitution to the Lit configuration.
+
+  The substitution can be a string or a callable, in which case it is called
+  with the configuration to produce the actual substitution (as a string).
+  """
+  def __init__(self, key, substitution):
+    self._key = key
+    self._getSub = lambda config: substitution(config) if callable(substitution) else substitution
+
+  def applyTo(self, config):
+    key = self._key
+    sub = self._getSub(config)
+    config.substitutions.append((key, sub))
+
+  def pretty(self, config, litParams):
+    return 'add substitution {} = {}'.format(self._key, self._getSub(config))
+
+
 class Feature(object):
   """
   Represents a Lit available feature that is enabled whenever it is supported.

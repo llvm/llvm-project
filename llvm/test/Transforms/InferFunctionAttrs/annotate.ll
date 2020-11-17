@@ -550,13 +550,13 @@ declare i64 @labs(i64)
 ; CHECK: declare noundef i32 @lchown(i8* nocapture noundef readonly, i32 noundef, i32 noundef) [[G1]]
 declare i32 @lchown(i8*, i32, i32)
 
-; CHECK: declare double @ldexp(double, i32) [[G0]]
+; CHECK: declare double @ldexp(double, i32 signext) [[G0]]
 declare double @ldexp(double, i32)
 
-; CHECK: declare float @ldexpf(float, i32) [[G0]]
+; CHECK: declare float @ldexpf(float, i32 signext) [[G0]]
 declare float @ldexpf(float, i32)
 
-; CHECK: declare x86_fp80 @ldexpl(x86_fp80, i32) [[G0]]
+; CHECK: declare x86_fp80 @ldexpl(x86_fp80, i32 signext) [[G0]]
 declare x86_fp80 @ldexpl(x86_fp80, i32)
 
 ; CHECK: declare i64 @llabs(i64) [[G0]]

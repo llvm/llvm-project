@@ -1,5 +1,6 @@
 import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("clangd_lit_site_cfg_files.gni")
 
@@ -41,6 +42,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "CLANGD_BUILD_XPC=1" ]
   } else {
     extra_values += [ "CLANGD_BUILD_XPC=0" ]
+  }
+
+  if (llvm_enable_zlib) {
+    extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZLIB=0" ]
   }
 }
 

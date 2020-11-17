@@ -589,6 +589,8 @@ static int __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     else
       __kmp_nThreadsPerCore = 1; // no CORE found
     __kmp_ncores = __kmp_xproc / __kmp_nThreadsPerCore;
+    if (nCoresPerPkg == 0)
+      nCoresPerPkg = 1; // to prevent possible division by 0
     nPackages = (__kmp_xproc + nCoresPerPkg - 1) / nCoresPerPkg;
     if (__kmp_affinity_verbose) {
       KMP_INFORM(AffNotCapableUseLocCpuidL11, "KMP_AFFINITY");

@@ -12,4 +12,12 @@ add_llvm_component_library(LLVMMipsDesc
   MipsNaClELFStreamer.cpp
   MipsOptionRecord.cpp
   MipsTargetStreamer.cpp
+
+  LINK_COMPONENTS
+  MC
+  MipsInfo
+  Support
+
+  ADD_TO_COMPONENT
+  Mips
   )

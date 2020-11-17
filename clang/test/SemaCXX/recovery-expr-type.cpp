@@ -92,7 +92,7 @@ namespace test7 {
 struct C {
   C() = delete; // expected-note {{has been explicitly marked deleted}}
 };
-void f(C &); // expected-note {{candidate function not viable: expects an l-value for 1st argument}}
+void f(C &); // expected-note {{candidate function not viable: expects an lvalue for 1st argument}}
 void test() {
   f(C()); // expected-error {{call to deleted constructor}} \
              expected-error {{no matching function for call}}

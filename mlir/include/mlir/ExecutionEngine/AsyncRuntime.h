@@ -14,16 +14,18 @@
 #ifndef MLIR_EXECUTIONENGINE_ASYNCRUNTIME_H_
 #define MLIR_EXECUTIONENGINE_ASYNCRUNTIME_H_
 
+#include <stdint.h>
+
 #ifdef _WIN32
 #ifndef MLIR_ASYNCRUNTIME_EXPORT
-#ifdef mlir_c_runner_utils_EXPORTS
+#ifdef mlir_async_runtime_EXPORTS
 // We are building this library
 #define MLIR_ASYNCRUNTIME_EXPORT __declspec(dllexport)
 #define MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
 #else
 // We are using this library
 #define MLIR_ASYNCRUNTIME_EXPORT __declspec(dllimport)
-#endif // mlir_c_runner_utils_EXPORTS
+#endif // mlir_async_runtime_EXPORTS
 #endif // MLIR_ASYNCRUNTIME_EXPORT
 #else
 #define MLIR_ASYNCRUNTIME_EXPORT
@@ -37,6 +39,9 @@
 // Runtime implementation of `async.token` data type.
 typedef struct AsyncToken MLIR_AsyncToken;
 
+// Runtime implementation of `async.group` data type.
+typedef struct AsyncGroup MLIR_AsyncGroup;
+
 // Async runtime uses LLVM coroutines to represent asynchronous tasks. Task
 // function is a coroutine handle and a resume function that continue coroutine
 // execution from a suspension point.
@@ -46,6 +51,12 @@ using CoroResume = void (*)(void *); // coroutine resume function
 // Create a new `async.token` in not-ready state.
 extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncToken *mlirAsyncRuntimeCreateToken();
 
+// Create a new `async.group` in empty state.
+extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncGroup *mlirAsyncRuntimeCreateGroup();
+
+extern "C" MLIR_ASYNCRUNTIME_EXPORT int64_t
+mlirAsyncRuntimeAddTokenToGroup(AsyncToken *, AsyncGroup *);
+
 // Switches `async.token` to ready state and runs all awaiters.
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void
 mlirAsyncRuntimeEmplaceToken(AsyncToken *);
@@ -53,6 +64,10 @@ mlirAsyncRuntimeEmplaceToken(AsyncToken *);
 // Blocks the caller thread until the token becomes ready.
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void
 mlirAsyncRuntimeAwaitToken(AsyncToken *);
+
+// Blocks the caller thread until the elements in the group become ready.
+extern "C" MLIR_ASYNCRUNTIME_EXPORT void
+mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *);
 
 // Executes the task (coro handle + resume function) in one of the threads
 // managed by the runtime.
@@ -63,6 +78,11 @@ extern "C" MLIR_ASYNCRUNTIME_EXPORT void mlirAsyncRuntimeExecute(CoroHandle,
 // managed by the runtime after the token becomes ready.
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void
 mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *, CoroHandle, CoroResume);
+
+// Executes the task (coro handle + resume function) in one of the threads
+// managed by the runtime after the all members of the group become ready.
+extern "C" MLIR_ASYNCRUNTIME_EXPORT void
+mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *, CoroHandle, CoroResume);
 
 //===----------------------------------------------------------------------===//
 // Small async runtime support library for testing.

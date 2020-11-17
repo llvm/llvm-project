@@ -33,96 +33,98 @@ multiclass ATOMIC_NRI<dag oops, dag iops, list<dag> pattern, string asmstr = "",
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 1 in {
-defm ATOMIC_NOTIFY_A32 :
+defm MEMORY_ATOMIC_NOTIFY_A32 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I32:$count),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           "atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
-           "atomic.notify \t${off}${p2align}", 0x00, "false">;
-defm ATOMIC_NOTIFY_A64 :
+           "memory.atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
+           "memory.atomic.notify \t${off}${p2align}", 0x00, "false">;
+defm MEMORY_ATOMIC_NOTIFY_A64 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr, I32:$count),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-           "atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
-           "atomic.notify \t${off}${p2align}", 0x00, "true">;
+           "memory.atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
+           "memory.atomic.notify \t${off}${p2align}", 0x00, "true">;
 let mayLoad = 1 in {
-defm ATOMIC_WAIT_I32_A32 :
+defm MEMORY_ATOMIC_WAIT32_A32 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I32:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           "i32.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i32.atomic.wait \t${off}${p2align}", 0x01, "false">;
-defm ATOMIC_WAIT_I32_A64 :
+           "memory.atomic.wait32 \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
+           "memory.atomic.wait32 \t${off}${p2align}", 0x01, "false">;
+defm MEMORY_ATOMIC_WAIT32_A64 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr, I32:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-           "i32.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i32.atomic.wait \t${off}${p2align}", 0x01, "true">;
-defm ATOMIC_WAIT_I64_A32 :
+           "memory.atomic.wait32 \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
+           "memory.atomic.wait32 \t${off}${p2align}", 0x01, "true">;
+defm MEMORY_ATOMIC_WAIT64_A32 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I64:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           "i64.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i64.atomic.wait \t${off}${p2align}", 0x02, "false">;
-defm ATOMIC_WAIT_I64_A64 :
+           "memory.atomic.wait64 \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
+           "memory.atomic.wait64 \t${off}${p2align}", 0x02, "false">;
+defm MEMORY_ATOMIC_WAIT64_A64 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr, I64:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-           "i64.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i64.atomic.wait \t${off}${p2align}", 0x02, "true">;
+           "memory.atomic.wait64 \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
+           "memory.atomic.wait64 \t${off}${p2align}", 0x02, "true">;
 } // mayLoad = 1
 } // hasSideEffects = 1
 
 let Predicates = [HasAtomics] in {
 // Select notifys with no constant offset.
 def NotifyPatNoOffset_A32 :
-  Pat<(i32 (int_wasm_atomic_notify I32:$addr, I32:$count)),
-      (ATOMIC_NOTIFY_A32 0, 0, I32:$addr, I32:$count)>,
+  Pat<(i32 (int_wasm_memory_atomic_notify I32:$addr, I32:$count)),
+      (MEMORY_ATOMIC_NOTIFY_A32 0, 0, I32:$addr, I32:$count)>,
   Requires<[HasAddr32]>;
 def NotifyPatNoOffset_A64 :
-  Pat<(i32 (int_wasm_atomic_notify I64:$addr, I32:$count)),
-      (ATOMIC_NOTIFY_A64 0, 0, I64:$addr, I32:$count)>,
+  Pat<(i32 (int_wasm_memory_atomic_notify I64:$addr, I32:$count)),
+      (MEMORY_ATOMIC_NOTIFY_A64 0, 0, I64:$addr, I32:$count)>,
   Requires<[HasAddr64]>;
 
 // Select notifys with a constant offset.
 
 // Pattern with address + immediate offset
 multiclass NotifyPatImmOff<PatFrag operand, string inst> {
-  def : Pat<(i32 (int_wasm_atomic_notify (operand I32:$addr, imm:$off),
+  def : Pat<(i32 (int_wasm_memory_atomic_notify (operand I32:$addr, imm:$off),
                   I32:$count)),
             (!cast<NI>(inst#_A32) 0, imm:$off, I32:$addr, I32:$count)>,
         Requires<[HasAddr32]>;
-  def : Pat<(i32 (int_wasm_atomic_notify (operand I64:$addr, imm:$off),
+  def : Pat<(i32 (int_wasm_memory_atomic_notify (operand I64:$addr, imm:$off),
                   I32:$count)),
             (!cast<NI>(inst#_A64) 0, imm:$off, I64:$addr, I32:$count)>,
         Requires<[HasAddr64]>;
 }
-defm : NotifyPatImmOff<regPlusImm, "ATOMIC_NOTIFY">;
-defm : NotifyPatImmOff<or_is_add, "ATOMIC_NOTIFY">;
+defm : NotifyPatImmOff<regPlusImm, "MEMORY_ATOMIC_NOTIFY">;
+defm : NotifyPatImmOff<or_is_add, "MEMORY_ATOMIC_NOTIFY">;
 
 // Select notifys with just a constant offset.
 def NotifyPatOffsetOnly_A32 :
-  Pat<(i32 (int_wasm_atomic_notify imm:$off, I32:$count)),
-      (ATOMIC_NOTIFY_A32 0, imm:$off, (CONST_I32 0), I32:$count)>,
+  Pat<(i32 (int_wasm_memory_atomic_notify imm:$off, I32:$count)),
+      (MEMORY_ATOMIC_NOTIFY_A32 0, imm:$off, (CONST_I32 0), I32:$count)>,
   Requires<[HasAddr32]>;
 def NotifyPatOffsetOnly_A64 :
-  Pat<(i32 (int_wasm_atomic_notify imm:$off, I32:$count)),
-      (ATOMIC_NOTIFY_A64 0, imm:$off, (CONST_I64 0), I32:$count)>,
+  Pat<(i32 (int_wasm_memory_atomic_notify imm:$off, I32:$count)),
+      (MEMORY_ATOMIC_NOTIFY_A64 0, imm:$off, (CONST_I64 0), I32:$count)>,
   Requires<[HasAddr64]>;
 
 def NotifyPatGlobalAddrOffOnly_A32 :
-  Pat<(i32 (int_wasm_atomic_notify (WebAssemblywrapper tglobaladdr:$off),
-                                   I32:$count)),
-      (ATOMIC_NOTIFY_A32 0, tglobaladdr:$off, (CONST_I32 0), I32:$count)>,
+  Pat<(i32 (int_wasm_memory_atomic_notify (WebAssemblywrapper tglobaladdr:$off),
+                                          I32:$count)),
+      (MEMORY_ATOMIC_NOTIFY_A32 0, tglobaladdr:$off, (CONST_I32 0), I32:$count)
+     >,
   Requires<[HasAddr32]>;
 def NotifyPatGlobalAddrOffOnly_A64 :
-  Pat<(i32 (int_wasm_atomic_notify (WebAssemblywrapper tglobaladdr:$off),
-                                   I32:$count)),
-      (ATOMIC_NOTIFY_A64 0, tglobaladdr:$off, (CONST_I64 0), I32:$count)>,
+  Pat<(i32 (int_wasm_memory_atomic_notify (WebAssemblywrapper tglobaladdr:$off),
+                                          I32:$count)),
+      (MEMORY_ATOMIC_NOTIFY_A64 0, tglobaladdr:$off, (CONST_I64 0), I32:$count)
+     >,
   Requires<[HasAddr64]>;
 
 // Select waits with no constant offset.
@@ -135,10 +137,14 @@ multiclass WaitPatNoOffset<ValueType ty, Intrinsic kind,
             (!cast<NI>(inst#_A64) 0, 0, I64:$addr, ty:$exp, I64:$timeout)>,
         Requires<[HasAddr64]>;
 }
-defm : WaitPatNoOffset<i32, int_wasm_atomic_wait_i32, "ATOMIC_WAIT_I32">;
-defm : WaitPatNoOffset<i64, int_wasm_atomic_wait_i64, "ATOMIC_WAIT_I64">;
-defm : WaitPatNoOffset<i32, int_wasm_atomic_wait_i32, "ATOMIC_WAIT_I32">;
-defm : WaitPatNoOffset<i64, int_wasm_atomic_wait_i64, "ATOMIC_WAIT_I64">;
+defm : WaitPatNoOffset<i32, int_wasm_memory_atomic_wait32,
+                       "MEMORY_ATOMIC_WAIT32">;
+defm : WaitPatNoOffset<i64, int_wasm_memory_atomic_wait64,
+                       "MEMORY_ATOMIC_WAIT64">;
+defm : WaitPatNoOffset<i32, int_wasm_memory_atomic_wait32,
+                       "MEMORY_ATOMIC_WAIT32">;
+defm : WaitPatNoOffset<i64, int_wasm_memory_atomic_wait64,
+                       "MEMORY_ATOMIC_WAIT64">;
 
 // Select waits with a constant offset.
 
@@ -154,16 +160,16 @@ multiclass WaitPatImmOff<ValueType ty, Intrinsic kind, PatFrag operand,
               I64:$timeout)>,
         Requires<[HasAddr64]>;
 }
-defm : WaitPatImmOff<i32, int_wasm_atomic_wait_i32, regPlusImm,
-                     "ATOMIC_WAIT_I32">;
-defm : WaitPatImmOff<i32, int_wasm_atomic_wait_i32, or_is_add,
-                     "ATOMIC_WAIT_I32">;
-defm : WaitPatImmOff<i64, int_wasm_atomic_wait_i64, regPlusImm,
-                     "ATOMIC_WAIT_I64">;
-defm : WaitPatImmOff<i64, int_wasm_atomic_wait_i64, or_is_add,
-                     "ATOMIC_WAIT_I64">;
+defm : WaitPatImmOff<i32, int_wasm_memory_atomic_wait32, regPlusImm,
+                     "MEMORY_ATOMIC_WAIT32">;
+defm : WaitPatImmOff<i32, int_wasm_memory_atomic_wait32, or_is_add,
+                     "MEMORY_ATOMIC_WAIT32">;
+defm : WaitPatImmOff<i64, int_wasm_memory_atomic_wait64, regPlusImm,
+                     "MEMORY_ATOMIC_WAIT64">;
+defm : WaitPatImmOff<i64, int_wasm_memory_atomic_wait64, or_is_add,
+                     "MEMORY_ATOMIC_WAIT64">;
 
-// Select wait_i32, "ATOMIC_WAIT_I32s with just a constant offset.
+// Select waits with just a constant offset.
 multiclass WaitPatOffsetOnly<ValueType ty, Intrinsic kind, string inst> {
   def : Pat<(i32 (kind imm:$off, ty:$exp, I64:$timeout)),
             (!cast<NI>(inst#_A32) 0, imm:$off, (CONST_I32 0), ty:$exp,
@@ -174,8 +180,10 @@ multiclass WaitPatOffsetOnly<ValueType ty, Intrinsic kind, string inst> {
                I64:$timeout)>,
         Requires<[HasAddr64]>;
 }
-defm : WaitPatOffsetOnly<i32, int_wasm_atomic_wait_i32, "ATOMIC_WAIT_I32">;
-defm : WaitPatOffsetOnly<i64, int_wasm_atomic_wait_i64, "ATOMIC_WAIT_I64">;
+defm : WaitPatOffsetOnly<i32, int_wasm_memory_atomic_wait32,
+                         "MEMORY_ATOMIC_WAIT32">;
+defm : WaitPatOffsetOnly<i64, int_wasm_memory_atomic_wait64,
+                         "MEMORY_ATOMIC_WAIT64">;
 
 multiclass WaitPatGlobalAddrOffOnly<ValueType ty, Intrinsic kind, string inst> {
   def : Pat<(i32 (kind (WebAssemblywrapper tglobaladdr:$off), ty:$exp,
@@ -189,10 +197,10 @@ multiclass WaitPatGlobalAddrOffOnly<ValueType ty, Intrinsic kind, string inst> {
                I64:$timeout)>,
         Requires<[HasAddr64]>;
 }
-defm : WaitPatGlobalAddrOffOnly<i32, int_wasm_atomic_wait_i32,
-                                "ATOMIC_WAIT_I32">;
-defm : WaitPatGlobalAddrOffOnly<i64, int_wasm_atomic_wait_i64,
-                                "ATOMIC_WAIT_I64">;
+defm : WaitPatGlobalAddrOffOnly<i32, int_wasm_memory_atomic_wait32,
+                                "MEMORY_ATOMIC_WAIT32">;
+defm : WaitPatGlobalAddrOffOnly<i64, int_wasm_memory_atomic_wait64,
+                                "MEMORY_ATOMIC_WAIT64">;
 } // Predicates = [HasAtomics]
 
 //===----------------------------------------------------------------------===//

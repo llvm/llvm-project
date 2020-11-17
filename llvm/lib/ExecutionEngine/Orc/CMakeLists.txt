@@ -23,18 +23,31 @@ add_llvm_component_library(LLVMOrcJIT
   TargetProcessControl.cpp
   ThreadSafeModule.cpp
   TPCDynamicLibrarySearchGenerator.cpp
+  TPCEHFrameRegistrar.cpp
   TPCIndirectionUtils.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  Analysis
+  BitReader
+  BitWriter
+  Core
+  ExecutionEngine
+  JITLink
+  Object
+  OrcShared
+  OrcTargetProcess
+  MC
+  Passes
+  RuntimeDyld
+  Support
+  Target
+  TransformUtils
   )
 
-target_link_libraries(LLVMOrcJIT
-  PRIVATE
-  LLVMAnalysis
-  LLVMBitReader
-  LLVMBitWriter
-  LLVMPasses
-  )
+add_subdirectory(Shared)
+add_subdirectory(TargetProcess)

@@ -840,6 +840,22 @@
 // CHECK-CORTEX-A76AE-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A76AE-SOFT: "-target-feature" "+soft-float-abi"
 
+// RUN: %clang -target arm -mcpu=neoverse-v1 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV84A %s
+// RUN: %clang -target arm -mcpu=neoverse-v1 -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV84A %s
+// CHECK-CPUV84A: "-cc1"{{.*}} "-triple" "armv8.4a-{{.*}}
+
+// RUN: %clang -target armeb -mcpu=neoverse-v1 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV84A %s
+// RUN: %clang -target arm -mcpu=neoverse-v1 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV84A %s
+// CHECK-BE-CPUV84A: "-cc1"{{.*}} "-triple" "armebv8.4a-{{.*}}
+
+// RUN: %clang -target arm -mcpu=neoverse-v1 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV84A-THUMB %s
+// RUN: %clang -target arm -mcpu=neoverse-v1 -mlittle-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV84A-THUMB %s
+// CHECK-CPUV84A-THUMB: "-cc1"{{.*}} "-triple" "thumbv8.4a-{{.*}}
+
+// RUN: %clang -target armeb -mcpu=neoverse-v1 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV84A-THUMB %s
+// RUN: %clang -target arm -mcpu=neoverse-v1 -mbig-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV84A-THUMB %s
+// CHECK-BE-CPUV84A-THUMB: "-cc1"{{.*}} "-triple" "thumbebv8.4a-{{.*}}
+
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-x1 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-X1 %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-x1 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-X1-MFPU %s
 // CHECK-CORTEX-X1: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-x1"

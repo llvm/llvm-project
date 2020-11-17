@@ -58,7 +58,7 @@ public:
     return Records.getAllDerivedDefinitions("Clause");
   }
 
-  bool CheckRecordsValidity() const;
+  bool HasValidityErrors() const;
 
 private:
   const llvm::Record *Def;

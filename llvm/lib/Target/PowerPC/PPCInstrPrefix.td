@@ -1294,6 +1294,18 @@ let Predicates = [MMA] in {
     XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
                      "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  let mayStore = 1 in {
+    def SPILL_ACC: PPCEmitTimePseudo<(outs), (ins acc:$AT, memrix16:$dst),
+                                     "#SPILL_ACC", []>;
+    def SPILL_UACC: PPCEmitTimePseudo<(outs), (ins uacc:$AT, memrix16:$dst),
+                                     "#SPILL_UACC", []>;
+  }
+  let mayLoad = 1, hasSideEffects = 0 in {
+    def RESTORE_ACC: PPCEmitTimePseudo<(outs acc:$AT), (ins memrix16:$src),
+                                       "#RESTORE_ACC", []>;
+    def RESTORE_UACC: PPCEmitTimePseudo<(outs uacc:$AT), (ins memrix16:$src),
+                                       "#RESTORE_UACC", []>;
+  }
 }
 
 let Predicates = [MMA, PrefixInstrs] in {
@@ -1640,6 +1652,24 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] i
     8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
                                 (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
                                 "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
+}
+
+let Predicates = [PairedVectorMemops] in {
+  // Intrinsics for Paired Vector Loads.
+  def : Pat<(v256i1 (int_ppc_mma_lxvp iaddrX16:$src)), (LXVP memrix16:$src)>;
+  def : Pat<(v256i1 (int_ppc_mma_lxvp xaddrX16:$src)), (LXVPX xaddrX16:$src)>;
+  let Predicates = [PairedVectorMemops, PrefixInstrs] in {
+    def : Pat<(v256i1 (int_ppc_mma_lxvp iaddrX34:$src)), (PLXVP memri34:$src)>;
+  }
+  // Intrinsics for Paired Vector Stores.
+  def : Pat<(int_ppc_mma_stxvp v256i1:$XSp, iaddrX16:$dst),
+            (STXVP $XSp, memrix16:$dst)>;
+  def : Pat<(int_ppc_mma_stxvp v256i1:$XSp, xaddrX16:$dst),
+            (STXVPX $XSp, xaddrX16:$dst)>;
+  let Predicates = [PairedVectorMemops, PrefixInstrs] in {
+    def : Pat<(int_ppc_mma_stxvp v256i1:$XSp, iaddrX34:$dst),
+              (PSTXVP $XSp, memri34:$dst)>;
+  }
 }
 
 // TODO: We have an added complexity of 500 here. This is only a temporary

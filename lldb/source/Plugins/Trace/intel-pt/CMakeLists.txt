@@ -10,6 +10,8 @@ include_directories(${LIBIPT_INCLUDE_PATH})
 find_library(LIBIPT_LIBRARY ipt PATHS ${LIBIPT_LIBRARY_PATH} REQUIRED)
 
 add_lldb_library(lldbPluginTraceIntelPT PLUGIN
+  DecodedThread.cpp
+  IntelPTDecoder.cpp
   TraceIntelPT.cpp
   TraceIntelPTSessionFileParser.cpp
 

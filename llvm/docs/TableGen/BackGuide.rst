@@ -27,8 +27,8 @@ header file (``record.h``) and/or the Doxygen documentation.
 
 This document assumes that you have read the :doc:`TableGen Programmer's
 Reference <./ProgRef>`, which provides a detailed reference for coding
-TableGen source files. This document and the data structure comments will be
-improved over time.
+TableGen source files. For a description of the existing backends, see
+:doc:`TableGen BackEnds <./BackEnds>`.
 
 Data Structures
 ===============
@@ -738,7 +738,9 @@ The ``PrintRecords`` Backend
 
 The TableGen command option ``--print-records`` invokes a simple backend
 that prints all the classes and records defined in the source files. This is
-the default backend option. The output looks like this:
+the default backend option. The format of the output is guaranteed to be
+constant over time, so that the output can be compared in tests. The output
+looks like this:
 
 .. code-block:: text
 
@@ -776,7 +778,8 @@ The ``PrintDetailedRecords`` Backend
 
 The TableGen command option ``--print-detailed-records`` invokes a backend
 that prints all the global variables, classes, and records defined in the
-source files. The output looks like this.
+source files. The format of the output is *not* guaranteed to be constant
+over time. The output looks like this.
 
 .. code-block:: text
 
@@ -821,3 +824,55 @@ parentheses. Each field is shown with its value and the source location at
 which it was set.
 The ``defm`` sequence gives the locations of the ``defm`` statements that
 were involved in generating the record, in the order they were invoked.
+
+Timing TableGen Phases
+----------------------
+
+TableGen provides a phase timing feature that produces a report of the time
+used by the various phases of parsing the source files and running the
+selected backend. This feature is enabled with the ``--time-phases`` option
+of the TableGen command.
+
+If the backend is *not* instrumented for timing, then a report such as the
+following is produced. This is the timing for the
+``--print-detailed-records`` backend run on the AMDGPU target.
+
+.. code-block:: text
+
+  ===-------------------------------------------------------------------------===
+                               TableGen Phase Timing
+  ===-------------------------------------------------------------------------===
+    Total Execution Time: 101.0106 seconds (102.4819 wall clock)
+  
+     ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Name ---
+    85.5197 ( 84.9%)   0.1560 ( 50.0%)  85.6757 ( 84.8%)  85.7009 ( 83.6%)  Backend overall
+    15.1789 ( 15.1%)   0.0000 (  0.0%)  15.1789 ( 15.0%)  15.1829 ( 14.8%)  Parse, build records
+     0.0000 (  0.0%)   0.1560 ( 50.0%)   0.1560 (  0.2%)   1.5981 (  1.6%)  Write output
+    100.6986 (100.0%)   0.3120 (100.0%)  101.0106 (100.0%)  102.4819 (100.0%)  Total
+
+Note that all the time for the backend is lumped under "Backend overall".
+
+If the backend is instrumented for timing, then its processing is
+divided into phases and each one timed separately. This is the timing for
+the ``--emit-dag-isel`` backend run on the AMDGPU target.
+
+.. code-block:: text
+
+  ===-------------------------------------------------------------------------===
+                               TableGen Phase Timing
+  ===-------------------------------------------------------------------------===
+    Total Execution Time: 746.3868 seconds (747.1447 wall clock)
+  
+     ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Name ---
+    657.7938 ( 88.1%)   0.1404 ( 90.0%)  657.9342 ( 88.1%)  658.6497 ( 88.2%)  Emit matcher table
+    70.2317 (  9.4%)   0.0000 (  0.0%)  70.2317 (  9.4%)  70.2700 (  9.4%)  Convert to matchers
+    14.8825 (  2.0%)   0.0156 ( 10.0%)  14.8981 (  2.0%)  14.9009 (  2.0%)  Parse, build records
+     2.1840 (  0.3%)   0.0000 (  0.0%)   2.1840 (  0.3%)   2.1791 (  0.3%)  Sort patterns
+     1.1388 (  0.2%)   0.0000 (  0.0%)   1.1388 (  0.2%)   1.1401 (  0.2%)  Optimize matchers
+     0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0050 (  0.0%)  Write output
+    746.2308 (100.0%)   0.1560 (100.0%)  746.3868 (100.0%)  747.1447 (100.0%)  Total
+
+The backend has been divided into four phases and timed separately.
+
+If you want to instrument a backend, refer to the backend ``DAGISelEmitter.cpp``
+and search for ``Records.startTimer``.

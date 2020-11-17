@@ -12,10 +12,10 @@
 ; Function Attrs: norecurse nounwind readonly
 define signext i8 @func_rr(%struct.data* nocapture readonly %0, i32 signext %1) {
 ; CHECK-LABEL: func_rr:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll %s1, %s1, 2
 ; CHECK-NEXT:    ld1b.sx %s0, (%s1, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   %3 = sext i32 %1 to i64
   %4 = getelementptr inbounds %struct.data, %struct.data* %0, i64 %3, i32 0, i64 0
   %5 = load i8, i8* %4, align 1

@@ -65,10 +65,22 @@ class VPlanSlp;
 /// [1, 9) = {1, 2, 4, 8}
 struct VFRange {
   // A power of 2.
-  const unsigned Start;
+  const ElementCount Start;
 
   // Need not be a power of 2. If End <= Start range is empty.
-  unsigned End;
+  ElementCount End;
+
+  bool isEmpty() const {
+    return End.getKnownMinValue() <= Start.getKnownMinValue();
+  }
+
+  VFRange(const ElementCount &Start, const ElementCount &End)
+      : Start(Start), End(End) {
+    assert(Start.isScalable() == End.isScalable() &&
+           "Both Start and End should have the same scalable flag");
+    assert(isPowerOf2_32(Start.getKnownMinValue()) &&
+           "Expected Start to be a power of 2");
+  }
 };
 
 using VPlanPtr = std::unique_ptr<VPlan>;
@@ -841,14 +853,13 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPRecipeBase, public VPUser {
-  /// Hold the call to be widened.
-  CallInst &Ingredient;
+class VPWidenCallRecipe : public VPRecipeBase, public VPValue, public VPUser {
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
-      : VPRecipeBase(VPWidenCallSC), VPUser(CallArguments), Ingredient(I) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenCallSC),
+        VPValue(VPValue::VPVWidenCallSC, &I), VPUser(CallArguments) {}
 
   ~VPWidenCallRecipe() override = default;
 
@@ -866,10 +877,7 @@ public:
 };
 
 /// A recipe for widening select instructions.
-class VPWidenSelectRecipe : public VPRecipeBase, public VPUser {
-private:
-  /// Hold the select to be widened.
-  SelectInst &Ingredient;
+class VPWidenSelectRecipe : public VPRecipeBase, public VPValue, public VPUser {
 
   /// Is the condition of the select loop invariant?
   bool InvariantCond;
@@ -878,7 +886,8 @@ public:
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
                       bool InvariantCond)
-      : VPRecipeBase(VPWidenSelectSC), VPUser(Operands), Ingredient(I),
+      : VPRecipeBase(VPRecipeBase::VPWidenSelectSC),
+        VPValue(VPValue::VPVWidenSelectSC, &I), VPUser(Operands),
         InvariantCond(InvariantCond) {}
 
   ~VPWidenSelectRecipe() override = default;
@@ -897,22 +906,21 @@ public:
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeBase, public VPUser {
-  GetElementPtrInst *GEP;
-
+class VPWidenGEPRecipe : public VPRecipeBase, public VPValue, public VPUser {
   bool IsPtrLoopInvariant;
   SmallBitVector IsIndexLoopInvariant;
 
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPWidenGEPSC), VPUser(Operands), GEP(GEP),
-        IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC), VPValue(VPWidenGEPSC, GEP),
+        VPUser(Operands), IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
 
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands,
                    Loop *OrigLoop)
-      : VPRecipeBase(VPWidenGEPSC), VPUser(Operands), GEP(GEP),
+      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC),
+        VPValue(VPValue::VPVWidenGEPSC, GEP), VPUser(Operands),
         IsIndexLoopInvariant(GEP->getNumIndices(), false) {
     IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
     for (auto Index : enumerate(GEP->indices()))
@@ -1233,8 +1241,7 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase,
   }
 
   bool isMasked() const {
-    return (isa<LoadInst>(getUnderlyingInstr()) && getNumOperands() == 2) ||
-           (isa<StoreInst>(getUnderlyingInstr()) && getNumOperands() == 3);
+    return isStore() ? getNumOperands() == 3 : getNumOperands() == 2;
   }
 
 public:
@@ -1269,10 +1276,12 @@ public:
     return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
+  /// Returns true if this recipe is a store.
+  bool isStore() const { return isa<StoreInst>(getUnderlyingInstr()); }
+
   /// Return the address accessed by this recipe.
   VPValue *getStoredValue() const {
-    assert(isa<StoreInst>(getUnderlyingInstr()) &&
-           "Stored value only available for store instructions");
+    assert(isStore() && "Stored value only available for store instructions");
     return getOperand(1); // Stored value is the 2nd, mandatory operand.
   }
 

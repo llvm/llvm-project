@@ -15,6 +15,8 @@
 #ifndef MLIR_C_TRANSFORMS_H
 #define MLIR_C_TRANSFORMS_H
 
+#include "mlir-c/Support.h"
+
 #include "mlir/Transforms/Transforms.capi.h.inc"
 
 #endif // MLIR_C_TRANSFORMS_H

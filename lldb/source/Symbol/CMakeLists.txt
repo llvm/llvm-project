@@ -39,6 +39,9 @@ add_lldb_library(lldbSymbol
 
   ${PLATFORM_SOURCES}
 
+  DEPENDS
+    intrinsics_gen
+
   LINK_LIBS
     lldbCore
     lldbExpression

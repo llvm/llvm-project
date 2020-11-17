@@ -1,3 +1,5 @@
+add_llvm_component_group(AMDGPU)
+
 set(LLVM_TARGET_DEFINITIONS AMDGPU.td)
 
 tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
@@ -59,6 +61,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUISelDAGToDAG.cpp
   AMDGPUISelLowering.cpp
   AMDGPUGlobalISelUtils.cpp
+  AMDGPULateCodeGenPrepare.cpp
   AMDGPULegalizerInfo.cpp
   AMDGPULibCalls.cpp
   AMDGPULibFunc.cpp
@@ -147,6 +150,29 @@ add_llvm_target(AMDGPUCodeGen
   GCNNSAReassign.cpp
   GCNDPPCombine.cpp
   SIModeRegister.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  IPO
+  MC
+  AMDGPUDesc
+  AMDGPUInfo
+  AMDGPUUtils
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  Vectorize
+  GlobalISel
+  BinaryFormat
+  MIRParser
+
+  ADD_TO_COMPONENT
+  AMDGPU
   )
 
 add_subdirectory(AsmParser)

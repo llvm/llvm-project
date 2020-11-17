@@ -12,9 +12,9 @@
 
 #include "mlir/Pass/Pass.h"
 #include "PassDetail.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
@@ -52,13 +52,13 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 
 /// Prints out the pass in the textual representation of pipelines. If this is
 /// an adaptor pass, print with the op_name(sub_pass,...) format.
-void Pass::printAsTextualPipeline(raw_ostream &os, bool filterVerifier) {
+void Pass::printAsTextualPipeline(raw_ostream &os) {
   // Special case for adaptors to use the 'op_name(sub_passes)' format.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleaveComma(adaptor->getPassManagers(), os,
                           [&](OpPassManager &pm) {
                             os << pm.getOpName() << "(";
-                            pm.printAsTextualPipeline(os, filterVerifier);
+                            pm.printAsTextualPipeline(os);
                             os << ")";
                           });
     return;
@@ -72,16 +72,6 @@ void Pass::printAsTextualPipeline(raw_ostream &os, bool filterVerifier) {
   else
     os << "unknown<" << getName() << ">";
   passOptions.print(os);
-}
-
-//===----------------------------------------------------------------------===//
-// Verifier Passes
-//===----------------------------------------------------------------------===//
-
-void VerifierPass::runOnOperation() {
-  if (failed(verify(getOperation())))
-    signalPassFailure();
-  markAllAnalysesPreserved();
 }
 
 //===----------------------------------------------------------------------===//
@@ -198,9 +188,9 @@ void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
       // Otherwise, merge into the existing adaptor and delete the current one.
       currentAdaptor->mergeInto(*lastAdaptor);
       it->reset();
-    } else if (lastAdaptor && !isa<VerifierPass>(*it)) {
-      // If this pass is not an adaptor and not a verifier pass, then coalesce
-      // and forget any existing adaptor.
+    } else if (lastAdaptor) {
+      // If this pass is not an adaptor, then coalesce and forget any existing
+      // adaptor.
       for (auto &pm : lastAdaptor->getPassManagers())
         pm.getImpl().coalesceAdjacentAdaptorPasses();
       lastAdaptor = nullptr;
@@ -223,10 +213,6 @@ void OpPassManagerImpl::splitAdaptorPasses() {
   std::swap(passes, oldPasses);
 
   for (std::unique_ptr<Pass> &pass : oldPasses) {
-    // Ignore verifier passes, they are added back in the "addPass()" calls.
-    if (isa<VerifierPass>(pass.get()))
-      continue;
-
     // If this pass isn't an adaptor, move it directly to the new pass list.
     auto *currentAdaptor = dyn_cast<OpToOpPassAdaptor>(pass.get());
     if (!currentAdaptor) {
@@ -237,12 +223,8 @@ void OpPassManagerImpl::splitAdaptorPasses() {
     // Otherwise, split the adaptors of each manager within the adaptor.
     for (OpPassManager &adaptorPM : currentAdaptor->getPassManagers()) {
       adaptorPM.getImpl().splitAdaptorPasses();
-
-      // Add all non-verifier passes to this pass manager.
-      for (std::unique_ptr<Pass> &nestedPass : adaptorPM.getImpl().passes) {
-        if (!isa<VerifierPass>(nestedPass.get()))
-          nest(adaptorPM.getOpName()).addPass(std::move(nestedPass));
-      }
+      for (std::unique_ptr<Pass> &nestedPass : adaptorPM.getImpl().passes)
+        nest(adaptorPM.getOpName()).addPass(std::move(nestedPass));
     }
   }
 }
@@ -311,30 +293,21 @@ Identifier OpPassManager::getOpName(MLIRContext &context) const {
 
 /// Prints out the given passes as the textual representation of a pipeline.
 static void printAsTextualPipeline(ArrayRef<std::unique_ptr<Pass>> passes,
-                                   raw_ostream &os,
-                                   bool filterVerifier = true) {
-  // Filter out passes that are not part of the public pipeline.
-  auto filteredPasses =
-      llvm::make_filter_range(passes, [&](const std::unique_ptr<Pass> &pass) {
-        return !filterVerifier || !isa<VerifierPass>(pass);
-      });
-  llvm::interleaveComma(filteredPasses, os,
-                        [&](const std::unique_ptr<Pass> &pass) {
-                          pass->printAsTextualPipeline(os, filterVerifier);
-                        });
+                                   raw_ostream &os) {
+  llvm::interleaveComma(passes, os, [&](const std::unique_ptr<Pass> &pass) {
+    pass->printAsTextualPipeline(os);
+  });
 }
 
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
-void OpPassManager::printAsTextualPipeline(raw_ostream &os,
-                                           bool filterVerifier) {
-  ::printAsTextualPipeline(impl->passes, os, filterVerifier);
+void OpPassManager::printAsTextualPipeline(raw_ostream &os) {
+  ::printAsTextualPipeline(impl->passes, os);
 }
 
 void OpPassManager::dump() {
   llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes: ";
-  ::printAsTextualPipeline(impl->passes, llvm::errs(),
-                           /*filterVerifier=*/false);
+  ::printAsTextualPipeline(impl->passes, llvm::errs());
   llvm::errs() << "\n";
 }
 
@@ -347,6 +320,10 @@ static void registerDialectsForPipeline(const OpPassManager &pm,
 void OpPassManager::getDependentDialects(DialectRegistry &dialects) const {
   registerDialectsForPipeline(*this, dialects);
 }
+
+OpPassManager::Nesting OpPassManager::getNesting() { return impl->nesting; }
+
+void OpPassManager::setNesting(Nesting nesting) { impl->nesting = nesting; }
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor

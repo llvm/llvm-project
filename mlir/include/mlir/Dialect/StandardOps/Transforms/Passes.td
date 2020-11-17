@@ -11,20 +11,15 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ExpandAtomic : FunctionPass<"expand-atomic"> {
-  let summary = "Expands AtomicRMWOp into GenericAtomicRMWOp.";
-  let constructor = "mlir::createExpandAtomicPass()";
-}
-
 def StdBufferize : FunctionPass<"std-bufferize"> {
   let summary = "Bufferize the std dialect";
   let constructor = "mlir::createStdBufferizePass()";
   let dependentDialects = ["scf::SCFDialect"];
 }
 
-def StdExpandDivs : FunctionPass<"std-expand-divs"> {
-  let summary = "Legalize div std dialect operations to be convertible to LLVM.";
-  let constructor = "mlir::createStdExpandDivsPass()";
+def StdExpandOps : FunctionPass<"std-expand"> {
+  let summary = "Legalize std operations to be convertible to LLVM.";
+  let constructor = "mlir::createStdExpandOpsPass()";
 }
 
 def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
@@ -54,6 +49,19 @@ def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
     bufferization passes.
   }];
   let constructor = "mlir::createFuncBufferizePass()";
+}
+
+def TensorConstantBufferize : Pass<"tensor-constant-bufferize", "ModuleOp"> {
+  let summary = "Bufferize tensor constants.";
+  let description = [{
+    This pass bufferizes tensor constants.
+
+    This pass needs to be a module pass because it inserts std.global_memref
+    ops into the module, which cannot be done safely from a function pass due to
+    multi-threading. Most other bufferization passes can run in parallel at
+    function granularity.
+  }];
+  let constructor = "mlir::createTensorConstantBufferizePass()";
 }
 
 #endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES

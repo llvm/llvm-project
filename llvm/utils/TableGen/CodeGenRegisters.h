@@ -353,7 +353,7 @@ namespace llvm {
     unsigned getNumValueTypes() const { return VTs.size(); }
 
     bool hasType(const ValueTypeByHwMode &VT) const {
-      return std::find(VTs.begin(), VTs.end(), VT) != VTs.end();
+      return llvm::is_contained(VTs, VT);
     }
 
     const ValueTypeByHwMode &getValueTypeNum(unsigned VTNum) const {

@@ -7,6 +7,9 @@
 // CHECK: module
 spv.module Logical GLSL450 {}
 
+// CHECK: module @foo
+spv.module @foo Logical GLSL450 {}
+
 // CHECK: module
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]> {}
 

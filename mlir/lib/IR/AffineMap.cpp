@@ -12,6 +12,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -224,6 +225,10 @@ ArrayRef<AffineExpr> AffineMap::getResults() const {
 AffineExpr AffineMap::getResult(unsigned idx) const {
   assert(map && "uninitialized map storage");
   return map->results[idx];
+}
+
+unsigned AffineMap::getDimPosition(unsigned idx) const {
+  return getResult(idx).cast<AffineDimExpr>().getPosition();
 }
 
 /// Folds the results of the application of an affine map on the provided
@@ -448,6 +453,22 @@ AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
   }
   return AffineMap::get(numDims, numSymbols, results,
                         maps.front().getContext());
+}
+
+AffineMap mlir::getProjectedMap(AffineMap map,
+                                ArrayRef<unsigned> projectedDimensions) {
+  DenseSet<unsigned> projectedDims(projectedDimensions.begin(),
+                                   projectedDimensions.end());
+  MLIRContext *context = map.getContext();
+  SmallVector<AffineExpr, 4> resultExprs;
+  for (auto dim : enumerate(llvm::seq<unsigned>(0, map.getNumDims()))) {
+    if (!projectedDims.count(dim.value()))
+      resultExprs.push_back(getAffineDimExpr(dim.index(), context));
+    else
+      resultExprs.push_back(getAffineConstantExpr(0, context));
+  }
+  return map.compose(AffineMap::get(
+      map.getNumDims() - projectedDimensions.size(), 0, resultExprs, context));
 }
 
 //===----------------------------------------------------------------------===//

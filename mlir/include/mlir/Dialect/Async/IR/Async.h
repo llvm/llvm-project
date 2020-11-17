@@ -19,6 +19,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
@@ -44,6 +45,12 @@ public:
   static ValueType get(Type valueType);
 
   Type getValueType();
+};
+
+/// The group type to represent async tokens or values grouped together.
+class GroupType : public Type::TypeBase<GroupType, Type, TypeStorage> {
+public:
+  using Base::Base;
 };
 
 } // namespace async

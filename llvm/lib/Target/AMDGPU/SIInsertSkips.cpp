@@ -172,8 +172,9 @@ static void generatePsEndPgm(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator I, DebugLoc DL,
                              const SIInstrInfo *TII) {
   // Generate "null export; s_endpgm".
+  const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
   BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
-      .addImm(0x09) // V_008DFC_SQ_EXP_NULL
+      .addImm(ST.hasNullExportTarget() ? AMDGPU::Exp::ET_NULL : 0 /* mrt0 */)
       .addReg(AMDGPU::VGPR0, RegState::Undef)
       .addReg(AMDGPU::VGPR0, RegState::Undef)
       .addReg(AMDGPU::VGPR0, RegState::Undef)

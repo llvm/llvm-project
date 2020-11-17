@@ -21,7 +21,9 @@ struct SafeReturn {
 // Generic entry point when using LLD as a library, safe for re-entry, supports
 // crash recovery. Returns a general completion code and a boolean telling
 // whether it can be called again. In some cases, a crash could corrupt memory
-// and re-entry would not be possible anymore.
+// and re-entry would not be possible anymore. Use exitLld() in that case to
+// properly exit your application and avoid intermittent crashes on exit caused
+// by cleanup.
 SafeReturn safeLldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
                        llvm::raw_ostream &stderrOS);
 

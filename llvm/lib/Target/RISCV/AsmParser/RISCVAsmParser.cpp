@@ -10,7 +10,6 @@
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
-#include "RISCVInstrInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "Utils/RISCVBaseInfo.h"
 #include "Utils/RISCVMatInt.h"
@@ -20,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -99,7 +97,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
   // synthesize the desired immedate value into the destination register.
-  void emitLoadImm(Register DestReg, int64_t Value, MCStreamer &Out);
+  void emitLoadImm(MCRegister DestReg, int64_t Value, MCStreamer &Out);
 
   // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
   // helpers such as emitLoadLocalAddress and emitLoadAddress.
@@ -262,7 +260,7 @@ struct RISCVOperand : public MCParsedAsmOperand {
   bool IsRV64;
 
   struct RegOp {
-    Register RegNum;
+    MCRegister RegNum;
   };
 
   struct ImmOp {
@@ -984,7 +982,7 @@ public:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "RISCVGenAsmMatcher.inc"
 
-static Register convertFPR64ToFPR32(Register Reg) {
+static MCRegister convertFPR64ToFPR32(MCRegister Reg) {
   assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
   return Reg - RISCV::F0_D + RISCV::F0_F;
 }
@@ -995,7 +993,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   if (!Op.isReg())
     return Match_InvalidOperand;
 
-  Register Reg = Op.getReg();
+  MCRegister Reg = Op.getReg();
   bool IsRegFPR64 =
       RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg);
   bool IsRegFPR64C =
@@ -1236,7 +1234,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 // alternative ABI names), setting RegNo to the matching register. Upon
 // failure, returns true and sets RegNo to 0. If IsRV32E then registers
 // x16-x31 will be rejected.
-static bool matchRegisterNameHelper(bool IsRV32E, Register &RegNo,
+static bool matchRegisterNameHelper(bool IsRV32E, MCRegister &RegNo,
                                     StringRef Name) {
   RegNo = MatchRegisterName(Name);
   // The 32- and 64-bit FPRs have the same asm name. Check that the initial
@@ -1267,7 +1265,7 @@ OperandMatchResultTy RISCVAsmParser::tryParseRegister(unsigned &RegNo,
   RegNo = 0;
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (matchRegisterNameHelper(isRV32E(), (Register &)RegNo, Name))
+  if (matchRegisterNameHelper(isRV32E(), (MCRegister &)RegNo, Name))
     return MatchOperand_NoMatch;
 
   getParser().Lex(); // Eat identifier token.
@@ -1299,7 +1297,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     return MatchOperand_NoMatch;
   case AsmToken::Identifier:
     StringRef Name = getLexer().getTok().getIdentifier();
-    Register RegNo;
+    MCRegister RegNo;
     matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
     if (RegNo == RISCV::NoRegister) {
@@ -1659,7 +1657,7 @@ OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
       Error(getLoc(), "expected '.t' suffix");
       return MatchOperand_ParseFail;
     }
-    Register RegNo;
+    MCRegister RegNo;
     matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
     if (RegNo == RISCV::NoRegister)
@@ -2181,12 +2179,12 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.emitInstruction((Res ? CInst : Inst), getSTI());
 }
 
-void RISCVAsmParser::emitLoadImm(Register DestReg, int64_t Value,
+void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                                  MCStreamer &Out) {
   RISCVMatInt::InstSeq Seq;
   RISCVMatInt::generateInstSeq(Value, isRV64(), Seq);
 
-  Register SrcReg = RISCV::X0;
+  MCRegister SrcReg = RISCV::X0;
   for (RISCVMatInt::Inst &Inst : Seq) {
     if (Inst.Opc == RISCV::LUI) {
       emitToStreamer(
@@ -2339,27 +2337,27 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
   unsigned TargetFlags =
-      (MCID.TSFlags >> RISCV::ConstraintOffset) & RISCV::ConstraintMask;
-  if (TargetFlags == RISCV::NoConstraint)
+      (MCID.TSFlags >> RISCVII::ConstraintOffset) & RISCVII::ConstraintMask;
+  if (TargetFlags == RISCVII::NoConstraint)
     return false;
 
   unsigned DestReg = Inst.getOperand(0).getReg();
   unsigned CheckReg;
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
-  if (TargetFlags & RISCV::VS2Constraint) {
+  if (TargetFlags & RISCVII::VS2Constraint) {
     CheckReg = Inst.getOperand(1).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((TargetFlags & RISCV::VS1Constraint) && (Inst.getOperand(2).isReg())) {
+  if ((TargetFlags & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
     CheckReg = Inst.getOperand(2).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((TargetFlags & RISCV::VMConstraint) && (DestReg == RISCV::V0)) {
+  if ((TargetFlags & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
     // vadc, vsbc are special cases. These instructions have no mask register.
     // The destination register could not be V0.
     unsigned Opcode = Inst.getOpcode();
@@ -2372,7 +2370,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
     // actually. We need to check the last operand to ensure whether it is
     // masked or not.
-    if ((TargetFlags & RISCV::OneInput) && (Inst.getNumOperands() == 3))
+    if ((TargetFlags & RISCVII::OneInput) && (Inst.getNumOperands() == 3))
       CheckReg = Inst.getOperand(2).getReg();
     else if (Inst.getNumOperands() == 4)
       CheckReg = Inst.getOperand(3).getReg();
@@ -2392,7 +2390,7 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   default:
     break;
   case RISCV::PseudoLI: {
-    Register Reg = Inst.getOperand(0).getReg();
+    MCRegister Reg = Inst.getOperand(0).getReg();
     const MCOperand &Op1 = Inst.getOperand(1);
     if (Op1.isExpr()) {
       // We must have li reg, %lo(sym) or li reg, %pcrel_lo(sym) or similar.

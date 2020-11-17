@@ -32,9 +32,9 @@ Sections:
     Type:    SHT_NOTE
     Content: 0500000008000000454C4946434F5245000000000000000000000000
 ProgramHeaders:
-  - Type:        PT_NOTE
-    Sections:
-      - Section: .note.foo
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo
 
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: llvm-readelf -n %t2.o 2>&1 | FileCheck -DFILE=%t2.o %s --check-prefix=ERR-NULL-TERM
@@ -66,9 +66,9 @@ Sections:
     Type:    SHT_NOTE
     Content: 050000002C000000454C4946434F5245000000000100000000000000001000000000000000100000000000000020000000000000003000000000000078787878
 ProgramHeaders:
-  - Type:        PT_NOTE
-    Sections:
-      - Section: .note.foo
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo
 
 # RUN: yaml2obj --docnum=3 %s -o %t3.o
 # RUN: llvm-readelf -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-COUNT
@@ -100,9 +100,9 @@ Sections:
     Type:    SHT_NOTE
     Content: 050000002C000000454C4946434F5245000000000200000000000000001000000000000000100000000000000020000000000000003000000000000078797A00
 ProgramHeaders:
-  - Type:        PT_NOTE
-    Sections:
-      - Section: .note.foo
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo
 
 # RUN: yaml2obj --docnum=4 %s -o %t4.o
 # RUN: llvm-readelf -n %t4.o 2>&1 | FileCheck -DFILE=%t4.o %s --check-prefix=ERR-FILE-END-EARLY
@@ -137,6 +137,6 @@ Sections:
     Type:    SHT_NOTE
     Content: 0500000044000000454C4946434F5245000000000200000000000000001000000000000000100000000000000020000000000000003000000000000000400000000000000050000000000000006000000000000078797A00
 ProgramHeaders:
-  - Type:        PT_NOTE
-    Sections:
-      - Section: .note.foo
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo

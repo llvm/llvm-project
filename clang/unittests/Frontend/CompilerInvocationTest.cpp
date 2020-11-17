@@ -37,6 +37,25 @@ public:
       : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions())) {}
 };
 
+TEST(OptsPopulationTest, CanPopulateOptsWithImpliedFlags) {
+  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
+
+  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  // Explicitly provided flag.
+  ASSERT_EQ(CInvok.getLangOpts()->CLUnsafeMath, true);
+
+  // Flags directly implied by explicitly provided flag.
+  ASSERT_EQ(CInvok.getCodeGenOpts().LessPreciseFPMAD, true);
+  ASSERT_EQ(CInvok.getLangOpts()->UnsafeFPMath, true);
+
+  // Flag transitively implied by explicitly provided flag.
+  ASSERT_EQ(CInvok.getLangOpts()->AllowRecip, true);
+}
+
 TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineFlag) {
   const char *Args[] = {"clang", "-xc++", "-fmodules-strict-context-hash", "-"};
 
@@ -113,6 +132,22 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparateEnum) {
 
   CInvok1.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Each(StrNe(RelocationModelCStr)));
+}
+
+TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineImpliedFlags) {
+  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations",
+                        "-cl-mad-enable", "-menable-unsafe-fp-math"};
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Explicitly provided flags that were also implied by another flag are not
+  // generated.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
 }
 
 } // anonymous namespace

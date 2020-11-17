@@ -64,5 +64,46 @@ TraceIntelPT::TraceIntelPT(
     : m_pt_cpu(pt_cpu) {
   for (const std::shared_ptr<ThreadTrace> &thread : traced_threads)
     m_trace_threads.emplace(
-        std::make_pair(thread->GetProcess()->GetID(), thread->GetID()), thread);
+        std::piecewise_construct,
+        std::forward_as_tuple(thread->GetProcess()->GetID(), thread->GetID()),
+        std::forward_as_tuple(thread, pt_cpu));
+}
+
+const DecodedThread *TraceIntelPT::Decode(const Thread &thread) {
+  auto it = m_trace_threads.find(
+      std::make_pair(thread.GetProcess()->GetID(), thread.GetID()));
+  if (it == m_trace_threads.end())
+    return nullptr;
+  return &it->second.Decode();
+}
+
+size_t TraceIntelPT::GetCursorPosition(const Thread &thread) {
+  const DecodedThread *decoded_thread = Decode(thread);
+  if (!decoded_thread)
+    return 0;
+  return decoded_thread->GetCursorPosition();
+}
+
+void TraceIntelPT::TraverseInstructions(
+    const Thread &thread, size_t position, TraceDirection direction,
+    std::function<bool(size_t index, Expected<lldb::addr_t> load_addr)>
+        callback) {
+  const DecodedThread *decoded_thread = Decode(thread);
+  if (!decoded_thread)
+    return;
+
+  ArrayRef<IntelPTInstruction> instructions = decoded_thread->GetInstructions();
+
+  ssize_t delta = direction == TraceDirection::Forwards ? 1 : -1;
+  for (ssize_t i = position; i < (ssize_t)instructions.size() && i >= 0;
+       i += delta)
+    if (!callback(i, instructions[i].GetLoadAddress()))
+      break;
+}
+
+size_t TraceIntelPT::GetInstructionCount(const Thread &thread) {
+  if (const DecodedThread *decoded_thread = Decode(thread))
+    return decoded_thread->GetInstructions().size();
+  else
+    return 0;
 }

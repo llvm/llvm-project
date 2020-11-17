@@ -91,8 +91,8 @@ std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
 }
 
 TEST(RenameTest, WithinFileRename) {
-  // rename is runnning on all "^" points, and "[[]]" ranges point to the
-  // identifier that is being renamed.
+  // For each "^" this test moves cursor to its location and applies renaming
+  // while checking that all identifiers in [[]] ranges are also renamed.
   llvm::StringRef Tests[] = {
       // Function.
       R"cpp(
@@ -119,28 +119,37 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
-      // Rename class, including constructor/destructor.
+      // Class, its constructor and destructor.
       R"cpp(
         class [[F^oo]] {
           [[F^oo]]();
-          ~[[Foo]]();
-          void foo(int x);
+          ~[[F^oo]]();
+          [[F^oo]] *foo(int x);
+
+          [[F^oo]] *Ptr;
         };
-        [[Foo]]::[[Fo^o]]() {}
-        void [[Foo]]::foo(int x) {}
+        [[F^oo]]::[[Fo^o]]() {}
+        [[F^oo]]::~[[Fo^o]]() {}
+        [[F^oo]] *[[F^oo]]::foo(int x) { return Ptr; }
       )cpp",
 
-      // Rename template class, including constructor/destructor.
+      // Template class, its constructor and destructor.
       R"cpp(
         template <typename T>
         class [[F^oo]] {
           [[F^oo]]();
           ~[[F^oo]]();
-          void f([[Foo]] x);
+          void f([[F^oo]] x);
         };
+
+        template<typename T>
+        [[F^oo]]<T>::[[Fo^o]]() {}
+
+        template<typename T>
+        [[F^oo]]<T>::~[[Fo^o]]() {}
       )cpp",
 
-      // Rename template class constructor.
+      // Template class constructor.
       R"cpp(
         class [[F^oo]] {
           template<typename T>
@@ -149,6 +158,9 @@ TEST(RenameTest, WithinFileRename) {
           template<typename T>
           [[F^oo]](T t);
         };
+
+        template<typename T>
+        [[F^oo]]::[[Fo^o]]() {}
       )cpp",
 
       // Class in template argument.
@@ -166,7 +178,15 @@ TEST(RenameTest, WithinFileRename) {
       // Forward class declaration without definition.
       R"cpp(
         class [[F^oo]];
-        [[Foo]] *f();
+        [[F^oo]] *f();
+      )cpp",
+
+      // Member function.
+      R"cpp(
+        struct X {
+          void [[F^oo]]() {}
+          void Baz() { [[F^oo]](); }
+        };
       )cpp",
 
       // Class methods overrides.
@@ -188,6 +208,30 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Templated method instantiation.
+      R"cpp(
+        template<typename T>
+        class Foo {
+        public:
+          static T [[f^oo]]() {}
+        };
+
+        void bar() {
+          Foo<int>::[[f^oo]]();
+        }
+      )cpp",
+      R"cpp(
+        template<typename T>
+        class Foo {
+        public:
+          T [[f^oo]]() {}
+        };
+
+        void bar() {
+          Foo<int>().[[f^oo]]();
+        }
+      )cpp",
+
       // Template class (partial) specializations.
       R"cpp(
         template <typename T>
@@ -199,9 +243,9 @@ TEST(RenameTest, WithinFileRename) {
         class [[F^oo]]<T*> {};
 
         void test() {
-          [[Foo]]<int> x;
-          [[Foo]]<bool> y;
-          [[Foo]]<int*> z;
+          [[F^oo]]<int> x;
+          [[F^oo]]<bool> y;
+          [[F^oo]]<int*> z;
         }
       )cpp",
 
@@ -209,7 +253,7 @@ TEST(RenameTest, WithinFileRename) {
       R"cpp(
         template <typename T>
         class [[Fo^o]] {};
-        void func([[Foo]]<int>);
+        void func([[F^oo]]<int>);
       )cpp",
 
       // Template class instantiations.
@@ -242,7 +286,7 @@ TEST(RenameTest, WithinFileRename) {
 
           [[F^oo]]<bool> b;
           b.member = false;
-          [[Foo]]<bool>::foo(false);
+          [[F^oo]]<bool>::foo(false);
         }
       )cpp",
 
@@ -261,6 +305,80 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Templated class specialization.
+      R"cpp(
+        template<typename T, typename U=bool>
+        class [[Foo^]];
+
+        template<typename T, typename U>
+        class [[Foo^]] {};
+
+        template<typename T=int, typename U>
+        class [[Foo^]];
+      )cpp",
+      R"cpp(
+        template<typename T=float, typename U=int>
+        class [[Foo^]];
+
+        template<typename T, typename U>
+        class [[Foo^]] {};
+      )cpp",
+
+      // Function template specialization.
+      R"cpp(
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+
+        template<typename T, typename U>
+        U [[foo^]]() {};
+      )cpp",
+      R"cpp(
+        template<typename T, typename U>
+        U [[foo^]]() {};
+
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+      )cpp",
+      R"cpp(
+        template<typename T=int, typename U=bool>
+        U [[foo^]]();
+
+        template<typename T, typename U>
+        U [[foo^]]();
+      )cpp",
+      R"cpp(
+        template <typename T>
+        void [[f^oo]](T t);
+
+        template <>
+        void [[f^oo]](int a);
+
+        void test() {
+          [[f^oo]]<double>(1);
+        }
+      )cpp",
+
+      // Variable template.
+      R"cpp(
+        template <typename T, int U>
+        bool [[F^oo]] = true;
+
+        // Explicit template specialization
+        template <>
+        bool [[F^oo]]<int, 0> = false;
+
+        // Partial template specialization
+        template <typename T>
+        bool [[F^oo]]<T, 1> = false;
+
+        void foo() {
+          // Ref to the explicit template specialization
+          [[F^oo]]<int, 0>;
+          // Ref to the primary template.
+          [[F^oo]]<double, 2>;
+        }
+      )cpp",
+
       // Complicated class type.
       R"cpp(
          // Forward declaration.
@@ -271,9 +389,9 @@ TEST(RenameTest, WithinFileRename) {
 
         class [[F^oo]] : public Baz  {
         public:
-          [[Foo]](int value = 0) : x(value) {}
+          [[F^oo]](int value = 0) : x(value) {}
 
-          [[Foo]] &operator++(int);
+          [[F^oo]] &operator++(int);
 
           bool operator<([[Foo]] const &rhs);
           int getValue() const;
@@ -282,18 +400,54 @@ TEST(RenameTest, WithinFileRename) {
         };
 
         void func() {
-          [[Foo]] *Pointer = 0;
-          [[Foo]] Variable = [[Foo]](10);
-          for ([[Foo]] it; it < Variable; it++);
-          const [[Foo]] *C = new [[Foo]]();
-          const_cast<[[Foo]] *>(C)->getValue();
-          [[Foo]] foo;
+          [[F^oo]] *Pointer = 0;
+          [[F^oo]] Variable = [[Foo]](10);
+          for ([[F^oo]] it; it < Variable; it++);
+          const [[F^oo]] *C = new [[Foo]]();
+          const_cast<[[F^oo]] *>(C)->getValue();
+          [[F^oo]] foo;
           const Baz &BazReference = foo;
           const Baz *BazPointer = &foo;
           reinterpret_cast<const [[^Foo]] *>(BazPointer)->getValue();
           static_cast<const [[^Foo]] &>(BazReference).getValue();
           static_cast<const [[^Foo]] *>(BazPointer)->getValue();
         }
+      )cpp",
+
+      // Static class member.
+      R"cpp(
+        struct Foo {
+          static Foo *[[Static^Member]];
+        };
+
+        Foo* Foo::[[Static^Member]] = nullptr;
+
+        void foo() {
+          Foo* Pointer = Foo::[[Static^Member]];
+        }
+      )cpp",
+
+      // Reference in lambda parameters.
+      R"cpp(
+        template <class T>
+        class function;
+        template <class R, class... ArgTypes>
+        class function<R(ArgTypes...)> {
+        public:
+          template <typename Functor>
+          function(Functor f) {}
+
+          function() {}
+
+          R operator()(ArgTypes...) const {}
+        };
+
+        namespace ns {
+        class [[Old]] {};
+        void f() {
+          function<void([[Old]])> func;
+        }
+        }  // namespace ns
       )cpp",
 
       // Destructor explicit call.
@@ -360,11 +514,11 @@ TEST(RenameTest, WithinFileRename) {
         void boo(int);
 
         void qoo() {
-          [[foo]]();
-          boo([[foo]]());
+          [[f^oo]]();
+          boo([[f^oo]]());
           M1();
           boo(M1());
-          M2([[foo]]());
+          M2([[f^oo]]());
           M2(M1()); // foo is inside the nested macro body.
         }
       )cpp",
@@ -380,9 +534,9 @@ TEST(RenameTest, WithinFileRename) {
 
         int main() {
           Baz baz;
-          baz.[[Foo]] = 1;
-          MACRO(baz.[[Foo]]);
-          int y = baz.[[Foo]];
+          baz.[[F^oo]] = 1;
+          MACRO(baz.[[F^oo]]);
+          int y = baz.[[F^oo]];
         }
       )cpp",
 
@@ -390,15 +544,15 @@ TEST(RenameTest, WithinFileRename) {
       R"cpp(
         template <typename [[^T]]>
         class Foo {
-          [[T]] foo([[T]] arg, [[T]]& ref, [[^T]]* ptr) {
+          [[T^]] foo([[T^]] arg, [[T^]]& ref, [[^T]]* ptr) {
             [[T]] value;
             int number = 42;
-            value = ([[T]])number;
+            value = ([[T^]])number;
             value = static_cast<[[^T]]>(number);
             return value;
           }
-          static void foo([[T]] value) {}
-          [[T]] member;
+          static void foo([[T^]] value) {}
+          [[T^]] member;
         };
       )cpp",
 
@@ -441,25 +595,34 @@ TEST(RenameTest, WithinFileRename) {
         namespace a { namespace b { void foo(); } }
         namespace [[^x]] = a::b;
         void bar() {
-          [[x]]::foo();
+          [[x^]]::foo();
         }
       )cpp",
 
-      // Scope enums.
+      // Enum.
+      R"cpp(
+        enum [[C^olor]] { Red, Green, Blue };
+        void foo() {
+          [[C^olor]] c;
+          c = [[C^olor]]::Blue;
+        }
+      )cpp",
+
+      // Scoped enum.
       R"cpp(
         enum class [[K^ind]] { ABC };
         void ff() {
           [[K^ind]] s;
-          s = [[Kind]]::ABC;
+          s = [[K^ind]]::ABC;
         }
       )cpp",
 
-      // template class in template argument list.
+      // Template class in template argument list.
       R"cpp(
         template<typename T>
         class [[Fo^o]] {};
         template <template<typename> class Z> struct Bar { };
-        template <> struct Bar<[[Foo]]> {};
+        template <> struct Bar<[[F^oo]]> {};
       )cpp",
 
       // Designated initializer.
@@ -490,14 +653,89 @@ TEST(RenameTest, WithinFileRename) {
         };
         Bar bar { .Foo.[[^Field]] = 42 };
       )cpp",
+
+      // Templated alias.
+      R"cpp(
+        template <typename T>
+        class X { T t; };
+
+        template <typename T>
+        using [[Fo^o]] = X<T>;
+
+        void bar() {
+          [[Fo^o]]<int> Bar;
+        }
+      )cpp",
+
+      // Alias.
+      R"cpp(
+        class X {};
+        using [[F^oo]] = X;
+
+        void bar() {
+          [[Fo^o]] Bar;
+        }
+      )cpp",
+
+      // Alias within a namespace.
+      R"cpp(
+        namespace x { class X {}; }
+        namespace ns {
+        using [[Fo^o]] = x::X;
+        }
+
+        void bar() {
+          ns::[[Fo^o]] Bar;
+        }
+      )cpp",
+
+      // Alias within macros.
+      R"cpp(
+        namespace x { class Old {}; }
+        namespace ns {
+        #define REF(alias) alias alias_var;
+
+        #define ALIAS(old) \
+          using old##Alias = x::old; \
+          REF(old##Alias);
+
+        ALIAS(Old);
+
+        [[Old^Alias]] old_alias;
+        }
+
+        void bar() {
+          ns::[[Old^Alias]] Bar;
+        }
+      )cpp",
+
+      // User defined conversion.
+      R"cpp(
+        class [[F^oo]] {
+        public:
+          [[F^oo]]() {}
+        };
+
+        class Baz {
+        public:
+          operator [[F^oo]]() {
+            return [[F^oo]]();
+          }
+        };
+
+        int main() {
+          Baz boo;
+          [[F^oo]] foo = static_cast<[[F^oo]]>(boo);
+        }
+      )cpp",
   };
+  llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
     SCOPED_TRACE(T);
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     auto AST = TU.build();
-    llvm::StringRef NewName = "abcde";
     for (const auto &RenamePos : Code.points()) {
       auto RenameResult =
           rename({RenamePos, NewName, AST, testPath(TU.Filename)});
@@ -630,6 +868,59 @@ TEST(RenameTest, Renameable) {
          class Foo {};
        )cpp",
        "no symbol", !HeaderFile, nullptr},
+
+      {R"cpp(
+        namespace {
+        int Conflict;
+        int Va^r;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        int Conflict;
+        int Va^r;
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        class Foo {
+          int Conflict;
+          int Va^r;
+        };
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        enum E {
+          Conflict,
+          Fo^o,
+        };
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        int Conflict;
+        enum E { // transparent context.
+          F^oo,
+        };
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(// FIXME: detecting local variables is not supported yet.
+        void func() {
+          int Conflict;
+          int [[V^ar]];
+        }
+      )cpp",
+       nullptr, !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(// Trying to rename into the same name, SameName == SameName.
+        void func() {
+          int S^ameName;
+        }
+      )cpp",
+       "new name is the same", !HeaderFile, nullptr, "SameName"},
   };
 
   for (const auto& Case : Cases) {
@@ -732,7 +1023,7 @@ TEST(RenameTest, PrepareRename) {
 
   auto Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
                                   /*NewName=*/llvm::None, {/*CrossFile=*/true});
-  // verify that for multi-file rename, we only return main-file occurrences.
+  // Verify that for multi-file rename, we only return main-file occurrences.
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   // We don't know the result is complete in prepareRename (passing a nullptr
   // index internally), so GlobalChanges should be empty.
@@ -740,7 +1031,7 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(FooCC.ranges(),
               testing::UnorderedElementsAreArray(Results->LocalChanges));
 
-  // verify name validation.
+  // Name validation.
   Results =
       runPrepareRename(Server, FooCCPath, FooCC.point(),
                        /*NewName=*/std::string("int"), {/*CrossFile=*/true});
@@ -748,7 +1039,7 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("keyword"));
 
-  // single-file rename on global symbols, we should report an error.
+  // Single-file rename on global symbols, we should report an error.
   Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
                              /*NewName=*/llvm::None, {/*CrossFile=*/false});
   EXPECT_FALSE(Results);

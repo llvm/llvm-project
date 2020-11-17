@@ -10,8 +10,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/SetVector.h"
@@ -1211,13 +1210,15 @@ void ConversionPatternRewriterImpl::notifyBlocksBeingMerged(Block *block,
 
 void ConversionPatternRewriterImpl::notifyRegionIsBeingInlinedBefore(
     Region &region, Region &parent, Region::iterator before) {
-  Block *origPrevBlock = nullptr;
-  for (auto &pair : llvm::enumerate(region)) {
-    Block &block = pair.value();
+  if (region.empty())
+    return;
+  Block *laterBlock = &region.back();
+  for (auto &earlierBlock : llvm::drop_begin(llvm::reverse(region), 1)) {
     blockActions.push_back(
-        BlockAction::getMove(&block, {&region, origPrevBlock}));
-    origPrevBlock = &block;
+        BlockAction::getMove(laterBlock, {&region, &earlierBlock}));
+    laterBlock = &earlierBlock;
   }
+  blockActions.push_back(BlockAction::getMove(laterBlock, {&region, nullptr}));
 }
 
 void ConversionPatternRewriterImpl::notifyRegionWasClonedBefore(

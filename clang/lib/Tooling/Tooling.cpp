@@ -319,12 +319,6 @@ ToolInvocation::~ToolInvocation() {
     delete Action;
 }
 
-void ToolInvocation::mapVirtualFile(StringRef FilePath, StringRef Content) {
-  SmallString<1024> PathStorage;
-  llvm::sys::path::native(FilePath, PathStorage);
-  MappedFileContents[PathStorage] = Content;
-}
-
 bool ToolInvocation::run() {
   std::vector<const char*> Argv;
   for (const std::string &Str : CommandLine)
@@ -359,14 +353,6 @@ bool ToolInvocation::run() {
     return false;
   std::unique_ptr<CompilerInvocation> Invocation(
       newInvocation(&Diagnostics, *CC1Args, BinaryName));
-  // FIXME: remove this when all users have migrated!
-  for (const auto &It : MappedFileContents) {
-    // Inject the code as the given file name into the preprocessor options.
-    std::unique_ptr<llvm::MemoryBuffer> Input =
-        llvm::MemoryBuffer::getMemBuffer(It.getValue());
-    Invocation->getPreprocessorOpts().addRemappedFile(It.getKey(),
-                                                      Input.release());
-  }
   return runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
                        std::move(PCHContainerOps));
 }

@@ -192,13 +192,32 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
   }
   assert(info.pl_event == PL_EVENT_SIGNAL);
 
-  LLDB_LOG(log, "got SIGTRAP, pid = {0}, lwpid = {1}", pid, info.pl_lwpid);
+  LLDB_LOG(log, "got SIGTRAP, pid = {0}, lwpid = {1}, flags = {2:x}", pid,
+           info.pl_lwpid, info.pl_flags);
   NativeThreadFreeBSD *thread = nullptr;
 
   if (info.pl_flags & (PL_FLAG_BORN | PL_FLAG_EXITED)) {
     if (info.pl_flags & PL_FLAG_BORN) {
       LLDB_LOG(log, "monitoring new thread, tid = {0}", info.pl_lwpid);
-      AddThread(info.pl_lwpid);
+      NativeThreadFreeBSD &t = AddThread(info.pl_lwpid);
+
+      // Technically, the FreeBSD kernel copies the debug registers to new
+      // threads.  However, there is a non-negligible delay between acquiring
+      // the DR values and reporting the new thread during which the user may
+      // establish a new watchpoint.  In order to ensure that watchpoints
+      // established during this period are propagated to new threads,
+      // explicitly copy the DR value at the time the new thread is reported.
+      //
+      // See also: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=250954
+
+      llvm::Error error = t.CopyWatchpointsFrom(
+          static_cast<NativeThreadFreeBSD &>(*GetCurrentThread()));
+      if (error) {
+        LLDB_LOG(log, "failed to copy watchpoints to new thread {0}: {1}",
+                 info.pl_lwpid, llvm::toString(std::move(error)));
+        SetState(StateType::eStateInvalid);
+        return;
+      }
     } else /*if (info.pl_flags & PL_FLAG_EXITED)*/ {
       LLDB_LOG(log, "thread exited, tid = {0}", info.pl_lwpid);
       RemoveThread(info.pl_lwpid);
@@ -208,6 +227,22 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
         PtraceWrapper(PT_CONTINUE, pid, reinterpret_cast<void *>(1), 0);
     if (error.Fail())
       SetState(StateType::eStateInvalid);
+    return;
+  }
+
+  if (info.pl_flags & PL_FLAG_EXEC) {
+    Status error = ReinitializeThreads();
+    if (error.Fail()) {
+      SetState(StateType::eStateInvalid);
+      return;
+    }
+
+    // Let our delegate know we have just exec'd.
+    NotifyDidExec();
+
+    for (const auto &thread : m_threads)
+      static_cast<NativeThreadFreeBSD &>(*thread).SetStoppedByExec();
+    SetState(StateType::eStateStopped, true);
     return;
   }
 
@@ -224,6 +259,8 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
 
   if (info.pl_flags & PL_FLAG_SI) {
     assert(info.pl_siginfo.si_signo == SIGTRAP);
+    LLDB_LOG(log, "SIGTRAP siginfo: si_code = {0}, pid = {1}",
+             info.pl_siginfo.si_code, info.pl_siginfo.si_pid);
 
     switch (info.pl_siginfo.si_code) {
     case TRAP_BRKPT:
@@ -232,7 +269,7 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
         FixupBreakpointPCAsNeeded(*thread);
       }
       SetState(StateType::eStateStopped, true);
-      break;
+      return;
     case TRAP_TRACE:
       if (thread) {
         auto &regctx = static_cast<NativeRegisterContextFreeBSD &>(
@@ -256,9 +293,14 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
       }
 
       SetState(StateType::eStateStopped, true);
-      break;
+      return;
     }
   }
+
+  // Either user-generated SIGTRAP or an unknown event that would
+  // otherwise leave the debugger hanging.
+  LLDB_LOG(log, "unknown SIGTRAP, passing to generic handler");
+  MonitorSignal(pid, SIGTRAP);
 }
 
 void NativeProcessFreeBSD::MonitorSignal(lldb::pid_t pid, int signal) {

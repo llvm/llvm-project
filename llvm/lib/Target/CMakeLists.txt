@@ -11,6 +11,12 @@ add_llvm_component_library(LLVMTarget
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Target
+
+  LINK_COMPONENTS
+  Analysis
+  Core
+  MC
+  Support
   )
 
 # When building shared objects for each target there are some internal APIs

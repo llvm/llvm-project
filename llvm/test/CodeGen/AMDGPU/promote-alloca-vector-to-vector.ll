@@ -9,7 +9,7 @@
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32_e32 [[RES:v[0-9]+]], 4.0,
-; GCN: store_dword v[{{[0-9:]+}}], [[RES]]
+; GCN: store_dword v{{.+}}, [[RES]]
 
 ; OPT:  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT:  store <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, <4 x float> addrspace(5)* %alloca, align 4
@@ -44,7 +44,7 @@ entry:
 ; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
 ; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
 ; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
-; GCN:     store_dwordx4 v[{{[0-9:]+}}],
+; GCN:     store_dwordx4 v{{.+}},
 
 ; OPT: %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT: %0 = load <4 x float>, <4 x float> addrspace(5)* %alloca

@@ -1629,6 +1629,95 @@ TEST_P(ASTMatchersTest, ArgumentCountIs_CXXConstructExpr) {
                  Constructor1Arg));
 }
 
+TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
+
+  // Member functions:
+  {
+    auto Code = "template <typename T> struct S{ void mem(); }; template "
+                "<typename T> void x() { S<T> s; s.mem(); }";
+
+    EXPECT_TRUE(matches(
+        Code,
+        cxxDependentScopeMemberExpr(
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
+            memberHasSameNameAsBoundNode("templMem"))));
+
+    EXPECT_TRUE(
+        matches(Code, cxxDependentScopeMemberExpr(hasMemberName("mem"))));
+  }
+
+  // Member variables:
+  {
+    auto Code = "template <typename T> struct S{ int mem; }; template "
+                "<typename T> void x() { S<T> s; s.mem; }";
+
+    EXPECT_TRUE(
+        matches(Code, cxxDependentScopeMemberExpr(hasMemberName("mem"))));
+
+    EXPECT_TRUE(matches(
+        Code,
+        cxxDependentScopeMemberExpr(
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
+            memberHasSameNameAsBoundNode("templMem"))));
+  }
+
+  // static member variables:
+  {
+    auto Code = "template <typename T> struct S{ static int mem; }; template "
+                "<typename T> void x() { S<T> s; s.mem; }";
+
+    EXPECT_TRUE(
+        matches(Code, cxxDependentScopeMemberExpr(hasMemberName("mem"))));
+
+    EXPECT_TRUE(matches(
+        Code,
+        cxxDependentScopeMemberExpr(
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
+            memberHasSameNameAsBoundNode("templMem"))));
+  }
+  {
+    auto Code = R"cpp(
+template <typename T>
+struct S {
+  bool operator==(int) const { return true; }
+};
+
+template <typename T>
+void func(T t) {
+  S<T> s;
+  s.operator==(1);
+}
+)cpp";
+
+    EXPECT_TRUE(matches(
+        Code, cxxDependentScopeMemberExpr(hasMemberName("operator=="))));
+  }
+
+  // other named decl:
+  {
+    auto Code = "template <typename T> struct S{ static int mem; }; struct "
+                "mem{}; template "
+                "<typename T> void x() { S<T> s; s.mem; }";
+
+    EXPECT_TRUE(matches(
+        Code,
+        translationUnitDecl(has(cxxRecordDecl(hasName("mem"))),
+                            hasDescendant(cxxDependentScopeMemberExpr()))));
+
+    EXPECT_FALSE(matches(
+        Code,
+        translationUnitDecl(has(cxxRecordDecl(hasName("mem")).bind("templMem")),
+                            hasDescendant(cxxDependentScopeMemberExpr(
+                                memberHasSameNameAsBoundNode("templMem"))))));
+  }
+}
+
 TEST(ASTMatchersTest, ArgumentCountIs_CXXUnresolvedConstructExpr) {
   const auto *Code =
       "template <typename T> struct S{}; template <typename T> void "

@@ -140,6 +140,11 @@ TEST(UnivariateLinearPolyBase, Univariate3D_Add) {
   Univariate3D X(42, 0);
   X += Univariate3D(42, 0);
   EXPECT_EQ(X, Univariate3D(84, 0));
+
+  // Test 'getWithIncrement' method
+  EXPECT_EQ(Univariate3D(42, 0).getWithIncrement(1), Univariate3D(43, 0));
+  EXPECT_EQ(Univariate3D(42, 1).getWithIncrement(2), Univariate3D(44, 1));
+  EXPECT_EQ(Univariate3D(42, 2).getWithIncrement(3), Univariate3D(45, 2));
 }
 
 TEST(UnivariateLinearPolyBase, Univariate3D_Sub) {
@@ -153,6 +158,11 @@ TEST(UnivariateLinearPolyBase, Univariate3D_Sub) {
   Univariate3D X(84, 0);
   X -= Univariate3D(42, 0);
   EXPECT_EQ(X, Univariate3D(42, 0));
+
+  // Test 'getWithDecrement' method
+  EXPECT_EQ(Univariate3D(43, 0).getWithDecrement(1), Univariate3D(42, 0));
+  EXPECT_EQ(Univariate3D(44, 1).getWithDecrement(2), Univariate3D(42, 1));
+  EXPECT_EQ(Univariate3D(45, 2).getWithDecrement(3), Univariate3D(42, 2));
 }
 
 TEST(UnivariateLinearPolyBase, Univariate3D_Scale) {

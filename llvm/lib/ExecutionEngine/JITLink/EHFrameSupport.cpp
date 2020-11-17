@@ -10,6 +10,8 @@
 #include "EHFrameSupportImpl.h"
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Config/config.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -629,150 +631,18 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
   return PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
 }
 
-// Determine whether we can register EH tables.
-#if (defined(__GNUC__) && !defined(__ARM_EABI__) && !defined(__ia64__) &&      \
-     !(defined(_AIX) && defined(__ibmxl__)) && !defined(__MVS__) &&            \
-     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__))
-#define HAVE_EHTABLE_SUPPORT 1
-#else
-#define HAVE_EHTABLE_SUPPORT 0
-#endif
-
-#if HAVE_EHTABLE_SUPPORT
-extern "C" void __register_frame(const void *);
-extern "C" void __deregister_frame(const void *);
-
-Error registerFrameWrapper(const void *P) {
-  __register_frame(P);
-  return Error::success();
-}
-
-Error deregisterFrameWrapper(const void *P) {
-  __deregister_frame(P);
-  return Error::success();
-}
-
-#else
-
-// The building compiler does not have __(de)register_frame but
-// it may be found at runtime in a dynamically-loaded library.
-// For example, this happens when building LLVM with Visual C++
-// but using the MingW runtime.
-static Error registerFrameWrapper(const void *P) {
-  static void((*RegisterFrame)(const void *)) = 0;
-
-  if (!RegisterFrame)
-    *(void **)&RegisterFrame =
-        llvm::sys::DynamicLibrary::SearchForAddressOfSymbol("__register_frame");
-
-  if (RegisterFrame) {
-    RegisterFrame(P);
-    return Error::success();
-  }
-
-  return make_error<JITLinkError>("could not register eh-frame: "
-                                  "__register_frame function not found");
-}
-
-static Error deregisterFrameWrapper(const void *P) {
-  static void((*DeregisterFrame)(const void *)) = 0;
-
-  if (!DeregisterFrame)
-    *(void **)&DeregisterFrame =
-        llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(
-            "__deregister_frame");
-
-  if (DeregisterFrame) {
-    DeregisterFrame(P);
-    return Error::success();
-  }
-
-  return make_error<JITLinkError>("could not deregister eh-frame: "
-                                  "__deregister_frame function not found");
-}
-#endif
-
-#ifdef __APPLE__
-
-template <typename HandleFDEFn>
-Error walkAppleEHFrameSection(const char *const SectionStart,
-                              size_t SectionSize,
-                              HandleFDEFn HandleFDE) {
-  const char *CurCFIRecord = SectionStart;
-  const char *End = SectionStart + SectionSize;
-  uint64_t Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
-
-  while (CurCFIRecord != End && Size != 0) {
-    const char *OffsetField = CurCFIRecord + (Size == 0xffffffff ? 12 : 4);
-    if (Size == 0xffffffff)
-      Size = *reinterpret_cast<const uint64_t *>(CurCFIRecord + 4) + 12;
-    else
-      Size += 4;
-    uint32_t Offset = *reinterpret_cast<const uint32_t *>(OffsetField);
-
-    LLVM_DEBUG({
-      dbgs() << "Registering eh-frame section:\n";
-      dbgs() << "Processing " << (Offset ? "FDE" : "CIE") << " @"
-             << (void *)CurCFIRecord << ": [";
-      for (unsigned I = 0; I < Size; ++I)
-        dbgs() << format(" 0x%02" PRIx8, *(CurCFIRecord + I));
-      dbgs() << " ]\n";
-    });
-
-    if (Offset != 0)
-      if (auto Err = HandleFDE(CurCFIRecord))
-        return Err;
-
-    CurCFIRecord += Size;
-
-    Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
-  }
-
-  return Error::success();
-}
-
-#endif // __APPLE__
-
-Error registerEHFrameSection(const void *EHFrameSectionAddr,
-                             size_t EHFrameSectionSize) {
-#ifdef __APPLE__
-  // On Darwin __register_frame has to be called for each FDE entry.
-  return walkAppleEHFrameSection(static_cast<const char *>(EHFrameSectionAddr),
-                                 EHFrameSectionSize,
-                                 registerFrameWrapper);
-#else
-  // On Linux __register_frame takes a single argument:
-  // a pointer to the start of the .eh_frame section.
-
-  // How can it find the end? Because crtendS.o is linked
-  // in and it has an .eh_frame section with four zero chars.
-  return registerFrameWrapper(EHFrameSectionAddr);
-#endif
-}
-
-Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
-                               size_t EHFrameSectionSize) {
-#ifdef __APPLE__
-  return walkAppleEHFrameSection(static_cast<const char *>(EHFrameSectionAddr),
-                                 EHFrameSectionSize,
-                                 deregisterFrameWrapper);
-#else
-  return deregisterFrameWrapper(EHFrameSectionAddr);
-#endif
-}
-
 EHFrameRegistrar::~EHFrameRegistrar() {}
 
 Error InProcessEHFrameRegistrar::registerEHFrames(
     JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
-  return registerEHFrameSection(
+  return orc::registerEHFrameSection(
       jitTargetAddressToPointer<void *>(EHFrameSectionAddr),
       EHFrameSectionSize);
 }
 
 Error InProcessEHFrameRegistrar::deregisterEHFrames(
     JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
-  return deregisterEHFrameSection(
+  return orc::deregisterEHFrameSection(
       jitTargetAddressToPointer<void *>(EHFrameSectionAddr),
       EHFrameSectionSize);
 }

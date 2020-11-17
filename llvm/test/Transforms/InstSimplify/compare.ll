@@ -518,15 +518,6 @@ define i1 @shl1(i32 %x) {
   ret i1 %c
 }
 
-define i1 @shl3(i32 %X) {
-; CHECK-LABEL: @shl3(
-; CHECK-NEXT:    ret i1 false
-;
-  %sub = shl nuw i32 4, %X
-  %cmp = icmp eq i32 %sub, 31
-  ret i1 %cmp
-}
-
 define i1 @lshr1(i32 %x) {
 ; CHECK-LABEL: @lshr1(
 ; CHECK-NEXT:    ret i1 false
@@ -1540,22 +1531,138 @@ define <2 x i1> @icmp_shl_1_ule_signmask_undef2(<2 x i8> %V) {
   ret <2 x i1> %cmp
 }
 
-define i1 @icmp_shl_1_V_eq_31(i32 %V) {
-; CHECK-LABEL: @icmp_shl_1_V_eq_31(
+define i1 @shl_1_cmp_eq_nonpow2(i32 %x) {
+; CHECK-LABEL: @shl_1_cmp_eq_nonpow2(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %shl = shl i32 1, %V
-  %cmp = icmp eq i32 %shl, 31
-  ret i1 %cmp
+  %s = shl i32 1, %x
+  %c = icmp eq i32 %s, 31
+  ret i1 %c
 }
 
-define i1 @icmp_shl_1_V_ne_31(i32 %V) {
-; CHECK-LABEL: @icmp_shl_1_V_ne_31(
+define <2 x i1> @shl_1_cmp_eq_nonpow2_splat(<2 x i32> %x) {
+; CHECK-LABEL: @shl_1_cmp_eq_nonpow2_splat(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %s = shl <2 x i32> <i32 1, i32 1>, %x
+  %c = icmp eq <2 x i32> %s, <i32 31, i32 31>
+  ret <2 x i1> %c
+}
+
+define <2 x i1> @shl_1_cmp_eq_nonpow2_splat_undef(<2 x i32> %x) {
+; CHECK-LABEL: @shl_1_cmp_eq_nonpow2_splat_undef(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %s = shl <2 x i32> <i32 1, i32 1>, %x
+  %c = icmp eq <2 x i32> %s, <i32 31, i32 undef>
+  ret <2 x i1> %c
+}
+
+define i1 @shl_1_cmp_ne_nonpow2(i32 %x) {
+; CHECK-LABEL: @shl_1_cmp_ne_nonpow2(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %shl = shl i32 1, %V
-  %cmp = icmp ne i32 %shl, 31
-  ret i1 %cmp
+  %s = shl i32 1, %x
+  %c = icmp ne i32 %s, 42
+  ret i1 %c
+}
+
+define <2 x i1> @shl_1_cmp_ne_nonpow2_splat(<2 x i32> %x) {
+; CHECK-LABEL: @shl_1_cmp_ne_nonpow2_splat(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %s = shl <2 x i32> <i32 1, i32 1>, %x
+  %c = icmp ne <2 x i32> %s, <i32 42, i32 42>
+  ret <2 x i1> %c
+}
+
+define <2 x i1> @shl_1_cmp_ne_nonpow2_splat_undef(<2 x i32> %x) {
+; CHECK-LABEL: @shl_1_cmp_ne_nonpow2_splat_undef(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %s = shl <2 x i32> <i32 undef, i32 1>, %x
+  %c = icmp ne <2 x i32> %s, <i32 42, i32 undef>
+  ret <2 x i1> %c
+}
+
+define i1 @shl_pow2_cmp_eq_nonpow2(i32 %x) {
+; CHECK-LABEL: @shl_pow2_cmp_eq_nonpow2(
+; CHECK-NEXT:    ret i1 false
+;
+  %s = shl i32 4, %x
+  %c = icmp eq i32 %s, 31
+  ret i1 %c
+}
+
+define <2 x i1> @shl_pow21_cmp_ne_nonpow2_splat_undef(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow21_cmp_ne_nonpow2_splat_undef(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %s = shl <2 x i32> <i32 undef, i32 4>, %x
+  %c = icmp ne <2 x i32> %s, <i32 31, i32 undef>
+  ret <2 x i1> %c
+}
+
+; Negative test - overflowing shift could be zero.
+
+define i1 @shl_pow2_cmp_ne_zero(i32 %x) {
+; CHECK-LABEL: @shl_pow2_cmp_ne_zero(
+; CHECK-NEXT:    [[S:%.*]] = shl i32 16, [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[S]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = shl i32 16, %x
+  %c = icmp ne i32 %s, 0
+  ret i1 %c
+}
+
+; Negative test - overflowing shift could be zero.
+
+define <2 x i1> @shl_pow2_cmp_ne_zero_splat(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow2_cmp_ne_zero_splat(
+; CHECK-NEXT:    [[S:%.*]] = shl <2 x i32> <i32 16, i32 16>, [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[S]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %s = shl <2 x i32> <i32 16, i32 16>, %x
+  %c = icmp ne <2 x i32> %s, zeroinitializer
+  ret <2 x i1> %c
+}
+
+define i1 @shl_pow2_cmp_eq_zero_nuw(i32 %x) {
+; CHECK-LABEL: @shl_pow2_cmp_eq_zero_nuw(
+; CHECK-NEXT:    ret i1 false
+;
+  %s = shl nuw i32 16, %x
+  %c = icmp eq i32 %s, 0
+  ret i1 %c
+}
+
+define <2 x i1> @shl_pow2_cmp_ne_zero_nuw_splat_undef(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow2_cmp_ne_zero_nuw_splat_undef(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %s = shl nuw <2 x i32> <i32 16, i32 undef>, %x
+  %c = icmp ne <2 x i32> %s, <i32 undef, i32 0>
+  ret <2 x i1> %c
+}
+
+define i1 @shl_pow2_cmp_ne_zero_nsw(i32 %x) {
+; CHECK-LABEL: @shl_pow2_cmp_ne_zero_nsw(
+; CHECK-NEXT:    ret i1 true
+;
+  %s = shl nsw i32 16, %x
+  %c = icmp ne i32 %s, 0
+  ret i1 %c
+}
+
+define <2 x i1> @shl_pow2_cmp_eq_zero_nsw_splat_undef(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow2_cmp_eq_zero_nsw_splat_undef(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %s = shl nsw <2 x i32> <i32 undef, i32 16>, %x
+  %c = icmp eq <2 x i32> %s, <i32 0, i32 undef>
+  ret <2 x i1> %c
 }
 
 define i1 @tautological1(i32 %A, i32 %B) {

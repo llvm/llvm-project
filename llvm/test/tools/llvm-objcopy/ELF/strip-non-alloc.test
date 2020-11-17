@@ -27,9 +27,9 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
 ProgramHeaders:
   # Use an arbitrary segment type to show that the segment type is unimportant.
-  - Type: 0x61234567
-    Sections:
-      - Section: non_alloc_in_segment
+  - Type:     0x61234567
+    FirstSec: non_alloc_in_segment
+    LastSec:  non_alloc_in_segment
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-objcopy --strip-non-alloc %t2 %t2.out
@@ -57,6 +57,6 @@ Sections:
     Type:    SHT_PROGBITS
     Content: 00
 ProgramHeaders:
-  - Type: 0x61234567
-    Sections:
-      - Section: .text
+  - Type:     0x61234567
+    FirstSec: .text
+    LastSec:  .text

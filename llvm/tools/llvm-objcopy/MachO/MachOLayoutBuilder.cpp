@@ -15,6 +15,14 @@ namespace llvm {
 namespace objcopy {
 namespace macho {
 
+StringTableBuilder::Kind
+MachOLayoutBuilder::getStringTableBuilderKind(const Object &O, bool Is64Bit) {
+  if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT)
+    return Is64Bit ? StringTableBuilder::MachO64 : StringTableBuilder::MachO;
+  return Is64Bit ? StringTableBuilder::MachO64Linked
+                 : StringTableBuilder::MachOLinked;
+}
+
 uint32_t MachOLayoutBuilder::computeSizeOfCmds() const {
   uint32_t Size = 0;
   for (const LoadCommand &LC : O.LoadCommands) {
@@ -148,7 +156,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
              "Section's address cannot be smaller than Segment's one");
       uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
       if (IsObjectFile) {
-        if (Sec->isVirtualSection()) {
+        if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
           uint64_t PaddingSize =
@@ -158,7 +166,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           SegFileSize += PaddingSize + Sec->Size;
         }
       } else {
-        if (Sec->isVirtualSection()) {
+        if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
           Sec->Offset = SegOffset + SectOffset;

@@ -50,9 +50,10 @@ define i32 @stack_call_int_szext() {
 ; CHECK-NEXT:    or %s0, -1, (0)1
 ; CHECK-NEXT:    st %s0, 248(, %s11)
 ; CHECK-NEXT:    lea %s34, 65535
-; CHECK-NEXT:    lea %s1, stack_callee_int_szext@lo
-; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s12, stack_callee_int_szext@hi(, %s1)
+; CHECK-NEXT:    lea %s0, stack_callee_int_szext@lo
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea.sl %s12, stack_callee_int_szext@hi(, %s0)
+; CHECK-NEXT:    or %s0, -1, (0)1
 ; CHECK-NEXT:    lea %s1, 255
 ; CHECK-NEXT:    or %s2, 3, (0)1
 ; CHECK-NEXT:    or %s3, 4, (0)1
@@ -73,6 +74,9 @@ define float @stack_call_float() {
 ; CHECK-NEXT:    lea.sl %s0, 1092616192
 ; CHECK-NEXT:    st %s0, 248(, %s11)
 ; CHECK-NEXT:    lea.sl %s34, 1091567616
+; CHECK-NEXT:    lea %s0, stack_callee_float@lo
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea.sl %s12, stack_callee_float@hi(, %s0)
 ; CHECK-NEXT:    lea.sl %s0, 1065353216
 ; CHECK-NEXT:    lea.sl %s1, 1073741824
 ; CHECK-NEXT:    lea.sl %s2, 1077936128
@@ -81,9 +85,6 @@ define float @stack_call_float() {
 ; CHECK-NEXT:    lea.sl %s5, 1086324736
 ; CHECK-NEXT:    lea.sl %s6, 1088421888
 ; CHECK-NEXT:    lea.sl %s7, 1090519040
-; CHECK-NEXT:    lea %s35, stack_callee_float@lo
-; CHECK-NEXT:    and %s35, %s35, (32)0
-; CHECK-NEXT:    lea.sl %s12, stack_callee_float@hi(, %s35)
 ; CHECK-NEXT:    st %s34, 240(, %s11)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -111,4 +112,3 @@ define float @stack_call_float2(float %p0) {
   %r = tail call float @stack_callee_float(float %p0, float %p0, float %p0, float %p0, float %p0, float %p0, float %p0, float %p0, float %p0, float %p0)
   ret float %r
 }
-

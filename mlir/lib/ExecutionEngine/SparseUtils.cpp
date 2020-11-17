@@ -14,6 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
+
+#ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
+
 #include <cctype>
 #include <cinttypes>
 #include <cstdio>
@@ -112,22 +116,23 @@ static void readItem(FILE *file, char *name, uint64_t *i, uint64_t *j,
 // The implementation is *not* thread-safe. Also, only *one* matrix file can
 // be open at the time. A matrix file must be closed before reading in a next.
 //
-// Note that input parameters mimic the layout of a MemRef<T>:
+// Note that input parameters in the "MLIRized" version of a function mimic
+// the data layout of a MemRef<T>:
+//
 //   struct MemRef {
 //     T *base;
 //     T *data;
 //     int64_t off;
 //   }
+//
 //===----------------------------------------------------------------------===//
 
 // Currently open matrix. This is *not* thread-safe or re-entrant.
 static FILE *sparseFile = nullptr;
 static char *sparseFilename = nullptr;
 
-extern "C" void openMatrix(char *filename, uint64_t *mbase, uint64_t *mdata,
-                           int64_t moff, uint64_t *nbase, uint64_t *ndata,
-                           int64_t noff, uint64_t *nnzbase, uint64_t *nnzdata,
-                           int64_t nnzoff) {
+extern "C" void openMatrixC(char *filename, uint64_t *mdata, uint64_t *ndata,
+                            uint64_t *nnzdata) {
   if (sparseFile != nullptr) {
     fprintf(stderr, "Other file still open %s vs. %s\n", sparseFilename,
             filename);
@@ -142,14 +147,28 @@ extern "C" void openMatrix(char *filename, uint64_t *mbase, uint64_t *mdata,
   readHeader(sparseFile, filename, mdata, ndata, nnzdata);
 }
 
-extern "C" void readMatrixItem(uint64_t *ibase, uint64_t *idata, int64_t ioff,
-                               uint64_t *jbase, uint64_t *jdata, int64_t joff,
-                               double *dbase, double *ddata, int64_t doff) {
+// "MLIRized" version.
+extern "C" void openMatrix(char *filename, uint64_t *mbase, uint64_t *mdata,
+                           int64_t moff, uint64_t *nbase, uint64_t *ndata,
+                           int64_t noff, uint64_t *nnzbase, uint64_t *nnzdata,
+                           int64_t nnzoff) {
+  openMatrixC(filename, mdata, ndata, nnzdata);
+}
+
+extern "C" void readMatrixItemC(uint64_t *idata, uint64_t *jdata,
+                                double *ddata) {
   if (sparseFile == nullptr) {
     fprintf(stderr, "Cannot read item from unopened matrix\n");
     exit(1);
   }
   readItem(sparseFile, sparseFilename, idata, jdata, ddata);
+}
+
+// "MLIRized" version.
+extern "C" void readMatrixItem(uint64_t *ibase, uint64_t *idata, int64_t ioff,
+                               uint64_t *jbase, uint64_t *jdata, int64_t joff,
+                               double *dbase, double *ddata, int64_t doff) {
+  readMatrixItemC(idata, jdata, ddata);
 }
 
 extern "C" void closeMatrix() {
@@ -170,3 +189,5 @@ extern "C" char *getMatrix(uint64_t id) {
   char *env = getenv(var);
   return env;
 }
+
+#endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS

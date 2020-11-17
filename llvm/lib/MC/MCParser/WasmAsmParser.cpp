@@ -116,6 +116,8 @@ public:
 
     auto Kind = StringSwitch<Optional<SectionKind>>(Name)
                     .StartsWith(".data", SectionKind::getData())
+                    .StartsWith(".tdata", SectionKind::getThreadData())
+                    .StartsWith(".tbss", SectionKind::getThreadBSS())
                     .StartsWith(".rodata", SectionKind::getReadOnly())
                     .StartsWith(".text", SectionKind::getText())
                     .StartsWith(".custom_section", SectionKind::getMetadata())

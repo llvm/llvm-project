@@ -436,10 +436,10 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
       // The product of a negative number and a non-negative number is either
       // negative or zero.
       if (!isKnownNonNegative)
-        isKnownNegative = (isKnownNegativeOp1 && isKnownNonNegativeOp0 &&
-                           isKnownNonZero(Op0, Depth, Q)) ||
-                          (isKnownNegativeOp0 && isKnownNonNegativeOp1 &&
-                           isKnownNonZero(Op1, Depth, Q));
+        isKnownNegative =
+            (isKnownNegativeOp1 && isKnownNonNegativeOp0 &&
+             Known2.isNonZero()) ||
+            (isKnownNegativeOp0 && isKnownNonNegativeOp1 && Known.isNonZero());
     }
   }
 
@@ -978,26 +978,23 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
 /// Compute known bits from a shift operator, including those with a
 /// non-constant shift amount. Known is the output of this function. Known2 is a
-/// pre-allocated temporary with the same bit width as Known. KZF and KOF are
-/// operator-specific functions that, given the known-zero or known-one bits
-/// respectively, and a shift amount, compute the implied known-zero or
-/// known-one bits of the shift operator's result respectively for that shift
-/// amount. The results from calling KZF and KOF are conservatively combined for
-/// all permitted shift amounts.
+/// pre-allocated temporary with the same bit width as Known and on return
+/// contains the known bit of the shift value source. KF is an
+/// operator-specific function that, given the known-bits and a shift amount,
+/// compute the implied known-bits of the shift operator's result respectively
+/// for that shift amount. The results from calling KF are conservatively
+/// combined for all permitted shift amounts.
 static void computeKnownBitsFromShiftOperator(
     const Operator *I, const APInt &DemandedElts, KnownBits &Known,
     KnownBits &Known2, unsigned Depth, const Query &Q,
-    function_ref<APInt(const APInt &, unsigned)> KZF,
-    function_ref<APInt(const APInt &, unsigned)> KOF) {
+    function_ref<KnownBits(const KnownBits &, const KnownBits &)> KF) {
   unsigned BitWidth = Known.getBitWidth();
-
+  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
   computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
-  if (Known.isConstant()) {
-    unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
 
-    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
-    Known.Zero = KZF(Known.Zero, ShiftAmt);
-    Known.One  = KOF(Known.One, ShiftAmt);
+  if (Known.isConstant()) {
+    Known = KF(Known2, Known);
+
     // If the known bits conflict, this must be an overflowing left shift, so
     // the shift result is poison. We can return anything we want. Choose 0 for
     // the best folding opportunity.
@@ -1040,8 +1037,6 @@ static void computeKnownBitsFromShiftOperator(
       return;
   }
 
-  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
-
   Known.Zero.setAllBits();
   Known.One.setAllBits();
   for (unsigned ShiftAmt = 0; ShiftAmt < BitWidth; ++ShiftAmt) {
@@ -1062,8 +1057,8 @@ static void computeKnownBitsFromShiftOperator(
         continue;
     }
 
-    Known.Zero &= KZF(Known2.Zero, ShiftAmt);
-    Known.One  &= KOF(Known2.One, ShiftAmt);
+    Known = KnownBits::commonBits(
+        Known, KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
   }
 
   // If the known bits conflict, the result is poison. Return a 0 and hope the
@@ -1161,8 +1156,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
 
     // Only known if known in both the LHS and RHS.
-    Known.One &= Known2.One;
-    Known.Zero &= Known2.Zero;
+    Known = KnownBits::commonBits(Known, Known2);
 
     if (SPF == SPF_ABS) {
       // RHS from matchSelectPattern returns the negation part of abs pattern.
@@ -1227,58 +1221,37 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Shl: {
-    // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    auto KZF = [NSW](const APInt &KnownZero, unsigned ShiftAmt) {
-      APInt KZResult = KnownZero << ShiftAmt;
-      KZResult.setLowBits(ShiftAmt); // Low bits known 0.
+    auto KF = [NSW](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      KnownBits Result = KnownBits::shl(KnownVal, KnownAmt);
       // If this shift has "nsw" keyword, then the result is either a poison
       // value or has the same sign bit as the first operand.
-      if (NSW && KnownZero.isSignBitSet())
-        KZResult.setSignBit();
-      return KZResult;
+      if (NSW) {
+        if (KnownVal.Zero.isSignBitSet())
+          Result.Zero.setSignBit();
+        if (KnownVal.One.isSignBitSet())
+          Result.One.setSignBit();
+      }
+      return Result;
     };
-
-    auto KOF = [NSW](const APInt &KnownOne, unsigned ShiftAmt) {
-      APInt KOResult = KnownOne << ShiftAmt;
-      if (NSW && KnownOne.isSignBitSet())
-        KOResult.setSignBit();
-      return KOResult;
-    };
-
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
-                                      KZF, KOF);
+                                      KF);
     break;
   }
   case Instruction::LShr: {
-    // (lshr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
-      APInt KZResult = KnownZero.lshr(ShiftAmt);
-      // High bits known zero.
-      KZResult.setHighBits(ShiftAmt);
-      return KZResult;
+    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      return KnownBits::lshr(KnownVal, KnownAmt);
     };
-
-    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
-      return KnownOne.lshr(ShiftAmt);
-    };
-
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
-                                      KZF, KOF);
+                                      KF);
     break;
   }
   case Instruction::AShr: {
-    // (ashr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
-      return KnownZero.ashr(ShiftAmt);
+    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      return KnownBits::ashr(KnownVal, KnownAmt);
     };
-
-    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
-      return KnownOne.ashr(ShiftAmt);
-    };
-
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
-                                      KZF, KOF);
+                                      KF);
     break;
   }
   case Instruction::Sub: {
@@ -1316,9 +1289,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
     APInt AccConstIndices(BitWidth, 0, /*IsSigned*/ true);
 
     gep_type_iterator GTI = gep_type_begin(I);
-    // If the inbounds keyword is not present, the offsets are added to the
-    // base address with silently-wrapping two’s complement arithmetic.
-    bool IsInBounds = cast<GEPOperator>(I)->isInBounds();
     for (unsigned i = 1, e = I->getNumOperands(); i != e; ++i, ++GTI) {
       // TrailZ can only become smaller, short-circuit if we hit zero.
       if (Known.isUnknown())
@@ -1383,17 +1353,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // to the width of the pointer.
       IndexBits = IndexBits.sextOrTrunc(BitWidth);
 
+      // Note that inbounds does *not* guarantee nsw for the addition, as only
+      // the offset is signed, while the base address is unsigned.
       Known = KnownBits::computeForAddSub(
-          /*Add=*/true,
-          /*NSW=*/IsInBounds, Known, IndexBits);
+          /*Add=*/true, /*NSW=*/false, Known, IndexBits);
     }
     if (!Known.isUnknown() && !AccConstIndices.isNullValue()) {
       KnownBits Index(BitWidth);
       Index.Zero = ~AccConstIndices;
       Index.One = AccConstIndices;
       Known = KnownBits::computeForAddSub(
-          /*Add=*/true,
-          /*NSW=*/IsInBounds, Known, Index);
+          /*Add=*/true, /*NSW=*/false, Known, Index);
     }
     break;
   }
@@ -1516,11 +1486,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Recurse, but cap the recursion to one level, because we don't
         // want to waste time spinning around in loops.
         computeKnownBits(IncValue, Known2, MaxAnalysisRecursionDepth - 1, RecQ);
-        Known.Zero &= Known2.Zero;
-        Known.One &= Known2.One;
+        Known = KnownBits::commonBits(Known, Known2);
         // If all bits have been ruled out, there's no need to check
         // more operands.
-        if (!Known.Zero && !Known.One)
+        if (Known.isUnknown())
           break;
       }
     }
@@ -1542,28 +1511,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       default: break;
-      case Intrinsic::abs:
+      case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-
-        // If the source's MSB is zero then we know the rest of the bits.
-        if (Known2.isNonNegative()) {
-          Known.Zero |= Known2.Zero;
-          Known.One |= Known2.One;
-          break;
-        }
-
-        // Absolute value preserves trailing zero count.
-        Known.Zero.setLowBits(Known2.Zero.countTrailingOnes());
-
-        // If this call is undefined for INT_MIN, the result is positive. We
-        // also know it can't be INT_MIN if there is a set bit that isn't the
-        // sign bit.
-        Known2.One.clearSignBit();
-        if (match(II->getArgOperand(1), m_One()) || Known2.One.getBoolValue())
-          Known.Zero.setSignBit();
-        // FIXME: Handle known negative input?
-        // FIXME: Calculate the negated Known bits and combine them?
+        bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
+        Known = Known2.abs(IntMinIsPoison);
         break;
+      }
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.reverseBits();
@@ -1711,8 +1664,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (!!DemandedRHS) {
       const Value *RHS = Shuf->getOperand(1);
       computeKnownBits(RHS, DemandedRHS, Known2, Depth + 1, Q);
-      Known.One &= Known2.One;
-      Known.Zero &= Known2.Zero;
+      Known = KnownBits::commonBits(Known, Known2);
     }
     break;
   }
@@ -1741,8 +1693,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     DemandedVecElts.clearBit(EltIdx);
     if (!!DemandedVecElts) {
       computeKnownBits(Vec, DemandedVecElts, Known2, Depth + 1, Q);
-      Known.One &= Known2.One;
-      Known.Zero &= Known2.Zero;
+      Known = KnownBits::commonBits(Known, Known2);
     }
     break;
   }

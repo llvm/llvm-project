@@ -288,11 +288,11 @@ spirv::TargetEnvAttr spirv::TargetEnvAttr::get(spirv::VerCapExtAttr triple,
 
 StringRef spirv::TargetEnvAttr::getKindName() { return "target_env"; }
 
-spirv::VerCapExtAttr spirv::TargetEnvAttr::getTripleAttr() {
+spirv::VerCapExtAttr spirv::TargetEnvAttr::getTripleAttr() const {
   return getImpl()->triple.cast<spirv::VerCapExtAttr>();
 }
 
-spirv::Version spirv::TargetEnvAttr::getVersion() {
+spirv::Version spirv::TargetEnvAttr::getVersion() const {
   return getTripleAttr().getVersion();
 }
 
@@ -312,17 +312,19 @@ ArrayAttr spirv::TargetEnvAttr::getCapabilitiesAttr() {
   return getTripleAttr().getCapabilitiesAttr();
 }
 
-spirv::Vendor spirv::TargetEnvAttr::getVendorID() {
+spirv::Vendor spirv::TargetEnvAttr::getVendorID() const {
   return getImpl()->vendorID;
 }
 
-spirv::DeviceType spirv::TargetEnvAttr::getDeviceType() {
+spirv::DeviceType spirv::TargetEnvAttr::getDeviceType() const {
   return getImpl()->deviceType;
 }
 
-uint32_t spirv::TargetEnvAttr::getDeviceID() { return getImpl()->deviceID; }
+uint32_t spirv::TargetEnvAttr::getDeviceID() const {
+  return getImpl()->deviceID;
+}
 
-spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() {
+spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() const {
   return getImpl()->limits.cast<spirv::ResourceLimitsAttr>();
 }
 

@@ -1010,36 +1010,53 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case LT:
   case GE:
   case GT: {
-    // try to fold eq comparison for 'bit' and 'int', otherwise fallback
-    // to string objects.
-    IntInit *L =
+    // First see if we have two bit, bits, or int.
+    IntInit *LHSi =
         dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get()));
-    IntInit *R =
+    IntInit *RHSi =
         dyn_cast_or_null<IntInit>(RHS->convertInitializerTo(IntRecTy::get()));
 
-    if (L && R) {
+    if (LHSi && RHSi) {
       bool Result;
       switch (getOpcode()) {
-      case EQ: Result = L->getValue() == R->getValue(); break;
-      case NE: Result = L->getValue() != R->getValue(); break;
-      case LE: Result = L->getValue() <= R->getValue(); break;
-      case LT: Result = L->getValue() < R->getValue(); break;
-      case GE: Result = L->getValue() >= R->getValue(); break;
-      case GT: Result = L->getValue() > R->getValue(); break;
+      case EQ: Result = LHSi->getValue() == RHSi->getValue(); break;
+      case NE: Result = LHSi->getValue() != RHSi->getValue(); break;
+      case LE: Result = LHSi->getValue() <= RHSi->getValue(); break;
+      case LT: Result = LHSi->getValue() <  RHSi->getValue(); break;
+      case GE: Result = LHSi->getValue() >= RHSi->getValue(); break;
+      case GT: Result = LHSi->getValue() >  RHSi->getValue(); break;
       default: llvm_unreachable("unhandled comparison");
       }
       return BitInit::get(Result);
     }
 
-    if (getOpcode() == EQ || getOpcode() == NE) {
-      StringInit *LHSs = dyn_cast<StringInit>(LHS);
-      StringInit *RHSs = dyn_cast<StringInit>(RHS);
+    // Next try strings.
+    StringInit *LHSs = dyn_cast<StringInit>(LHS);
+    StringInit *RHSs = dyn_cast<StringInit>(RHS);
 
-      // Make sure we've resolved
-      if (LHSs && RHSs) {
-        bool Equal = LHSs->getValue() == RHSs->getValue();
-        return BitInit::get(getOpcode() == EQ ? Equal : !Equal);
+    if (LHSs && RHSs) {
+      bool Result;
+      switch (getOpcode()) {
+      case EQ: Result = LHSs->getValue() == RHSs->getValue(); break;
+      case NE: Result = LHSs->getValue() != RHSs->getValue(); break;
+      case LE: Result = LHSs->getValue() <= RHSs->getValue(); break;
+      case LT: Result = LHSs->getValue() <  RHSs->getValue(); break;
+      case GE: Result = LHSs->getValue() >= RHSs->getValue(); break;
+      case GT: Result = LHSs->getValue() >  RHSs->getValue(); break;
+      default: llvm_unreachable("unhandled comparison");
       }
+      return BitInit::get(Result);
+////      bool Equal = LHSs->getValue() == RHSs->getValue();
+////      return BitInit::get(getOpcode() == EQ ? Equal : !Equal);
+    }
+
+    // Finally, !eq and !ne can be used with records.
+    if (getOpcode() == EQ || getOpcode() == NE) {
+      DefInit *LHSd = dyn_cast<DefInit>(LHS);
+      DefInit *RHSd = dyn_cast<DefInit>(RHS);
+      if (LHSd && RHSd)
+        return BitInit::get((getOpcode() == EQ) ? LHSd == RHSd
+                                                : LHSd != RHSd);
     }
 
     break;
@@ -1162,7 +1179,7 @@ void TernOpInit::Profile(FoldingSetNodeID &ID) const {
   ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
-static Init *ForeachApply(Init *LHS, Init *MHSe, Init *RHS, Record *CurRec) {
+static Init *ItemApply(Init *LHS, Init *MHSe, Init *RHS, Record *CurRec) {
   MapResolver R(CurRec);
   R.set(LHS, MHSe);
   return RHS->resolveReferences(R);
@@ -1171,7 +1188,7 @@ static Init *ForeachApply(Init *LHS, Init *MHSe, Init *RHS, Record *CurRec) {
 static Init *ForeachDagApply(Init *LHS, DagInit *MHSd, Init *RHS,
                              Record *CurRec) {
   bool Change = false;
-  Init *Val = ForeachApply(LHS, MHSd->getOperator(), RHS, CurRec);
+  Init *Val = ItemApply(LHS, MHSd->getOperator(), RHS, CurRec);
   if (Val != MHSd->getOperator())
     Change = true;
 
@@ -1184,7 +1201,7 @@ static Init *ForeachDagApply(Init *LHS, DagInit *MHSd, Init *RHS,
     if (DagInit *Argd = dyn_cast<DagInit>(Arg))
       NewArg = ForeachDagApply(LHS, Argd, RHS, CurRec);
     else
-      NewArg = ForeachApply(LHS, Arg, RHS, CurRec);
+      NewArg = ItemApply(LHS, Arg, RHS, CurRec);
 
     NewArgs.push_back(std::make_pair(NewArg, ArgName));
     if (Arg != NewArg)
@@ -1206,9 +1223,34 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
     SmallVector<Init *, 8> NewList(MHSl->begin(), MHSl->end());
 
     for (Init *&Item : NewList) {
-      Init *NewItem = ForeachApply(LHS, Item, RHS, CurRec);
+      Init *NewItem = ItemApply(LHS, Item, RHS, CurRec);
       if (NewItem != Item)
         Item = NewItem;
+    }
+    return ListInit::get(NewList, cast<ListRecTy>(Type)->getElementType());
+  }
+
+  return nullptr;
+}
+
+// Evaluates RHS for all elements of MHS, using LHS as a temp variable.
+// Creates a new list with the elements that evaluated to true.
+static Init *FilterHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
+                          Record *CurRec) {
+  if (ListInit *MHSl = dyn_cast<ListInit>(MHS)) {
+    SmallVector<Init *, 8> NewList;
+
+    for (Init *Item : MHSl->getValues()) {
+      Init *Include = ItemApply(LHS, Item, RHS, CurRec);
+      if (!Include)
+        return nullptr;
+      if (IntInit *IncludeInt = dyn_cast_or_null<IntInit>(
+                                    Include->convertInitializerTo(IntRecTy::get()))) {
+        if (IncludeInt->getValue())          
+          NewList.push_back(Item);
+      } else {
+        return nullptr;
+      }
     }
     return ListInit::get(NewList, cast<ListRecTy>(Type)->getElementType());
   }
@@ -1268,6 +1310,12 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     break;
   }
 
+  case FILTER: {
+    if (Init *Result = FilterHelper(LHS, MHS, RHS, getType(), CurRec))
+      return Result;
+    break;
+  }
+
   case IF: {
     if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
                             LHS->convertInitializerTo(IntRecTy::get()))) {
@@ -1322,7 +1370,7 @@ Init *TernOpInit::resolveReferences(Resolver &R) const {
   Init *mhs = MHS->resolveReferences(R);
   Init *rhs;
 
-  if (getOpcode() == FOREACH) {
+  if (getOpcode() == FOREACH || getOpcode() == FILTER) {
     ShadowResolver SR(R);
     SR.addShadow(lhs);
     rhs = RHS->resolveReferences(SR);
@@ -1342,6 +1390,7 @@ std::string TernOpInit::getAsString() const {
   switch (getOpcode()) {
   case SUBST: Result = "!subst"; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
+  case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case IF: Result = "!if"; break;
   case DAG: Result = "!dag"; break;
   }
@@ -2523,6 +2572,47 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
 /// an identifier.
 Init *RecordKeeper::getNewAnonymousName() {
   return StringInit::get("anonymous_" + utostr(AnonCounter++));
+}
+
+// These functions implement the phase timing facility. Starting a timer
+// when one is already running stops the running one.
+
+void RecordKeeper::startTimer(StringRef Name) {
+  if (TimingGroup) {
+    if (LastTimer && LastTimer->isRunning()) {
+      LastTimer->stopTimer();
+      if (BackendTimer) {
+        LastTimer->clear();
+        BackendTimer = false;
+      }
+    }
+
+    LastTimer = new Timer("", Name, *TimingGroup);
+    LastTimer->startTimer();
+  }
+}
+
+void RecordKeeper::stopTimer() {
+  if (TimingGroup) {
+    assert(LastTimer && "No phase timer was started");
+    LastTimer->stopTimer();
+  }
+}
+
+void RecordKeeper::startBackendTimer(StringRef Name) {
+  if (TimingGroup) {
+    startTimer(Name);
+    BackendTimer = true;
+  }
+}
+
+void RecordKeeper::stopBackendTimer() {
+  if (TimingGroup) {
+    if (BackendTimer) {
+      stopTimer();
+      BackendTimer = false;
+    }
+  }
 }
 
 std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(

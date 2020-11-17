@@ -65,6 +65,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -446,7 +447,7 @@ static CodeGenFileType getCodeGenFileType(BackendAction Action) {
   }
 }
 
-static void initTargetOptions(DiagnosticsEngine &Diags,
+static bool initTargetOptions(DiagnosticsEngine &Diags,
                               llvm::TargetOptions &Options,
                               const CodeGenOptions &CodeGenOpts,
                               const clang::TargetOptions &TargetOpts,
@@ -517,11 +518,12 @@ static void initTargetOptions(DiagnosticsEngine &Diags,
   if (Options.BBSections == llvm::BasicBlockSection::List) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
         MemoryBuffer::getFile(CodeGenOpts.BBSections.substr(5));
-    if (!MBOrErr)
+    if (!MBOrErr) {
       Diags.Report(diag::err_fe_unable_to_load_basic_block_sections_file)
           << MBOrErr.getError().message();
-    else
-      Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+      return false;
+    }
+    Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
   }
 
   Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
@@ -572,6 +574,8 @@ static void initTargetOptions(DiagnosticsEngine &Diags,
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0;
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
+
+  return true;
 }
 
 static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts,
@@ -858,7 +862,9 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   CodeGenOpt::Level OptLevel = getCGOptLevel(CodeGenOpts);
 
   llvm::TargetOptions Options;
-  initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts, HSOpts);
+  if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
+                         HSOpts))
+    return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
 }
@@ -1057,67 +1063,6 @@ static void addCoroutinePassesAtO0(ModulePassManager &MPM,
   MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
 }
 
-static void addSanitizersAtO0(ModulePassManager &MPM,
-                              const Triple &TargetTriple,
-                              const LangOptions &LangOpts,
-                              const CodeGenOptions &CodeGenOpts) {
-  if (CodeGenOpts.SanitizeCoverageType ||
-      CodeGenOpts.SanitizeCoverageIndirectCalls ||
-      CodeGenOpts.SanitizeCoverageTraceCmp) {
-    auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-    MPM.addPass(ModuleSanitizerCoveragePass(
-        SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
-        CodeGenOpts.SanitizeCoverageBlocklistFiles));
-  }
-
-  auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
-    MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-    bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
-    MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-        CompileKernel, Recover, CodeGenOpts.SanitizeAddressUseAfterScope)));
-    bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
-    MPM.addPass(
-        ModuleAddressSanitizerPass(CompileKernel, Recover, ModuleUseAfterScope,
-                                   CodeGenOpts.SanitizeAddressUseOdrIndicator));
-  };
-
-  if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
-    ASanPass(SanitizerKind::Address, /*CompileKernel=*/false);
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::KernelAddress)) {
-    ASanPass(SanitizerKind::KernelAddress, /*CompileKernel=*/true);
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
-    bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
-    MPM.addPass(HWAddressSanitizerPass(
-        /*CompileKernel=*/false, Recover));
-  }
-  if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
-    MPM.addPass(HWAddressSanitizerPass(
-        /*CompileKernel=*/true, /*Recover=*/true));
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
-    bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
-    int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
-    MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        MemorySanitizerPass({TrackOrigins, Recover, false})));
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::KernelMemory)) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        MemorySanitizerPass({0, false, /*Kernel=*/true})));
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
-    MPM.addPass(ThreadSanitizerPass());
-    MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
-  }
-}
-
 /// A clean version of `EmitAssembly` that uses the new pass manager.
 ///
 /// Not all features are currently supported in this system, but where
@@ -1254,30 +1199,137 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     bool IsThinLTO = CodeGenOpts.PrepareForThinLTO;
     bool IsLTO = CodeGenOpts.PrepareForLTO;
 
-    if (CodeGenOpts.OptimizationLevel == 0) {
-      // If we reached here with a non-empty index file name, then the index
-      // file was empty and we are not performing ThinLTO backend compilation
-      // (used in testing in a distributed build environment). Drop any the type
-      // test assume sequences inserted for whole program vtables so that
-      // codegen doesn't complain.
-      if (!CodeGenOpts.ThinLTOIndexFile.empty())
-        MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
-                                       /*ImportSummary=*/nullptr,
-                                       /*DropTypeTests=*/true));
-      if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
-        MPM.addPass(GCOVProfilerPass(*Options));
-      if (Optional<InstrProfOptions> Options =
-              getInstrProfOptions(CodeGenOpts, LangOpts))
-        MPM.addPass(InstrProfiling(*Options, false));
+    // If we reached here with a non-empty index file name, then the index
+    // file was empty and we are not performing ThinLTO backend compilation
+    // (used in testing in a distributed build environment). Drop any the type
+    // test assume sequences inserted for whole program vtables so that
+    // codegen doesn't complain.
+    if (!CodeGenOpts.ThinLTOIndexFile.empty())
+      PB.registerPipelineStartEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
+                                           /*ImportSummary=*/nullptr,
+                                           /*DropTypeTests=*/true));
+          });
 
+    if (Level != PassBuilder::OptimizationLevel::O0) {
+      PB.registerPipelineStartEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(createModuleToFunctionPassAdaptor(
+                EntryExitInstrumenterPass(/*PostInlining=*/false)));
+          });
+    }
+
+    // Register callbacks to schedule sanitizer passes at the appropriate part
+    // of the pipeline.
+    if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
+      PB.registerScalarOptimizerLateEPCallback(
+          [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
+            FPM.addPass(BoundsCheckingPass());
+          });
+
+    if (CodeGenOpts.SanitizeCoverageType ||
+        CodeGenOpts.SanitizeCoverageIndirectCalls ||
+        CodeGenOpts.SanitizeCoverageTraceCmp) {
+      PB.registerOptimizerLastEPCallback(
+          [this](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
+            MPM.addPass(ModuleSanitizerCoveragePass(
+                SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
+                CodeGenOpts.SanitizeCoverageBlocklistFiles));
+          });
+    }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
+      int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
+      bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
+      PB.registerOptimizerLastEPCallback(
+          [TrackOrigins, Recover](ModulePassManager &MPM,
+                                  PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
+            MPM.addPass(createModuleToFunctionPassAdaptor(
+                MemorySanitizerPass({TrackOrigins, Recover, false})));
+          });
+    }
+    if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
+      PB.registerOptimizerLastEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(ThreadSanitizerPass());
+            MPM.addPass(
+                createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
+          });
+    }
+
+    auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
+      if (LangOpts.Sanitize.has(Mask)) {
+        bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
+        bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
+        bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+        bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
+        PB.registerOptimizerLastEPCallback(
+            [CompileKernel, Recover, UseAfterScope, ModuleUseAfterScope,
+             UseOdrIndicator](ModulePassManager &MPM,
+                              PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(
+                  RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+              MPM.addPass(ModuleAddressSanitizerPass(CompileKernel, Recover,
+                                                     ModuleUseAfterScope,
+                                                     UseOdrIndicator));
+              MPM.addPass(createModuleToFunctionPassAdaptor(
+                  AddressSanitizerPass(CompileKernel, Recover, UseAfterScope)));
+            });
+      }
+    };
+    ASanPass(SanitizerKind::Address, false);
+    ASanPass(SanitizerKind::KernelAddress, true);
+
+    auto HWASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
+      if (LangOpts.Sanitize.has(Mask)) {
+        bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
+        PB.registerOptimizerLastEPCallback(
+            [CompileKernel, Recover](ModulePassManager &MPM,
+                                     PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(HWAddressSanitizerPass(CompileKernel, Recover));
+            });
+      }
+    };
+    HWASanPass(SanitizerKind::HWAddress, false);
+    HWASanPass(SanitizerKind::KernelHWAddress, true);
+
+    if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
+      PB.registerOptimizerLastEPCallback(
+          [this](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(
+                DataFlowSanitizerPass(LangOpts.SanitizerBlacklistFiles));
+          });
+    }
+
+    if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
+      PB.registerPipelineStartEPCallback(
+          [Options](ModulePassManager &MPM,
+                    PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(GCOVProfilerPass(*Options));
+          });
+    if (Optional<InstrProfOptions> Options =
+            getInstrProfOptions(CodeGenOpts, LangOpts))
+      PB.registerPipelineStartEPCallback(
+          [Options](ModulePassManager &MPM,
+                    PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(InstrProfiling(*Options, false));
+          });
+
+    if (CodeGenOpts.OptimizationLevel == 0) {
       // Build a minimal pipeline based on the semantics required by Clang,
       // which is just that always inlining occurs. Further, disable generating
       // lifetime intrinsics to avoid enabling further optimizations during
       // code generation.
       // However, we need to insert lifetime intrinsics to avoid invalid access
       // caused by multithreaded coroutines.
-      MPM.addPass(
-          AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/LangOpts.Coroutines));
+      PB.registerPipelineStartEPCallback(
+          [this](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            MPM.addPass(AlwaysInlinerPass(
+                /*InsertLifetimeIntrinsics=*/LangOpts.Coroutines));
+          });
 
       // At -O0, we can still do PGO. Add all the requested passes for
       // instrumentation PGO, if requested.
@@ -1289,153 +1341,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
             /* IsCS */ false, PGOOpt->ProfileFile,
             PGOOpt->ProfileRemappingFile);
 
-      // At -O0 we directly run necessary sanitizer passes.
-      if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
-        MPM.addPass(createModuleToFunctionPassAdaptor(BoundsCheckingPass()));
-
-      // Lastly, add semantically necessary passes for LTO.
-      if (IsLTO || IsThinLTO) {
-        MPM.addPass(CanonicalizeAliasesPass());
-        MPM.addPass(NameAnonGlobalPass());
-      }
-    } else {
-      // If we reached here with a non-empty index file name, then the index
-      // file was empty and we are not performing ThinLTO backend compilation
-      // (used in testing in a distributed build environment). Drop any the type
-      // test assume sequences inserted for whole program vtables so that
-      // codegen doesn't complain.
-      if (!CodeGenOpts.ThinLTOIndexFile.empty())
-        PB.registerPipelineStartEPCallback(
-            [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
-                                             /*ImportSummary=*/nullptr,
-                                             /*DropTypeTests=*/true));
-            });
-
-      PB.registerPipelineStartEPCallback(
-          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(
-                EntryExitInstrumenterPass(/*PostInlining=*/false)));
-          });
-
-      // Register callbacks to schedule sanitizer passes at the appropriate part of
-      // the pipeline.
-      if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
-        PB.registerScalarOptimizerLateEPCallback(
-            [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(BoundsCheckingPass());
-            });
-
-      if (CodeGenOpts.SanitizeCoverageType ||
-          CodeGenOpts.SanitizeCoverageIndirectCalls ||
-          CodeGenOpts.SanitizeCoverageTraceCmp) {
-        PB.registerOptimizerLastEPCallback(
-            [this](ModulePassManager &MPM,
-                   PassBuilder::OptimizationLevel Level) {
-              auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-              MPM.addPass(ModuleSanitizerCoveragePass(
-                  SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
-                  CodeGenOpts.SanitizeCoverageBlocklistFiles));
-            });
-      }
-
-      if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
-        int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
-        bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
-        PB.registerOptimizerLastEPCallback(
-            [TrackOrigins, Recover](ModulePassManager &MPM,
-                                    PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
-              MPM.addPass(createModuleToFunctionPassAdaptor(
-                  MemorySanitizerPass({TrackOrigins, Recover, false})));
-            });
-      }
-      if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
-        PB.registerOptimizerLastEPCallback(
-            [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(ThreadSanitizerPass());
-              MPM.addPass(
-                  createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
-            });
-      }
-      if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
-        bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
-        bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
-        bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
-        bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
-        PB.registerOptimizerLastEPCallback(
-            [Recover, UseAfterScope, ModuleUseAfterScope, UseOdrIndicator](
-                ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(
-                  RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-              MPM.addPass(ModuleAddressSanitizerPass(
-                  /*CompileKernel=*/false, Recover, ModuleUseAfterScope,
-                  UseOdrIndicator));
-              MPM.addPass(
-                  createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-                      /*CompileKernel=*/false, Recover, UseAfterScope)));
-            });
-      }
-
-      if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
-        bool Recover =
-            CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
-        PB.registerOptimizerLastEPCallback(
-            [Recover](ModulePassManager &MPM,
-                      PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(HWAddressSanitizerPass(
-                  /*CompileKernel=*/false, Recover));
-            });
-      }
-      if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
-        bool Recover =
-            CodeGenOpts.SanitizeRecover.has(SanitizerKind::KernelHWAddress);
-        PB.registerOptimizerLastEPCallback(
-            [Recover](ModulePassManager &MPM,
-                      PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(HWAddressSanitizerPass(
-                  /*CompileKernel=*/true, Recover));
-            });
-      }
-
-      if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
-        PB.registerPipelineStartEPCallback(
-            [Options](ModulePassManager &MPM,
-                      PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(GCOVProfilerPass(*Options));
-            });
-      if (Optional<InstrProfOptions> Options =
-              getInstrProfOptions(CodeGenOpts, LangOpts))
-        PB.registerPipelineStartEPCallback(
-            [Options](ModulePassManager &MPM,
-                      PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(InstrProfiling(*Options, false));
-            });
-
-      if (IsThinLTO) {
-        MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);
-        MPM.addPass(CanonicalizeAliasesPass());
-        MPM.addPass(NameAnonGlobalPass());
-      } else if (IsLTO) {
-        MPM = PB.buildLTOPreLinkDefaultPipeline(Level);
-        MPM.addPass(CanonicalizeAliasesPass());
-        MPM.addPass(NameAnonGlobalPass());
-      } else {
-        MPM = PB.buildPerModuleDefaultPipeline(Level);
-      }
-    }
-
-    // Add UniqueInternalLinkageNames Pass which renames internal linkage
-    // symbols with unique names.
-    if (CodeGenOpts.UniqueInternalLinkageNames)
-      MPM.addPass(UniqueInternalLinkageNamesPass());
-
-    if (!CodeGenOpts.MemoryProfileOutput.empty()) {
-      MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
-      MPM.addPass(ModuleMemProfilerPass());
-    }
-
-    if (CodeGenOpts.OptimizationLevel == 0) {
       PB.runRegisteredEPCallbacks(MPM, Level, CodeGenOpts.DebugPassManager);
 
       // FIXME: the backends do not handle matrix intrinsics currently. Make
@@ -1446,7 +1351,28 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
             createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass()));
 
       addCoroutinePassesAtO0(MPM, LangOpts, CodeGenOpts);
-      addSanitizersAtO0(MPM, TargetTriple, LangOpts, CodeGenOpts);
+    } else if (IsThinLTO) {
+      MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);
+    } else if (IsLTO) {
+      MPM = PB.buildLTOPreLinkDefaultPipeline(Level);
+    } else {
+      MPM = PB.buildPerModuleDefaultPipeline(Level);
+    }
+
+    // Lastly, add semantically necessary passes for LTO.
+    if (IsLTO || IsThinLTO) {
+      MPM.addPass(CanonicalizeAliasesPass());
+      MPM.addPass(NameAnonGlobalPass());
+    }
+
+    // Add UniqueInternalLinkageNames Pass which renames internal linkage
+    // symbols with unique names.
+    if (CodeGenOpts.UniqueInternalLinkageNames)
+      MPM.addPass(UniqueInternalLinkageNamesPass());
+
+    if (!CodeGenOpts.MemoryProfileOutput.empty()) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
+      MPM.addPass(ModuleMemProfilerPass());
     }
   }
 

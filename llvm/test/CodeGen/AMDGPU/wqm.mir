@@ -142,3 +142,60 @@ body:             |
     S_ENDPGM 0
 
 ...
+
+---
+# Check exit of WQM is still inserted correctly when SCC is live until block end.
+# Critially this tests that compilation does not fail.
+#CHECK-LABEL: name: scc_always_live
+#CHECK: %8:vreg_128 = IMAGE_SAMPLE_V4_V2 %7
+#CHECK-NEXT: S_CMP_EQ_U32 %2, 0, implicit-def $scc
+#CHECK-NEXT: undef %9.sub0:vreg_64 = nsz arcp nofpexcept V_ADD_F32_e64
+#CHECK-NEXT: %9.sub1:vreg_64 = nsz arcp nofpexcept V_MUL_F32_e32
+#CHECK-NEXT: %14:sreg_32_xm0 = COPY $scc
+#CHECK-NEXT: $exec = S_AND_B64 $exec, %13, implicit-def $scc
+#CHECK-NEXT: $scc = COPY %14
+#CHECK-NEXT: %10:vgpr_32 = nsz arcp nofpexcept V_ADD_F32_e64
+#CHECK-NEXT: %11:vreg_128 = IMAGE_SAMPLE_V4_V2
+#CHECK-NEXT: S_CBRANCH_SCC0 %bb.2
+name:            scc_always_live
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr1, $sgpr2, $vgpr1, $vgpr2
+
+    $m0 = COPY $sgpr1
+    %0:vgpr_32 = COPY $vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %8:sgpr_32 = COPY $sgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %2:vgpr_32 = V_INTERP_P1_F32 %0:vgpr_32, 3, 2, implicit $mode, implicit $m0, implicit $exec
+    %3:vgpr_32 = V_INTERP_P1_F32 %1:vgpr_32, 3, 2, implicit $mode, implicit $m0, implicit $exec
+
+    undef %7.sub0:vreg_64 = COPY %2:vgpr_32
+    %7.sub1:vreg_64 = COPY %3:vgpr_32
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %7:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 4, addrspace 4)
+    S_CMP_EQ_U32 %8:sgpr_32, 0, implicit-def $scc
+
+    undef %5.sub0:vreg_64 = nsz arcp nofpexcept V_ADD_F32_e64 0, %4.sub0:vreg_128, 0, %3:vgpr_32, 1, 0, implicit $mode, implicit $exec
+    %5.sub1:vreg_64 = nsz arcp nofpexcept V_MUL_F32_e32 %2, %3, implicit $mode, implicit $exec
+    %6:vgpr_32 = nsz arcp nofpexcept V_ADD_F32_e64 0, %2:vgpr_32, 0, %3:vgpr_32, 1, 0, implicit $mode, implicit $exec
+
+    %9:vreg_128 = IMAGE_SAMPLE_V4_V2 %5:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 4, addrspace 4)
+
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+
+  bb.1:
+    %10:sreg_32 = S_MOV_B32 0
+    BUFFER_STORE_DWORD_OFFSET_exact %6:vgpr_32, %101:sgpr_128, %10:sreg_32, 4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+  bb.2:
+    $vgpr0 = COPY %4.sub0:vreg_128
+    $vgpr1 = COPY %4.sub1:vreg_128
+    $vgpr2 = COPY %9.sub0:vreg_128
+    $vgpr3 = COPY %9.sub1:vreg_128
+    SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+...

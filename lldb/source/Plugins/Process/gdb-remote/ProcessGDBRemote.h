@@ -175,6 +175,8 @@ public:
                      llvm::MutableArrayRef<uint8_t> &buffer,
                      size_t offset = 0) override;
 
+  llvm::Expected<TraceTypeInfo> GetSupportedTraceType() override;
+
   Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) override;
 
   Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;

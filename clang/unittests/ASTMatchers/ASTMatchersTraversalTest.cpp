@@ -2214,6 +2214,23 @@ void instantiate()
   (void)timesTwo<double>(2);
 }
 
+template class TemplStruct<float>;
+
+extern template class TemplStruct<long>;
+
+template<> class TemplStruct<bool> {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+  void boolSpecializationMethodOnly() {}
+private:
+  bool m_t;
+};
+
+template float timesTwo(float);
+template<> bool timesTwo<bool>(bool){
+  return true;
+}
 )cpp";
   {
     auto M = cxxRecordDecl(hasName("TemplStruct"),
@@ -2240,6 +2257,77 @@ void instantiate()
                      hasParameter(0, parmVarDecl(hasType(asString("double")))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // Match on the integer literal in the explicit instantiation:
+    auto MDef =
+        functionDecl(hasName("timesTwo"),
+                     hasParameter(0, parmVarDecl(hasType(asString("float")))),
+                     hasDescendant(integerLiteral(equals(2))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MDef)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MDef)));
+
+    auto MTempl =
+        functionDecl(hasName("timesTwo"),
+                     hasTemplateArgument(0, refersToType(asString("float"))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MTempl)));
+    // TODO: If we could match on explicit instantiations of function templates,
+    // this would be EXPECT_TRUE.
+    EXPECT_FALSE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MTempl)));
+  }
+  {
+    auto M = functionDecl(hasName("timesTwo"),
+                          hasParameter(0, parmVarDecl(hasType(booleanType()))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // Match on the field within the explicit instantiation:
+    auto MRecord = cxxRecordDecl(hasName("TemplStruct"),
+                                 has(fieldDecl(hasType(asString("float")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MRecord)));
+    EXPECT_FALSE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MRecord)));
+
+    // Match on the explicit template instantiation itself:
+    auto MTempl = classTemplateSpecializationDecl(
+        hasName("TemplStruct"),
+        hasTemplateArgument(0,
+                            templateArgument(refersToType(asString("float")))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MTempl)));
+    EXPECT_TRUE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MTempl)));
+  }
+  {
+    // The template argument is matchable, but the instantiation is not:
+    auto M = classTemplateSpecializationDecl(
+        hasName("TemplStruct"),
+        hasTemplateArgument(0,
+                            templateArgument(refersToType(asString("float")))),
+        has(cxxConstructorDecl(hasName("TemplStruct"))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // The template argument is matchable, but the instantiation is not:
+    auto M = classTemplateSpecializationDecl(
+        hasName("TemplStruct"),
+        hasTemplateArgument(0,
+                            templateArgument(refersToType(asString("long")))),
+        has(cxxConstructorDecl(hasName("TemplStruct"))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // Explicit specialization is written in source and it matches:
+    auto M = classTemplateSpecializationDecl(
+        hasName("TemplStruct"),
+        hasTemplateArgument(0, templateArgument(refersToType(booleanType()))),
+        has(cxxConstructorDecl(hasName("TemplStruct"))),
+        has(cxxMethodDecl(hasName("boolSpecializationMethodOnly"))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
 }
 
@@ -2284,6 +2372,11 @@ void foo()
                              callExpr(has(callExpr(traverse(
                                  TK_AsIs, callExpr(has(implicitCastExpr(
                                               has(floatLiteral())))))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreImplicitCastsAndParentheses,
+               traverse(TK_AsIs, implicitCastExpr(has(floatLiteral()))))));
 }
 
 TEST(Traversal, traverseMatcherThroughImplicit) {
@@ -3249,10 +3342,9 @@ TEST(MatcherMemoize, HasDiffersFromHasDescendant) {
   EXPECT_TRUE(matches(
     code,
     cxxThrowExpr(hasDescendant(integerLiteral()))));
-  EXPECT_TRUE(notMatches(code, 
-    cxxThrowExpr(allOf(
-      hasDescendant(integerLiteral()),
-      has(integerLiteral())))));
+  EXPECT_TRUE(
+      notMatches(code, cxxThrowExpr(allOf(hasDescendant(integerLiteral()),
+                                          has(integerLiteral())))));
 }
 TEST(HasAncestor, MatchesAllAncestors) {
   EXPECT_TRUE(matches(
@@ -3720,24 +3812,24 @@ TEST(CXXNewExpr, PlacementArgs) {
   StatementMatcher IsPlacementNew = cxxNewExpr(hasAnyPlacementArg(anything()));
 
   EXPECT_TRUE(matches(R"(
-    void* operator new(decltype(sizeof(void*)), void*); 
+    void* operator new(decltype(sizeof(void*)), void*);
     int *foo(void* Storage) {
-      return new (Storage) int; 
+      return new (Storage) int;
     })",
                       IsPlacementNew));
 
   EXPECT_TRUE(matches(R"(
-    void* operator new(decltype(sizeof(void*)), void*, unsigned); 
+    void* operator new(decltype(sizeof(void*)), void*, unsigned);
     int *foo(void* Storage) {
-      return new (Storage, 16) int; 
+      return new (Storage, 16) int;
     })",
                       cxxNewExpr(hasPlacementArg(
                           1, ignoringImpCasts(integerLiteral(equals(16)))))));
 
   EXPECT_TRUE(notMatches(R"(
-    void* operator new(decltype(sizeof(void*)), void*); 
+    void* operator new(decltype(sizeof(void*)), void*);
     int *foo(void* Storage) {
-      return new int; 
+      return new int;
     })",
                          IsPlacementNew));
 }

@@ -14,6 +14,7 @@
 !   2.11 Parallel Loop
 !   2.11 Kernels Loop
 !   2.11 Serial Loop
+!   2.14.3 Set
 !   2.16.13 Wait
 
 program openacc_clause_validity
@@ -41,6 +42,32 @@ program openacc_clause_validity
   !$acc init device_type(i)
   !$acc init device_type(2, i, j)
   !$acc init device_num(i) device_type(i, j) if(ifCondition)
+
+  !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
+  !$acc set
+
+  !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
+  !$acc set if(.TRUE.)
+
+  !ERROR: At most one DEFAULT_ASYNC clause can appear on the SET directive
+  !$acc set default_async(2) default_async(1)
+
+  !ERROR: At most one DEFAULT_ASYNC clause can appear on the SET directive
+  !$acc set default_async(2) default_async(1)
+
+  !ERROR: At most one DEVICE_NUM clause can appear on the SET directive
+  !$acc set device_num(1) device_num(i)
+
+  !ERROR: At most one DEVICE_TYPE clause can appear on the SET directive
+  !$acc set device_type(i) device_type(2, i, j)
+
+  !$acc set default_async(2)
+  !$acc set default_async(i)
+  !$acc set device_num(1)
+  !$acc set device_num(i)
+  !$acc set device_type(i)
+  !$acc set device_type(2, i, j)
+  !$acc set device_num(1) default_async(2) device_type(2, i, j)
 
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data

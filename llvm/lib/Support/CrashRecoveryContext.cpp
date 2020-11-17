@@ -442,6 +442,27 @@ void CrashRecoveryContext::HandleExit(int RetCode) {
   llvm_unreachable("Most likely setjmp wasn't called!");
 }
 
+bool CrashRecoveryContext::throwIfCrash(int RetCode) {
+#if defined(_WIN32)
+  // On Windows, the high bits are reserved for kernel return codes. Values
+  // starting with 0x80000000 are reserved for "warnings"; values of 0xC0000000
+  // and up are for "errors". In practice, both are interpreted as a
+  // non-continuable signal.
+  unsigned Code = ((unsigned)RetCode & 0xF0000000) >> 28;
+  if (Code != 0xC && Code != 8)
+    return false;
+  ::RaiseException(RetCode, 0, 0, NULL);
+#else
+  // On Unix, signals are represented by return codes of 128 or higher.
+  // Exit code 128 is a reserved value and should not be raised as a signal.
+  if (RetCode <= 128)
+    return false;
+  llvm::sys::unregisterHandlers();
+  raise(RetCode - 128);
+#endif
+  return true;
+}
+
 // FIXME: Portability.
 static void setThreadBackgroundPriority() {
 #ifdef __APPLE__

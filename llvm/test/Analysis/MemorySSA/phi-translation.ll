@@ -475,8 +475,8 @@ cleanup:                                          ; preds = %while.body, %while.
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 
-define void @another_loop_clobber() {
-; CHECK-LABEL: void @another_loop_clobber
+define void @another_loop_clobber_inc() {
+; CHECK-LABEL: void @another_loop_clobber_inc
 ; CHECK-LABEL: loop.header:
 ; CHECK-NEXT:  ; 4 = MemoryPhi({entry,1},{cond.read,3})
 
@@ -507,6 +507,45 @@ cond.read:                                        ; preds = %while.cond
   %use = load i32, i32* %ptr.1, align 4
   %c.2 = call i1 @cond(i32 %use)
   %ptr.10 = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i32 %inc
+  store i32 10, i32* %ptr.2, align 4
+  br i1 %c.2, label %loop.header, label %cleanup
+
+cleanup:
+  ret void
+}
+
+define void @another_loop_clobber_dec() {
+; CHECK-LABEL: void @another_loop_clobber_dec
+; CHECK-LABEL: loop.header:
+; CHECK-NEXT:  ; 4 = MemoryPhi({entry,1},{cond.read,3})
+
+; CHECK-LABEL: cond.read:
+; CHECK:       ; MemoryUse(4)
+; CHECK-NEXT:  %use = load i32, i32* %ptr.1, align 4
+; CHECK-NEXT:  ; 2 = MemoryDef(4)
+; CHECK-NEXT:  %c.2 = call i1 @cond(i32 %use)
+; CHECK-NEXT:  %ptr.10 = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i64 %sub
+; CHECK-NEXT:  ; 3 = MemoryDef(2)
+; CHECK-NEXT:  store i32 10, i32* %ptr.2, align 4
+
+entry:
+  %nodeStack = alloca [12 x i32], align 4
+  %c.1 = call i1 @cond(i32 1)
+  br i1 %c.1, label %cleanup, label %loop.header
+
+loop.header:                                       ; preds = %entry, %while.cond.backedge
+  %depth.1 = phi i64 [ %sub, %cond.read], [ 20, %entry ]
+  %cmp = icmp sgt i64 %depth.1, 6
+  %sub = sub nsw nuw i64 %depth.1, 3
+  %sub2 = sub nsw nuw i64 %depth.1, 6
+  br i1 %cmp, label %cond.read, label %cleanup
+
+cond.read:                                        ; preds = %while.cond
+  %ptr.1 = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i64 %depth.1
+  %ptr.2 = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i64 %sub2
+  %use = load i32, i32* %ptr.1, align 4
+  %c.2 = call i1 @cond(i32 %use)
+  %ptr.10 = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i64 %sub
   store i32 10, i32* %ptr.2, align 4
   br i1 %c.2, label %loop.header, label %cleanup
 

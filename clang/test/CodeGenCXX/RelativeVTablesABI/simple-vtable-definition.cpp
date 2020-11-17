@@ -20,13 +20,13 @@
 // The vtable symbol is exposed through an alias.
 // @_ZTV1A = dso_local unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
 
-// CHECK:      define void @_ZN1A3fooEv(%class.A* nocapture %this) unnamed_addr
+// CHECK:      define void @_ZN1A3fooEv(%class.A* nocapture {{[^,]*}} %this) unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
 // This function should be in a comdat
-// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* nocapture %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* nocapture {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

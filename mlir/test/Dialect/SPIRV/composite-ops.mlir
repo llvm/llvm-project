@@ -273,3 +273,13 @@ func @vector_dynamic_extract(%vec: vector<4xf32>, %id : i32) -> f32 {
   %0 = spv.VectorExtractDynamic %vec[%id] : vector<4xf32>, i32
   return %0 : f32
 }
+
+//===----------------------------------------------------------------------===//
+// spv.VectorInsertDynamic
+//===----------------------------------------------------------------------===//
+
+func @vector_dynamic_insert(%val: f32, %vec: vector<4xf32>, %id : i32) -> vector<4xf32> {
+  // CHECK: spv.VectorInsertDynamic %{{.*}}, %{{.*}}[%{{.*}}] : vector<4xf32>, i32
+  %0 = spv.VectorInsertDynamic %val, %vec[%id] : vector<4xf32>, i32
+  return %0 : vector<4xf32>
+}

@@ -16,7 +16,7 @@
 
 steps:
   - label: "C++03"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-cxx03"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -27,7 +27,7 @@ steps:
           limit: 2
 
   - label: "C++11"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-cxx11"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -38,7 +38,7 @@ steps:
           limit: 2
 
   - label: "C++14"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-cxx14"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx14"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -49,7 +49,7 @@ steps:
           limit: 2
 
   - label: "C++17"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-cxx17"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx17"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -60,7 +60,7 @@ steps:
           limit: 2
 
   - label: "C++20"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2a"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -71,7 +71,7 @@ steps:
           limit: 2
 
   - label: "-fno-exceptions"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-noexceptions"
+    command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -82,7 +82,7 @@ steps:
           limit: 2
 
   - label: "GCC/C++20"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-gcc"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -93,7 +93,7 @@ steps:
           limit: 2
 
   - label: "ASAN"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-asan"
+    command: "libcxx/utils/ci/run-buildbot generic-asan"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -104,7 +104,7 @@ steps:
           limit: 2
 
   - label: "TSAN"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-tsan"
+    command: "libcxx/utils/ci/run-buildbot generic-tsan"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -115,7 +115,7 @@ steps:
           limit: 2
 
   - label: "UBSAN"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-ubsan"
+    command: "libcxx/utils/ci/run-buildbot generic-ubsan"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -126,7 +126,7 @@ steps:
           limit: 2
 
   - label: "With LLVM's libunwind"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-with_llvm_unwinder"
+    command: "libcxx/utils/ci/run-buildbot generic-with_llvm_unwinder"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -137,7 +137,7 @@ steps:
           limit: 2
 
   - label: "Single-threaded"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-singlethreaded"
+    command: "libcxx/utils/ci/run-buildbot generic-singlethreaded"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -148,7 +148,7 @@ steps:
           limit: 2
 
   - label: "No debug mode"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-nodebug"
+    command: "libcxx/utils/ci/run-buildbot generic-nodebug"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -159,7 +159,7 @@ steps:
           limit: 2
 
   - label: "No random device"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-no-random_device"
+    command: "libcxx/utils/ci/run-buildbot generic-no-random_device"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -170,7 +170,7 @@ steps:
           limit: 2
 
   - label: "No locale"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-no-localization"
+    command: "libcxx/utils/ci/run-buildbot generic-no-localization"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -181,7 +181,7 @@ steps:
           limit: 2
 
   - label: "MacOS C++20"
-    command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2a"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -192,7 +192,18 @@ steps:
           limit: 2
 
   - label: "Benchmarks"
-    command: "libcxx/utils/ci/run-buildbot.sh benchmarks"
+    command: "libcxx/utils/ci/run-buildbot benchmarks"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Documentation"
+    command: "libcxx/utils/ci/run-buildbot documentation"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -203,7 +214,7 @@ steps:
           limit: 2
 
   - label: "Legacy standalone build"
-    command: "libcxx/utils/ci/run-buildbot.sh legacy-standalone"
+    command: "libcxx/utils/ci/run-buildbot legacy-standalone"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -214,7 +225,7 @@ steps:
           limit: 2
 
   - label: "Unified standalone build"
-    command: "libcxx/utils/ci/run-buildbot.sh unified-standalone"
+    command: "libcxx/utils/ci/run-buildbot unified-standalone"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -226,7 +237,7 @@ steps:
 
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
-    command: "libcxx/utils/ci/run-buildbot.sh x86_64-apple-system"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -237,7 +248,19 @@ steps:
           limit: 2
 
   - label: "Apple system -fno-exceptions"
-    command: "libcxx/utils/ci/run-buildbot.sh x86_64-apple-system-noexceptions"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-macos-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  # Test back-deployment to older Apple platforms
+  - label: "Apple back-deployment macosx10.9"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.9"
     artifact_paths:
       - "**/test-results.xml"
     agents:

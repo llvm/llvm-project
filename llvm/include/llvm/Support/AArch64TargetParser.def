@@ -150,6 +150,10 @@ AARCH64_CPU_NAME("neoverse-n1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                   AArch64::AEK_PROFILE | AArch64::AEK_RAS | AArch64::AEK_RCPC |
                   AArch64::AEK_SSBS))
+AARCH64_CPU_NAME("neoverse-v1", ARMV8_4A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
+                  AArch64::AEK_RCPC | AArch64::AEK_FP16 | AArch64::AEK_BF16 |
+                  AArch64::AEK_DOTPROD ))
 AARCH64_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_NONE))
 AARCH64_CPU_NAME("apple-a7", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,

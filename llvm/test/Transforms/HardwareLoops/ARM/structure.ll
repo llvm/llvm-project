@@ -51,13 +51,13 @@ do.end:
 }
 
 ; CHECK-LABEL: nested
-; CHECK-NOT: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK-NOT: call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK: br i1 %cmp20, label %while.end7, label %while.cond1.preheader.us
 
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: [[START:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK: br label %while.body3.us
 
-; CHECK: [[REM:%[^ ]+]] = phi i32 [ %N, %while.cond1.preheader.us ], [ [[LOOP_DEC:%[^ ]+]], %while.body3.us ]
+; CHECK: [[REM:%[^ ]+]] = phi i32 [ [[START]], %while.cond1.preheader.us ], [ [[LOOP_DEC:%[^ ]+]], %while.body3.us ]
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body3.us, label %while.cond1.while.end_crit_edge.us
@@ -103,19 +103,19 @@ while.end7:
 }
 
 ; CHECK-LABEL: pre_existing
-; CHECK: llvm.set.loop.iterations
-; CHECK-NOT: llvm.set.loop.iterations
+; CHECK: llvm.start.loop.iterations
+; CHECK-NOT: llvm.start.loop.iterations
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
 ; CHECK-NOT: call i32 @llvm.loop.decrement.reg
 define i32 @pre_existing(i32 %n, i32* nocapture %p, i32* nocapture readonly %q) {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 %n)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %n)
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
   %q.addr.05 = phi i32* [ %incdec.ptr, %while.body ], [ %q, %entry ]
   %p.addr.04 = phi i32* [ %incdec.ptr1, %while.body ], [ %p, %entry ]
-  %0 = phi i32 [ %n, %entry ], [ %2, %while.body ]
+  %0 = phi i32 [ %start, %entry ], [ %2, %while.body ]
   %incdec.ptr = getelementptr inbounds i32, i32* %q.addr.05, i32 1
   %1 = load i32, i32* %q.addr.05, align 4
   %incdec.ptr1 = getelementptr inbounds i32, i32* %p.addr.04, i32 1
@@ -158,9 +158,9 @@ while.end:                                        ; preds = %while.body
 }
 
 ; CHECK-LABEL: pre_existing_inner
-; CHECK-NOT: llvm.set.loop.iterations
+; CHECK-NOT: llvm.start.loop.iterations
 ; CHECK: while.cond1.preheader.us:
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
 ; CHECK: br i1
 ; CHECK-NOT: call i32 @llvm.loop.decrement
@@ -172,12 +172,12 @@ entry:
 while.cond1.preheader.us:
   %i.021.us = phi i32 [ %inc6.us, %while.cond1.while.end_crit_edge.us ], [ 0, %entry ]
   %mul.us = mul i32 %i.021.us, %N
-  call void @llvm.set.loop.iterations.i32(i32 %N)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
   br label %while.body3.us
 
 while.body3.us:
   %j.019.us = phi i32 [ 0, %while.cond1.preheader.us ], [ %inc.us, %while.body3.us ]
-  %0 = phi i32 [ %N, %while.cond1.preheader.us ], [ %1, %while.body3.us ]
+  %0 = phi i32 [ %start, %while.cond1.preheader.us ], [ %1, %while.body3.us ]
   %add.us = add i32 %j.019.us, %mul.us
   %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %add.us
   store i32 %add.us, i32* %arrayidx.us, align 4
@@ -196,7 +196,7 @@ while.end7:
 }
 
 ; CHECK-LABEL: not_rotated
-; CHECK-NOT: call void @llvm.set.loop.iterations
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
 ; CHECK-NOT: call i32 @llvm.loop.decrement.i32
 define void @not_rotated(i32, i16* nocapture, i16 signext) {
   br label %4
@@ -233,7 +233,7 @@ define void @not_rotated(i32, i16* nocapture, i16 signext) {
 }
 
 ; CHECK-LABEL: multi_latch
-; CHECK-NOT: call void @llvm.set.loop.iterations
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
 ; CHECK-NOT: call i32 @llvm.loop.decrement
 define void @multi_latch(i32* %a, i32* %b, i32 %N) {
 entry:
@@ -322,7 +322,7 @@ for.inc:                                          ; preds = %sw.bb, %sw.bb1, %fo
 }
 
 ; CHECK-LABEL: unroll_inc_int
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32(
 
 ; TODO: We should be able to support the unrolled loop body.
@@ -404,7 +404,7 @@ for.body:
 }
 
 ; CHECK-LABEL: unroll_dec_int
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32(
 
 ; TODO: An unnecessary register is being held to hold COUNT, lr should just
@@ -447,7 +447,7 @@ for.body:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-declare void @llvm.set.loop.iterations.i32(i32) #0
+declare i32 @llvm.start.loop.iterations.i32(i32) #0
 declare i1 @llvm.test.set.loop.iterations.i32(i32) #0
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32) #0
 

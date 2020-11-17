@@ -205,10 +205,6 @@ elif config.android:
   config.compile_wrapper = compile_wrapper
   config.substitutions.append( ('%run', "") )
   config.substitutions.append( ('%env ', "env ") )
-  # TODO: Implement `%device_rm` to perform removal of files on a device.  For
-  # now just make it a no-op.
-  lit_config.warning('%device_rm is not implemented')
-  config.substitutions.append( ('%device_rm', 'echo ') )
 else:
   config.substitutions.append( ('%run', "") )
   config.substitutions.append( ('%env ', "env ") )
@@ -352,6 +348,7 @@ if config.android:
   config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%pull_from_device', "%s -s '%s' pull " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%device_rm', "%s -s '%s' shell 'rm ' " % (adb, env['ANDROID_SERIAL']) ) )
 
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
@@ -362,11 +359,12 @@ if config.android:
     android_api_level = int(android_api_level_str)
   except ValueError:
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb): got '%s'" % (adb, android_api_level_str))
+  android_api_level = min(android_api_level, int(config.android_api_level))
   if android_api_level >= 26:
     config.available_features.add('android-26')
   if android_api_level >= 28:
     config.available_features.add('android-28')
-  if android_api_level >= 31 or android_api_codename == 'S':
+  if android_api_level > 30 or (android_api_level == 30 and android_api_codename == 'S'):
     config.available_features.add('android-thread-properties-api')
 
   # Prepare the device.

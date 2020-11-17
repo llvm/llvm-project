@@ -30,17 +30,17 @@ define void @while_lt(i32 %i, i32 %N, i32* nocapture %A) {
 ; CHECK-PHI-NEXT:    br i1 [[CMP4]], label [[WHILE_BODY_PREHEADER:%.*]], label [[WHILE_END:%.*]]
 ; CHECK-PHI:       while.body.preheader:
 ; CHECK-PHI-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[I]]
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP0]])
+; CHECK-PHI-NEXT:    [[TMP1:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[TMP0]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHI:       while.body:
 ; CHECK-PHI-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHI-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHI-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP3:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHI-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHI-NEXT:    [[INC]] = add nuw i32 [[I_ADDR_05]], 1
-; CHECK-PHI-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHI-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP2]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP4]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHI:       while.end:
 ; CHECK-PHI-NEXT:    ret void
 ;
@@ -86,17 +86,17 @@ define void @while_lt(i32 %i, i32 %N, i32* nocapture %A) {
 ; CHECK-PHIGUARD-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[I]]
 ; CHECK-PHIGUARD-NEXT:    br i1 [[CMP4]], label [[WHILE_BODY_PREHEADER:%.*]], label [[WHILE_END:%.*]]
 ; CHECK-PHIGUARD:       while.body.preheader:
-; CHECK-PHIGUARD-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP0]])
+; CHECK-PHIGUARD-NEXT:    [[TMP1:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[TMP0]])
 ; CHECK-PHIGUARD-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHIGUARD:       while.body:
 ; CHECK-PHIGUARD-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHIGUARD-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHIGUARD-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP3:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHIGUARD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHIGUARD-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHIGUARD-NEXT:    [[INC]] = add nuw i32 [[I_ADDR_05]], 1
-; CHECK-PHIGUARD-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
-; CHECK-PHIGUARD-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-PHIGUARD-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHIGUARD-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP2]], i32 1)
+; CHECK-PHIGUARD-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-PHIGUARD-NEXT:    br i1 [[TMP4]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHIGUARD:       while.end:
 ; CHECK-PHIGUARD-NEXT:    ret void
 ;
@@ -160,17 +160,17 @@ define void @while_gt(i32 %i, i32 %N, i32* nocapture %A) {
 ; CHECK-PHI-NEXT:    br i1 [[CMP4]], label [[WHILE_BODY_PREHEADER:%.*]], label [[WHILE_END:%.*]]
 ; CHECK-PHI:       while.body.preheader:
 ; CHECK-PHI-NEXT:    [[TMP0:%.*]] = sub i32 [[I]], [[N]]
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP0]])
+; CHECK-PHI-NEXT:    [[TMP1:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[TMP0]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHI:       while.body:
 ; CHECK-PHI-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHI-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHI-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP3:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHI-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHI-NEXT:    [[DEC]] = add nsw i32 [[I_ADDR_05]], -1
-; CHECK-PHI-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHI-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP2]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP4]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHI:       while.end:
 ; CHECK-PHI-NEXT:    ret void
 ;
@@ -216,17 +216,17 @@ define void @while_gt(i32 %i, i32 %N, i32* nocapture %A) {
 ; CHECK-PHIGUARD-NEXT:    [[TMP0:%.*]] = sub i32 [[I]], [[N]]
 ; CHECK-PHIGUARD-NEXT:    br i1 [[CMP4]], label [[WHILE_BODY_PREHEADER:%.*]], label [[WHILE_END:%.*]]
 ; CHECK-PHIGUARD:       while.body.preheader:
-; CHECK-PHIGUARD-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP0]])
+; CHECK-PHIGUARD-NEXT:    [[TMP1:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[TMP0]])
 ; CHECK-PHIGUARD-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHIGUARD:       while.body:
 ; CHECK-PHIGUARD-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHIGUARD-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHIGUARD-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP3:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHIGUARD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHIGUARD-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHIGUARD-NEXT:    [[DEC]] = add nsw i32 [[I_ADDR_05]], -1
-; CHECK-PHIGUARD-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
-; CHECK-PHIGUARD-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-PHIGUARD-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHIGUARD-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP2]], i32 1)
+; CHECK-PHIGUARD-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-PHIGUARD-NEXT:    br i1 [[TMP4]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHIGUARD:       while.end:
 ; CHECK-PHIGUARD-NEXT:    ret void
 ;
@@ -292,17 +292,17 @@ define void @while_gte(i32 %i, i32 %N, i32* nocapture %A) {
 ; CHECK-PHI:       while.body.preheader:
 ; CHECK-PHI-NEXT:    [[TMP0:%.*]] = add i32 [[I]], 1
 ; CHECK-PHI-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[N]]
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP1]])
+; CHECK-PHI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[TMP1]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHI:       while.body:
 ; CHECK-PHI-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHI-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP3:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHI-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP2]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP4:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHI-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHI-NEXT:    [[DEC]] = add nsw i32 [[I_ADDR_05]], -1
-; CHECK-PHI-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP2]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP4]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHI-NEXT:    [[TMP4]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP3]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP5]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHI:       while.end:
 ; CHECK-PHI-NEXT:    ret void
 ;
@@ -351,17 +351,17 @@ define void @while_gte(i32 %i, i32 %N, i32* nocapture %A) {
 ; CHECK-PHIGUARD:       while.body.preheader:
 ; CHECK-PHIGUARD-NEXT:    [[TMP0:%.*]] = add i32 [[I]], 1
 ; CHECK-PHIGUARD-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[N]]
-; CHECK-PHIGUARD-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP1]])
+; CHECK-PHIGUARD-NEXT:    [[TMP2:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[TMP1]])
 ; CHECK-PHIGUARD-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHIGUARD:       while.body:
 ; CHECK-PHIGUARD-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[I]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHIGUARD-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP3:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHIGUARD-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP2]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP4:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHIGUARD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHIGUARD-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHIGUARD-NEXT:    [[DEC]] = add nsw i32 [[I_ADDR_05]], -1
-; CHECK-PHIGUARD-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP2]], i32 1)
-; CHECK-PHIGUARD-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-PHIGUARD-NEXT:    br i1 [[TMP4]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHIGUARD-NEXT:    [[TMP4]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP3]], i32 1)
+; CHECK-PHIGUARD-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-PHIGUARD-NEXT:    br i1 [[TMP5]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHIGUARD:       while.end:
 ; CHECK-PHIGUARD-NEXT:    ret void
 ;
@@ -424,17 +424,17 @@ define void @while_ne(i32 %N, i32* nocapture %A) {
 ; CHECK-PHI-NEXT:    [[CMP:%.*]] = icmp ne i32 [[N:%.*]], 0
 ; CHECK-PHI-NEXT:    br i1 [[CMP]], label [[WHILE_BODY_PREHEADER:%.*]], label [[WHILE_END:%.*]]
 ; CHECK-PHI:       while.body.preheader:
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[N]])
+; CHECK-PHI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHI:       while.body:
 ; CHECK-PHI-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHI-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP1:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHI-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHI-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHI-NEXT:    [[INC]] = add nuw i32 [[I_ADDR_05]], 1
-; CHECK-PHI-NEXT:    [[TMP1]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP2]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHI-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHI:       while.end:
 ; CHECK-PHI-NEXT:    ret void
 ;
@@ -548,17 +548,17 @@ define void @while_eq(i32 %N, i32* nocapture %A) {
 ; CHECK-PHI-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; CHECK-PHI-NEXT:    br i1 [[CMP]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK-PHI:       while.body.preheader:
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[N]])
+; CHECK-PHI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHI:       while.body:
 ; CHECK-PHI-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHI-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP1:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHI-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHI-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHI-NEXT:    [[INC]] = add nuw i32 [[I_ADDR_05]], 1
-; CHECK-PHI-NEXT:    [[TMP1]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP2]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHI-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHI:       while.end:
 ; CHECK-PHI-NEXT:    ret void
 ;
@@ -676,17 +676,17 @@ define void @while_preheader_eq(i32 %N, i32* nocapture %A) {
 ; CHECK-PHI-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; CHECK-PHI-NEXT:    br i1 [[CMP]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK-PHI:       while.body.preheader:
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[N]])
+; CHECK-PHI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-PHI:       while.body:
 ; CHECK-PHI-NEXT:    [[I_ADDR_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; CHECK-PHI-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP1:%.*]], [[WHILE_BODY]] ]
+; CHECK-PHI-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2:%.*]], [[WHILE_BODY]] ]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_ADDR_05]]
 ; CHECK-PHI-NEXT:    store i32 [[I_ADDR_05]], i32* [[ARRAYIDX]], align 4
 ; CHECK-PHI-NEXT:    [[INC]] = add nuw i32 [[I_ADDR_05]], 1
-; CHECK-PHI-NEXT:    [[TMP1]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP2]], label [[WHILE_BODY]], label [[WHILE_END]]
+; CHECK-PHI-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY]], label [[WHILE_END]]
 ; CHECK-PHI:       while.end:
 ; CHECK-PHI-NEXT:    ret void
 ;
@@ -820,18 +820,18 @@ define void @nested(i32* nocapture %A, i32 %N) {
 ; CHECK-PHI:       while.cond1.preheader.us:
 ; CHECK-PHI-NEXT:    [[I_021_US:%.*]] = phi i32 [ [[INC6_US:%.*]], [[WHILE_COND1_WHILE_END_CRIT_EDGE_US:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-PHI-NEXT:    [[MUL_US:%.*]] = mul i32 [[I_021_US]], [[N]]
-; CHECK-PHI-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[N]])
+; CHECK-PHI-NEXT:    [[TMP0:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-PHI-NEXT:    br label [[WHILE_BODY3_US:%.*]]
 ; CHECK-PHI:       while.body3.us:
 ; CHECK-PHI-NEXT:    [[J_019_US:%.*]] = phi i32 [ 0, [[WHILE_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[WHILE_BODY3_US]] ]
-; CHECK-PHI-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[WHILE_COND1_PREHEADER_US]] ], [ [[TMP1:%.*]], [[WHILE_BODY3_US]] ]
+; CHECK-PHI-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[WHILE_BODY3_US]] ]
 ; CHECK-PHI-NEXT:    [[ADD_US:%.*]] = add i32 [[J_019_US]], [[MUL_US]]
 ; CHECK-PHI-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[ADD_US]]
 ; CHECK-PHI-NEXT:    store i32 [[ADD_US]], i32* [[ARRAYIDX_US]], align 4
 ; CHECK-PHI-NEXT:    [[INC_US]] = add nuw i32 [[J_019_US]], 1
-; CHECK-PHI-NEXT:    [[TMP1]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
-; CHECK-PHI-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-PHI-NEXT:    br i1 [[TMP2]], label [[WHILE_BODY3_US]], label [[WHILE_COND1_WHILE_END_CRIT_EDGE_US]]
+; CHECK-PHI-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
+; CHECK-PHI-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-PHI-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY3_US]], label [[WHILE_COND1_WHILE_END_CRIT_EDGE_US]]
 ; CHECK-PHI:       while.cond1.while.end_crit_edge.us:
 ; CHECK-PHI-NEXT:    [[INC6_US]] = add nuw i32 [[I_021_US]], 1
 ; CHECK-PHI-NEXT:    [[EXITCOND23:%.*]] = icmp eq i32 [[INC6_US]], [[N]]
@@ -897,18 +897,18 @@ define void @nested(i32* nocapture %A, i32 %N) {
 ; CHECK-PHIGUARD:       while.cond1.preheader.us:
 ; CHECK-PHIGUARD-NEXT:    [[I_021_US:%.*]] = phi i32 [ [[INC6_US:%.*]], [[WHILE_COND1_WHILE_END_CRIT_EDGE_US:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-PHIGUARD-NEXT:    [[MUL_US:%.*]] = mul i32 [[I_021_US]], [[N]]
-; CHECK-PHIGUARD-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[N]])
+; CHECK-PHIGUARD-NEXT:    [[TMP0:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-PHIGUARD-NEXT:    br label [[WHILE_BODY3_US:%.*]]
 ; CHECK-PHIGUARD:       while.body3.us:
 ; CHECK-PHIGUARD-NEXT:    [[J_019_US:%.*]] = phi i32 [ 0, [[WHILE_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[WHILE_BODY3_US]] ]
-; CHECK-PHIGUARD-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[WHILE_COND1_PREHEADER_US]] ], [ [[TMP1:%.*]], [[WHILE_BODY3_US]] ]
+; CHECK-PHIGUARD-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[WHILE_BODY3_US]] ]
 ; CHECK-PHIGUARD-NEXT:    [[ADD_US:%.*]] = add i32 [[J_019_US]], [[MUL_US]]
 ; CHECK-PHIGUARD-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[ADD_US]]
 ; CHECK-PHIGUARD-NEXT:    store i32 [[ADD_US]], i32* [[ARRAYIDX_US]], align 4
 ; CHECK-PHIGUARD-NEXT:    [[INC_US]] = add nuw i32 [[J_019_US]], 1
-; CHECK-PHIGUARD-NEXT:    [[TMP1]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
-; CHECK-PHIGUARD-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-PHIGUARD-NEXT:    br i1 [[TMP2]], label [[WHILE_BODY3_US]], label [[WHILE_COND1_WHILE_END_CRIT_EDGE_US]]
+; CHECK-PHIGUARD-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP1]], i32 1)
+; CHECK-PHIGUARD-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-PHIGUARD-NEXT:    br i1 [[TMP3]], label [[WHILE_BODY3_US]], label [[WHILE_COND1_WHILE_END_CRIT_EDGE_US]]
 ; CHECK-PHIGUARD:       while.cond1.while.end_crit_edge.us:
 ; CHECK-PHIGUARD-NEXT:    [[INC6_US]] = add nuw i32 [[I_021_US]], 1
 ; CHECK-PHIGUARD-NEXT:    [[EXITCOND23:%.*]] = icmp eq i32 [[INC6_US]], [[N]]

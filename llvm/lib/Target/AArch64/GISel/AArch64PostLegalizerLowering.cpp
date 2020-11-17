@@ -291,8 +291,7 @@ static bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
     return false;
 
   // Match the index constant 0.
-  int64_t Index = 0;
-  if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ICst(Index)) || Index)
+  if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ZeroInt()))
     return false;
 
   MatchInfo = ShuffleVectorPseudo(AArch64::G_DUP, MI.getOperand(0).getReg(),
@@ -547,6 +546,67 @@ bool applyAdjustICmpImmAndPred(
   RHS.setReg(Cst->getOperand(0).getReg());
   MI.getOperand(1).setPredicate(MatchInfo.second);
   Observer.changedInstr(MI);
+  return true;
+}
+
+bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
+                  std::pair<unsigned, int> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  Register Src1Reg = MI.getOperand(1).getReg();
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  auto LaneIdx = getSplatIndex(MI);
+  if (!LaneIdx)
+    return false;
+
+  // The lane idx should be within the first source vector.
+  if (*LaneIdx >= SrcTy.getNumElements())
+    return false;
+
+  if (DstTy != SrcTy)
+    return false;
+
+  LLT ScalarTy = SrcTy.getElementType();
+  unsigned ScalarSize = ScalarTy.getSizeInBits();
+
+  unsigned Opc = 0;
+  switch (SrcTy.getNumElements()) {
+  case 2:
+    if (ScalarSize == 64)
+      Opc = AArch64::G_DUPLANE64;
+    break;
+  case 4:
+    if (ScalarSize == 32)
+      Opc = AArch64::G_DUPLANE32;
+    break;
+  case 8:
+    if (ScalarSize == 16)
+      Opc = AArch64::G_DUPLANE16;
+    break;
+  case 16:
+    if (ScalarSize == 8)
+      Opc = AArch64::G_DUPLANE8;
+    break;
+  default:
+    break;
+  }
+  if (!Opc)
+    return false;
+
+  MatchInfo.first = Opc;
+  MatchInfo.second = *LaneIdx;
+  return true;
+}
+
+bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
+                  MachineIRBuilder &B, std::pair<unsigned, int> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  B.setInstrAndDebugLoc(MI);
+  auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
+  B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()},
+               {MI.getOperand(1).getReg(), Lane});
+  MI.eraseFromParent();
   return true;
 }
 

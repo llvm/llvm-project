@@ -1323,28 +1323,23 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
     }
+  } else if (SIInstrInfo::isEXP(Inst)) {
+    int Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
+    if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_PARAM_ACCESS, Inst);
+    else if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
+    else
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
     case AMDGPU::S_SENDMSGHALT:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SQ_MESSAGE, Inst);
       break;
-    case AMDGPU::EXP:
-    case AMDGPU::EXP_DONE: {
-      int Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
-      if (Imm >= 32 && Imm <= 63)
-        ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_PARAM_ACCESS, Inst);
-      else if (Imm >= 12 && Imm <= 15)
-        ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
-      else
-        ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
-      break;
-    }
     case AMDGPU::S_MEMTIME:
     case AMDGPU::S_MEMREALTIME:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
-      break;
-    default:
       break;
     }
   }
@@ -1481,6 +1476,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         if (ScoreBrackets.getScoreLB(LGKM_CNT) <
             ScoreBrackets.getScoreUB(LGKM_CNT) &&
             ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+          // Restore vccz if there's an outstanding smem read, which could
+          // complete and clobber vccz at any time.
           RestoreVCCZ = true;
         }
       }
@@ -1493,25 +1490,14 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       }
     }
 
-    // Don't examine operands unless we need to track vccz correctness.
-    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
+    if (!ST->partialVCCWritesUpdateVCCZ()) {
       if (Inst.definesRegister(AMDGPU::VCC_LO) ||
           Inst.definesRegister(AMDGPU::VCC_HI)) {
-	// Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
-	if (!ST->partialVCCWritesUpdateVCCZ())
-	  VCCZCorrect = false;
+        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+        VCCZCorrect = false;
       } else if (Inst.definesRegister(AMDGPU::VCC)) {
-	if (ST->hasReadVCCZBug() &&
-	    ScoreBrackets.getScoreLB(LGKM_CNT) <
-	    ScoreBrackets.getScoreUB(LGKM_CNT) &&
-	    ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-	  // Writes to vcc while there's an outstanding smem read may get
-	  // clobbered as soon as any read completes.
-	  VCCZCorrect = false;
-	} else {
-	  // Writes to vcc will fix any incorrect value in vccz.
-	  VCCZCorrect = true;
-	}
+        // Writes to vcc will fix any incorrect value in vccz.
+        VCCZCorrect = true;
       }
     }
 

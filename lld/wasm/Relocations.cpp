@@ -9,6 +9,7 @@
 #include "Relocations.h"
 
 #include "InputChunks.h"
+#include "OutputSegment.h"
 #include "SyntheticSections.h"
 
 using namespace llvm;
@@ -87,6 +88,16 @@ void scanRelocations(InputChunk *chunk) {
     case R_WASM_GLOBAL_INDEX_I32:
       if (!isa<GlobalSymbol>(sym))
         addGOTEntry(sym);
+      break;
+    case R_WASM_MEMORY_ADDR_TLS_SLEB:
+      if (auto *D = dyn_cast<DefinedData>(sym)) {
+        if (D->segment->outputSeg->name != ".tdata") {
+          error(toString(file) + ": relocation " +
+                relocTypeToString(reloc.Type) + " cannot be used against `" +
+                toString(*sym) +
+                "` in non-TLS section: " + D->segment->outputSeg->name);
+        }
+      }
       break;
     }
 

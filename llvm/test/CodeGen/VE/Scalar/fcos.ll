@@ -80,18 +80,18 @@ declare fp128 @llvm.cos.f128(fp128)
 ; Function Attrs: norecurse nounwind readnone
 define float @fcos_float_zero() {
 ; CHECK-LABEL: fcos_float_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, 1065353216
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret float 1.000000e+00
 }
 
 ; Function Attrs: norecurse nounwind readnone
 define double @fcos_double_zero() {
 ; CHECK-LABEL: fcos_double_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, 1072693248
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret double 1.000000e+00
 }
 
@@ -116,19 +116,19 @@ define fp128 @fcos_quad_zero() {
 ; Function Attrs: norecurse nounwind readnone
 define float @fcos_float_const() {
 ; CHECK-LABEL: fcos_float_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, -1093332685
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret float 0xBFDAA22660000000
 }
 
 ; Function Attrs: norecurse nounwind readnone
 define double @fcos_double_const() {
 ; CHECK-LABEL: fcos_double_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s0, 1465086469
 ; CHECK-NEXT:    lea.sl %s0, -1076190682(, %s0)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK-NEXT:    b.l.t (, %s10)
   ret double 0xBFDAA22657537205
 }
 

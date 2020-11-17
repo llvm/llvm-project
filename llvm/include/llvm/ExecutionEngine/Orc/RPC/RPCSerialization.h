@@ -9,6 +9,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
 #define LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/Support/thread.h"
 #include <map>
@@ -160,6 +162,19 @@ public:
       std::string Name;
       raw_string_ostream(Name) << "std::tuple<"
                                << RPCTypeNameSequence<ArgTs...>() << ">";
+      return Name;
+    }();
+    return Name.data();
+  }
+};
+
+template <typename T> class RPCTypeName<Optional<T>> {
+public:
+  static const char *getName() {
+    static std::string Name = [] {
+      std::string Name;
+      raw_string_ostream(Name)
+          << "Optional<" << RPCTypeName<T>::getName() << ">";
       return Name;
     }();
     return Name.data();
@@ -574,6 +589,31 @@ private:
   }
 };
 
+template <typename ChannelT, typename T>
+class SerializationTraits<ChannelT, Optional<T>> {
+public:
+  /// Serialize an Optional<T>.
+  static Error serialize(ChannelT &C, const Optional<T> &O) {
+    if (auto Err = serializeSeq(C, O != None))
+      return Err;
+    if (O)
+      if (auto Err = serializeSeq(C, *O))
+        return Err;
+    return Error::success();
+  }
+
+  /// Deserialize an Optional<T>.
+  static Error deserialize(ChannelT &C, Optional<T> &O) {
+    bool HasValue = false;
+    if (auto Err = deserializeSeq(C, HasValue))
+      return Err;
+    if (HasValue)
+      if (auto Err = deserializeSeq(C, *O))
+        return Err;
+    return Error::success();
+  };
+};
+
 /// SerializationTraits default specialization for std::vector.
 template <typename ChannelT, typename T>
 class SerializationTraits<ChannelT, std::vector<T>> {
@@ -603,6 +643,22 @@ public:
     V.resize(Count);
     for (auto &E : V)
       if (auto Err = deserializeSeq(C, E))
+        return Err;
+
+    return Error::success();
+  }
+};
+
+/// Enable vector serialization from an ArrayRef.
+template <typename ChannelT, typename T>
+class SerializationTraits<ChannelT, std::vector<T>, ArrayRef<T>> {
+public:
+  static Error serialize(ChannelT &C, ArrayRef<T> V) {
+    if (auto Err = serializeSeq(C, static_cast<uint64_t>(V.size())))
+      return Err;
+
+    for (const auto &E : V)
+      if (auto Err = serializeSeq(C, E))
         return Err;
 
     return Error::success();
@@ -669,6 +725,55 @@ public:
 
   /// Deserialize a std::map<K, V> to a std::map<K, V>.
   static Error deserialize(ChannelT &C, std::map<K2, V2> &M) {
+    assert(M.empty() && "Expected default-constructed map to deserialize into");
+
+    uint64_t Count = 0;
+    if (auto Err = deserializeSeq(C, Count))
+      return Err;
+
+    while (Count-- != 0) {
+      std::pair<K2, V2> Val;
+      if (auto Err =
+              SerializationTraits<ChannelT, K, K2>::deserialize(C, Val.first))
+        return Err;
+
+      if (auto Err =
+              SerializationTraits<ChannelT, V, V2>::deserialize(C, Val.second))
+        return Err;
+
+      auto Added = M.insert(Val).second;
+      if (!Added)
+        return make_error<StringError>("Duplicate element in deserialized map",
+                                       orcError(OrcErrorCode::UnknownORCError));
+    }
+
+    return Error::success();
+  }
+};
+
+template <typename ChannelT, typename K, typename V, typename K2, typename V2>
+class SerializationTraits<ChannelT, std::map<K, V>, DenseMap<K2, V2>> {
+public:
+  /// Serialize a std::map<K, V> from DenseMap<K2, V2>.
+  static Error serialize(ChannelT &C, const DenseMap<K2, V2> &M) {
+    if (auto Err = serializeSeq(C, static_cast<uint64_t>(M.size())))
+      return Err;
+
+    for (auto &E : M) {
+      if (auto Err =
+              SerializationTraits<ChannelT, K, K2>::serialize(C, E.first))
+        return Err;
+
+      if (auto Err =
+              SerializationTraits<ChannelT, V, V2>::serialize(C, E.second))
+        return Err;
+    }
+
+    return Error::success();
+  }
+
+  /// Serialize a std::map<K, V> from DenseMap<K2, V2>.
+  static Error deserialize(ChannelT &C, DenseMap<K2, V2> &M) {
     assert(M.empty() && "Expected default-constructed map to deserialize into");
 
     uint64_t Count = 0;

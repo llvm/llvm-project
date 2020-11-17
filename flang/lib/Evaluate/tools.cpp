@@ -69,7 +69,7 @@ auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
   return symbol && symbol->attrs().test(semantics::Attr::POINTER);
 }
 
-// Conversions of complex component expressions to REAL.
+// Conversions of COMPLEX component expressions to REAL.
 ConvertRealOperandsResult ConvertRealOperands(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -498,31 +498,14 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
           },
           [&](Expr<SomeComplex> &&zx,
               Expr<SomeComplex> &&zy) -> std::optional<Expr<LogicalResult>> {
-            if (opr != RelationalOperator::EQ &&
-                opr != RelationalOperator::NE) {
+            if (opr == RelationalOperator::EQ ||
+                opr == RelationalOperator::NE) {
+              return PromoteAndRelate(opr, std::move(zx), std::move(zy));
+            } else {
               messages.Say(
                   "COMPLEX data may be compared only for equality"_err_en_US);
-            } else {
-              auto rr{Relate(messages, opr,
-                  AsGenericExpr(GetComplexPart(zx, false)),
-                  AsGenericExpr(GetComplexPart(zy, false)))};
-              auto ri{
-                  Relate(messages, opr, AsGenericExpr(GetComplexPart(zx, true)),
-                      AsGenericExpr(GetComplexPart(zy, true)))};
-              if (auto parts{
-                      common::AllPresent(std::move(rr), std::move(ri))}) {
-                // (a,b)==(c,d) -> (a==c) .AND. (b==d)
-                // (a,b)/=(c,d) -> (a/=c) .OR. (b/=d)
-                LogicalOperator combine{opr == RelationalOperator::EQ
-                        ? LogicalOperator::And
-                        : LogicalOperator::Or};
-                return Expr<LogicalResult>{
-                    LogicalOperation<LogicalResult::kind>{combine,
-                        std::get<0>(std::move(*parts)),
-                        std::get<1>(std::move(*parts))}};
-              }
+              return std::nullopt;
             }
-            return std::nullopt;
           },
           [&](Expr<SomeComplex> &&zx, Expr<SomeInteger> &&iy) {
             return Relate(messages, opr, std::move(x),

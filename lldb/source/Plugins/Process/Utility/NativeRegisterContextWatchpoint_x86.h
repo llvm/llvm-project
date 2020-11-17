@@ -40,7 +40,6 @@ public:
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 
-private:
   const RegisterInfo *GetDR(int num) const;
 };
 

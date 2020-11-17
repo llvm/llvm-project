@@ -19,43 +19,7 @@ include "VOPInstructions.td"
 include "SMInstructions.td"
 include "FLATInstructions.td"
 include "BUFInstructions.td"
-
-//===----------------------------------------------------------------------===//
-// EXP Instructions
-//===----------------------------------------------------------------------===//
-
-defm EXP : EXP_m<0>;
-defm EXP_DONE : EXP_m<1>;
-
-class ExpPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
-  (int_amdgcn_exp timm:$tgt, timm:$en,
-                  (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
-                  (vt ExpSrc2:$src2), (vt ExpSrc3:$src3),
-                  done_val, timm:$vm),
-  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
-        ExpSrc2:$src2, ExpSrc3:$src3, timm:$vm, 0, timm:$en)
->;
-
-class ExpComprPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
-  (int_amdgcn_exp_compr timm:$tgt, timm:$en,
-                        (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
-                        done_val, timm:$vm),
-  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
-        (IMPLICIT_DEF), (IMPLICIT_DEF), timm:$vm, 1, timm:$en)
->;
-
-// FIXME: The generated DAG matcher seems to have strange behavior
-// with a 1-bit literal to match, so use a -1 for checking a true
-// 1-bit value.
-def : ExpPattern<i32, EXP, 0>;
-def : ExpPattern<i32, EXP_DONE, -1>;
-def : ExpPattern<f32, EXP, 0>;
-def : ExpPattern<f32, EXP_DONE, -1>;
-
-def : ExpComprPattern<v2i16, EXP, 0>;
-def : ExpComprPattern<v2i16, EXP_DONE, -1>;
-def : ExpComprPattern<v2f16, EXP, 0>;
-def : ExpComprPattern<v2f16, EXP_DONE, -1>;
+include "EXPInstructions.td"
 
 //===----------------------------------------------------------------------===//
 // VINTRP Instructions
@@ -715,7 +679,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
-      (ins vgpr_class:$vdata, i32imm:$vaddr, SReg_128:$srsrc,
+      (ins vgpr_class:$vdata, i32imm:$vaddr,
            SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 1;
       let mayLoad = 0;
@@ -727,8 +691,8 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
-      (ins i32imm:$vaddr, SReg_128:$srsrc, SReg_32:$soffset,
-           i32imm:$offset)> {
+      (ins i32imm:$vaddr,
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -830,11 +794,6 @@ def : Pat <
 let UseNamedOperandTable = 1 in {
 
 class SI_WATERFALL_BEGIN<RegisterClass idx_rc> : SPseudoInstSI <
-  (outs SReg_32:$tok),
-  (ins idx_rc:$idx)> {
-}
-
-class SI_WATERFALL_BEGIN_CONT<RegisterClass idx_rc> : SPseudoInstSI <
   (outs SReg_32:$tok_ret),
   (ins SReg_32:$tok, idx_rc:$idx)> {
 }
@@ -857,11 +816,6 @@ def SI_WATERFALL_BEGIN_V1 : SI_WATERFALL_BEGIN<VGPR_32>;
 def SI_WATERFALL_BEGIN_V2 : SI_WATERFALL_BEGIN<VReg_64>;
 def SI_WATERFALL_BEGIN_V4 : SI_WATERFALL_BEGIN<VReg_128>;
 def SI_WATERFALL_BEGIN_V8 : SI_WATERFALL_BEGIN<VReg_256>;
-
-def SI_WATERFALL_BEGIN_CONT_V1 : SI_WATERFALL_BEGIN_CONT<VGPR_32>;
-def SI_WATERFALL_BEGIN_CONT_V2 : SI_WATERFALL_BEGIN_CONT<VReg_64>;
-def SI_WATERFALL_BEGIN_CONT_V4 : SI_WATERFALL_BEGIN_CONT<VReg_128>;
-def SI_WATERFALL_BEGIN_CONT_V8 : SI_WATERFALL_BEGIN_CONT<VReg_256>;
 
 def SI_WATERFALL_READFIRSTLANE_V1 : SI_WATERFALL_READFIRSTLANE<SReg_32, VGPR_32>;
 def SI_WATERFALL_READFIRSTLANE_V2 : SI_WATERFALL_READFIRSTLANE<SReg_64, VReg_64>;
@@ -1681,13 +1635,8 @@ def : GCNPat <
 
 multiclass SI_WATERFALL_Pattern < ValueType dvt, ValueType svt, string VecSize> {
   def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) svt:$idx)
-  >;
-
-  def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin_cont i32:$tok, svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_CONT_"#VecSize) i32:$tok, svt:$idx)
+    (i32 (int_amdgcn_waterfall_begin i32:$tok, svt:$idx)),
+    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok, svt:$idx)
   >;
 
   def : GCNPat<
@@ -1703,13 +1652,8 @@ multiclass SI_WATERFALL_Pattern < ValueType dvt, ValueType svt, string VecSize> 
 
 multiclass SI_WATERFALL_S_Pattern < ValueType svt, string VecSize> {
   def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) svt:$idx)
-  >;
-
-  def : GCNPat<
-    (i32 (int_amdgcn_waterfall_begin_cont i32:$tok, svt:$idx)),
-    (!cast<Instruction>("SI_WATERFALL_BEGIN_CONT_"#VecSize) i32:$tok, svt:$idx)
+    (i32 (int_amdgcn_waterfall_begin i32:$tok, svt:$idx)),
+    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) i32:$tok, svt:$idx)
   >;
 
   def : GCNPat<

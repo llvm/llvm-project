@@ -6,4 +6,11 @@ add_llvm_component_library(LLVMBitWriter
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  Analysis
+  Core
+  MC
+  Object
+  Support
   )

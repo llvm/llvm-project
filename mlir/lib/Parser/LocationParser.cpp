@@ -11,24 +11,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-/// Parse a location.
-///
-///   location           ::= `loc` inline-location
-///   inline-location    ::= '(' location-inst ')'
-///
-ParseResult Parser::parseLocation(LocationAttr &loc) {
-  // Check for 'loc' identifier.
-  if (parseToken(Token::kw_loc, "expected 'loc' keyword"))
-    return emitError();
-
-  // Parse the inline-location.
-  if (parseToken(Token::l_paren, "expected '(' in inline location") ||
-      parseLocationInstance(loc) ||
-      parseToken(Token::r_paren, "expected ')' in inline location"))
-    return failure();
-  return success();
-}
-
 /// Specific location instances.
 ///
 /// location-inst ::= filelinecol-location |

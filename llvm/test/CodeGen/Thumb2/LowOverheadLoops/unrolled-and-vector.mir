@@ -37,18 +37,18 @@
     br i1 %7, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
 
   for.body.preheader.new:                           ; preds = %for.body.preheader
-    call void @llvm.set.loop.iterations.i32(i32 %11)
+    %start1 = call i32 @llvm.start.loop.iterations.i32(i32 %11)
     br label %for.body
 
   vector.ph:                                        ; preds = %vector.memcheck
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv50 = phi i8* [ %scevgep51, %vector.body ], [ %res, %vector.ph ]
     %lsr.iv47 = phi i8* [ %scevgep48, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep45, %vector.body ], [ %a, %vector.ph ]
-    %12 = phi i32 [ %5, %vector.ph ], [ %17, %vector.body ]
+    %12 = phi i32 [ %start2, %vector.ph ], [ %17, %vector.body ]
     %13 = phi i32 [ %N, %vector.ph ], [ %15, %vector.body ]
     %lsr.iv5052 = bitcast i8* %lsr.iv50 to <16 x i8>*
     %lsr.iv4749 = bitcast i8* %lsr.iv47 to <16 x i8>*
@@ -88,7 +88,7 @@
 
   for.body:                                         ; preds = %for.body, %for.body.preheader.new
     %i.011 = phi i32 [ 0, %for.body.preheader.new ], [ %inc.3, %for.body ]
-    %21 = phi i32 [ %11, %for.body.preheader.new ], [ %30, %for.body ]
+    %21 = phi i32 [ %start1, %for.body.preheader.new ], [ %30, %for.body ]
     %scevgep23 = getelementptr i8, i8* %a, i32 %i.011
     %scevgep2453 = bitcast i8* %scevgep23 to i8*
     %22 = load i8, i8* %scevgep2453, align 1
@@ -159,7 +159,7 @@
 
   declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>) #1
   declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32 immarg, <16 x i1>) #2
-  declare void @llvm.set.loop.iterations.i32(i32) #3
+  declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare <16 x i1> @llvm.arm.mve.vctp8(i32) #4
 
@@ -429,7 +429,7 @@ body:             |
     renamable $r6 = t2BICri killed renamable $r6, 15, 14, $noreg, $noreg
     renamable $r6, dead $cpsr = tSUBi8 killed renamable $r6, 16, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r6, 35, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.5.vector.body:
     successors: %bb.5(0x7c000000), %bb.11(0x04000000)
@@ -455,7 +455,7 @@ body:             |
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r3, 19, 14, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 0, 14, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.7.for.body:
     successors: %bb.7(0x7c000000), %bb.8(0x04000000)

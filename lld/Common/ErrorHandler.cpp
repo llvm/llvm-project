@@ -64,6 +64,10 @@ void lld::exitLld(int val) {
   if (errorHandler().outputBuffer)
     errorHandler().outputBuffer->discard();
 
+  // Re-throw a possible signal or exception once/if it was catched by
+  // safeLldMain().
+  CrashRecoveryContext::throwIfCrash(val);
+
   // Dealloc/destroy ManagedStatic variables before calling _exit().
   // In an LTO build, allows us to get the output of -time-passes.
   // Ensures that the thread pool for the parallel algorithms is stopped to
@@ -76,7 +80,10 @@ void lld::exitLld(int val) {
     lld::outs().flush();
     lld::errs().flush();
   }
-  llvm::sys::Process::Exit(val);
+  // When running inside safeLldMain(), restore the control flow back to the
+  // CrashRecoveryContext. Otherwise simply use _exit(), meanning no cleanup,
+  // since we want to avoid further crashes on shutdown.
+  llvm::sys::Process::Exit(val, /*NoCleanup=*/true);
 }
 
 void lld::diagnosticHandler(const DiagnosticInfo &di) {
@@ -238,6 +245,9 @@ void ErrorHandler::error(const Twine &msg, ErrorTag tag,
   switch (tag) {
   case ErrorTag::LibNotFound:
     scriptArgs.push_back("missing-lib");
+    break;
+  case ErrorTag::SymbolNotFound:
+    scriptArgs.push_back("undefined-symbol");
     break;
   }
   scriptArgs.insert(scriptArgs.end(), args.begin(), args.end());

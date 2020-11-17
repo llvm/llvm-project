@@ -45,23 +45,6 @@ static unsigned getWFBeginSize(const unsigned Opcode) {
   return 0; // Not SI_WATERFALL_BEGIN_*
 }
 
-static unsigned getWFBeginContSize(const unsigned Opcode) {
-  switch (Opcode) {
-  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V1:
-    return 1;
-  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V2:
-    return 2;
-  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V4:
-    return 4;
-  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V8:
-    return 8;
-  default:
-    break;
-  }
-
-  return 0; // Not SI_WATERFALL_BEGIN_CONT_*
-}
-
 static unsigned getWFRFLSize(const unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_WATERFALL_READFIRSTLANE_V1:
@@ -288,6 +271,7 @@ class SIInsertWaterfall : public MachineFunctionPass {
 private:
   struct WaterfallWorkitem {
     const SIInstrInfo *TII;
+    const MachineRegisterInfo *MRI;
     Register TokReg; // This is always the token from the last begin intrinsic
     MachineInstr *Final;
 
@@ -302,22 +286,29 @@ private:
     std::vector<Register> RFLRegs;
 
     WaterfallWorkitem() = default;
-    WaterfallWorkitem(MachineInstr *_Begin, const SIInstrInfo *_TII)
-        : TII(_TII), Final(nullptr) {
+    WaterfallWorkitem(MachineInstr *_Begin, const SIInstrInfo *_TII,
+                      MachineRegisterInfo *_MRI)
+        : TII(_TII), MRI(_MRI), Final(nullptr) {
 
-      auto TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok);
+      auto TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
+
+      assert(tokIsStart(TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok)) &&
+             "first begin does not have an undefined input token as expected");
       assert(TokMO &&
              "Unable to extract tok operand from SI_WATERFALL_BEGIN pseudo op");
+
       BeginList.push_back(_Begin);
       TokReg = TokMO->getReg();
-    };
+    }
+
+    WaterfallWorkitem(const SIInstrInfo *_TII, MachineRegisterInfo *_MRI)
+        : TII(_TII), MRI(_MRI), TokReg(AMDGPU::NoRegister), Final(nullptr) {}
 
     void processCandidate(MachineInstr *Cand) {
       unsigned Opcode = Cand->getOpcode();
       // Trivially end any waterfall intrinsic instructions
-      if (getWFBeginSize(Opcode) || getWFBeginContSize(Opcode) ||
-          getWFRFLSize(Opcode) || getWFEndSize(Opcode) ||
-          getWFLastUseSize(Opcode)) {
+      if (getWFBeginSize(Opcode) || getWFRFLSize(Opcode) ||
+          getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) {
         // TODO: A new waterfall clause shouldn't overlap with any uses
         // tagged by a last_use intrinsic
         return;
@@ -334,38 +325,73 @@ private:
       }
     }
 
+    MachineInstr *getDefInstr(const MachineOperand *MO) const {
+      if (MO->isReg() && MRI->hasOneDef(MO->getReg())) {
+        return (*MRI->def_begin(MO->getReg())).getParent();
+      }
+      return nullptr;
+    }
+
+    bool tokIsStart(const MachineOperand *MO) const {
+      MachineInstr *defInstr = getDefInstr(MO);
+      if (defInstr && defInstr->getOpcode() == AMDGPU::S_MOV_B32) {
+        auto CopySrcOp = TII->getNamedOperand(*defInstr, AMDGPU::OpName::src0);
+        if (CopySrcOp && CopySrcOp->isImm()) {
+          if (CopySrcOp->getImm() == 0)
+            return true;
+        }
+      }
+      return false;
+    }
+
     bool addCandidate(MachineInstr *Cand) {
       unsigned Opcode = Cand->getOpcode();
 
-      if (getWFBeginContSize(Opcode) || getWFRFLSize(Opcode) ||
-          getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) {
-        auto CandTokMO = TII->getNamedOperand(*Cand, AMDGPU::OpName::tok);
-        Register CandTokReg = CandTokMO->getReg();
-        if (CandTokReg == TokReg) {
-          if (getWFBeginContSize(Opcode)) {
-            auto TokRetMO =
-                TII->getNamedOperand(*Cand, AMDGPU::OpName::tok_ret);
-            assert(TokRetMO && "Unable to extract tok_ret operand from "
-                               "SI_WATERFALL_BEGIN_CONT pseudo op");
-            BeginList.push_back(Cand);
-            TokReg = TokRetMO->getReg();
-            return true;
-          } else if (getWFRFLSize(Opcode)) {
-            RFLList.push_back(Cand);
-            return true;
-          } else if (getWFEndSize(Opcode)) {
-            EndList.push_back(Cand);
-            Final = Cand;
-            return true;
-          } else {
-            LastUseList.push_back(Cand);
-            return true;
-          }
-        }
-      } else {
-        llvm_unreachable(
-            "Candidate is not an SI_WATERFALL_* pseudo instruction");
+      assert((getWFBeginSize(Opcode) || getWFRFLSize(Opcode) ||
+              getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) &&
+             "expected a waterfall instruction in addCandidate");
+
+      auto CandTokMO = TII->getNamedOperand(*Cand, AMDGPU::OpName::tok);
+      // There are a couple of scenarios at this point:
+      // 1. Standard - there's already been a begin that's been processed and
+      //               set up the WaterfallWorkItem. In which case the token is
+      //               valid and needs to be checked to ensure well- formed
+      //               waterfall groups.
+      // 2. Begins removed - begins were uniform - and all of them have been
+      //               removed. Need to process the rest of the instructions
+      //               in the group, and verify that they have a undefined
+      //               token
+      if (TokReg == AMDGPU::NoRegister) {
+        // All begins have been removed - continue to process the rest of the
+        // grouping ready for them to be removed in the next stage
+        assert(!getWFBeginSize(Opcode) &&
+               "unexpected begin instruction for addCandidate");
+        assert(tokIsStart(CandTokMO) &&
+               "waterfall group with no begin doesn't have undef tok input");
+
+        TokReg = CandTokMO->getReg();
       }
+      if (CandTokMO->getReg() == TokReg) {
+        if (getWFBeginSize(Opcode)) {
+          auto TokRetMO = TII->getNamedOperand(*Cand, AMDGPU::OpName::tok_ret);
+          assert(TokRetMO && "Unable to extract tok_ret operand from "
+                             "SI_WATERFALL_BEGIN pseudo op");
+          BeginList.push_back(Cand);
+          TokReg = TokRetMO->getReg();
+          return true;
+        } else if (getWFRFLSize(Opcode)) {
+          RFLList.push_back(Cand);
+          return true;
+        } else if (getWFEndSize(Opcode)) {
+          EndList.push_back(Cand);
+          Final = Cand;
+          return true;
+        } else {
+          LastUseList.push_back(Cand);
+          return true;
+        }
+      }
+      LLVM_DEBUG(dbgs() << "malformed waterfall instruction group");
       return false;
     }
   };
@@ -390,6 +416,8 @@ public:
 
   bool removeRedundantWaterfall(WaterfallWorkitem &Item);
   bool processWaterfall(MachineBasicBlock &MBB);
+
+  Register getToken(MachineInstr *MI);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
@@ -418,13 +446,17 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // The readfirstlane intrinsics are replaced with the uniform source value,
   // the loop is removed and the defs in the end intrinsics are just replaced
   // with the input operands
+  // We can also have cases where the begins are all removed (all the indices
+  // were actually uniform).
 
   // First step is to identify any readfirstlane intrinsics that are actually
-  // uniform
+  // uniform - unless there are no begin instructions, in which case we always
+  // remove
   bool LoopRemoved = false;
   unsigned Removed = 0;
   std::vector<MachineInstr *> NewRFLList;
   std::vector<MachineInstr *> ToRemoveRFLList;
+
   for (auto RFLMI : Item.RFLList) {
     auto RFLSrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
     auto RFLDstOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::dst);
@@ -446,7 +478,7 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
 
   // Note: this test also returns true when there are NO RFL intrinsics, the
   // case where a prior pass has removed all of them and the loop is now redundant
-  if (Removed == Item.RFLList.size()) {
+  if (!Item.BeginList.size() || Removed == Item.RFLList.size()) {
     // Removed all of the RFLs
     // We can remove the waterfall loop entirely
 
@@ -468,6 +500,17 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
       auto LUDstReg = TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst)->getReg();
       auto LUSrcReg = TII->getNamedOperand(*LUMI, AMDGPU::OpName::src)->getReg();
       MRI->replaceRegWith(LUDstReg, LUSrcReg);
+    }
+    // If all the begins were removed, we have to replace the RFL with actual
+    // RFL, these will show up in the NewRLFList
+    for (auto RFLMI : NewRFLList) {
+      auto DstReg = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::dst)->getReg();
+      auto SrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
+      Register SrcReg = SrcOp->getReg();
+
+      MachineBasicBlock::iterator RFLInsert(RFLMI);
+      readFirstLaneReg(*RFLMI->getParent(), MRI, RI, TII, RFLInsert,
+                       RFLMI->getDebugLoc(), DstReg, SrcReg, *SrcOp);
     }
 
     for (auto BeginMI : Item.BeginList)
@@ -502,20 +545,22 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
   // Firstly we check that there are at least 3 related waterfall instructions
   // for this begin
-  // SI_WATERFALL_BEGIN [ SI_WATERFALL_BEING_CONT ]*
+  // SI_WATERFALL_BEGIN [ SI_WATERFALL_BEGIN ]*
   // [ SI_WATERFALL_READFIRSTLANE ]+ [ SI_WATERFALL_END ]+ If there are multiple
   // waterfall loops they must also be disjoint
 
   for (WaterfallWorkitem &Item : Worklist) {
-    LLVM_DEBUG(dbgs() << "Processing " << *Item.BeginList[0] << "\n");
-
     LLVM_DEBUG(
-        for (auto RUse = MRI->use_begin(Item.TokReg), RSE = MRI->use_end();
-             RUse != RSE; ++RUse) {
-          MachineInstr *RUseMI = RUse->getParent();
-          assert((CurrMBB->getNumber() == RUseMI->getParent()->getNumber()) &&
-                 "Linked WATERFALL pseudo ops found in different BBs");
-        });
+        if (Item.BeginList.size()) {
+          dbgs() << "Processing " << *Item.BeginList[0] << "\n";
+
+          for (auto RUse = MRI->use_begin(Item.TokReg), RSE = MRI->use_end();
+               RUse != RSE; ++RUse) {
+            MachineInstr *RUseMI = RUse->getParent();
+            assert((CurrMBB->getNumber() == RUseMI->getParent()->getNumber()) &&
+                   "Linked WATERFALL pseudo ops found in different BBs");
+          }
+        } else { dbgs() << "Processing redundant waterfall\n"; });
 
     if (removeRedundantWaterfall(Item)) {
       Changed = true;
@@ -751,6 +796,11 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
   return Changed;
 }
 
+Register SIInsertWaterfall::getToken(MachineInstr *MI) {
+  auto CandTokMO = TII->getNamedOperand(*MI, AMDGPU::OpName::tok);
+  return CandTokMO->isReg() ? CandTokMO->getReg() : AMDGPU::NoRegister;
+}
+
 bool SIInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
@@ -761,14 +811,35 @@ bool SIInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     Worklist.clear();
+    bool StartNew = true;
 
     for (MachineInstr &MI : MBB) {
       unsigned Opcode = MI.getOpcode();
 
-      if (getWFBeginSize(Opcode))
-        Worklist.push_back(WaterfallWorkitem(&MI, TII));
-      else if (getWFBeginContSize(Opcode) || getWFRFLSize(Opcode) ||
-               getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) {
+      if (getWFBeginSize(Opcode)) {
+        if (StartNew) {
+          Worklist.push_back(WaterfallWorkitem(&MI, TII, MRI));
+          StartNew = false;
+        } else {
+          if (!Worklist.back().addCandidate(&MI)) {
+            llvm_unreachable("Incorrect SI_WATERFALL_* groups");
+          }
+        }
+      } else if (getWFRFLSize(Opcode) || getWFEndSize(Opcode) ||
+                 getWFLastUseSize(Opcode)) {
+        // On to the body of the group intrinsics,
+
+        // Tag StartNew as true if we encounter another begin
+        StartNew = true;
+
+        if (!Worklist.size() || getToken(&MI) != Worklist.back().TokReg) {
+          // There's no associated begin for these body intrinsics
+          // That means it's either an error - or all the begin intrinsics
+          // were removed due to being uniform
+          // Set up a WorkItem so we can process this correctly
+          Worklist.push_back(WaterfallWorkitem(TII, MRI));
+        }
+
         if (!Worklist.back().addCandidate(&MI)) {
           llvm_unreachable("Overlapping SI_WATERFALL_* groups");
         }

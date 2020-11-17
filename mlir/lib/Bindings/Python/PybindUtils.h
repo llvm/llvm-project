@@ -85,7 +85,7 @@ struct MlirDefaultingCaster {
       value = DefaultingTy{
           pybind11::cast<typename DefaultingTy::ReferrentTy &>(src)};
       return true;
-    } catch (std::exception &e) {
+    } catch (std::exception &) {
       return false;
     }
   }
@@ -183,6 +183,93 @@ struct PySinglePartStringAccumulator {
 private:
   pybind11::str value;
   bool invoked = false;
+};
+
+/// A CRTP base class for pseudo-containers willing to support Python-type
+/// slicing access on top of indexed access. Calling ::bind on this class
+/// will define `__len__` as well as `__getitem__` with integer and slice
+/// arguments.
+///
+/// This is intended for pseudo-containers that can refer to arbitrary slices of
+/// underlying storage indexed by a single integer. Indexing those with an
+/// integer produces an instance of ElementTy. Indexing those with a slice
+/// produces a new instance of Derived, which can be sliced further.
+///
+/// A derived class must provide the following:
+///   - a `static const char *pyClassName ` field containing the name of the
+///     Python class to bind;
+///   - an instance method `intptr_t getNumElements()` that returns the number
+///     of elements in the backing container (NOT that of the slice);
+///   - an instance method `ElementTy getElement(intptr_t)` that returns a
+///     single element at the given index.
+///   - an instance method `Derived slice(intptr_t, intptr_t, intptr_t)` that
+///     constructs a new instance of the derived pseudo-container with the
+///     given slice parameters (to be forwarded to the Sliceable constructor).
+///
+/// A derived class may additionally define:
+///   - a `static void bindDerived(ClassTy &)` method to bind additional methods
+///     the python class.
+template <typename Derived, typename ElementTy>
+class Sliceable {
+protected:
+  using ClassTy = pybind11::class_<Derived>;
+
+public:
+  explicit Sliceable(intptr_t startIndex, intptr_t length, intptr_t step)
+      : startIndex(startIndex), length(length), step(step) {
+    assert(length >= 0 && "expected non-negative slice length");
+  }
+
+  /// Returns the length of the slice.
+  intptr_t dunderLen() const { return length; }
+
+  /// Returns the element at the given slice index. Supports negative indices
+  /// by taking elements in inverse order. Throws if the index is out of bounds.
+  ElementTy dunderGetItem(intptr_t index) {
+    // Negative indices mean we count from the end.
+    if (index < 0)
+      index = length + index;
+    if (index < 0 || index >= length) {
+      throw python::SetPyError(PyExc_IndexError,
+                               "attempt to access out of bounds");
+    }
+
+    // Compute the linear index given the current slice properties.
+    int linearIndex = index * step + startIndex;
+    assert(linearIndex >= 0 &&
+           linearIndex < static_cast<Derived *>(this)->getNumElements() &&
+           "linear index out of bounds, the slice is ill-formed");
+    return static_cast<Derived *>(this)->getElement(linearIndex);
+  }
+
+  /// Returns a new instance of the pseudo-container restricted to the given
+  /// slice.
+  Derived dunderGetItemSlice(pybind11::slice slice) {
+    ssize_t start, stop, extraStep, sliceLength;
+    if (!slice.compute(dunderLen(), &start, &stop, &extraStep, &sliceLength)) {
+      throw python::SetPyError(PyExc_IndexError,
+                               "attempt to access out of bounds");
+    }
+    return static_cast<Derived *>(this)->slice(startIndex + start * step,
+                                               sliceLength, step * extraStep);
+  }
+
+  /// Binds the indexing and length methods in the Python class.
+  static void bind(pybind11::module &m) {
+    auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName)
+                     .def("__len__", &Sliceable::dunderLen)
+                     .def("__getitem__", &Sliceable::dunderGetItem)
+                     .def("__getitem__", &Sliceable::dunderGetItemSlice);
+    Derived::bindDerived(clazz);
+  }
+
+  /// Hook for derived classes willing to bind more methods.
+  static void bindDerived(ClassTy &) {}
+
+private:
+  intptr_t startIndex;
+  intptr_t length;
+  intptr_t step;
 };
 
 } // namespace mlir

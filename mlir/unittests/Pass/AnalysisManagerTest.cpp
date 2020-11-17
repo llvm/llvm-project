@@ -8,7 +8,7 @@
 
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "gtest/gtest.h"
@@ -58,6 +58,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   FuncOp func1 =
       FuncOp::create(builder.getUnknownLoc(), "foo",
                      builder.getFunctionType(llvm::None, llvm::None));
+  func1.setPrivate();
   module->push_back(func1);
 
   // Test fine grain invalidation of the function analysis manager.
@@ -87,6 +88,7 @@ TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
   FuncOp func1 =
       FuncOp::create(builder.getUnknownLoc(), "foo",
                      builder.getFunctionType(llvm::None, llvm::None));
+  func1.setPrivate();
   module->push_back(func1);
 
   // Test fine grain invalidation of a function analysis from within a module

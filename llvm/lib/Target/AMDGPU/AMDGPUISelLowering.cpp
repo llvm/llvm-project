@@ -798,7 +798,6 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_waterfall_readfirstlane:
     case Intrinsic::amdgcn_waterfall_begin:
-    case Intrinsic::amdgcn_waterfall_begin_cont:
     case Intrinsic::amdgcn_waterfall_end:
     case Intrinsic::amdgcn_waterfall_last_use:
       return true;
@@ -810,7 +809,6 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     switch (IntrID) {
     case Intrinsic::amdgcn_waterfall_readfirstlane:
     case Intrinsic::amdgcn_waterfall_begin:
-    case Intrinsic::amdgcn_waterfall_begin_cont:
     case Intrinsic::amdgcn_waterfall_end:
     case Intrinsic::amdgcn_waterfall_last_use:
       return true;
@@ -959,6 +957,8 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CC_AMDGPU_Func;
+  case CallingConv::AMDGPU_Gfx:
+    return CC_SI_Gfx;
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
   default:
@@ -980,6 +980,8 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
   case CallingConv::AMDGPU_ES:
   case CallingConv::AMDGPU_LS:
     return RetCC_SI_Shader;
+  case CallingConv::AMDGPU_Gfx:
+    return RetCC_SI_Gfx;
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:

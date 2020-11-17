@@ -89,6 +89,15 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
               return Scalar<T>{std::invoke(fptr, i, j)};
             }));
+  } else if (name == "isnan") {
+    // A warning about an invalid argument is discarded from converting
+    // the argument of isnan().
+    auto restorer{context.messages().DiscardMessages()};
+    using DefaultReal = Type<TypeCategory::Real, 4>;
+    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+          return Scalar<T>{x.IsNotANumber()};
+        }));
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {
@@ -125,11 +134,13 @@ Expr<LogicalResult> FoldOperation(
           Satisfies(relation.opr, folded->first.CompareSigned(folded->second));
     } else if constexpr (T::category == TypeCategory::Real) {
       result = Satisfies(relation.opr, folded->first.Compare(folded->second));
+    } else if constexpr (T::category == TypeCategory::Complex) {
+      result = (relation.opr == RelationalOperator::EQ) ==
+          folded->first.Equals(folded->second);
     } else if constexpr (T::category == TypeCategory::Character) {
       result = Satisfies(relation.opr, Compare(folded->first, folded->second));
     } else {
-      static_assert(T::category != TypeCategory::Complex &&
-          T::category != TypeCategory::Logical);
+      static_assert(T::category != TypeCategory::Logical);
     }
     return Expr<LogicalResult>{Constant<LogicalResult>{result}};
   }

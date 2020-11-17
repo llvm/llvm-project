@@ -79,6 +79,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
+    case R_WASM_MEMORY_ADDR_TLS_SLEB:
       existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
       break;
     case R_WASM_TABLE_INDEX_SLEB64:
@@ -96,6 +97,7 @@ void InputChunk::verifyRelocTargets() const {
       break;
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
+    case R_WASM_FUNCTION_OFFSET_I64:
       existingValue = read64le(loc);
       break;
     default:
@@ -158,6 +160,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
+    case R_WASM_MEMORY_ADDR_TLS_SLEB:
       encodeSLEB128(static_cast<int32_t>(value), loc, 5);
       break;
     case R_WASM_TABLE_INDEX_SLEB64:
@@ -174,6 +177,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
       break;
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
+    case R_WASM_FUNCTION_OFFSET_I64:
       write64le(loc, value);
       break;
     default:

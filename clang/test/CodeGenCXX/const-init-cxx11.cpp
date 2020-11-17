@@ -624,4 +624,4 @@ const char *f() { return &X::p; }
 
 // VirtualMembers::TemplateClass::templateMethod() must be defined in this TU,
 // not just declared.
-// CHECK: define linkonce_odr void @_ZN14VirtualMembers13TemplateClassIiE14templateMethodEv(%"struct.VirtualMembers::TemplateClass"* %this)
+// CHECK: define linkonce_odr void @_ZN14VirtualMembers13TemplateClassIiE14templateMethodEv(%"struct.VirtualMembers::TemplateClass"* {{[^,]*}} %this)

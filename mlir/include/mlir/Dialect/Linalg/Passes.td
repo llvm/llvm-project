@@ -11,6 +11,17 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ConvertElementwiseToLinalg : FunctionPass<"convert-elementwise-to-linalg"> {
+  let summary = "Convert ElementwiseMappable ops to linalg";
+  let description = [{
+    Convert ops with the `ElementwiseMappable` trait to linalg parallel loops.
+
+    This pass only converts ops that operate on ranked tensors.
+  }];
+  let constructor = "mlir::createConvertElementwiseToLinalgPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";
@@ -50,10 +61,10 @@ def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect", "AffineDialect"];
 }
 
-def LinalgBufferize : Pass<"linalg-bufferize", "ModuleOp"> {
+def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
   let summary = "Bufferize the linalg dialect";
   let constructor = "mlir::createLinalgBufferizePass()";
-  let dependentDialects = ["linalg::LinalgDialect", "vector::VectorDialect"];
+  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 def LinalgLowerToParallelLoops

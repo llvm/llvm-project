@@ -166,6 +166,84 @@ func @failedSameOperandAndResultType_operand_result_mismatch(%t10 : tensor<10xf3
 
 // -----
 
+func @failedElementwiseMappable_different_rankedness(%arg0: tensor<?xf32>, %arg1: tensor<*xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'tensor<*xf32>' and 'tensor<?xf32>'}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (tensor<?xf32>, tensor<*xf32>) -> tensor<*xf32>
+}
+
+// -----
+
+func @failedElementwiseMappable_different_rank(%arg0: tensor<?xf32>, %arg1: tensor<?x?xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'tensor<?x?xf32>' and 'tensor<?xf32>'}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (tensor<?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+}
+
+// -----
+
+func @failedElementwiseMappable_different_shape(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'tensor<5xf32>' and 'tensor<?xf32>'}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (tensor<?xf32>, tensor<5xf32>) -> tensor<?xf32>
+}
+
+// -----
+
+func @failedElementwiseMappable_different_base_type(%arg0: vector<2xf32>, %arg1: tensor<2xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type: found 'tensor<2xf32>' and 'vector<2xf32>'}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (vector<2xf32>, tensor<2xf32>) -> tensor<2xf32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_non_scalar_output(%arg0: vector<2xf32>) {
+  // expected-error@+1 {{if an operand is non-scalar, then there must be at least one non-scalar result}}
+  %0 = "test.elementwise_mappable"(%arg0) : (vector<2xf32>) -> f32
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_non_scalar_result_all_scalar_input(%arg0: f32) {
+  // expected-error@+1 {{if a result is non-scalar, then at least one operand must be non-scalar}}
+  %0 = "test.elementwise_mappable"(%arg0) : (f32) -> tensor<f32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_mixed_scalar_non_scalar_results(%arg0: tensor<10xf32>) {
+  // expected-error@+1 {{if an operand is non-scalar, then all results must be non-scalar}}
+  %0, %1 = "test.elementwise_mappable"(%arg0) : (tensor<10xf32>) -> (f32, tensor<10xf32>)
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_zero_results(%arg0: tensor<10xf32>) {
+  // expected-error@+1 {{if an operand is non-scalar, then there must be at least one non-scalar result}}
+  "test.elementwise_mappable"(%arg0) : (tensor<10xf32>) -> ()
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_zero_operands() {
+  // expected-error@+1 {{if a result is non-scalar, then at least one operand must be non-scalar}}
+  "test.elementwise_mappable"() : () -> (tensor<6xf32>)
+  return
+}
+
+// -----
+
+func @succeededElementwiseMappable(%arg0: vector<2xf32>) {
+  // Check that varying element types are allowed.
+  // CHECK: test.elementwise_mappable
+  %0 = "test.elementwise_mappable"(%arg0) : (vector<2xf32>) -> vector<2xf16>
+  return
+}
+
+// -----
+
 func @failedHasParent_wrong_parent() {
   "some.op"() ({
    // expected-error@+1 {{'test.child' op expects parent op 'test.parent'}}
@@ -266,11 +344,11 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
 
 // Test that operation with the SymbolTable Trait define a new symbol scope.
 "test.symbol_scope"() ({
-  func @foo() {
+  func private @foo() {
   }
   "test.finish" () : () -> ()
 }) : () -> ()
-func @foo() {
+func private @foo() {
 }
 
 // -----

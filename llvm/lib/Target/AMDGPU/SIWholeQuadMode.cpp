@@ -341,7 +341,8 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
       if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO)
         continue;
 
-      for (MCRegUnitIterator RegUnit(Reg, TRI); RegUnit.isValid(); ++RegUnit) {
+      for (MCRegUnitIterator RegUnit(Reg.asMCReg(), TRI); RegUnit.isValid();
+           ++RegUnit) {
         LiveRange &LR = LIS->getRegUnit(*RegUnit);
         const VNInfo *Value = LR.Query(LIS->getInstructionIndex(MI)).valueIn();
         if (!Value)
@@ -757,7 +758,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
   if (!SaveSCC)
     return PreferLast ? Last : First;
 
-  LiveRange &LR = LIS->getRegUnit(*MCRegUnitIterator(AMDGPU::SCC, TRI));
+  LiveRange &LR =
+      LIS->getRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
   auto MBBE = MBB.end();
   SlotIndex FirstIdx = First != MBBE ? LIS->getInstructionIndex(*First)
                                      : LIS->getMBBEndIdx(&MBB);
@@ -958,11 +960,12 @@ MachineInstr *SIWholeQuadMode::lowerDemote(MachineBasicBlock &MBB, MachineInstr 
   const unsigned Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   const unsigned AndN2 =
     ST->isWave32() ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
-  const unsigned And =
-    ST->isWave32() ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+  const unsigned Xor =
+    ST->isWave32() ? AMDGPU::S_XOR_B32 : AMDGPU::S_XOR_B64;
 
   const DebugLoc &DL = MI.getDebugLoc();
   MachineInstr *NewMI = nullptr;
+  Register KillMaskReg = Register();
 
   const MachineOperand &Op = MI.getOperand(0);
   int64_t KillVal = MI.getOperand(1).getImm();
@@ -976,16 +979,34 @@ MachineInstr *SIWholeQuadMode::lowerDemote(MachineBasicBlock &MBB, MachineInstr 
         .addReg(Exec);
     }
   } else {
-    unsigned Opcode = KillVal ? AndN2 : And;
-    NewMI = BuildMI(MBB, MI, DL,
-                    TII->get(Opcode),
-                    LiveMaskOut)
-      .addReg(LiveMaskIn)
-      .add(Op);
+    if (!KillVal) {
+      const TargetRegisterClass *BoolRC = TRI->getBoolRC();
+      KillMaskReg = MRI->createVirtualRegister(BoolRC);
+      MachineInstr *ComputeKilledMaskMI =
+        BuildMI(MBB, MI, DL,
+                TII->get(Xor),
+                KillMaskReg)
+        .add(Op)
+        .addReg(Exec);
+      NewMI = BuildMI(MBB, MI, DL,
+                      TII->get(AndN2),
+                      LiveMaskOut)
+        .addReg(LiveMaskIn)
+        .addReg(KillMaskReg);
+      LIS->InsertMachineInstrInMaps(*ComputeKilledMaskMI);
+    } else {
+      NewMI = BuildMI(MBB, MI, DL,
+                      TII->get(AndN2),
+                      LiveMaskOut)
+        .addReg(LiveMaskIn)
+        .add(Op);
+    }
   }
 
   if (NewMI) {
     LIS->InsertMachineInstrInMaps(*NewMI);
+    if (KillMaskReg)
+      LIS->createAndComputeVirtRegInterval(KillMaskReg);
   }
 
   MachineInstr *TermMI = BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_EARLY_TERMINATE_SCC0));
@@ -1538,7 +1559,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   // Physical registers like SCC aren't tracked by default anyway, so just
   // removing the ranges we computed is the simplest option for maintaining
   // the analysis results.
-  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::SCC, TRI));
+  LIS->removeRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
 
   return true;
 }

@@ -23,6 +23,12 @@
 #include <map>
 #include <vector>
 
+namespace llvm {
+namespace lto {
+class InputFile;
+} // namespace lto
+} // namespace llvm
+
 namespace lld {
 namespace macho {
 
@@ -39,9 +45,10 @@ class InputFile {
 public:
   enum Kind {
     ObjKind,
+    OpaqueKind,
     DylibKind,
     ArchiveKind,
-    OpaqueKind,
+    BitcodeKind,
   };
 
   virtual ~InputFile() = default;
@@ -125,6 +132,14 @@ private:
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+};
+
+class BitcodeFile : public InputFile {
+public:
+  explicit BitcodeFile(MemoryBufferRef mb);
+  static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
+
+  std::unique_ptr<llvm::lto::InputFile> obj;
 };
 
 extern std::vector<InputFile *> inputFiles;

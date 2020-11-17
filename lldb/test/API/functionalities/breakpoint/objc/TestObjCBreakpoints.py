@@ -13,11 +13,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
 class TestObjCBreakpoints(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @add_test_categories(["objc"])
     def test_break(self):
         """Test setting Objective-C specific breakpoints (DWARF in .o files)."""
         self.build()

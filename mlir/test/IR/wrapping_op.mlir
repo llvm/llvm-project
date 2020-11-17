@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-GENERIC
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic -mlir-print-debuginfo -mlir-print-local-scope %s | FileCheck %s --check-prefix=CHECK-GENERIC
 
 // CHECK-LABEL: func @wrapping_op
 // CHECK-GENERIC: "func"

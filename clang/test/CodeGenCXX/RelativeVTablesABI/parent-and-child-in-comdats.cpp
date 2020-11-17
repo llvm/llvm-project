@@ -27,19 +27,19 @@
 // CHECK: declare void @_Z5A_fooP1A(%class.A*)
 
 // The stubs and implementations for foo() are in their own comdat sections.
-// CHECK:      define linkonce_odr void @_ZN1A3fooEv(%class.A* %this) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define linkonce_odr void @_ZN1A3fooEv(%class.A* {{[^,]*}} %this) unnamed_addr #{{[0-9]+}} comdat
 
-// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   tail call void @_ZN1A3fooEv(%class.A* %0)
+// CHECK-NEXT:   tail call void @_ZN1A3fooEv(%class.A* {{[^,]*}} %0)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK:      define linkonce_odr void @_ZN1B3fooEv(%class.B* %this) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define linkonce_odr void @_ZN1B3fooEv(%class.B* {{[^,]*}} %this) unnamed_addr #{{[0-9]+}} comdat
 
-// CHECK:      define hidden void @_ZN1B3fooEv.stub(%class.B* %0) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define hidden void @_ZN1B3fooEv.stub(%class.B* {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   tail call void @_ZN1B3fooEv(%class.B* %0)
+// CHECK-NEXT:   tail call void @_ZN1B3fooEv(%class.B* {{[^,]*}} %0)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

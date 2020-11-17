@@ -41,7 +41,7 @@ class PCHContainerOperations;
 
 /// Runs lexer to compute suggested preamble bounds.
 PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
-                                     const llvm::MemoryBuffer *Buffer,
+                                     const llvm::MemoryBufferRef &Buffer,
                                      unsigned MaxLines);
 
 class PreambleCallbacks;

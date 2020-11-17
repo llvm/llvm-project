@@ -477,8 +477,6 @@ func @canonicalize_bounds(%M : index, %N : index) {
 
 // Compose maps into affine load and store ops.
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0) -> (d0 + 1)>
-
 // CHECK-LABEL: @compose_into_affine_load_store
 func @compose_into_affine_load_store(%A : memref<1024xf32>, %u : index) {
   // CHECK: affine.for %[[IV:.*]] = 0 to 1024
@@ -594,7 +592,7 @@ func @rep(%arg0 : index, %arg1 : index) -> index {
 }
 
 // -----
-// CHECK-DAG: #[[lb:.*]] = affine_map<()[s0] -> (s0)>
+
 // CHECK-DAG: #[[ub:.*]] = affine_map<()[s0] -> (s0 + 2)>
 
 func @drop_duplicate_bounds(%N : index) {

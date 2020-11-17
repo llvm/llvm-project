@@ -309,7 +309,7 @@ def LiteralInvalidB : TestFormat_Op<"literal_invalid_b", [{
 }]>;
 // CHECK-NOT: error
 def LiteralValid : TestFormat_Op<"literal_valid", [{
-  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` ` ` `->` `abc$._`
+  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `*` ` ` `` `->` `abc$._`
   attr-dict
 }]>;
 
@@ -329,7 +329,7 @@ def OptionalInvalidB : TestFormat_Op<"optional_invalid_b", [{
 def OptionalInvalidC : TestFormat_Op<"optional_invalid_c", [{
   ($attr)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: first element of an operand group must be an attribute, literal, operand, or region
+// CHECK: error: first parsable element of an operand group must be an attribute, literal, operand, or region
 def OptionalInvalidD : TestFormat_Op<"optional_invalid_d", [{
   (type($operand) $operand^)? attr-dict
 }]>, Arguments<(ins Optional<I64>:$operand)>;
@@ -369,6 +369,11 @@ def OptionalInvalidL : TestFormat_Op<"optional_invalid_l", [{
 def OptionalInvalidM : TestFormat_Op<"optional_invalid_m", [{
   (` `^)?
 }]>, Arguments<(ins)>;
+
+// CHECK-NOT: error
+def OptionalValidA : TestFormat_Op<"optional_valid_a", [{
+  (` ` `` $arg^)?
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Variables

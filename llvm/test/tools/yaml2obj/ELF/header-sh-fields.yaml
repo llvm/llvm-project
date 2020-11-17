@@ -20,10 +20,8 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 ProgramHeaders:
-  - Type:     PT_LOAD
-    Sections: []
-  - Type:     PT_LOAD
-    Sections: []
+  - Type: PT_LOAD
+  - Type: PT_LOAD
 
 ## Check we can override all default values using the same values
 ## and that this does not change the output.
@@ -43,10 +41,8 @@ FileHeader:
   EPhEntSize: [[PHENTSIZE=56]]
   EPhNum:     [[PHNUM=2]]
 ProgramHeaders:
-  - Type:     PT_LOAD
-    Sections: []
-  - Type:     PT_LOAD
-    Sections: []
+  - Type: PT_LOAD
+  - Type: PT_LOAD
 
 ## Override different fields to check the output produced.
 

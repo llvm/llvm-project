@@ -24,7 +24,7 @@ bb:                                               ; preds = %bb.nph, %bb1
   %1 = sext i32 %i.01 to i64                      ; <i64> [#uses=1]
 
 ; CHECK: %2 = getelementptr inbounds double, double* %d, i64 %1
-; CHECK: -->  {%d,+,16}<nsw><%bb>
+; CHECK: -->  {%d,+,16}<nuw><%bb>
   %2 = getelementptr inbounds double, double* %d, i64 %1  ; <double*> [#uses=1]
 
   %3 = load double, double* %2, align 8                   ; <double> [#uses=1]
@@ -38,7 +38,7 @@ bb:                                               ; preds = %bb.nph, %bb1
   %8 = sext i32 %7 to i64                         ; <i64> [#uses=1]
 
 ; CHECK: %9 = getelementptr inbounds double, double* %q, i64 %8
-; CHECK: {(8 + %q)<nsw>,+,16}<nsw><%bb>
+; CHECK: {(8 + %q)<nuw>,+,16}<nuw><%bb>
   %9 = getelementptr inbounds double, double* %q, i64 %8  ; <double*> [#uses=1]
 
 ; Artificially repeat the above three instructions, this time using
@@ -50,7 +50,7 @@ bb:                                               ; preds = %bb.nph, %bb1
   %t8 = sext i32 %t7 to i64                         ; <i64> [#uses=1]
 
 ; CHECK: %t9 = getelementptr inbounds double, double* %q, i64 %t8
-; CHECK: {(8 + %q)<nsw>,+,16}<nsw><%bb>
+; CHECK: {(8 + %q)<nuw>,+,16}<nuw><%bb>
   %t9 = getelementptr inbounds double, double* %q, i64 %t8  ; <double*> [#uses=1]
 
   %10 = load double, double* %9, align 8                  ; <double> [#uses=1]

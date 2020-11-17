@@ -375,22 +375,19 @@ def apple_simulator_test(platform):
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""
     def should_skip_debugserver_test():
-        return "debugserver tests" if configuration.dont_do_debugserver_test else None
+        return ("debugserver tests"
+                if not configuration.debugserver_platform
+                else None)
     return skipTestIfFn(should_skip_debugserver_test)(func)
 
 
 def llgs_test(func):
     """Decorate the item as a lldb-server test."""
     def should_skip_llgs_tests():
-        return "llgs tests" if configuration.dont_do_llgs_test else None
+        return ("llgs tests"
+                if not configuration.llgs_platform
+                else None)
     return skipTestIfFn(should_skip_llgs_tests)(func)
-
-
-def not_remote_testsuite_ready(func):
-    """Decorate the item as a test which is not ready yet for remote testsuite."""
-    def is_remote():
-        return "Not ready for remote testsuite" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
 
 
 def expectedFailureOS(

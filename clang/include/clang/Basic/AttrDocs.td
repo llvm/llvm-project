@@ -3594,9 +3594,10 @@ def NSErrorDomainDocs : Documentation {
 In Cocoa frameworks in Objective-C, one can group related error codes in enums
 and categorize these enums with error domains.
 
-The ``ns_error_domain`` attribute indicates a global ``NSString`` constant
-representing the error domain that an error code belongs to. For pointer
-uniqueness and code size this is a constant symbol, not a literal.
+The ``ns_error_domain`` attribute indicates a global ``NSString`` or
+``CFString`` constant representing the error domain that an error code belongs
+to. For pointer uniqueness and code size this is a constant symbol, not a
+literal.
 
 The domain and error code need to be used together. The ``ns_error_domain``
 attribute links error codes to their domain at the source level.

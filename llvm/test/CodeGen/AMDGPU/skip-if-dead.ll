@@ -1,4 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; TODO-GFX11: This should generate "exp mrt0" instead of "exp null":
+; TODO-GFX11: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_pos:
 ; CHECK-NEXT: ; %bb.0:

@@ -34,11 +34,10 @@ Sections:
     Flags:           [ ]
     Content:         "FEEDFACE"
 ProgramHeaders:
-- Type: PT_LOAD
-  Flags: [ PF_X, PF_R ]
-  Sections:
-    - Section: .text
-    - Section: .non_alloc_in_segment
+- Type:     PT_LOAD
+  Flags:    [ PF_X, PF_R ]
+  FirstSec: .text
+  LastSec:  .non_alloc_in_segment
 
 # DATA: {{^[^[:blank:]]+}} de ad be ef ca fe ba be
 # DATA-NOT: fe ed fa ce

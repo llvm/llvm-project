@@ -110,7 +110,7 @@ KnownBits KnownBits::umax(const KnownBits &LHS, const KnownBits &RHS) {
   // are common to these two values are also known in the result.
   KnownBits L = LHS.makeGE(RHS.getMinValue());
   KnownBits R = RHS.makeGE(LHS.getMinValue());
-  return KnownBits(L.Zero & R.Zero, L.One & R.One);
+  return KnownBits::commonBits(L, R);
 }
 
 KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {
@@ -160,12 +160,16 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
     return Known;
   }
 
-  // Minimum shift amount low bits are known zero.
-  if (RHS.getMinValue().ult(BitWidth))
-    Known.Zero.setLowBits(RHS.getMinValue().getZExtValue());
-
   // No matter the shift amount, the trailing zeros will stay zero.
-  Known.Zero.setLowBits(LHS.countMinTrailingZeros());
+  unsigned MinTrailingZeros = LHS.countMinTrailingZeros();
+
+  // Minimum shift amount low bits are known zero.
+  if (RHS.getMinValue().ult(BitWidth)) {
+    MinTrailingZeros += RHS.getMinValue().getZExtValue();
+    MinTrailingZeros = std::min(MinTrailingZeros, BitWidth);
+  }
+
+  Known.Zero.setLowBits(MinTrailingZeros);
   return Known;
 }
 
@@ -183,12 +187,16 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
     return Known;
   }
 
-  // Minimum shift amount high bits are known zero.
-  if (RHS.getMinValue().ult(BitWidth))
-    Known.Zero.setHighBits(RHS.getMinValue().getZExtValue());
-
   // No matter the shift amount, the leading zeros will stay zero.
-  Known.Zero.setHighBits(LHS.countMinLeadingZeros());
+  unsigned MinLeadingZeros = LHS.countMinLeadingZeros();
+
+  // Minimum shift amount high bits are known zero.
+  if (RHS.getMinValue().ult(BitWidth)) {
+    MinLeadingZeros += RHS.getMinValue().getZExtValue();
+    MinLeadingZeros = std::min(MinLeadingZeros, BitWidth);
+  }
+
+  Known.Zero.setHighBits(MinLeadingZeros);
   return Known;
 }
 
@@ -204,26 +212,44 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
     return Known;
   }
 
-  // TODO: Minimum shift amount high bits are known sign bits.
-  // TODO: No matter the shift amount, the leading sign bits will stay.
+  // No matter the shift amount, the leading sign bits will stay.
+  unsigned MinLeadingZeros = LHS.countMinLeadingZeros();
+  unsigned MinLeadingOnes = LHS.countMinLeadingOnes();
+
+  // Minimum shift amount high bits are known sign bits.
+  if (RHS.getMinValue().ult(BitWidth)) {
+    if (MinLeadingZeros) {
+      MinLeadingZeros += RHS.getMinValue().getZExtValue();
+      MinLeadingZeros = std::min(MinLeadingZeros, BitWidth);
+    }
+    if (MinLeadingOnes) {
+      MinLeadingOnes += RHS.getMinValue().getZExtValue();
+      MinLeadingOnes = std::min(MinLeadingOnes, BitWidth);
+    }
+  }
+
+  Known.Zero.setHighBits(MinLeadingZeros);
+  Known.One.setHighBits(MinLeadingOnes);
   return Known;
 }
 
-KnownBits KnownBits::abs() const {
+KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   // If the source's MSB is zero then we know the rest of the bits already.
   if (isNonNegative())
     return *this;
 
-  // Assume we know nothing.
+  // Absolute value preserves trailing zero count.
   KnownBits KnownAbs(getBitWidth());
+  KnownAbs.Zero.setLowBits(countMinTrailingZeros());
 
-  // We only know that the absolute values's MSB will be zero iff there is
-  // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
-  APInt Val = One;
-  Val.clearSignBit();
-  if (!Val.isNullValue())
+  // We only know that the absolute values's MSB will be zero if INT_MIN is
+  // poison, or there is a set bit that isn't the sign bit (otherwise it could
+  // be INT_MIN).
+  if (IntMinIsPoison || (!One.isNullValue() && !One.isMinSignedValue()))
     KnownAbs.Zero.setSignBit();
 
+  // FIXME: Handle known negative input?
+  // FIXME: Calculate the negated Known bits and combine them?
   return KnownAbs;
 }
 

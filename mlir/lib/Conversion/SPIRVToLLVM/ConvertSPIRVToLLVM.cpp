@@ -18,7 +18,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -630,6 +630,82 @@ public:
       return failure();
     rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands,
                                                  operation.getAttrs());
+    return success();
+  }
+};
+
+/// Converts `spv.ExecutionMode` into a global struct constant that holds
+/// execution mode information.
+class ExecutionModePattern
+    : public SPIRVToLLVMConversion<spirv::ExecutionModeOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ExecutionModeOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ExecutionModeOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // First, create the global struct's name that would be associated with
+    // this entry point's execution mode. We set it to be:
+    //   __spv__{SPIR-V module name}_{function name}_execution_mode_info
+    ModuleOp module = op.getParentOfType<ModuleOp>();
+    std::string moduleName;
+    if (module.getName().hasValue())
+      moduleName = "_" + module.getName().getValue().str();
+    else
+      moduleName = "";
+    std::string executionModeInfoName = llvm::formatv(
+        "__spv_{0}_{1}_execution_mode_info", moduleName, op.fn().str());
+
+    MLIRContext *context = rewriter.getContext();
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    // Create a struct type, corresponding to the C struct below.
+    // struct {
+    //   int32_t executionMode;
+    //   int32_t values[];          // optional values
+    // };
+    auto llvmI32Type = LLVM::LLVMType::getInt32Ty(context);
+    SmallVector<LLVM::LLVMType, 2> fields;
+    fields.push_back(llvmI32Type);
+    ArrayAttr values = op.values();
+    if (!values.empty()) {
+      auto arrayType = LLVM::LLVMType::getArrayTy(llvmI32Type, values.size());
+      fields.push_back(arrayType);
+    }
+    auto structType = LLVM::LLVMType::getStructTy(context, fields);
+
+    // Create `llvm.mlir.global` with initializer region containing one block.
+    auto global = rewriter.create<LLVM::GlobalOp>(
+        UnknownLoc::get(context), structType, /*isConstant=*/true,
+        LLVM::Linkage::External, executionModeInfoName, Attribute());
+    Location loc = global.getLoc();
+    Region &region = global.getInitializerRegion();
+    Block *block = rewriter.createBlock(&region);
+
+    // Initialize the struct and set the execution mode value.
+    rewriter.setInsertionPoint(block, block->begin());
+    Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
+    IntegerAttr executionModeAttr = op.execution_modeAttr();
+    Value executionMode =
+        rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, executionModeAttr);
+    structValue = rewriter.create<LLVM::InsertValueOp>(
+        loc, structType, structValue, executionMode,
+        ArrayAttr::get({rewriter.getIntegerAttr(rewriter.getI32Type(), 0)},
+                       context));
+
+    // Insert extra operands if they exist into execution mode info struct.
+    for (unsigned i = 0, e = values.size(); i < e; ++i) {
+      auto attr = values.getValue()[i];
+      Value entry = rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, attr);
+      structValue = rewriter.create<LLVM::InsertValueOp>(
+          loc, structType, structValue, entry,
+          ArrayAttr::get({rewriter.getIntegerAttr(rewriter.getI32Type(), 1),
+                          rewriter.getIntegerAttr(rewriter.getI32Type(), i)},
+                         context));
+    }
+    rewriter.create<LLVM::ReturnOp>(loc, ArrayRef<Value>({structValue}));
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -1269,7 +1345,8 @@ public:
   matchAndRewrite(spirv::ModuleOp spvModuleOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto newModuleOp = rewriter.create<ModuleOp>(spvModuleOp.getLoc());
+    auto newModuleOp =
+        rewriter.create<ModuleOp>(spvModuleOp.getLoc(), spvModuleOp.getName());
     rewriter.inlineRegionBefore(spvModuleOp.body(), newModuleOp.getBody());
 
     // Remove the terminator block that was automatically added by builder
@@ -1385,12 +1462,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       FunctionCallPattern, LoopPattern, SelectionPattern,
       ErasePattern<spirv::MergeOp>,
 
-      // Entry points and execution mode
-      // Module generated from SPIR-V could have other "internal" functions, so
-      // having entry point and execution mode metadata can be useful. For now,
-      // simply remove them.
-      // TODO: Support EntryPoint/ExecutionMode properly.
-      ErasePattern<spirv::EntryPointOp>, ErasePattern<spirv::ExecutionModeOp>,
+      // Entry points and execution mode are handled separately.
+      ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
 
       // GLSL extended instruction set ops
       DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,

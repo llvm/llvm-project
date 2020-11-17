@@ -119,4 +119,25 @@ dq_char_test PROC
   ret
 dq_char_test ENDP
 
+string_constant_test PROC
+; CHECK-LABEL: string_constant_test:
+
+  mov eax, 'ab'
+  mov eax, "ab"
+; CHECK: mov eax, 24930
+; CHECK: mov eax, 24930
+
+  mov eax, "abc"
+  mov eax, 'abc'
+; CHECK: mov eax, 6382179
+; CHECK: mov eax, 6382179
+
+  mov eax, "abc"""
+  mov eax, 'abc'''
+; CHECK: mov eax, 1633837858
+; CHECK: mov eax, 1633837863
+
+  ret
+string_constant_test ENDP
+
 end

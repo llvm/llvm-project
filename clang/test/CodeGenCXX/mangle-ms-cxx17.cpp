@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++1z -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.10 | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK --check-prefix=MSVC2017
-// RUN: %clang_cc1 -std=c++1z -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK --check-prefix=MSVC2015
+// RUN: %clang_cc1 -std=c++1z -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.10 | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -std=c++1z -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck -allow-deprecated-dag-overlap %s
 
 struct S {
     int x;

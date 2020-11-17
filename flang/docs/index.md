@@ -47,10 +47,12 @@ Flang is LLVM's Fortran frontend
    OptionComparison
    ParserCombinators
    RuntimeDescriptor
+   RuntimeTypeInfo
    Calls
    Character
    ArrayComposition
    BijectiveInternalNameUniquing
+   DoConcurrent
 ```
 
 # Indices and tables

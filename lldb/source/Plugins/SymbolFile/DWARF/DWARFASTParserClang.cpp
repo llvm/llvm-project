@@ -341,7 +341,9 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       break;
 
     case DW_AT_decl_file:
-      decl.SetFile(die.GetCU()->GetFile(form_value.Unsigned()));
+      // die.GetCU() can differ if DW_AT_specification uses DW_FORM_ref_addr.
+      decl.SetFile(
+          attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
       break;
     case DW_AT_decl_line:
       decl.SetLine(form_value.Unsigned());
@@ -2579,7 +2581,11 @@ void DWARFASTParserClang::ParseSingleMember(
           // The ObjC runtime knows the byte offset but we still need to provide
           // the bit-offset in the layout. It just means something different then
           // what it does in C and C++. So we skip this check for ObjC types.
+          //
+          // We also skip this for fields of a union since they will all have a
+          // zero offset.
           if (!TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type) &&
+              !(parent_die.Tag() == DW_TAG_union_type && this_field_info.bit_offset == 0) &&
               ((this_field_info.bit_offset >= parent_bit_size) ||
                (last_field_info.IsBitfield() &&
                 !last_field_info.NextBitfieldOffsetIsValid(

@@ -75,6 +75,21 @@ MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
                            "spill on ppc"),
                   cl::Hidden, cl::init(100));
 
+// Copies/moves of physical accumulators are expensive operations
+// that should be avoided whenever possible. MMA instructions are
+// meant to be used in performance-sensitive computational kernels.
+// This option is provided, at least for the time being, to give the
+// user a tool to detect this expensive operation and either rework
+// their code or report a compiler bug if that turns out to be the
+// cause.
+#ifndef NDEBUG
+static cl::opt<bool>
+ReportAccMoves("ppc-report-acc-moves",
+               cl::desc("Emit information about accumulator register spills "
+                        "and copies"),
+               cl::Hidden, cl::init(false));
+#endif
+
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
 
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
@@ -936,6 +951,109 @@ void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,
   MBB.erase(II);
 }
 
+void PPCRegisterInfo::emitAccCopyInfo(MachineBasicBlock &MBB,
+                                      MCRegister DestReg, MCRegister SrcReg) {
+#ifdef NDEBUG
+  return;
+#else
+  if (ReportAccMoves) {
+    std::string Dest = PPC::ACCRCRegClass.contains(DestReg) ? "acc" : "uacc";
+    std::string Src = PPC::ACCRCRegClass.contains(SrcReg) ? "acc" : "uacc";
+    dbgs() << "Emitting copy from " << Src << " to " << Dest << ":\n";
+    MBB.dump();
+  }
+#endif
+}
+
+static void emitAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsPrimed,
+                                    bool IsRestore) {
+#ifdef NDEBUG
+  return;
+#else
+  if (ReportAccMoves) {
+    dbgs() << "Emitting " << (IsPrimed ? "acc" : "uacc") << " register "
+           << (IsRestore ? "restore" : "spill") << ":\n";
+    MBB.dump();
+  }
+#endif
+}
+
+/// lowerACCSpilling - Generate the code for spilling the accumulator register.
+/// Similarly to other spills/reloads that use pseudo-ops, we do not actually
+/// eliminate the FrameIndex here nor compute the stack offset. We simply
+/// create a real instruction with an FI and rely on eliminateFrameIndex to
+/// handle the FI elimination.
+void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
+                                       unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // SPILL_ACC <SrcReg>, <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  Register SrcReg = MI.getOperand(0).getReg();
+  bool IsKilled = MI.getOperand(0).isKill();
+
+  bool IsPrimed = PPC::ACCRCRegClass.contains(SrcReg);
+  Register Reg =
+      PPC::VSRp0 + (SrcReg - (IsPrimed ? PPC::ACC0 : PPC::UACC0)) * 2;
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  emitAccSpillRestoreInfo(MBB, IsPrimed, false);
+
+  // De-prime the register being spilled, create two stores for the pair
+  // subregisters accounting for endianness and then re-prime the register if
+  // it isn't killed.  This uses the Offset parameter to addFrameReference() to
+  // adjust the offset of the store that is within the 64-byte stack slot.
+  if (IsPrimed)
+    BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(Reg, getKillRegState(IsKilled)),
+                    FrameIndex, IsLittleEndian ? 32 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(Reg + 1, getKillRegState(IsKilled)),
+                    FrameIndex, IsLittleEndian ? 0 : 32);
+  if (IsPrimed && !IsKilled)
+    BuildMI(MBB, II, DL, TII.get(PPC::XXMTACC), SrcReg).addReg(SrcReg);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
+/// lowerACCRestore - Generate the code to restore the accumulator register.
+void PPCRegisterInfo::lowerACCRestore(MachineBasicBlock::iterator II,
+                                      unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // <DestReg> = RESTORE_ACC <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register DestReg = MI.getOperand(0).getReg();
+  assert(MI.definesRegister(DestReg) &&
+         "RESTORE_ACC does not define its destination");
+
+  bool IsPrimed = PPC::ACCRCRegClass.contains(DestReg);
+  Register Reg =
+      PPC::VSRp0 + (DestReg - (IsPrimed ? PPC::ACC0 : PPC::UACC0)) * 2;
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  emitAccSpillRestoreInfo(MBB, IsPrimed, true);
+
+  // Create two loads for the pair subregisters accounting for endianness and
+  // then prime the accumulator register being restored.
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), Reg),
+                    FrameIndex, IsLittleEndian ? 32 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), Reg + 1),
+                    FrameIndex, IsLittleEndian ? 0 : 32);
+  if (IsPrimed)
+    BuildMI(MBB, II, DL, TII.get(PPC::XXMTACC), DestReg).addReg(DestReg);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
 bool PPCRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
                                            Register Reg, int &FrameIdx) const {
   // For the nonvolatile condition registers (CR2, CR3, CR4) return true to
@@ -1066,6 +1184,12 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return;
   } else if (OpC == PPC::RESTORE_CRBIT) {
     lowerCRBitRestore(II, FrameIndex);
+    return;
+  } else if (OpC == PPC::SPILL_ACC || OpC == PPC::SPILL_UACC) {
+    lowerACCSpilling(II, FrameIndex);
+    return;
+  } else if (OpC == PPC::RESTORE_ACC || OpC == PPC::RESTORE_UACC) {
+    lowerACCRestore(II, FrameIndex);
     return;
   }
 

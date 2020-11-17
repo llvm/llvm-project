@@ -1,4 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -mlir-print-local-scope | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo | FileCheck %s --check-prefix=CHECK-ALIAS
 // This test verifies that debug locations are round-trippable.
 
 #set0 = affine_set<(d0) : (1 == 0)>
@@ -22,3 +23,12 @@ func @inline_notation() -> i32 {
   // CHECK: return %0 : i32 loc(unknown)
   return %1 : i32 loc(unknown)
 }
+
+// CHECK-LABEL: func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
+func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
+
+// CHECK-ALIAS: "foo.op"() : () -> () loc(#[[LOC:.*]])
+"foo.op"() : () -> () loc(#loc)
+
+// CHECK-ALIAS: #[[LOC]] = loc("out_of_line_location")
+#loc = loc("out_of_line_location")

@@ -4,8 +4,8 @@
 /// Check that a constant is properly propagated through the arguments and
 /// results of a private function.
 
-// CHECK-LABEL: func @private(
-func @private(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
+// CHECK-LABEL: func private @private(
+func private @private(%arg0 : i32) -> i32 {
   // CHECK: %[[CST:.*]] = constant 1 : i32
   // CHECK: return %[[CST]] : i32
 
@@ -27,8 +27,8 @@ func @simple_private() -> i32 {
 /// Check that a constant is properly propagated through the arguments and
 /// results of a visible nested function.
 
-// CHECK: func @nested(
-func @nested(%arg0 : i32) -> i32 attributes { sym_visibility = "nested" } {
+// CHECK: func nested @nested(
+func nested @nested(%arg0 : i32) -> i32 {
   // CHECK: %[[CST:.*]] = constant 1 : i32
   // CHECK: return %[[CST]] : i32
 
@@ -52,8 +52,8 @@ module {
   // NESTED-LABEL: module @nested_module
   module @nested_module attributes { sym_visibility = "public" } {
 
-    // NESTED: func @nested(
-    func @nested(%arg0 : i32) -> (i32, i32) attributes { sym_visibility = "nested" } {
+    // NESTED: func nested @nested(
+    func nested @nested(%arg0 : i32) -> (i32, i32) {
       // NESTED: %[[CST:.*]] = constant 1 : i32
       // NESTED: return %[[CST]], %arg0 : i32, i32
 
@@ -79,7 +79,7 @@ module {
 /// Check that public functions do not track arguments.
 
 // CHECK-LABEL: func @public(
-func @public(%arg0 : i32) -> (i32, i32) attributes { sym_visibility = "public" } {
+func @public(%arg0 : i32) -> (i32, i32) {
   %1 = constant 1 : i32
   return %1, %arg0 : i32, i32
 }
@@ -99,7 +99,7 @@ func @simple_public() -> (i32, i32) {
 
 /// Check that functions with non-call users don't have arguments tracked.
 
-func @callable(%arg0 : i32) -> (i32, i32) attributes { sym_visibility = "private" } {
+func private @callable(%arg0 : i32) -> (i32, i32) {
   %1 = constant 1 : i32
   return %1, %arg0 : i32, i32
 }
@@ -121,7 +121,7 @@ func @non_call_users() -> (i32, i32) {
 
 /// Check that return values are overdefined in the presence of an unknown terminator.
 
-func @callable(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
+func private @callable(%arg0 : i32) -> i32 {
   "unknown.return"(%arg0) : (i32) -> ()
 }
 
@@ -139,7 +139,7 @@ func @unknown_terminator() -> i32 {
 
 /// Check that return values are overdefined when the constant conflicts.
 
-func @callable(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
+func private @callable(%arg0 : i32) -> i32 {
   "unknown.return"(%arg0) : (i32) -> ()
 }
 
@@ -161,7 +161,7 @@ func @conflicting_constant() -> (i32, i32) {
 /// Check that return values are overdefined when the constant conflicts with a
 /// non-constant.
 
-func @callable(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
+func private @callable(%arg0 : i32) -> i32 {
   "unknown.return"(%arg0) : (i32) -> ()
 }
 
@@ -181,8 +181,8 @@ func @conflicting_constant(%arg0 : i32) -> (i32, i32) {
 
 /// Check a more complex interaction with calls and control flow.
 
-// CHECK-LABEL: func @complex_inner_if(
-func @complex_inner_if(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
+// CHECK-LABEL: func private @complex_inner_if(
+func private @complex_inner_if(%arg0 : i32) -> i32 {
   // CHECK-DAG: %[[TRUE:.*]] = constant true
   // CHECK-DAG: %[[CST:.*]] = constant 1 : i32
   // CHECK: cond_br %[[TRUE]], ^bb1
@@ -204,10 +204,10 @@ func @complex_inner_if(%arg0 : i32) -> i32 attributes { sym_visibility = "privat
   return %arg_inc : i32
 }
 
-func @complex_cond() -> i1
+func private @complex_cond() -> i1
 
-// CHECK-LABEL: func @complex_callee(
-func @complex_callee(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
+// CHECK-LABEL: func private @complex_callee(
+func private @complex_callee(%arg0 : i32) -> i32 {
   // CHECK: %[[CST:.*]] = constant 1 : i32
 
   %loop_cond = call @complex_cond() : () -> i1

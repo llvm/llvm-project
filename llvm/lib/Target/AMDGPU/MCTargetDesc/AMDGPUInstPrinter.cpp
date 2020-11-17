@@ -1016,20 +1016,23 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   // This is really a 6 bit field.
   uint32_t Tgt = MI->getOperand(OpNo).getImm() & ((1 << 6) - 1);
 
-  if (Tgt <= 7)
-    O << " mrt" << Tgt;
-  else if (Tgt == 8)
+  if (Tgt <= Exp::ET_MRT7)
+    O << " mrt" << Tgt - Exp::ET_MRT0;
+  else if (Tgt == Exp::ET_MRTZ)
     O << " mrtz";
-  else if (Tgt == 9)
+  else if (Tgt == Exp::ET_NULL && !AMDGPU::isGFX11Plus(STI))
     O << " null";
-  else if ((Tgt >= 12 && Tgt <= 15) || (Tgt == 16 && AMDGPU::isGFX10(STI)))
-    O << " pos" << Tgt - 12;
-  else if (AMDGPU::isGFX10(STI) && Tgt == 20)
+  else if (Tgt >= Exp::ET_POS0 &&
+           Tgt <= uint32_t(isGFX10Plus(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
+    O << " pos" << Tgt - Exp::ET_POS0;
+  else if (isGFX10Plus(STI) && Tgt == Exp::ET_PRIM)
     O << " prim";
-  else if (Tgt >= 32 && Tgt <= 63)
-    O << " param" << Tgt - 32;
+  else if (Tgt >= 21 && Tgt <= 22 && AMDGPU::isGFX11Plus(STI))
+    O << " dual_src_blend" << Tgt - 21;
+  else if (Tgt >= Exp::ET_PARAM0 && !AMDGPU::isGFX11Plus(STI))
+    O << " param" << Tgt - Exp::ET_PARAM0;
   else {
-    // Reserved values 10, 11
+    // Reserved values.
     O << " invalid_target_" << Tgt;
   }
 }
@@ -1401,6 +1404,49 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
       O << ' ';
     O << "lgkmcnt(" << Lgkmcnt << ')';
   }
+}
+
+void AMDGPUInstPrinter::printDelayFlag(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const char *BadInstId = "/* invalid instid value */";
+  static const std::array<const char *, 12> InstIds = {
+      "NO_DEP",        "VALU_DEP_1",    "VALU_DEP_2",
+      "VALU_DEP_3",    "VALU_DEP_4",    "TRANS32_DEP_1",
+      "TRANS32_DEP_2", "TRANS32_DEP_3", "FMA_ACCUM_CYCLE_1",
+      "SALU_CYCLE_1",  "SALU_CYCLE_2",  "SALU_CYCLE_3"};
+
+  const char *BadInstSkip = "/* invalid instskip value */";
+  static const std::array<const char *, 6> InstSkips = {
+      "SAME", "NEXT", "SKIP_1", "SKIP_2", "SKIP_3", "SKIP_4"};
+
+  unsigned SImm16 = MI->getOperand(OpNo).getImm();
+  const char *Prefix = "";
+
+  unsigned Value = SImm16 & 0xF;
+  if (Value) {
+    const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+    O << Prefix << "instid0(" << Name << ')';
+    Prefix = " ";
+  }
+
+  Value = (SImm16 >> 4) & 7;
+  if (Value) {
+    const char *Name =
+        Value < InstSkips.size() ? InstSkips[Value] : BadInstSkip;
+    O << Prefix << "instskip(" << Name << ')';
+    Prefix = " ";
+  }
+
+  Value = (SImm16 >> 7) & 0xF;
+  if (Value) {
+    const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+    O << Prefix << "instid1(" << Name << ')';
+    Prefix = " ";
+  }
+
+  if (!*Prefix)
+    O << "0";
 }
 
 void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,

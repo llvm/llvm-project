@@ -13,10 +13,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
 
 #include "llvm/ADT/StringSwitch.h"
@@ -1833,11 +1833,13 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
                                                     unsigned argIdx,
                                                     NamedAttribute argAttr) {
   // Check that llvm.noalias is a boolean attribute.
-  if (argAttr.first == "llvm.noalias" && !argAttr.second.isa<BoolAttr>())
+  if (argAttr.first == LLVMDialect::getNoAliasAttrName() &&
+      !argAttr.second.isa<BoolAttr>())
     return op->emitError()
            << "llvm.noalias argument attribute of non boolean type";
   // Check that llvm.align is an integer attribute.
-  if (argAttr.first == "llvm.align" && !argAttr.second.isa<IntegerAttr>())
+  if (argAttr.first == LLVMDialect::getAlignAttrName() &&
+      !argAttr.second.isa<IntegerAttr>())
     return op->emitError()
            << "llvm.align argument attribute of non integer type";
   return success();

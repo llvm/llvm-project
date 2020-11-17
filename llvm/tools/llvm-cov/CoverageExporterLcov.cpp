@@ -27,7 +27,7 @@
 //   - for each instrumented line:
 //     - "DA:<line number>,<execution count>[,<checksum>]
 //   - "LH:<number of lines with non-zero execution count>"
-//   - "LF:<nubmer of instrumented lines>"
+//   - "LF:<number of instrumented lines>"
 //   - "end_of_record"
 //
 // If the user is exporting summary information only, then the FN, FNDA, and DA

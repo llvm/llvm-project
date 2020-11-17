@@ -1,7 +1,6 @@
 // RUN: mlir-opt %s -test-vector-to-vector-conversion | FileCheck %s
 // RUN: mlir-opt %s -test-vector-unrolling-patterns | FileCheck %s
 
-// CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: #[[MAP1:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
 
 // CHECK-LABEL: func @add4x2

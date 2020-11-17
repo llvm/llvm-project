@@ -202,15 +202,11 @@ template <typename TO, TypeCategory FROMCAT = TO::category>
 struct Convert : public Operation<Convert<TO, FROMCAT>, TO, SomeKind<FROMCAT>> {
   // Fortran doesn't have conversions between kinds of CHARACTER apart from
   // assignments, and in those the data must be convertible to/from 7-bit ASCII.
-  // Conversions between kinds of COMPLEX are represented piecewise.
   static_assert(((TO::category == TypeCategory::Integer ||
                      TO::category == TypeCategory::Real) &&
                     (FROMCAT == TypeCategory::Integer ||
                         FROMCAT == TypeCategory::Real)) ||
-      (TO::category == TypeCategory::Character &&
-          FROMCAT == TypeCategory::Character) ||
-      (TO::category == TypeCategory::Logical &&
-          FROMCAT == TypeCategory::Logical));
+      TO::category == FROMCAT);
   using Result = TO;
   using Operand = SomeKind<FROMCAT>;
   using Base = Operation<Convert, Result, Operand>;
@@ -542,8 +538,7 @@ public:
 
 private:
   // N.B. Real->Complex and Complex->Real conversions are done with CMPLX
-  // and part access operations (resp.).  Conversions between kinds of
-  // Complex are done via decomposition to Real and reconstruction.
+  // and part access operations (resp.).
   using Conversions = std::variant<Convert<Result, TypeCategory::Integer>,
       Convert<Result, TypeCategory::Real>>;
   using Operations = std::variant<ComplexComponent<KIND>, Parentheses<Result>,
@@ -563,12 +558,10 @@ public:
   using Result = Type<TypeCategory::Complex, KIND>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x}} {}
-
-  // Note that many COMPLEX operations are represented as REAL operations
-  // over their components (viz., conversions, negation, add, and subtract).
-  using Operations =
-      std::variant<Parentheses<Result>, Multiply<Result>, Divide<Result>,
-          Power<Result>, RealToIntPower<Result>, ComplexConstructor<KIND>>;
+  using Operations = std::variant<Parentheses<Result>, Negate<Result>,
+      Convert<Result, TypeCategory::Complex>, Add<Result>, Subtract<Result>,
+      Multiply<Result>, Divide<Result>, Power<Result>, RealToIntPower<Result>,
+      ComplexConstructor<KIND>>;
   using Others = std::variant<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -614,6 +607,7 @@ struct Relational : public Operation<Relational<T>, LogicalResult, T, T> {
   using Operand = typename Base::template Operand<0>;
   static_assert(Operand::category == TypeCategory::Integer ||
       Operand::category == TypeCategory::Real ||
+      Operand::category == TypeCategory::Complex ||
       Operand::category == TypeCategory::Character);
   CLASS_BOILERPLATE(Relational)
   Relational(
@@ -625,9 +619,8 @@ struct Relational : public Operation<Relational<T>, LogicalResult, T, T> {
 };
 
 template <> class Relational<SomeType> {
-  // COMPLEX data are compared piecewise.
-  using DirectlyComparableTypes =
-      common::CombineTuples<IntegerTypes, RealTypes, CharacterTypes>;
+  using DirectlyComparableTypes = common::CombineTuples<IntegerTypes, RealTypes,
+      ComplexTypes, CharacterTypes>;
 
 public:
   using Result = LogicalResult;

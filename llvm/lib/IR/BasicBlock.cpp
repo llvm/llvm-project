@@ -326,8 +326,7 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
 void BasicBlock::removePredecessor(BasicBlock *Pred,
                                    bool KeepOneInputPHIs) {
   // Use hasNUsesOrMore to bound the cost of this assertion for complex CFGs.
-  assert((hasNUsesOrMore(16) ||
-          find(pred_begin(this), pred_end(this), Pred) != pred_end(this)) &&
+  assert((hasNUsesOrMore(16) || llvm::is_contained(predecessors(this), Pred)) &&
          "Pred is not a predecessor!");
 
   // Return early if there are no PHI nodes to update.

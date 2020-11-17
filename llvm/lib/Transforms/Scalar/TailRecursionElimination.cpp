@@ -282,7 +282,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
       }
     }
 
-    for (auto *SuccBB : make_range(succ_begin(BB), succ_end(BB))) {
+    for (auto *SuccBB : successors(BB)) {
       auto &State = Visited[SuccBB];
       if (State < Escaped) {
         State = Escaped;

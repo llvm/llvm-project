@@ -321,6 +321,7 @@ LogicalResult verifyAtLeastNSuccessors(Operation *op, unsigned numSuccessors);
 LogicalResult verifyOperandSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyResultSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyNoRegionArguments(Operation *op);
+LogicalResult verifyElementwiseMappable(Operation *op);
 } // namespace impl
 
 /// Helper class for implementing traits.  Clients are not expected to interact
@@ -786,6 +787,132 @@ class VariadicSuccessors
 };
 
 //===----------------------------------------------------------------------===//
+// SingleBlockImplicitTerminator
+
+/// This class provides APIs and verifiers for ops with regions having a single
+/// block that must terminate with `TerminatorOpType`.
+template <typename TerminatorOpType>
+struct SingleBlockImplicitTerminator {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  private:
+    /// Builds a terminator operation without relying on OpBuilder APIs to avoid
+    /// cyclic header inclusion.
+    static Operation *buildTerminator(OpBuilder &builder, Location loc) {
+      OperationState state(loc, TerminatorOpType::getOperationName());
+      TerminatorOpType::build(builder, state);
+      return Operation::create(state);
+    }
+
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
+        Region &region = op->getRegion(i);
+
+        // Empty regions are fine.
+        if (region.empty())
+          continue;
+
+        // Non-empty regions must contain a single basic block.
+        if (std::next(region.begin()) != region.end())
+          return op->emitOpError("expects region #")
+                 << i << " to have 0 or 1 blocks";
+
+        Block &block = region.front();
+        if (block.empty())
+          return op->emitOpError() << "expects a non-empty block";
+        Operation &terminator = block.back();
+        if (isa<TerminatorOpType>(terminator))
+          continue;
+
+        return op->emitOpError("expects regions to end with '" +
+                               TerminatorOpType::getOperationName() +
+                               "', found '" +
+                               terminator.getName().getStringRef() + "'")
+                   .attachNote()
+               << "in custom textual format, the absence of terminator implies "
+                  "'"
+               << TerminatorOpType::getOperationName() << '\'';
+      }
+
+      return success();
+    }
+
+    /// Ensure that the given region has the terminator required by this trait.
+    /// If OpBuilder is provided, use it to build the terminator and notify the
+    /// OpBuilder litsteners accordingly. If only a Builder is provided, locally
+    /// construct an OpBuilder with no listeners; this should only be used if no
+    /// OpBuilder is available at the call site, e.g., in the parser.
+    static void ensureTerminator(Region &region, Builder &builder,
+                                 Location loc) {
+      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
+                                           buildTerminator);
+    }
+    static void ensureTerminator(Region &region, OpBuilder &builder,
+                                 Location loc) {
+      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
+                                           buildTerminator);
+    }
+
+    Block *getBody(unsigned idx = 0) {
+      Region &region = this->getOperation()->getRegion(idx);
+      assert(!region.empty() && "unexpected empty region");
+      return &region.front();
+    }
+    Region &getBodyRegion(unsigned idx = 0) {
+      return this->getOperation()->getRegion(idx);
+    }
+
+    //===------------------------------------------------------------------===//
+    // Single Region Utilities
+    //===------------------------------------------------------------------===//
+
+    /// The following are a set of methods only enabled when the parent
+    /// operation has a single region. Each of these methods take an additional
+    /// template parameter that represents the concrete operation so that we
+    /// can use SFINAE to disable the methods for non-single region operations.
+    template <typename OpT, typename T = void>
+    using enable_if_single_region =
+        typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT, Block::iterator> begin() {
+      return getBody()->begin();
+    }
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT, Block::iterator> end() {
+      return getBody()->end();
+    }
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT, Operation &> front() {
+      return *begin();
+    }
+
+    /// Insert the operation into the back of the body, before the terminator.
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT> push_back(Operation *op) {
+      insert(Block::iterator(getBody()->getTerminator()), op);
+    }
+
+    /// Insert the operation at the given insertion point. Note: The operation
+    /// is never inserted after the terminator, even if the insertion point is
+    /// end().
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT> insert(Operation *insertPt, Operation *op) {
+      insert(Block::iterator(insertPt), op);
+    }
+    template <typename OpT = ConcreteType>
+    enable_if_single_region<OpT> insert(Block::iterator insertPt,
+                                        Operation *op) {
+      auto *body = getBody();
+      if (insertPt == body->end())
+        insertPt = Block::iterator(body->getTerminator());
+      body->getOperations().insert(insertPt, op);
+    }
+  };
+};
+
+//===----------------------------------------------------------------------===//
 // Misc Traits
 
 /// This class provides verification for ops that are known to have the same
@@ -1035,78 +1162,6 @@ public:
   }
 };
 
-/// This class provides APIs and verifiers for ops with regions having a single
-/// block that must terminate with `TerminatorOpType`.
-template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
-  template <typename ConcreteType>
-  class Impl : public TraitBase<ConcreteType, Impl> {
-  private:
-    /// Builds a terminator operation without relying on OpBuilder APIs to avoid
-    /// cyclic header inclusion.
-    static Operation *buildTerminator(OpBuilder &builder, Location loc) {
-      OperationState state(loc, TerminatorOpType::getOperationName());
-      TerminatorOpType::build(builder, state);
-      return Operation::create(state);
-    }
-
-  public:
-    static LogicalResult verifyTrait(Operation *op) {
-      for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
-        Region &region = op->getRegion(i);
-
-        // Empty regions are fine.
-        if (region.empty())
-          continue;
-
-        // Non-empty regions must contain a single basic block.
-        if (std::next(region.begin()) != region.end())
-          return op->emitOpError("expects region #")
-                 << i << " to have 0 or 1 blocks";
-
-        Block &block = region.front();
-        if (block.empty())
-          return op->emitOpError() << "expects a non-empty block";
-        Operation &terminator = block.back();
-        if (isa<TerminatorOpType>(terminator))
-          continue;
-
-        return op->emitOpError("expects regions to end with '" +
-                               TerminatorOpType::getOperationName() +
-                               "', found '" +
-                               terminator.getName().getStringRef() + "'")
-                   .attachNote()
-               << "in custom textual format, the absence of terminator implies "
-                  "'"
-               << TerminatorOpType::getOperationName() << '\'';
-      }
-
-      return success();
-    }
-
-    /// Ensure that the given region has the terminator required by this trait.
-    /// If OpBuilder is provided, use it to build the terminator and notify the
-    /// OpBuilder litsteners accordingly. If only a Builder is provided, locally
-    /// construct an OpBuilder with no listeners; this should only be used if no
-    /// OpBuilder is available at the call site, e.g., in the parser.
-    static void ensureTerminator(Region &region, Builder &builder,
-                                 Location loc) {
-      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
-                                           buildTerminator);
-    }
-    static void ensureTerminator(Region &region, OpBuilder &builder,
-                                 Location loc) {
-      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
-                                           buildTerminator);
-    }
-
-    Block *getBody(unsigned idx = 0) {
-      Region &region = this->getOperation()->getRegion(idx);
-      assert(!region.empty() && "unexpected empty region");
-      return &region.front();
-    }
-  };
-};
-
 /// This class provides a verifier for ops that are expecting their parent
 /// to be one of the given parent ops
 template <typename... ParentOpTypes>
@@ -1181,6 +1236,93 @@ struct NoRegionArguments : public TraitBase<ConcrentType, NoRegionArguments> {
 template <typename ConcrentType>
 struct MemRefsNormalizable
     : public TraitBase<ConcrentType, MemRefsNormalizable> {};
+
+/// This trait tags scalar ops that also can be applied to vectors/tensors, with
+/// their semantics on vectors/tensors being elementwise application.
+///
+/// NOTE: Not all ops that are "elementwise" in some abstract sense satisfy this
+/// trait. In particular, broadcasting behavior is not allowed. This trait
+/// describes a set of invariants that allow systematic
+/// vectorization/tensorization, and the reverse, scalarization. The properties
+/// needed for this also can be used to implement a number of
+/// transformations/analyses/interfaces.
+///
+/// An `ElementwiseMappable` op must satisfy the following properties:
+///
+/// 1. If any result is a vector (resp. tensor), then at least one operand must
+/// be a vector (resp. tensor).
+/// 2. If any operand is a vector (resp. tensor), then there must be at least
+/// one result, and all results must be vectors (resp. tensors).
+/// 3. The static types of all vector (resp. tensor) operands and results must
+/// have the same shape.
+/// 4. In the case of tensor operands, the dynamic shapes of all tensor operands
+/// must be the same, otherwise the op has undefined behavior.
+/// 5. ("systematic scalarization" property) If an op has vector/tensor
+/// operands/results, then the same op, with the operand/result types changed to
+/// their corresponding element type, shall be a verifier-valid op.
+/// 6. The semantics of the op on vectors (resp. tensors) shall be the same as
+/// applying the scalarized version of the op for each corresponding element of
+/// the vector (resp. tensor) operands in parallel.
+/// 7. ("systematic vectorization/tensorization" property) If an op has
+/// scalar operands/results, the op shall remain verifier-valid if all scalar
+/// operands are replaced with vectors/tensors of the same shape and
+/// corresponding element types.
+///
+/// Together, these properties provide an easy way for scalar operations to
+/// conveniently generalize their behavior to vectors/tensors, and systematize
+/// conversion between these forms.
+///
+/// Examples:
+/// ```
+/// %scalar = "std.addf"(%a, %b) : (f32, f32) -> f32
+/// // Applying the systematic vectorization/tensorization property, this op
+/// // must also be valid:
+/// %tensor = "std.addf"(%a_tensor, %b_tensor)
+///           : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>)
+///
+/// // These properties generalize well to the cases of non-scalar operands.
+/// %select_scalar_pred = "std.select"(%pred, %true_val, %false_val)
+///                       : (i1, tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+/// // Applying the systematic vectorization / tensorization property, this
+/// // op must also be valid:
+/// %select_tensor_pred = "std.select"(%pred_tensor, %true_val, %false_val)
+///                       : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
+///                       -> tensor<?xf32>
+/// // Applying the systematic scalarization property, this op must also
+/// // be valid.
+/// %select_scalar = "std.select"(%pred, %true_val_scalar, %false_val_scalar)
+///                  : (i1, f32, f32) -> f32
+/// ```
+///
+/// TODO: Avoid hardcoding vector/tensor, and generalize this to any type
+/// implementing a new "ElementwiseMappableTypeInterface" that describes types
+/// for which it makes sense to apply a scalar function to each element.
+///
+/// Rationale:
+/// - 1. and 2. guarantee a well-defined iteration space for 6.
+///   - These also exclude the cases of 0 non-scalar operands or 0 non-scalar
+///     results, which complicate a generic definition of the iteration space.
+/// - 3. guarantees that folding can be done across scalars/vectors/tensors
+///   with the same pattern, as otherwise lots of special handling of type
+///   mismatches would be needed.
+/// - 4. guarantees that no error handling cases need to be considered.
+///   - Higher-level dialects should reify any needed guards / error handling
+///   code before lowering to an ElementwiseMappable op.
+/// - 5. and 6. allow defining the semantics on vectors/tensors via the scalar
+///   semantics and provide a constructive procedure for IR transformations
+///   to e.g. create scalar loop bodies from tensor ops.
+/// - 7. provides the reverse of 5., which when chained together allows
+///   reasoning about the relationship between the tensor and vector case.
+///   Additionally, it permits reasoning about promoting scalars to
+///   vectors/tensors via broadcasting in cases like `%select_scalar_pred`
+///   above.
+template <typename ConcreteType>
+struct ElementwiseMappable
+    : public TraitBase<ConcreteType, ElementwiseMappable> {
+  static LogicalResult verifyTrait(Operation *op) {
+    return ::mlir::OpTrait::impl::verifyElementwiseMappable(op);
+  }
+};
 
 } // end namespace OpTrait
 

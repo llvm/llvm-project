@@ -36,6 +36,7 @@ STATISTIC(NumArgMemOnly, "Number of functions inferred as argmemonly");
 STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
 STATISTIC(NumWriteOnlyArg, "Number of arguments inferred as writeonly");
+STATISTIC(NumSExtArg, "Number of arguments inferred as signext");
 STATISTIC(NumReadOnlyArg, "Number of arguments inferred as readonly");
 STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
 STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
@@ -114,6 +115,13 @@ static bool setOnlyWritesMemory(Function &F, unsigned ArgNo) {
   return true;
 }
 
+static bool setSignExtendedArg(Function &F, unsigned ArgNo) {
+ if (F.hasParamAttribute(ArgNo, Attribute::SExt))
+    return false;
+  F.addParamAttr(ArgNo, Attribute::SExt);
+  ++NumSExtArg;
+  return true;
+}
 
 static bool setRetNoUndef(Function &F) {
   if (!F.getReturnType()->isVoidTy() &&
@@ -950,7 +958,11 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotAccessMemory(F);
     Changed |= setDoesNotThrow(F);
     return Changed;
-
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
+    Changed |= setSignExtendedArg(F, 1);
+    return Changed;
   default:
     // FIXME: It'd be really nice to cover all the library functions we're
     // aware of here.
@@ -1265,12 +1277,15 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
 
 static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
                                           StringRef Name, IRBuilderBase &B,
-                                          const AttributeList &Attrs) {
+                                          const AttributeList &Attrs,
+                                          const TargetLibraryInfo *TLI = nullptr) {
   assert((Name != "") && "Must specify Name to emitBinaryFloatFnCall");
 
   Module *M = B.GetInsertBlock()->getModule();
   FunctionCallee Callee = M->getOrInsertFunction(Name, Op1->getType(),
                                                  Op1->getType(), Op2->getType());
+  if (TLI != nullptr)
+    inferLibFuncAttributes(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Callee, { Op1, Op2 }, Name);
 
   // The incoming attribute set may have come from a speculatable intrinsic, but
@@ -1306,7 +1321,7 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
   StringRef Name = getFloatFnName(TLI, Op1->getType(),
                                   DoubleFn, FloatFn, LongDoubleFn);
 
-  return emitBinaryFloatFnCallHelper(Op1, Op2, Name, B, Attrs);
+  return emitBinaryFloatFnCallHelper(Op1, Op2, Name, B, Attrs, TLI);
 }
 
 Value *llvm::emitPutChar(Value *Char, IRBuilderBase &B,

@@ -465,9 +465,12 @@ supported for the ``amdgcn`` target.
 
   Using the constant address space indicates that the data will not change
   during the execution of the kernel. This allows scalar read instructions to
-  be used. The vector and scalar L1 caches are invalidated of volatile data
-  before each kernel dispatch execution to allow constant memory to change
-  values between kernel dispatches.
+  be used. As the constant address space could only be modified on the host
+  side, a generic pointer loaded from the constant address space is safe to be
+  assumed as a global pointer since only the device global memory is visible
+  and managed on the host side. The vector and scalar L1 caches are invalidated
+  of volatile data before each kernel dispatch execution to allow constant
+  memory to change values between kernel dispatches.
 
 **Region**
   The region address space uses the hardware Global Data Store (GDS). All
@@ -8116,6 +8119,25 @@ The following table illustrates the required format:
   is a 32-bit pointer. The top 32 bits should be assumed to be the same as
   the top 32 bits of the pipeline, so the shader may use the program
   counter's top 32 bits.
+
+.. _pal_call-convention:
+
+Call Convention
+~~~~~~~~~~~~~~~
+
+For graphics use cases, the calling convention is `amdgpu_gfx`.
+
+.. note::
+
+  `amdgpu_gfx` Function calls are currently in development and are
+  subject to major changes.
+
+This calling convention shares most properties with calling non-kernel
+functions (see
+:ref:`amdgpu-amdhsa-function-call-convention-non-kernel-functions`).
+Differences are:
+
+ - Currently there are none, differences will be listed here
 
 Unspecified OS
 --------------

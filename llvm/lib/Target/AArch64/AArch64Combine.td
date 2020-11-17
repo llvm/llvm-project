@@ -83,6 +83,15 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
 >;
 
+def form_duplane_matchdata :
+  GIDefMatchData<"std::pair<unsigned, int>">;
+def form_duplane : GICombineRule <
+  (defs root:$root, form_duplane_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+          [{ return matchDupLane(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
 def adjust_icmp_imm : GICombineRule <
@@ -102,13 +111,21 @@ def extractvecelt_pairwise_add : GICombineRule<
   (apply [{ applyExtractVecEltPairwiseAdd(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def mul_const_matchdata : GIDefMatchData<"std::function<void(MachineIRBuilder&, Register)>">;
+def mul_const : GICombineRule<
+  (defs root:$root, mul_const_matchdata:$matchinfo),
+  (match (wip_match_opcode G_MUL):$root,
+          [{ return matchAArch64MulConstCombine(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
                        [shuffle_vector_pseudos, vashr_vlshr_imm,
-                        icmp_lowering]> {
+                        icmp_lowering, form_duplane]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 
@@ -118,7 +135,8 @@ def AArch64PostLegalizerCombinerHelper
                        [copy_prop, erase_undef_store, combines_for_extload,
                         sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
-                        and_trivial_mask, xor_of_and_with_same_reg,
-                        extractvecelt_pairwise_add]> {
+                        redundant_and, xor_of_and_with_same_reg,
+                        extractvecelt_pairwise_add, redundant_or,
+                        mul_const]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

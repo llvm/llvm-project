@@ -20,7 +20,6 @@ class TestObjCStaticMethodStripped(TestBase):
         self.break_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     @skipIf(
         debug_info=no_match("dsym"),

@@ -1363,8 +1363,7 @@ define i64 @f20u64(double %x) #0 {
 ; X87-NEXT:    wait
 ; X87-NEXT:    setbe %dl
 ; X87-NEXT:    fldz
-; X87-NEXT:    fxch %st(1)
-; X87-NEXT:    fcmovnbe %st(1), %st
+; X87-NEXT:    fcmovbe %st(1), %st
 ; X87-NEXT:    fstp %st(1)
 ; X87-NEXT:    fsubrp %st, %st(1)
 ; X87-NEXT:    wait
@@ -1387,12 +1386,11 @@ define i64 @f20u64(double %x) #0 {
 ; X86-SSE-NEXT:    subl $20, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; X86-SSE-NEXT:    comisd %xmm0, %xmm2
-; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
-; X86-SSE-NEXT:    ja .LBB25_2
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    comisd %xmm0, %xmm1
+; X86-SSE-NEXT:    jbe .LBB25_2
 ; X86-SSE-NEXT:  # %bb.1: # %entry
-; X86-SSE-NEXT:    movapd %xmm2, %xmm1
+; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:  .LBB25_2: # %entry
 ; X86-SSE-NEXT:    subsd %xmm1, %xmm0
 ; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)

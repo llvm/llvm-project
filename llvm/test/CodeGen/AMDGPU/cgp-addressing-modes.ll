@@ -45,9 +45,8 @@ done:
 ; GCN: s_and_saveexec_b64
 ; SICIVI: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 
-; GFX9: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0xf000,
-; GFX9: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0,
-; GFX9: global_load_sbyte {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, off offset:4095{{$}}
+; GFX9: v_mov_b32_e32 [[VOFFSET:v[0-9]+]], 0xf000{{$}}
+; GFX9: global_load_sbyte {{v[0-9]+}}, [[VOFFSET]], {{s\[[0-9]+:[0-9]+\]}} offset:4095{{$}}
 ; GCN: {{^}}BB1_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_i32_ds_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
@@ -75,7 +74,8 @@ done:
 ; GCN-LABEL: {{^}}test_sink_global_small_max_mubuf_offset:
 ; GCN: s_and_saveexec_b64
 ; SICIVI: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4095{{$}}
-; GFX9: global_load_sbyte {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, off offset:4095{{$}}
+; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GFX9: global_load_sbyte {{v[0-9]+}}, [[ZERO]], {{s\[[0-9]+:[0-9]+\]}} offset:4095{{$}}
 ; GCN: {{^}}BB2_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_mubuf_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
@@ -103,7 +103,8 @@ done:
 ; GCN-LABEL: {{^}}test_sink_global_small_max_plus_1_mubuf_offset:
 ; GCN: s_and_saveexec_b64
 ; SICIVI: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
-; GFX9: global_load_sbyte {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, off{{$}}
+; GFX9: v_mov_b32_e32 [[VOFFSET:v[0-9]+]], 0x1000{{$}}
+; GFX9: global_load_sbyte {{v[0-9]+}}, [[VOFFSET]], {{s\[[0-9]+:[0-9]+\]$}}
 ; GCN: {{^}}BB3_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_plus_1_mubuf_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
@@ -697,7 +698,8 @@ done:
 ; OPT-GFX9: load i8, i8 addrspace(1)* %sunkaddr
 
 ; GCN-LABEL: {{^}}test_sink_global_small_min_scratch_global_offset:
-; GFX9: global_load_sbyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:-4096{{$}}
+; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GFX9: global_load_sbyte v{{[0-9]+}}, [[ZERO]], s{{\[[0-9]+:[0-9]+\]}} offset:-4096{{$}}
 define amdgpu_kernel void @test_sink_global_small_min_scratch_global_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 1024

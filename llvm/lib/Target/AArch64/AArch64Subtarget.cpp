@@ -151,6 +151,7 @@ void AArch64Subtarget::initializeProperties() {
     PrefFunctionLogAlignment = 3;
     break;
   case NeoverseN1:
+  case NeoverseV1:
     PrefFunctionLogAlignment = 4;
     break;
   case Saphira:
@@ -366,4 +367,9 @@ unsigned AArch64Subtarget::getMinSVEVectorSizeInBits() const {
   if (SVEVectorBitsMax == 0)
     return (SVEVectorBitsMin / 128) * 128;
   return (std::min(SVEVectorBitsMin, SVEVectorBitsMax) / 128) * 128;
+}
+
+bool AArch64Subtarget::useSVEForFixedLengthVectors() const {
+  // Prefer NEON unless larger SVE registers are available.
+  return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
 }

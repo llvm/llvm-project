@@ -40,10 +40,30 @@ using namespace llvm;
 
 #include "VEGenCallingConv.inc"
 
+CCAssignFn *getReturnCC(CallingConv::ID CallConv) {
+  switch (CallConv) {
+  default:
+    return RetCC_VE_C;
+  case CallingConv::Fast:
+    return RetCC_VE_Fast;
+  }
+}
+
+CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
+  if (IsVarArg)
+    return CC_VE2;
+  switch (CallConv) {
+  default:
+    return CC_VE_C;
+  case CallingConv::Fast:
+    return CC_VE_Fast;
+  }
+}
+
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
-  CCAssignFn *RetCC = RetCC_VE;
+  CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC);
@@ -282,7 +302,7 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
 
   // Analyze return values.
-  CCInfo.AnalyzeReturn(Outs, RetCC_VE);
+  CCInfo.AnalyzeReturn(Outs, getReturnCC(CallConv));
 
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -363,7 +383,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
   // by CC_VE would be correct now.
-  CCInfo.AnalyzeFormalArguments(Ins, CC_VE);
+  CCInfo.AnalyzeFormalArguments(Ins, getParamCC(CallConv, false));
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -511,7 +531,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
   // by CC_VE would be correct now.
-  CCInfo.AnalyzeCallOperands(CLI.Outs, CC_VE);
+  CCInfo.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, false));
 
   // VE requires to use both register and stack for varargs or no-prototyped
   // functions.
@@ -522,7 +542,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCState CCInfo2(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(),
                   ArgLocs2, *DAG.getContext());
   if (UseBoth)
-    CCInfo2.AnalyzeCallOperands(CLI.Outs, CC_VE2);
+    CCInfo2.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, true));
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -707,7 +727,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CB)
     CLI.Ins[0].Flags.setInReg();
 
-  RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_VE);
+  RVInfo.AnalyzeCallResult(CLI.Ins, getReturnCC(CLI.CallConv));
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -940,23 +960,19 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (isa<ConstantPoolSDNode>(Op) ||
         (GlobalN && GlobalN->getGlobal()->hasLocalLinkage())) {
       // Create following instructions for local linkage PIC code.
-      //     lea %s35, %gotoff_lo(.LCPI0_0)
-      //     and %s35, %s35, (32)0
-      //     lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35)
-      //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
-      // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+      //     lea %reg, label@gotoff_lo
+      //     and %reg, %reg, (32)0
+      //     lea.sl %reg, label@gotoff_hi(%reg, %got)
       SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
                                   VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
       SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
       return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
     }
     // Create following instructions for not local linkage PIC code.
-    //     lea %s35, %got_lo(.LCPI0_0)
-    //     and %s35, %s35, (32)0
-    //     lea.sl %s35, %got_hi(.LCPI0_0)(%s35)
-    //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
-    //     ld     %s35, (,%s35)
-    // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+    //     lea %reg, label@got_lo
+    //     and %reg, %reg, (32)0
+    //     lea.sl %reg, label@got_hi(%reg)
+    //     ld %reg, (%reg, %got)
     SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOT_HI32,
                                 VEMCExpr::VK_VE_GOT_LO32, DAG);
     SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
@@ -1533,4 +1549,43 @@ SDValue VETargetLowering::PerformDAGCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+//===----------------------------------------------------------------------===//
+//                         VE Inline Assembly Support
+//===----------------------------------------------------------------------===//
+
+VETargetLowering::ConstraintType
+VETargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'v': // vector registers
+      return C_RegisterClass;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
+std::pair<unsigned, const TargetRegisterClass *>
+VETargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                               StringRef Constraint,
+                                               MVT VT) const {
+  const TargetRegisterClass *RC = nullptr;
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+    case 'r':
+      RC = &VE::I64RegClass;
+      break;
+    case 'v':
+      RC = &VE::V64RegClass;
+      break;
+    }
+    return std::make_pair(0U, RC);
+  }
+
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }

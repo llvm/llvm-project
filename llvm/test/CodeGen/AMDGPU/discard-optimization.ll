@@ -131,7 +131,7 @@ endif:
 ; GCN-NEXT: ; %.entry
 ; GCN: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
 ; GCN: s_wqm_b64 exec, exec
-; DEMOTE: s_and_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], vcc
+; DEMOTE: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]]
 ; GCN: image_sample
 ; GCN: v_add_f32_e32
 ; DEMOTE: s_and_b64 exec, exec, [[LIVE]]
@@ -165,7 +165,7 @@ define amdgpu_ps <4 x float> @wqm_kill_to_demote1(<8 x i32> inreg %rsrc, <4 x i3
 ; GCN: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
 ; GCN: s_wqm_b64 exec, exec
 ; GCN: image_sample
-; DEMOTE: s_and_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], vcc
+; DEMOTE: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]]
 ; GCN: v_add_f32_e32
 ; DEMOTE: s_and_b64 exec, exec, [[LIVE]]
 ; KILL: s_and_b64 exec, exec, [[ORIG]]

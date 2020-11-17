@@ -371,6 +371,48 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ilogb_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ilogb_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ilogb
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ilogbf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ilogbf_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ilogbf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ilogbl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ilogbl_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ilogbl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   logb_test
   SUITE
     libc_math_unittests
@@ -439,6 +481,48 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.modfl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdimf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdimf_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdimf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdim_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdim_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdim
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdiml_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdiml_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdiml
     libc.utils.FPUtil.fputil
 )
 

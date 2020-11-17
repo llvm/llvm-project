@@ -15,7 +15,7 @@ A g();
 void f(A a, A *ap, A& ar) {
   // This should not be a virtual function call.
   
-  // CHECK: call void @_ZN1A1fEv(%struct.A* %a)
+  // CHECK: call void @_ZN1A1fEv(%struct.A* {{[^,]*}} %a)
   a.f();
 
   // CHECK: call void %  

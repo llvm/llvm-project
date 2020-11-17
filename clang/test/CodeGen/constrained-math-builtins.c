@@ -1,6 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-linux -ffp-exception-behavior=strict -w -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -ffp-exception-behavior=maytrap -w -S -o - -emit-llvm %s | FileCheck %s
 
 // Test codegen of constrained math builtins.
+//
+// Test that the constrained intrinsics are picking up the exception
+// metadata from the AST instead of the global default from the command line.
+
+#pragma float_control(except, on)
 
 void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   f = __builtin_fmod(f,f);    f = __builtin_fmodf(f,f);   f =  __builtin_fmodl(f,f); f = __builtin_fmodf128(f,f);
@@ -177,9 +182,9 @@ void bar(float f) {
   (double)f * f - f;
   (long double)-f * f + f;
 
-  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32
+  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: fneg
-  // CHECK: call double @llvm.experimental.constrained.fmuladd.f64
+  // CHECK: call double @llvm.experimental.constrained.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: fneg
-  // CHECK: call x86_fp80 @llvm.experimental.constrained.fmuladd.f80
+  // CHECK: call x86_fp80 @llvm.experimental.constrained.fmuladd.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 };

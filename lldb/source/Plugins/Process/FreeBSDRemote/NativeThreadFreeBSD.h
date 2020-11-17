@@ -64,7 +64,7 @@ private:
   void SetRunning();
   void SetStepping();
 
-  Status CopyWatchpointsFrom(NativeThreadFreeBSD &source);
+  llvm::Error CopyWatchpointsFrom(NativeThreadFreeBSD &source);
 
   // Member Variables
   lldb::StateType m_state;
@@ -74,7 +74,6 @@ private:
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;
   WatchpointIndexMap m_hw_break_index_map;
-  llvm::Optional<std::string> m_thread_name;
 };
 
 typedef std::shared_ptr<NativeThreadFreeBSD> NativeThreadFreeBSDSP;

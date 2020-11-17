@@ -1,0 +1,23 @@
+# REQUIRES: lua
+# UNSUPPORTED: lldb-repro
+#
+# RUN: rm -rf %t.stderr %t.stdout
+# RUN: cat %s | %lldb --script-language lua 2> %t.stderr > %t.stdout
+# RUN: cat %t.stdout | FileCheck %s --check-prefix STDOUT
+# RUN: cat %t.stderr | FileCheck %s --check-prefix STDERR
+script
+file = lldb.SBFile(2, "w", false)
+lldb.debugger:SetOutputFile(file)
+print(95000 + 126, nil, 'a')
+quit
+script
+print({})
+quit
+
+# STDOUT: 95126	nil	a
+# STDOUT-NOT: table: {{0x[[:xdigit:]]+}}
+# STDERR: table: {{0x[[:xdigit:]]+}}
+
+# RUN: rm -rf %t.stderr %t.stdout
+# RUN: %lldb --script-language lua -o 'script print(95000 + 126, nil, "a")' 2> %t.stderr > %t.stdout
+# RUN: cat %t.stdout | FileCheck %s --check-prefix STDOUT

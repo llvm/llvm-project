@@ -39,20 +39,16 @@
 
 FROM ubuntu:bionic
 
-RUN apt-get update
-RUN apt-get install -y bash curl
+# Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get install -y ninja-build python3 sphinx-doc git
-
-# Install the Phabricator Python module to allow uploading results to Phabricator.
-# This MUST be done before installing a recent GCC, otherwise /usr/bin/gcc is
-# overwritten to an older GCC.
-RUN apt-get install -y python3-pip
-RUN pip3 install phabricator
+RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx git gdb
 
 # Install the most recently released LLVM
-RUN apt-get install -y lsb-release wget software-properties-common
+RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 RUN ln -s $(find /usr/bin -regex '.+/clang\+\+-[a-zA-Z0-9.]+') /usr/bin/clang++
 RUN ln -s $(find /usr/bin -regex '.+/clang-[a-zA-Z0-9.]+') /usr/bin/clang
@@ -70,7 +66,7 @@ RUN rm /tmp/install-cmake.sh
 
 # Change the user to a non-root user, since some of the libc++ tests
 # (e.g. filesystem) require running as non-root. Also setup passwordless sudo.
-RUN apt-get install -y sudo
+RUN apt-get update && apt-get install -y sudo
 RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN useradd --create-home libcxx-builder
 USER libcxx-builder

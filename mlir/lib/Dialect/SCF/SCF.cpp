@@ -10,6 +10,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -284,7 +285,27 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
-ValueVector mlir::scf::buildLoopNest(
+void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<int64_t> &countPerRegion) {
+  assert(countPerRegion.empty());
+  countPerRegion.resize(1);
+
+  auto lb = operands[0].dyn_cast_or_null<IntegerAttr>();
+  auto ub = operands[1].dyn_cast_or_null<IntegerAttr>();
+  auto step = operands[2].dyn_cast_or_null<IntegerAttr>();
+
+  // Loop bounds are not known statically.
+  if (!lb || !ub || !step || step.getValue().getSExtValue() == 0) {
+    countPerRegion[0] = -1;
+    return;
+  }
+
+  countPerRegion[0] =
+      ceilDiv(ub.getValue().getSExtValue() - lb.getValue().getSExtValue(),
+              step.getValue().getSExtValue());
+}
+
+LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ValueRange iterArgs,
     function_ref<ValueVector(OpBuilder &, Location, ValueRange, ValueRange)>
@@ -302,7 +323,7 @@ ValueVector mlir::scf::buildLoopNest(
     assert(results.size() == iterArgs.size() &&
            "loop nest body must return as many values as loop has iteration "
            "arguments");
-    return results;
+    return LoopNest();
   }
 
   // First, create the loop structure iteratively using the body-builder
@@ -351,11 +372,13 @@ ValueVector mlir::scf::buildLoopNest(
   builder.setInsertionPointToEnd(loops.back().getBody());
   builder.create<scf::YieldOp>(loc, results);
 
-  // Return the results of the outermost loop.
-  return ValueVector(loops.front().result_begin(), loops.front().result_end());
+  // Return the loops.
+  LoopNest res;
+  res.loops.assign(loops.begin(), loops.end());
+  return res;
 }
 
-ValueVector mlir::scf::buildLoopNest(
+LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {

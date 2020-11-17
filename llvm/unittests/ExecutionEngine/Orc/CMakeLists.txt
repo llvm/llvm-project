@@ -3,8 +3,9 @@ set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
   Object
-  OrcError
   OrcJIT
+  OrcShared
+  OrcTargetProcess
   Passes
   RuntimeDyld
   Support

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -inline="disable-simplify" | FileCheck %s
-// RUN: mlir-opt %s -inline="disable-simplify" -mlir-print-debuginfo | FileCheck %s --check-prefix INLINE-LOC
+// RUN: mlir-opt %s -inline="disable-simplify" -mlir-print-debuginfo -mlir-print-local-scope | FileCheck %s --check-prefix INLINE-LOC
 // RUN: mlir-opt %s -inline | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
@@ -64,8 +64,8 @@ func @inline_with_locations(%arg0 : i32) -> i32 {
 }
 
 
-// Check that external functions are not inlined.
-func @func_external()
+// Check that external function declarations are not inlined.
+func private @func_external()
 
 // CHECK-LABEL: func @no_inline_external
 func @no_inline_external() {

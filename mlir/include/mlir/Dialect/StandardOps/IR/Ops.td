@@ -67,6 +67,11 @@ class CastOp<string mnemonic, list<OpTrait> traits = []> :
   let hasFolder = 1;
 }
 
+// Base class for arithmetic cast operations.
+class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
+    CastOp<mnemonic, !listconcat(traits, [ElementwiseMappable])> {
+}
+
 // Base class for unary ops. Requires single operand and result. Individual
 // classes will have `operand` accessor.
 class UnaryOp<string mnemonic, list<OpTrait> traits = []> :
@@ -88,7 +93,8 @@ class UnaryOpSameOperandAndResultType<string mnemonic,
 class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
     UnaryOpSameOperandAndResultType<mnemonic,
       !listconcat(traits,
-                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
+                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+                   ElementwiseMappable])>,
     Arguments<(ins FloatLike:$operand)>;
 
 // Base class for standard arithmetic operations.  Requires operands and
@@ -96,9 +102,11 @@ class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
 // types.  Individual classes will have `lhs` and `rhs` accessor to operands.
 class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     Op<StandardOps_Dialect, mnemonic,
-       !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])> {
+       !listconcat(traits, [NoSideEffect,
+                            SameOperandsAndResultType,
+                            ElementwiseMappable])> {
 
-  let results = (outs AnyType);
+  let results = (outs AnyType:$result);
 
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
@@ -157,20 +165,38 @@ class ComplexFloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 class AllocLikeOp<string mnemonic,
                   Resource resource,
                   list<OpTrait> traits = []> :
-    Std_Op<mnemonic, !listconcat([MemoryEffects<[MemAlloc<resource>]>], traits)> {
+    Std_Op<mnemonic,
+    !listconcat([
+      MemoryEffects<[MemAlloc<resource>]>,
+      AttrSizedOperandSegments
+    ], traits)> {
 
-  let arguments = (ins Variadic<Index>:$value,
+  let arguments = (ins Variadic<Index>:$dynamicSizes,
+                   // The symbolic operands (the ones in square brackets) bind
+                   // to the symbols of the memref's layout map.
+                   Variadic<Index>:$symbolOperands,
                    Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
-  let results = (outs Res<AnyMemRef, "", [MemAlloc<resource>]>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<resource>]>:$memref);
 
   let builders = [
-    OpBuilderDAG<(ins "MemRefType":$memrefType), [{
-      $_state.types.push_back(memrefType);
+    OpBuilderDAG<(ins "MemRefType":$memrefType,
+                  CArg<"IntegerAttr", "IntegerAttr()">:$alignment), [{
+      return build($_builder, $_state, memrefType, {}, alignment);
     }]>,
-    OpBuilderDAG<(ins "MemRefType":$memrefType, "ValueRange":$operands,
-      CArg<"IntegerAttr", "IntegerAttr()">:$alignment), [{
-      $_state.addOperands(operands);
+    OpBuilderDAG<(ins "MemRefType":$memrefType, "ValueRange":$dynamicSizes,
+                  CArg<"IntegerAttr", "IntegerAttr()">:$alignment), [{
+      return build($_builder, $_state, memrefType, dynamicSizes, {}, alignment);
+    }]>,
+    OpBuilderDAG<(ins "MemRefType":$memrefType, "ValueRange":$dynamicSizes,
+                  "ValueRange":$symbolOperands,
+                  CArg<"IntegerAttr", "{}">:$alignment), [{
       $_state.types.push_back(memrefType);
+      $_state.addOperands(dynamicSizes);
+      $_state.addOperands(symbolOperands);
+      $_state.addAttribute(getOperandSegmentSizeAttr(),
+          $_builder.getI32VectorAttr({
+              static_cast<int32_t>(dynamicSizes.size()),
+              static_cast<int32_t>(symbolOperands.size())}));
       if (alignment)
         $_state.addAttribute(getAlignmentAttrName(), alignment);
     }]>];
@@ -180,23 +206,13 @@ class AllocLikeOp<string mnemonic,
 
     MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
 
-    /// Returns the number of symbolic operands (the ones in square brackets),
-    /// which bind to the symbols of the memref's layout map.
-    unsigned getNumSymbolicOperands() {
-      return getNumOperands() - getType().getNumDynamicDims();
-    }
-
-    /// Returns the symbolic operands (the ones in square brackets), which bind
-    /// to the symbols of the memref's layout map.
-    operand_range getSymbolicOperands() {
-      return {operand_begin() + getType().getNumDynamicDims(), operand_end()};
-    }
-
     /// Returns the dynamic sizes for this alloc operation if specified.
-    operand_range getDynamicSizes() { return getOperands(); }
+    operand_range getDynamicSizes() { return dynamicSizes(); }
   }];
 
-  let parser = [{ return ::parseAllocLikeOp(parser, result); }];
+  let assemblyFormat = [{
+    `(`$dynamicSizes`)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
+  }];
 
   let hasCanonicalizer = 1;
 }
@@ -1152,10 +1168,10 @@ def CmpFPredicateAttr : I64EnumAttr<
 }
 
 def CmpFOp : Std_Op<"cmpf",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
-     TypesMatchWith<
+    [NoSideEffect, SameTypeOperands,
+     SameOperandsAndResultShape, TypesMatchWith<
        "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">]> {
+       "lhs", "result", "getI1SameShape($_self)">, ElementwiseMappable]> {
   let summary = "floating-point comparison operation";
   let description = [{
     The `cmpf` operation compares its two operands according to the float
@@ -1236,10 +1252,10 @@ def CmpIPredicateAttr : I64EnumAttr<
 }
 
 def CmpIOp : Std_Op<"cmpi",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
-     TypesMatchWith<
+    [NoSideEffect, SameTypeOperands,
+     SameOperandsAndResultShape, TypesMatchWith<
        "result type has i1 element type and same shape as operands",
-       "lhs", "result", "getI1SameShape($_self)">]> {
+       "lhs", "result", "getI1SameShape($_self)">, ElementwiseMappable]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -1926,7 +1942,7 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
 // FPExtOp
 //===----------------------------------------------------------------------===//
 
-def FPExtOp : CastOp<"fpext">, Arguments<(ins AnyType:$in)> {
+def FPExtOp : ArithmeticCastOp<"fpext">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point to wider floating-point";
   let description = [{
     Cast a floating-point value to a larger floating-point-typed value.
@@ -1947,7 +1963,7 @@ def FPExtOp : CastOp<"fpext">, Arguments<(ins AnyType:$in)> {
 // FPToSIOp
 //===----------------------------------------------------------------------===//
 
-def FPToSIOp : CastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
+def FPToSIOp : ArithmeticCastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point type to integer type";
   let description = [{
     Cast from a value interpreted as floating-point to the nearest (rounding
@@ -1967,7 +1983,7 @@ def FPToSIOp : CastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
 // FPToUIOp
 //===----------------------------------------------------------------------===//
 
-def FPToUIOp : CastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
+def FPToUIOp : ArithmeticCastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point type to integer type";
   let description = [{
     Cast from a value interpreted as floating-point to the nearest (rounding
@@ -1987,7 +2003,7 @@ def FPToUIOp : CastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
 // FPTruncOp
 //===----------------------------------------------------------------------===//
 
-def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
+def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
     Truncate a floating-point value to a smaller floating-point-typed value.
@@ -2131,7 +2147,7 @@ def ImOp : Std_Op<"im",
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
+def IndexCastOp : ArithmeticCastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between integer scalars and 'index' scalars. Index is an integer of
@@ -2714,7 +2730,8 @@ def RsqrtOp : FloatUnaryOp<"rsqrt"> {
 //===----------------------------------------------------------------------===//
 
 def SelectOp : Std_Op<"select", [NoSideEffect,
-     AllTypesMatch<["true_value", "false_value", "result"]>]> {
+     AllTypesMatch<["true_value", "false_value", "result"]>,
+     ElementwiseMappable]> {
   let summary = "select operation";
   let description = [{
     The `select` operation chooses one value based on a binary condition
@@ -2945,7 +2962,7 @@ def SignedShiftRightOp : IntArithmeticOp<"shift_right_signed"> {
 //===----------------------------------------------------------------------===//
 
 def SignExtendIOp : Std_Op<"sexti",
-    [NoSideEffect, SameOperandsAndResultShape]> {
+    [NoSideEffect, SameOperandsAndResultShape, ElementwiseMappable]> {
   let summary = "integer sign extension operation";
   let description = [{
     The integer sign extension operation takes an integer input of
@@ -2987,7 +3004,7 @@ def SignExtendIOp : Std_Op<"sexti",
 // SIToFPOp
 //===----------------------------------------------------------------------===//
 
-def SIToFPOp : CastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
+def SIToFPOp : ArithmeticCastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from integer type to floating-point";
   let description = [{
     Cast from a value interpreted as signed or vector of signed integers to the
@@ -3720,13 +3737,18 @@ def TensorToMemrefOp : Std_Op<"tensor_to_memref",
                     "getTensorTypeFromMemRefType($_self)">]> {
   let summary = "tensor to memref operation";
   let description = [{
-    Create a memref from a tensor. This is equivalent to allocating a new
-    memref of the appropriate (possibly dynamic) shape, and then copying the
-    elements (as if by a tensor_store op) into the newly allocated memref.
+    Create a memref from a tensor. This is a transient op created as a
+    materialization during type conversions between tensors and memrefs.
 
     The opposite of this op is tensor_load. Together, these two ops are useful
     for source/target materializations when doing type conversions involving
     tensors and memrefs.
+
+    This op is defined by the fold
+    `tensor_to_memref(tensor_load(%memref)) -> %memref`, which is the property
+    that makes it a valid materialization in the type conversion framework.
+    This implies that one cannot assume that this op allocates a new memref for
+    its result.
 
     Note: This op takes the memref type in its pretty form because the tensor
     type can always be inferred from the memref type, but the reverse is not
@@ -3735,13 +3757,12 @@ def TensorToMemrefOp : Std_Op<"tensor_to_memref",
 
     ```mlir
     // Result type is tensor<4x?xf32>
-    %12 = tensor_to_memref %10 :  memref<4x?xf32, #map0, 42>
+    %12 = tensor_to_memref %10 : memref<4x?xf32, #map0, 42>
     ```
   }];
 
   let arguments = (ins AnyTensor:$tensor);
-  let results = (outs Res<AnyRankedOrUnrankedMemRef,
-                      "the memref to create", [MemAlloc]>:$memref);
+  let results = (outs AnyRankedOrUnrankedMemRef:$memref);
   // This op is fully verified by traits.
   let verifier = ?;
 
@@ -3786,7 +3807,9 @@ def TransposeOp : Std_Op<"transpose", [NoSideEffect]>,
 // TruncateIOp
 //===----------------------------------------------------------------------===//
 
-def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
+def TruncateIOp : Std_Op<"trunci", [NoSideEffect,
+                                    SameOperandsAndResultShape,
+                                    ElementwiseMappable]> {
   let summary = "integer truncation operation";
   let description = [{
     The integer truncation operation takes an integer input of
@@ -3826,7 +3849,7 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
 // UIToFPOp
 //===----------------------------------------------------------------------===//
 
-def UIToFPOp : CastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
+def UIToFPOp : ArithmeticCastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
     Cast from a value interpreted as unsigned integer or vector of unsigned
@@ -4053,7 +4076,9 @@ def XOrOp : IntArithmeticOp<"xor", [Commutative]> {
 // ZeroExtendIOp
 //===----------------------------------------------------------------------===//
 
-def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, SameOperandsAndResultShape]> {
+def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect,
+                                     SameOperandsAndResultShape,
+                                     ElementwiseMappable]> {
   let summary = "integer zero extension operation";
   let description = [{
     The integer zero extension operation takes an integer input of

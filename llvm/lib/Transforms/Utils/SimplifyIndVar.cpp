@@ -191,15 +191,15 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   const SCEV *S = SE->getSCEVAtScope(ICmp->getOperand(IVOperIdx), ICmpLoop);
   const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
 
-  ICmpInst::Predicate InvariantPredicate;
-  const SCEV *InvariantLHS, *InvariantRHS;
-
   auto *PN = dyn_cast<PHINode>(IVOperand);
   if (!PN)
     return false;
-  if (!SE->isLoopInvariantPredicate(Pred, S, X, L, InvariantPredicate,
-                                    InvariantLHS, InvariantRHS))
+  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L);
+  if (!LIP)
     return false;
+  ICmpInst::Predicate InvariantPredicate = LIP->Pred;
+  const SCEV *InvariantLHS = LIP->LHS;
+  const SCEV *InvariantRHS = LIP->RHS;
 
   // Rewrite the comparison to a loop invariant comparison if it can be done
   // cheaply, where cheaply means "we don't need to emit any new
@@ -1539,8 +1539,26 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   ExtendKind ExtKind = getExtendKind(NarrowDef);
   bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
   bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
-  if (!CanSignExtend && !CanZeroExtend)
-    return false;
+  auto AnotherOpExtKind = ExtKind;
+  if (!CanSignExtend && !CanZeroExtend) {
+    // Because InstCombine turns 'sub nuw' to 'add' losing the no-wrap flag, we
+    // will most likely not see it. Let's try to prove it.
+    if (OpCode != Instruction::Add)
+      return false;
+    if (ExtKind != ZeroExtended)
+      return false;
+    const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
+    const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
+    if (!SE->isKnownNegative(RHS))
+      return false;
+    bool ProvedSubNUW = SE->isKnownPredicateAt(
+        ICmpInst::ICMP_UGE, LHS, SE->getNegativeSCEV(RHS), NarrowUse);
+    if (!ProvedSubNUW)
+      return false;
+    // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
+    // neg(zext(neg(op))), which is basically sext(op).
+    AnotherOpExtKind = SignExtended;
+  }
 
   // Verifying that Defining operand is an AddRec
   const SCEV *Op1 = SE->getSCEV(WideDef);
@@ -1548,7 +1566,12 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
 
+  // Check that all uses are either s/zext, or narrow def (in case of we are
+  // widening the IV increment).
+  SmallVector<Instruction *, 4> ExtUsers;
   for (Use &U : NarrowUse->uses()) {
+    if (U.getUser() == NarrowDef)
+      continue;
     Instruction *User = nullptr;
     if (ExtKind == SignExtended)
       User = dyn_cast<SExtInst>(U.getUser());
@@ -1556,6 +1579,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       User = dyn_cast<ZExtInst>(U.getUser());
     if (!User || User->getType() != WideType)
       return false;
+    ExtUsers.push_back(User);
   }
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
@@ -1564,11 +1588,11 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(0), WideType,
-                                      ExtKind, NarrowUse);
+                                      AnotherOpExtKind, NarrowUse);
   Value *RHS = (NarrowUse->getOperand(1) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(1), WideType,
-                                      ExtKind, NarrowUse);
+                                      AnotherOpExtKind, NarrowUse);
 
   auto *NarrowBO = cast<BinaryOperator>(NarrowUse);
   auto *WideBO = BinaryOperator::Create(NarrowBO->getOpcode(), LHS, RHS,
@@ -1578,12 +1602,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   WideBO->copyIRFlags(NarrowBO);
   ExtendKindMap[NarrowUse] = ExtKind;
 
-  for (Use &U : NarrowUse->uses()) {
-    Instruction *User = nullptr;
-    if (ExtKind == SignExtended)
-      User = cast<SExtInst>(U.getUser());
-    else
-      User = cast<ZExtInst>(U.getUser());
+  for (Instruction *User : ExtUsers) {
     assert(User->getType() == WideType && "Checked before!");
     LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
                       << *WideBO << "\n");

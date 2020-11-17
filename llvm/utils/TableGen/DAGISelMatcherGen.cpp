@@ -744,7 +744,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
     }
   }
 
-  errs() << "unhandled leaf node: \n";
+  errs() << "unhandled leaf node:\n";
   N->dump();
 }
 

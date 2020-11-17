@@ -23,7 +23,7 @@ class ObjCTypeQueryTestCase(TestBase):
         self.line = line_number(
             'main.m', "// Set breakpoint here, then do 'expr (NSArray*)array_token'.")
 
-    @skipUnlessDarwin
+    @add_test_categories(["objc"])
     def test(self):
         """The expression parser's type search should be wider than the current compilation unit."""
         self.build()

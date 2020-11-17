@@ -2374,6 +2374,15 @@ static Instruction *foldSelectFunnelShift(SelectInst &Sel,
       Pred != ICmpInst::ICMP_EQ)
     return nullptr;
 
+  // If this is not a rotate then the select was blocking poison from the
+  // 'shift-by-zero' non-TVal, but a funnel shift won't - so freeze it.
+  if (SV0 != SV1) {
+    if (IsFshl && !llvm::isGuaranteedNotToBePoison(SV1))
+      SV1 = Builder.CreateFreeze(SV1);
+    else if (!IsFshl && !llvm::isGuaranteedNotToBePoison(SV0))
+      SV0 = Builder.CreateFreeze(SV0);
+  }
+
   // This is a funnel/rotate that avoids shift-by-bitwidth UB in a suboptimal way.
   // Convert to funnel shift intrinsic.
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;

@@ -39,7 +39,7 @@ enum TestCondition {
 namespace internal {
 
 template <typename ValType>
-bool test(RunContext &Ctx, TestCondition Cond, ValType LHS, ValType RHS,
+bool test(RunContext *Ctx, TestCondition Cond, ValType LHS, ValType RHS,
           const char *LHSStr, const char *RHSStr, const char *File,
           unsigned long Line);
 
@@ -59,6 +59,9 @@ template <typename T> struct Matcher : public MatcherBase { bool match(T &t); };
 class Test {
 private:
   Test *Next = nullptr;
+  RunContext *Ctx = nullptr;
+
+  void setContext(RunContext *C) { Ctx = C; }
 
 public:
   virtual ~Test() {}
@@ -79,43 +82,36 @@ protected:
   // of type promotion.
   template <typename ValType,
             cpp::EnableIfType<cpp::IsIntegral<ValType>::Value, int> = 0>
-  static bool test(RunContext &Ctx, TestCondition Cond, ValType LHS,
-                   ValType RHS, const char *LHSStr, const char *RHSStr,
-                   const char *File, unsigned long Line) {
+  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
   }
 
   template <
       typename ValType,
       cpp::EnableIfType<cpp::IsPointerType<ValType>::Value, ValType> = nullptr>
-  static bool test(RunContext &Ctx, TestCondition Cond, ValType LHS,
-                   ValType RHS, const char *LHSStr, const char *RHSStr,
-                   const char *File, unsigned long Line) {
+  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, (unsigned long long)LHS,
                           (unsigned long long)RHS, LHSStr, RHSStr, File, Line);
   }
 
-  static bool testStrEq(RunContext &Ctx, const char *LHS, const char *RHS,
+  bool testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, const char *File, unsigned long Line);
+
+  bool testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, const char *File, unsigned long Line);
+
+  bool testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
+                 const char *RHSStr, const char *File, unsigned long Line);
+
+  bool testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
                         const char *File, unsigned long Line);
 
-  static bool testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
-                        const char *LHSStr, const char *RHSStr,
-                        const char *File, unsigned long Line);
-
-  static bool testMatch(RunContext &Ctx, bool MatchResult, MatcherBase &Matcher,
-                        const char *LHSStr, const char *RHSStr,
-                        const char *File, unsigned long Line);
-
-  static bool testProcessExits(RunContext &Ctx, testutils::FunctionCaller *Func,
-                               int ExitCode, const char *LHSStr,
-                               const char *RHSStr, const char *File,
-                               unsigned long Line);
-
-  static bool testProcessKilled(RunContext &Ctx,
-                                testutils::FunctionCaller *Func, int Signal,
-                                const char *LHSStr, const char *RHSStr,
-                                const char *File, unsigned long Line);
+  bool testProcessKilled(testutils::FunctionCaller *Func, int Signal,
+                         const char *LHSStr, const char *RHSStr,
+                         const char *File, unsigned long Line);
 
   template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
     struct Callable : public testutils::FunctionCaller {
@@ -128,7 +124,7 @@ protected:
   }
 
 private:
-  virtual void Run(RunContext &Ctx) = 0;
+  virtual void Run() = 0;
   virtual const char *getName() const = 0;
 
   static Test *Start;
@@ -142,74 +138,72 @@ private:
   class SuiteName##_##TestName : public __llvm_libc::testing::Test {           \
   public:                                                                      \
     SuiteName##_##TestName() { addTest(this); }                                \
-    void Run(__llvm_libc::testing::RunContext &) override;                     \
+    void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
   };                                                                           \
   SuiteName##_##TestName SuiteName##_##TestName##_Instance;                    \
-  void SuiteName##_##TestName::Run(__llvm_libc::testing::RunContext &Ctx)
+  void SuiteName##_##TestName::Run()
 
 #define TEST_F(SuiteClass, TestName)                                           \
   class SuiteClass##_##TestName : public SuiteClass {                          \
   public:                                                                      \
     SuiteClass##_##TestName() { addTest(this); }                               \
-    void Run(__llvm_libc::testing::RunContext &) override;                     \
+    void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
   };                                                                           \
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
-  void SuiteClass##_##TestName::Run(__llvm_libc::testing::RunContext &Ctx)
+  void SuiteClass##_##TestName::Run()
 
 #define EXPECT_EQ(LHS, RHS)                                                    \
-  __llvm_libc::testing::Test::test(Ctx, __llvm_libc::testing::Cond_EQ, (LHS),  \
-                                   (RHS), #LHS, #RHS, __FILE__, __LINE__)
+  this->test(__llvm_libc::testing::Cond_EQ, (LHS), (RHS), #LHS, #RHS,          \
+             __FILE__, __LINE__)
 #define ASSERT_EQ(LHS, RHS)                                                    \
   if (!EXPECT_EQ(LHS, RHS))                                                    \
   return
 
 #define EXPECT_NE(LHS, RHS)                                                    \
-  __llvm_libc::testing::Test::test(Ctx, __llvm_libc::testing::Cond_NE, (LHS),  \
-                                   (RHS), #LHS, #RHS, __FILE__, __LINE__)
+  this->test(__llvm_libc::testing::Cond_NE, (LHS), (RHS), #LHS, #RHS,          \
+             __FILE__, __LINE__)
 #define ASSERT_NE(LHS, RHS)                                                    \
   if (!EXPECT_NE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_LT(LHS, RHS)                                                    \
-  __llvm_libc::testing::Test::test(Ctx, __llvm_libc::testing::Cond_LT, (LHS),  \
-                                   (RHS), #LHS, #RHS, __FILE__, __LINE__)
+  this->test(__llvm_libc::testing::Cond_LT, (LHS), (RHS), #LHS, #RHS,          \
+             __FILE__, __LINE__)
 #define ASSERT_LT(LHS, RHS)                                                    \
   if (!EXPECT_LT(LHS, RHS))                                                    \
   return
 
 #define EXPECT_LE(LHS, RHS)                                                    \
-  __llvm_libc::testing::Test::test(Ctx, __llvm_libc::testing::Cond_LE, (LHS),  \
-                                   (RHS), #LHS, #RHS, __FILE__, __LINE__)
+  this->test(__llvm_libc::testing::Cond_LE, (LHS), (RHS), #LHS, #RHS,          \
+             __FILE__, __LINE__)
 #define ASSERT_LE(LHS, RHS)                                                    \
   if (!EXPECT_LE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_GT(LHS, RHS)                                                    \
-  __llvm_libc::testing::Test::test(Ctx, __llvm_libc::testing::Cond_GT, (LHS),  \
-                                   (RHS), #LHS, #RHS, __FILE__, __LINE__)
+  this->test(__llvm_libc::testing::Cond_GT, (LHS), (RHS), #LHS, #RHS,          \
+             __FILE__, __LINE__)
 #define ASSERT_GT(LHS, RHS)                                                    \
   if (!EXPECT_GT(LHS, RHS))                                                    \
   return
 
 #define EXPECT_GE(LHS, RHS)                                                    \
-  __llvm_libc::testing::Test::test(Ctx, __llvm_libc::testing::Cond_GE, (LHS),  \
-                                   (RHS), #LHS, #RHS, __FILE__, __LINE__)
+  this->test(__llvm_libc::testing::Cond_GE, (LHS), (RHS), #LHS, #RHS,          \
+             __FILE__, __LINE__)
 #define ASSERT_GE(LHS, RHS)                                                    \
   if (!EXPECT_GE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_STREQ(LHS, RHS)                                                 \
-  __llvm_libc::testing::Test::testStrEq(Ctx, (LHS), (RHS), #LHS, #RHS,         \
-                                        __FILE__, __LINE__)
+  this->testStrEq((LHS), (RHS), #LHS, #RHS, __FILE__, __LINE__)
 #define ASSERT_STREQ(LHS, RHS)                                                 \
   if (!EXPECT_STREQ(LHS, RHS))                                                 \
   return
 
 #define EXPECT_STRNE(LHS, RHS)                                                 \
-  __llvm_libc::testing::Test::testStrNe(Ctx, (LHS), (RHS), #LHS, #RHS,         \
-                                        __FILE__, __LINE__)
+  this->testStrNe((LHS), (RHS), #LHS, #RHS, __FILE__, __LINE__)
 #define ASSERT_STRNE(LHS, RHS)                                                 \
   if (!EXPECT_STRNE(LHS, RHS))                                                 \
   return
@@ -227,18 +221,16 @@ private:
   return
 
 #define EXPECT_EXITS(FUNC, EXIT)                                               \
-  __llvm_libc::testing::Test::testProcessExits(                                \
-      Ctx, __llvm_libc::testing::Test::createCallable(FUNC), EXIT, #FUNC,      \
-      #EXIT, __FILE__, __LINE__)
+  this->testProcessExits(__llvm_libc::testing::Test::createCallable(FUNC),     \
+                         EXIT, #FUNC, #EXIT, __FILE__, __LINE__)
 
 #define ASSERT_EXITS(FUNC, EXIT)                                               \
   if (!EXPECT_EXITS(FUNC, EXIT))                                               \
   return
 
 #define EXPECT_DEATH(FUNC, SIG)                                                \
-  __llvm_libc::testing::Test::testProcessKilled(                               \
-      Ctx, __llvm_libc::testing::Test::createCallable(FUNC), SIG, #FUNC, #SIG, \
-      __FILE__, __LINE__)
+  this->testProcessKilled(__llvm_libc::testing::Test::createCallable(FUNC),    \
+                          SIG, #FUNC, #SIG, __FILE__, __LINE__)
 
 #define ASSERT_DEATH(FUNC, EXIT)                                               \
   if (!EXPECT_DEATH(FUNC, EXIT))                                               \
@@ -251,17 +243,17 @@ private:
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
   do {                                                                         \
     auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
-    __llvm_libc::testing::Test::testMatch(                                     \
-        Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),      \
-        #MATCH, #MATCHER, __FILE__, __LINE__);                                 \
+    this->testMatch(UNIQUE_VAR(__matcher).match((MATCH)),                      \
+                    UNIQUE_VAR(__matcher), #MATCH, #MATCHER, __FILE__,         \
+                    __LINE__);                                                 \
   } while (0)
 
 #define ASSERT_THAT(MATCH, MATCHER)                                            \
   do {                                                                         \
     auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
-    if (!__llvm_libc::testing::Test::testMatch(                                \
-            Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),  \
-            #MATCH, #MATCHER, __FILE__, __LINE__))                             \
+    if (!this->testMatch(UNIQUE_VAR(__matcher).match((MATCH)),                 \
+                         UNIQUE_VAR(__matcher), #MATCH, #MATCHER, __FILE__,    \
+                         __LINE__))                                            \
       return;                                                                  \
   } while (0)
 

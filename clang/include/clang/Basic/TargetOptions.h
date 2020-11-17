@@ -75,6 +75,9 @@ public:
   /// address space.
   bool NVPTXUseShortPointers = false;
 
+  /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
+  bool AllowAMDGPUUnsafeFPAtomics = false;
+
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus
   // "default" for the case when the user has not explicitly specified a

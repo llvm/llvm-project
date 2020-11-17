@@ -97,7 +97,8 @@ void DwarfExpression::addAnd(unsigned Mask) {
 }
 
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
-                                    unsigned MachineReg, unsigned MaxSize) {
+                                    llvm::Register MachineReg,
+                                    unsigned MaxSize) {
   if (!llvm::Register::isPhysicalRegister(MachineReg)) {
     if (isFrameRegister(TRI, MachineReg)) {
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
@@ -248,7 +249,7 @@ void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
 
 bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
-                                              unsigned MachineReg,
+                                              llvm::Register MachineReg,
                                               unsigned FragmentOffsetInBits) {
   auto Fragment = ExprCursor.getFragmentInfo();
   if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U)) {

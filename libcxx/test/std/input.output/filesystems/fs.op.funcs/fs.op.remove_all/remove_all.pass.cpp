@@ -112,7 +112,7 @@ TEST_CASE(symlink_to_dir)
     scoped_test_env env;
     const path dir = env.create_dir("dir");
     const path file = env.create_file(dir / "file", 42);
-    const path link = env.create_symlink(dir, "sym");
+    const path link = env.create_directory_symlink(dir, "sym");
 
     {
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
@@ -136,7 +136,7 @@ TEST_CASE(nested_dir)
         env.create_file(dir / "file1", 42),
         env.create_symlink(out_of_dir_file, dir / "sym1"),
         env.create_file(dir1 / "file2", 42),
-        env.create_symlink(dir, dir1 / "sym2")
+        env.create_directory_symlink(dir, dir1 / "sym2")
     };
     const std::size_t expected_count = sizeof(all_files) / sizeof(all_files[0]);
 

@@ -319,3 +319,17 @@ void testVPOperators4(int v, void *ptr) {
   __vector_pair vp2 = (__vector_pair)vpp; // expected-error {{used type '__vector_pair' where arithmetic or pointer type is required}}
 }
 
+void testBuiltinTypes1(const __vector_pair *vpp, const __vector_pair *vp2, float f) {
+  __vector_pair vp = __builtin_mma_lxvp(f, vpp); // expected-error {{passing 'float' to parameter of incompatible type 'long long'}}
+  __builtin_mma_stxvp(vp, 32799, vp2);           // expected-error {{passing 'int' to parameter of incompatible type 'long long'}}
+}
+
+void testBuiltinTypes2(__vector_pair *vpp, const __vector_pair *vp2, unsigned char c) {
+  __vector_pair vp = __builtin_mma_lxvp(6LL, vpp); // expected-error {{passing '__vector_pair *' to parameter of incompatible type 'const __vector_pair *'}}
+  __builtin_mma_stxvp(vp, c, vp2);                 // expected-error {{passing 'unsigned char' to parameter of incompatible type 'long long'}}
+}
+
+void testBuiltinTypes3(vector int v, __vector_pair *vp2, signed long long ll, unsigned short s) {
+  __vector_pair vp = __builtin_mma_lxvp(ll, v); // expected-error {{passing '__vector int' (vector of 4 'int' values) to parameter of incompatible type 'const __vector_pair *'}}
+  __builtin_mma_stxvp(vp, ll, s);               // expected-error {{passing 'unsigned short' to parameter of incompatible type 'const __vector_pair *'}}
+}

@@ -105,7 +105,7 @@ public:
   /// of pipelines.
   /// Note: The quality of the string representation depends entirely on the
   /// the correctness of per-pass overrides of Pass::printAsTextualPipeline.
-  void printAsTextualPipeline(raw_ostream &os, bool filterVerifier = true);
+  void printAsTextualPipeline(raw_ostream &os);
 
   /// Raw dump of the pass manager to llvm::errs().
   void dump();
@@ -117,6 +117,14 @@ public:
   /// This is forwarding to every pass in this PassManager, see the
   /// documentation for the same method on the Pass class.
   void getDependentDialects(DialectRegistry &dialects) const;
+
+  /// Enable or disable the implicit nesting on this particular PassManager.
+  /// This will also apply to any newly nested PassManager built from this
+  /// instance.
+  void setNesting(Nesting nesting);
+
+  /// Return the current nesting mode.
+  Nesting getNesting();
 
 private:
   /// A pointer to an internal implementation instance.

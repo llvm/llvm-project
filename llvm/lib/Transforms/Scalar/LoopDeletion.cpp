@@ -53,26 +53,28 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // of the loop.
   bool AllEntriesInvariant = true;
   bool AllOutgoingValuesSame = true;
-  for (PHINode &P : ExitBlock->phis()) {
-    Value *incoming = P.getIncomingValueForBlock(ExitingBlocks[0]);
+  if (!L->hasNoExitBlocks()) {
+    for (PHINode &P : ExitBlock->phis()) {
+      Value *incoming = P.getIncomingValueForBlock(ExitingBlocks[0]);
 
-    // Make sure all exiting blocks produce the same incoming value for the exit
-    // block.  If there are different incoming values for different exiting
-    // blocks, then it is impossible to statically determine which value should
-    // be used.
-    AllOutgoingValuesSame =
-        all_of(makeArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
-          return incoming == P.getIncomingValueForBlock(BB);
-        });
+      // Make sure all exiting blocks produce the same incoming value for the
+      // block. If there are different incoming values for different exiting
+      // blocks, then it is impossible to statically determine which value
+      // should be used.
+      AllOutgoingValuesSame =
+          all_of(makeArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
+            return incoming == P.getIncomingValueForBlock(BB);
+          });
 
-    if (!AllOutgoingValuesSame)
-      break;
-
-    if (Instruction *I = dyn_cast<Instruction>(incoming))
-      if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator())) {
-        AllEntriesInvariant = false;
+      if (!AllOutgoingValuesSame)
         break;
-      }
+
+      if (Instruction *I = dyn_cast<Instruction>(incoming))
+        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator())) {
+          AllEntriesInvariant = false;
+          break;
+        }
+    }
   }
 
   if (Changed)
@@ -189,12 +191,12 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  // We require that the loop only have a single exit block.  Otherwise, we'd
-  // be in the situation of needing to be able to solve statically which exit
-  // block will be branched to, or trying to preserve the branching logic in
-  // a loop invariant manner.
-  if (!ExitBlock) {
-    LLVM_DEBUG(dbgs() << "Deletion requires single exit block\n");
+  // We require that the loop has at most one exit block. Otherwise, we'd be in
+  // the situation of needing to be able to solve statically which exit block
+  // will be branched to, or trying to preserve the branching logic in a loop
+  // invariant manner.
+  if (!ExitBlock && !L->hasNoExitBlocks()) {
+    LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }
   // Finally, we have to check that the loop really is dead.

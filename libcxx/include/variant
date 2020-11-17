@@ -521,7 +521,7 @@ struct __indices {
 };
 
 template <size_t... _Ns, class _Fp, class _Rp, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 static constexpr auto __make_vtable_impl(_Fp __f, _Rp (*)(_Args...)) {
   array<_Rp (*)(_Args...), (1 * ... * _Ns) + 1> __result = {
       [](_Args...) -> _Rp { __throw_bad_variant_access(); }
@@ -552,7 +552,7 @@ struct __base {
   };
 
   template <class _Vis, class _Vp, class _Wp>
-  inline _LIBCPP_INLINE_VISIBILITY
+  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
   static constexpr decltype(auto)
   __visit_alt_at(size_t __index, _Vis&& __vis, _Vp&& __v, _Wp&& __w) {
     constexpr size_t __size = __uncvref_t<_Vp>::__size();
@@ -598,7 +598,7 @@ struct __base {
   }
 
   template <size_t... _Is, class _Vis, class... _Vs>
-  inline _LIBCPP_INLINE_VISIBILITY
+  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
   static constexpr decltype(auto)
   __visit_alt_impl(index_sequence<_Is...>, _Vis&& __vis, _Vs&&... __vs) {
     using __multi = __multi<__uncvref_t<_Vs>::__size()...>;

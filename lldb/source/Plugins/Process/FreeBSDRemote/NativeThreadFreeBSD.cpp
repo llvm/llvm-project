@@ -149,41 +149,35 @@ void NativeThreadFreeBSD::SetStepping() {
 }
 
 std::string NativeThreadFreeBSD::GetName() {
-  if (!m_thread_name) {
-    Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
 
-    std::vector<struct kinfo_proc> kp;
-    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
-                  static_cast<int>(GetProcess().GetID())};
+  std::vector<struct kinfo_proc> kp;
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
+                static_cast<int>(GetProcess().GetID())};
 
-    while (1) {
-      size_t len = kp.size() * sizeof(struct kinfo_proc);
-      void *ptr = len == 0 ? nullptr : kp.data();
-      int error = ::sysctl(mib, 4, ptr, &len, nullptr, 0);
-      if (ptr == nullptr || (error != 0 && errno == ENOMEM)) {
-        kp.resize(len / sizeof(struct kinfo_proc));
-        continue;
-      }
-      if (error != 0) {
-        len = 0;
-        LLDB_LOG(log, "tid = {0} in state {1} failed to get thread name: {2}", GetID(),
-                 m_state, strerror(errno));
-      }
+  while (1) {
+    size_t len = kp.size() * sizeof(struct kinfo_proc);
+    void *ptr = len == 0 ? nullptr : kp.data();
+    int error = ::sysctl(mib, 4, ptr, &len, nullptr, 0);
+    if (ptr == nullptr || (error != 0 && errno == ENOMEM)) {
       kp.resize(len / sizeof(struct kinfo_proc));
-      break;
+      continue;
     }
-
-    // empty == unknown
-    m_thread_name = std::string();
-    for (auto& procinfo : kp) {
-      if (procinfo.ki_tid == (lwpid_t)GetID()) {
-        m_thread_name = procinfo.ki_tdname;
-        break;
-      }
+    if (error != 0) {
+      len = 0;
+      LLDB_LOG(log, "tid = {0} in state {1} failed to get thread name: {2}",
+               GetID(), m_state, strerror(errno));
     }
+    kp.resize(len / sizeof(struct kinfo_proc));
+    break;
   }
 
-  return m_thread_name.getValue();
+  for (auto &procinfo : kp) {
+    if (procinfo.ki_tid == static_cast<lwpid_t>(GetID()))
+      return procinfo.ki_tdname;
+  }
+
+  return "";
 }
 
 lldb::StateType NativeThreadFreeBSD::GetState() { return m_state; }
@@ -278,4 +272,15 @@ Status NativeThreadFreeBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   }
 
   return Status("Clearing hardware breakpoint failed.");
+}
+
+llvm::Error
+NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
+  llvm::Error s = GetRegisterContext().CopyHardwareWatchpointsFrom(
+      source.GetRegisterContext());
+  if (!s) {
+    m_watchpoint_index_map = source.m_watchpoint_index_map;
+    m_hw_break_index_map = source.m_hw_break_index_map;
+  }
+  return s;
 }

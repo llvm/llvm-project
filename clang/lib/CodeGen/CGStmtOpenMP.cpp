@@ -1614,11 +1614,11 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddressOfLocalVariable(
     Allocator = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Allocator,
                                                                 CGM.VoidPtrTy);
 
-  llvm::Value *Addr = OMPBuilder.CreateOMPAlloc(
+  llvm::Value *Addr = OMPBuilder.createOMPAlloc(
       CGF.Builder, Size, Allocator,
       getNameWithSeparators({CVD->getName(), ".void.addr"}, ".", "."));
   llvm::CallInst *FreeCI =
-      OMPBuilder.CreateOMPFree(CGF.Builder, Addr, Allocator);
+      OMPBuilder.createOMPFree(CGF.Builder, Addr, Allocator);
 
   CGF.EHStack.pushCleanup<OMPAllocateCleanupTy>(NormalAndEHCleanup, FreeCI);
   Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
@@ -1646,7 +1646,7 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddrOfThreadPrivate(
   llvm::Twine CacheName = Twine(CGM.getMangledName(VD)).concat(Suffix);
 
   llvm::CallInst *ThreadPrivateCacheCall =
-      OMPBuilder.CreateCachedThreadPrivate(CGF.Builder, Data, Size, CacheName);
+      OMPBuilder.createCachedThreadPrivate(CGF.Builder, Data, Size, CacheName);
 
   return Address(ThreadPrivateCacheCall, VDAddr.getAlignment());
 }
@@ -1718,7 +1718,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
         AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
     Builder.restoreIP(
-        OMPBuilder.CreateParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
+        OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
                                   IfCond, NumThreads, ProcBind, S.hasCancel()));
     return;
   }
@@ -3641,7 +3641,7 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
 
     LexicalScope Scope(*this, S.getSourceRange());
     EmitStopPoint(&S);
-    Builder.restoreIP(OMPBuilder.CreateMaster(Builder, BodyGenCB, FiniCB));
+    Builder.restoreIP(OMPBuilder.createMaster(Builder, BodyGenCB, FiniCB));
 
     return;
   }
@@ -3682,7 +3682,7 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
 
     LexicalScope Scope(*this, S.getSourceRange());
     EmitStopPoint(&S);
-    Builder.restoreIP(OMPBuilder.CreateCritical(
+    Builder.restoreIP(OMPBuilder.createCritical(
         Builder, BodyGenCB, FiniCB, S.getDirectiveName().getAsString(),
         HintInst));
 
@@ -5976,7 +5976,7 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
         IfCondition = EmitScalarExpr(IfCond,
                                      /*IgnoreResultAssign=*/true);
       return Builder.restoreIP(
-          OMPBuilder.CreateCancel(Builder, IfCondition, S.getCancelRegion()));
+          OMPBuilder.createCancel(Builder, IfCondition, S.getCancelRegion()));
     }
   }
 

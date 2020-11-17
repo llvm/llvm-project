@@ -30,7 +30,7 @@ def VRDepot  : NVPTXReg<"%Depot">;
 
 // We use virtual registers, but define a few physical registers here to keep
 // SDAG and the MachineInstr layers happy.
-foreach i = 0-4 in {
+foreach i = 0...4 in {
   def P#i  : NVPTXReg<"%p"#i>;  // Predicate
   def RS#i : NVPTXReg<"%rs"#i>; // 16-bit
   def R#i  : NVPTXReg<"%r"#i>;  // 32-bit
@@ -47,7 +47,7 @@ foreach i = 0-4 in {
   def da#i : NVPTXReg<"%da"#i>;
 }
 
-foreach i = 0-31 in {
+foreach i = 0...31 in {
   def ENVREG#i : NVPTXReg<"%envreg"#i>;
 }
 

@@ -2,9 +2,9 @@
 // REQUIRES: powerpc-registered-target
 
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,LE
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,BE
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
 #include <smmintrin.h>
 
@@ -116,3 +116,32 @@ test_blend() {
 // CHECK-NEXT: [[REG80:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_sel(unsigned char vector[16], unsigned char vector[16], unsigned char vector[16])(<16 x i8> [[REG76]], <16 x i8> [[REG78]], <16 x i8> [[REG79]])
 // CHECK-NEXT: [[REG81:[0-9a-zA-Z_%.]+]] = bitcast <16 x i8> [[REG80]] to <2 x i64>
 // CHECK-NEXT: ret <2 x i64> [[REG81]]
+
+void __attribute__((noinline))
+test_insert() {
+  _mm_insert_epi8(m1, 1, 0);
+  _mm_insert_epi32(m1, 1, 0);
+  _mm_insert_epi64(m1, 0xFFFFFFFF1L, 0);
+}
+
+// CHECK-LABEL: @test_insert
+
+// CHECK: define available_externally <2 x i64> @_mm_insert_epi8(<2 x i64> {{[0-9a-zA-Z_%.]+}}, i32 signext {{[0-9a-zA-Z_%.]+}}, i32 signext {{[0-9a-zA-Z_%.]+}})
+// CHECK: %{{[0-9a-zA-Z_.]+}} = bitcast <2 x i64> %{{[0-9a-zA-Z_.]+}} to <16 x i8>
+// CHECK: %[[R0:[0-9a-zA-Z_.]+]] = trunc i32 %{{[0-9a-zA-Z_.]+}} to i8
+// CHECK: %[[R1:[0-9a-zA-Z_.]+]] = and i32 %{{[0-9a-zA-Z_.]+}}, 15
+// CHECK: %{{[0-9a-zA-Z_.]+}} = insertelement <16 x i8> %{{[0-9a-zA-Z_.]+}}, i8 %[[R0]], i32 %[[R1]]
+// CHECK: %[[R2:[0-9a-zA-Z_.]+]] = bitcast <16 x i8> %{{[0-9a-zA-Z_.]+}} to <2 x i64>
+// CHECK: ret <2 x i64> %[[R2]]
+
+// CHECK: define available_externally <2 x i64> @_mm_insert_epi32(<2 x i64> {{[0-9a-zA-Z_%.]+}}, i32 signext {{[0-9a-zA-Z_%.]+}}, i32 signext {{[0-9a-zA-Z_%.]+}})
+// CHECK: %{{[0-9a-zA-Z_.]+}} = bitcast <2 x i64> %{{[0-9a-zA-Z_.]+}} to <4 x i32>
+// CHECK: %[[R0:[0-9a-zA-Z_.]+]] = and i32 %{{[0-9a-zA-Z_.]+}}, 3
+// CHECK: %{{[0-9a-zA-Z_.]+}} = insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 %[[R0]]
+// CHECK: %[[R1:[0-9a-zA-Z_.]+]] = bitcast <4 x i32> %{{[0-9a-zA-Z_.]+}} to <2 x i64>
+// CHECK: ret <2 x i64> %[[R1]]
+
+// CHECK: define available_externally <2 x i64> @_mm_insert_epi64(<2 x i64> {{[0-9a-zA-Z_%.]+}}, i64 {{[0-9a-zA-Z_%.]+}}, i32 signext {{[0-9a-zA-Z_%.]+}})
+// CHECK: %[[R0:[0-9a-zA-Z_.]+]] = and i32 %{{[0-9a-zA-Z_.]+}}, 1
+// CHECK: %{{[0-9a-zA-Z_.]+}} = insertelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i64 %{{[0-9a-zA-Z_.]+}}, i32 %[[R0:[0-9a-zA-Z_.]+]]
+// CHECK: ret <2 x i64> %{{[0-9a-zA-Z_.]+}}

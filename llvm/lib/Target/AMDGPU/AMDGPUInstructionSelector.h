@@ -72,6 +72,8 @@ private:
     GEPInfo(const MachineInstr &GEP) : GEP(GEP), Imm(0) { }
   };
 
+  bool isSGPR(Register Reg) const;
+
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
 

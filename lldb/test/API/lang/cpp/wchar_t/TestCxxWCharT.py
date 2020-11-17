@@ -20,20 +20,16 @@ class CxxWCharTTestCase(TestBase):
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         # Check that we correctly report templates on wchar_t
-        self.expect("frame variable foo_y",
-                    substrs=['(Foo<wchar_t>) foo_y = '])
+        self.expect_var_path("foo_y", type="Foo<wchar_t>")
 
         # Check that we correctly report templates on int
-        self.expect("frame variable foo_x",
-                    substrs=['(Foo<int>) foo_x = '])
+        self.expect_var_path("foo_x", type="Foo<int>")
 
         # Check that we correctly report wchar_t
-        self.expect("frame variable foo_y.object",
-                    substrs=['(wchar_t) foo_y.object = '])
+        self.expect_var_path("foo_y.object", type="wchar_t")
 
         # Check that we correctly report int
-        self.expect("frame variable foo_x.object",
-                    substrs=['(int) foo_x.object = '])
+        self.expect_var_path("foo_x.object", type="int")
 
         # Check that we can run expressions that return wchar_t
         self.expect("expression L'a'", substrs=['(wchar_t) $', "L'a'"])

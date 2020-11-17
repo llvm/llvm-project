@@ -416,7 +416,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
        << " " << Field.Name << ";\n";
   }
   OS << "  };\n";
-  OS << "  KeyType Key = { ";
+  OS << "  KeyType Key = {";
   bool NeedComma = false;
   for (const auto &Field : Index.Fields) {
     if (NeedComma)
@@ -434,7 +434,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
                             Field.Name + "'");
     }
   }
-  OS << " };\n";
+  OS << "};\n";
 
   OS << "  auto Table = makeArrayRef(" << IndexName << ");\n";
   OS << "  auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,\n";

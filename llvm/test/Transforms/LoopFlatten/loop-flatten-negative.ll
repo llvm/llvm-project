@@ -1,6 +1,8 @@
 ; RUN: opt < %s -S -loop-flatten -debug-only=loop-flatten 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
+target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+
 ; Every function in this file has a reason that it can't be transformed.
 
 ; CHECK-NOT: Checks all passed, doing the transformation
@@ -393,3 +395,216 @@ for.end16:                                        ; preds = %lor.end
 for.end19:                                        ; preds = %for.end16
   ret i32 undef
 }
+
+; A 3d loop corresponding to:
+;
+; for (int i = 0; i < N; ++i)
+;    for (int j = 0; j < N; ++j)
+;      for (int k = 0; k < N; ++k)
+;        f(&A[i + N * (j + N * k)]);
+;
+define void @d3_1(i32* %A, i32 %N) {
+entry:
+  %cmp35 = icmp sgt i32 %N, 0
+  br i1 %cmp35, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
+
+for.cond1.preheader.lr.ph:
+  br label %for.cond1.preheader.us
+
+for.cond1.preheader.us:
+  %i.036.us = phi i32 [ 0, %for.cond1.preheader.lr.ph ], [ %inc15.us, %for.cond1.for.cond.cleanup3_crit_edge.us ]
+  br i1 true, label %for.cond5.preheader.us.us.preheader, label %for.cond5.preheader.us52.preheader
+
+for.cond5.preheader.us52.preheader:
+  br label %for.cond5.preheader.us52
+
+for.cond5.preheader.us.us.preheader:
+  br label %for.cond5.preheader.us.us
+
+for.cond5.preheader.us52:
+  br i1 false, label %for.cond5.preheader.us52, label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit58
+
+for.cond1.for.cond.cleanup3_crit_edge.us.loopexit:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us.loopexit58:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us:
+  %inc15.us = add nuw nsw i32 %i.036.us, 1
+  %cmp.us = icmp slt i32 %inc15.us, %N
+  br i1 %cmp.us, label %for.cond1.preheader.us, label %for.cond.cleanup.loopexit
+
+for.cond5.preheader.us.us:
+  %j.033.us.us = phi i32 [ %inc12.us.us, %for.cond5.for.cond.cleanup7_crit_edge.us.us ], [ 0, %for.cond5.preheader.us.us.preheader ]
+  br label %for.body8.us.us
+
+for.cond5.for.cond.cleanup7_crit_edge.us.us:
+  %inc12.us.us = add nuw nsw i32 %j.033.us.us, 1
+  %cmp2.us.us = icmp slt i32 %inc12.us.us, %N
+  br i1 %cmp2.us.us, label %for.cond5.preheader.us.us, label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit
+
+for.body8.us.us:
+  %k.031.us.us = phi i32 [ 0, %for.cond5.preheader.us.us ], [ %inc.us.us, %for.body8.us.us ]
+  %mul.us.us = mul nsw i32 %k.031.us.us, %N
+  %add.us.us = add nsw i32 %mul.us.us, %j.033.us.us
+  %mul9.us.us = mul nsw i32 %add.us.us, %N
+  %add10.us.us = add nsw i32 %mul9.us.us, %i.036.us
+  %idxprom.us.us = sext i32 %add10.us.us to i64
+  %arrayidx.us.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us.us
+  tail call void @f(i32* %arrayidx.us.us) #2
+  %inc.us.us = add nuw nsw i32 %k.031.us.us, 1
+  %cmp6.us.us = icmp slt i32 %inc.us.us, %N
+  br i1 %cmp6.us.us, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
+
+for.cond.cleanup.loopexit:
+  br label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
+; A 3d loop corresponding to:
+;
+;   for (int k = 0; k < N; ++k)
+;    for (int i = 0; i < N; ++i)
+;      for (int j = 0; j < M; ++j)
+;        f(&A[i*M+j]);
+;
+; This could be supported, but isn't at the moment.
+;
+define void @d3_2(i32* %A, i32 %N, i32 %M) {
+entry:
+  %cmp30 = icmp sgt i32 %N, 0
+  br i1 %cmp30, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
+
+for.cond1.preheader.lr.ph:
+  %cmp625 = icmp sgt i32 %M, 0
+  br label %for.cond1.preheader.us
+
+for.cond1.preheader.us:
+  %k.031.us = phi i32 [ 0, %for.cond1.preheader.lr.ph ], [ %inc13.us, %for.cond1.for.cond.cleanup3_crit_edge.us ]
+  br i1 %cmp625, label %for.cond5.preheader.us.us.preheader, label %for.cond5.preheader.us43.preheader
+
+for.cond5.preheader.us43.preheader:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit50
+
+for.cond5.preheader.us.us.preheader:
+  br label %for.cond5.preheader.us.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us.loopexit:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us.loopexit50:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us:
+  %inc13.us = add nuw nsw i32 %k.031.us, 1
+  %exitcond52 = icmp ne i32 %inc13.us, %N
+  br i1 %exitcond52, label %for.cond1.preheader.us, label %for.cond.cleanup.loopexit
+
+for.cond5.preheader.us.us:
+  %i.028.us.us = phi i32 [ %inc10.us.us, %for.cond5.for.cond.cleanup7_crit_edge.us.us ], [ 0, %for.cond5.preheader.us.us.preheader ]
+  %mul.us.us = mul nsw i32 %i.028.us.us, %M
+  br label %for.body8.us.us
+
+for.cond5.for.cond.cleanup7_crit_edge.us.us:
+  %inc10.us.us = add nuw nsw i32 %i.028.us.us, 1
+  %exitcond51 = icmp ne i32 %inc10.us.us, %N
+  br i1 %exitcond51, label %for.cond5.preheader.us.us, label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit
+
+for.body8.us.us:
+  %j.026.us.us = phi i32 [ 0, %for.cond5.preheader.us.us ], [ %inc.us.us, %for.body8.us.us ]
+  %add.us.us = add nsw i32 %j.026.us.us, %mul.us.us
+  %idxprom.us.us = sext i32 %add.us.us to i64
+  %arrayidx.us.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us.us
+  tail call void @f(i32* %arrayidx.us.us) #2
+  %inc.us.us = add nuw nsw i32 %j.026.us.us, 1
+  %exitcond = icmp ne i32 %inc.us.us, %M
+  br i1 %exitcond, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
+
+for.cond.cleanup.loopexit:
+  br label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
+; A 3d loop corresponding to:
+;
+;   for (int i = 0; i < N; ++i)
+;     for (int j = 0; j < M; ++j) {
+;       A[i*M+j] = 0;
+;       for (int k = 0; k < N; ++k)
+;         g();
+;     }
+;
+define void @d3_3(i32* nocapture %A, i32 %N, i32 %M) {
+entry:
+  %cmp29 = icmp sgt i32 %N, 0
+  br i1 %cmp29, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
+
+for.cond1.preheader.lr.ph:
+  %cmp227 = icmp sgt i32 %M, 0
+  br i1 %cmp227, label %for.cond1.preheader.us.preheader, label %for.cond1.preheader.preheader
+
+for.cond1.preheader.preheader:
+  br label %for.cond.cleanup.loopexit49
+
+for.cond1.preheader.us.preheader:
+  br label %for.cond1.preheader.us
+
+for.cond1.preheader.us:
+  %i.030.us = phi i32 [ %inc13.us, %for.cond1.for.cond.cleanup3_crit_edge.us ], [ 0, %for.cond1.preheader.us.preheader ]
+  %mul.us = mul nsw i32 %i.030.us, %M
+  br i1 true, label %for.body4.us.us.preheader, label %for.body4.us32.preheader
+
+for.body4.us32.preheader:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit48
+
+for.body4.us.us.preheader:
+  br label %for.body4.us.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us.loopexit:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us.loopexit48:
+  br label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us:
+  %inc13.us = add nuw nsw i32 %i.030.us, 1
+  %exitcond51 = icmp ne i32 %inc13.us, %N
+  br i1 %exitcond51, label %for.cond1.preheader.us, label %for.cond.cleanup.loopexit
+
+for.body4.us.us:
+  %j.028.us.us = phi i32 [ %inc10.us.us, %for.cond5.for.cond.cleanup7_crit_edge.us.us ], [ 0, %for.body4.us.us.preheader ]
+  %add.us.us = add nsw i32 %j.028.us.us, %mul.us
+  %idxprom.us.us = sext i32 %add.us.us to i64
+  %arrayidx.us.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us.us
+  store i32 0, i32* %arrayidx.us.us, align 4
+  br label %for.body8.us.us
+
+for.cond5.for.cond.cleanup7_crit_edge.us.us:
+  %inc10.us.us = add nuw nsw i32 %j.028.us.us, 1
+  %exitcond50 = icmp ne i32 %inc10.us.us, %M
+  br i1 %exitcond50, label %for.body4.us.us, label %for.cond1.for.cond.cleanup3_crit_edge.us.loopexit
+
+for.body8.us.us:
+  %k.026.us.us = phi i32 [ 0, %for.body4.us.us ], [ %inc.us.us, %for.body8.us.us ]
+  tail call void bitcast (void (...)* @g to void ()*)() #2
+  %inc.us.us = add nuw nsw i32 %k.026.us.us, 1
+  %exitcond = icmp ne i32 %inc.us.us, %N
+  br i1 %exitcond, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
+
+for.cond.cleanup.loopexit:
+  br label %for.cond.cleanup
+
+for.cond.cleanup.loopexit49:
+  br label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
+declare dso_local void @f(i32*)
+declare dso_local void @g(...)

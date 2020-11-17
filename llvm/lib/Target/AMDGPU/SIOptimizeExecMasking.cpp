@@ -179,9 +179,14 @@ static unsigned getSaveExecOp(unsigned Opc) {
 // register allocation, so turn them back into normal instructions.
 static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case AMDGPU::S_MOV_B64_term:
   case AMDGPU::S_MOV_B32_term: {
-    MI.setDesc(TII.get(AMDGPU::COPY));
+    bool RegSrc = MI.getOperand(1).isReg();
+    MI.setDesc(TII.get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+    return true;
+  }
+  case AMDGPU::S_MOV_B64_term: {
+    bool RegSrc = MI.getOperand(1).isReg();
+    MI.setDesc(TII.get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B64));
     return true;
   }
   case AMDGPU::S_XOR_B64_term: {

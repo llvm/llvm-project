@@ -10,8 +10,8 @@
 ; RUN: llc -march=mips64   -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EB %s
 ; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64R2-EL %s
 ; RUN: llc -march=mips64   -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64R2-EB %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64R6,MIPS64R6-EL %s
-; RUN: llc -march=mips64   -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64R6,MIPS64R6-EB %s
+; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64R6 %s
+; RUN: llc -march=mips64   -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64R6 %s
 
 %struct.SLL = type { i64 }
 %struct.SI = type { i32 }

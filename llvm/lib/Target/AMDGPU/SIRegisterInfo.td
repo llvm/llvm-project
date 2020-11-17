@@ -17,9 +17,7 @@ class Indexes<int N> {
                    24, 25, 26, 27, 28, 29, 30, 31];
 
   // Returns list of indexes [0..N)
-  list<int> slice =
-    !foldl([]<int>, all, acc, cur,
-           !listconcat(acc, !if(!lt(cur, N), [cur], [])));
+  list<int> slice = !filter(i, all, !lt(i, N));
 }
 
 let Namespace = "AMDGPU" in {

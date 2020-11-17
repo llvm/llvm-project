@@ -199,14 +199,15 @@ typedef void ParserFunction(StringRef Source, StringSaver &Saver,
                             bool MarkEOLs);
 
 void testCommandLineTokenizer(ParserFunction *parse, StringRef Input,
-                              const char *const Output[], size_t OutputSize) {
+                              ArrayRef<const char *> Output,
+                              bool MarkEOLs = false) {
   SmallVector<const char *, 0> Actual;
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  parse(Input, Saver, Actual, /*MarkEOLs=*/false);
-  EXPECT_EQ(OutputSize, Actual.size());
+  parse(Input, Saver, Actual, MarkEOLs);
+  EXPECT_EQ(Output.size(), Actual.size());
   for (unsigned I = 0, E = Actual.size(); I != E; ++I) {
-    if (I < OutputSize) {
+    if (I < Output.size()) {
       EXPECT_STREQ(Output[I], Actual[I]);
     }
   }
@@ -219,8 +220,7 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
   const char *const Output[] = {
       "foo bar",     "foo bar",   "foo bar",          "foo\\bar",
       "-DFOO=bar()", "foobarbaz", "C:\\src\\foo.cpp", "C:srcfoo.cpp"};
-  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
@@ -228,75 +228,85 @@ TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
       R"(a\b c\\d e\\"f g" h\"i j\\\"k "lmn" o pqr "st \"u" \v)";
   const char *const Output[] = { "a\\b", "c\\\\d", "e\\f g", "h\"i", "j\\\"k",
                                  "lmn", "o", "pqr", "st \"u", "\\v" };
-  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine2) {
   const char Input[] = "clang -c -DFOO=\"\"\"ABC\"\"\" x.cpp";
   const char *const Output[] = { "clang", "-c", "-DFOO=\"ABC\"", "x.cpp"};
-  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLineQuotedLastArgument) {
   const char Input1[] = R"(a b c d "")";
   const char *const Output1[] = {"a", "b", "c", "d", ""};
-  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input1, Output1,
-                           array_lengthof(Output1));
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input1, Output1);
   const char Input2[] = R"(a b c d ")";
   const char *const Output2[] = {"a", "b", "c", "d"};
-  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input2, Output2,
-                           array_lengthof(Output2));
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeAndMarkEOLs) {
+  // Clang uses EOL marking in response files to support options that consume
+  // the rest of the arguments on the current line, but do not consume arguments
+  // from subsequent lines. For example, given these rsp files contents:
+  // /c /Zi /O2
+  // /Oy- /link /debug /opt:ref
+  // /Zc:ThreadsafeStatics-
+  //
+  // clang-cl needs to treat "/debug /opt:ref" as linker flags, and everything
+  // else as compiler flags. The tokenizer inserts nullptr sentinels into the
+  // output so that clang-cl can find the end of the current line.
+  const char Input[] = "clang -Xclang foo\n\nfoo\"bar\"baz\n x.cpp\n";
+  const char *const Output[] = {"clang", "-Xclang", "foo",
+                                nullptr, nullptr,   "foobarbaz",
+                                nullptr, "x.cpp",   nullptr};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
+                           /*MarkEOLs=*/true);
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output,
+                           /*MarkEOLs=*/true);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile1) {
   const char *Input = "\\";
   const char *const Output[] = { "\\" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile2) {
   const char *Input = "\\abc";
   const char *const Output[] = { "abc" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile3) {
   const char *Input = "abc\\";
   const char *const Output[] = { "abc\\" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile4) {
   const char *Input = "abc\\\n123";
   const char *const Output[] = { "abc123" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile5) {
   const char *Input = "abc\\\r\n123";
   const char *const Output[] = { "abc123" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile6) {
   const char *Input = "abc\\\n";
   const char *const Output[] = { "abc" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile7) {
   const char *Input = "abc\\\r\n";
   const char *const Output[] = { "abc" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile8) {
@@ -318,15 +328,13 @@ TEST(CommandLineTest, TokenizeConfigFile9) {
 TEST(CommandLineTest, TokenizeConfigFile10) {
   const char *Input = "\\\nabc";
   const char *const Output[] = { "abc" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, TokenizeConfigFile11) {
   const char *Input = "\\\r\nabc";
   const char *const Output[] = { "abc" };
-  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
-                           array_lengthof(Output));
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
 TEST(CommandLineTest, AliasesWithArguments) {
@@ -960,6 +968,34 @@ TEST(CommandLineTest, ResponseFileRelativePath) {
                                       /*CurrentDir=*/StringRef(TestRoot)));
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
+}
+
+TEST(CommandLineTest, ResponseFileEOLs) {
+  vfs::InMemoryFileSystem FS;
+#ifdef _WIN32
+  const char *TestRoot = "C:\\";
+#else
+  const char *TestRoot = "//net";
+#endif
+  FS.setCurrentWorkingDirectory(TestRoot);
+  FS.addFile("eols.rsp", 0,
+             MemoryBuffer::getMemBuffer("-Xclang -Wno-whatever\n input.cpp"));
+  SmallVector<const char *, 2> Argv = {"clang", "@eols.rsp"};
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine,
+                                      Argv, true, true, FS,
+                                      /*CurrentDir=*/StringRef(TestRoot)));
+  const char *Expected[] = {"clang", "-Xclang", "-Wno-whatever", nullptr,
+                            "input.cpp"};
+  ASSERT_EQ(array_lengthof(Expected), Argv.size());
+  for (size_t I = 0, E = array_lengthof(Expected); I < E; ++I) {
+    if (Expected[I] == nullptr) {
+      ASSERT_EQ(Argv[I], nullptr);
+    } else {
+      ASSERT_STREQ(Expected[I], Argv[I]);
+    }
+  }
 }
 
 TEST(CommandLineTest, SetDefautValue) {

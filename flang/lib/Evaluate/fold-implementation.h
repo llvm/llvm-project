@@ -1113,7 +1113,13 @@ auto ApplyElementwise(FoldingContext &context,
         if (rightExpr.Rank() > 0) {
           if (std::optional<Shape> rightShape{GetShape(context, rightExpr)}) {
             if (auto right{AsFlatArrayConstructor(rightExpr)}) {
-              CheckConformance(context.messages(), *leftShape, *rightShape);
+              if (CheckConformance(
+                      context.messages(), *leftShape, *rightShape)) {
+                return MapOperation(context, std::move(f), *leftShape,
+                    std::move(*left), std::move(*right));
+              } else {
+                return std::nullopt;
+              }
               return MapOperation(context, std::move(f), *leftShape,
                   std::move(*left), std::move(*right));
             }
@@ -1229,6 +1235,15 @@ Expr<TO> FoldOperation(
                 converted.value = converted.value.FlushSubnormalToZero();
               }
               return ScalarConstantToExpr(std::move(converted.value));
+            }
+          } else if constexpr (TO::category == TypeCategory::Complex) {
+            if constexpr (Operand::category == TypeCategory::Complex) {
+              return FoldOperation(ctx,
+                  ComplexConstructor<TO::kind>{
+                      AsExpr(Convert<typename TO::Part>{AsCategoryExpr(
+                          Constant<typename Operand::Part>{value->REAL()})}),
+                      AsExpr(Convert<typename TO::Part>{AsCategoryExpr(
+                          Constant<typename Operand::Part>{value->AIMAG()})})});
             }
           } else if constexpr (TO::category == TypeCategory::Character &&
               Operand::category == TypeCategory::Character) {

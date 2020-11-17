@@ -14,6 +14,7 @@ add_subdirectory(SDBM)
 add_subdirectory(Shape)
 add_subdirectory(SPIRV)
 add_subdirectory(StandardOps)
+add_subdirectory(Tosa)
 add_subdirectory(Vector)
 
 set(LLVM_OPTIONAL_SOURCES

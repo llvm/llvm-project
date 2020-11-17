@@ -29,6 +29,7 @@ class MachineInstr;
 
 FunctionPass *createVEISelDag(VETargetMachine &TM);
 FunctionPass *createVEPromoteToI1Pass();
+FunctionPass *createLVLGenPass();
 
 void LowerVEMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                  AsmPrinter &AP);
@@ -347,6 +348,24 @@ inline static bool isMImm32Val(uint32_t Val) {
   }
   // (m)1 patterns
   return (Val & (1 << 31)) && isShiftedMask_32(Val);
+}
+
+/// val2MImm - Convert an integer immediate value to target MImm immediate.
+inline static uint64_t val2MImm(uint64_t Val) {
+  if (Val == 0)
+    return 0; // (0)1
+  if (Val & (1UL << 63))
+    return countLeadingOnes(Val);       // (m)1
+  return countLeadingZeros(Val) | 0x40; // (m)0
+}
+
+/// mimm2Val - Convert a target MImm immediate to an integer immediate value.
+inline static uint64_t mimm2Val(uint64_t Val) {
+  if (Val == 0)
+    return 0; // (0)1
+  if ((Val & 0x40) == 0)
+    return (uint64_t)((1L << 63) >> (Val & 0x3f)); // (m)1
+  return ((uint64_t)(-1L) >> (Val & 0x3f));        // (m)0
 }
 
 inline unsigned M0(unsigned Val) { return Val + 64; }

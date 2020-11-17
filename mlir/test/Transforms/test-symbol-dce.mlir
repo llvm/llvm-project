@@ -5,25 +5,22 @@
 
 // CHECK-LABEL: module attributes {test.simple}
 module attributes {test.simple} {
-  // CHECK-NOT: func @dead_private_function
-  func @dead_private_function() attributes { sym_visibility = "private" }
+  // CHECK-NOT: func private @dead_private_function
+  func private @dead_private_function()
 
-  // CHECK-NOT: func @dead_nested_function
-  func @dead_nested_function() attributes { sym_visibility = "nested" }
+  // CHECK-NOT: func nested @dead_nested_function
+  func nested @dead_nested_function()
 
-  // CHECK: func @live_private_function
-  func @live_private_function() attributes { sym_visibility = "private" }
+  // CHECK: func private @live_private_function
+  func private @live_private_function()
 
-  // CHECK: func @live_nested_function
-  func @live_nested_function() attributes { sym_visibility = "nested" }
+  // CHECK: func nested @live_nested_function
+  func nested @live_nested_function()
 
   // CHECK: func @public_function
   func @public_function() {
     "foo.return"() {uses = [@live_private_function, @live_nested_function]} : () -> ()
   }
-
-  // CHECK: func @public_function_explicit
-  func @public_function_explicit() attributes { sym_visibility = "public" }
 }
 
 // -----
@@ -33,14 +30,14 @@ module attributes {test.simple} {
 module attributes {test.nested} {
   // CHECK: module @public_module
   module @public_module {
-    // CHECK-NOT: func @dead_nested_function
-    func @dead_nested_function() attributes { sym_visibility = "nested" }
+    // CHECK-NOT: func nested @dead_nested_function
+    func nested @dead_nested_function()
 
-    // CHECK: func @private_function
-    func @private_function() attributes { sym_visibility = "private" }
+    // CHECK: func private @private_function
+    func private @private_function()
 
-    // CHECK: func @nested_function
-    func @nested_function() attributes { sym_visibility = "nested" } {
+    // CHECK: func nested @nested_function
+    func nested @nested_function() {
       "foo.return"() {uses = [@private_function]} : () -> ()
     }
   }
@@ -56,20 +53,20 @@ module attributes {test.nested} {
 module attributes {test.no_dce_non_hidden_parent} {
   // NESTED: module @public_module
   module @public_module {
-    // NESTED: func @nested_function
-    func @nested_function() attributes { sym_visibility = "nested" }
+    // NESTED: func nested @nested_function
+    func nested @nested_function()
   }
   // NESTED: module @nested_module
   module @nested_module attributes { sym_visibility = "nested" } {
-    // NESTED: func @nested_function
-    func @nested_function() attributes { sym_visibility = "nested" }
+    // NESTED: func nested @nested_function
+    func nested @nested_function()
   }
 
   // Only private modules can be assumed to be hidden.
   // NESTED: module @private_module
   module @private_module attributes { sym_visibility = "private" } {
-    // NESTED-NOT: func @nested_function
-    func @nested_function() attributes { sym_visibility = "nested" }
+    // NESTED-NOT: func nested @nested_function
+    func nested @nested_function()
   }
 
   "live.user"() {uses = [@nested_module, @private_module]} : () -> ()
@@ -78,7 +75,7 @@ module attributes {test.no_dce_non_hidden_parent} {
 // -----
 
 module {
-  func @private_symbol() attributes { sym_visibility = "private" }
+  func private @private_symbol()
 
   // expected-error@+1 {{contains potentially unknown symbol table}}
   "foo.possibly_unknown_symbol_table"() ({

@@ -16,6 +16,7 @@
 
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -24,6 +25,7 @@
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
 #include <cstdlib>
@@ -46,6 +48,7 @@ inline void registerAllPasses() {
 
   // Dialect passes
   registerAffinePasses();
+  registerAsyncPasses();
   registerGPUPasses();
   registerLinalgPasses();
   LLVM::registerLLVMPasses();
@@ -54,6 +57,7 @@ inline void registerAllPasses() {
   registerShapePasses();
   spirv::registerSPIRVPasses();
   registerStandardPasses();
+  tosa::registerTosaOptPasses();
 }
 
 } // namespace mlir

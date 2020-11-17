@@ -1,3 +1,15 @@
+//===- Attributes.td - Defines all LLVM attributes ---------*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines all the LLVM attributes.
+//
+//===----------------------------------------------------------------------===//
+
 /// Attribute base class.
 class Attr<string S> {
   // String representation of this attribute in the IR.
@@ -294,3 +306,4 @@ def : MergeRule<"adjustCallerStackProbes">;
 def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
+def : MergeRule<"setAND<MustProgressAttr>">;

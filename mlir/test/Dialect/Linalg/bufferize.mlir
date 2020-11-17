@@ -94,24 +94,6 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
 
 // -----
 
-// Check lowering of tensor-valued std.constant's
-// TODO: Move this to std-bufferize.
-
-// CHECK-LABEL:   func @constant() -> tensor<2x3xf32> {
-// CHECK:           %[[VECTOR_MEMREF:.*]] = alloc() : memref<vector<6xf32>>
-// CHECK:           %[[VECTOR_CONST:.*]] = constant dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00]> : vector<6xf32>
-// CHECK:           store %[[VECTOR_CONST]], %[[VECTOR_MEMREF]][] : memref<vector<6xf32>>
-// CHECK:           %[[MEMREF:.*]] = vector.type_cast %[[VECTOR_MEMREF]] : memref<vector<6xf32>> to memref<6xf32>
-// CHECK:           %[[FINAL_SHAPE:.*]] = linalg.reshape %[[MEMREF]] [#map] : memref<6xf32> into memref<2x3xf32>
-// CHECK:           %[[RESULT:.*]] = tensor_load %[[FINAL_SHAPE]] : memref<2x3xf32>
-// CHECK:           return %[[RESULT]] : tensor<2x3xf32>
-func @constant() -> tensor<2x3xf32> {
-  %0 = constant dense<[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]> : tensor<2x3xf32>
-  return %0: tensor<2x3xf32>
-}
-
-// -----
-
 #accesses = [
   affine_map<(i, j, k) -> (j, i, k)>,
   affine_map<(i, j, k) -> (i, j)>
@@ -146,4 +128,88 @@ func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
   } -> tensor<3x2xf32>
 
   return %0 : tensor<3x2xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[$MAP1:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1 * 2)>
+
+func private @make_index() -> index
+
+// CHECK-LABEL: func @bufferize_subtensor(
+//  CHECK-SAME:   %[[T:[0-9a-z]*]]: tensor<?x?xf32>
+func @bufferize_subtensor(%t : tensor<?x?xf32>) -> (tensor<2x3xf32>, tensor<2x?xf32>) {
+  //      CHECK: %[[IDX:.*]] = call @make_index() : () -> index
+  %i0 = call @make_index() : () -> index
+
+  //      CHECK: %[[M0:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[A0:.*]] = alloc() : memref<2x3xf32>
+  // CHECK-NEXT: %[[SM0:.*]] = subview %[[M0]][0, 0] [2, 3] [1, 1]
+  // CHECK-SAME:   memref<?x?xf32> to memref<2x3xf32, #[[$MAP0]]>
+  // CHECK-NEXT: linalg.copy(%[[SM0]], %[[A0]]) : memref<2x3xf32, #[[$MAP0]]>, memref<2x3xf32>
+  // CHECK-NEXT: %[[RT0:.*]] = tensor_load %[[A0]] : memref<2x3xf32>
+  %st0 = subtensor %t[0, 0][2, 3][1, 1] : tensor<?x?xf32> to tensor<2x3xf32>
+
+  //      CHECK: %[[M1:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[A1:.*]] = alloc(%[[IDX]]) : memref<2x?xf32>
+  // CHECK-NEXT: %[[SM1:.*]] = subview %[[M1]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
+  // CHECK-SAME:   memref<?x?xf32> to memref<2x?xf32, #[[$MAP1]]>
+  // CHECK-NEXT: linalg.copy(%[[SM1]], %[[A1]]) : memref<2x?xf32, #[[$MAP1]]>, memref<2x?xf32>
+  // CHECK-NEXT: %[[RT1:.*]] = tensor_load %[[A1]] : memref<2x?xf32>
+  %st1 = subtensor %t[0, %i0][2, %i0][1, 2] : tensor<?x?xf32> to tensor<2x?xf32>
+
+  // CHECK-NEXT: return %[[RT0]], %[[RT1]]
+  return %st0, %st1 : tensor<2x3xf32>, tensor<2x?xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[$MAP1:[0-9a-z]*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1 * 2)>
+
+func private @make_index() -> index
+
+// CHECK-LABEL: func @bufferize_subtensor_insert(
+//  CHECK-SAME:   %[[T:[0-9a-z]*]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[ST0:[0-9a-z]*]]: tensor<2x3xf32>
+//  CHECK-SAME:   %[[ST1:[0-9a-z]*]]: tensor<2x?xf32>
+func @bufferize_subtensor_insert(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %st1 : tensor<2x?xf32>) ->
+    (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  //      CHECK: %[[IDX:.*]] = call @make_index() : () -> index
+  %i0 = call @make_index() : () -> index
+
+
+  //  CHECK-DAG: %[[M0:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
+  //  CHECK-DAG: %[[SM0:.*]] = tensor_to_memref %[[ST0]] : memref<2x3xf32>
+  // CHECK-NEXT: %[[C0:.*]] = constant 0 : index
+  // CHECK-NEXT: %[[DIM0:.*]] = dim %[[M0]], %[[C0]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[C1:.*]] = constant 1 : index
+  // CHECK-NEXT: %[[DIM1:.*]] = dim %[[M0]], %[[C1]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[M0_COPY:.*]] = alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK-NEXT: linalg.copy(%[[M0]], %[[M0_COPY]]) : memref<?x?xf32>, memref<?x?xf32>
+  // CHECK-NEXT: %[[SUBVIEW0:.*]] = subview %[[M0_COPY]][0, 0] [2, 3] [1, 1]
+  // CHECK-SAME:   memref<?x?xf32> to memref<2x3xf32, #[[$MAP0]]>
+  // CHECK-NEXT: linalg.copy(%[[SM0]], %[[SUBVIEW0]]) : memref<2x3xf32>, memref<2x3xf32, #[[$MAP0]]>
+  // CHECK-NEXT: %[[RT0:.*]] = tensor_load %[[M0_COPY]] : memref<?x?xf32>
+  %t0 = subtensor_insert %st0 into %t[0, 0][2, 3][1, 1] : tensor<2x3xf32> into tensor<?x?xf32>
+
+  //  CHECK-DAG: %[[M1:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
+  //  CHECK-DAG: %[[SM1:.*]] = tensor_to_memref %[[ST1]] : memref<2x?xf32>
+  // CHECK-NEXT: %[[C0:.*]] = constant 0 : index
+  // CHECK-NEXT: %[[DIM0:.*]] = dim %[[M1]], %[[C0]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[C1:.*]] = constant 1 : index
+  // CHECK-NEXT: %[[DIM1:.*]] = dim %[[M1]], %[[C1]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[M1_COPY:.*]] = alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK-NEXT: linalg.copy(%[[M1]], %[[M1_COPY]]) : memref<?x?xf32>, memref<?x?xf32>
+  // CHECK-NEXT: %[[SUBVIEW1:.*]] = subview %[[M1_COPY]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
+  // CHECK-SAME:   memref<?x?xf32> to memref<2x?xf32, #[[$MAP1]]>
+  // CHECK-NEXT: linalg.copy(%[[SM1]], %[[SUBVIEW1]]) : memref<2x?xf32>, memref<2x?xf32, #[[$MAP1]]>
+  // CHECK-NEXT: %[[RT1:.*]] = tensor_load %[[M1_COPY]] : memref<?x?xf32>
+  %t1 = subtensor_insert %st1 into %t[0, %i0][2, %i0][1, 2] : tensor<2x?xf32> into tensor<?x?xf32>
+
+  //     CHECK: return %[[RT0]], %[[RT1]]
+  return %t0, %t1: tensor<?x?xf32>, tensor<?x?xf32>
 }

@@ -24,14 +24,12 @@ class RaiseTestCase(TestBase):
         # scenario: https://llvm.org/bugs/show_bug.cgi?id=23574
 
     @skipIfDarwin  # darwin does not support real time signals
-    @skipIfFreeBSD  # hangs
     @skipIfTargetAndroid()
     def test_sigsigrtmin(self):
         self.build()
         self.signal_test('SIGRTMIN', True)
 
     @skipIfNetBSD  # Hangs on NetBSD
-    @skipIfFreeBSD  # hangs
     def test_sigtrap(self):
         self.build()
         self.signal_test('SIGTRAP', True)

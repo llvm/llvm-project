@@ -636,33 +636,33 @@ inline Matcher<QualType> DynTypedMatcher::convertTo<QualType>() const {
 
 /// Finds the first node in a range that matches the given matcher.
 template <typename MatcherT, typename IteratorT>
-bool matchesFirstInRange(const MatcherT &Matcher, IteratorT Start,
-                         IteratorT End, ASTMatchFinder *Finder,
-                         BoundNodesTreeBuilder *Builder) {
+IteratorT matchesFirstInRange(const MatcherT &Matcher, IteratorT Start,
+                              IteratorT End, ASTMatchFinder *Finder,
+                              BoundNodesTreeBuilder *Builder) {
   for (IteratorT I = Start; I != End; ++I) {
     BoundNodesTreeBuilder Result(*Builder);
     if (Matcher.matches(*I, Finder, &Result)) {
       *Builder = std::move(Result);
-      return true;
+      return I;
     }
   }
-  return false;
+  return End;
 }
 
 /// Finds the first node in a pointer range that matches the given
 /// matcher.
 template <typename MatcherT, typename IteratorT>
-bool matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
-                                IteratorT End, ASTMatchFinder *Finder,
-                                BoundNodesTreeBuilder *Builder) {
+IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
+                                     IteratorT End, ASTMatchFinder *Finder,
+                                     BoundNodesTreeBuilder *Builder) {
   for (IteratorT I = Start; I != End; ++I) {
     BoundNodesTreeBuilder Result(*Builder);
     if (Matcher.matches(**I, Finder, &Result)) {
       *Builder = std::move(Result);
-      return true;
+      return I;
     }
   }
-  return false;
+  return End;
 }
 
 // Metafunction to determine if type T has a member called getDecl.
@@ -1060,7 +1060,9 @@ public:
 
   virtual ASTContext &getASTContext() const = 0;
 
-  virtual bool isMatchingInImplicitTemplateInstantiation() const = 0;
+  virtual bool IsMatchingInTemplateInstantiationNotSpelledInSource() const = 0;
+
+  bool isTraversalAsIs() const;
 
 protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
@@ -1206,6 +1208,8 @@ public:
   }
 
   llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+    if (auto NestedKind = this->InnerMatcher.getTraversalKind())
+      return NestedKind;
     return Traversal;
   }
 };

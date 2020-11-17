@@ -42,12 +42,6 @@ TargetList::TargetList(Debugger &debugger)
   CheckInWithManager();
 }
 
-// Destructor
-TargetList::~TargetList() {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  m_target_list.clear();
-}
-
 Status TargetList::CreateTarget(Debugger &debugger,
                                 llvm::StringRef user_exe_path,
                                 llvm::StringRef triple_str,
@@ -55,8 +49,8 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
   return CreateTargetInternal(debugger, user_exe_path, triple_str,
-                              load_dependent_files, platform_options, target_sp,
-                              false);
+                              load_dependent_files, platform_options,
+                              target_sp);
 }
 
 Status TargetList::CreateTarget(Debugger &debugger,
@@ -65,15 +59,13 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
   return CreateTargetInternal(debugger, user_exe_path, specified_arch,
-                              load_dependent_files, platform_sp, target_sp,
-                              false);
+                              load_dependent_files, platform_sp, target_sp);
 }
 
 Status TargetList::CreateTargetInternal(
     Debugger &debugger, llvm::StringRef user_exe_path,
     llvm::StringRef triple_str, LoadDependentFiles load_dependent_files,
-    const OptionGroupPlatform *platform_options, TargetSP &target_sp,
-    bool is_dummy_target) {
+    const OptionGroupPlatform *platform_options, TargetSP &target_sp) {
   Status error;
 
   // Let's start by looking at the selected platform.
@@ -256,7 +248,7 @@ Status TargetList::CreateTargetInternal(
   if (!prefer_platform_arch && arch.IsValid()) {
     if (!platform_sp->IsCompatibleArchitecture(arch, false, nullptr)) {
       platform_sp = Platform::GetPlatformForArchitecture(arch, &platform_arch);
-      if (!is_dummy_target && platform_sp)
+      if (platform_sp)
         debugger.GetPlatformList().SetSelectedPlatform(platform_sp);
     }
   } else if (platform_arch.IsValid()) {
@@ -266,7 +258,7 @@ Status TargetList::CreateTargetInternal(
     if (!platform_sp->IsCompatibleArchitecture(platform_arch, false, nullptr)) {
       platform_sp = Platform::GetPlatformForArchitecture(platform_arch,
                                                          &fixed_platform_arch);
-      if (!is_dummy_target && platform_sp)
+      if (platform_sp)
         debugger.GetPlatformList().SetSelectedPlatform(platform_sp);
     }
   }
@@ -274,31 +266,9 @@ Status TargetList::CreateTargetInternal(
   if (!platform_arch.IsValid())
     platform_arch = arch;
 
-  return TargetList::CreateTargetInternal(
-      debugger, user_exe_path, platform_arch, load_dependent_files, platform_sp,
-      target_sp, is_dummy_target);
-}
-
-lldb::TargetSP TargetList::GetDummyTarget(lldb_private::Debugger &debugger) {
-  // FIXME: Maybe the dummy target should be per-Debugger
-  if (!m_dummy_target_sp || !m_dummy_target_sp->IsValid()) {
-    ArchSpec arch(Target::GetDefaultArchitecture());
-    if (!arch.IsValid())
-      arch = HostInfo::GetArchitecture();
-    Status err = CreateDummyTarget(
-        debugger, arch.GetTriple().getTriple().c_str(), m_dummy_target_sp);
-  }
-
-  return m_dummy_target_sp;
-}
-
-Status TargetList::CreateDummyTarget(Debugger &debugger,
-                                     llvm::StringRef specified_arch_name,
-                                     lldb::TargetSP &target_sp) {
-  PlatformSP host_platform_sp(Platform::GetHostPlatform());
-  return CreateTargetInternal(
-      debugger, (const char *)nullptr, specified_arch_name, eLoadDependentsNo,
-      (const OptionGroupPlatform *)nullptr, target_sp, true);
+  return TargetList::CreateTargetInternal(debugger, user_exe_path,
+                                          platform_arch, load_dependent_files,
+                                          platform_sp, target_sp);
 }
 
 Status TargetList::CreateTargetInternal(Debugger &debugger,
@@ -306,13 +276,13 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
                                         const ArchSpec &specified_arch,
                                         LoadDependentFiles load_dependent_files,
                                         lldb::PlatformSP &platform_sp,
-                                        lldb::TargetSP &target_sp,
-                                        bool is_dummy_target) {
+                                        lldb::TargetSP &target_sp) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
       func_cat, "TargetList::CreateTarget (file = '%s', arch = '%s')",
       user_exe_path.str().c_str(), specified_arch.GetArchitectureName());
   Status error;
+  const bool is_dummy_target = false;
 
   ArchSpec arch(specified_arch);
 
@@ -418,16 +388,11 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     target_sp->AppendExecutableSearchPaths(file_dir);
   }
 
-  // Don't put the dummy target in the target list, it's held separately.
-  if (!is_dummy_target) {
-    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-    m_selected_target_idx = m_target_list.size();
-    m_target_list.push_back(target_sp);
-    // Now prime this from the dummy target:
-    target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
-  } else {
-    m_dummy_target_sp = target_sp;
-  }
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  m_selected_target_idx = m_target_list.size();
+  m_target_list.push_back(target_sp);
+  // Now prime this from the dummy target:
+  target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
 
   return error;
 }

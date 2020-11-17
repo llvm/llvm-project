@@ -21,6 +21,7 @@ void AsyncDialect::initialize() {
       >();
   addTypes<TokenType>();
   addTypes<ValueType>();
+  addTypes<GroupType>();
 }
 
 /// Parse a type registered to this dialect.
@@ -54,6 +55,7 @@ void AsyncDialect::printType(Type type, DialectAsmPrinter &os) const {
         os.printType(valueTy.getValueType());
         os << '>';
       })
+      .Case<GroupType>([&](GroupType) { os << "group"; })
       .Default([](Type) { llvm_unreachable("unexpected 'async' type kind"); });
 }
 
@@ -117,6 +119,72 @@ static LogicalResult verify(YieldOp op) {
 //===----------------------------------------------------------------------===//
 
 constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
+
+void ExecuteOp::getNumRegionInvocations(
+    ArrayRef<Attribute> operands, SmallVectorImpl<int64_t> &countPerRegion) {
+  (void)operands;
+  assert(countPerRegion.empty());
+  countPerRegion.push_back(1);
+}
+
+void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
+                                    ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `body` region branch back to the parent operation.
+  if (index.hasValue()) {
+    assert(*index == 0);
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  // Otherwise the successor is the body region.
+  regions.push_back(RegionSuccessor(&body()));
+}
+
+void ExecuteOp::build(OpBuilder &builder, OperationState &result,
+                      TypeRange resultTypes, ValueRange dependencies,
+                      ValueRange operands, BodyBuilderFn bodyBuilder) {
+
+  result.addOperands(dependencies);
+  result.addOperands(operands);
+
+  // Add derived `operand_segment_sizes` attribute based on parsed operands.
+  int32_t numDependencies = dependencies.size();
+  int32_t numOperands = operands.size();
+  auto operandSegmentSizes = DenseIntElementsAttr::get(
+      VectorType::get({2}, IntegerType::get(32, result.getContext())),
+      {numDependencies, numOperands});
+  result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
+
+  // First result is always a token, and then `resultTypes` wrapped into
+  // `async.value`.
+  result.addTypes({TokenType::get(result.getContext())});
+  for (Type type : resultTypes)
+    result.addTypes(ValueType::get(type));
+
+  // Add a body region with block arguments as unwrapped async value operands.
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  for (Value operand : operands) {
+    auto valueType = operand.getType().dyn_cast<ValueType>();
+    bodyBlock.addArgument(valueType ? valueType.getValueType()
+                                    : operand.getType());
+  }
+
+  // Create the default terminator if the builder is not provided and if the
+  // expected result is empty. Otherwise, leave this to the caller
+  // because we don't know which values to return from the execute op.
+  if (resultTypes.empty() && !bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&bodyBlock);
+    builder.create<async::YieldOp>(result.location, ValueRange());
+  } else if (bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock.getArguments());
+  }
+}
 
 static void print(OpAsmPrinter &p, ExecuteOp op) {
   p << op.getOperationName();

@@ -49,7 +49,7 @@ public:
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
   using Recurse = DWARFBaseDIE::Recurse;
-  size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs,
+  size_t GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs,
                        Recurse recurse = Recurse::yes) const {
     return GetAttributes(cu, attrs, recurse, 0 /* curr_depth */);
   }
@@ -180,8 +180,8 @@ protected:
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 
 private:
-  size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs,
-                       Recurse recurse, uint32_t curr_depth) const;
+  size_t GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs, Recurse recurse,
+                       uint32_t curr_depth) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H

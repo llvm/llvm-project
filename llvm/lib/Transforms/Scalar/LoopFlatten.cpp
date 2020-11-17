@@ -29,7 +29,6 @@
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -44,7 +43,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Utils/SimplifyIndVar.h"
 
 #define DEBUG_TYPE "loop-flatten"
 
@@ -61,6 +63,29 @@ static cl::opt<bool>
                      cl::init(false),
                      cl::desc("Assume that the product of the two iteration "
                               "limits will never overflow"));
+
+static cl::opt<bool>
+    WidenIV("loop-flatten-widen-iv", cl::Hidden,
+            cl::init(false),
+            cl::desc("Widen the loop induction variables, if possible, so "
+                     "overflow checks won't reject flattening"));
+
+struct FlattenInfo {
+  Loop *OuterLoop = nullptr;
+  Loop *InnerLoop = nullptr;
+  PHINode *InnerInductionPHI = nullptr;
+  PHINode *OuterInductionPHI = nullptr;
+  Value *InnerLimit = nullptr;
+  Value *OuterLimit = nullptr;
+  BinaryOperator *InnerIncrement = nullptr;
+  BinaryOperator *OuterIncrement = nullptr;
+  BranchInst *InnerBranch = nullptr;
+  BranchInst *OuterBranch = nullptr;
+  SmallPtrSet<Value *, 4> LinearIVUses;
+  SmallPtrSet<PHINode *, 4> InnerPHIsToTransform;
+
+  FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL) {};
+};
 
 // Finds the induction variable, increment and limit for a simple loop that we
 // can flatten.
@@ -161,10 +186,8 @@ static bool findLoopComponents(
   return true;
 }
 
-static bool checkPHIs(Loop *OuterLoop, Loop *InnerLoop,
-                      SmallPtrSetImpl<PHINode *> &InnerPHIsToTransform,
-                      PHINode *InnerInductionPHI, PHINode *OuterInductionPHI,
-                      TargetTransformInfo *TTI) {
+static bool checkPHIs(struct FlattenInfo &FI,
+                      const TargetTransformInfo *TTI) {
   // All PHIs in the inner and outer headers must either be:
   // - The induction PHI, which we are going to rewrite as one induction in
   //   the new loop. This is already checked by findLoopComponents.
@@ -180,29 +203,29 @@ static bool checkPHIs(Loop *OuterLoop, Loop *InnerLoop,
   // the exception of the induction variable), but we do need to check that
   // there are no unsafe PHI nodes.
   SmallPtrSet<PHINode *, 4> SafeOuterPHIs;
-  SafeOuterPHIs.insert(OuterInductionPHI);
+  SafeOuterPHIs.insert(FI.OuterInductionPHI);
 
   // Check that all PHI nodes in the inner loop header match one of the valid
   // patterns.
-  for (PHINode &InnerPHI : InnerLoop->getHeader()->phis()) {
+  for (PHINode &InnerPHI : FI.InnerLoop->getHeader()->phis()) {
     // The induction PHIs break these rules, and that's OK because we treat
     // them specially when doing the transformation.
-    if (&InnerPHI == InnerInductionPHI)
+    if (&InnerPHI == FI.InnerInductionPHI)
       continue;
 
     // Each inner loop PHI node must have two incoming values/blocks - one
     // from the pre-header, and one from the latch.
     assert(InnerPHI.getNumIncomingValues() == 2);
     Value *PreHeaderValue =
-        InnerPHI.getIncomingValueForBlock(InnerLoop->getLoopPreheader());
+        InnerPHI.getIncomingValueForBlock(FI.InnerLoop->getLoopPreheader());
     Value *LatchValue =
-        InnerPHI.getIncomingValueForBlock(InnerLoop->getLoopLatch());
+        InnerPHI.getIncomingValueForBlock(FI.InnerLoop->getLoopLatch());
 
     // The incoming value from the outer loop must be the PHI node in the
     // outer loop header, with no modifications made in the top of the outer
     // loop.
     PHINode *OuterPHI = dyn_cast<PHINode>(PreHeaderValue);
-    if (!OuterPHI || OuterPHI->getParent() != OuterLoop->getHeader()) {
+    if (!OuterPHI || OuterPHI->getParent() != FI.OuterLoop->getHeader()) {
       LLVM_DEBUG(dbgs() << "value modified in top of outer loop\n");
       return false;
     }
@@ -212,7 +235,7 @@ static bool checkPHIs(Loop *OuterLoop, Loop *InnerLoop,
     // so this will actually be a PHI in the inner loop's exit block, which
     // only uses values from inside the inner loop.
     PHINode *LCSSAPHI = dyn_cast<PHINode>(
-        OuterPHI->getIncomingValueForBlock(OuterLoop->getLoopLatch()));
+        OuterPHI->getIncomingValueForBlock(FI.OuterLoop->getLoopLatch()));
     if (!LCSSAPHI) {
       LLVM_DEBUG(dbgs() << "could not find LCSSA PHI\n");
       return false;
@@ -230,32 +253,32 @@ static bool checkPHIs(Loop *OuterLoop, Loop *InnerLoop,
     LLVM_DEBUG(dbgs() << "  Inner: "; InnerPHI.dump());
     LLVM_DEBUG(dbgs() << "  Outer: "; OuterPHI->dump());
     SafeOuterPHIs.insert(OuterPHI);
-    InnerPHIsToTransform.insert(&InnerPHI);
+    FI.InnerPHIsToTransform.insert(&InnerPHI);
   }
 
-  for (PHINode &OuterPHI : OuterLoop->getHeader()->phis()) {
+  for (PHINode &OuterPHI : FI.OuterLoop->getHeader()->phis()) {
     if (!SafeOuterPHIs.count(&OuterPHI)) {
       LLVM_DEBUG(dbgs() << "found unsafe PHI in outer loop: "; OuterPHI.dump());
       return false;
     }
   }
 
+  LLVM_DEBUG(dbgs() << "checkPHIs: OK\n");
   return true;
 }
 
 static bool
-checkOuterLoopInsts(Loop *OuterLoop, Loop *InnerLoop,
+checkOuterLoopInsts(struct FlattenInfo &FI,
                     SmallPtrSetImpl<Instruction *> &IterationInstructions,
-                    Value *InnerLimit, PHINode *OuterPHI,
-                    TargetTransformInfo *TTI) {
+                    const TargetTransformInfo *TTI) {
   // Check for instructions in the outer but not inner loop. If any of these
   // have side-effects then this transformation is not legal, and if there is
   // a significant amount of code here which can't be optimised out that it's
   // not profitable (as these instructions would get executed for each
   // iteration of the inner loop).
   unsigned RepeatedInstrCost = 0;
-  for (auto *B : OuterLoop->getBlocks()) {
-    if (InnerLoop->contains(B))
+  for (auto *B : FI.OuterLoop->getBlocks()) {
+    if (FI.InnerLoop->contains(B))
       continue;
 
     for (auto &I : *B) {
@@ -276,11 +299,12 @@ checkOuterLoopInsts(Loop *OuterLoop, Loop *InnerLoop,
       // a fall-through, so adds no cost.
       BranchInst *Br = dyn_cast<BranchInst>(&I);
       if (Br && Br->isUnconditional() &&
-          Br->getSuccessor(0) == InnerLoop->getHeader())
+          Br->getSuccessor(0) == FI.InnerLoop->getHeader())
         continue;
       // Multiplies of the outer iteration variable and inner iteration
       // count will be optimised out.
-      if (match(&I, m_c_Mul(m_Specific(OuterPHI), m_Specific(InnerLimit))))
+      if (match(&I, m_c_Mul(m_Specific(FI.OuterInductionPHI),
+                            m_Specific(FI.InnerLimit))))
         continue;
       int Cost = TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost " << Cost << ": "; I.dump());
@@ -292,16 +316,16 @@ checkOuterLoopInsts(Loop *OuterLoop, Loop *InnerLoop,
                     << RepeatedInstrCost << "\n");
   // Bail out if flattening the loops would cause instructions in the outer
   // loop but not in the inner loop to be executed extra times.
-  if (RepeatedInstrCost > RepeatedInstructionThreshold)
+  if (RepeatedInstrCost > RepeatedInstructionThreshold) {
+    LLVM_DEBUG(dbgs() << "checkOuterLoopInsts: not profitable, bailing.\n");
     return false;
+  }
 
+  LLVM_DEBUG(dbgs() << "checkOuterLoopInsts: OK\n");
   return true;
 }
 
-static bool checkIVUsers(PHINode *InnerPHI, PHINode *OuterPHI,
-                         BinaryOperator *InnerIncrement,
-                         BinaryOperator *OuterIncrement, Value *InnerLimit,
-                         SmallPtrSetImpl<Value *> &LinearIVUses) {
+static bool checkIVUsers(struct FlattenInfo &FI) {
   // We require all uses of both induction variables to match this pattern:
   //
   //   (OuterPHI * InnerLimit) + InnerPHI
@@ -310,23 +334,46 @@ static bool checkIVUsers(PHINode *InnerPHI, PHINode *OuterPHI,
   // require a div/mod to reconstruct in the flattened loop, so the
   // transformation wouldn't be profitable.
 
+  Value *InnerLimit = FI.InnerLimit;
+  if (auto *I = dyn_cast<SExtInst>(InnerLimit))
+    InnerLimit = I->getOperand(0);
+
   // Check that all uses of the inner loop's induction variable match the
   // expected pattern, recording the uses of the outer IV.
   SmallPtrSet<Value *, 4> ValidOuterPHIUses;
-  for (User *U : InnerPHI->users()) {
-    if (U == InnerIncrement)
+  for (User *U : FI.InnerInductionPHI->users()) {
+    if (U == FI.InnerIncrement)
       continue;
+
+    // After widening the IVs, a trunc instruction might have been introduced, so
+    // look through truncs.
+    if (dyn_cast<TruncInst>(U) ) {
+      if (!U->hasOneUse())
+        return false;
+      U = *U->user_begin();
+    }
 
     LLVM_DEBUG(dbgs() << "Found use of inner induction variable: "; U->dump());
 
-    Value *MatchedMul, *MatchedItCount;
-    if (match(U, m_c_Add(m_Specific(InnerPHI), m_Value(MatchedMul))) &&
-        match(MatchedMul,
-              m_c_Mul(m_Specific(OuterPHI), m_Value(MatchedItCount))) &&
-        MatchedItCount == InnerLimit) {
+    Value *MatchedMul;
+    Value *MatchedItCount;
+    bool IsAdd = match(U, m_c_Add(m_Specific(FI.InnerInductionPHI),
+                                  m_Value(MatchedMul))) &&
+                 match(MatchedMul, m_c_Mul(m_Specific(FI.OuterInductionPHI),
+                                           m_Value(MatchedItCount)));
+
+    // Matches the same pattern as above, except it also looks for truncs
+    // on the phi, which can be the result of widening the induction variables.
+    bool IsAddTrunc = match(U, m_c_Add(m_Trunc(m_Specific(FI.InnerInductionPHI)),
+                                       m_Value(MatchedMul))) &&
+                      match(MatchedMul,
+                            m_c_Mul(m_Trunc(m_Specific(FI.OuterInductionPHI)),
+                            m_Value(MatchedItCount)));
+
+    if ((IsAdd || IsAddTrunc) && MatchedItCount == InnerLimit) {
       LLVM_DEBUG(dbgs() << "Use is optimisable\n");
       ValidOuterPHIUses.insert(MatchedMul);
-      LinearIVUses.insert(U);
+      FI.LinearIVUses.insert(U);
     } else {
       LLVM_DEBUG(dbgs() << "Did not match expected pattern, bailing\n");
       return false;
@@ -335,37 +382,47 @@ static bool checkIVUsers(PHINode *InnerPHI, PHINode *OuterPHI,
 
   // Check that there are no uses of the outer IV other than the ones found
   // as part of the pattern above.
-  for (User *U : OuterPHI->users()) {
-    if (U == OuterIncrement)
+  for (User *U : FI.OuterInductionPHI->users()) {
+    if (U == FI.OuterIncrement)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Found use of outer induction variable: "; U->dump());
-
-    if (!ValidOuterPHIUses.count(U)) {
-      LLVM_DEBUG(dbgs() << "Did not match expected pattern, bailing\n");
-      return false;
-    } else {
+    auto IsValidOuterPHIUses = [&] (User *U) -> bool {
+      LLVM_DEBUG(dbgs() << "Found use of outer induction variable: "; U->dump());
+      if (!ValidOuterPHIUses.count(U)) {
+        LLVM_DEBUG(dbgs() << "Did not match expected pattern, bailing\n");
+        return false;
+      }
       LLVM_DEBUG(dbgs() << "Use is optimisable\n");
+      return true;
+    };
+
+    if (auto *V = dyn_cast<TruncInst>(U)) {
+      for (auto *K : V->users()) {
+        if (!IsValidOuterPHIUses(K))
+          return false;
+      }
+      continue;
     }
+
+    if (!IsValidOuterPHIUses(U))
+      return false;
   }
 
-  LLVM_DEBUG(dbgs() << "Found " << LinearIVUses.size()
+  LLVM_DEBUG(dbgs() << "checkIVUsers: OK\n";
+             dbgs() << "Found " << FI.LinearIVUses.size()
                     << " value(s) that can be replaced:\n";
-             for (Value *V : LinearIVUses) {
+             for (Value *V : FI.LinearIVUses) {
                dbgs() << "  ";
                V->dump();
              });
-
   return true;
 }
 
 // Return an OverflowResult dependant on if overflow of the multiplication of
 // InnerLimit and OuterLimit can be assumed not to happen.
-static OverflowResult checkOverflow(Loop *OuterLoop, Value *InnerLimit,
-                                    Value *OuterLimit,
-                                    SmallPtrSetImpl<Value *> &LinearIVUses,
+static OverflowResult checkOverflow(struct FlattenInfo &FI,
                                     DominatorTree *DT, AssumptionCache *AC) {
-  Function *F = OuterLoop->getHeader()->getParent();
+  Function *F = FI.OuterLoop->getHeader()->getParent();
   const DataLayout &DL = F->getParent()->getDataLayout();
 
   // For debugging/testing.
@@ -375,12 +432,12 @@ static OverflowResult checkOverflow(Loop *OuterLoop, Value *InnerLimit,
   // Check if the multiply could not overflow due to known ranges of the
   // input values.
   OverflowResult OR = computeOverflowForUnsignedMul(
-      InnerLimit, OuterLimit, DL, AC,
-      OuterLoop->getLoopPreheader()->getTerminator(), DT);
+      FI.InnerLimit, FI.OuterLimit, DL, AC,
+      FI.OuterLoop->getLoopPreheader()->getTerminator(), DT);
   if (OR != OverflowResult::MayOverflow)
     return OR;
 
-  for (Value *V : LinearIVUses) {
+  for (Value *V : FI.LinearIVUses) {
     for (Value *U : V->users()) {
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
         // The IV is used as the operand of a GEP, and the IV is at least as
@@ -402,53 +459,36 @@ static OverflowResult checkOverflow(Loop *OuterLoop, Value *InnerLimit,
   return OverflowResult::MayOverflow;
 }
 
-static bool FlattenLoopPair(Loop *OuterLoop, Loop *InnerLoop, DominatorTree *DT,
-                            LoopInfo *LI, ScalarEvolution *SE,
-                            AssumptionCache *AC, TargetTransformInfo *TTI,
-                            std::function<void(Loop *)> markLoopAsDeleted) {
-  Function *F = OuterLoop->getHeader()->getParent();
-
-  LLVM_DEBUG(dbgs() << "Loop flattening running on outer loop "
-                    << OuterLoop->getHeader()->getName() << " and inner loop "
-                    << InnerLoop->getHeader()->getName() << " in "
-                    << F->getName() << "\n");
-
+static bool CanFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
+                               LoopInfo *LI, ScalarEvolution *SE,
+                               AssumptionCache *AC, const TargetTransformInfo *TTI) {
   SmallPtrSet<Instruction *, 8> IterationInstructions;
-
-  PHINode *InnerInductionPHI, *OuterInductionPHI;
-  Value *InnerLimit, *OuterLimit;
-  BinaryOperator *InnerIncrement, *OuterIncrement;
-  BranchInst *InnerBranch, *OuterBranch;
-
-  if (!findLoopComponents(InnerLoop, IterationInstructions, InnerInductionPHI,
-                          InnerLimit, InnerIncrement, InnerBranch, SE))
+  if (!findLoopComponents(FI.InnerLoop, IterationInstructions, FI.InnerInductionPHI,
+                          FI.InnerLimit, FI.InnerIncrement, FI.InnerBranch, SE))
     return false;
-  if (!findLoopComponents(OuterLoop, IterationInstructions, OuterInductionPHI,
-                          OuterLimit, OuterIncrement, OuterBranch, SE))
+  if (!findLoopComponents(FI.OuterLoop, IterationInstructions, FI.OuterInductionPHI,
+                          FI.OuterLimit, FI.OuterIncrement, FI.OuterBranch, SE))
     return false;
 
   // Both of the loop limit values must be invariant in the outer loop
   // (non-instructions are all inherently invariant).
-  if (!OuterLoop->isLoopInvariant(InnerLimit)) {
+  if (!FI.OuterLoop->isLoopInvariant(FI.InnerLimit)) {
     LLVM_DEBUG(dbgs() << "inner loop limit not invariant\n");
     return false;
   }
-  if (!OuterLoop->isLoopInvariant(OuterLimit)) {
+  if (!FI.OuterLoop->isLoopInvariant(FI.OuterLimit)) {
     LLVM_DEBUG(dbgs() << "outer loop limit not invariant\n");
     return false;
   }
 
-  SmallPtrSet<PHINode *, 4> InnerPHIsToTransform;
-  if (!checkPHIs(OuterLoop, InnerLoop, InnerPHIsToTransform, InnerInductionPHI,
-                 OuterInductionPHI, TTI))
+  if (!checkPHIs(FI, TTI))
     return false;
 
   // FIXME: it should be possible to handle different types correctly.
-  if (InnerInductionPHI->getType() != OuterInductionPHI->getType())
+  if (FI.InnerInductionPHI->getType() != FI.OuterInductionPHI->getType())
     return false;
 
-  if (!checkOuterLoopInsts(OuterLoop, InnerLoop, IterationInstructions,
-                           InnerLimit, OuterInductionPHI, TTI))
+  if (!checkOuterLoopInsts(FI, IterationInstructions, TTI))
     return false;
 
   // Find the values in the loop that can be replaced with the linearized
@@ -456,110 +496,200 @@ static bool FlattenLoopPair(Loop *OuterLoop, Loop *InnerLoop, DominatorTree *DT,
   // or outer induction variable. If there were, we could still do this
   // transformation, but we'd have to insert a div/mod to calculate the
   // original IVs, so it wouldn't be profitable.
-  SmallPtrSet<Value *, 4> LinearIVUses;
-  if (!checkIVUsers(InnerInductionPHI, OuterInductionPHI, InnerIncrement,
-                    OuterIncrement, InnerLimit, LinearIVUses))
+  if (!checkIVUsers(FI))
     return false;
 
-  // Check if the new iteration variable might overflow. In this case, we
-  // need to version the loop, and select the original version at runtime if
-  // the iteration space is too large.
-  // TODO: We currently don't version the loop.
-  // TODO: it might be worth using a wider iteration variable rather than
-  // versioning the loop, if a wide enough type is legal.
-  bool MustVersionLoop = true;
-  OverflowResult OR =
-      checkOverflow(OuterLoop, InnerLimit, OuterLimit, LinearIVUses, DT, AC);
-  if (OR == OverflowResult::AlwaysOverflowsHigh ||
-      OR == OverflowResult::AlwaysOverflowsLow) {
-    LLVM_DEBUG(dbgs() << "Multiply would always overflow, so not profitable\n");
-    return false;
-  } else if (OR == OverflowResult::MayOverflow) {
-    LLVM_DEBUG(dbgs() << "Multiply might overflow, not flattening\n");
-  } else {
-    LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
-    MustVersionLoop = false;
-  }
+  LLVM_DEBUG(dbgs() << "CanFlattenLoopPair: OK\n");
+  return true;
+}
 
-  // We cannot safely flatten the loop. Exit now.
-  if (MustVersionLoop)
-    return false;
-
-  // Do the actual transformation.
+static bool DoFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
+                              LoopInfo *LI, ScalarEvolution *SE,
+                              AssumptionCache *AC,
+                              const TargetTransformInfo *TTI) {
+  Function *F = FI.OuterLoop->getHeader()->getParent();
   LLVM_DEBUG(dbgs() << "Checks all passed, doing the transformation\n");
-
   {
     using namespace ore;
-    OptimizationRemark Remark(DEBUG_TYPE, "Flattened", InnerLoop->getStartLoc(),
-                              InnerLoop->getHeader());
+    OptimizationRemark Remark(DEBUG_TYPE, "Flattened", FI.InnerLoop->getStartLoc(),
+                              FI.InnerLoop->getHeader());
     OptimizationRemarkEmitter ORE(F);
     Remark << "Flattened into outer loop";
     ORE.emit(Remark);
   }
 
   Value *NewTripCount =
-      BinaryOperator::CreateMul(InnerLimit, OuterLimit, "flatten.tripcount",
-                                OuterLoop->getLoopPreheader()->getTerminator());
+      BinaryOperator::CreateMul(FI.InnerLimit, FI.OuterLimit, "flatten.tripcount",
+                                FI.OuterLoop->getLoopPreheader()->getTerminator());
   LLVM_DEBUG(dbgs() << "Created new trip count in preheader: ";
              NewTripCount->dump());
 
   // Fix up PHI nodes that take values from the inner loop back-edge, which
   // we are about to remove.
-  InnerInductionPHI->removeIncomingValue(InnerLoop->getLoopLatch());
-  for (PHINode *PHI : InnerPHIsToTransform)
-    PHI->removeIncomingValue(InnerLoop->getLoopLatch());
+  FI.InnerInductionPHI->removeIncomingValue(FI.InnerLoop->getLoopLatch());
+
+  // The old Phi will be optimised away later, but for now we can't leave
+  // leave it in an invalid state, so are updating them too.
+  for (PHINode *PHI : FI.InnerPHIsToTransform)
+    PHI->removeIncomingValue(FI.InnerLoop->getLoopLatch());
 
   // Modify the trip count of the outer loop to be the product of the two
   // trip counts.
-  cast<User>(OuterBranch->getCondition())->setOperand(1, NewTripCount);
+  cast<User>(FI.OuterBranch->getCondition())->setOperand(1, NewTripCount);
 
   // Replace the inner loop backedge with an unconditional branch to the exit.
-  BasicBlock *InnerExitBlock = InnerLoop->getExitBlock();
-  BasicBlock *InnerExitingBlock = InnerLoop->getExitingBlock();
+  BasicBlock *InnerExitBlock = FI.InnerLoop->getExitBlock();
+  BasicBlock *InnerExitingBlock = FI.InnerLoop->getExitingBlock();
   InnerExitingBlock->getTerminator()->eraseFromParent();
   BranchInst::Create(InnerExitBlock, InnerExitingBlock);
-  DT->deleteEdge(InnerExitingBlock, InnerLoop->getHeader());
+  DT->deleteEdge(InnerExitingBlock, FI.InnerLoop->getHeader());
+
+  auto HasSExtUser = [] (Value *V) -> Value * {
+    for (User *U : V->users() )
+      if (dyn_cast<SExtInst>(U))
+        return U;
+    return nullptr;
+  };
 
   // Replace all uses of the polynomial calculated from the two induction
   // variables with the one new one.
-  for (Value *V : LinearIVUses)
-    V->replaceAllUsesWith(OuterInductionPHI);
+  for (Value *V : FI.LinearIVUses) {
+    // If the induction variable has been widened, look through the SExt.
+    if (Value *U = HasSExtUser(V))
+      V = U;
+    V->replaceAllUsesWith(FI.OuterInductionPHI);
+  }
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
   // deleted, and any information that have about the outer loop invalidated.
-  markLoopAsDeleted(InnerLoop);
-  SE->forgetLoop(OuterLoop);
-  SE->forgetLoop(InnerLoop);
-  LI->erase(InnerLoop);
-
+  SE->forgetLoop(FI.OuterLoop);
+  SE->forgetLoop(FI.InnerLoop);
+  LI->erase(FI.InnerLoop);
   return true;
 }
 
-PreservedAnalyses LoopFlattenPass::run(Loop &L, LoopAnalysisManager &AM,
-                                       LoopStandardAnalysisResults &AR,
-                                       LPMUpdater &Updater) {
-  if (L.getSubLoops().size() != 1)
+static bool CanWidenIV(struct FlattenInfo &FI, DominatorTree *DT,
+                       LoopInfo *LI, ScalarEvolution *SE,
+                       AssumptionCache *AC, const TargetTransformInfo *TTI) {
+  if (!WidenIV) {
+    LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Try widening the IVs\n");
+  Module *M = FI.InnerLoop->getHeader()->getParent()->getParent();
+  auto &DL = M->getDataLayout();
+  auto *InnerType = FI.InnerInductionPHI->getType();
+  auto *OuterType = FI.OuterInductionPHI->getType();
+  unsigned MaxLegalSize = DL.getLargestLegalIntTypeSizeInBits();
+  auto *MaxLegalType = DL.getLargestLegalIntType(M->getContext());
+
+  // If both induction types are less than the maximum legal integer width,
+  // promote both to the widest type available so we know calculating
+  // (OuterLimit * InnerLimit) as the new trip count is safe.
+  if (InnerType != OuterType ||
+      InnerType->getScalarSizeInBits() >= MaxLegalSize ||
+      MaxLegalType->getScalarSizeInBits() < InnerType->getScalarSizeInBits() * 2) {
+    LLVM_DEBUG(dbgs() << "Can't widen the IV\n");
+    return false;
+  }
+
+  SCEVExpander Rewriter(*SE, DL, "loopflatten");
+  SmallVector<WideIVInfo, 2> WideIVs;
+  SmallVector<WeakTrackingVH, 4> DeadInsts;
+  WideIVs.push_back( {FI.InnerInductionPHI, MaxLegalType, false });
+  WideIVs.push_back( {FI.OuterInductionPHI, MaxLegalType, false });
+  unsigned ElimExt;
+  unsigned Widened;
+
+  for (unsigned i = 0; i < WideIVs.size(); i++) {
+    PHINode *WidePhi = createWideIV(WideIVs[i], LI, SE, Rewriter, DT, DeadInsts,
+                                    ElimExt, Widened, true /* HasGuards */,
+                                    true /* UsePostIncrementRanges */);
+    if (!WidePhi)
+      return false;
+    LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());
+    LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIVs[i].NarrowIV->dump());
+    RecursivelyDeleteDeadPHINode(WideIVs[i].NarrowIV);
+  }
+  // After widening, rediscover all the loop components.
+  return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+}
+
+static bool FlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
+                            LoopInfo *LI, ScalarEvolution *SE,
+                            AssumptionCache *AC,
+                            const TargetTransformInfo *TTI) {
+  LLVM_DEBUG(
+      dbgs() << "Loop flattening running on outer loop "
+             << FI.OuterLoop->getHeader()->getName() << " and inner loop "
+             << FI.InnerLoop->getHeader()->getName() << " in "
+             << FI.OuterLoop->getHeader()->getParent()->getName() << "\n");
+
+  if (!CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI))
+    return false;
+
+  // Check if we can widen the induction variables to avoid overflow checks.
+  if (CanWidenIV(FI, DT, LI, SE, AC, TTI))
+    return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+
+  // Check if the new iteration variable might overflow. In this case, we
+  // need to version the loop, and select the original version at runtime if
+  // the iteration space is too large.
+  // TODO: We currently don't version the loop.
+  OverflowResult OR = checkOverflow(FI, DT, AC);
+  if (OR == OverflowResult::AlwaysOverflowsHigh ||
+      OR == OverflowResult::AlwaysOverflowsLow) {
+    LLVM_DEBUG(dbgs() << "Multiply would always overflow, so not profitable\n");
+    return false;
+  } else if (OR == OverflowResult::MayOverflow) {
+    LLVM_DEBUG(dbgs() << "Multiply might overflow, not flattening\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
+  return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+}
+
+bool Flatten(DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
+             AssumptionCache *AC, TargetTransformInfo *TTI) {
+  bool Changed = false;
+  for (auto *InnerLoop : LI->getLoopsInPreorder()) {
+    auto *OuterLoop = InnerLoop->getParentLoop();
+    if (!OuterLoop)
+      continue;
+    struct FlattenInfo FI(OuterLoop, InnerLoop);
+    Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI);
+  }
+  return Changed;
+}
+
+PreservedAnalyses LoopFlattenPass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  auto *LI = &AM.getResult<LoopAnalysis>(F);
+  auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *AC = &AM.getResult<AssumptionAnalysis>(F);
+  auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
+
+  if (!Flatten(DT, LI, SE, AC, TTI))
     return PreservedAnalyses::all();
 
-  Loop *InnerLoop = *L.begin();
-  std::string LoopName(InnerLoop->getName());
-  if (!FlattenLoopPair(
-          &L, InnerLoop, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI,
-          [&](Loop *L) { Updater.markLoopAsDeleted(*L, LoopName); }))
-    return PreservedAnalyses::all();
-  return getLoopPassPreservedAnalyses();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {
-class LoopFlattenLegacyPass : public LoopPass {
+class LoopFlattenLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
-  LoopFlattenLegacyPass() : LoopPass(ID) {
+  LoopFlattenLegacyPass() : FunctionPass(ID) {
     initializeLoopFlattenLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   // Possibly flatten loop L into its child.
-  bool runOnLoop(Loop *L, LPPassManager &) override;
+  bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     getLoopAnalysisUsage(AU);
@@ -574,32 +704,20 @@ public:
 char LoopFlattenLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopFlattenLegacyPass, "loop-flatten", "Flattens loops",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(LoopFlattenLegacyPass, "loop-flatten", "Flattens loops",
                     false, false)
 
-Pass *llvm::createLoopFlattenPass() { return new LoopFlattenLegacyPass(); }
+FunctionPass *llvm::createLoopFlattenPass() { return new LoopFlattenLegacyPass(); }
 
-bool LoopFlattenLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-
-  if (L->getSubLoops().size() != 1)
-    return false;
-
+bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   auto &TTIP = getAnalysis<TargetTransformInfoWrapperPass>();
-  TargetTransformInfo *TTI = &TTIP.getTTI(*L->getHeader()->getParent());
-  AssumptionCache *AC =
-      &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-          *L->getHeader()->getParent());
-
-  Loop *InnerLoop = *L->begin();
-  return FlattenLoopPair(L, InnerLoop, DT, LI, SE, AC, TTI,
-                         [&](Loop *L) { LPM.markLoopAsDeleted(*L); });
+  auto *TTI = &TTIP.getTTI(F);
+  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  return Flatten(DT, LI, SE, AC, TTI);
 }

@@ -11,9 +11,9 @@
 // This test uses the POSIX header <sys/time.h> which Windows doesn't provide
 // UNSUPPORTED: windows
 
-// Until 58a0a70fb2f1, this_thread::sleep_for could get interrupted by
-// signals and this test would fail. Disable the test on the corresponding
-// system libraries.
+// Until 58a0a70fb2f1, this_thread::sleep_for misbehaves when interrupted by
+// a signal, as tested here. Disable the test on the corresponding system
+// libraries.
 // XFAIL: with_system_cxx_lib=macosx10.11
 // XFAIL: with_system_cxx_lib=macosx10.10
 // XFAIL: with_system_cxx_lib=macosx10.9

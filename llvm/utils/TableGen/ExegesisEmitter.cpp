@@ -144,7 +144,7 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
 
 void ExegesisEmitter::emitPfmCounters(raw_ostream &OS) const {
   // Emit the counter name table.
-  OS << "\nstatic const char* " << Target << "PfmCounterNames[] = {\n";
+  OS << "\nstatic const char *" << Target << "PfmCounterNames[] = {\n";
   for (const auto &NameAndIndex : PfmCounterNameTable)
     OS << "  \"" << NameAndIndex.first << "\", // " << NameAndIndex.second
        << "\n";

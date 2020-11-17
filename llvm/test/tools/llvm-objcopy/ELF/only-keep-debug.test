@@ -97,28 +97,23 @@ ProgramHeaders:
     Flags:    [ PF_R, PF_X ]
     Offset:   0
     Align:    0x1000
-    Sections:
-      - Section: .note1
-      - Section: .note2
-      - Section: .text
+    FirstSec: .note1
+    LastSec:  .text
   - Type:     PT_LOAD
     Flags:    [ PF_R, PF_W ]
     VAddr:    0x1480    # Ensure Offset=VAddr (mod Align) if Offset changes
     Align:    0x1000
-    Sections:
-      - Section: .tdata
-      - Section: .bss
+    FirstSec: .tdata
+    LastSec:  .bss
   - Type:     PT_TLS
     Flags:    [ PF_R, PF_W ]
     VAddr:    0x1480    # Ensure Offset=VAddr (mod Align) if Offset changes
-    Sections:
-      - Section: .tdata
-      - Section: .tbss
+    FirstSec: .tdata
+    LastSec:  .tbss
   - Type:     PT_NOTE
     VAddr:    0x400
-    Sections:
-      - Section: .note1
-      - Section: .note2
+    FirstSec: .note1
+    LastSec:  .note2
 ...
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
@@ -175,9 +170,8 @@ ProgramHeaders:
     Flags:    [ PF_R, PF_X ]
     Offset:   0
     Align:    4096
-    Sections:
-      - Section: .text
-      - Section: .note
+    FirstSec: .text
+    LastSec:  .note
   - Type:     PT_LOAD
     Flags:    [ PF_R, PF_W ]
     Offset:   0x202
@@ -222,3 +216,65 @@ Sections:
     Flags: [ SHF_ALLOC ]
 DynamicSymbols: []
 Symbols: []
+
+## PT_TLS and .tdata are empty. Test that we set its p_offset to the parent
+## segment's p_offset. If we don't rewrite the p_offset of PT_TLS and the deleted
+## bytes are large, p_offset can be larger than the file size, and trigger
+## validation errors with subsequent tools.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objcopy --only-keep-debug %t4 %t4.dbg
+# RUN: llvm-readelf -S -l %t4.dbg | FileCheck --check-prefix=CHECK4 %s
+
+# CHECK4:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK4:      [ 1] .text       NOBITS   0000000000000200 000200 000001 00  AX  0   0  0
+# CHECK4-NEXT: [ 2] .tdata      NOBITS   0000000000001240 000240 000000 00 WAT  0   0 64
+# CHECK4-NEXT: [ 3] .got        NOBITS   0000000000001240 000240 000008 00  WA  0   0  0
+
+# CHECK4:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK4-NEXT: LOAD 0x000200 0x0000000000000200 0x0000000000000200 0x000000 0x000001 R E 0x1000
+# CHECK4-NEXT: LOAD 0x000240 0x0000000000001240 0x0000000000001240 0x000000 0x000008 RW  0x1000
+# CHECK4-NEXT: TLS  0x000240 0x0000000000001240 0x0000000000001240 0x000000 0x000000 R   0x40
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x200
+    Size:         1
+  - Name:         .tdata
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE, SHF_TLS ]
+    Address:      0x1240   # Ensure Address=0x1000+Offset
+    AddressAlign: 0x40
+  - Name:         .got
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Size:         8
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x200
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  ## Add .got so that the PT_LOAD does not have zero p_memsz. We don't add
+  ## sections to zero-sized segments so zero-sized segments may have strange
+  ## offsets. In practice, the Linux kernel errors when mmapping a p_memsz
+  ## PT_LOAD,so for practical so this assumption can generally be made.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x1240
+    Align:    0x1000
+    FirstSec: .tdata
+    LastSec:  .got
+  - Type:     PT_TLS
+    Flags:    [ PF_R ]
+    VAddr:    0x1240
+    FirstSec: .tdata
+    LastSec:  .tdata

@@ -16,3 +16,9 @@ void test_ds_fmax(float src) {
   __shared__ float shared;
   volatile float x = __builtin_amdgcn_ds_fmaxf(&shared, src, 0, 0, false);
 }
+
+// CHECK-LABEL: @_Z6endpgmv(
+// CHECK: call void @llvm.amdgcn.endpgm()
+__global__ void endpgm() {
+  __builtin_amdgcn_endpgm();
+}

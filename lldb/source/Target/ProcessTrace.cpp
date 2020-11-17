@@ -12,6 +12,8 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -121,5 +123,9 @@ bool ProcessTrace::GetProcessInfo(ProcessInstanceInfo &info) {
 
 size_t ProcessTrace::DoReadMemory(addr_t addr, void *buf, size_t size,
                                   Status &error) {
-  return 0;
+  Address resolved_address;
+  GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, resolved_address);
+
+  return GetTarget().ReadMemoryFromFileCache(resolved_address, buf, size,
+                                             error);
 }
