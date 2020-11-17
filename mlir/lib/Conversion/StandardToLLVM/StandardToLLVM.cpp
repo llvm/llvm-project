@@ -1094,14 +1094,51 @@ Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
-    Location loc, MemRefType memRefType, ArrayRef<Value> dynSizes,
-    ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes) const {
+    Location loc, MemRefType memRefType, ArrayRef<Value> dynamicSizes,
+    ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes,
+    SmallVectorImpl<Value> &strides, Value &sizeBytes) const {
+  assert(isSupportedMemRefType(memRefType) &&
+         "layout maps must have been normalized away");
+
   sizes.reserve(memRefType.getRank());
-  unsigned i = 0;
-  for (int64_t s : memRefType.getShape())
-    sizes.push_back(s == ShapedType::kDynamicSize
-                        ? dynSizes[i++]
-                        : createIndexConstant(rewriter, loc, s));
+  unsigned dynamicIndex = 0;
+  for (int64_t size : memRefType.getShape()) {
+    sizes.push_back(size == ShapedType::kDynamicSize
+                        ? dynamicSizes[dynamicIndex++]
+                        : createIndexConstant(rewriter, loc, size));
+  }
+
+  // Strides: iterate sizes in reverse order and multiply.
+  int64_t stride = 1;
+  Value runningStride = createIndexConstant(rewriter, loc, 1);
+  strides.resize(memRefType.getRank());
+  for (auto i = memRefType.getRank(); i-- > 0;) {
+    strides[i] = runningStride;
+
+    int64_t size = memRefType.getShape()[i];
+    if (size == 0)
+      continue;
+    bool useSizeAsStride = stride == 1;
+    if (size == ShapedType::kDynamicSize)
+      stride = ShapedType::kDynamicSize;
+    if (stride != ShapedType::kDynamicSize)
+      stride *= size;
+
+    if (useSizeAsStride)
+      runningStride = sizes[i];
+    else if (stride == ShapedType::kDynamicSize)
+      runningStride =
+          rewriter.create<LLVM::MulOp>(loc, runningStride, sizes[i]);
+    else
+      runningStride = createIndexConstant(rewriter, loc, stride);
+  }
+
+  // Buffer size in bytes.
+  Type elementPtrType = getElementPtrType(memRefType);
+  Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
+  Value gepPtr = rewriter.create<LLVM::GEPOp>(
+      loc, elementPtrType, ArrayRef<Value>{nullPtr, runningStride});
+  sizeBytes = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 }
 
 Value ConvertToLLVMPattern::getSizeInBytes(
@@ -1131,18 +1168,10 @@ Value ConvertToLLVMPattern::getNumElements(
   return numElements;
 }
 
-Value ConvertToLLVMPattern::getCumulativeSizeInBytes(
-    Location loc, Type elementType, ArrayRef<Value> shape,
-    ConversionPatternRewriter &rewriter) const {
-  Value numElements = this->getNumElements(loc, shape, rewriter);
-  Value elementSize = this->getSizeInBytes(loc, elementType, rewriter);
-  return rewriter.create<LLVM::MulOp>(loc, numElements, elementSize);
-}
-
 /// Creates and populates the memref descriptor struct given all its fields.
 MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
     Location loc, MemRefType memRefType, Value allocatedPtr, Value alignedPtr,
-    uint64_t offset, ArrayRef<int64_t> strides, ArrayRef<Value> sizes,
+    ArrayRef<Value> sizes, ArrayRef<Value> strides,
     ConversionPatternRewriter &rewriter) const {
   auto structType = typeConverter.convertType(memRefType);
   auto memRefDescriptor = MemRefDescriptor::undef(rewriter, loc, structType);
@@ -1155,37 +1184,16 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
 
   // Field 3: Offset in aligned pointer.
   memRefDescriptor.setOffset(rewriter, loc,
-                             createIndexConstant(rewriter, loc, offset));
+                             createIndexConstant(rewriter, loc, 0));
 
-  if (memRefType.getRank() == 0)
-    // No size/stride descriptor in memref, return the descriptor value.
-    return memRefDescriptor;
+  // Fields 4: Sizes.
+  for (auto en : llvm::enumerate(sizes))
+    memRefDescriptor.setSize(rewriter, loc, en.index(), en.value());
 
-  // Fields 4 and 5: sizes and strides of the strided MemRef.
-  // Store all sizes in the descriptor. Only dynamic sizes are passed in as
-  // operands to AllocOp.
-  Value runningStride = nullptr;
-  // Iterate strides in reverse order, compute runningStride and strideValues.
-  auto nStrides = strides.size();
-  SmallVector<Value, 4> strideValues(nStrides, nullptr);
-  for (unsigned i = 0; i < nStrides; ++i) {
-    int64_t index = nStrides - 1 - i;
-    if (strides[index] == MemRefType::getDynamicStrideOrOffset())
-      // Identity layout map is enforced in the match function, so we compute:
-      //   `runningStride *= sizes[index + 1]`
-      runningStride = runningStride ? rewriter.create<LLVM::MulOp>(
-                                          loc, runningStride, sizes[index + 1])
-                                    : createIndexConstant(rewriter, loc, 1);
-    else
-      runningStride = createIndexConstant(rewriter, loc, strides[index]);
-    strideValues[index] = runningStride;
-  }
-  // Fill size and stride descriptors in memref.
-  for (auto indexedSize : llvm::enumerate(sizes)) {
-    int64_t index = indexedSize.index();
-    memRefDescriptor.setSize(rewriter, loc, index, indexedSize.value());
-    memRefDescriptor.setStride(rewriter, loc, index, strideValues[index]);
-  }
+  // Field 5: Strides.
+  for (auto en : llvm::enumerate(strides))
+    memRefDescriptor.setStride(rewriter, loc, en.index(), en.value());
+
   return memRefDescriptor;
 }
 
@@ -1953,15 +1961,11 @@ protected:
     return rewriter.create<LLVM::BitcastOp>(loc, ptrType, allocatedPtr);
   }
 
-  /// Returns if buffer allocation needs buffer size to be computed. This size
-  /// feeds into the `bufferSize` argument of `allocateBuffer`.
-  virtual bool needsBufferSize() const { return true; }
-
   /// Allocates the underlying buffer. Returns the allocated pointer and the
   /// aligned pointer.
   virtual std::tuple<Value, Value>
   allocateBuffer(ConversionPatternRewriter &rewriter, Location loc,
-                 Value bufferSize, Operation *op) const = 0;
+                 Value sizeBytes, Operation *op) const = 0;
 
 private:
   static MemRefType getMemRefResultType(Operation *op) {
@@ -1998,37 +2002,20 @@ private:
     // values and dynamic sizes are passed to 'alloc' as operands.  In case of
     // zero-dimensional memref, assume a scalar (size 1).
     SmallVector<Value, 4> sizes;
-    this->getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, sizes);
-
-    Value bufferSize;
-    if (needsBufferSize())
-      bufferSize = this->getCumulativeSizeInBytes(
-          loc, memRefType.getElementType(), sizes, rewriter);
+    SmallVector<Value, 4> strides;
+    Value sizeBytes;
+    this->getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, sizes,
+                                   strides, sizeBytes);
 
     // Allocate the underlying buffer.
     Value allocatedPtr;
     Value alignedPtr;
     std::tie(allocatedPtr, alignedPtr) =
-        this->allocateBuffer(rewriter, loc, bufferSize, op);
-
-    int64_t offset;
-    SmallVector<int64_t, 4> strides;
-    auto successStrides = getStridesAndOffset(memRefType, strides, offset);
-    (void)successStrides;
-    assert(succeeded(successStrides) && "unexpected non-strided memref");
-    assert(offset != MemRefType::getDynamicStrideOrOffset() &&
-           "unexpected dynamic offset");
-
-    // 0-D memref corner case: they have size 1.
-    assert(
-        ((memRefType.getRank() == 0 && strides.empty() && sizes.size() == 1) ||
-         (strides.size() == sizes.size())) &&
-        "unexpected number of strides");
+        this->allocateBuffer(rewriter, loc, sizeBytes, op);
 
     // Create the MemRef descriptor.
-    auto memRefDescriptor =
-        this->createMemRefDescriptor(loc, memRefType, allocatedPtr, alignedPtr,
-                                     offset, strides, sizes, rewriter);
+    auto memRefDescriptor = this->createMemRefDescriptor(
+        loc, memRefType, allocatedPtr, alignedPtr, sizes, strides, rewriter);
 
     // Return the final value of the descriptor.
     rewriter.replaceOp(op, {memRefDescriptor});
@@ -2040,7 +2027,7 @@ struct AllocOpLowering : public AllocLikeOpLowering {
       : AllocLikeOpLowering(AllocOp::getOperationName(), converter) {}
 
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value bufferSize,
+                                          Location loc, Value sizeBytes,
                                           Operation *op) const override {
     // Heap allocations.
     AllocOp allocOp = cast<AllocOp>(op);
@@ -2059,14 +2046,14 @@ struct AllocOpLowering : public AllocLikeOpLowering {
 
     if (alignment) {
       // Adjust the allocation size to consider alignment.
-      bufferSize = rewriter.create<LLVM::AddOp>(loc, bufferSize, alignment);
+      sizeBytes = rewriter.create<LLVM::AddOp>(loc, sizeBytes, alignment);
     }
 
     // Allocate the underlying buffer and store a pointer to it in the MemRef
     // descriptor.
     Type elementPtrType = this->getElementPtrType(memRefType);
     Value allocatedPtr =
-        createAllocCall(loc, "malloc", elementPtrType, {bufferSize},
+        createAllocCall(loc, "malloc", elementPtrType, {sizeBytes},
                         allocOp.getParentOfType<ModuleOp>(), rewriter);
 
     Value alignedPtr = allocatedPtr;
@@ -2133,7 +2120,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
   }
 
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value bufferSize,
+                                          Location loc, Value sizeBytes,
                                           Operation *op) const override {
     // Heap allocations.
     AllocOp allocOp = cast<AllocOp>(op);
@@ -2144,11 +2131,11 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
     // aligned_alloc requires size to be a multiple of alignment; we will pad
     // the size to the next multiple if necessary.
     if (!isMemRefSizeMultipleOf(memRefType, alignment))
-      bufferSize = createAligned(rewriter, loc, bufferSize, allocAlignment);
+      sizeBytes = createAligned(rewriter, loc, sizeBytes, allocAlignment);
 
     Type elementPtrType = this->getElementPtrType(memRefType);
     Value allocatedPtr = createAllocCall(
-        loc, "aligned_alloc", elementPtrType, {allocAlignment, bufferSize},
+        loc, "aligned_alloc", elementPtrType, {allocAlignment, sizeBytes},
         allocOp.getParentOfType<ModuleOp>(), rewriter);
 
     return std::make_tuple(allocatedPtr, allocatedPtr);
@@ -2169,7 +2156,7 @@ struct AllocaOpLowering : public AllocLikeOpLowering {
   /// is set to null for stack allocations. `accessAlignment` is set if
   /// alignment is needed post allocation (for eg. in conjunction with malloc).
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value bufferSize,
+                                          Location loc, Value sizeBytes,
                                           Operation *op) const override {
 
     // With alloca, one gets a pointer to the element type right away.
@@ -2178,7 +2165,7 @@ struct AllocaOpLowering : public AllocLikeOpLowering {
     auto elementPtrType = this->getElementPtrType(allocaOp.getType());
 
     auto allocatedElementPtr = rewriter.create<LLVM::AllocaOp>(
-        loc, elementPtrType, bufferSize,
+        loc, elementPtrType, sizeBytes,
         allocaOp.alignment() ? *allocaOp.alignment() : 0);
 
     return std::make_tuple(allocatedElementPtr, allocatedElementPtr);
@@ -2453,14 +2440,10 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
   GetGlobalMemrefOpLowering(LLVMTypeConverter &converter)
       : AllocLikeOpLowering(GetGlobalMemrefOp::getOperationName(), converter) {}
 
-  /// Allocation for GetGlobalMemrefOp just returns the GV pointer, so no need
-  /// to compute buffer size.
-  bool needsBufferSize() const override { return false; }
-
   /// Buffer "allocation" for get_global_memref op is getting the address of
   /// the global variable referenced.
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value bufferSize,
+                                          Location loc, Value sizeBytes,
                                           Operation *op) const override {
     auto getGlobalOp = cast<GetGlobalMemrefOp>(op);
     MemRefType type = getGlobalOp.result().getType().cast<MemRefType>();
