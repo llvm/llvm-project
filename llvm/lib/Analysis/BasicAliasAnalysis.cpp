@@ -958,6 +958,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // the guard invokes the "deopt" continuation.
   if (isIntrinsicCall(Call, Intrinsic::experimental_guard))
     return ModRefInfo::Ref;
+  // The same applies to deoptimize which is essentially a guard(false).
+  if (isIntrinsicCall(Call, Intrinsic::experimental_deoptimize))
+    return ModRefInfo::Ref;
 
   // Like assumes, invariant.start intrinsics were also marked as arbitrarily
   // writing so that proper control dependencies are maintained but they never
