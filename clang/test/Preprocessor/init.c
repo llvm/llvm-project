@@ -1397,6 +1397,7 @@
 //
 // RUN: %clang_cc1 -triple arm-linux-androideabi -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix ANDROID %s
 // ANDROID-NOT:#define __ANDROID_API__
+// ANDROID-NOT:#define __ANDROID_MIN_SDK_VERSION__
 // ANDROID:#define __ANDROID__ 1
 // ANDROID-NOT:#define __gnu_linux__
 //
@@ -1407,7 +1408,8 @@
 // X86_64-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 //
 // RUN: %clang_cc1 -triple arm-linux-androideabi20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix ANDROID20 %s
-// ANDROID20:#define __ANDROID_API__ 20
+// ANDROID20:#define __ANDROID_API__ __ANDROID_MIN_SDK_VERSION__
+// ANDROID20:#define __ANDROID_MIN_SDK_VERSION__ 20
 // ANDROID20:#define __ANDROID__ 1
 // ANDROID-NOT:#define __gnu_linux__
 //
