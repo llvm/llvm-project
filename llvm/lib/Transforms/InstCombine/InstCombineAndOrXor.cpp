@@ -1922,7 +1922,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'and' instructions might have to be created.
-    Value *X, *Y;
     if (LHS && match(Op1, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = foldAndOfICmps(LHS, Cmp, I))
