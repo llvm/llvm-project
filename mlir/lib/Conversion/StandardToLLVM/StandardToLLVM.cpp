@@ -19,8 +19,8 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
@@ -1094,11 +1094,20 @@ Value ConvertToLLVMPattern::getDataPtr(
                               offset, rewriter);
 }
 
+// Check if the MemRefType `type` is supported by the lowering. We currently
+// only support memrefs with identity maps.
+bool ConvertToLLVMPattern::isSupportedMemRefType(MemRefType type) const {
+  if (!typeConverter.convertType(type.getElementType()))
+    return false;
+  return type.getAffineMaps().empty() ||
+         llvm::all_of(type.getAffineMaps(),
+                      [](AffineMap map) { return map.isIdentity(); });
+}
+
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
-  auto structElementType = typeConverter.convertType(elementType);
-  return structElementType.cast<LLVM::LLVMType>().getPointerTo(
-      type.getMemorySpace());
+  auto structElementType = unwrap(typeConverter.convertType(elementType));
+  return structElementType.getPointerTo(type.getMemorySpace());
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
@@ -1912,14 +1921,6 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
   }
 };
 
-// Check if the MemRefType `type` is supported by the lowering. We currently
-// only support memrefs with identity maps.
-static bool isSupportedMemRefType(MemRefType type) {
-  return type.getAffineMaps().empty() ||
-         llvm::all_of(type.getAffineMaps(),
-                      [](AffineMap map) { return map.isIdentity(); });
-}
-
 /// Lowering for AllocOp and AllocaOp.
 struct AllocLikeOpLowering : public ConvertToLLVMPattern {
   using ConvertToLLVMPattern::createIndexConstant;
@@ -1986,21 +1987,7 @@ private:
 
   LogicalResult match(Operation *op) const override {
     MemRefType memRefType = getMemRefResultType(op);
-    if (isSupportedMemRefType(memRefType))
-      return success();
-
-    int64_t offset;
-    SmallVector<int64_t, 4> strides;
-    if (failed(getStridesAndOffset(memRefType, strides, offset)))
-      return failure();
-
-    // Dynamic strides are ok if they can be deduced from dynamic sizes (which
-    // is guaranteed when getStridesAndOffset succeeded. Dynamic offset however
-    // can never be alloc'ed.
-    if (offset == MemRefType::getDynamicStrideOrOffset())
-      return failure();
-
-    return success();
+    return success(isSupportedMemRefType(memRefType));
   }
 
   // An `alloc` is converted into a definition of a memref descriptor value and
@@ -3070,6 +3057,7 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<RankOp> {
 template <typename Derived>
 struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
   using ConvertOpToLLVMPattern<Derived>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<Derived>::isSupportedMemRefType;
   using Base = LoadStoreOpLowering<Derived>;
 
   LogicalResult match(Operation *op) const override {

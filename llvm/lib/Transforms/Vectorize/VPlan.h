@@ -877,10 +877,7 @@ public:
 };
 
 /// A recipe for widening select instructions.
-class VPWidenSelectRecipe : public VPRecipeBase, public VPUser {
-private:
-  /// Hold the select to be widened.
-  SelectInst &Ingredient;
+class VPWidenSelectRecipe : public VPRecipeBase, public VPValue, public VPUser {
 
   /// Is the condition of the select loop invariant?
   bool InvariantCond;
@@ -889,7 +886,8 @@ public:
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
                       bool InvariantCond)
-      : VPRecipeBase(VPWidenSelectSC), VPUser(Operands), Ingredient(I),
+      : VPRecipeBase(VPRecipeBase::VPWidenSelectSC),
+        VPValue(VPValue::VPVWidenSelectSC, &I), VPUser(Operands),
         InvariantCond(InvariantCond) {}
 
   ~VPWidenSelectRecipe() override = default;
@@ -908,22 +906,21 @@ public:
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeBase, public VPUser {
-  GetElementPtrInst *GEP;
-
+class VPWidenGEPRecipe : public VPRecipeBase, public VPValue, public VPUser {
   bool IsPtrLoopInvariant;
   SmallBitVector IsIndexLoopInvariant;
 
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPWidenGEPSC), VPUser(Operands), GEP(GEP),
-        IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
+      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC), VPValue(VPWidenGEPSC, GEP),
+        VPUser(Operands), IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
 
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands,
                    Loop *OrigLoop)
-      : VPRecipeBase(VPWidenGEPSC), VPUser(Operands), GEP(GEP),
+      : VPRecipeBase(VPRecipeBase::VPWidenGEPSC),
+        VPValue(VPValue::VPVWidenGEPSC, GEP), VPUser(Operands),
         IsIndexLoopInvariant(GEP->getNumIndices(), false) {
     IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
     for (auto Index : enumerate(GEP->indices()))

@@ -69,7 +69,7 @@ void test_conversion(ConvertibleToBase ctb, ConvertibleToDerived ctd,
 }
 
 struct X1 {
-  X1(X1&); // expected-note{{candidate constructor not viable: expects an l-value for 1st argument}}
+  X1(X1&); // expected-note{{candidate constructor not viable: expects an lvalue for 1st argument}}
 };
 
 struct X2 {

@@ -134,16 +134,15 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
 
-    if (D.CCCIsCXX())
-      CmdArgs.push_back(Args.MakeArgString(
-          ToolChain.GetFilePath(IsArch32Bit ? "crti.o" : "crti_64.o")));
+    CmdArgs.push_back(Args.MakeArgString(
+        ToolChain.GetFilePath(IsArch32Bit ? "crti.o" : "crti_64.o")));
   }
 
-  // Collect all static constructor and destructor functions in CXX mode. This
-  // has to come before AddLinkerInputs as the implied option needs to precede
-  // any other '-bcdtors' settings or '-bnocdtors' that '-Wl' might forward.
-  if (D.CCCIsCXX())
-    CmdArgs.push_back("-bcdtors:all:0:s");
+  // Collect all static constructor and destructor functions in both C and CXX
+  // language link invocations. This has to come before AddLinkerInputs as the
+  // implied option needs to precede any other '-bcdtors' settings or
+  // '-bnocdtors' that '-Wl' might forward.
+  CmdArgs.push_back("-bcdtors:all:0:s");
 
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);

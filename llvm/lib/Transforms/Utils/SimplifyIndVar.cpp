@@ -191,15 +191,15 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   const SCEV *S = SE->getSCEVAtScope(ICmp->getOperand(IVOperIdx), ICmpLoop);
   const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
 
-  ICmpInst::Predicate InvariantPredicate;
-  const SCEV *InvariantLHS, *InvariantRHS;
-
   auto *PN = dyn_cast<PHINode>(IVOperand);
   if (!PN)
     return false;
-  if (!SE->isLoopInvariantPredicate(Pred, S, X, L, InvariantPredicate,
-                                    InvariantLHS, InvariantRHS))
+  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L);
+  if (!LIP)
     return false;
+  ICmpInst::Predicate InvariantPredicate = LIP->Pred;
+  const SCEV *InvariantLHS = LIP->LHS;
+  const SCEV *InvariantRHS = LIP->RHS;
 
   // Rewrite the comparison to a loop invariant comparison if it can be done
   // cheaply, where cheaply means "we don't need to emit any new
@@ -1568,6 +1568,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
 
   // Check that all uses are either s/zext, or narrow def (in case of we are
   // widening the IV increment).
+  SmallVector<Instruction *, 4> ExtUsers;
   for (Use &U : NarrowUse->uses()) {
     if (U.getUser() == NarrowDef)
       continue;
@@ -1578,6 +1579,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       User = dyn_cast<ZExtInst>(U.getUser());
     if (!User || User->getType() != WideType)
       return false;
+    ExtUsers.push_back(User);
   }
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
@@ -1600,15 +1602,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   WideBO->copyIRFlags(NarrowBO);
   ExtendKindMap[NarrowUse] = ExtKind;
 
-  for (Use &U : NarrowUse->uses()) {
-    // Ignore narrow def: it will be removed after the transform.
-    if (U.getUser() == NarrowDef)
-      continue;
-    Instruction *User = nullptr;
-    if (ExtKind == SignExtended)
-      User = cast<SExtInst>(U.getUser());
-    else
-      User = cast<ZExtInst>(U.getUser());
+  for (Instruction *User : ExtUsers) {
     assert(User->getType() == WideType && "Checked before!");
     LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
                       << *WideBO << "\n");

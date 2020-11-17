@@ -1151,7 +1151,7 @@ def G_INTRINSIC : GenericInstruction {
   let hasSideEffects = 0;
 
   // Conservatively assume this is convergent. If there turnes out to
-  // be a need, there should be separate convergent intrinsic opcode.s
+  // be a need, there should be separate convergent intrinsic opcodes.
   let isConvergent = 1;
 }
 
@@ -1164,7 +1164,7 @@ def G_INTRINSIC_W_SIDE_EFFECTS : GenericInstruction {
   let mayStore = 1;
 
   // Conservatively assume this is convergent. If there turnes out to
-  // be a need, there should be separate convergent intrinsic opcode.s
+  // be a need, there should be separate convergent intrinsic opcodes.
   let isConvergent = 1;
 }
 

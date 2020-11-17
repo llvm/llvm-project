@@ -963,26 +963,33 @@ public:
                             Optional<const SCEV *> NumIter = None,
                             const Instruction *Context = nullptr);
 
-  /// Return true if the result of the predicate LHS `Pred` RHS is loop
-  /// invariant with respect to L.  Set InvariantPred, InvariantLHS and
-  /// InvariantLHS so that InvariantLHS `InvariantPred` InvariantRHS is the
-  /// loop invariant form of LHS `Pred` RHS.
-  bool isLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                                const SCEV *RHS, const Loop *L,
-                                ICmpInst::Predicate &InvariantPred,
-                                const SCEV *&InvariantLHS,
-                                const SCEV *&InvariantRHS);
+  struct LoopInvariantPredicate {
+    ICmpInst::Predicate Pred;
+    const SCEV *LHS;
+    const SCEV *RHS;
 
-  /// Return true if the result of the predicate LHS `Pred` RHS is loop
-  /// invariant with respect to L at given Context during at least first
-  /// MaxIter iterations.  Set InvariantPred, InvariantLHS and InvariantLHS so
-  /// that InvariantLHS `InvariantPred` InvariantRHS is the loop invariant form
-  /// of LHS `Pred` RHS. The predicate should be the loop's exit condition.
-  bool isLoopInvariantExitCondDuringFirstIterations(
-      ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
-      const Instruction *Context, const SCEV *MaxIter,
-      ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
-      const SCEV *&InvariantRHS);
+    LoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
+                           const SCEV *RHS)
+        : Pred(Pred), LHS(LHS), RHS(RHS) {}
+  };
+  /// If the result of the predicate LHS `Pred` RHS is loop invariant with
+  /// respect to L, return a LoopInvariantPredicate with LHS and RHS being
+  /// invariants, available at L's entry. Otherwise, return None.
+  Optional<LoopInvariantPredicate>
+  getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
+                            const SCEV *RHS, const Loop *L);
+
+  /// If the result of the predicate LHS `Pred` RHS is loop invariant with
+  /// respect to L at given Context during at least first MaxIter iterations,
+  /// return a LoopInvariantPredicate with LHS and RHS being invariants,
+  /// available at L's entry. Otherwise, return None. The predicate should be
+  /// the loop's exit condition.
+  Optional<LoopInvariantPredicate>
+  getLoopInvariantExitCondDuringFirstIterations(ICmpInst::Predicate Pred,
+                                                const SCEV *LHS,
+                                                const SCEV *RHS, const Loop *L,
+                                                const Instruction *Context,
+                                                const SCEV *MaxIter);
 
   /// Simplify LHS and RHS in a comparison with predicate Pred. Return true
   /// iff any changes were made. If the operands are provably equal or
@@ -1897,6 +1904,14 @@ private:
 
   /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
   SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
+
+  /// Try to prove NSW on \p AR by proving facts about conditions known  on
+  /// entry and backedge.
+  SCEV::NoWrapFlags proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR);
+
+  /// Try to prove NUW on \p AR by proving facts about conditions known on
+  /// entry and backedge.
+  SCEV::NoWrapFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
 
   Optional<MonotonicPredicateType> getMonotonicPredicateTypeImpl(
       const SCEVAddRecExpr *LHS, ICmpInst::Predicate Pred,

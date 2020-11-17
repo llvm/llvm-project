@@ -148,6 +148,16 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         return getVisibility() != ::mlir::SymbolTable::Visibility::Public;
       }]
     >,
+    InterfaceMethod<[{
+        Returns true if this operation is a declaration of a symbol (as opposed
+        to a definition).
+      }],
+      "bool", "isDeclaration", (ins), [{}],
+      /*defaultImplementation=*/[{
+        // By default, assume that the operation defines a symbol.
+        return false;
+      }]
+    >,
   ];
 
   let verify = [{
@@ -157,7 +167,12 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       if(!concreteOp.getAttr(::mlir::SymbolTable::getSymbolAttrName()))
         return success();
     }
-    return ::mlir::detail::verifySymbol($_op);
+    if (::mlir::failed(::mlir::detail::verifySymbol($_op)))
+      return ::mlir::failure();
+    if (concreteOp.isDeclaration() && concreteOp.isPublic())
+      return concreteOp.emitOpError("symbol declaration cannot have public "
+             "visibility");
+    return success();
   }];
 
   let extraClassDeclaration = [{

@@ -76,6 +76,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
     case MCSymbolRefExpr::VK_WASM_TBREL:
       assert(SymA.isFunction());
       return wasm::R_WASM_TABLE_INDEX_REL_SLEB;
+    case MCSymbolRefExpr::VK_WASM_TLSREL:
+      return wasm::R_WASM_MEMORY_ADDR_TLS_SLEB;
     case MCSymbolRefExpr::VK_WASM_MBREL:
       assert(SymA.isData());
       return is64Bit() ? wasm::R_WASM_MEMORY_ADDR_REL_SLEB64
@@ -129,7 +131,7 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
     if (auto Section = static_cast<const MCSectionWasm *>(
             getFixupSection(Fixup.getValue()))) {
       if (Section->getKind().isText())
-        llvm_unreachable("unimplemented R_WASM_FUNCTION_OFFSET_I64");
+        return wasm::R_WASM_FUNCTION_OFFSET_I64;
       else if (!Section->isWasmData())
         llvm_unreachable("unimplemented R_WASM_SECTION_OFFSET_I64");
     }

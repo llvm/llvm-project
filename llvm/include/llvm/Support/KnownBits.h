@@ -250,6 +250,11 @@ public:
     return getBitWidth() - Zero.countPopulation();
   }
 
+  /// Create known bits from a known constant.
+  static KnownBits makeConstant(const APInt &C) {
+    return KnownBits(~C, C);
+  }
+
   /// Compute known bits common to LHS and RHS.
   static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
     return KnownBits(LHS.Zero & RHS.Zero, LHS.One & RHS.One);
@@ -321,7 +326,7 @@ public:
   KnownBits &operator^=(const KnownBits &RHS);
 
   /// Compute known bits for the absolute value.
-  KnownBits abs() const;
+  KnownBits abs(bool IntMinIsPoison = false) const;
 
   KnownBits byteSwap() {
     return KnownBits(Zero.byteSwap(), One.byteSwap());

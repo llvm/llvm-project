@@ -15,12 +15,11 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
@@ -225,6 +224,38 @@ static raw_ostream &operator<<(raw_ostream &os, NewLineCounter &newLine) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// This class represents a specific instance of a symbol Alias.
+class SymbolAlias {
+public:
+  SymbolAlias(StringRef name, bool isDeferrable)
+      : name(name), suffixIndex(0), hasSuffixIndex(false),
+        isDeferrable(isDeferrable) {}
+  SymbolAlias(StringRef name, uint32_t suffixIndex, bool isDeferrable)
+      : name(name), suffixIndex(suffixIndex), hasSuffixIndex(true),
+        isDeferrable(isDeferrable) {}
+
+  /// Print this alias to the given stream.
+  void print(raw_ostream &os) const {
+    os << name;
+    if (hasSuffixIndex)
+      os << suffixIndex;
+  }
+
+  /// Returns true if this alias supports deferred resolution when parsing.
+  bool canBeDeferred() const { return isDeferrable; }
+
+private:
+  /// The main name of the alias.
+  StringRef name;
+  /// The optional suffix index of the alias, if multiple aliases had the same
+  /// name.
+  uint32_t suffixIndex : 30;
+  /// A flag indicating whether this alias has a suffix or not.
+  bool hasSuffixIndex : 1;
+  /// A flag indicating whether this alias may be deferred or not.
+  bool isDeferrable : 1;
+};
+
 /// This class represents a utility that initializes the set of attribute and
 /// type aliases, without the need to store the extra information within the
 /// main AliasState class or pass it around via function arguments.
@@ -236,14 +267,14 @@ public:
       : interfaces(interfaces), aliasAllocator(aliasAllocator),
         aliasOS(aliasBuffer) {}
 
-  void initialize(
-      Operation *op, const OpPrintingFlags &printerFlags,
-      llvm::MapVector<Attribute, std::pair<StringRef, Optional<int>>>
-          &attrToAlias,
-      llvm::MapVector<Type, std::pair<StringRef, Optional<int>>> &typeToAlias);
+  void initialize(Operation *op, const OpPrintingFlags &printerFlags,
+                  llvm::MapVector<Attribute, SymbolAlias> &attrToAlias,
+                  llvm::MapVector<Type, SymbolAlias> &typeToAlias);
 
-  /// Visit the given attribute to see if it has an alias.
-  void visit(Attribute attr);
+  /// Visit the given attribute to see if it has an alias. `canBeDeferred` is
+  /// set to true if the originator of this attribute can resolve the alias
+  /// after parsing has completed (e.g. in the case of operation locations).
+  void visit(Attribute attr, bool canBeDeferred = false);
 
   /// Visit the given type to see if it has an alias.
   void visit(Type type);
@@ -251,9 +282,11 @@ public:
 private:
   /// Try to generate an alias for the provided symbol. If an alias is
   /// generated, the provided alias mapping and reverse mapping are updated.
+  /// Returns success if an alias was generated, failure otherwise.
   template <typename T>
-  void generateAlias(T symbol,
-                     llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol);
+  LogicalResult
+  generateAlias(T symbol,
+                llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol);
 
   /// The set of asm interfaces within the context.
   DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
@@ -267,6 +300,9 @@ private:
 
   /// The set of visited attributes.
   DenseSet<Attribute> visitedAttributes;
+
+  /// The set of attributes that have aliases *and* can be deferred.
+  DenseSet<Attribute> deferrableAttributes;
 
   /// The set of visited types.
   DenseSet<Type> visitedTypes;
@@ -291,7 +327,7 @@ public:
   void print(Operation *op) {
     // Visit the operation location.
     if (printerFlags.shouldPrintDebugInfo())
-      initializer.visit(op->getLoc());
+      initializer.visit(op->getLoc(), /*canBeDeferred=*/true);
 
     // If requested, always print the generic form.
     if (!printerFlags.shouldPrintGenericOpForm()) {
@@ -464,9 +500,10 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
 /// Given a collection of aliases and symbols, initialize a mapping from a
 /// symbol to a given alias.
 template <typename T>
-static void initializeAliases(
-    llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol,
-    llvm::MapVector<T, std::pair<StringRef, Optional<int>>> &symbolToAlias) {
+static void
+initializeAliases(llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol,
+                  llvm::MapVector<T, SymbolAlias> &symbolToAlias,
+                  DenseSet<T> *deferrableAliases = nullptr) {
   std::vector<std::pair<StringRef, std::vector<T>>> aliases =
       aliasToSymbol.takeVector();
   llvm::array_pod_sort(aliases.begin(), aliases.end(),
@@ -477,20 +514,24 @@ static void initializeAliases(
   for (auto &it : aliases) {
     // If there is only one instance for this alias, use the name directly.
     if (it.second.size() == 1) {
-      symbolToAlias.insert({it.second.front(), {it.first, llvm::None}});
+      T symbol = it.second.front();
+      bool isDeferrable = deferrableAliases && deferrableAliases->count(symbol);
+      symbolToAlias.insert({symbol, SymbolAlias(it.first, isDeferrable)});
       continue;
     }
     // Otherwise, add the index to the name.
-    for (int i = 0, e = it.second.size(); i < e; ++i)
-      symbolToAlias.insert({it.second[i], {it.first, i}});
+    for (int i = 0, e = it.second.size(); i < e; ++i) {
+      T symbol = it.second[i];
+      bool isDeferrable = deferrableAliases && deferrableAliases->count(symbol);
+      symbolToAlias.insert({symbol, SymbolAlias(it.first, i, isDeferrable)});
+    }
   }
 }
 
 void AliasInitializer::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
-    llvm::MapVector<Attribute, std::pair<StringRef, Optional<int>>>
-        &attrToAlias,
-    llvm::MapVector<Type, std::pair<StringRef, Optional<int>>> &typeToAlias) {
+    llvm::MapVector<Attribute, SymbolAlias> &attrToAlias,
+    llvm::MapVector<Type, SymbolAlias> &typeToAlias) {
   // Use a dummy printer when walking the IR so that we can collect the
   // attributes/types that will actually be used during printing when
   // considering aliases.
@@ -498,13 +539,25 @@ void AliasInitializer::initialize(
   aliasPrinter.print(op);
 
   // Initialize the aliases sorted by name.
-  initializeAliases(aliasToAttr, attrToAlias);
+  initializeAliases(aliasToAttr, attrToAlias, &deferrableAttributes);
   initializeAliases(aliasToType, typeToAlias);
 }
 
-void AliasInitializer::visit(Attribute attr) {
-  if (!visitedAttributes.insert(attr).second)
+void AliasInitializer::visit(Attribute attr, bool canBeDeferred) {
+  if (!visitedAttributes.insert(attr).second) {
+    // If this attribute already has an alias and this instance can't be
+    // deferred, make sure that the alias isn't deferred.
+    if (!canBeDeferred)
+      deferrableAttributes.erase(attr);
     return;
+  }
+
+  // Try to generate an alias for this attribute.
+  if (succeeded(generateAlias(attr, aliasToAttr))) {
+    if (canBeDeferred)
+      deferrableAttributes.insert(attr);
+    return;
+  }
 
   if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
     for (Attribute element : arrayAttr.getValue())
@@ -515,13 +568,14 @@ void AliasInitializer::visit(Attribute attr) {
   } else if (auto typeAttr = attr.dyn_cast<TypeAttr>()) {
     visit(typeAttr.getValue());
   }
-
-  // Try to generate an alias for this attribute.
-  generateAlias(attr, aliasToAttr);
 }
 
 void AliasInitializer::visit(Type type) {
   if (!visitedTypes.insert(type).second)
+    return;
+
+  // Try to generate an alias for this type.
+  if (succeeded(generateAlias(type, aliasToType)))
     return;
 
   // Visit several subtypes that contain types or atttributes.
@@ -539,13 +593,10 @@ void AliasInitializer::visit(Type type) {
       for (auto map : memref.getAffineMaps())
         visit(AffineMapAttr::get(map));
   }
-
-  // Try to generate an alias for this type.
-  generateAlias(type, aliasToType);
 }
 
 template <typename T>
-void AliasInitializer::generateAlias(
+LogicalResult AliasInitializer::generateAlias(
     T symbol, llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol) {
   SmallString<16> tempBuffer;
   for (const auto &interface : interfaces) {
@@ -559,8 +610,9 @@ void AliasInitializer::generateAlias(
 
     aliasToSymbol[name].push_back(symbol);
     aliasBuffer.clear();
-    break;
+    return success();
   }
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -580,21 +632,31 @@ public:
   /// Returns success if an alias was printed, failure otherwise.
   LogicalResult getAlias(Attribute attr, raw_ostream &os) const;
 
-  /// Print all of the referenced attribute aliases.
-  void printAttributeAliases(raw_ostream &os, NewLineCounter &newLine) const;
-
   /// Get an alias for the given type if it has one and print it in `os`.
   /// Returns success if an alias was printed, failure otherwise.
   LogicalResult getAlias(Type ty, raw_ostream &os) const;
 
-  /// Print all of the referenced type aliases.
-  void printTypeAliases(raw_ostream &os, NewLineCounter &newLine) const;
+  /// Print all of the referenced aliases that can not be resolved in a deferred
+  /// manner.
+  void printNonDeferredAliases(raw_ostream &os, NewLineCounter &newLine) const {
+    printAliases(os, newLine, /*isDeferred=*/false);
+  }
+
+  /// Print all of the referenced aliases that support deferred resolution.
+  void printDeferredAliases(raw_ostream &os, NewLineCounter &newLine) const {
+    printAliases(os, newLine, /*isDeferred=*/true);
+  }
 
 private:
-  /// Mapping between attribute and a pair comprised of a base alias name and a
-  /// count suffix. If the suffix is set to None, it is not displayed.
-  llvm::MapVector<Attribute, std::pair<StringRef, Optional<int>>> attrToAlias;
-  llvm::MapVector<Type, std::pair<StringRef, Optional<int>>> typeToAlias;
+  /// Print all of the referenced aliases that support the provided resolution
+  /// behavior.
+  void printAliases(raw_ostream &os, NewLineCounter &newLine,
+                    bool isDeferred) const;
+
+  /// Mapping between attribute and alias.
+  llvm::MapVector<Attribute, SymbolAlias> attrToAlias;
+  /// Mapping between type and alias.
+  llvm::MapVector<Type, SymbolAlias> typeToAlias;
 
   /// An allocator used for alias names.
   llvm::BumpPtrAllocator aliasAllocator;
@@ -608,29 +670,12 @@ void AliasState::initialize(
   initializer.initialize(op, printerFlags, attrToAlias, typeToAlias);
 }
 
-static void printAlias(raw_ostream &os,
-                       const std::pair<StringRef, Optional<int>> &alias,
-                       char prefix) {
-  os << prefix << alias.first;
-  if (alias.second)
-    os << *alias.second;
-}
-
 LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
   auto it = attrToAlias.find(attr);
   if (it == attrToAlias.end())
     return failure();
-
-  printAlias(os, it->second, '#');
+  it->second.print(os << '#');
   return success();
-}
-
-void AliasState::printAttributeAliases(raw_ostream &os,
-                                       NewLineCounter &newLine) const {
-  for (const auto &it : attrToAlias) {
-    printAlias(os, it.second, '#');
-    os << " = " << it.first << newLine;
-  }
 }
 
 LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
@@ -638,14 +683,21 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   if (it == typeToAlias.end())
     return failure();
 
-  printAlias(os, it->second, '!');
+  it->second.print(os << '!');
   return success();
 }
 
-void AliasState::printTypeAliases(raw_ostream &os,
-                                  NewLineCounter &newLine) const {
-  for (const auto &it : typeToAlias) {
-    printAlias(os, it.second, '!');
+void AliasState::printAliases(raw_ostream &os, NewLineCounter &newLine,
+                              bool isDeferred) const {
+  auto filterFn = [=](const auto &aliasIt) {
+    return aliasIt.second.canBeDeferred() == isDeferred;
+  };
+  for (const auto &it : llvm::make_filter_range(attrToAlias, filterFn)) {
+    it.second.print(os << '#');
+    os << " = " << it.first << newLine;
+  }
+  for (const auto &it : llvm::make_filter_range(typeToAlias, filterFn)) {
+    it.second.print(os << '!');
     os << " = " << it.first << newLine;
   }
 }
@@ -2237,12 +2289,15 @@ private:
 } // end anonymous namespace
 
 void OperationPrinter::print(ModuleOp op) {
-  // Output the aliases at the top level.
-  state->getAliasState().printAttributeAliases(os, newLine);
-  state->getAliasState().printTypeAliases(os, newLine);
+  // Output the aliases at the top level that can't be deferred.
+  state->getAliasState().printNonDeferredAliases(os, newLine);
 
   // Print the module.
   print(op.getOperation());
+  os << newLine;
+
+  // Output the aliases at the top level that can be deferred.
+  state->getAliasState().printDeferredAliases(os, newLine);
 }
 
 void OperationPrinter::print(Operation *op) {

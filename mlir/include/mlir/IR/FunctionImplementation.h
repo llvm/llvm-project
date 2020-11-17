@@ -78,23 +78,15 @@ parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
 /// whether the function is variadic.  If the builder returns a null type,
 /// `result` will not contain the `type` attribute.  The caller can then add a
 /// type, report the error or delegate the reporting to the op's verifier.
-/// If `allowInlineVisibility` is true, then the parser will allow visibility
-/// to be specified after the operation name. If the visibility is not specified
-/// there or `allowInlineVisibility` is false, visibility will be allowed in the
-/// attribute dict.
 ParseResult parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
                                 bool allowVariadic,
-                                FuncTypeBuilder funcTypeBuilder,
-                                bool allowInlineVisibility = false);
+                                FuncTypeBuilder funcTypeBuilder);
 
 /// Printer implementation for function-like operations.  Accepts lists of
-/// argument and result types to use while printing. If `printVisibilityInline`
-/// is true, visibility is printed "inline" after the operation name and elided
-/// from the attributes dict. Otherwise, it is printed in the attribute dict.
+/// argument and result types to use while printing.
 void printFunctionLikeOp(OpAsmPrinter &p, Operation *op,
                          ArrayRef<Type> argTypes, bool isVariadic,
-                         ArrayRef<Type> resultTypes,
-                         bool printVisibilityInline = false);
+                         ArrayRef<Type> resultTypes);
 
 /// Prints the signature of the function-like operation `op`.  Assumes `op` has
 /// the FunctionLike trait and passed the verification.

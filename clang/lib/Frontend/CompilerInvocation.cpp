@@ -125,6 +125,52 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 #include "clang/Driver/Options.inc"
 #undef SIMPLE_ENUM_VALUE_TABLE
 
+static llvm::Optional<bool> normalizeSimpleFlag(OptSpecifier Opt,
+                                                unsigned TableIndex,
+                                                const ArgList &Args,
+                                                DiagnosticsEngine &Diags) {
+  if (Args.hasArg(Opt))
+    return true;
+  return None;
+}
+
+void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
+                           const char *Spelling,
+                           CompilerInvocation::StringAllocator SA,
+                           unsigned TableIndex, unsigned Value) {
+  Args.push_back(Spelling);
+}
+
+template <typename T, T Value>
+static llvm::Optional<T>
+normalizeFlagToValue(OptSpecifier Opt, unsigned TableIndex, const ArgList &Args,
+                     DiagnosticsEngine &Diags) {
+  if (Args.hasArg(Opt))
+    return Value;
+  return None;
+}
+
+static Optional<bool> normalizeBooleanFlag(OptSpecifier PosOpt,
+                                           OptSpecifier NegOpt,
+                                           unsigned TableIndex,
+                                           const ArgList &Args,
+                                           DiagnosticsEngine &Diags) {
+  if (const Arg *A = Args.getLastArg(PosOpt, NegOpt))
+    return A->getOption().matches(PosOpt);
+  return None;
+}
+
+static void denormalizeBooleanFlag(SmallVectorImpl<const char *> &Args,
+                                   const char *Spelling,
+                                   const char *NegSpelling,
+                                   CompilerInvocation::StringAllocator SA,
+                                   unsigned TableIndex, unsigned Value) {
+  if (Value)
+    Args.push_back(Spelling);
+  else
+    Args.push_back(NegSpelling);
+}
+
 static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
                                                     unsigned TableIndex,
                                                     const ArgList &Args,
@@ -146,22 +192,30 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
   return None;
 }
 
-static const char *denormalizeSimpleEnum(CompilerInvocation::StringAllocator SA,
-                                         unsigned TableIndex, unsigned Value) {
+static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
+                                  const char *Spelling,
+                                  CompilerInvocation::StringAllocator SA,
+                                  unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
-  for (int I = 0, E = Table.Size; I != E; ++I)
-    if (Value == Table.Table[I].Value)
-      return Table.Table[I].Name;
+  for (int I = 0, E = Table.Size; I != E; ++I) {
+    if (Value == Table.Table[I].Value) {
+      Args.push_back(Spelling);
+      Args.push_back(Table.Table[I].Name);
+      return;
+    }
+  }
 
   llvm_unreachable("The simple enum value was not correctly defined in "
                    "the tablegen option description");
 }
 
-static const char *denormalizeString(CompilerInvocation::StringAllocator SA,
-                                     unsigned TableIndex,
-                                     const std::string &Value) {
-  return SA(Value);
+static void denormalizeString(SmallVectorImpl<const char *> &Args,
+                              const char *Spelling,
+                              CompilerInvocation::StringAllocator SA,
+                              unsigned TableIndex, const std::string &Value) {
+  Args.push_back(Spelling);
+  Args.push_back(SA(Value));
 }
 
 static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
@@ -171,6 +225,24 @@ static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
   if (!Arg)
     return None;
   return llvm::Triple::normalize(Arg->getValue());
+}
+
+template <typename T, typename U>
+static T mergeForwardValue(T KeyPath, U Value) {
+  return Value;
+}
+
+template <typename T, typename U> static T mergeMaskValue(T KeyPath, U Value) {
+  return KeyPath | Value;
+}
+
+template <typename T> static T extractForwardValue(T KeyPath) {
+  return KeyPath;
+}
+
+template <typename T, typename U, U Value>
+static T extractMaskValue(T KeyPath) {
+  return KeyPath & Value;
 }
 
 //===----------------------------------------------------------------------===//
@@ -736,10 +808,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
         Opts.setInlining(CodeGenOptions::OnlyAlwaysInlining);
     }
   }
-
-  Opts.ExperimentalNewPassManager = Args.hasFlag(
-      OPT_fexperimental_new_pass_manager, OPT_fno_experimental_new_pass_manager,
-      /* Default */ ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER);
 
   Opts.DebugPassManager =
       Args.hasFlag(OPT_fdebug_pass_manager, OPT_fno_debug_pass_manager,
@@ -2009,37 +2077,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       std::string(Args.getLastArgValue(OPT_arcmt_migrate_report_output));
   Opts.ARCMTMigrateEmitARCErrors
     = Args.hasArg(OPT_arcmt_migrate_emit_arc_errors);
-
-  if (Args.hasArg(OPT_objcmt_migrate_literals))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_Literals;
-  if (Args.hasArg(OPT_objcmt_migrate_subscripting))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_Subscripting;
-  if (Args.hasArg(OPT_objcmt_migrate_property_dot_syntax))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_PropertyDotSyntax;
-  if (Args.hasArg(OPT_objcmt_migrate_property))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_Property;
-  if (Args.hasArg(OPT_objcmt_migrate_readonly_property))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_ReadonlyProperty;
-  if (Args.hasArg(OPT_objcmt_migrate_readwrite_property))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_ReadwriteProperty;
-  if (Args.hasArg(OPT_objcmt_migrate_annotation))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_Annotation;
-  if (Args.hasArg(OPT_objcmt_returns_innerpointer_property))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_ReturnsInnerPointerProperty;
-  if (Args.hasArg(OPT_objcmt_migrate_instancetype))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_Instancetype;
-  if (Args.hasArg(OPT_objcmt_migrate_nsmacros))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_NsMacros;
-  if (Args.hasArg(OPT_objcmt_migrate_protocol_conformance))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_ProtocolConformance;
-  if (Args.hasArg(OPT_objcmt_atomic_property))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_AtomicProperty;
-  if (Args.hasArg(OPT_objcmt_ns_nonatomic_iosonly))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_NsAtomicIOSOnlyProperty;
-  if (Args.hasArg(OPT_objcmt_migrate_designated_init))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_DesignatedInitializer;
-  if (Args.hasArg(OPT_objcmt_migrate_all))
-    Opts.ObjCMTAction |= FrontendOptions::ObjCMT_MigrateDecls;
 
   Opts.ObjCMTWhiteListPath =
       std::string(Args.getLastArgValue(OPT_objcmt_whitelist_dir_path));
@@ -3335,9 +3372,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
-  if (Args.hasArg(OPT_fexperimental_strict_floating_point))
-    Opts.ExpStrictFP = true;
-
   auto FPRM = llvm::RoundingMode::NearestTiesToEven;
   if (Args.hasArg(OPT_frounding_math)) {
     FPRM = llvm::RoundingMode::Dynamic;
@@ -3713,6 +3747,9 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   Opts.ForceEnableInt128 = Args.hasArg(OPT_fforce_enable_int128);
   Opts.NVPTXUseShortPointers = Args.hasFlag(
       options::OPT_fcuda_short_ptr, options::OPT_fno_cuda_short_ptr, false);
+  Opts.AllowAMDGPUUnsafeFPAtomics =
+      Args.hasFlag(options::OPT_munsafe_fp_atomics,
+                   options::OPT_mno_unsafe_fp_atomics, false);
   if (Arg *A = Args.getLastArg(options::OPT_target_sdk_version_EQ)) {
     llvm::VersionTuple Version;
     if (Version.tryParse(A->getValue()))
@@ -3725,26 +3762,32 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
 
 bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
                                          DiagnosticsEngine &Diags) {
-#define OPTION_WITH_MARSHALLING_FLAG(PREFIX_TYPE, NAME, ID, KIND, GROUP,       \
-                                     ALIAS, ALIASARGS, FLAGS, PARAM, HELPTEXT, \
-                                     METAVAR, VALUES, SPELLING, ALWAYS_EMIT,   \
-                                     KEYPATH, DEFAULT_VALUE, IS_POSITIVE)      \
-  this->KEYPATH = (Args.hasArg(OPT_##ID) && IS_POSITIVE) || (DEFAULT_VALUE);
-
-#define OPTION_WITH_MARSHALLING_STRING(                                        \
+#define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, TABLE_INDEX)                               \
+    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
   {                                                                            \
+    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
     if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags))      \
-      this->KEYPATH = static_cast<TYPE>(*MaybeValue);                          \
+      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
+  }
+
+#define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
+    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NEG_SPELLING)                                                              \
+  {                                                                            \
+    if (auto MaybeValue =                                                      \
+            NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
+      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
     else                                                                       \
-      this->KEYPATH = DEFAULT_VALUE;                                           \
+      this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                    \
   }
 
 #include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING_STRING
-#undef OPTION_WITH_MARSHALLING_FLAG
+#undef OPTION_WITH_MARSHALLING_BOOLEAN
+#undef OPTION_WITH_MARSHALLING
   return true;
 }
 
@@ -3834,9 +3877,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       Res.getDiagnosticOpts().Warnings.push_back("no-stdlibcxx-not-found");
     }
   }
-
-  if (Diags.isIgnored(diag::warn_profile_data_misexpect, SourceLocation()))
-    Res.FrontendOpts.LLVMArgs.push_back("-pgo-warn-misexpect");
 
   LangOpts.FunctionAlignment =
       getLastArgIntValue(Args, OPT_function_alignment, 0, Diags);
@@ -3999,29 +4039,29 @@ std::string CompilerInvocation::getModuleHash() const {
 
 void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
-#define OPTION_WITH_MARSHALLING_FLAG(PREFIX_TYPE, NAME, ID, KIND, GROUP,       \
-                                     ALIAS, ALIASARGS, FLAGS, PARAM, HELPTEXT, \
-                                     METAVAR, VALUES, SPELLING, ALWAYS_EMIT,   \
-                                     KEYPATH, DEFAULT_VALUE, IS_POSITIVE)      \
-  if ((FLAGS) & options::CC1Option &&                                          \
-      (ALWAYS_EMIT || this->KEYPATH != (DEFAULT_VALUE)))                       \
-    Args.push_back(SPELLING);
-
-#define OPTION_WITH_MARSHALLING_STRING(                                        \
+#define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER_RET_TY, NORMALIZER, DENORMALIZER, TABLE_INDEX)                  \
+    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
   if (((FLAGS) & options::CC1Option) &&                                        \
-      (ALWAYS_EMIT || this->KEYPATH != DEFAULT_VALUE)) {                       \
-    if (Option::KIND##Class == Option::SeparateClass) {                        \
-      Args.push_back(SPELLING);                                                \
-      Args.push_back(DENORMALIZER(SA, TABLE_INDEX, this->KEYPATH));            \
-    }                                                                          \
+      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != (DEFAULT_VALUE))) {          \
+    DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));   \
+  }
+
+#define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
+    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NEG_SPELLING)                                                              \
+  if (((FLAGS)&options::CC1Option) &&                                          \
+      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != DEFAULT_VALUE)) {            \
+    DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX,                \
+                 EXTRACTOR(this->KEYPATH));                                    \
   }
 
 #include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING_STRING
-#undef OPTION_WITH_MARSHALLING_FLAG
+#undef OPTION_WITH_MARSHALLING_BOOLEAN
+#undef OPTION_WITH_MARSHALLING
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

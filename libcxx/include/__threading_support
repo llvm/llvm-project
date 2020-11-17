@@ -16,6 +16,10 @@
 #include <iosfwd>
 #include <errno.h>
 
+#ifdef __MVS__
+# include <support/ibm/nanosleep.h>
+#endif
+
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #pragma GCC system_header
 #endif
@@ -289,7 +293,7 @@ struct __libcpp_timed_backoff_policy {
       else if(__elapsed > chrono::microseconds(4))
         __libcpp_thread_yield();
       else
-        ; // poll
+        {} // poll
       return false;
   }
 };

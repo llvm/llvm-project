@@ -83,15 +83,15 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[14:15], exec
 ; GFX9-NEXT:    s_wqm_b64 exec, exec
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    v_mov_b32_e32 v5, v4
+; GFX9-NEXT:    v_mov_b32_e32 v2, v4
+; GFX9-NEXT:    v_mov_b32_e32 v3, v5
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX9-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 tfe d16
-; GFX9-NEXT:    v_mov_b32_e32 v0, s12
-; GFX9-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_store_dword v[0:1], v3, off
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    global_store_dword v4, v3, s[12:13]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -99,16 +99,16 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s28, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-NEXT:    v_mov_b32_e32 v5, v4
+; GFX10-NEXT:    v_mov_b32_e32 v2, v4
+; GFX10-NEXT:    v_mov_b32_e32 v3, v5
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
-; GFX10-NEXT:    v_mov_b32_e32 v0, s12
-; GFX10-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_dword v[0:1], v3, off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    global_store_dword v4, v3, s[12:13]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:

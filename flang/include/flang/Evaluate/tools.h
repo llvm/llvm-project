@@ -331,49 +331,29 @@ template <typename A> const Symbol *GetFirstSymbol(const A &x) {
 template <typename TO, TypeCategory FROMCAT>
 Expr<TO> ConvertToType(Expr<SomeKind<FROMCAT>> &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
-  if constexpr (FROMCAT != TO::category) {
-    if constexpr (TO::category == TypeCategory::Complex) {
-      using Part = typename TO::Part;
-      Scalar<Part> zero;
-      return Expr<TO>{ComplexConstructor<TO::kind>{
-          ConvertToType<Part>(std::move(x)), Expr<Part>{Constant<Part>{zero}}}};
-    } else if constexpr (FROMCAT == TypeCategory::Complex) {
-      // Extract and convert the real component of a complex value
-      return std::visit(
-          [&](auto &&z) {
-            using ZType = ResultType<decltype(z)>;
-            using Part = typename ZType::Part;
-            return ConvertToType<TO, TypeCategory::Real>(Expr<SomeReal>{
-                Expr<Part>{ComplexComponent<Part::kind>{false, std::move(z)}}});
-          },
-          std::move(x.u));
+  if constexpr (FROMCAT == TO::category) {
+    if (auto *already{std::get_if<Expr<TO>>(&x.u)}) {
+      return std::move(*already);
     } else {
       return Expr<TO>{Convert<TO, FROMCAT>{std::move(x)}};
     }
+  } else if constexpr (TO::category == TypeCategory::Complex) {
+    using Part = typename TO::Part;
+    Scalar<Part> zero;
+    return Expr<TO>{ComplexConstructor<TO::kind>{
+        ConvertToType<Part>(std::move(x)), Expr<Part>{Constant<Part>{zero}}}};
+  } else if constexpr (FROMCAT == TypeCategory::Complex) {
+    // Extract and convert the real component of a complex value
+    return std::visit(
+        [&](auto &&z) {
+          using ZType = ResultType<decltype(z)>;
+          using Part = typename ZType::Part;
+          return ConvertToType<TO, TypeCategory::Real>(Expr<SomeReal>{
+              Expr<Part>{ComplexComponent<Part::kind>{false, std::move(z)}}});
+        },
+        std::move(x.u));
   } else {
-    // Same type category
-    if (auto *already{std::get_if<Expr<TO>>(&x.u)}) {
-      return std::move(*already);
-    }
-    if constexpr (TO::category == TypeCategory::Complex) {
-      // Extract, convert, and recombine the components.
-      return Expr<TO>{std::visit(
-          [](auto &z) {
-            using FromType = ResultType<decltype(z)>;
-            using FromPart = typename FromType::Part;
-            using FromGeneric = SomeKind<TypeCategory::Real>;
-            using ToPart = typename TO::Part;
-            Convert<ToPart, TypeCategory::Real> re{Expr<FromGeneric>{
-                Expr<FromPart>{ComplexComponent<FromType::kind>{false, z}}}};
-            Convert<ToPart, TypeCategory::Real> im{Expr<FromGeneric>{
-                Expr<FromPart>{ComplexComponent<FromType::kind>{true, z}}}};
-            return ComplexConstructor<TO::kind>{
-                AsExpr(std::move(re)), AsExpr(std::move(im))};
-          },
-          x.u)};
-    } else {
-      return Expr<TO>{Convert<TO, TO::category>{std::move(x)}};
-    }
+    return Expr<TO>{Convert<TO, FROMCAT>{std::move(x)}};
   }
 }
 
@@ -523,24 +503,11 @@ template <typename A> Expr<TypeOf<A>> ScalarConstantToExpr(const A &x) {
 }
 
 // Combine two expressions of the same specific numeric type with an operation
-// to produce a new expression.  Implements piecewise addition and subtraction
-// for COMPLEX.
+// to produce a new expression.
 template <template <typename> class OPR, typename SPECIFIC>
 Expr<SPECIFIC> Combine(Expr<SPECIFIC> &&x, Expr<SPECIFIC> &&y) {
   static_assert(IsSpecificIntrinsicType<SPECIFIC>);
-  if constexpr (SPECIFIC::category == TypeCategory::Complex &&
-      (std::is_same_v<OPR<LargestReal>, Add<LargestReal>> ||
-          std::is_same_v<OPR<LargestReal>, Subtract<LargestReal>>)) {
-    static constexpr int kind{SPECIFIC::kind};
-    using Part = Type<TypeCategory::Real, kind>;
-    return AsExpr(ComplexConstructor<kind>{
-        AsExpr(OPR<Part>{AsExpr(ComplexComponent<kind>{false, x}),
-            AsExpr(ComplexComponent<kind>{false, y})}),
-        AsExpr(OPR<Part>{AsExpr(ComplexComponent<kind>{true, x}),
-            AsExpr(ComplexComponent<kind>{true, y})})});
-  } else {
-    return AsExpr(OPR<SPECIFIC>{std::move(x), std::move(y)});
-  }
+  return AsExpr(OPR<SPECIFIC>{std::move(x), std::move(y)});
 }
 
 // Given two expressions of arbitrary kind in the same intrinsic type
@@ -618,15 +585,6 @@ Expr<SomeLogical> BinaryLogicalOperation(
 template <TypeCategory C, int K>
 Expr<Type<C, K>> operator-(Expr<Type<C, K>> &&x) {
   return AsExpr(Negate<Type<C, K>>{std::move(x)});
-}
-
-template <int K>
-Expr<Type<TypeCategory::Complex, K>> operator-(
-    Expr<Type<TypeCategory::Complex, K>> &&x) {
-  using Part = Type<TypeCategory::Real, K>;
-  return AsExpr(ComplexConstructor<K>{
-      AsExpr(Negate<Part>{AsExpr(ComplexComponent<K>{false, x})}),
-      AsExpr(Negate<Part>{AsExpr(ComplexComponent<K>{true, x})})});
 }
 
 template <TypeCategory C, int K>

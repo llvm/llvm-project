@@ -2600,47 +2600,35 @@ bool RISCVTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 }
 
 const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
+#define NODE_NAME_CASE(NODE)                                                   \
+  case RISCVISD::NODE:                                                         \
+    return "RISCVISD::" #NODE;
+  // clang-format off
   switch ((RISCVISD::NodeType)Opcode) {
   case RISCVISD::FIRST_NUMBER:
     break;
-  case RISCVISD::RET_FLAG:
-    return "RISCVISD::RET_FLAG";
-  case RISCVISD::URET_FLAG:
-    return "RISCVISD::URET_FLAG";
-  case RISCVISD::SRET_FLAG:
-    return "RISCVISD::SRET_FLAG";
-  case RISCVISD::MRET_FLAG:
-    return "RISCVISD::MRET_FLAG";
-  case RISCVISD::CALL:
-    return "RISCVISD::CALL";
-  case RISCVISD::SELECT_CC:
-    return "RISCVISD::SELECT_CC";
-  case RISCVISD::BuildPairF64:
-    return "RISCVISD::BuildPairF64";
-  case RISCVISD::SplitF64:
-    return "RISCVISD::SplitF64";
-  case RISCVISD::TAIL:
-    return "RISCVISD::TAIL";
-  case RISCVISD::SLLW:
-    return "RISCVISD::SLLW";
-  case RISCVISD::SRAW:
-    return "RISCVISD::SRAW";
-  case RISCVISD::SRLW:
-    return "RISCVISD::SRLW";
-  case RISCVISD::DIVW:
-    return "RISCVISD::DIVW";
-  case RISCVISD::DIVUW:
-    return "RISCVISD::DIVUW";
-  case RISCVISD::REMUW:
-    return "RISCVISD::REMUW";
-  case RISCVISD::FMV_W_X_RV64:
-    return "RISCVISD::FMV_W_X_RV64";
-  case RISCVISD::FMV_X_ANYEXTW_RV64:
-    return "RISCVISD::FMV_X_ANYEXTW_RV64";
-  case RISCVISD::READ_CYCLE_WIDE:
-    return "RISCVISD::READ_CYCLE_WIDE";
+  NODE_NAME_CASE(RET_FLAG)
+  NODE_NAME_CASE(URET_FLAG)
+  NODE_NAME_CASE(SRET_FLAG)
+  NODE_NAME_CASE(MRET_FLAG)
+  NODE_NAME_CASE(CALL)
+  NODE_NAME_CASE(SELECT_CC)
+  NODE_NAME_CASE(BuildPairF64)
+  NODE_NAME_CASE(SplitF64)
+  NODE_NAME_CASE(TAIL)
+  NODE_NAME_CASE(SLLW)
+  NODE_NAME_CASE(SRAW)
+  NODE_NAME_CASE(SRLW)
+  NODE_NAME_CASE(DIVW)
+  NODE_NAME_CASE(DIVUW)
+  NODE_NAME_CASE(REMUW)
+  NODE_NAME_CASE(FMV_W_X_RV64)
+  NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
+  NODE_NAME_CASE(READ_CYCLE_WIDE)
   }
+  // clang-format on
   return nullptr;
+#undef NODE_NAME_CASE
 }
 
 /// getConstraintType - Given a constraint letter, return the type of

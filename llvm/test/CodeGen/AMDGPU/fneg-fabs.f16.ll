@@ -26,7 +26,7 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, 
 ; GFX89-NOT: _and
 ; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{s[0-9]+}}, -|{{v[0-9]+}}|
 ; GFX89-NOT: [[MUL]]
-; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
+; GFX89: {{flat|global}}_store_short v{{.+}}, [[MUL]]
 define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
@@ -134,8 +134,8 @@ define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %o
 ; GFX9: v_mov_b32_e32 [[V_ABS:v[0-9]+]], [[ABS]]
 ; GFX9: s_xor_b32 [[NEG:s[0-9]+]], [[ABS]], 0x80008000
 ; GFX9-DAG: v_mov_b32_e32 [[V_NEG:v[0-9]+]], [[NEG]]
-; GFX9-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_ABS]]
-; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_NEG]]
+; GFX9-DAG: global_store_dword v{{[0-9]+}}, [[V_ABS]], s{{\[[0-9]+:[0-9]+\]}}
+; GFX9: global_store_dword v{{[0-9]+}}, [[V_NEG]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs

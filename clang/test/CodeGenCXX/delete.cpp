@@ -71,7 +71,7 @@ namespace test0 {
     delete a;
   }
 
-  // CHECK-LABEL: define linkonce_odr void @_ZN5test01AD1Ev(%"struct.test0::A"* %this) unnamed_addr
+  // CHECK-LABEL: define linkonce_odr void @_ZN5test01AD1Ev(%"struct.test0::A"* {{[^,]*}} %this) unnamed_addr
   // CHECK-LABEL: define linkonce_odr void @_ZN5test01AdlEPv
 }
 
@@ -97,7 +97,7 @@ namespace test1 {
     // CHECK-NEXT: br i1 [[ISEMPTY]],
     // CHECK:      [[PAST:%.*]] = phi [[A]]* [ [[END]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
     // CHECK-NEXT: [[CUR:%.*]] = getelementptr inbounds [[A]], [[A]]* [[PAST]], i64 -1
-    // CHECK-NEXT: call void @_ZN5test11AD1Ev([[A]]* [[CUR]])
+    // CHECK-NEXT: call void @_ZN5test11AD1Ev([[A]]* {{[^,]*}} [[CUR]])
     // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq [[A]]* [[CUR]], [[BEGIN]]
     // CHECK-NEXT: br i1 [[ISDONE]]
     // CHECK:      call void @_ZdaPv(i8* [[ALLOC]])
@@ -144,7 +144,7 @@ namespace test4 {
     // CHECK-NEXT: [[VTABLE:%.*]] = load void ([[X]]*)**, void ([[X]]*)*** [[T0]]
     // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds void ([[X]]*)*, void ([[X]]*)** [[VTABLE]], i64 0
     // CHECK-NEXT: [[DTOR:%.*]] = load void ([[X]]*)*, void ([[X]]*)** [[T0]]
-    // CHECK-NEXT: call void [[DTOR]]([[X]]* [[OBJ:%.*]])
+    // CHECK-NEXT: call void [[DTOR]]([[X]]* {{[^,]*}} [[OBJ:%.*]])
     //   Call the global operator delete.
     // CHECK-NEXT: call void @_ZdlPv(i8* [[ALLOCATED]]) [[NUW:#[0-9]+]]
     ::delete xp;

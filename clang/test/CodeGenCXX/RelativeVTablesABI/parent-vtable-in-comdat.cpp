@@ -21,11 +21,11 @@
 // CHECK: @_ZTI1A.rtti_proxy = hidden unnamed_addr constant { i8*, i8* }* @_ZTI1A, comdat
 // CHECK: @_ZTV1A = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
 
-// CHECK:      define linkonce_odr void @_ZN1A3fooEv(%class.A* %this) unnamed_addr #{{[0-9]+}} comdat
+// CHECK:      define linkonce_odr void @_ZN1A3fooEv(%class.A* {{[^,]*}} %this) unnamed_addr #{{[0-9]+}} comdat
 
-// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* %0) unnamed_addr #{{[0-9]+}} comdat {
+// CHECK:      define hidden void @_ZN1A3fooEv.stub(%class.A* {{[^,]*}} %0) unnamed_addr #{{[0-9]+}} comdat {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   tail call void @_ZN1A3fooEv(%class.A* %0)
+// CHECK-NEXT:   tail call void @_ZN1A3fooEv(%class.A* {{[^,]*}} %0)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

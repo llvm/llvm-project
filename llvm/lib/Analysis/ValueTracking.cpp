@@ -987,14 +987,13 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 static void computeKnownBitsFromShiftOperator(
     const Operator *I, const APInt &DemandedElts, KnownBits &Known,
     KnownBits &Known2, unsigned Depth, const Query &Q,
-    function_ref<KnownBits(const KnownBits &, unsigned)> KF) {
+    function_ref<KnownBits(const KnownBits &, const KnownBits &)> KF) {
   unsigned BitWidth = Known.getBitWidth();
   computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
   computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
 
   if (Known.isConstant()) {
-    unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
-    Known = KF(Known2, ShiftAmt);
+    Known = KF(Known2, Known);
 
     // If the known bits conflict, this must be an overflowing left shift, so
     // the shift result is poison. We can return anything we want. Choose 0 for
@@ -1058,7 +1057,8 @@ static void computeKnownBitsFromShiftOperator(
         continue;
     }
 
-    Known = KnownBits::commonBits(Known, KF(Known2, ShiftAmt));
+    Known = KnownBits::commonBits(
+        Known, KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
   }
 
   // If the known bits conflict, the result is poison. Return a 0 and hope the
@@ -1221,20 +1221,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Shl: {
-    // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    auto KF = [NSW](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = KnownShiftVal.Zero << ShiftAmt;
-      Result.One = KnownShiftVal.One << ShiftAmt;
-      // Low bits known zero.
-      Result.Zero.setLowBits(ShiftAmt);
+    auto KF = [NSW](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      KnownBits Result = KnownBits::shl(KnownVal, KnownAmt);
       // If this shift has "nsw" keyword, then the result is either a poison
       // value or has the same sign bit as the first operand.
       if (NSW) {
-        if (KnownShiftVal.Zero.isSignBitSet())
+        if (KnownVal.Zero.isSignBitSet())
           Result.Zero.setSignBit();
-        if (KnownShiftVal.One.isSignBitSet())
+        if (KnownVal.One.isSignBitSet())
           Result.One.setSignBit();
       }
       return Result;
@@ -1244,26 +1239,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::LShr: {
-    // (lshr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KF = [](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = KnownShiftVal.Zero.lshr(ShiftAmt);
-      Result.One = KnownShiftVal.One.lshr(ShiftAmt);
-      // High bits known zero.
-      Result.Zero.setHighBits(ShiftAmt);
-      return Result;
+    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      return KnownBits::lshr(KnownVal, KnownAmt);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
     break;
   }
   case Instruction::AShr: {
-    // (ashr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KF = [](const KnownBits &KnownShiftVal, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = KnownShiftVal.Zero.ashr(ShiftAmt);
-      Result.One = KnownShiftVal.One.ashr(ShiftAmt);
-      return Result;
+    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      return KnownBits::ashr(KnownVal, KnownAmt);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1304,9 +1289,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
     APInt AccConstIndices(BitWidth, 0, /*IsSigned*/ true);
 
     gep_type_iterator GTI = gep_type_begin(I);
-    // If the inbounds keyword is not present, the offsets are added to the
-    // base address with silently-wrapping two’s complement arithmetic.
-    bool IsInBounds = cast<GEPOperator>(I)->isInBounds();
     for (unsigned i = 1, e = I->getNumOperands(); i != e; ++i, ++GTI) {
       // TrailZ can only become smaller, short-circuit if we hit zero.
       if (Known.isUnknown())
@@ -1371,17 +1353,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // to the width of the pointer.
       IndexBits = IndexBits.sextOrTrunc(BitWidth);
 
+      // Note that inbounds does *not* guarantee nsw for the addition, as only
+      // the offset is signed, while the base address is unsigned.
       Known = KnownBits::computeForAddSub(
-          /*Add=*/true,
-          /*NSW=*/IsInBounds, Known, IndexBits);
+          /*Add=*/true, /*NSW=*/false, Known, IndexBits);
     }
     if (!Known.isUnknown() && !AccConstIndices.isNullValue()) {
       KnownBits Index(BitWidth);
       Index.Zero = ~AccConstIndices;
       Index.One = AccConstIndices;
       Known = KnownBits::computeForAddSub(
-          /*Add=*/true,
-          /*NSW=*/IsInBounds, Known, Index);
+          /*Add=*/true, /*NSW=*/false, Known, Index);
     }
     break;
   }
@@ -1529,28 +1511,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       default: break;
-      case Intrinsic::abs:
+      case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-
-        // If the source's MSB is zero then we know the rest of the bits.
-        if (Known2.isNonNegative()) {
-          Known.Zero |= Known2.Zero;
-          Known.One |= Known2.One;
-          break;
-        }
-
-        // Absolute value preserves trailing zero count.
-        Known.Zero.setLowBits(Known2.Zero.countTrailingOnes());
-
-        // If this call is undefined for INT_MIN, the result is positive. We
-        // also know it can't be INT_MIN if there is a set bit that isn't the
-        // sign bit.
-        Known2.One.clearSignBit();
-        if (match(II->getArgOperand(1), m_One()) || Known2.One.getBoolValue())
-          Known.Zero.setSignBit();
-        // FIXME: Handle known negative input?
-        // FIXME: Calculate the negated Known bits and combine them?
+        bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
+        Known = Known2.abs(IntMinIsPoison);
         break;
+      }
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.reverseBits();

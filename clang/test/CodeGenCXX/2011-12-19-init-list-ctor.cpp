@@ -19,8 +19,8 @@ struct S {
 };
 
 // CHECK: store i32 0, i32* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 0, i32 0)
-// CHECK: call void @_ZN1AC1EPKc(%struct.A* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 0, i32 1), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+// CHECK: call void @_ZN1AC1EPKc(%struct.A* {{[^,]*}} getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 0, i32 1), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
 // CHECK: store i32 1, i32* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 1, i32 0)
-// CHECK: call void @_ZN1AC1EPKc(%struct.A* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 1, i32 1), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.1, i64 0, i64 0))
+// CHECK: call void @_ZN1AC1EPKc(%struct.A* {{[^,]*}} getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 1, i32 1), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.1, i64 0, i64 0))
 // CHECK: store i32 2, i32* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 2, i32 0)
-// CHECK: call void @_ZN1AC1EPKc(%struct.A* getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 2, i32 1), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.2, i64 0, i64 0))
+// CHECK: call void @_ZN1AC1EPKc(%struct.A* {{[^,]*}} getelementptr inbounds ([3 x %struct.S], [3 x %struct.S]* @arr, i64 0, i64 2, i32 1), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.2, i64 0, i64 0))

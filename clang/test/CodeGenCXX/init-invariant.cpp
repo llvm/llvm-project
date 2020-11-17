@@ -41,13 +41,13 @@ void e() {
   static const A a = A();
 }
 
-// CHECK: call void @_ZN1AC1Ev({{.*}}* nonnull @a)
+// CHECK: call void @_ZN1AC1Ev({{.*}}* nonnull {{[^,]*}} @a)
 // CHECK: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* bitcast ({{.*}} @a to i8*))
 
-// CHECK: call void @_ZN1BC1Ev({{.*}}* nonnull @b)
+// CHECK: call void @_ZN1BC1Ev({{.*}}* nonnull {{[^,]*}} @b)
 // CHECK-NOT: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* bitcast ({{.*}} @b to i8*))
 
-// CHECK: call void @_ZN1CC1Ev({{.*}}* nonnull @c)
+// CHECK: call void @_ZN1CC1Ev({{.*}}* nonnull {{[^,]*}} @c)
 // CHECK-NOT: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* bitcast ({{.*}} @c to i8*))
 
 // CHECK: call i32 @_Z1fv(
@@ -55,6 +55,6 @@ void e() {
 // CHECK: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* bitcast ({{.*}} @d to i8*))
 
 // CHECK-LABEL: define void @_Z1ev(
-// CHECK: call void @_ZN1AC1Ev(%struct.A* nonnull @_ZZ1evE1a)
+// CHECK: call void @_ZN1AC1Ev(%struct.A* nonnull {{[^,]*}} @_ZZ1evE1a)
 // CHECK: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* {{.*}}bitcast ({{.*}} @_ZZ1evE1a to i8*))
 // CHECK-NOT: llvm.invariant.end

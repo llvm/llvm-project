@@ -214,6 +214,10 @@ def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
     Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
            /*default=*/"1024",
            "Define the maximum size in bytes to promote allocations to stack.">,
+    Option<"bitwidthOfIndexType", "bitwidth-of-index-type", "unsigned",
+           /*default=*/"64",
+           "Define the bitwidth of the index type. Used for size estimation.">,
+
   ];
 }
 

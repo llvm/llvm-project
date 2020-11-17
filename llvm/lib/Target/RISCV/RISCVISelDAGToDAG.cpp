@@ -314,62 +314,66 @@ bool RISCVDAGToDAGISel::SelectSLLIUW(SDValue N, SDValue &RS1, SDValue &Shamt) {
 // and then we check that VC1, the mask used to fill with ones, is compatible
 // with VC2, the shamt:
 //
-//  VC1 == maskTrailingOnes<uint32_t>(VC2)
+//  VC2 < 32
+//  VC1 == maskTrailingOnes<uint64_t>(VC2)
 
 bool RISCVDAGToDAGISel::SelectSLOIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
-  if (Subtarget->getXLenVT() == MVT::i64 &&
-      N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
-    if (N.getOperand(0).getOpcode() == ISD::OR) {
-      SDValue Or = N.getOperand(0);
-      if (Or.getOperand(0).getOpcode() == ISD::SHL) {
-        SDValue Shl = Or.getOperand(0);
-        if (isa<ConstantSDNode>(Shl.getOperand(1)) &&
-            isa<ConstantSDNode>(Or.getOperand(1))) {
-          uint32_t VC1 = Or.getConstantOperandVal(1);
-          uint32_t VC2 = Shl.getConstantOperandVal(1);
-          if (VC1 == maskTrailingOnes<uint32_t>(VC2)) {
-            RS1 = Shl.getOperand(0);
-            Shamt = CurDAG->getTargetConstant(VC2, SDLoc(N),
-                                              Shl.getOperand(1).getValueType());
-            return true;
-          }
-        }
-      }
-    }
-  }
-  return false;
+  assert(Subtarget->is64Bit() && "SLOIW should only be matched on RV64");
+  if (N.getOpcode() != ISD::SIGN_EXTEND_INREG ||
+      cast<VTSDNode>(N.getOperand(1))->getVT() != MVT::i32)
+    return false;
+
+   SDValue Or = N.getOperand(0);
+
+   if (Or.getOpcode() != ISD::OR || !isa<ConstantSDNode>(Or.getOperand(1)))
+     return false;
+
+   SDValue Shl = Or.getOperand(0);
+   if (Shl.getOpcode() != ISD::SHL || !isa<ConstantSDNode>(Shl.getOperand(1)))
+     return false;
+
+   uint64_t VC1 = Or.getConstantOperandVal(1);
+   uint64_t VC2 = Shl.getConstantOperandVal(1);
+
+   if (VC2 >= 32 || VC1 != maskTrailingOnes<uint64_t>(VC2))
+     return false;
+
+  RS1 = Shl.getOperand(0);
+  Shamt = CurDAG->getTargetConstant(VC2, SDLoc(N),
+                                    Shl.getOperand(1).getValueType());
+  return true;
 }
 
 // Check that it is a SROIW (Shift Right Ones Immediate i32 on RV64).
 // We first check that it is the right node tree:
 //
-//  (OR (SHL RS1, VC2), VC1)
+//  (OR (SRL RS1, VC2), VC1)
 //
 // and then we check that VC1, the mask used to fill with ones, is compatible
 // with VC2, the shamt:
 //
-//  VC1 == maskLeadingOnes<uint32_t>(VC2)
-
+//  VC2 < 32
+//  VC1 == maskTrailingZeros<uint64_t>(32 - VC2)
+//
 bool RISCVDAGToDAGISel::SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
-  if (N.getOpcode() == ISD::OR && Subtarget->getXLenVT() == MVT::i64) {
-    SDValue Or = N;
-    if (Or.getOperand(0).getOpcode() == ISD::SRL) {
-      SDValue Srl = Or.getOperand(0);
-      if (isa<ConstantSDNode>(Srl.getOperand(1)) &&
-          isa<ConstantSDNode>(Or.getOperand(1))) {
-        uint32_t VC1 = Or.getConstantOperandVal(1);
-        uint32_t VC2 = Srl.getConstantOperandVal(1);
-        if (VC1 == maskLeadingOnes<uint32_t>(VC2)) {
-          RS1 = Srl.getOperand(0);
-          Shamt = CurDAG->getTargetConstant(VC2, SDLoc(N),
-                                            Srl.getOperand(1).getValueType());
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+  assert(Subtarget->is64Bit() && "SROIW should only be matched on RV64");
+  if (N.getOpcode() != ISD::OR || !isa<ConstantSDNode>(N.getOperand(1)))
+    return false;
+
+  SDValue Srl = N.getOperand(0);
+  if (Srl.getOpcode() != ISD::SRL || !isa<ConstantSDNode>(Srl.getOperand(1)))
+    return false;
+
+  uint64_t VC1 = N.getConstantOperandVal(1);
+  uint64_t VC2 = Srl.getConstantOperandVal(1);
+
+  if (VC2 >= 32 || VC1 != maskTrailingZeros<uint64_t>(32 - VC2))
+    return false;
+
+  RS1 = Srl.getOperand(0);
+  Shamt = CurDAG->getTargetConstant(VC2, SDLoc(N),
+                                    Srl.getOperand(1).getValueType());
+  return true;
 }
 
 // Check that it is a RORIW (i32 Right Rotate Immediate on RV64).

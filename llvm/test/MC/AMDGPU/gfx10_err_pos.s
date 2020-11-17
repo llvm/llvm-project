@@ -75,12 +75,12 @@ ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 4, 1, 2, 3)
 s_atc_probe_buffer 0x1, s[8:11], -1
 // CHECK: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe_buffer 0x1, s[8:11], -1
-// CHECK-NEXT:{{^}}                   ^
+// CHECK-NEXT:{{^}}                                 ^
 
 s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
 // CHECK: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
-// CHECK-NEXT:{{^}}                   ^
+// CHECK-NEXT:{{^}}                                 ^
 
 s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
 // CHECK: error: expected a 20-bit unsigned offset
@@ -93,7 +93,7 @@ s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
 s_atc_probe 0x7, s[4:5], 0x1FFFFF
 // CHECK: error: expected a 21-bit signed offset
 // CHECK-NEXT:{{^}}s_atc_probe 0x7, s[4:5], 0x1FFFFF
-// CHECK-NEXT:{{^}}            ^
+// CHECK-NEXT:{{^}}                         ^
 
 s_atomic_swap s5, s[2:3], 0x1FFFFF
 // CHECK: error: expected a 21-bit signed offset
@@ -429,7 +429,17 @@ s_mov_b64 s[10:11], s[1:0]
 ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
 // CHECK: error: group size must be a power of two
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
-// CHECK-NEXT:{{^}}                                              ^
+// CHECK-NEXT:{{^}}                                               ^
+
+ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
+// CHECK: error: group size must be a power of two
+// CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
+// CHECK-NEXT:{{^}}                                             ^
+
+ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
+// CHECK: error: group size must be a power of two
+// CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
+// CHECK-NEXT:{{^}}                                          ^
 
 //==============================================================================
 // group size must be in the interval [1,16]
@@ -485,7 +495,7 @@ s_cbranch_join 1
 s_getreg_b32  s2, hwreg(3,32,32)
 // CHECK: error: invalid bit offset: only 5-bit values are legal
 // CHECK-NEXT:{{^}}s_getreg_b32  s2, hwreg(3,32,32)
-// CHECK-NEXT:{{^}}                  ^
+// CHECK-NEXT:{{^}}                          ^
 
 //==============================================================================
 // invalid bitfield width: only values from 1 to 32 are legal
@@ -493,7 +503,7 @@ s_getreg_b32  s2, hwreg(3,32,32)
 s_setreg_b32  hwreg(3,0,33), s2
 // CHECK: error: invalid bitfield width: only values from 1 to 32 are legal
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(3,0,33), s2
-// CHECK-NEXT:{{^}}              ^
+// CHECK-NEXT:{{^}}                        ^
 
 //==============================================================================
 // invalid code of hardware register: only 6-bit values are legal
@@ -501,7 +511,7 @@ s_setreg_b32  hwreg(3,0,33), s2
 s_setreg_b32  hwreg(0x40), s2
 // CHECK: error: invalid code of hardware register: only 6-bit values are legal
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(0x40), s2
-// CHECK-NEXT:{{^}}              ^
+// CHECK-NEXT:{{^}}                    ^
 
 //==============================================================================
 // invalid counter name x
@@ -567,7 +577,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")
 s_sendmsg sendmsg(-1)
 // CHECK: error: invalid message id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(-1)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                  ^
 
 //==============================================================================
 // invalid message stream id
@@ -575,12 +585,12 @@ s_sendmsg sendmsg(-1)
 s_sendmsg sendmsg(2, 2, 4)
 // CHECK: error: invalid message stream id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(2, 2, 4)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                        ^
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
 // CHECK: error: invalid message stream id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                                     ^
 
 //==============================================================================
 // invalid mul value.
@@ -596,7 +606,7 @@ v_cvt_f64_i32 v[5:6], s1 mul:3
 v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
 // CHECK: error: invalid op_sel operand
 // CHECK-NEXT:{{^}}v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                                ^
 
 //==============================================================================
 // invalid op_sel value.
@@ -648,7 +658,7 @@ v_cmp_eq_f32 s[0:1], private_base, s0
 s_sendmsg sendmsg(15, -1)
 // CHECK: error: invalid operation id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(15, -1)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                      ^
 
 //==============================================================================
 // invalid or unsupported register size
@@ -701,7 +711,7 @@ v_ceil_f32 v0, --1
 v_ashrrev_i16 v0, lds_direct, v0
 // CHECK: error: invalid use of lds_direct
 // CHECK-NEXT:{{^}}v_ashrrev_i16 v0, lds_direct, v0
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                  ^
 
 //==============================================================================
 // lane id must be in the interval [0,group size - 1]
@@ -717,7 +727,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,2,-1)
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
 // CHECK: error: message does not support operations
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                                    ^
 
 //==============================================================================
 // message operation does not support streams
@@ -725,7 +735,7 @@ s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
 s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // CHECK: error: message operation does not support streams
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                                          ^
 
 //==============================================================================
 // missing message operation
@@ -733,7 +743,7 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 s_sendmsg sendmsg(MSG_SYSMSG)
 // CHECK: error: missing message operation
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_SYSMSG)
-// CHECK-NEXT:{{^}}          ^
+// CHECK-NEXT:{{^}}                  ^
 
 //==============================================================================
 // missing register index
@@ -874,7 +884,7 @@ v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
 s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 // CHECK: error: specified hardware register is not supported on this GPU
 // CHECK-NEXT:{{^}}s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
-// CHECK-NEXT:{{^}}                 ^
+// CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
 // too few operands for instruction

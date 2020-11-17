@@ -17,7 +17,7 @@
 ; CHECK:     KernargSegmentAlign:     8
 ; CHECK:     WavefrontSize:           64
 ; CHECK:     NumSGPRs:                8
-; CHECK:     NumVGPRs:                6
+; CHECK:     NumVGPRs:                {{3|6}}
 ; CHECK:     MaxFlatWorkGroupSize:    1024
 define amdgpu_kernel void @test(
     half addrspace(1)* %r,
@@ -40,7 +40,7 @@ entry:
 ; CHECK:     KernargSegmentAlign:     8
 ; CHECK:     WavefrontSize:           64
 ; CHECK:     NumSGPRs:                8
-; CHECK:     NumVGPRs:                6
+; CHECK:     NumVGPRs:                {{3|6}}
 ; CHECK:     MaxFlatWorkGroupSize:    256
 define amdgpu_kernel void @test_max_flat_workgroup_size(
     half addrspace(1)* %r,
@@ -59,7 +59,7 @@ entry:
 ; CHECK:   CodeProps:
 ; GFX700:     NumSpilledSGPRs: 38
 ; GFX803:     NumSpilledSGPRs: 22
-; GFX900:     NumSpilledSGPRs: 22
+; GFX900:     NumSpilledSGPRs: {{22|48}}
 define amdgpu_kernel void @num_spilled_sgprs(
     i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32],
     i32 addrspace(1)* %out2, i32 addrspace(1)* %out3, [8 x i32],
@@ -96,7 +96,7 @@ entry:
 ; CHECK-LABEL: - Name:       num_spilled_vgprs
 ; CHECK:   SymbolName: 'num_spilled_vgprs@kd'
 ; CHECK:   CodeProps:
-; CHECK:     NumSpilledVGPRs: 14
+; CHECK:     NumSpilledVGPRs: {{13|14}}
 define amdgpu_kernel void @num_spilled_vgprs() #1 {
   %val0 = load volatile float, float addrspace(1)* @var
   %val1 = load volatile float, float addrspace(1)* @var

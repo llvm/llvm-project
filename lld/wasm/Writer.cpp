@@ -749,15 +749,15 @@ void Writer::assignIndexes() {
 }
 
 static StringRef getOutputDataSegmentName(StringRef name) {
-  // With PIC code we currently only support a single data segment since
-  // we only have a single __memory_base to use as our base address.
-  if (config->isPic)
-    return ".data";
   // We only support one thread-local segment, so we must merge the segments
   // despite --no-merge-data-segments.
   // We also need to merge .tbss into .tdata so they share the same offsets.
   if (name.startswith(".tdata") || name.startswith(".tbss"))
     return ".tdata";
+  // With PIC code we currently only support a single data segment since
+  // we only have a single __memory_base to use as our base address.
+  if (config->isPic)
+    return ".data";
   if (!config->mergeDataSegments)
     return name;
   if (name.startswith(".text."))
@@ -1199,10 +1199,10 @@ void Writer::run() {
 
   if (!config->relocatable) {
     // Create linker synthesized functions
-    if (config->sharedMemory)
-      createInitMemoryFunction();
     if (config->isPic)
       createApplyRelocationsFunction();
+    else if (config->sharedMemory)
+      createInitMemoryFunction();
     createCallCtorsFunction();
 
     // Create export wrappers for commands if needed.

@@ -1,3 +1,5 @@
+add_llvm_component_group(X86 HAS_JIT)
+
 set(LLVM_TARGET_DEFINITIONS X86.td)
 
 tablegen(LLVM X86GenAsmMatcher.inc -gen-asm-matcher)
@@ -76,7 +78,25 @@ set(sources
   X86InsertWait.cpp
   )
 
-add_llvm_target(X86CodeGen ${sources})
+add_llvm_target(X86CodeGen ${sources}
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  SelectionDAG
+  Support
+  Target
+  X86Desc
+  X86Info
+  GlobalISel
+  ProfileData
+  CFGuard
+
+  ADD_TO_COMPONENT
+  X86
+)
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

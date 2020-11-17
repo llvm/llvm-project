@@ -547,6 +547,7 @@ void WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
     case wasm::R_WASM_MEMORY_ADDR_I32:
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
+    case wasm::R_WASM_FUNCTION_OFFSET_I64:
     case wasm::R_WASM_SECTION_OFFSET_I32:
       encodeULEB128(Reloc.Addend, OS);
     }

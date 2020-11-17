@@ -1525,7 +1525,7 @@ struct __libcpp_atomic_wait_backoff_impl {
         else if(__elapsed > chrono::microseconds(4))
             __libcpp_thread_yield();
         else
-            ; // poll
+            {} // poll
         return false;
     }
 };

@@ -341,10 +341,9 @@ template <typename... Args>
 static LinalgOp createLinalgOpOfSameType(LinalgOp op, PatternRewriter &rewriter,
                                          Args... args) {
   if (isa<GenericOp>(op.getOperation()))
-    return cast<LinalgOp>(rewriter.create<GenericOp>(args...).getOperation());
+    return rewriter.create<GenericOp>(args...);
   if (isa<IndexedGenericOp>(op.getOperation()))
-    return cast<LinalgOp>(
-        rewriter.create<IndexedGenericOp>(args...).getOperation());
+    return rewriter.create<IndexedGenericOp>(args...);
   llvm_unreachable(
       "expected only linalg.generic or linalg.indexed_generic ops");
   return nullptr;
@@ -467,9 +466,8 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
     unsigned pos = resultExpr.value().cast<AffineDimExpr>().getPosition();
     AffineMap foldedDims = reassociationMaps[resultExpr.index()];
     numFoldedDims[pos] = foldedDims.getNumResults();
-    ArrayRef<int64_t> shape = expandedShape.slice(
-        foldedDims.getResult(0).cast<AffineDimExpr>().getPosition(),
-        numFoldedDims[pos]);
+    ArrayRef<int64_t> shape =
+        expandedShape.slice(foldedDims.getDimPosition(0), numFoldedDims[pos]);
     expandedDimsShape[pos].assign(shape.begin(), shape.end());
   }
 

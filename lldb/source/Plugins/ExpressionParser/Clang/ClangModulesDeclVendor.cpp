@@ -95,8 +95,10 @@ public:
   uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
                      std::vector<CompilerDecl> &decls) override;
 
-  void ForEachMacro(const ModuleVector &modules,
-                    std::function<bool(const std::string &)> handler) override;
+  void ForEachMacro(
+      const ModuleVector &modules,
+      std::function<bool(llvm::StringRef, llvm::StringRef)> handler) override;
+
 private:
   void
   ReportModuleExportsHelper(std::set<ClangModulesDeclVendor::ModuleID> &exports,
@@ -420,7 +422,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
 
 void ClangModulesDeclVendorImpl::ForEachMacro(
     const ClangModulesDeclVendor::ModuleVector &modules,
-    std::function<bool(const std::string &)> handler) {
+    std::function<bool(llvm::StringRef, llvm::StringRef)> handler) {
   if (!m_enabled) {
     return;
   }
@@ -490,7 +492,8 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
     if (macro_info) {
       std::string macro_expansion = "#define ";
-      macro_expansion.append(mi->first->getName().str());
+      llvm::StringRef macro_identifier = mi->first->getName();
+      macro_expansion.append(macro_identifier.str());
 
       {
         if (macro_info->isFunctionLike()) {
@@ -575,7 +578,7 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
           }
         }
 
-        if (handler(macro_expansion)) {
+        if (handler(macro_identifier, macro_expansion)) {
           return;
         }
       }

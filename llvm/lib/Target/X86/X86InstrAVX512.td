@@ -2921,9 +2921,6 @@ def : Pat<(i64 (bitconvert (v64i1 VK64:$src))),
 
 // Load/store kreg
 let Predicates = [HasDQI] in {
-  def : Pat<(store VK1:$src, addr:$dst),
-            (KMOVBmk addr:$dst, (COPY_TO_REGCLASS VK1:$src, VK8))>;
-
   def : Pat<(v1i1 (load addr:$src)),
             (COPY_TO_REGCLASS (KMOVBkm addr:$src), VK1)>;
   def : Pat<(v2i1 (load addr:$src)),

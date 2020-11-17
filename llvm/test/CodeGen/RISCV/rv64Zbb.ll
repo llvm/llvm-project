@@ -166,7 +166,6 @@ define signext i32 @sroi_i32(i32 signext %a) nounwind {
 ; This is similar to the type legalized version of sroiw but the mask is 0 in
 ; the upper bits instead of 1 so the result is not sign extended. Make sure we
 ; don't match it to sroiw.
-; FIXME: We're matching it to sroiw.
 define i64 @sroiw_bug(i64 %a) nounwind {
 ; RV64I-LABEL: sroiw_bug:
 ; RV64I:       # %bb.0:
@@ -178,12 +177,18 @@ define i64 @sroiw_bug(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: sroiw_bug:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    sroiw a0, a0, 1
+; RV64IB-NEXT:    srli a0, a0, 1
+; RV64IB-NEXT:    addi a1, zero, 1
+; RV64IB-NEXT:    slli a1, a1, 31
+; RV64IB-NEXT:    or a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: sroiw_bug:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    sroiw a0, a0, 1
+; RV64IBB-NEXT:    srli a0, a0, 1
+; RV64IBB-NEXT:    addi a1, zero, 1
+; RV64IBB-NEXT:    slli a1, a1, 31
+; RV64IBB-NEXT:    or a0, a0, a1
 ; RV64IBB-NEXT:    ret
   %neg = lshr i64 %a, 1
   %neg12 = or i64 %neg, 2147483648

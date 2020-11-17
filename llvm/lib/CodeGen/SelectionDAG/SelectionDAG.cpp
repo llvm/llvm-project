@@ -2624,15 +2624,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
     // We know all of the bits for a constant!
-    Known.One = C->getAPIntValue();
-    Known.Zero = ~Known.One;
-    return Known;
+    return KnownBits::makeConstant(C->getAPIntValue());
   }
   if (auto *C = dyn_cast<ConstantFPSDNode>(Op)) {
     // We know all of the bits for a constant fp!
-    Known.One = C->getValueAPF().bitcastToAPInt();
-    Known.Zero = ~Known.One;
-    return Known;
+    return KnownBits::makeConstant(C->getValueAPF().bitcastToAPInt());
   }
 
   if (Depth >= MaxRecursionDepth)

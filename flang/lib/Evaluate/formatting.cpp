@@ -349,6 +349,7 @@ template <typename TO, TypeCategory FROMCAT>
 llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
   static_assert(TO::category == TypeCategory::Integer ||
           TO::category == TypeCategory::Real ||
+          TO::category == TypeCategory::Complex ||
           TO::category == TypeCategory::Character ||
           TO::category == TypeCategory::Logical,
       "Convert<> to bad category!");
@@ -358,6 +359,8 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
     this->left().AsFortran(o << "int(");
   } else if constexpr (TO::category == TypeCategory::Real) {
     this->left().AsFortran(o << "real(");
+  } else if constexpr (TO::category == TypeCategory::Complex) {
+    this->left().AsFortran(o << "cmplx(");
   } else {
     this->left().AsFortran(o << "logical(");
   }

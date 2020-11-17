@@ -12,16 +12,19 @@ add_llvm_component_library(LLVMExecutionEngine
 
   DEPENDS
   intrinsics_gen
-  )
 
-if(BUILD_SHARED_LIBS)
-  target_link_libraries(LLVMExecutionEngine PUBLIC LLVMRuntimeDyld)
-endif()
+  LINK_COMPONENTS
+  Core
+  MC
+  Object
+  RuntimeDyld
+  Support
+  Target
+  )
 
 add_subdirectory(Interpreter)
 add_subdirectory(JITLink)
 add_subdirectory(MCJIT)
-add_subdirectory(OrcError)
 add_subdirectory(Orc)
 add_subdirectory(RuntimeDyld)
 

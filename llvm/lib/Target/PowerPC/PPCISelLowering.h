@@ -770,6 +770,8 @@ namespace llvm {
     bool SelectAddressRegImm(SDValue N, SDValue &Disp, SDValue &Base,
                              SelectionDAG &DAG,
                              MaybeAlign EncodingAlignment) const;
+    bool SelectAddressRegImm34(SDValue N, SDValue &Disp, SDValue &Base,
+                               SelectionDAG &DAG) const;
 
     /// SelectAddressRegRegOnly - Given the specified addressed, force it to be
     /// represented as an indexed [r+r] operation.
@@ -1325,6 +1327,8 @@ namespace llvm {
 
   bool isIntS16Immediate(SDNode *N, int16_t &Imm);
   bool isIntS16Immediate(SDValue Op, int16_t &Imm);
+  bool isIntS34Immediate(SDNode *N, int64_t &Imm);
+  bool isIntS34Immediate(SDValue Op, int64_t &Imm);
 
   bool convertToNonDenormSingle(APInt &ArgAPInt);
   bool convertToNonDenormSingle(APFloat &ArgAPFloat);

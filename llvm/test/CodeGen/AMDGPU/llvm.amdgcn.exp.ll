@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; TODO-GFX11: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10 %s
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
@@ -568,6 +568,18 @@ define amdgpu_kernel void @test_export_pos_before_param(float %x, float %y) #0 {
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
   %z1 = fsub float %y, %x
   call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 true, i1 false)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_export_pos4_before_param:
+; GFX10: exp pos4
+; GFX10-NOT: s_waitcnt
+; GFX10: exp param0
+define amdgpu_kernel void @test_export_pos4_before_param(float %x, float %y) #0 {
+  %z0 = fadd float %x, %y
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
+  %z1 = fsub float %y, %x
+  call void @llvm.amdgcn.exp.f32(i32 16, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 true, i1 false)
   ret void
 }
 

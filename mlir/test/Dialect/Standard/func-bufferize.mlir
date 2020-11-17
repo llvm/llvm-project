@@ -34,22 +34,22 @@ func @eliminate_source_materialization(%arg0: memref<f32>) -> tensor<f32> {
   return %0 : tensor<f32>
 }
 
-// CHECK-LABEL:   func @source() -> memref<f32>
+// CHECK-LABEL:   func private @source() -> memref<f32>
 // CHECK-LABEL:   func @call_source() -> memref<f32> {
 // CHECK:           %[[RET:.*]] = call @source() : () -> memref<f32>
 // CHECK:           return %[[RET]] : memref<f32>
-func @source() -> tensor<f32>
+func private @source() -> tensor<f32>
 func @call_source() -> tensor<f32> {
   %0 = call @source() : () -> tensor<f32>
   return %0 : tensor<f32>
 }
 
-// CHECK-LABEL:   func @sink(memref<f32>)
+// CHECK-LABEL:   func private @sink(memref<f32>)
 // CHECK-LABEL:   func @call_sink(
 // CHECK-SAME:        %[[ARG:.*]]: memref<f32>) {
 // CHECK:           call @sink(%[[ARG]]) : (memref<f32>) -> ()
 // CHECK:           return
-func @sink(tensor<f32>)
+func private @sink(tensor<f32>)
 func @call_sink(%arg0: tensor<f32>) {
   call @sink(%arg0) : (tensor<f32>) -> ()
   return

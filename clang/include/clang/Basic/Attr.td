@@ -742,7 +742,7 @@ def Annotate : InheritableParamAttr {
   // '#pragma clang attribute' even though it has no subject list.
   let AdditionalMembers = [{
   static AnnotateAttr *Create(ASTContext &Ctx, llvm::StringRef Annotation, \
-              const AttributeCommonInfo &CommonInfo = {SourceRange{}}) {
+              const AttributeCommonInfo &CommonInfo) {
     return AnnotateAttr::Create(Ctx, Annotation, nullptr, 0, CommonInfo);
   }
   static AnnotateAttr *CreateImplicit(ASTContext &Ctx, llvm::StringRef Annotation, \

@@ -29,11 +29,16 @@ static bool isKnownControlFlowInterface(Operation *op) {
 /// Check if the size of the allocation is less than the given size. The
 /// transformation is only applied to small buffers since large buffers could
 /// exceed the stack space.
-static bool isSmallAlloc(Value alloc, unsigned maximumSizeInBytes) {
+static bool isSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
+                         unsigned bitwidthOfIndexType) {
   auto type = alloc.getType().dyn_cast<ShapedType>();
   if (!type || !type.hasStaticShape())
     return false;
-  return type.getSizeInBits() < maximumSizeInBytes * 8;
+  // For index types, use the provided size, as the type does not know.
+  unsigned int bitwidth = type.getElementType().isIndex()
+                              ? bitwidthOfIndexType
+                              : type.getElementTypeBitWidth();
+  return type.getNumElements() * bitwidth <= maximumSizeInBytes * 8;
 }
 
 /// Checks whether the given aliases leave the allocation scope.
@@ -281,14 +286,15 @@ public:
       : BufferPlacementTransformationBase(op) {}
 
   /// Promote buffers to stack-based allocations.
-  void promote(unsigned maximumSize) {
+  void promote(unsigned maximumSize, unsigned bitwidthOfIndexType) {
     for (BufferPlacementAllocs::AllocEntry &entry : allocs) {
       Value alloc = std::get<0>(entry);
+      Operation *dealloc = std::get<1>(entry);
       // Checking several requirements to transform an AllocOp into an AllocaOp.
       // The transformation is done if the allocation is limited to a given
       // size. Furthermore, a deallocation must not be defined for this
       // allocation entry and a parent allocation scope must exist.
-      if (!isSmallAlloc(alloc, maximumSize) || std::get<1>(entry) ||
+      if (!isSmallAlloc(alloc, maximumSize, bitwidthOfIndexType) || dealloc ||
           !hasAllocationScope(alloc, aliases))
         continue;
 
@@ -340,17 +346,17 @@ struct BufferLoopHoistingPass : BufferLoopHoistingBase<BufferLoopHoistingPass> {
 struct PromoteBuffersToStackPass
     : PromoteBuffersToStackBase<PromoteBuffersToStackPass> {
 
-  PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes)
-      : maximumSize(maxAllocSizeInBytes) {}
+  PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
+                            unsigned bitwidthOfIndexType) {
+    this->maxAllocSizeInBytes = maxAllocSizeInBytes;
+    this->bitwidthOfIndexType = bitwidthOfIndexType;
+  }
 
   void runOnFunction() override {
     // Move all allocation nodes and convert candidates into allocas.
     BufferPlacementPromotion optimizer(getFunction());
-    optimizer.promote(maximumSize);
+    optimizer.promote(this->maxAllocSizeInBytes, this->bitwidthOfIndexType);
   }
-
-private:
-  const unsigned maximumSize;
 };
 
 } // end anonymous namespace
@@ -364,6 +370,8 @@ std::unique_ptr<Pass> mlir::createBufferLoopHoistingPass() {
 }
 
 std::unique_ptr<Pass>
-mlir::createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes) {
-  return std::make_unique<PromoteBuffersToStackPass>(maxAllocSizeInBytes);
+mlir::createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
+                                      unsigned bitwidthOfIndexType) {
+  return std::make_unique<PromoteBuffersToStackPass>(maxAllocSizeInBytes,
+                                                     bitwidthOfIndexType);
 }

@@ -2367,7 +2367,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         ai->writeCtorParameters(OS);
       }
       OS << ", const AttributeCommonInfo &CommonInfo";
-      if (Header)
+      if (Header && Implicit)
         OS << " = {SourceRange{}}";
       OS << ")";
       if (Header) {

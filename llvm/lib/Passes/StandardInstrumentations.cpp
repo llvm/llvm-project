@@ -68,7 +68,8 @@ static cl::opt<bool>
 // or indicating that the IR has been filtered out.  The extra options
 // can be combined, allowing only changed IRs for certain passes on certain
 // functions to be reported in different formats, with the rest being
-// reported as filtered out.
+// reported as filtered out.  The -print-before-changed option will print
+// the IR as it was before each pass that changed it.
 static cl::opt<bool> PrintChanged("print-changed",
                                   cl::desc("Print changed IRs"),
                                   cl::init(false), cl::Hidden);
@@ -80,6 +81,13 @@ static cl::list<std::string>
                     cl::desc("Only consider IR changes for passes whose names "
                              "match for the print-changed option"),
                     cl::CommaSeparated, cl::Hidden);
+// An option that supports the -print-changed option.  See
+// the description for -print-changed for an explanation of the use
+// of this option.  Note that this option has no effect without -print-changed.
+static cl::opt<bool>
+    PrintChangedBefore("print-before-changed",
+                       cl::desc("Print before passes that change them"),
+                       cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -392,6 +400,19 @@ void IRChangePrinter::handleAfter(StringRef PassID, std::string &Name,
   StringRef AfterRef = After;
   StringRef Banner =
       AfterRef.take_until([](char C) -> bool { return C == '\n'; });
+
+  // Report the IR before the changes when requested.
+  if (PrintChangedBefore) {
+    Out << "*** IR Dump Before" << Banner.substr(17);
+    // LazyCallGraph::SCC already has "(scc:..." in banner so only add
+    // in the name if it isn't already there.
+    if (Name.substr(0, 6) != " (scc:" && !llvm::forcePrintModuleIR())
+      Out << Name;
+
+    StringRef BeforeRef = Before;
+    Out << BeforeRef.substr(Banner.size());
+  }
+
   Out << Banner;
 
   // LazyCallGraph::SCC already has "(scc:..." in banner so only add

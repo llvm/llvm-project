@@ -108,6 +108,10 @@ VPValue *VPRecipeBase::toVPValue() {
     return V;
   if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
     return V;
+  if (auto *V = dyn_cast<VPWidenSelectRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
+    return V;
   return nullptr;
 }
 
@@ -117,6 +121,10 @@ const VPValue *VPRecipeBase::toVPValue() const {
   if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
     return V;
   if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPWidenSelectRecipe>(this))
+    return V;
+  if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
     return V;
   return nullptr;
 }
@@ -843,8 +851,15 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-SELECT" << VPlanIngredient(&Ingredient)
-    << (InvariantCond ? " (condition is loop invariant)" : "");
+  O << "\"WIDEN-SELECT ";
+  printAsOperand(O, SlotTracker);
+  O << " = select ";
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(2)->printAsOperand(O, SlotTracker);
+  O << (InvariantCond ? " (condition is loop invariant)" : "");
 }
 
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -871,8 +886,11 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
   size_t IndicesNumber = IsIndexLoopInvariant.size();
   for (size_t I = 0; I < IndicesNumber; ++I)
     O << "[" << (IsIndexLoopInvariant[I] ? "Inv" : "Var") << "]";
-  O << "\\l\"";
-  O << " +\n" << Indent << "\"  " << VPlanIngredient(GEP);
+
+  O << " ";
+  printAsOperand(O, SlotTracker);
+  O << " = getelementptr ";
+  printOperands(O, SlotTracker);
 }
 
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,

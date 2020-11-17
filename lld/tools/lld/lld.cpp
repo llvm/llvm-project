@@ -71,7 +71,7 @@ static Flavor getFlavor(StringRef s) {
       .CasesLower("wasm", "ld-wasm", Wasm)
       .CaseLower("link", WinLink)
       .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
-      .CaseLower("darwinnew", DarwinNew)
+      .CasesLower("darwinnew", "ld64.lld.darwinnew", DarwinNew)
       .Default(Invalid);
 }
 
@@ -179,7 +179,7 @@ SafeReturn lld::safeLldMain(int argc, const char **argv,
     if (!crc.RunSafely([&]() {
           r = lldMain(argc, argv, stdoutOS, stderrOS, /*exitEarly=*/false);
         }))
-      r = crc.RetCode;
+      return {crc.RetCode, /*canRunAgain=*/false};
   }
 
   // Cleanup memory and reset everything back in pristine condition. This path
@@ -221,7 +221,7 @@ int main(int argc, const char **argv) {
     // Execute one iteration.
     auto r = safeLldMain(argc, argv, llvm::outs(), llvm::errs());
     if (!r.canRunAgain)
-      _exit(r.ret); // Exit now, can't re-execute again.
+      exitLld(r.ret); // Exit now, can't re-execute again.
 
     if (!mainRet) {
       mainRet = r.ret;
@@ -230,14 +230,5 @@ int main(int argc, const char **argv) {
       return r.ret;
     }
   }
-#if LLVM_ON_UNIX
-  // Re-throw the signal so it can be caught by WIFSIGNALED in
-  // llvm/lib/Support/Unix/Program.inc. This is required to correctly handle
-  // usages of `not --crash`.
-  if (*mainRet > 128) {
-    llvm::sys::unregisterHandlers();
-    raise(*mainRet - 128);
-  }
-#endif
   return *mainRet;
 }

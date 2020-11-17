@@ -334,7 +334,6 @@ private:
                            int Index,
                            Register ValueReg,
                            bool ValueIsKill,
-                           MCRegister ScratchRsrcReg,
                            MCRegister ScratchOffsetReg,
                            int64_t InstrOffset,
                            MachineMemOperand *MMO,

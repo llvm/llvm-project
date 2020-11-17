@@ -15,7 +15,7 @@
 
 ; W32:       v_mov_b32_e32 [[V:v[0-9]+]], 32
 ; W64:       v_mov_b32_e32 [[V:v[0-9]+]], 64
-; GCN:       store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:       store_dword v{{.+}}, [[V]]
 
 ; OPT-W32:   store i32 32, i32 addrspace(1)* %arg, align 4
 ; OPT-W64:   store i32 64, i32 addrspace(1)* %arg, align 4
@@ -36,7 +36,7 @@ bb:
 ; W32:       v_mov_b32_e32 [[V:v[0-9]+]], 1{{$}}
 ; W64:       v_mov_b32_e32 [[V:v[0-9]+]], 2{{$}}
 ; GCN-NOT:   cndmask
-; GCN:       store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:       store_dword v{{.+}}, [[V]]
 
 ; OPT-W32:   store i32 1, i32 addrspace(1)* %arg, align 4
 ; OPT-W64:   store i32 2, i32 addrspace(1)* %arg, align 4

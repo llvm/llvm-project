@@ -1016,20 +1016,21 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   // This is really a 6 bit field.
   uint32_t Tgt = MI->getOperand(OpNo).getImm() & ((1 << 6) - 1);
 
-  if (Tgt <= 7)
-    O << " mrt" << Tgt;
-  else if (Tgt == 8)
+  if (Tgt <= Exp::ET_MRT7)
+    O << " mrt" << Tgt - Exp::ET_MRT0;
+  else if (Tgt == Exp::ET_MRTZ)
     O << " mrtz";
-  else if (Tgt == 9 && !AMDGPU::isGFX11Plus(STI))
+  else if (Tgt == Exp::ET_NULL && !AMDGPU::isGFX11Plus(STI))
     O << " null";
-  else if (Tgt >= 12 && Tgt <= (AMDGPU::isGFX10Plus(STI) ? 16 : 15))
-    O << " pos" << Tgt - 12;
-  else if (Tgt == 20 && AMDGPU::isGFX10Plus(STI))
+  else if (Tgt >= Exp::ET_POS0 &&
+           Tgt <= uint32_t(isGFX10Plus(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
+    O << " pos" << Tgt - Exp::ET_POS0;
+  else if (isGFX10Plus(STI) && Tgt == Exp::ET_PRIM)
     O << " prim";
   else if (Tgt >= 21 && Tgt <= 22 && AMDGPU::isGFX11Plus(STI))
     O << " dual_src_blend" << Tgt - 21;
-  else if (Tgt >= 32 && !AMDGPU::isGFX11Plus(STI))
-    O << " param" << Tgt - 32;
+  else if (Tgt >= Exp::ET_PARAM0 && !AMDGPU::isGFX11Plus(STI))
+    O << " param" << Tgt - Exp::ET_PARAM0;
   else {
     // Reserved values.
     O << " invalid_target_" << Tgt;

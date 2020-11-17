@@ -15,8 +15,8 @@
 #define MLIR_TESTDIALECT_H
 
 #include "mlir/Dialect/Traits.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Function.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"

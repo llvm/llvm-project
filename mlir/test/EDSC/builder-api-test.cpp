@@ -17,9 +17,9 @@
 #include "mlir/EDSC/Builders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
@@ -1223,7 +1223,7 @@ TEST_FUNC(builder_loop_for_yield) {
                                  [&](Value iv, ValueRange args) {
                                    Value sum = args[0] + args[1];
                                    return scf::ValueVector{args[1], sum};
-                                 });
+                                 }).getResults();
   results[0] + results[1];
 
   // clang-format off

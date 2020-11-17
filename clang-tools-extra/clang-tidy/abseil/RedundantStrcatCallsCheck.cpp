@@ -47,6 +47,8 @@ struct StrCatCheckResult {
 };
 
 void RemoveCallLeaveArgs(const CallExpr* Call, StrCatCheckResult* CheckResult) {
+  if (Call->getNumArgs() == 0)
+    return;
   // Remove 'Foo('
   CheckResult->Hints.push_back(
       FixItHint::CreateRemoval(CharSourceRange::getCharRange(

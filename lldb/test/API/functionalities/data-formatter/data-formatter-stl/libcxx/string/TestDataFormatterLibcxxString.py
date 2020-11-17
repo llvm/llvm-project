@@ -24,6 +24,9 @@ class LibcxxStringDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libc++"])
     @expectedFailureAll(bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android")
+    # Inline namespace is randomly ignored as Clang due to broken lookup inside
+    # the std namespace.
+    @expectedFailureAll(debug_info="gmodules")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -77,6 +80,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::u32string) u32_empty = ""'%ns,
                 '(%s::basic_string<unsigned char, %s::char_traits<unsigned char>, '
                 '%s::allocator<unsigned char> >) uchar = "aaaaa"'%(ns,ns,ns),
+                '(%s::string *) null_str = nullptr'%ns,
         ])
 
         self.runCmd("n")
@@ -114,6 +118,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::u32string) u32_empty = ""'%ns,
                 '(%s::basic_string<unsigned char, %s::char_traits<unsigned char>, '
                 '%s::allocator<unsigned char> >) uchar = "aaaaa"'%(ns,ns,ns),
+                '(%s::string *) null_str = nullptr'%ns,
         ])
 
         # The test assumes that std::string is in its cap-size-data layout.

@@ -84,13 +84,12 @@ define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 a
 ; GFX9-LABEL: global_store_2xi16_align2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_mov_b32_e32 v2, 1
-; GFX9-NEXT:    v_mov_b32_e32 v3, 2
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 1
+; GFX9-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_store_short v[0:1], v2, off
-; GFX9-NEXT:    global_store_short v[0:1], v3, off offset:2
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX9-NEXT:    global_store_short v0, v2, s[0:1] offset:2
 ; GFX9-NEXT:    s_endpgm
   %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
   store i16 1, i16 addrspace(1)* %r, align 2
@@ -193,11 +192,10 @@ define amdgpu_kernel void @global_store_2xi16_align1(i16 addrspace(1)* %p, i16 a
 ; GFX9-LABEL: global_store_2xi16_align1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x20001
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
   store i16 1, i16 addrspace(1)* %r, align 1
@@ -283,11 +281,10 @@ define amdgpu_kernel void @global_store_2xi16_align4(i16 addrspace(1)* %p, i16 a
 ; GFX9-LABEL: global_store_2xi16_align4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x20001
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
   store i16 1, i16 addrspace(1)* %r, align 4

@@ -101,6 +101,11 @@ enum TOF {
   MO_MEMORY_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol
+  // address relative the __tls_base wasm global.
+  // Only applicable to data symbols.
+  MO_TLS_BASE_REL,
+
+  // On a symbol operand this indicates that the immediate is the symbol
   // address relative the __table_base wasm global.
   // Only applicable to function symbols.
   MO_TABLE_BASE_REL,
@@ -244,8 +249,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(ATOMIC_RMW32_U_XCHG_I64)
   WASM_LOAD_STORE(ATOMIC_RMW_CMPXCHG_I32)
   WASM_LOAD_STORE(ATOMIC_RMW32_U_CMPXCHG_I64)
-  WASM_LOAD_STORE(ATOMIC_NOTIFY)
-  WASM_LOAD_STORE(ATOMIC_WAIT_I32)
+  WASM_LOAD_STORE(MEMORY_ATOMIC_NOTIFY)
+  WASM_LOAD_STORE(MEMORY_ATOMIC_WAIT32)
   WASM_LOAD_STORE(LOAD_SPLAT_v32x4)
   WASM_LOAD_STORE(LOAD_ZERO_v4i32)
   WASM_LOAD_STORE(LOAD_LANE_v4i32)
@@ -264,7 +269,7 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(ATOMIC_RMW_XOR_I64)
   WASM_LOAD_STORE(ATOMIC_RMW_XCHG_I64)
   WASM_LOAD_STORE(ATOMIC_RMW_CMPXCHG_I64)
-  WASM_LOAD_STORE(ATOMIC_WAIT_I64)
+  WASM_LOAD_STORE(MEMORY_ATOMIC_WAIT64)
   WASM_LOAD_STORE(LOAD_SPLAT_v64x2)
   WASM_LOAD_STORE(LOAD_EXTEND_S_v8i16)
   WASM_LOAD_STORE(LOAD_EXTEND_U_v8i16)

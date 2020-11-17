@@ -345,7 +345,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     if (!MDO)
       return nullptr;
     auto V = cast<ValueAsMetadata>(MDO);
-    const Function *F = cast<Function>(V->getValue());
+    const Function *F = cast<Function>(V->getValue()->stripPointerCasts());
     return TM->getSymbol(F);
   };
 

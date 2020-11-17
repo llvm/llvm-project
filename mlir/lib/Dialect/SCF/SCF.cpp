@@ -305,7 +305,7 @@ void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
               step.getValue().getSExtValue());
 }
 
-ValueVector mlir::scf::buildLoopNest(
+LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ValueRange iterArgs,
     function_ref<ValueVector(OpBuilder &, Location, ValueRange, ValueRange)>
@@ -323,7 +323,7 @@ ValueVector mlir::scf::buildLoopNest(
     assert(results.size() == iterArgs.size() &&
            "loop nest body must return as many values as loop has iteration "
            "arguments");
-    return results;
+    return LoopNest();
   }
 
   // First, create the loop structure iteratively using the body-builder
@@ -372,11 +372,13 @@ ValueVector mlir::scf::buildLoopNest(
   builder.setInsertionPointToEnd(loops.back().getBody());
   builder.create<scf::YieldOp>(loc, results);
 
-  // Return the results of the outermost loop.
-  return ValueVector(loops.front().result_begin(), loops.front().result_end());
+  // Return the loops.
+  LoopNest res;
+  res.loops.assign(loops.begin(), loops.end());
+  return res;
 }
 
-ValueVector mlir::scf::buildLoopNest(
+LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {

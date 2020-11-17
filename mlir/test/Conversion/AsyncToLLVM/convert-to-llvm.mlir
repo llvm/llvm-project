@@ -156,4 +156,43 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK: store %arg1, %arg2[%c0] : memref<1xf32>
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_1]])
 
+// -----
 
+// CHECK-LABEL: async_group_await_all
+func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
+  // CHECK: %0 = call @mlirAsyncRuntimeCreateGroup()
+  %0 = async.create_group
+
+  // CHECK: %[[TOKEN:.*]] = call @async_execute_fn
+  %token = async.execute { async.yield }
+  // CHECK: call @mlirAsyncRuntimeAddTokenToGroup(%[[TOKEN]], %0)
+  async.add_to_group %token, %0 : !async.token
+
+  // CHECK: call @async_execute_fn_0
+  async.execute {
+    async.await_all %0
+    async.yield
+  }
+
+  // CHECK: call @mlirAsyncRuntimeAwaitAllInGroup(%0)
+  async.await_all %0
+
+  return
+}
+
+// Function outlined from the async.execute operation.
+// CHECK: func private @async_execute_fn_0(%arg0: !llvm.ptr<i8>)
+// CHECK: %[[RET_1:.*]] = call @mlirAsyncRuntimeCreateToken()
+// CHECK: %[[HDL_1:.*]] = llvm.call @llvm.coro.begin
+
+// Suspend coroutine in the beginning.
+// CHECK: call @mlirAsyncRuntimeExecute(%[[HDL_1]],
+// CHECK: llvm.call @llvm.coro.suspend
+
+// Suspend coroutine second time waiting for the group.
+// CHECK: llvm.call @llvm.coro.save
+// CHECK: call @mlirAsyncRuntimeAwaitAllInGroupAndExecute(%arg0, %[[HDL_1]],
+// CHECK: llvm.call @llvm.coro.suspend
+
+// Emplace result token.
+// CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_1]])

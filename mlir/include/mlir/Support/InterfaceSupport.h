@@ -16,7 +16,6 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/TypeName.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 namespace detail {
@@ -75,19 +74,6 @@ public:
   using InterfaceBase =
       Interface<ConcreteType, ValueT, Traits, BaseType, BaseTrait>;
 
-  Interface(ValueT t = ValueT())
-      : BaseType(t), impl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
-    assert((!t || impl) &&
-           "instantiating an interface with an unregistered operation");
-  }
-
-  /// Support 'classof' by checking if the given object defines the concrete
-  /// interface.
-  static bool classof(ValueT t) { return ConcreteType::getInterfaceFor(t); }
-
-  /// Define an accessor for the ID of this interface.
-  static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
-
   /// This is a special trait that registers a given interface with an object.
   template <typename ConcreteT>
   struct Trait : public BaseTrait<ConcreteT, Trait> {
@@ -96,6 +82,28 @@ public:
     /// Define an accessor for the ID of this interface.
     static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
   };
+
+  /// Construct an interface from an instance of the value type.
+  Interface(ValueT t = ValueT())
+      : BaseType(t), impl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
+    assert((!t || impl) && "expected value to provide interface instance");
+  }
+
+  /// Construct an interface instance from a type that implements this
+  /// interface's trait.
+  template <typename T, typename std::enable_if_t<
+                            std::is_base_of<Trait<T>, T>::value> * = nullptr>
+  Interface(T t)
+      : BaseType(t), impl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
+    assert((!t || impl) && "expected value to provide interface instance");
+  }
+
+  /// Support 'classof' by checking if the given object defines the concrete
+  /// interface.
+  static bool classof(ValueT t) { return ConcreteType::getInterfaceFor(t); }
+
+  /// Define an accessor for the ID of this interface.
+  static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
 
 protected:
   /// Get the raw concept in the correct derived concept type.

@@ -21,8 +21,8 @@ def OpenACC : DirectiveLanguage {
   let cppNamespace = "acc"; // final namespace will be llvm::acc
   let directivePrefix = "ACCD_";
   let clausePrefix = "ACCC_";
-  let makeEnumAvailableInNamespace = 1;
-  let enableBitmaskEnumInNamespace = 1;
+  let makeEnumAvailableInNamespace = true;
+  let enableBitmaskEnumInNamespace = true;
   let includeHeader = "llvm/Frontend/OpenACC/ACC.h.inc";
   let clauseEnumSetClass = "AccClauseSet";
   let flangClauseBaseClass = "AccClause";
@@ -35,7 +35,7 @@ def OpenACC : DirectiveLanguage {
 // 2.16.1
 def ACCC_Async : Clause<"async"> {
   let flangClassValue = "ScalarIntExpr";
-  let isValueOptional = 1;
+  let isValueOptional = true;
 }
 
 // 2.9.6
@@ -123,8 +123,8 @@ def ACCC_DeviceResident : Clause<"device_resident"> {
 def ACCC_DeviceType : Clause<"device_type"> {
   let flangClassValue = "ScalarIntExpr";
   let defaultValue = "*";
-  let isValueOptional = 1;
-  let isValueList = 1;
+  let isValueOptional = true;
+  let isValueList = true;
 }
 
 // 2.6.6
@@ -138,7 +138,7 @@ def ACCC_FirstPrivate : Clause<"firstprivate"> {
 // 2.9.2
 def ACCC_Gang : Clause<"gang"> {
   let flangClassValue = "AccGangArgument";
-  let isValueOptional = 1;
+  let isValueOptional = true;
 }
 
 // 2.14.4
@@ -211,7 +211,7 @@ def ACCC_Reduction : Clause<"reduction"> {
 // 2.5.5
 def ACCC_Self : Clause<"self"> {
   let flangClassValue = "ScalarLogicalExpr";
-  let isValueOptional = 1;
+  let isValueOptional = true;
 }
 
 // 2.9.5
@@ -220,7 +220,7 @@ def ACCC_Seq : Clause<"seq"> {}
 // 2.9.4
 def ACCC_Vector : Clause<"vector"> {
   let flangClassValue = "ScalarIntExpr";
-  let isValueOptional = 1;
+  let isValueOptional = true;
 }
 
 // 2.5.10
@@ -231,20 +231,20 @@ def ACCC_VectorLength : Clause<"vector_length"> {
 // 2.16.2
 def ACCC_Wait : Clause<"wait"> {
   let flangClassValue = "AccWaitArgument";
-  let isValueOptional = 1;
+  let isValueOptional = true;
 }
 
 // 2.9.3
 def ACCC_Worker: Clause<"worker"> {
   let flangClassValue = "ScalarIntExpr";
-  let isValueOptional = 1;
+  let isValueOptional = true;
 }
 
 // 2.12
 def ACCC_Write : Clause<"write"> {}
 
 def ACCC_Unknown : Clause<"unknown"> {
-  let isDefault = 1;
+  let isDefault = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -614,5 +614,5 @@ def ACC_SerialLoop : Directive<"serial loop"> {
 }
 
 def ACC_Unknown : Directive<"unknown"> {
-  let isDefault = 1;
+  let isDefault = true;
 }

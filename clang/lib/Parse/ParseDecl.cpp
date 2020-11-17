@@ -1593,7 +1593,8 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
     if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute)
-      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored) << AL;
+      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
+          << AL << AL.getRange();
     else {
       Diag(AL.getLoc(), DiagID) << AL;
       AL.setInvalid();
@@ -2437,7 +2438,7 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   // Issue diagnostic and remove constexpr specifier if present.
   if (DS.hasConstexprSpecifier() && DSC != DeclSpecContext::DSC_condition) {
     Diag(DS.getConstexprSpecLoc(), diag::err_typename_invalid_constexpr)
-        << DS.getConstexprSpecifier();
+        << static_cast<int>(DS.getConstexprSpecifier());
     DS.ClearConstexprSpec();
   }
 }
@@ -3678,38 +3679,41 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // constexpr, consteval, constinit specifiers
     case tok::kw_constexpr:
-      isInvalid = DS.SetConstexprSpec(CSK_constexpr, Loc, PrevSpec, DiagID);
+      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, Loc,
+                                      PrevSpec, DiagID);
       break;
     case tok::kw_consteval:
-      isInvalid = DS.SetConstexprSpec(CSK_consteval, Loc, PrevSpec, DiagID);
+      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Consteval, Loc,
+                                      PrevSpec, DiagID);
       break;
     case tok::kw_constinit:
-      isInvalid = DS.SetConstexprSpec(CSK_constinit, Loc, PrevSpec, DiagID);
+      isInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constinit, Loc,
+                                      PrevSpec, DiagID);
       break;
 
     // type-specifier
     case tok::kw_short:
-      isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_short, Loc, PrevSpec,
+      isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::Short, Loc, PrevSpec,
                                       DiagID, Policy);
       break;
     case tok::kw_long:
-      if (DS.getTypeSpecWidth() != DeclSpec::TSW_long)
-        isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_long, Loc, PrevSpec,
+      if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Long)
+        isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::Long, Loc, PrevSpec,
                                         DiagID, Policy);
       else
-        isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_longlong, Loc, PrevSpec,
-                                        DiagID, Policy);
+        isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::LongLong, Loc,
+                                        PrevSpec, DiagID, Policy);
       break;
     case tok::kw___int64:
-        isInvalid = DS.SetTypeSpecWidth(DeclSpec::TSW_longlong, Loc, PrevSpec,
-                                        DiagID, Policy);
+      isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::LongLong, Loc,
+                                      PrevSpec, DiagID, Policy);
       break;
     case tok::kw_signed:
-      isInvalid = DS.SetTypeSpecSign(DeclSpec::TSS_signed, Loc, PrevSpec,
-                                     DiagID);
+      isInvalid =
+          DS.SetTypeSpecSign(TypeSpecifierSign::Signed, Loc, PrevSpec, DiagID);
       break;
     case tok::kw_unsigned:
-      isInvalid = DS.SetTypeSpecSign(DeclSpec::TSS_unsigned, Loc, PrevSpec,
+      isInvalid = DS.SetTypeSpecSign(TypeSpecifierSign::Unsigned, Loc, PrevSpec,
                                      DiagID);
       break;
     case tok::kw__Complex:

@@ -49,17 +49,17 @@ struct InClassInit {
 };
 // CHECK-LABEL: define void @_ZN11InClassInit10test_classEv()
 void InClassInit::test_class() {
-  // CHECK: call void @_ZN11InClassInitC1Ev(%struct.InClassInit* %test_one)
+  // CHECK: call void @_ZN11InClassInitC1Ev(%struct.InClassInit* {{[^,]*}} %test_one)
   InClassInit test_one;
-  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag1i(%struct.InClassInit* %test_two, i32 [[@LINE+1]])
+  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag1i(%struct.InClassInit* {{[^,]*}} %test_two, i32 [[@LINE+1]])
   InClassInit test_two{Tag1{}};
-  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag2(%struct.InClassInit* %test_three)
+  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag2(%struct.InClassInit* {{[^,]*}} %test_three)
   InClassInit test_three{Tag2{}};
-  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag3i(%struct.InClassInit* %test_four, i32 [[@LINE+1]])
+  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag3i(%struct.InClassInit* {{[^,]*}} %test_four, i32 [[@LINE+1]])
   InClassInit test_four(Tag3{});
   // CHECK-NEXT: %[[CALL:.+]] = call i32 @_Z8get_linei(i32 [[@LINE+3]])
   // CHECK-NEXT: %[[CALL2:.+]] = call i32 @_Z9get_line2i(i32 %[[CALL]])
-  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag4i(%struct.InClassInit* %test_five, i32 %[[CALL2]])
+  // CHECK-NEXT: call void @_ZN11InClassInitC1E4Tag4i(%struct.InClassInit* {{[^,]*}} %test_five, i32 %[[CALL2]])
   InClassInit test_five(Tag4{});
 
 }
@@ -72,7 +72,7 @@ InClassInit::InClassInit() = default;
 
 InClassInit::InClassInit(Tag3, int l) : Init(l) {}
 
-// CHECK-LABEL: define void @_ZN11InClassInitC2E4Tag4i(%struct.InClassInit* %this, i32 %arg)
+// CHECK-LABEL: define void @_ZN11InClassInitC2E4Tag4i(%struct.InClassInit* {{[^,]*}} %this, i32 %arg)
 // CHECK:  %[[TEMP:.+]] = load i32, i32* %arg.addr, align 4
 // CHECK-NEXT: store i32 %[[TEMP]], i32* %Init, align 4
 // CHECK: %[[CALL:.+]] = call i32 @_Z8get_linei(i32 [[@LINE+3]])

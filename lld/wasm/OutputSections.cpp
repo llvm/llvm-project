@@ -133,12 +133,19 @@ void DataSection::finalizeContents() {
       std::count_if(segments.begin(), segments.end(),
                     [](OutputSegment *segment) { return !segment->isBss; });
 
+#ifndef NDEBUG
+  unsigned activeCount = std::count_if(
+      segments.begin(), segments.end(), [](OutputSegment *segment) {
+        return (segment->initFlags & WASM_SEGMENT_IS_PASSIVE) == 0;
+      });
+#endif
+
+  assert((!config->isPic || activeCount <= 1) &&
+         "Currenly only a single data segment is supported in PIC mode");
+
   writeUleb128(os, segmentCount, "data segment count");
   os.flush();
   bodySize = dataSectionHeader.size();
-
-  assert((!config->isPic || segments.size() <= 1) &&
-         "Currenly only a single data segment is supported in PIC mode");
 
   for (OutputSegment *segment : segments) {
     if (segment->isBss)

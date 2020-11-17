@@ -86,21 +86,21 @@ StringRef LinalgDependenceGraph::getDependenceTypeStr(DependenceType depType) {
 
 LinalgDependenceGraph
 LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
-  SmallVector<Operation *, 8> linalgOps;
+  SmallVector<LinalgOp, 8> linalgOps;
   f.walk([&](LinalgOp op) { linalgOps.push_back(op); });
   return LinalgDependenceGraph(aliases, linalgOps);
 }
 
 LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
-                                             ArrayRef<Operation *> ops)
+                                             ArrayRef<LinalgOp> ops)
     : aliases(aliases), linalgOps(ops.begin(), ops.end()) {
   for (auto en : llvm::enumerate(linalgOps)) {
-    assert(isa<LinalgOp>(en.value()) && "Expected value for LinalgOp");
-    linalgOpPositions.insert(std::make_pair(en.value(), en.index()));
+    linalgOpPositions.insert(
+        std::make_pair(en.value().getOperation(), en.index()));
   }
   for (unsigned i = 0, e = ops.size(); i < e; ++i) {
     for (unsigned j = i + 1; j < e; ++j) {
-      addDependencesBetween(cast<LinalgOp>(ops[i]), cast<LinalgOp>(ops[j]));
+      addDependencesBetween(ops[i], ops[j]);
     }
   }
 }

@@ -1672,13 +1672,11 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   Value *Result = EmitGEPOffset(GEP1);
 
   // If this is a single inbounds GEP and the original sub was nuw,
-  // then the final multiplication is also nuw. We match an extra add zero
-  // here, because that's what EmitGEPOffset() generates.
-  Instruction *I;
-  if (IsNUW && !GEP2 && !Swapped && GEP1->isInBounds() &&
-      match(Result, m_Add(m_Instruction(I), m_Zero())) &&
-      I->getOpcode() == Instruction::Mul)
-    I->setHasNoUnsignedWrap();
+  // then the final multiplication is also nuw.
+  if (auto *I = dyn_cast<Instruction>(Result))
+    if (IsNUW && !GEP2 && !Swapped && GEP1->isInBounds() &&
+        I->getOpcode() == Instruction::Mul)
+      I->setHasNoUnsignedWrap();
 
   // If we had a constant expression GEP on the other side offsetting the
   // pointer, subtract it from the offset we have.
@@ -2049,6 +2047,20 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Value *Neg = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
                                    I.hasNoSignedWrap());
     return SelectInst::Create(Cmp, Neg, A);
+  }
+
+  // If we are subtracting a low-bit masked subset of some value from an add
+  // of that same value with no low bits changed, that is clearing some low bits
+  // of the sum:
+  // sub (X + AddC), (X & AndC) --> and (X + AddC), ~AndC
+  const APInt *AddC, *AndC;
+  if (match(Op0, m_Add(m_Value(X), m_APInt(AddC))) &&
+      match(Op1, m_And(m_Specific(X), m_APInt(AndC)))) {
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    unsigned Cttz = AddC->countTrailingZeros();
+    APInt HighMask(APInt::getHighBitsSet(BitWidth, BitWidth - Cttz));
+    if ((HighMask & *AndC).isNullValue())
+      return BinaryOperator::CreateAnd(Op0, ConstantInt::get(Ty, ~(*AndC)));
   }
 
   if (Instruction *V =

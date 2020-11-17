@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -231,7 +231,7 @@ struct DistributeOps {
   InsertMapOp insert;
 };
 
-/// Distribute a 1D vector pointwise operation over a range of given IDs taking
+/// Distribute a N-D vector pointwise operation over a range of given ids taking
 /// *all* values in [0 .. multiplicity - 1] (e.g. loop induction variable or
 /// SPMD id). This transformation only inserts
 /// vector.extract_map/vector.insert_map. It is meant to be used with
@@ -243,9 +243,10 @@ struct DistributeOps {
 /// %v = addf %a, %b : vector<32xf32>
 /// %ev = vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32>
 /// %nv = vector.insert_map %ev, %id, 32 : vector<1xf32> into vector<32xf32>
-Optional<DistributeOps> distributPointwiseVectorOp(OpBuilder &builder,
-                                                   Operation *op, Value id,
-                                                   int64_t multiplicity);
+Optional<DistributeOps>
+distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
+                           ArrayRef<Value> id, ArrayRef<int64_t> multiplicity,
+                           const AffineMap &map);
 /// Canonicalize an extra element using the result of a pointwise operation.
 /// Transforms:
 /// %v = addf %a, %b : vector32xf32>

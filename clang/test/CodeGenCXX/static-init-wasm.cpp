@@ -44,11 +44,11 @@ struct A {
 A theA;
 
 // WEBASSEMBLY32: define internal void @__cxx_global_var_init() #3 {
-// WEBASSEMBLY32: call %struct.A* @_ZN1AC1Ev(%struct.A* @theA)
+// WEBASSEMBLY32: call %struct.A* @_ZN1AC1Ev(%struct.A* {{[^,]*}} @theA)
 // WEBASSEMBLY32: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
 // WEBASSEMBLY32: call void @__cxx_global_var_init()
 //
 // WEBASSEMBLY64: define internal void @__cxx_global_var_init() #3 {
-// WEBASSEMBLY64: call %struct.A* @_ZN1AC1Ev(%struct.A* @theA)
+// WEBASSEMBLY64: call %struct.A* @_ZN1AC1Ev(%struct.A* {{[^,]*}} @theA)
 // WEBASSEMBLY64: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
 // WEBASSEMBLY64: call void @__cxx_global_var_init()

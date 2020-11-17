@@ -208,15 +208,13 @@ llvm::objcarc::Depends(DependenceKind Flavor, Instruction *Inst,
 /// non-local dependencies on Arg.
 ///
 /// TODO: Cache results?
-void
-llvm::objcarc::FindDependencies(DependenceKind Flavor,
-                                const Value *Arg,
-                                BasicBlock *StartBB, Instruction *StartInst,
-                                SmallPtrSetImpl<Instruction *> &DependingInsts,
-                                SmallPtrSetImpl<const BasicBlock *> &Visited,
-                                ProvenanceAnalysis &PA) {
+static bool findDependencies(DependenceKind Flavor, const Value *Arg,
+                             BasicBlock *StartBB, Instruction *StartInst,
+                             SmallPtrSetImpl<Instruction *> &DependingInsts,
+                             ProvenanceAnalysis &PA) {
   BasicBlock::iterator StartPos = StartInst->getIterator();
 
+  SmallPtrSet<const BasicBlock *, 4> Visited;
   SmallVector<std::pair<BasicBlock *, BasicBlock::iterator>, 4> Worklist;
   Worklist.push_back(std::make_pair(StartBB, StartPos));
   do {
@@ -229,15 +227,14 @@ llvm::objcarc::FindDependencies(DependenceKind Flavor,
       if (LocalStartPos == StartBBBegin) {
         pred_iterator PI(LocalStartBB), PE(LocalStartBB, false);
         if (PI == PE)
-          // If we've reached the function entry, produce a null dependence.
-          DependingInsts.insert(nullptr);
-        else
-          // Add the predecessors to the worklist.
-          do {
-            BasicBlock *PredBB = *PI;
-            if (Visited.insert(PredBB).second)
-              Worklist.push_back(std::make_pair(PredBB, PredBB->end()));
-          } while (++PI != PE);
+          // Return if we've reached the function entry.
+          return false;
+        // Add the predecessors to the worklist.
+        do {
+          BasicBlock *PredBB = *PI;
+          if (Visited.insert(PredBB).second)
+            Worklist.push_back(std::make_pair(PredBB, PredBB->end()));
+        } while (++PI != PE);
         break;
       }
 
@@ -256,9 +253,22 @@ llvm::objcarc::FindDependencies(DependenceKind Flavor,
     if (BB == StartBB)
       continue;
     for (const BasicBlock *Succ : successors(BB))
-      if (Succ != StartBB && !Visited.count(Succ)) {
-        DependingInsts.insert(reinterpret_cast<Instruction *>(-1));
-        return;
-      }
+      if (Succ != StartBB && !Visited.count(Succ))
+        return false;
   }
+
+  return true;
+}
+
+llvm::Instruction *llvm::objcarc::findSingleDependency(DependenceKind Flavor,
+                                                       const Value *Arg,
+                                                       BasicBlock *StartBB,
+                                                       Instruction *StartInst,
+                                                       ProvenanceAnalysis &PA) {
+  SmallPtrSet<Instruction *, 4> DependingInsts;
+
+  if (!findDependencies(Flavor, Arg, StartBB, StartInst, DependingInsts, PA) ||
+      DependingInsts.size() != 1)
+    return nullptr;
+  return *DependingInsts.begin();
 }
