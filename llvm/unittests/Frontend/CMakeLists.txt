@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(LLVMFrontendTests
   OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp
+  OpenMPParsingTest.cpp
 
   DEPENDS
   omp_gen
