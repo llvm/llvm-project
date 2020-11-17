@@ -29,7 +29,7 @@ namespace test0 {
   A a;
 }
 // CHECK:    define internal void [[CTOR0_:@.*]]()
-// CHECK:      call void @_ZN5test01AC1Ev([[A]]* @_ZN5test01aE)
+// CHECK:      call void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} @_ZN5test01aE)
 // CHECK-NEXT: ret void
 
 // CHECK:    define internal void [[CTOR0]]()

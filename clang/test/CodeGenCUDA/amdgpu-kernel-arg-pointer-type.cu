@@ -56,20 +56,24 @@ struct S {
   int *x;
   float *y;
 };
-// `by-val` struct will be coerced into a similar struct with all generic
-// pointers lowerd into global ones.
+// `by-val` struct is passed by-indirect-alias (a mix of by-ref and indirect
+// by-val). However, the enhanced address inferring pass should be able to
+// assume they are global pointers.
+//
 // HOST: define void @_Z22__device_stub__kernel41S(i32* %s.coerce0, float* %s.coerce1)
 // COMMON-LABEL: define amdgpu_kernel void @_Z7kernel41S(%struct.S addrspace(4)*{{.*}} byref(%struct.S) align 8 %0)
 // OPT: [[R0:%.*]] = getelementptr inbounds %struct.S, %struct.S addrspace(4)* %0, i64 0, i32 0
 // OPT: [[P0:%.*]] = load i32*, i32* addrspace(4)* [[R0]], align 8
+// OPT: [[G0:%.*]] = addrspacecast i32* [[P0]] to i32 addrspace(1)*
 // OPT: [[R1:%.*]] = getelementptr inbounds %struct.S, %struct.S addrspace(4)* %0, i64 0, i32 1
 // OPT: [[P1:%.*]] = load float*, float* addrspace(4)* [[R1]], align 8
-// OPT: [[V0:%.*]] = load i32, i32* [[P0]], align 4
+// OPT: [[G1:%.*]] = addrspacecast float* [[P1]] to float addrspace(1)*
+// OPT: [[V0:%.*]] = load i32, i32 addrspace(1)* [[G0]], align 4
 // OPT: [[INC:%.*]] = add nsw i32 [[V0]], 1
-// OPT: store i32 [[INC]], i32* [[P0]], align 4
-// OPT: [[V1:%.*]] = load float, float* [[P1]], align 4
+// OPT: store i32 [[INC]], i32 addrspace(1)* [[G0]], align 4
+// OPT: [[V1:%.*]] = load float, float addrspace(1)* [[G1]], align 4
 // OPT: [[ADD:%.*]] = fadd contract float [[V1]], 1.000000e+00
-// OPT: store float [[ADD]], float* [[P1]], align 4
+// OPT: store float [[ADD]], float addrspace(1)* [[G1]], align 4
 // OPT: ret void
 __global__ void kernel4(struct S s) {
   s.x[0]++;
@@ -87,19 +91,24 @@ __global__ void kernel5(struct S *s) {
 struct T {
   float *x[2];
 };
-// `by-val` array is also coerced.
+// `by-val` array is passed by-indirect-alias (a mix of by-ref and indirect
+// by-val). However, the enhanced address inferring pass should be able to
+// assume they are global pointers.
+//
 // HOST: define void @_Z22__device_stub__kernel61T(float* %t.coerce0, float* %t.coerce1)
 // COMMON-LABEL: define amdgpu_kernel void @_Z7kernel61T(%struct.T addrspace(4)*{{.*}} byref(%struct.T) align 8 %0)
 // OPT: [[R0:%.*]] = getelementptr inbounds %struct.T, %struct.T addrspace(4)* %0, i64 0, i32 0, i64 0
 // OPT: [[P0:%.*]] = load float*, float* addrspace(4)* [[R0]], align 8
+// OPT: [[G0:%.*]] = addrspacecast float* [[P0]] to float addrspace(1)*
 // OPT: [[R1:%.*]] = getelementptr inbounds %struct.T, %struct.T addrspace(4)* %0, i64 0, i32 0, i64 1
 // OPT: [[P1:%.*]] = load float*, float* addrspace(4)* [[R1]], align 8
-// OPT: [[V0:%.*]] = load float, float* [[P0]], align 4
+// OPT: [[G1:%.*]] = addrspacecast float* [[P1]] to float addrspace(1)*
+// OPT: [[V0:%.*]] = load float, float addrspace(1)* [[G0]], align 4
 // OPT: [[ADD0:%.*]] = fadd contract float [[V0]], 1.000000e+00
-// OPT: store float [[ADD0]], float* [[P0]], align 4
-// OPT: [[V1:%.*]] = load float, float* [[P1]], align 4
+// OPT: store float [[ADD0]], float addrspace(1)* [[G0]], align 4
+// OPT: [[V1:%.*]] = load float, float addrspace(1)* [[G1]], align 4
 // OPT: [[ADD1:%.*]] = fadd contract float [[V1]], 2.000000e+00
-// OPT: store float [[ADD1]], float* [[P1]], align 4
+// OPT: store float [[ADD1]], float addrspace(1)* [[G1]], align 4
 // OPT: ret void
 __global__ void kernel6(struct T t) {
   t.x[0][0] += 1.f;

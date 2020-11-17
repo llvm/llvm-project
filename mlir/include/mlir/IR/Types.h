@@ -126,43 +126,43 @@ public:
 
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
-  bool isIndex();
-  bool isBF16();
-  bool isF16();
-  bool isF32();
-  bool isF64();
+  bool isIndex() const;
+  bool isBF16() const;
+  bool isF16() const;
+  bool isF32() const;
+  bool isF64() const;
 
   /// Return true if this is an integer type with the specified width.
-  bool isInteger(unsigned width);
+  bool isInteger(unsigned width) const;
   /// Return true if this is a signless integer type (with the specified width).
-  bool isSignlessInteger();
-  bool isSignlessInteger(unsigned width);
+  bool isSignlessInteger() const;
+  bool isSignlessInteger(unsigned width) const;
   /// Return true if this is a signed integer type (with the specified width).
-  bool isSignedInteger();
-  bool isSignedInteger(unsigned width);
+  bool isSignedInteger() const;
+  bool isSignedInteger(unsigned width) const;
   /// Return true if this is an unsigned integer type (with the specified
   /// width).
-  bool isUnsignedInteger();
-  bool isUnsignedInteger(unsigned width);
+  bool isUnsignedInteger() const;
+  bool isUnsignedInteger(unsigned width) const;
 
   /// Return the bit width of an integer or a float type, assert failure on
   /// other types.
-  unsigned getIntOrFloatBitWidth();
+  unsigned getIntOrFloatBitWidth() const;
 
   /// Return true if this is a signless integer or index type.
-  bool isSignlessIntOrIndex();
+  bool isSignlessIntOrIndex() const;
   /// Return true if this is a signless integer, index, or float type.
-  bool isSignlessIntOrIndexOrFloat();
+  bool isSignlessIntOrIndexOrFloat() const;
   /// Return true of this is a signless integer or a float type.
-  bool isSignlessIntOrFloat();
+  bool isSignlessIntOrFloat() const;
 
   /// Return true if this is an integer (of any signedness) or an index type.
-  bool isIntOrIndex();
+  bool isIntOrIndex() const;
   /// Return true if this is an integer (of any signedness) or a float type.
-  bool isIntOrFloat();
+  bool isIntOrFloat() const;
   /// Return true if this is an integer (of any signedness), index, or float
   /// type.
-  bool isIntOrIndexOrFloat();
+  bool isIntOrIndexOrFloat() const;
 
   /// Print the current type.
   void print(raw_ostream &os);

@@ -85,6 +85,12 @@ public:
   /// Returns the results types that the callable region produces when executed.
   ArrayRef<Type> getCallableResults() { return getType().getResults(); }
 
+  //===--------------------------------------------------------------------===//
+  // SymbolOpInterface Methods
+  //===--------------------------------------------------------------------===//
+
+  bool isDeclaration() { return isExternal(); }
+
 private:
   // This trait needs access to the hooks defined below.
   friend class OpTrait::FunctionLike<FuncOp>;

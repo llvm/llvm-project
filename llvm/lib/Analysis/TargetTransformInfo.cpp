@@ -297,6 +297,10 @@ bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);
 }
 
+unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
+  return TTIImpl->getAssumedAddrSpace(V);
+}
+
 Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
     IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);

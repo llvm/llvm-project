@@ -12,9 +12,9 @@ struct A {
 // CHECK-LABEL: define dso_local void @"?test_arc_order@@YAXUA@@PAUobjc_object@@01@Z"
 // CHECK:                       (<{ %struct.A, i8*, %struct.A, i8* }>* inalloca %0)
 void test_arc_order(A a, id __attribute__((ns_consumed)) b , A c, id __attribute__((ns_consumed)) d) {
-  // CHECK: call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* %{{.*}})
+  // CHECK: call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* {{[^,]*}} %{{.*}})
   // CHECK: call void @llvm.objc.storeStrong(i8** %{{.*}}, i8* null)
-  // CHECK: call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* %{{.*}})
+  // CHECK: call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* {{[^,]*}} %{{.*}})
   // CHECK: call void @llvm.objc.storeStrong(i8** %{{.*}}, i8* null)
   // CHECK: ret void
 }

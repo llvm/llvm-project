@@ -40,7 +40,7 @@ template<typename T> void X1<T>::blarg() { }
 extern template struct X0<char>;
 extern template struct X1<char>;
 
-// CHECK-LABEL: define linkonce_odr void @_ZN2X1IcED1Ev(%struct.X1* %this) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN2X1IcED1Ev(%struct.X1* {{[^,]*}} %this) unnamed_addr
 void test_X1() {
   X1<char> i1c;
 }

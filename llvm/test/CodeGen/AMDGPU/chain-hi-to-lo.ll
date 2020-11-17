@@ -226,32 +226,29 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
 ; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GFX900-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX900-NEXT:    s_add_u32 s0, s0, s9
 ; GFX900-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v0, s4
-; GFX900-NEXT:    v_mov_b32_e32 v1, s5
-; GFX900-NEXT:    global_load_ushort v2, v[0:1], off
+; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v2, off, s[0:3], 0 offset:4
-; GFX900-NEXT:    global_load_ushort v2, v[0:1], off offset:2
+; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
+; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:2
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v2, off, s[0:3], 0 offset:6
-; GFX900-NEXT:    global_load_ushort v2, v[0:1], off offset:4
-; GFX900-NEXT:    v_mov_b32_e32 v0, s6
-; GFX900-NEXT:    v_mov_b32_e32 v1, s7
+; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:6
+; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v2, off, s[0:3], 0 offset:8
-; GFX900-NEXT:    buffer_load_ushort v2, off, s[0:3], 0 offset:4
-; GFX900-NEXT:    buffer_load_ushort v4, off, s[0:3], 0 offset:6
+; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:8
+; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:4
+; GFX900-NEXT:    buffer_load_ushort v3, off, s[0:3], 0 offset:6
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX900-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v3, v4
-; GFX900-NEXT:    buffer_load_short_d16_hi v3, off, s[0:3], 0 offset:8
-; GFX900-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; GFX900-NEXT:    v_mov_b32_e32 v1, v3
+; GFX900-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
+; GFX900-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX900-NEXT:    s_endpgm
 ;
 ; FLATSCR-LABEL: vload2_private:
@@ -259,36 +256,33 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    v_mov_b32_e32 v0, s0
-; FLATSCR-NEXT:    v_mov_b32_e32 v1, s1
-; FLATSCR-NEXT:    global_load_ushort v2, v[0:1], off
+; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1]
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v2, vcc_hi offset:4
-; FLATSCR-NEXT:    global_load_ushort v2, v[0:1], off offset:2
+; FLATSCR-NEXT:    scratch_store_short off, v0, vcc_hi offset:4
+; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1] offset:2
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v2, vcc_hi offset:6
-; FLATSCR-NEXT:    global_load_ushort v2, v[0:1], off offset:4
+; FLATSCR-NEXT:    scratch_store_short off, v0, vcc_hi offset:6
+; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1] offset:4
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    v_mov_b32_e32 v0, s2
-; FLATSCR-NEXT:    v_mov_b32_e32 v1, s3
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v2, vcc_hi offset:8
+; FLATSCR-NEXT:    scratch_store_short off, v0, vcc_hi offset:8
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    scratch_load_ushort v2, off, vcc_hi offset:4
+; FLATSCR-NEXT:    scratch_load_ushort v0, off, vcc_hi offset:4
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    scratch_load_ushort v4, off, vcc_hi offset:6
+; FLATSCR-NEXT:    scratch_load_ushort v3, off, vcc_hi offset:6
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(1)
-; FLATSCR-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; FLATSCR-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    v_mov_b32_e32 v3, v4
-; FLATSCR-NEXT:    scratch_load_short_d16_hi v3, off, vcc_hi offset:8
-; FLATSCR-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; FLATSCR-NEXT:    v_mov_b32_e32 v1, v3
+; FLATSCR-NEXT:    scratch_load_short_d16_hi v1, off, vcc_hi offset:8
+; FLATSCR-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; FLATSCR-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; FLATSCR-NEXT:    s_endpgm
 entry:
   %loc = alloca [3 x i16], align 2, addrspace(5)

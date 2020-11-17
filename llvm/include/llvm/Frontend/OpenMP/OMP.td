@@ -116,10 +116,29 @@ def OMPC_ProcBind : Clause<"proc_bind"> {
     OMP_PROC_BIND_unknown
   ];
 }
+
+// static and auto are C++ keywords so need a capital to disambiguate.
+def OMP_SCHEDULE_Static : ClauseVal<"Static", 2, 1> {}
+def OMP_SCHEDULE_Dynamic : ClauseVal<"Dynamic", 3, 1> {}
+def OMP_SCHEDULE_Guided : ClauseVal<"Guided", 4, 1> {}
+def OMP_SCHEDULE_Auto : ClauseVal<"Auto", 5, 1> {}
+def OMP_SCHEDULE_Runtime : ClauseVal<"Runtime", 6, 1> {}
+def OMP_SCHEDULE_Default : ClauseVal<"Default", 7, 0> { let isDefault = 1; }
+
 def OMPC_Schedule : Clause<"schedule"> {
   let clangClass = "OMPScheduleClause";
   let flangClass = "OmpScheduleClause";
+  let enumClauseValue = "ScheduleKind";
+  let allowedClauseValues = [
+    OMP_SCHEDULE_Static,
+    OMP_SCHEDULE_Dynamic,
+    OMP_SCHEDULE_Guided,
+    OMP_SCHEDULE_Auto,
+    OMP_SCHEDULE_Runtime,
+    OMP_SCHEDULE_Default
+  ];
 }
+
 def OMPC_Ordered : Clause<"ordered"> {
   let clangClass = "OMPOrderedClause";
   let flangClassValue = "ScalarIntConstantExpr";
@@ -239,8 +258,14 @@ def OMPC_Allocate : Clause<"allocate"> {
 def OMPC_NonTemporal : Clause<"nontemporal"> {
   let clangClass = "OMPNontemporalClause";
 }
+
+def OMP_ORDER_concurrent : ClauseVal<"default",2,0> { let isDefault = 1; }
 def OMPC_Order : Clause<"order"> {
   let clangClass = "OMPOrderClause";
+  let enumClauseValue = "OrderKind";
+  let allowedClauseValues = [
+    OMP_ORDER_concurrent
+  ];
 }
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";

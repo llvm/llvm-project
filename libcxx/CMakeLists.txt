@@ -128,7 +128,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
-option(LIBCXX_TEST_GDB_PRETTY_PRINTERS "Test gdb pretty printers." OFF)
 set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/legacy.cfg.in" CACHE STRING
     "The Lit testing configuration to use when running the tests.")
 set(LIBCXX_TEST_PARAMS "" CACHE STRING

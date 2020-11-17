@@ -58,9 +58,8 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; GFX9-NEXT:    s_cbranch_execnz BB0_1
 ; GFX9-NEXT:  ; %bb.2:
 ; GFX9-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    global_store_dword v[1:2], v0, off
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-32-LABEL: test_waterfall_readlane:
@@ -87,9 +86,8 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; GFX10-32-NEXT:    s_cbranch_execnz BB0_1
 ; GFX10-32-NEXT:  ; %bb.2:
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, s2
-; GFX10-32-NEXT:    v_mov_b32_e32 v2, s1
-; GFX10-32-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-32-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-32-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-32-NEXT:    s_endpgm
 ;
 ; GFX10-64-LABEL: test_waterfall_readlane:
@@ -115,9 +113,8 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; GFX10-64-NEXT:    s_cbranch_execnz BB0_1
 ; GFX10-64-NEXT:  ; %bb.2:
 ; GFX10-64-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX10-64-NEXT:    v_mov_b32_e32 v2, s1
-; GFX10-64-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-64-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-64-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-64-NEXT:    s_endpgm
   %gep.in = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 %tid
   %args = load <2 x i32>, <2 x i32> addrspace(1)* %gep.in
@@ -553,26 +550,23 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX9-NEXT:    s_cbranch_execnz BB3_1
 ; GFX9-NEXT:  ; %bb.2:
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-NEXT:    v_mov_b32_e32 v5, s1
-; GFX9-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_store_dword v0, v3, s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], exec
-; GFX9-NEXT:    global_store_dword v[4:5], v3, off
 ; GFX9-NEXT:  BB3_3: ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v1
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_readlane_b32 s6, v2, s6
-; GFX9-NEXT:    v_mov_b32_e32 v3, s6
-; GFX9-NEXT:    v_or_b32_e32 v0, v0, v3
+; GFX9-NEXT:    v_mov_b32_e32 v4, s6
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v4
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_cbranch_execnz BB3_3
 ; GFX9-NEXT:  ; %bb.4:
 ; GFX9-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-NEXT:    global_store_dword v[1:2], v0, off
+; GFX9-NEXT:    global_store_dword v0, v3, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-32-LABEL: test_multiple_groups:
@@ -591,25 +585,22 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX10-32-NEXT:    s_cbranch_execnz BB3_1
 ; GFX10-32-NEXT:  ; %bb.2:
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, s4
-; GFX10-32-NEXT:    v_mov_b32_e32 v5, s1
-; GFX10-32-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
-; GFX10-32-NEXT:    global_store_dword v[4:5], v3, off
+; GFX10-32-NEXT:    v_mov_b32_e32 v6, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    global_store_dword v6, v3, s[0:1]
 ; GFX10-32-NEXT:  BB3_3: ; =>This Inner Loop Header: Depth=1
-; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s4, v1
-; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
-; GFX10-32-NEXT:    v_readlane_b32 s4, v2, s4
-; GFX10-32-NEXT:    v_mov_b32_e32 v3, s4
-; GFX10-32-NEXT:    v_or_b32_e32 v0, v0, v3
-; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s0, s1, v1
+; GFX10-32-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX10-32-NEXT:    v_readlane_b32 s1, v2, s1
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, s1
+; GFX10-32-NEXT:    v_or_b32_e32 v4, v4, v3
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX10-32-NEXT:    s_cbranch_execnz BB3_3
 ; GFX10-32-NEXT:  ; %bb.4:
-; GFX10-32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-32-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-32-NEXT:    v_mov_b32_e32 v2, s3
-; GFX10-32-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10-32-NEXT:    global_store_dword v6, v4, s[2:3]
 ; GFX10-32-NEXT:    s_endpgm
 ;
 ; GFX10-64-LABEL: test_multiple_groups:
@@ -627,25 +618,22 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX10-64-NEXT:    s_cbranch_execnz BB3_1
 ; GFX10-64-NEXT:  ; %bb.2:
 ; GFX10-64-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX10-64-NEXT:    v_mov_b32_e32 v5, s1
-; GFX10-64-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-64-NEXT:    s_mov_b64 s[0:1], exec
-; GFX10-64-NEXT:    global_store_dword v[4:5], v3, off
+; GFX10-64-NEXT:    v_mov_b32_e32 v6, 0
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-64-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-64-NEXT:    global_store_dword v6, v3, s[0:1]
 ; GFX10-64-NEXT:  BB3_3: ; =>This Inner Loop Header: Depth=1
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v1
-; GFX10-64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[0:1], s6, v1
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX10-64-NEXT:    v_readlane_b32 s6, v2, s6
 ; GFX10-64-NEXT:    v_mov_b32_e32 v3, s6
-; GFX10-64-NEXT:    v_or_b32_e32 v0, v0, v3
-; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    v_or_b32_e32 v4, v4, v3
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX10-64-NEXT:    s_cbranch_execnz BB3_3
 ; GFX10-64-NEXT:  ; %bb.4:
-; GFX10-64-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX10-64-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-64-NEXT:    v_mov_b32_e32 v2, s3
-; GFX10-64-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-64-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX10-64-NEXT:    global_store_dword v6, v4, s[2:3]
 ; GFX10-64-NEXT:    s_endpgm
   %wf_token = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %idx1)
   %readlane1 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %wf_token, i32 %idx1)

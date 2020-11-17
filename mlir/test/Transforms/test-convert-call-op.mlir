@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-convert-call-op | FileCheck %s
 
 // CHECK-LABEL: llvm.func @callee(!llvm.ptr<i8>) -> !llvm.i32
-func @callee(!test.test_type) -> i32
+func private @callee(!test.test_type) -> i32
 
 // CHECK-NEXT: llvm.func @caller() -> !llvm.i32
 func @caller() -> i32 {

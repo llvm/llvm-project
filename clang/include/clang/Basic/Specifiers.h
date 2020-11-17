@@ -29,12 +29,7 @@ namespace clang {
   };
 
   /// Define the kind of constexpr specifier.
-  enum ConstexprSpecKind {
-    CSK_unspecified,
-    CSK_constexpr,
-    CSK_consteval,
-    CSK_constinit
-  };
+  enum class ConstexprSpecKind { Unspecified, Constexpr, Consteval, Constinit };
 
   /// Specifies the width of a type, e.g., short, long, or long long.
   enum class TypeSpecifierWidth { Unspecified, Short, Long, LongLong };

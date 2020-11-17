@@ -1605,8 +1605,7 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
       // that value once it has finished.
       const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
       if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
-        // Manually compute the final value for AR, checking for
-        // overflow.
+        // Manually compute the final value for AR, checking for overflow.
 
         // Check whether the backedge-taken count can be losslessly casted to
         // the addrec's type. The count is always unsigned.
@@ -1673,27 +1672,24 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
       // doing extra work that may not pay off.
       if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
           !AC.assumptions().empty()) {
-        // If the backedge is guarded by a comparison with the pre-inc
-        // value the addrec is safe. Also, if the entry is guarded by
-        // a comparison with the start value and the backedge is
-        // guarded by a comparison with the post-inc value, the addrec
-        // is safe.
-        if (isKnownPositive(Step)) {
-          const SCEV *N = getConstant(APInt::getMinValue(BitWidth) -
-                                      getUnsignedRangeMax(Step));
-          if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT, AR, N) ||
-              isKnownOnEveryIteration(ICmpInst::ICMP_ULT, AR, N)) {
-            // Cache knowledge of AR NUW, which is propagated to this
-            // AddRec.
-            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
-            // Return the expression with the addrec on the outside.
-            return getAddRecExpr(
+
+        auto NewFlags = proveNoUnsignedWrapViaInduction(AR);
+        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
+        if (AR->hasNoUnsignedWrap()) {
+          // Same as nuw case above - duplicated here to avoid a compile time
+          // issue.  It's not clear that the order of checks does matter, but
+          // it's one of two issue possible causes for a change which was
+          // reverted.  Be conservative for the moment.
+          return getAddRecExpr(
                 getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
                                                          Depth + 1),
                 getZeroExtendExpr(Step, Ty, Depth + 1), L,
                 AR->getNoWrapFlags());
-          }
-        } else if (isKnownNegative(Step)) {
+        }
+        
+        // For a negative step, we can extend the operands iff doing so only
+        // traverses values in the range zext([0,UINT_MAX]). 
+        if (isKnownNegative(Step)) {
           const SCEV *N = getConstant(APInt::getMaxValue(BitWidth) -
                                       getSignedRangeMin(Step));
           if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
@@ -2015,33 +2011,16 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
         }
       }
 
-      // Normally, in the cases we can prove no-overflow via a
-      // backedge guarding condition, we can also compute a backedge
-      // taken count for the loop.  The exceptions are assumptions and
-      // guards present in the loop -- SCEV is not great at exploiting
-      // these to compute max backedge taken counts, but can still use
-      // these to prove lack of overflow.  Use this fact to avoid
-      // doing extra work that may not pay off.
-
-      if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
-          !AC.assumptions().empty()) {
-        // If the backedge is guarded by a comparison with the pre-inc
-        // value the addrec is safe. Also, if the entry is guarded by
-        // a comparison with the start value and the backedge is
-        // guarded by a comparison with the post-inc value, the addrec
-        // is safe.
-        ICmpInst::Predicate Pred;
-        const SCEV *OverflowLimit =
-            getSignedOverflowLimitForStep(Step, &Pred, this);
-        if (OverflowLimit &&
-            (isLoopBackedgeGuardedByCond(L, Pred, AR, OverflowLimit) ||
-             isKnownOnEveryIteration(Pred, AR, OverflowLimit))) {
-          // Cache knowledge of AR NSW, then propagate NSW to the wide AddRec.
-          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
-          return getAddRecExpr(
-              getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1),
-              getSignExtendExpr(Step, Ty, Depth + 1), L, AR->getNoWrapFlags());
-        }
+      auto NewFlags = proveNoSignedWrapViaInduction(AR);
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
+      if (AR->hasNoSignedWrap()) {
+        // Same as nsw case above - duplicated here to avoid a compile time
+        // issue.  It's not clear that the order of checks does matter, but
+        // it's one of two issue possible causes for a change which was
+        // reverted.  Be conservative for the moment.
+        return getAddRecExpr(
+            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1),
+            getSignExtendExpr(Step, Ty, Depth + 1), L, AR->getNoWrapFlags());
       }
 
       // sext({C,+,Step}) --> (sext(D) + sext({C-D,+,Step}))<nuw><nsw>
@@ -4431,6 +4410,107 @@ ScalarEvolution::proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
         Instruction::Add, IncRange, OBO::NoUnsignedWrap);
     if (NUWRegion.contains(AddRecRange))
       Result = ScalarEvolution::setFlags(Result, SCEV::FlagNUW);
+  }
+
+  return Result;
+}
+
+SCEV::NoWrapFlags
+ScalarEvolution::proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR) {
+  SCEV::NoWrapFlags Result = AR->getNoWrapFlags();
+
+  if (AR->hasNoSignedWrap())
+    return Result;
+
+  if (!AR->isAffine())
+    return Result;
+
+  const SCEV *Step = AR->getStepRecurrence(*this);
+  const Loop *L = AR->getLoop();
+
+  // Check whether the backedge-taken count is SCEVCouldNotCompute.
+  // Note that this serves two purposes: It filters out loops that are
+  // simply not analyzable, and it covers the case where this code is
+  // being called from within backedge-taken count analysis, such that
+  // attempting to ask for the backedge-taken count would likely result
+  // in infinite recursion. In the later case, the analysis code will
+  // cope with a conservative value, and it will take care to purge
+  // that value once it has finished.
+  const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
+
+  // Normally, in the cases we can prove no-overflow via a
+  // backedge guarding condition, we can also compute a backedge
+  // taken count for the loop.  The exceptions are assumptions and
+  // guards present in the loop -- SCEV is not great at exploiting
+  // these to compute max backedge taken counts, but can still use
+  // these to prove lack of overflow.  Use this fact to avoid
+  // doing extra work that may not pay off.
+
+  if (isa<SCEVCouldNotCompute>(MaxBECount) && !HasGuards &&
+      AC.assumptions().empty())
+    return Result;
+
+  // If the backedge is guarded by a comparison with the pre-inc  value the
+  // addrec is safe. Also, if the entry is guarded by a comparison with the
+  // start value and the backedge is guarded by a comparison with the post-inc
+  // value, the addrec is safe.
+  ICmpInst::Predicate Pred;
+  const SCEV *OverflowLimit =
+    getSignedOverflowLimitForStep(Step, &Pred, this);
+  if (OverflowLimit &&
+      (isLoopBackedgeGuardedByCond(L, Pred, AR, OverflowLimit) ||
+       isKnownOnEveryIteration(Pred, AR, OverflowLimit))) {
+    Result = setFlags(Result, SCEV::FlagNSW);
+  }
+  return Result;
+}
+SCEV::NoWrapFlags
+ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
+  SCEV::NoWrapFlags Result = AR->getNoWrapFlags();
+
+  if (AR->hasNoUnsignedWrap())
+    return Result;
+
+  if (!AR->isAffine())
+    return Result;
+
+  const SCEV *Step = AR->getStepRecurrence(*this);
+  unsigned BitWidth = getTypeSizeInBits(AR->getType());
+  const Loop *L = AR->getLoop();
+
+  // Check whether the backedge-taken count is SCEVCouldNotCompute.
+  // Note that this serves two purposes: It filters out loops that are
+  // simply not analyzable, and it covers the case where this code is
+  // being called from within backedge-taken count analysis, such that
+  // attempting to ask for the backedge-taken count would likely result
+  // in infinite recursion. In the later case, the analysis code will
+  // cope with a conservative value, and it will take care to purge
+  // that value once it has finished.
+  const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
+
+  // Normally, in the cases we can prove no-overflow via a
+  // backedge guarding condition, we can also compute a backedge
+  // taken count for the loop.  The exceptions are assumptions and
+  // guards present in the loop -- SCEV is not great at exploiting
+  // these to compute max backedge taken counts, but can still use
+  // these to prove lack of overflow.  Use this fact to avoid
+  // doing extra work that may not pay off.
+
+  if (isa<SCEVCouldNotCompute>(MaxBECount) && !HasGuards &&
+      AC.assumptions().empty())
+    return Result;
+
+  // If the backedge is guarded by a comparison with the pre-inc  value the
+  // addrec is safe. Also, if the entry is guarded by a comparison with the
+  // start value and the backedge is guarded by a comparison with the post-inc
+  // value, the addrec is safe.
+  if (isKnownPositive(Step)) {
+    const SCEV *N = getConstant(APInt::getMinValue(BitWidth) -
+                                getUnsignedRangeMax(Step));
+    if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT, AR, N) ||
+        isKnownOnEveryIteration(ICmpInst::ICMP_ULT, AR, N)) {
+      Result = setFlags(Result, SCEV::FlagNUW);
+    }
   }
 
   return Result;

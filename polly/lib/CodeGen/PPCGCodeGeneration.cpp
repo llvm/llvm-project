@@ -337,7 +337,7 @@ public:
   void initializeAfterRTH();
 
   /// Finalize the generated scop.
-  virtual void finalize();
+  void finalize() override;
 
   /// Track if the full build process was successful.
   ///
@@ -408,9 +408,9 @@ private:
   ///   - In-kernel memory copy statement
   ///
   /// @param UserStmt The ast node to generate code for.
-  virtual void createUser(__isl_take isl_ast_node *UserStmt);
+  void createUser(__isl_take isl_ast_node *UserStmt) override;
 
-  virtual void createFor(__isl_take isl_ast_node *Node);
+  void createFor(__isl_take isl_ast_node *Node) override;
 
   enum DataDirection { HOST_TO_DEVICE, DEVICE_TO_HOST };
 

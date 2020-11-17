@@ -35,6 +35,8 @@ VERegisterInfo::VERegisterInfo() : VEGenRegisterInfo(VE::SX10) {}
 const MCPhysReg *
 VERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   switch (MF->getFunction().getCallingConv()) {
+  case CallingConv::Fast:
+    // Being explicit (same as standard CC).
   default:
     return CSR_SaveList;
   case CallingConv::PreserveAll:
@@ -45,6 +47,8 @@ VERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *VERegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                                      CallingConv::ID CC) const {
   switch (CC) {
+  case CallingConv::Fast:
+    // Being explicit (same as standard CC).
   default:
     return CSR_RegMask;
   case CallingConv::PreserveAll:
@@ -82,10 +86,22 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
          ++ItAlias)
       Reserved.set(*ItAlias);
 
+  // Reserve constant registers.
+  Reserved.set(VE::VM0);
+  Reserved.set(VE::VMP0);
+
   return Reserved;
 }
 
-bool VERegisterInfo::isConstantPhysReg(MCRegister PhysReg) const { return false; }
+bool VERegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
+  switch (PhysReg) {
+  case VE::VM0:
+  case VE::VMP0:
+    return true;
+  default:
+    return false;
+  }
+}
 
 const TargetRegisterClass *
 VERegisterInfo::getPointerRegClass(const MachineFunction &MF,

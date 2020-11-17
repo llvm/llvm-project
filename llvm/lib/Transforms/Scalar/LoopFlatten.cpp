@@ -66,7 +66,7 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     WidenIV("loop-flatten-widen-iv", cl::Hidden,
-            cl::init(true),
+            cl::init(false),
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
 

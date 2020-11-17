@@ -71,7 +71,7 @@ static Flavor getFlavor(StringRef s) {
       .CasesLower("wasm", "ld-wasm", Wasm)
       .CaseLower("link", WinLink)
       .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
-      .CaseLower("darwinnew", DarwinNew)
+      .CasesLower("darwinnew", "ld64.lld.darwinnew", DarwinNew)
       .Default(Invalid);
 }
 

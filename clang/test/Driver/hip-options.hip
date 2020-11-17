@@ -31,3 +31,7 @@
 // HOST-NOT: clang{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}"
 // HOST-NOT: clang{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}"
 // HOST: clang{{.*}} "-debug-info-kind={{.*}}"
+
+// RUN: %clang -### -nogpuinc -nogpulib -munsafe-fp-atomics \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=UNSAFE-FP-ATOMICS %s
+// UNSAFE-FP-ATOMICS: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-munsafe-fp-atomics"

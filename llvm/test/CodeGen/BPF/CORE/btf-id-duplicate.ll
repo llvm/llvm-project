@@ -18,15 +18,16 @@ entry:
   %arg.addr = alloca %struct.s1*, align 8
   store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
   call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !17, metadata !DIExpression()), !dbg !22
-  %0 = call i32 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !23, !llvm.preserve.access.index !12
-  ret i32 %0, !dbg !24
+  %0 = call i64 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !23, !llvm.preserve.access.index !12
+  %conv = trunc i64 %0 to i32, !dbg !23
+  ret i32 %conv, !dbg !24
 }
 
-; Function Attrs: nounwind readnone speculatable willreturn
+; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.btf.type.id(i32, i64) #2
+declare i64 @llvm.bpf.btf.type.id(i32, i64) #2
 
 ; Function Attrs: nounwind
 define dso_local i32 @bar(%struct.s1* %arg) #0 !dbg !25 {
@@ -34,8 +35,9 @@ entry:
   %arg.addr = alloca %struct.s1*, align 8
   store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
   call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !27, metadata !DIExpression()), !dbg !28
-  %0 = call i32 @llvm.bpf.btf.type.id(i32 1, i64 0), !dbg !29, !llvm.preserve.access.index !12
-  ret i32 %0, !dbg !30
+  %0 = call i64 @llvm.bpf.btf.type.id(i32 1, i64 0), !dbg !29, !llvm.preserve.access.index !12
+  %conv = trunc i64 %0 to i32, !dbg !29
+  ret i32 %conv, !dbg !30
 }
 
 ; CHECK:             .long   1                               # BTF_KIND_STRUCT(id = 2)
@@ -57,20 +59,20 @@ entry:
 ; CHECK-NEXT:        .long   6
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable willreturn }
+attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0 (https://github.com/llvm/llvm-project.git 80a3f7beebd8caab358ff063526ae2d26467c029)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0 (https://github.com/llvm/llvm-project.git c1c153c3c70641a23c4a9540a897ff2d4eb4c5b2)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "test.c", directory: "/home/yhs/work/tests/dup")
 !2 = !{}
 !3 = !{i32 7, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
-!6 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git 80a3f7beebd8caab358ff063526ae2d26467c029)"}
+!6 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git c1c153c3c70641a23c4a9540a897ff2d4eb4c5b2)"}
 !7 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !16)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10, !11}

@@ -6415,11 +6415,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (isa<StoreInst>(&I) && isScalarWithPredication(&I))
         NumPredStores++;
 
-      if (Legal->isUniform(Ptr) &&
-          // Conditional loads and stores should be scalarized and predicated.
-          // isScalarWithPredication cannot be used here since masked
-          // gather/scatters are not considered scalar with predication.
-          !Legal->blockNeedsPredication(I.getParent())) {
+      if (Legal->isUniformMemOp(I)) {
         // TODO: Avoid replicating loads and stores instead of
         // relying on instcombine to remove them.
         // Load: Scalar load + broadcast

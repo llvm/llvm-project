@@ -2294,6 +2294,10 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
   getAddrModeInfo(*PtrMI, MRI, AddrInfo);
 }
 
+bool AMDGPUInstructionSelector::isSGPR(Register Reg) const {
+  return RBI.getRegBank(Reg, *MRI, TRI)->getID() == AMDGPU::SGPRRegBankID;
+}
+
 bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {
   if (!MI.hasOneMemOperand())
     return false;
@@ -3480,38 +3484,93 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
+  Register Addr = Root.getReg();
   Register PtrBase;
-  int64_t ImmOffset;
+  int64_t ConstOffset;
+  int64_t ImmOffset = 0;
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ImmOffset) = getPtrBaseWithConstantOffset(Root.getReg(),
-                                                              *MRI);
+  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
 
-  // TODO: Could split larger constant into VGPR offset.
-  if (ImmOffset != 0 &&
-      !TII.isLegalFLATOffset(ImmOffset, AMDGPUAS::GLOBAL_ADDRESS, true)) {
-    PtrBase = Root.getReg();
-    ImmOffset = 0;
+  if (ConstOffset != 0) {
+    if (TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, true)) {
+      Addr = PtrBase;
+      ImmOffset = ConstOffset;
+    } else if (ConstOffset > 0) {
+      auto PtrBaseDef = getDefSrcRegIgnoringCopies(PtrBase, *MRI);
+      if (!PtrBaseDef)
+        return None;
+
+      if (isSGPR(PtrBaseDef->Reg)) {
+        // Offset is too large.
+        //
+        // saddr + large_offset -> saddr + (voffset = large_offset & ~MaxOffset)
+        //                         + (large_offset & MaxOffset);
+        int64_t SplitImmOffset, RemainderOffset;
+        std::tie(SplitImmOffset, RemainderOffset)
+          = TII.splitFlatOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, true);
+
+        if (isUInt<32>(RemainderOffset)) {
+          MachineInstr *MI = Root.getParent();
+          MachineBasicBlock *MBB = MI->getParent();
+          Register HighBits
+            = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+          BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
+                  HighBits)
+            .addImm(RemainderOffset);
+
+          return {{
+            [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrBase); },  // saddr
+            [=](MachineInstrBuilder &MIB) { MIB.addReg(HighBits); }, // voffset
+            [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
+          }};
+        }
+      }
+    }
   }
 
-  // Match the variable offset.
-  const MachineInstr *PtrBaseDef = getDefIgnoringCopies(PtrBase, *MRI);
-  if (PtrBaseDef->getOpcode() != AMDGPU::G_PTR_ADD)
+  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
+  if (!AddrDef)
     return None;
+
+  // Match the variable offset.
+  if (AddrDef->MI->getOpcode() != AMDGPU::G_PTR_ADD) {
+    // FIXME: We should probably have folded COPY (G_IMPLICIT_DEF) earlier, and
+    // drop this.
+    if (AddrDef->MI->getOpcode() == AMDGPU::G_IMPLICIT_DEF ||
+        AddrDef->MI->getOpcode() == AMDGPU::G_CONSTANT)
+      return None;
+
+    // It's cheaper to materialize a single 32-bit zero for vaddr than the two
+    // moves required to copy a 64-bit SGPR to VGPR.
+    const Register SAddr = AddrDef->Reg;
+    if (!isSGPR(SAddr))
+      return None;
+
+    MachineInstr *MI = Root.getParent();
+    MachineBasicBlock *MBB = MI->getParent();
+    Register VOffset = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
+            VOffset)
+      .addImm(0);
+
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(SAddr); },    // saddr
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },  // voffset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+    }};
+  }
 
   // Look through the SGPR->VGPR copy.
-  Register PtrBaseSrc =
-    getSrcRegIgnoringCopies(PtrBaseDef->getOperand(1).getReg(), *MRI);
-  if (!PtrBaseSrc)
+  Register SAddr =
+    getSrcRegIgnoringCopies(AddrDef->MI->getOperand(1).getReg(), *MRI);
+  if (!SAddr || !isSGPR(SAddr))
     return None;
 
-  const RegisterBank *BaseRB = RBI.getRegBank(PtrBaseSrc, *MRI, TRI);
-  if (BaseRB->getID() != AMDGPU::SGPRRegBankID)
-    return None;
-
-  Register SAddr = PtrBaseSrc;
-  Register PtrBaseOffset = PtrBaseDef->getOperand(2).getReg();
+  Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
 
   // It's possible voffset is an SGPR here, but the copy to VGPR will be
   // inserted later.

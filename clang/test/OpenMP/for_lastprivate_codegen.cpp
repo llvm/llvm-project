@@ -309,7 +309,7 @@ int main() {
     // LAMBDA: store i{{[0-9]+}}* [[G1_PRIVATE_ADDR]], i{{[0-9]+}}** [[G1_PRIVATE_ADDR_REF]]
     // LAMBDA: [[SIVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
     // LAMBDA: store i{{[0-9]+}}* [[SIVAR_PRIVATE_ADDR]], i{{[0-9]+}}** [[SIVAR_PRIVATE_ADDR_REF]]
-    // LAMBDA: call void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
+    // LAMBDA: call void [[INNER_LAMBDA:@.+]](%{{.+}}* {{[^,]*}} [[ARG]])
     // LAMBDA: call void @__kmpc_for_static_fini(%{{.+}}* @{{.+}}, i32 [[GTID]])
     g = 1;
     g1 = 1;
@@ -332,7 +332,7 @@ int main() {
     // LAMBDA: [[LAST_DONE]]
     // LAMBDA: call void @__kmpc_barrier(%{{.+}}* @{{.+}}, i{{[0-9]+}} [[GTID]])
     [&]() {
-      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
+      // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* {{[^,]*}} [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
       g = 2;
       g1 = 2;
@@ -508,7 +508,7 @@ int main() {
 
 // CHECK: define i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [2 x i32]*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i32*)* [[MAIN_MICROTASK:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 0, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*)* [[MAIN_MICROTASK1:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 0, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*)* [[MAIN_MICROTASK2:@.+]] to void
@@ -540,8 +540,8 @@ int main() {
 // CHECK-NOT: [[T_VAR_PRIV]]
 // CHECK-NOT: [[VEC_PRIV]]
 // CHECK: [[S_ARR_PRIV_ITEM:%.+]] = phi [[S_FLOAT_TY]]*
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* [[S_ARR_PRIV_ITEM]])
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[S_ARR_PRIV_ITEM]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK: call {{.+}} @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 %{{.+}}, i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
 // <Skip loop body>
 // CHECK: call void @__kmpc_for_static_fini(%{{.+}}* @{{.+}}, i32 %{{.+}})
@@ -574,11 +574,11 @@ int main() {
 // CHECK: [[S_ARR_BODY_DONE]]
 
 // original var=private_var;
-// CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* {{.*}} [[VAR_PRIV]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_COPY_ASSIGN:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_REF]], [[S_FLOAT_TY]]* {{.*}} [[VAR_PRIV]])
 // CHECK: [[SIVAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR_PRIV]],
 // CHECK: br label %[[LAST_DONE]]
 // CHECK: [[LAST_DONE]]
-// CHECK-DAG: call void [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call void [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK-DAG: call void [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]*
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_REF]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
@@ -717,7 +717,7 @@ int main() {
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[TMAIN_MICROTASK:@.+]] to void
 // CHECK: call void [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
@@ -789,9 +789,9 @@ int main() {
 // CHECK-NOT: [[T_VAR_PRIV]]
 // CHECK-NOT: [[VEC_PRIV]]
 // CHECK: [[S_ARR_PRIV_ITEM:%.+]] = phi [[S_INT_TY]]*
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* [[S_ARR_PRIV_ITEM]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_PRIV_ITEM]])
 // CHECK: [[VAR_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK: store [[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]** [[VAR_PRIV_REF]]
 // CHECK: call {{.+}} @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 %{{.+}}, i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
 // <Skip loop body>
@@ -826,10 +826,10 @@ int main() {
 
 // original var=private_var;
 // CHECK: [[VAR_PRIV1:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[VAR_PRIV_REF]],
-// CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* {{.*}} [[VAR_PRIV1]])
+// CHECK: call {{.*}} [[S_INT_TY_COPY_ASSIGN:@.+]]([[S_INT_TY]]* {{[^,]*}} [[VAR_REF]], [[S_INT_TY]]* {{.*}} [[VAR_PRIV1]])
 // CHECK: br label %[[LAST_DONE]]
 // CHECK: [[LAST_DONE]]
-// CHECK-DAG: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK-DAG: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_REF]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]

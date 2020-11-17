@@ -175,14 +175,14 @@ int main() {
 // CHECK: [[SRC_C_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[SRC_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // CHECK: [[SRC_C_ADDR_VOID_PTR:%.+]] = load i8*, i8** [[SRC_C_ADDR_REF]],
 // CHECK: [[SRC_C_ADDR:%.+]] = bitcast i8* [[SRC_C_ADDR_VOID_PTR]] to [[TEST_CLASS_TY]]*
-// CHECK: call{{.*}} [[TEST_CLASS_TY_ASSIGN:@.+]]([[TEST_CLASS_TY]]* [[DST_C_ADDR]], [[TEST_CLASS_TY]]* {{.*}}[[SRC_C_ADDR]])
+// CHECK: call{{.*}} [[TEST_CLASS_TY_ASSIGN:@.+]]([[TEST_CLASS_TY]]* {{[^,]*}} [[DST_C_ADDR]], [[TEST_CLASS_TY]]* {{.*}}[[SRC_C_ADDR]])
 // CHECK: [[DST_TC_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[DST_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[DST_TC_ADDR_VOID_PTR:%.+]] = load i8*, i8** [[DST_TC_ADDR_REF]],
 // CHECK: [[DST_TC_ADDR:%.+]] = bitcast i8* [[DST_TC_ADDR_VOID_PTR]] to [[TEST_CLASS_TY]]*
 // CHECK: [[SRC_TC_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[SRC_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[SRC_TC_ADDR_VOID_PTR:%.+]] = load i8*, i8** [[SRC_TC_ADDR_REF]],
 // CHECK: [[SRC_TC_ADDR:%.+]] = bitcast i8* [[SRC_TC_ADDR_VOID_PTR]] to [[TEST_CLASS_TY]]*
-// CHECK: call{{.*}} [[TEST_CLASS_TY_ASSIGN]]([[TEST_CLASS_TY]]* [[DST_TC_ADDR]], [[TEST_CLASS_TY]]* {{.*}}[[SRC_TC_ADDR]])
+// CHECK: call{{.*}} [[TEST_CLASS_TY_ASSIGN]]([[TEST_CLASS_TY]]* {{[^,]*}} [[DST_TC_ADDR]], [[TEST_CLASS_TY]]* {{.*}}[[SRC_TC_ADDR]])
 // CHECK: [[DST_A2_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[DST_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
 // CHECK: [[DST_A2_ADDR:%.+]] = load i8*, i8** [[DST_A2_ADDR_REF]],
 // CHECK: [[SRC_A2_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[SRC_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
@@ -195,7 +195,7 @@ int main() {
 // CHECK: [[SRC_TC2_ADDR_VOID_PTR:%.+]] = load i8*, i8** [[SRC_TC2_ADDR_REF]],
 // CHECK: [[SRC_TC2_ADDR:%.+]] = bitcast i8* [[SRC_TC2_ADDR_VOID_PTR]] to [[TEST_CLASS_TY]]*
 // CHECK: br i1
-// CHECK: call{{.*}} [[TEST_CLASS_TY_ASSIGN]]([[TEST_CLASS_TY]]* %{{.+}}, [[TEST_CLASS_TY]]* {{.*}})
+// CHECK: call{{.*}} [[TEST_CLASS_TY_ASSIGN]]([[TEST_CLASS_TY]]* {{[^,]*}} %{{.+}}, [[TEST_CLASS_TY]]* {{.*}})
 // CHECK: br i1
 // CHECK: ret void
 
@@ -322,7 +322,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: load i32*, i32** %
 // CHECK-NEXT: store i32* %
 // CHECK-LABEL: invoke void @_ZZN2SSC1ERiENKUlvE_clEv(
-// CHECK-SAME: [[CAP_TY]]* [[CAP]])
+// CHECK-SAME: [[CAP_TY]]* {{[^,]*}} [[CAP]])
 
 // CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
 // CHECK: store i32 1, i32* [[DID_IT]],

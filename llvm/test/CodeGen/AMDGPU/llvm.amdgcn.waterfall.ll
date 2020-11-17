@@ -19,7 +19,7 @@
 ; GCN-64: s_mov_b64 exec, s[{{[0-9]+:[0-9]+}}]
 ; GCN-32: s_mov_b32 exec_lo, s{{[0-9]+}}
 ; VI: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM]]
-; GFX9_UP: global_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM]], off
+; GFX9_UP: global_store_dword v{{[0-9]+}}, [[ACCUM]], s[0:1]
 define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 x i32> addrspace(1)* inreg %in, i32 %tid) #1 {
   %gep.in = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 %tid
   %args = load <2 x i32>, <2 x i32> addrspace(1)* %gep.in
@@ -137,7 +137,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GCN-64: s_mov_b64 exec, s[{{[0-9]+:[0-9]+}}]
 ; GCN-32: s_mov_b32 exec_lo, s{{[0-9]+}}
 ; VI: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM]]
-; GFX9_UP: global_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM]], off
+; GFX9_UP: global_store_dword v{{[0-9]+}}, [[ACCUM]], s[0:1]
 ; GCN: {{^}}BB3_3:
 ; GCN: v_readfirstlane_b32 [[VAL2_1:s[0-9]+]], [[VAL2_2:v[0-9]+]]
 ; GCN-64: v_cmp_eq_u32_e64 [[EXEC2:s[[0-9]+:[0-9]+]]], [[VAL2_1]], [[VAL2_2]]
@@ -153,7 +153,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GCN-64: s_mov_b64 exec, s[{{[0-9]+:[0-9]+}}]
 ; GCN-32: s_mov_b32 exec_lo, s{{[0-9]+}}
 ; VI: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM2]]
-; GFX9_UP: global_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM2]], off
+; GFX9_UP: global_store_dword v{{[0-9]+}}, [[ACCUM2]], s[2:3]
 
 define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 addrspace(1)* inreg %out2,
                                             i32 %idx1, i32 %idx2, i32 %val) #1 {

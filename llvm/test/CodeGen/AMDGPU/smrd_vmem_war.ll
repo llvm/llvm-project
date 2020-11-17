@@ -3,7 +3,7 @@
 ; GCN-LABEL: ; %bb.0:
 ; GCN: s_load_dword s{{[0-9]+}}, s{{\[}}[[ADDR_LO:[0-9]+]]{{\:}}[[ADDR_HI:[0-9]+]]{{\]}}, 0x0
 ; GCN: s_waitcnt lgkmcnt(0)
-; GCN: global_store_dword v{{\[}}[[ADDR_LO]]{{\:}}[[ADDR_HI]]{{\]}}, v{{[0-9]+}}, off
+; GCN: global_store_dword v
 
 define amdgpu_kernel void @zot(i32 addrspace(1)* nocapture %arg, i64 addrspace(1)* nocapture %arg1) {
 bb:

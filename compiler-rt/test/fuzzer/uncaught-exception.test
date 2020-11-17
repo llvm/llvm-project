@@ -1,5 +1,7 @@
 # Test that throws a C++ exception and doesn't catch it. Should result in a
 # crash
+# FIXME: Get test working on other platforms.
+REQUIRES: windows
 RUN: %cpp_compiler %S/UncaughtException.cpp -o %t-UncaughtException
 
 RUN: not %run %t-UncaughtException 2>&1 | FileCheck %s

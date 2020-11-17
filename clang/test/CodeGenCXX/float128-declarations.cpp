@@ -90,7 +90,7 @@ int main(void) {
 // CHECK-DAG: @arr1f = global [10 x fp128]
 // CHECK-DAG: @arr2f = global [3 x fp128] [fp128 0xL3333333333333333BFFF333333333333, fp128 0xL0000000000000000C000800000000000, fp128 0xL0000000000000000C025176592E00000]
 // CHECK-DAG: declare fp128 @_Z6func1fu9__ieee128(fp128)
-// CHECK-DAG: define linkonce_odr void @_ZN2C1C2Eu9__ieee128(%class.C1* %this, fp128 %arg)
+// CHECK-DAG: define linkonce_odr void @_ZN2C1C2Eu9__ieee128(%class.C1* {{[^,]*}} %this, fp128 %arg)
 // CHECK-DAG: define linkonce_odr fp128 @_ZN2C16func2cEu9__ieee128(fp128 %arg)
 // CHECK-DAG: define linkonce_odr fp128 @_Z6func1tIu9__ieee128ET_S0_(fp128 %arg)
 // CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { fp128 0xL00000000000000004006080000000000 }
@@ -112,7 +112,7 @@ int main(void) {
 // CHECK-X86-DAG: @arr1f = global [10 x fp128]
 // CHECK-X86-DAG: @arr2f = global [3 x fp128] [fp128 0xL3333333333333333BFFF333333333333, fp128 0xL0000000000000000C000800000000000, fp128 0xL0000000000000000C025176592E00000]
 // CHECK-X86-DAG: declare fp128 @_Z6func1fg(fp128)
-// CHECK-X86-DAG: define linkonce_odr void @_ZN2C1C2Eg(%class.C1* %this, fp128 %arg)
+// CHECK-X86-DAG: define linkonce_odr void @_ZN2C1C2Eg(%class.C1* {{[^,]*}} %this, fp128 %arg)
 // CHECK-X86-DAG: define linkonce_odr fp128 @_ZN2C16func2cEg(fp128 %arg)
 // CHECK-X86-DAG: define linkonce_odr fp128 @_Z6func1tIgET_S0_(fp128 %arg)
 // CHECK-X86-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { fp128 0xL00000000000000004006080000000000 }

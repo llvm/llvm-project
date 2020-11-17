@@ -62,6 +62,6 @@ module attributes {
     return
   }
 
-  func @fillI32Buffer(%arg0 : memref<?xi32>, %arg1 : i32)
-  func @print_memref_i32(%ptr : memref<*xi32>)
+  func private @fillI32Buffer(%arg0 : memref<?xi32>, %arg1 : i32)
+  func private @print_memref_i32(%ptr : memref<*xi32>)
 }

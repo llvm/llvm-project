@@ -655,7 +655,8 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   // contain the constexpr specifier.
   if (New->getConstexprKind() != Old->getConstexprKind()) {
     Diag(New->getLocation(), diag::err_constexpr_redecl_mismatch)
-        << New << New->getConstexprKind() << Old->getConstexprKind();
+        << New << static_cast<int>(New->getConstexprKind())
+        << static_cast<int>(Old->getConstexprKind());
     Diag(Old->getLocation(), diag::note_previous_declaration);
     Invalid = true;
   } else if (!Old->getMostRecentDecl()->isInlined() && New->isInlined() &&
@@ -1642,7 +1643,7 @@ static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
 
     if (Kind == Sema::CheckConstexprKind::Diagnose) {
       SemaRef.Diag(DD->getLocation(), diag::err_constexpr_dtor_subobject)
-          << DD->getConstexprKind() << !FD
+          << static_cast<int>(DD->getConstexprKind()) << !FD
           << (FD ? FD->getDeclName() : DeclarationName()) << T;
       SemaRef.Diag(Loc, diag::note_constexpr_dtor_subobject)
           << !FD << (FD ? FD->getDeclName() : DeclarationName()) << T;
@@ -7368,9 +7369,10 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     //   If a function is explicitly defaulted on its first declaration, it is
     //   implicitly considered to be constexpr if the implicit declaration
     //   would be.
-    MD->setConstexprKind(
-        Constexpr ? (MD->isConsteval() ? CSK_consteval : CSK_constexpr)
-                  : CSK_unspecified);
+    MD->setConstexprKind(Constexpr ? (MD->isConsteval()
+                                          ? ConstexprSpecKind::Consteval
+                                          : ConstexprSpecKind::Constexpr)
+                                   : ConstexprSpecKind::Unspecified);
 
     if (!Type->hasExceptionSpec()) {
       // C++2a [except.spec]p3:
@@ -8462,7 +8464,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   // FIXME: Only applying this to the first declaration seems problematic, as
   // simple reorderings can affect the meaning of the program.
   if (First && !FD->isConstexpr() && Info.Constexpr)
-    FD->setConstexprKind(CSK_constexpr);
+    FD->setConstexprKind(ConstexprSpecKind::Constexpr);
 
   // C++2a [except.spec]p3:
   //   If a declaration of a function does not have a noexcept-specifier
@@ -12974,7 +12976,8 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
       Context, ClassDecl, ClassLoc, NameInfo, /*Type*/ QualType(),
       /*TInfo=*/nullptr, ExplicitSpecifier(),
       /*isInline=*/true, /*isImplicitlyDeclared=*/true,
-      Constexpr ? CSK_constexpr : CSK_unspecified);
+      Constexpr ? ConstexprSpecKind::Constexpr
+                : ConstexprSpecKind::Unspecified);
   DefaultCon->setAccess(AS_public);
   DefaultCon->setDefaulted();
 
@@ -13095,7 +13098,7 @@ Sema::findInheritingConstructor(SourceLocation Loc,
       Context, Derived, UsingLoc, NameInfo, TInfo->getType(), TInfo,
       BaseCtor->getExplicitSpecifier(), /*isInline=*/true,
       /*isImplicitlyDeclared=*/true,
-      Constexpr ? BaseCtor->getConstexprKind() : CSK_unspecified,
+      Constexpr ? BaseCtor->getConstexprKind() : ConstexprSpecKind::Unspecified,
       InheritedConstructor(Shadow, BaseCtor),
       BaseCtor->getTrailingRequiresClause());
   if (Shadow->isInvalidDecl())
@@ -13252,7 +13255,8 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
       CXXDestructorDecl::Create(Context, ClassDecl, ClassLoc, NameInfo,
                                 QualType(), nullptr, /*isInline=*/true,
                                 /*isImplicitlyDeclared=*/true,
-                                Constexpr ? CSK_constexpr : CSK_unspecified);
+                                Constexpr ? ConstexprSpecKind::Constexpr
+                                          : ConstexprSpecKind::Unspecified);
   Destructor->setAccess(AS_public);
   Destructor->setDefaulted();
 
@@ -13887,7 +13891,8 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   CXXMethodDecl *CopyAssignment = CXXMethodDecl::Create(
       Context, ClassDecl, ClassLoc, NameInfo, QualType(),
       /*TInfo=*/nullptr, /*StorageClass=*/SC_None,
-      /*isInline=*/true, Constexpr ? CSK_constexpr : CSK_unspecified,
+      /*isInline=*/true,
+      Constexpr ? ConstexprSpecKind::Constexpr : ConstexprSpecKind::Unspecified,
       SourceLocation());
   CopyAssignment->setAccess(AS_public);
   CopyAssignment->setDefaulted();
@@ -14212,7 +14217,8 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   CXXMethodDecl *MoveAssignment = CXXMethodDecl::Create(
       Context, ClassDecl, ClassLoc, NameInfo, QualType(),
       /*TInfo=*/nullptr, /*StorageClass=*/SC_None,
-      /*isInline=*/true, Constexpr ? CSK_constexpr : CSK_unspecified,
+      /*isInline=*/true,
+      Constexpr ? ConstexprSpecKind::Constexpr : ConstexprSpecKind::Unspecified,
       SourceLocation());
   MoveAssignment->setAccess(AS_public);
   MoveAssignment->setDefaulted();
@@ -14596,7 +14602,8 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
       ExplicitSpecifier(),
       /*isInline=*/true,
       /*isImplicitlyDeclared=*/true,
-      Constexpr ? CSK_constexpr : CSK_unspecified);
+      Constexpr ? ConstexprSpecKind::Constexpr
+                : ConstexprSpecKind::Unspecified);
   CopyConstructor->setAccess(AS_public);
   CopyConstructor->setDefaulted();
 
@@ -14729,7 +14736,8 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
       ExplicitSpecifier(),
       /*isInline=*/true,
       /*isImplicitlyDeclared=*/true,
-      Constexpr ? CSK_constexpr : CSK_unspecified);
+      Constexpr ? ConstexprSpecKind::Constexpr
+                : ConstexprSpecKind::Unspecified);
   MoveConstructor->setAccess(AS_public);
   MoveConstructor->setDefaulted();
 

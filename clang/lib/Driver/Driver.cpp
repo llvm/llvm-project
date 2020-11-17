@@ -3964,7 +3964,9 @@ void Driver::BuildJobs(Compilation &C) const {
         // CSV format.
         std::string Buffer;
         llvm::raw_string_ostream Out(Buffer);
-        Out << llvm::sys::path::filename(Cmd.getExecutable()) << ',';
+        llvm::sys::printArg(Out, llvm::sys::path::filename(Cmd.getExecutable()),
+                            /*Quote*/ true);
+        Out << ',';
         if (Cmd.getOutputFilenames().empty())
           Out << "\"\"";
         else

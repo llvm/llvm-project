@@ -220,41 +220,41 @@ __device__ void df() {
   T t;
   // DEVICE-NOT: call
   EC ec;
-  // DEVICE:  call void @_ZN2ECC1Ev(%struct.EC* %[[ec]])
+  // DEVICE:  call void @_ZN2ECC1Ev(%struct.EC* {{[^,]*}} %[[ec]])
   ED ed;
   // DEVICE-NOT: call
   ECD ecd;
-  // DEVICE:  call void @_ZN3ECDC1Ev(%struct.ECD* %[[ecd]])
+  // DEVICE:  call void @_ZN3ECDC1Ev(%struct.ECD* {{[^,]*}} %[[ecd]])
   ETC etc;
-  // DEVICE:  call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* %[[etc]])
+  // DEVICE:  call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* {{[^,]*}} %[[etc]])
   UC uc;
   // undefined constructor -- not allowed
-  // DEVICE:  call void @_ZN2UCC1Ev(%struct.UC* %[[uc]])
+  // DEVICE:  call void @_ZN2UCC1Ev(%struct.UC* {{[^,]*}} %[[uc]])
   UD ud;
   // undefined destructor -- not allowed
   // DEVICE-NOT: call
   ECI eci;
   // empty constructor w/ initializer list -- not allowed
-  // DEVICE:  call void @_ZN3ECIC1Ev(%struct.ECI* %[[eci]])
+  // DEVICE:  call void @_ZN3ECIC1Ev(%struct.ECI* {{[^,]*}} %[[eci]])
   NEC nec;
   // non-empty constructor -- not allowed
-  // DEVICE:  call void @_ZN3NECC1Ev(%struct.NEC* %[[nec]])
+  // DEVICE:  call void @_ZN3NECC1Ev(%struct.NEC* {{[^,]*}} %[[nec]])
   // non-empty destructor -- not allowed
   NED ned;
   // no-constructor,  virtual method -- not allowed
-  // DEVICE:  call void @_ZN3NCVC1Ev(%struct.NCV* %[[ncv]])
+  // DEVICE:  call void @_ZN3NCVC1Ev(%struct.NCV* {{[^,]*}} %[[ncv]])
   NCV ncv;
   // DEVICE-NOT: call
   VD vd;
-  // DEVICE:  call void @_ZN2VDC1Ev(%struct.VD* %[[vd]])
+  // DEVICE:  call void @_ZN2VDC1Ev(%struct.VD* {{[^,]*}} %[[vd]])
   NCF ncf;
-  // DEVICE:   call void @_ZN3NCFC1Ev(%struct.NCF* %[[ncf]])
+  // DEVICE:   call void @_ZN3NCFC1Ev(%struct.NCF* {{[^,]*}} %[[ncf]])
   NCFS ncfs;
-  // DEVICE:  call void @_ZN4NCFSC1Ev(%struct.NCFS* %[[ncfs]])
+  // DEVICE:  call void @_ZN4NCFSC1Ev(%struct.NCFS* {{[^,]*}} %[[ncfs]])
   UTC utc;
-  // DEVICE:  call void @_ZN3UTCC1IJEEEDpT_(%struct.UTC* %[[utc]])
+  // DEVICE:  call void @_ZN3UTCC1IJEEEDpT_(%struct.UTC* {{[^,]*}} %[[utc]])
   NETC netc;
-  // DEVICE:  call void @_ZN4NETCC1IJEEEDpT_(%struct.NETC* %[[netc]])
+  // DEVICE:  call void @_ZN4NETCC1IJEEEDpT_(%struct.NETC* {{[^,]*}} %[[netc]])
   T_B_T t_b_t;
   // DEVICE-NOT: call
   T_F_T t_f_t;
@@ -262,17 +262,17 @@ __device__ void df() {
   T_FA_T t_fa_t;
   // DEVICE-NOT: call
   EC_I_EC ec_i_ec;
-  // DEVICE:  call void @_ZN7EC_I_ECC1Ev(%struct.EC_I_EC* %[[ec_i_ec]])
+  // DEVICE:  call void @_ZN7EC_I_ECC1Ev(%struct.EC_I_EC* {{[^,]*}} %[[ec_i_ec]])
   EC_I_EC1 ec_i_ec1;
-  // DEVICE:  call void @_ZN8EC_I_EC1C1Ev(%struct.EC_I_EC1* %[[ec_i_ec1]])
+  // DEVICE:  call void @_ZN8EC_I_EC1C1Ev(%struct.EC_I_EC1* {{[^,]*}} %[[ec_i_ec1]])
   T_V_T t_v_t;
-  // DEVICE:  call void @_ZN5T_V_TC1Ev(%struct.T_V_T* %[[t_v_t]])
+  // DEVICE:  call void @_ZN5T_V_TC1Ev(%struct.T_V_T* {{[^,]*}} %[[t_v_t]])
   T_B_NEC t_b_nec;
-  // DEVICE:  call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* %[[t_b_nec]])
+  // DEVICE:  call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* {{[^,]*}} %[[t_b_nec]])
   T_F_NEC t_f_nec;
-  // DEVICE:  call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* %[[t_f_nec]])
+  // DEVICE:  call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* {{[^,]*}} %[[t_f_nec]])
   T_FA_NEC t_fa_nec;
-  // DEVICE:  call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* %[[t_fa_nec]])
+  // DEVICE:  call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* {{[^,]*}} %[[t_fa_nec]])
   T_B_NED t_b_ned;
   // DEVICE-NOT: call
   T_F_NED t_f_ned;
@@ -291,14 +291,14 @@ __device__ void df() {
   df(); // DEVICE: call void @_Z2dfv()
 
   // Verify that we only call non-empty destructors
-  // DEVICE-NEXT: call void @_ZN8T_FA_NEDD1Ev(%struct.T_FA_NED* %[[t_fa_ned]])
-  // DEVICE-NEXT: call void @_ZN7T_F_NEDD1Ev(%struct.T_F_NED* %[[t_f_ned]])
-  // DEVICE-NEXT: call void @_ZN7T_B_NEDD1Ev(%struct.T_B_NED* %[[t_b_ned]])
-  // DEVICE-NEXT: call void @_ZN2VDD1Ev(%struct.VD* %[[vd]])
-  // DEVICE-NEXT: call void @_ZN3NEDD1Ev(%struct.NED* %[[ned]])
-  // DEVICE-NEXT: call void @_ZN2UDD1Ev(%struct.UD* %[[ud]])
-  // DEVICE-NEXT: call void @_ZN3ECDD1Ev(%struct.ECD* %[[ecd]])
-  // DEVICE-NEXT: call void @_ZN2EDD1Ev(%struct.ED* %[[ed]])
+  // DEVICE-NEXT: call void @_ZN8T_FA_NEDD1Ev(%struct.T_FA_NED* {{[^,]*}} %[[t_fa_ned]])
+  // DEVICE-NEXT: call void @_ZN7T_F_NEDD1Ev(%struct.T_F_NED* {{[^,]*}} %[[t_f_ned]])
+  // DEVICE-NEXT: call void @_ZN7T_B_NEDD1Ev(%struct.T_B_NED* {{[^,]*}} %[[t_b_ned]])
+  // DEVICE-NEXT: call void @_ZN2VDD1Ev(%struct.VD* {{[^,]*}} %[[vd]])
+  // DEVICE-NEXT: call void @_ZN3NEDD1Ev(%struct.NED* {{[^,]*}} %[[ned]])
+  // DEVICE-NEXT: call void @_ZN2UDD1Ev(%struct.UD* {{[^,]*}} %[[ud]])
+  // DEVICE-NEXT: call void @_ZN3ECDD1Ev(%struct.ECD* {{[^,]*}} %[[ecd]])
+  // DEVICE-NEXT: call void @_ZN2EDD1Ev(%struct.ED* {{[^,]*}} %[[ed]])
 
   // DEVICE-NEXT: ret void
 }

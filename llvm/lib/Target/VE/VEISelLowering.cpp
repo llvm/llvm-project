@@ -44,6 +44,8 @@ CCAssignFn *getReturnCC(CallingConv::ID CallConv) {
   switch (CallConv) {
   default:
     return RetCC_VE_C;
+  case CallingConv::Fast:
+    return RetCC_VE_Fast;
   }
 }
 
@@ -53,6 +55,8 @@ CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
   switch (CallConv) {
   default:
     return CC_VE_C;
+  case CallingConv::Fast:
+    return CC_VE_Fast;
   }
 }
 

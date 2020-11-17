@@ -465,9 +465,12 @@ supported for the ``amdgcn`` target.
 
   Using the constant address space indicates that the data will not change
   during the execution of the kernel. This allows scalar read instructions to
-  be used. The vector and scalar L1 caches are invalidated of volatile data
-  before each kernel dispatch execution to allow constant memory to change
-  values between kernel dispatches.
+  be used. As the constant address space could only be modified on the host
+  side, a generic pointer loaded from the constant address space is safe to be
+  assumed as a global pointer since only the device global memory is visible
+  and managed on the host side. The vector and scalar L1 caches are invalidated
+  of volatile data before each kernel dispatch execution to allow constant
+  memory to change values between kernel dispatches.
 
 **Region**
   The region address space uses the hardware Global Data Store (GDS). All

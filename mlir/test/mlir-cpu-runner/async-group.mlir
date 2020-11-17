@@ -37,4 +37,4 @@ func @main() {
   return
 }
 
-func @mlirAsyncRuntimePrintCurrentThreadId() -> ()
+func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()

@@ -1458,11 +1458,11 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     TailCall->setDebugLoc(DbgLoc);
     TailCall->setTailCall();
     TailCall->setCallingConv(Fn->getCallingConv());
+    Builder.CreateRetVoid();
     InlineFunctionInfo FnInfo;
     auto InlineRes = InlineFunction(*TailCall, FnInfo);
     assert(InlineRes.isSuccess() && "Expected inlining to succeed");
     (void)InlineRes;
-    Builder.CreateRetVoid();
 
     // Replace the lvm.coro.async.resume intrisic call.
     replaceAsyncResumeFunction(Suspend, Continuation);

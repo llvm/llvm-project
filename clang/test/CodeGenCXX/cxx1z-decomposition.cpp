@@ -50,7 +50,7 @@ auto [e1, e2] = make<E>();
 
 // CHECK: @_Z4makeI1BERT_v()
 //   CHECK: call i32 @_Z3getILi0EEDa1B()
-//   CHECK: call void @_ZN1XC1E1Y({{.*}}* @_ZGR2b1_, i32
+//   CHECK: call void @_ZN1XC1E1Y({{.*}}* {{[^,]*}} @_ZGR2b1_, i32
 //   CHECK: call i32 @__cxa_atexit({{.*}}@_ZN1XD1Ev{{.*}}@_ZGR2b1_
 //   CHECK: store {{.*}}* @_ZGR2b1_,
 //
@@ -93,7 +93,7 @@ int test_locals() {
 
   // CHECK: @_Z4makeI1BERT_v()
   //   CHECK: call i32 @_Z3getILi0EEDa1B()
-  //   CHECK: call void @_ZN1XC1E1Y({{.*}}* %[[b1:.*]], i32
+  //   CHECK: call void @_ZN1XC1E1Y({{.*}}* {{[^,]*}} %[[b1:.*]], i32
   //
   //   CHECK: call double @_Z3getILi1EEDa1B()
   //   CHECK: %[[cvt:.*]] = fptosi double %{{.*}} to i32

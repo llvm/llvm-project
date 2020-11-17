@@ -62,7 +62,7 @@ void init_plus(BaseS1&, const BaseS1&);
 void bazz() {
   S<int> s;
 // CHECK: [[S_ADDR:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[S_ADDR]])
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[S_ADDR]])
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S_INT_TY]]*)* [[BAZZ_OUTLINE:@.+]] to void (i32*, i32*, ...)*), [[S_INT_TY]]* [[S_ADDR]])
 // CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret void
@@ -76,13 +76,13 @@ void bazz() {
 // CHECK: [[S_PRIV_ADDR:%.+]] = alloca [[S_INT_TY]],
 // CHECK: call void [[BAZZ_INIT:@.+]]([[S_INT_TY]]* [[S_PRIV_ADDR]], [[S_INT_TY]]* [[S_ORIG_ADDR:%.+]])
 // CHECK:  call void @{{.+}}([[S_INT_TY]]* [[S_ORIG_ADDR]], [[S_INT_TY]]* [[S_PRIV_ADDR]])
-// CHECK-NEXT:  call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[S_PRIV_ADDR]])
+// CHECK-NEXT:  call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[S_PRIV_ADDR]])
 // CHECK-NEXT:  ret void
 
 // CHECK: define internal void [[BAZZ_INIT]]([[S_INT_TY]]* {{.*}}[[S_PRIV_ADDR:%.+]], [[S_INT_TY]]* {{.*}}[[S_ORIG_ADDR:%.+]])
 // CHECK: store [[S_INT_TY]]* [[S_PRIV_ADDR]], [[S_INT_TY]]** [[S_PRIV_ADDR_REF:%.+]],
 // CHECK: [[S_PRIV_ADDR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[S_PRIV_ADDR_REF]],
-// CHECK: call void [[S_INT_TY_CONSTR]]([[S_INT_TY]]* [[S_PRIV_ADDR]])
+// CHECK: call void [[S_INT_TY_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_PRIV_ADDR]])
 // CHECK-NEXT: ret void
 
 #pragma omp declare reduction(operator&& : int : omp_out = 111 & omp_in)
@@ -173,7 +173,7 @@ int main() {
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, float*, [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]*, float*, [2 x i32]*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, i64, i32*, [2 x i32]*, [10 x [4 x [[S_FLOAT_TY]]]]*)* [[MAIN_MICROTASK1:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, i64, i32*, [10 x [4 x [[S_FLOAT_TY]]]]*)* [[MAIN_MICROTASK2:@.+]] to void
@@ -203,11 +203,11 @@ int main() {
 // For + reduction operation initial value of private variable is -1.
 // CHECK: call void [[RED_INIT1:@.+]](float* %{{.+}}, float* %{{.+}})
 
-// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[VAR_PRIV]]
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]]
 // For & reduction operation initial value of private variable is defined by call of 'init()' function.
 // CHECK: call void [[RED_INIT2:@.+]](
 
-// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[VAR1_PRIV]]
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* {{[^,]*}} [[VAR1_PRIV]]
 // For && reduction operation initial value of private variable is 1.0.
 // CHECK: call void [[RED_INIT3:@.+]](
 
@@ -293,7 +293,7 @@ int main() {
 // break;
 // CHECK: br label %[[RED_DONE]]
 // CHECK: [[RED_DONE]]
-// CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 
@@ -509,7 +509,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_PRIV]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* %
+// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* {{[^,]*}} %
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[ARRS_PRIV]]
 // CHECK: br i1 [[DONE]],
 // CHECK: call void @llvm.stackrestore(i8*
@@ -605,7 +605,7 @@ int main() {
 // CHECK: br label %[[CTOR:[^,]+]]
 // CHECK: [[CTOR]]:
 // CHECK: [[CUR:%.+]] = phi [[S_FLOAT_TY]]* [ [[BEGIN]], %{{.+}} ], [ [[NEXT:%.+]], %[[CTOR]] ]
-// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[CUR]])
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* {{[^,]*}} [[CUR]])
 // CHECK: [[NEXT:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[CUR]], i64 1
 // CHECK: [[IS_DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* [[NEXT]], [[END]]
 // CHECK: br i1 [[IS_DONE]], label %[[DONE:[^,]+]], label %[[CTOR]]
@@ -715,7 +715,7 @@ int main() {
 // CHECK: [[END:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[BEGIN]], i64 40
 // CHECK: br
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* %
+// CHECK: call void @_ZN1SIfED1Ev([[S_FLOAT_TY]]* {{[^,]*}} %
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[BEGIN]]
 // CHECK: br i1 [[DONE]],
 // CHECK: call void @llvm.stackrestore(i8*
@@ -882,7 +882,7 @@ int main() {
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT_42]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_CONSTR]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [[S_INT_TY]]*, [[S_INT_TY]]*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*)* [[TMAIN_MICROTASK:@.+]] to void
 // Not interested in this one:
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4,
@@ -915,11 +915,11 @@ int main() {
 // For + reduction operation initial value of private variable is 0.
 // CHECK: call void [[RED_INIT6:@.+]](
 
-// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* [[VAR_PRIV]]
+// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]]
 // For & reduction operation initial value of private variable is ones in all bits.
 // CHECK: call void [[RED_INIT2:@.+]](
 
-// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* [[VAR1_PRIV]]
+// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* {{[^,]*}} [[VAR1_PRIV]]
 // For && reduction operation initial value of private variable is 1.0.
 // CHECK: call void [[RED_INIT7:@.+]](
 
@@ -1001,7 +1001,7 @@ int main() {
 // break;
 // CHECK: br label %[[RED_DONE]]
 // CHECK: [[RED_DONE]]
-// CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[VAR_PRIV]])
+// CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[VAR_PRIV]])
 // CHECK-DAG: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: ret void
 

@@ -6,6 +6,6 @@
 module {
 module @inner_mod1 {
   "test.symbol"() {sym_name = "foo"} : () -> ()
-  func @bar()
+  func private @bar()
 }
 }

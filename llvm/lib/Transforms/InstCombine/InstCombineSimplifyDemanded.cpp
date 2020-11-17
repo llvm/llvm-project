@@ -826,21 +826,6 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   // do simplifications that apply to *just* the one user if we know that
   // this instruction has a simpler value in that context.
   switch (I->getOpcode()) {
-  case Instruction::Add: {
-    // TODO: Allow undefs and/or non-splat vectors.
-    const APInt *C;
-    if (match(I->getOperand(1), m_APInt(C))) {
-      // Right fill the demanded bits for this add to demand the most
-      // significant demanded bit and all those below it.
-      unsigned Ctlz = DemandedMask.countLeadingZeros();
-      APInt LowMask(APInt::getLowBitsSet(BitWidth, BitWidth - Ctlz));
-      // If we are adding zeros to every bit below the highest demanded bit,
-      // just return the add's variable operand.
-      if ((*C & LowMask).isNullValue())
-        return I->getOperand(0);
-    }
-    break;
-  }
   case Instruction::And: {
     // If either the LHS or the RHS are Zero, the result is zero.
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);

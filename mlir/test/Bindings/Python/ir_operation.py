@@ -320,7 +320,7 @@ def testOperationResultList():
       %0:3 = call @f2() : () -> (i32, f64, index)
       return
     }
-    func @f2() -> (i32, f64, index)
+    func private @f2() -> (i32, f64, index)
   """, ctx)
   caller = module.body.operations[0]
   call = caller.regions[0].blocks[0].operations[0]

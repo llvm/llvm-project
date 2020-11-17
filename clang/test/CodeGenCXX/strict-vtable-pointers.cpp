@@ -95,7 +95,7 @@ struct DynamicFrom2Virtuals;
 
 // CHECK-NEW: %[[THIS3:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS2:.*]])
 // CHECK-NEW: %[[THIS4:.*]] = bitcast i8* %[[THIS3]] to %[[DynamicDerived:.*]]*
-// CHECK-NEW: call void @_ZN14DynamicDerivedC1Ev(%[[DynamicDerived:.*]]* %[[THIS4]])
+// CHECK-NEW: call void @_ZN14DynamicDerivedC1Ev(%[[DynamicDerived:.*]]* {{[^,]*}} %[[THIS4]])
 // CHECK-NEW-LABEL: {{^}}}
 void Pointers1() {
   DynamicBase1 *DB = new DynamicBase1;
@@ -141,7 +141,7 @@ struct DynamicDerived;
 // CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS1:.*]])
 // CHECK-CTORS: %[[THIS3:.*]] = bitcast i8* %[[THIS2]] to %[[DynamicDerived]]*
 // CHECK-CTORS: %[[THIS4:.*]] = bitcast %[[DynamicDerived]]* %[[THIS3]] to %[[DynamicBase:.*]]*
-// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[DynamicBase]]* %[[THIS4]])
+// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[DynamicBase]]* {{[^,]*}} %[[THIS4]])
 
 // CHECK-CTORS: %[[THIS5:.*]] = bitcast %struct.DynamicDerived* %[[THIS0]] to i32 (...)***
 // CHECK-CTORS: store {{.*}} %[[THIS5]]
@@ -155,7 +155,7 @@ struct DynamicDerivedMultiple;
 // CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS1]])
 // CHECK-CTORS: %[[THIS3:.*]] = bitcast i8* %[[THIS2]] to %[[CLASS]]*
 // CHECK-CTORS: %[[THIS4:.*]] = bitcast %[[CLASS]]* %[[THIS3]] to %[[BASE_CLASS:.*]]*
-// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[BASE_CLASS]]* %[[THIS4]])
+// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[BASE_CLASS]]* {{[^,]*}} %[[THIS4]])
 
 // CHECK-CTORS: call i8* @llvm.launder.invariant.group.p0i8(
 
@@ -380,7 +380,7 @@ void testCompareMembers() {
   // CHECK-NEW:    [[BPM:%.*]] = alloca i32*
 
   A *ap = new A;
-  // CHECK-NEW:   call void %{{.*}}(%struct.A* %{{.*}})
+  // CHECK-NEW:   call void %{{.*}}(%struct.A* {{[^,]*}} %{{.*}})
   ap->foo();
   // CHECK-NEW:    [[TMP7:%.*]] = load %struct.A*, %struct.A** [[AP]]
   // CHECK-NEW:    [[TMP8:%.*]] = bitcast %struct.A* [[TMP7]] to i8*

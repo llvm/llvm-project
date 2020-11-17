@@ -748,7 +748,7 @@ func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64
 // Check that unranked memrefs with non-default memory space roundtrip
 // properly.
 // CHECK-LABEL: @unranked_memref_roundtrip(memref<*xf32, 4>)
-func @unranked_memref_roundtrip(memref<*xf32, 4>)
+func private @unranked_memref_roundtrip(memref<*xf32, 4>)
 
 // CHECK-LABEL: func @memref_view(%arg0
 func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {

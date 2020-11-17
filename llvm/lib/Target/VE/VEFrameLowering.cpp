@@ -198,6 +198,7 @@ void VEFrameLowering::emitSPExtend(MachineFunction &MF, MachineBasicBlock &MBB,
 
 void VEFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
+  const VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const VEInstrInfo &TII = *STI.getInstrInfo();
@@ -233,6 +234,9 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Update stack size with corrected value.
   MFI.setStackSize(NumBytes);
+
+  if (FuncInfo->isLeafProc())
+    return;
 
   // Emit Prologue instructions to save multiple registers.
   emitPrologueInsns(MF, MBB, MBBI, NumBytes, true);
@@ -283,10 +287,14 @@ MachineBasicBlock::iterator VEFrameLowering::eliminateCallFramePseudoInstr(
 
 void VEFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
+  const VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   uint64_t NumBytes = MFI.getStackSize();
+
+  if (FuncInfo->isLeafProc())
+    return;
 
   // Emit Epilogue instructions to restore multiple registers.
   emitEpilogueInsns(MF, MBB, MBBI, NumBytes, true);
@@ -294,9 +302,7 @@ void VEFrameLowering::emitEpilogue(MachineFunction &MF,
 
 // hasFP - Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if the function has variable sized allocas
-// or if frame pointer elimination is disabled.  For the case of VE, we don't
-// implement FP eliminator yet, but we returns false from this function to
-// not refer fp from generated code.
+// or if frame pointer elimination is disabled.
 bool VEFrameLowering::hasFP(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
@@ -318,22 +324,19 @@ StackOffset VEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                     Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const VERegisterInfo *RegInfo = STI.getRegisterInfo();
-  const VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
   bool isFixed = MFI.isFixedObjectIndex(FI);
 
   int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FI);
 
-  if (FuncInfo->isLeafProc()) {
-    // If there's a leaf proc, all offsets need to be %sp-based,
-    // because we haven't caused %fp to actually point to our frame.
+  if (!hasFP(MF)) {
+    // If FP is not used, frame indexies are based on a %sp regiter.
     FrameReg = VE::SX11; // %sp
     return StackOffset::getFixed(FrameOffset +
                                  MF.getFrameInfo().getStackSize());
   }
   if (RegInfo->needsStackRealignment(MF) && !isFixed) {
-    // If there is dynamic stack realignment, all local object
-    // references need to be via %sp or %s17 (bp), to take account
-    // of the re-alignment.
+    // If data on stack require realignemnt, frame indexies are based on a %sp
+    // or %s17 (bp) register.  If there is a variable sized object, bp is used.
     if (hasBP(MF))
       FrameReg = VE::SX17; // %bp
     else
@@ -341,7 +344,7 @@ StackOffset VEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
     return StackOffset::getFixed(FrameOffset +
                                  MF.getFrameInfo().getStackSize());
   }
-  // Finally, default to using %fp.
+  // Use %fp by default.
   FrameReg = RegInfo->getFrameRegister(MF);
   return StackOffset::getFixed(FrameOffset);
 }
@@ -362,9 +365,12 @@ void VEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                            BitVector &SavedRegs,
                                            RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  if (isLeafProc(MF)) {
-    VEMachineFunctionInfo *MFI = MF.getInfo<VEMachineFunctionInfo>();
-    MFI->setLeafProc(true);
+  // Functions having BP or stack objects need to emit prologue and epilogue
+  // to allocate local buffer on the stack.
+  if (isLeafProc(MF) && !hasBP(MF) && !MFI.hasStackObjects()) {
+    VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
+    FuncInfo->setLeafProc(true);
   }
 }

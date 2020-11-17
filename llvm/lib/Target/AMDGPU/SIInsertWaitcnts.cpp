@@ -1476,6 +1476,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         if (ScoreBrackets.getScoreLB(LGKM_CNT) <
             ScoreBrackets.getScoreUB(LGKM_CNT) &&
             ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+          // Restore vccz if there's an outstanding smem read, which could
+          // complete and clobber vccz at any time.
           RestoreVCCZ = true;
         }
       }
@@ -1488,25 +1490,14 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       }
     }
 
-    // Don't examine operands unless we need to track vccz correctness.
-    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
+    if (!ST->partialVCCWritesUpdateVCCZ()) {
       if (Inst.definesRegister(AMDGPU::VCC_LO) ||
           Inst.definesRegister(AMDGPU::VCC_HI)) {
-	// Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
-	if (!ST->partialVCCWritesUpdateVCCZ())
-	  VCCZCorrect = false;
+        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+        VCCZCorrect = false;
       } else if (Inst.definesRegister(AMDGPU::VCC)) {
-	if (ST->hasReadVCCZBug() &&
-	    ScoreBrackets.getScoreLB(LGKM_CNT) <
-	    ScoreBrackets.getScoreUB(LGKM_CNT) &&
-	    ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-	  // Writes to vcc while there's an outstanding smem read may get
-	  // clobbered as soon as any read completes.
-	  VCCZCorrect = false;
-	} else {
-	  // Writes to vcc will fix any incorrect value in vccz.
-	  VCCZCorrect = true;
-	}
+        // Writes to vcc will fix any incorrect value in vccz.
+        VCCZCorrect = true;
       }
     }
 

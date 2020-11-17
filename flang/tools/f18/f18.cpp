@@ -99,7 +99,6 @@ struct DriverOptions {
   bool dumpParseTree{false};
   bool dumpPreFirTree{false};
   bool dumpSymbols{false};
-  bool debugResolveNames{false};
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
   bool measureTree{false};
@@ -247,9 +246,9 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
   if (driver.measureTree) {
     MeasureParseTree(parseTree);
   }
-  if (!driver.debugNoSemantics || driver.debugResolveNames ||
-      driver.dumpSymbols || driver.dumpUnparseWithSymbols ||
-      driver.getDefinition || driver.getSymbolsSources) {
+  if (!driver.debugNoSemantics || driver.dumpSymbols ||
+      driver.dumpUnparseWithSymbols || driver.getDefinition ||
+      driver.getSymbolsSources) {
     Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
         parsing.cooked().AsCharBlock(), driver.debugModuleWriter};
     semantics.Perform();
@@ -517,8 +516,6 @@ int main(int argc, char *const argv[]) {
       driver.dumpPreFirTree = true;
     } else if (arg == "-fdebug-dump-symbols") {
       driver.dumpSymbols = true;
-    } else if (arg == "-fdebug-resolve-names") {
-      driver.debugResolveNames = true;
     } else if (arg == "-fdebug-module-writer") {
       driver.debugModuleWriter = true;
     } else if (arg == "-fdebug-measure-parse-tree") {
@@ -646,7 +643,6 @@ int main(int argc, char *const argv[]) {
           << "  -fdebug-dump-provenance\n"
           << "  -fdebug-dump-parse-tree\n"
           << "  -fdebug-dump-symbols\n"
-          << "  -fdebug-resolve-names\n"
           << "  -fdebug-instrumented-parse\n"
           << "  -fdebug-no-semantics  disable semantic checks\n"
           << "  -fget-definition\n"

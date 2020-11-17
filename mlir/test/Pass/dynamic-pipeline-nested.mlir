@@ -20,9 +20,9 @@ module @inner_mod1 {
 // CHECK: Dump Before CSE
 // NOTNESTED-NEXT: @inner_mod1
 // NESTED-NEXT: @foo
-  func @foo()
+  func private @foo()
 // Only in the nested case we have a second run of the pass here.
 // NESTED: Dump Before CSE
 // NESTED-NEXT: @baz
-  func @baz()
+  func private @baz()
 }

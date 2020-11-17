@@ -35,7 +35,7 @@ define void @fp_iv_loop1(float* noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 96
 ; AUTO_VEC-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], -4
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], 1152921504606846972
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
@@ -306,7 +306,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP2]], 48
 ; AUTO_VEC-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP4]], -4
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP4]], 2305843009213693948
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]

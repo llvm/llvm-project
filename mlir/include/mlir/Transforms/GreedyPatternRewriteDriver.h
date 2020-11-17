@@ -24,19 +24,37 @@ namespace mlir {
 
 /// Rewrite the regions of the specified operation, which must be isolated from
 /// above, by repeatedly applying the highest benefit patterns in a greedy
-/// work-list driven manner. Return success if no more patterns can be matched
-/// in the result operation regions.
-/// Note: This does not apply patterns to the top-level operation itself. Note:
+/// work-list driven manner.
+/// This variant may stop after a predefined number of iterations, see the
+/// alternative below to provide a specific number of iterations before stopping
+/// in absence of convergence.
+/// Return success if the iterative process converged and no more patterns can
+/// be matched in the result operation regions.
+/// Note: This does not apply patterns to the top-level operation itself.
 ///       These methods also perform folding and simple dead-code elimination
 ///       before attempting to match any of the provided patterns.
-///
 LogicalResult
 applyPatternsAndFoldGreedily(Operation *op,
                              const FrozenRewritePatternList &patterns);
+
+/// Rewrite the regions of the specified operation, with a user-provided limit
+/// on iterations to attempt before reaching convergence.
+LogicalResult
+applyPatternsAndFoldGreedily(Operation *op,
+                             const FrozenRewritePatternList &patterns,
+                             unsigned maxIterations);
+
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
                              const FrozenRewritePatternList &patterns);
+
+/// Rewrite the given regions, with a user-provided limit on iterations to
+/// attempt before reaching convergence.
+LogicalResult
+applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
+                             const FrozenRewritePatternList &patterns,
+                             unsigned maxIterations);
 
 /// Applies the specified patterns on `op` alone while also trying to fold it,
 /// by selecting the highest benefits patterns in a greedy manner. Returns

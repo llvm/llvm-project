@@ -69,6 +69,6 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
   return
 }
 
-func @print_flops(f64)
-func @rtclock() -> f64
-func @print_memref_f32(memref<*xf32>)
+func private @print_flops(f64)
+func private @rtclock() -> f64
+func private @print_memref_f32(memref<*xf32>)
