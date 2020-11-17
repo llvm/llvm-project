@@ -33,9 +33,12 @@ def aligncomm : P<"aligncomm", "Set common symbol alignment">;
 def alternatename : P<"alternatename", "Define weak alias">;
 def base    : P<"base", "Base address of the program">;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
-    HelpText<"Use colors in diagnostics">;
+    HelpText<"Alias for --color-diagnostics=always">;
+def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,
+    HelpText<"Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
-    HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
+    HelpText<"Use colors in diagnostics (default: auto)">,
+    MetaVarName<"[auto,always,never]">;
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def entry   : P<"entry", "Name of entry point symbol">;
@@ -73,8 +76,6 @@ def opt     : P<"opt", "Control optimizations">;
 def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
 def natvis : P<"natvis", "Path to natvis file to embed in the PDB">;
-def no_color_diagnostics: F<"no-color-diagnostics">,
-    HelpText<"Do not use colors in diagnostics">;
 def pdb : P<"pdb", "PDB file path">;
 def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;

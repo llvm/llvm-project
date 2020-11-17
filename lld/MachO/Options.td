@@ -1,8 +1,20 @@
 include "llvm/Option/OptParser.td"
 
+// Flags that lld/MachO understands but ld64 doesn't. These take
+// '--' instead of '-' and use dashes instead of underscores, so
+// they don't collide with the ld64 compat options.
+
 def help : Flag<["-", "--"], "help">;
 def help_hidden : Flag<["--"], "help-hidden">,
   HelpText<"Display help for hidden options">;
+def color_diagnostics: Flag<["--"], "color-diagnostics">,
+  HelpText<"Alias for --color-diagnostics=always">;
+def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,
+  HelpText<"Alias for --color-diagnostics=never">;
+def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
+  HelpText<"Use colors in diagnostics (default: auto)">,
+  MetaVarName<"[auto,always,never]">;
+
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
