@@ -178,7 +178,7 @@ instructions are represented in the SPIR-V dialect:
 
 *   Global variables are defined with the `spv.globalVariable` op. They do not
     generate SSA values. Instead they have symbols and should be referenced via
-    symbols. To use global variables in a function block, `spv._address_of` is
+    symbols. To use global variables in a function block, `spv.mlir.addressof` is
     needed to turn the symbol into an SSA value.
 *   Specialization constants are defined with the `spv.specConstant` op. Similar
     to global variables, they do not generate SSA values and have symbols for
@@ -968,7 +968,7 @@ Similarly, a few transformations are performed during deserialization:
 *   `OpVariable` instructions will be converted to `spv.globalVariable` ops if
     in module-level; otherwise they will be converted into `spv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
-    `spv._address_of` op to turn the symbol of the corresponding
+    `spv.mlir.addressof` op to turn the symbol of the corresponding
     `spv.globalVariable` into an SSA value.
 *   Every use of a `OpSpecConstant` instruction will materialize a
     `spv._reference_of` op to turn the symbol of the corresponding
@@ -1054,7 +1054,7 @@ rules. Specifically,
 
 *   Creates `spv.globalVariable`s for the arguments, and replaces all uses of
     the argument with this variable. The SSA value used for replacement is
-    obtained using the `spv._address_of` operation.
+    obtained using the `spv.mlir.addressof` operation.
 *   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
     `spv.module` for the entry function.
 
@@ -1068,10 +1068,10 @@ the [Vulkan shader requirements][VulkanShaderInterface].
 #### Creating builtin variables
 
 In SPIR-V dialect, builtins are represented using `spv.globalVariable`s, with
-`spv._address_of` used to get a handle to the builtin as an SSA value.  The
+`spv.mlir.addressof` used to get a handle to the builtin as an SSA value.  The
 method `mlir::spirv::getBuiltinVariableValue` creates a `spv.globalVariable` for
 the builtin in the current `spv.module` if it does not exist already, and
-returns an SSA value generated from an `spv._address_of` operation.
+returns an SSA value generated from an `spv.mlir.addressof` operation.
 
 ### Current conversions to SPIR-V
 

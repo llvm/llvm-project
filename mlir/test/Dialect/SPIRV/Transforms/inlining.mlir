@@ -35,7 +35,7 @@ spv.module Logical GLSL450 {
 spv.module Logical GLSL450 {
   spv.globalVariable @data bind(0, 0) : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
   spv.func @callee() "None" {
-    %0 = spv._address_of @data : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
+    %0 = spv.mlir.addressof @data : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>
     %1 = spv.constant 0: i32
     %2 = spv.AccessChain %0[%1, %1] : !spv.ptr<!spv.struct<(!spv.rtarray<i32> [0])>, StorageBuffer>, i32, i32
     spv.Branch ^next
@@ -48,7 +48,7 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @calling_multi_block_ret_func
   spv.func @calling_multi_block_ret_func() "None" {
-    // CHECK-NEXT:   spv._address_of
+    // CHECK-NEXT:   spv.mlir.addressof
     // CHECK-NEXT:   spv.constant 0
     // CHECK-NEXT:   spv.AccessChain
     // CHECK-NEXT:   spv.Branch ^bb1
@@ -190,12 +190,12 @@ spv.module Logical GLSL450 {
   // CHECK: @inline_into_selection_region
   spv.func @inline_into_selection_region() "None" {
     %1 = spv.constant 0 : i32
-    // CHECK-DAG: [[ADDRESS_ARG0:%.*]] = spv._address_of @arg_0
-    // CHECK-DAG: [[ADDRESS_ARG1:%.*]] = spv._address_of @arg_1
+    // CHECK-DAG: [[ADDRESS_ARG0:%.*]] = spv.mlir.addressof @arg_0
+    // CHECK-DAG: [[ADDRESS_ARG1:%.*]] = spv.mlir.addressof @arg_1
     // CHECK-DAG: [[LOADPTR:%.*]] = spv.AccessChain [[ADDRESS_ARG0]]
     // CHECK: [[VAL:%.*]] = spv.Load "StorageBuffer" [[LOADPTR]]
-    %2 = spv._address_of @arg_0 : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
-    %3 = spv._address_of @arg_1 : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+    %2 = spv.mlir.addressof @arg_0 : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+    %3 = spv.mlir.addressof @arg_1 : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
     %4 = spv.AccessChain %2[%1] : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>, i32
     %5 = spv.Load "StorageBuffer" %4 : i32
     %6 = spv.SGreaterThan %5, %1 : i32
