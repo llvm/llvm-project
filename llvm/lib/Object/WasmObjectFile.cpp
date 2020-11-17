@@ -562,7 +562,6 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
           Info.Name = Import.Field;
         }
         GlobalType = &Import.Global;
-        Info.ImportName = Import.Field;
         if (!Import.Module.empty()) {
           Info.ImportModule = Import.Module;
         }

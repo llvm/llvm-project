@@ -271,10 +271,10 @@ AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
 }
 
 void CrossWindowsToolChain::
-AddCXXStdlibLibArgs(const llvm::opt::ArgList &DriverArgs,
-                    llvm::opt::ArgStringList &CC1Args) const {
-  if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx)
-    CC1Args.push_back("-lc++");
+AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                    llvm::opt::ArgStringList &CmdArgs) const {
+  if (GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
+    CmdArgs.push_back("-lc++");
 }
 
 clang::SanitizerMask CrossWindowsToolChain::getSupportedSanitizers() const {

@@ -63,4 +63,4 @@ func @entry() {
   return
 }
 
-func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }

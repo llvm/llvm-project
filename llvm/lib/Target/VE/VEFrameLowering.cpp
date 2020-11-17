@@ -92,8 +92,8 @@ void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
   //
   //    or %sp, 0, %fp
   //    ld %s17, 40(,%sp) iff this function is using s17 as BP
-  //    ld %got, 32(,%sp)
-  //    ld %plt, 24(,%sp)
+  //    ld %plt, 32(,%sp)
+  //    ld %got, 24(,%sp)
   //    ld %lr, 8(,%sp)
   //    ld %fp, 0(,%sp)
   BuildMI(MBB, MBBI, DL, TII.get(VE::ORri), VE::SX11).addReg(VE::SX9).addImm(0);

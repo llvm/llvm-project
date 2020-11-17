@@ -3,6 +3,7 @@
 // CHECK-MESSAGES: [[@LINE+2]]:1: warning: #includes are not sorted properly
 #include "j.h"
 #include "gtest/foo.h"
+#include "gmock/foo.h"
 #include "i.h"
 #include <s.h>
 #include "llvm/a.h"
@@ -16,6 +17,7 @@
 // CHECK-FIXES-NEXT: #include "clang/b.h"
 // CHECK-FIXES-NEXT: #include "llvm-c/d.h" // -c
 // CHECK-FIXES-NEXT: #include "llvm/a.h"
+// CHECK-FIXES-NEXT: #include "gmock/foo.h"
 // CHECK-FIXES-NEXT: #include "gtest/foo.h"
 // CHECK-FIXES-NEXT: #include <s.h>
 

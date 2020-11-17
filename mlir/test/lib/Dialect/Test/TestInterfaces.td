@@ -28,6 +28,15 @@ def TestTypeInterface : TypeInterface<"TestTypeInterface"> {
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeC", (ins "Location":$loc)
     >,
+    // It should be possible to use the interface type name as result type
+    // as well as in the implementation.
+    InterfaceMethod<"Prints the type name and returns the type as interface.",
+      "TestTypeInterface", "printTypeRet", (ins "Location":$loc),
+      [{}], /*defaultImplementation=*/[{
+        emitRemark(loc) << $_type << " - TestRet";
+        return $_type;
+      }]
+    >,
   ];
   let extraClassDeclaration = [{
     /// Prints the type name.

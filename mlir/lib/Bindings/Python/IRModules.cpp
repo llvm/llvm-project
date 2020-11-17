@@ -1310,8 +1310,14 @@ public:
     return mlirOperationGetNumAttributes(operation->get());
   }
 
+  bool dunderContains(const std::string &name) {
+    return !mlirAttributeIsNull(
+        mlirOperationGetAttributeByName(operation->get(), name.c_str()));
+  }
+
   static void bind(py::module &m) {
     py::class_<PyOpAttributeMap>(m, "OpAttributeMap")
+        .def("__contains__", &PyOpAttributeMap::dunderContains)
         .def("__len__", &PyOpAttributeMap::dunderLen)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed);
@@ -1744,6 +1750,24 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def("__getitem__", &PyDenseFPElementsAttribute::dunderGetItem);
+  }
+};
+
+/// Unit Attribute subclass. Unit attributes don't have values.
+class PyUnitAttribute : public PyConcreteAttribute<PyUnitAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAUnit;
+  static constexpr const char *pyClassName = "UnitAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return PyUnitAttribute(context->getRef(),
+                                 mlirUnitAttrGet(context->get()));
+        },
+        py::arg("context") = py::none(), "Create a Unit attribute.");
   }
 };
 
@@ -2852,6 +2876,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyDenseElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
   PyDenseFPElementsAttribute::bind(m);
+  PyUnitAttribute::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of PyType.

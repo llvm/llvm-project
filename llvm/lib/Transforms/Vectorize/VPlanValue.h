@@ -10,7 +10,7 @@
 /// This file contains the declarations of the entities induced by Vectorization
 /// Plans, e.g. the instructions the VPlan intends to generate if executed.
 /// VPlan models the following entities:
-/// VPValue   VPUser
+/// VPValue   VPUser   VPDef
 ///    |        |
 ///   VPInstruction
 /// These are documented in docs/VectorizationPlan.rst.
@@ -21,7 +21,9 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 
 namespace llvm {
@@ -29,6 +31,7 @@ namespace llvm {
 // Forward declarations.
 class raw_ostream;
 class Value;
+class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
@@ -39,6 +42,7 @@ class VPRecipeBase;
 // and live-outs which the VPlan will need to fix accordingly.
 class VPValue {
   friend class VPBuilder;
+  friend class VPDef;
   friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
@@ -53,8 +57,11 @@ protected:
   // Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
-  VPValue(const unsigned char SC, Value *UV = nullptr)
-      : SubclassID(SC), UnderlyingVal(UV) {}
+  /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
+  /// VPValue is not defined by any recipe modeled in VPlan.
+  VPDef *Def;
+
+  VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -87,13 +94,12 @@ public:
     VPVWidenGEPSC
   };
 
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
+  VPValue(Value *UV = nullptr, VPDef *Def = nullptr)
+      : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
-  virtual ~VPValue() {
-    assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  }
+  virtual ~VPValue();
 
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
@@ -152,6 +158,8 @@ public:
   }
 
   void replaceAllUsesWith(VPValue *New);
+
+  VPDef *getDef() { return Def; }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -223,6 +231,65 @@ public:
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *Recipe);
 };
+
+/// This class augments a recipe with a set of VPValues defined by the recipe.
+/// It allows recipes to define zero, one or multiple VPValues. A VPDef owns
+/// the VPValues it defines and is responsible for deleting its defined values.
+/// Single-value VPDefs that also inherit from VPValue must make sure to inherit
+/// from VPDef before VPValue.
+class VPDef {
+  friend class VPValue;
+
+  /// The VPValues defined by this VPDef.
+  TinyPtrVector<VPValue *> DefinedValues;
+
+  /// Add \p V as a defined value by this VPDef.
+  void addDefinedValue(VPValue *V) {
+    assert(V->getDef() == this &&
+           "can only add VPValue already linked with this VPDef");
+    DefinedValues.push_back(V);
+  }
+
+  /// Remove \p V from the values defined by this VPDef. \p V must be a defined
+  /// value of this VPDef.
+  void removeDefinedValue(VPValue *V) {
+    assert(V->getDef() == this &&
+           "can only remove VPValue linked with this VPDef");
+    assert(find(DefinedValues, V) != DefinedValues.end() &&
+           "VPValue to remove must be in DefinedValues");
+    erase_value(DefinedValues, V);
+    V->Def = nullptr;
+  }
+
+public:
+  virtual ~VPDef() {
+    for (VPValue *D : make_early_inc_range(DefinedValues)) {
+      assert(D->Def == this &&
+             "all defined VPValues should point to the containing VPDef");
+      assert(D->getNumUsers() == 0 &&
+             "all defined VPValues should have no more users");
+      D->Def = nullptr;
+      delete D;
+    }
+  }
+
+  /// Returns the VPValue with index \p I defined by the VPDef.
+  VPValue *getVPValue(unsigned I = 0) {
+    assert(DefinedValues[I] && "defined value must be non-null");
+    return DefinedValues[I];
+  }
+  const VPValue *getVPValue(unsigned I = 0) const {
+    assert(DefinedValues[I] && "defined value must be non-null");
+    return DefinedValues[I];
+  }
+
+  /// Returns an ArrayRef of the values defined by the VPDef.
+  ArrayRef<VPValue *> definedValues() { return DefinedValues; }
+
+  /// Returns the number of values defined by the VPDef.
+  unsigned getNumDefinedValues() const { return DefinedValues.size(); }
+};
+
 class VPlan;
 class VPBasicBlock;
 class VPRegionBlock;
