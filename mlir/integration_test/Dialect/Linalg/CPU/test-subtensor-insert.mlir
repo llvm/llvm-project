@@ -19,4 +19,4 @@ func @main() {
   return
 }
 
-func @print_memref_f32(%ptr : tensor<*xf32>)
+func private @print_memref_f32(%ptr : tensor<*xf32>)
