@@ -121,6 +121,7 @@ struct AlphaNum {
   AlphaNum &operator=(const AlphaNum &);
 };
 
+string StrCat();
 string StrCat(const AlphaNum &A);
 string StrCat(const AlphaNum &A, const AlphaNum &B);
 string StrCat(const AlphaNum &A, const AlphaNum &B, const AlphaNum &C);
@@ -182,6 +183,9 @@ void Positives() {
   StrAppend(&S, StrCat(1, 2, 3, 4, 5), StrCat(6, 7, 8, 9, 10));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
   // CHECK-FIXES: StrAppend(&S, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+
+  StrCat(1, StrCat());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
 }
 
 void Negatives() {
