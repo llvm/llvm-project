@@ -64,6 +64,8 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+
+  unsigned getAssumedAddrSpace(const Value *V) const override;
 };
 
 //===----------------------------------------------------------------------===//
