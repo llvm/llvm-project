@@ -2593,6 +2593,11 @@ def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Specify XNACK mode (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>;
 
+def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">, Group<m_Group>,
+  HelpText<"Enable unsafe floating point atomic instructions (AMDGPU only)">,
+  Flags<[CC1Option]>;
+def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">, Group<m_Group>;
+
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[NoXarchOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[NoXarchOption]>;
 def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;
