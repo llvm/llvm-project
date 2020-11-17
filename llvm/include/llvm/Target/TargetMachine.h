@@ -284,6 +284,14 @@ public:
     return false;
   }
 
+  /// If the specified generic pointer could be assumed as a pointer to a
+  /// specific address space, return that address space.
+  ///
+  /// Under offloading programming, the offloading target may be passed with
+  /// values only prepared on the host side and could assume certain
+  /// properties.
+  virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
+
   /// Get a \c TargetIRAnalysis appropriate for the target.
   ///
   /// This is used to construct the new pass manager's target IR analysis pass,
