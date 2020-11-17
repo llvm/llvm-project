@@ -82,6 +82,7 @@ protected:
 
   void emitConceptDecl(Interface &interface);
   void emitModelDecl(Interface &interface);
+  void emitModelMethodsDef(Interface &interface);
   void emitTraitDecl(Interface &interface, StringRef interfaceName,
                      StringRef interfaceTraitsName);
   void emitInterfaceDecl(Interface interface);
@@ -217,11 +218,25 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
 
   // Insert each of the virtual method overrides.
   for (auto &method : interface.getMethods()) {
-    emitCPPType(method.getReturnType(), os << "    static ");
+    emitCPPType(method.getReturnType(), os << "    static inline ");
     emitMethodNameAndArgs(method, os, valueType,
                           /*addThisArg=*/!method.isStatic(),
                           /*addConst=*/false);
-    os << " {\n      ";
+    os << ";\n";
+  }
+  os << "  };\n";
+}
+
+void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
+  for (auto &method : interface.getMethods()) {
+    os << "template<typename " << valueTemplate << ">\n";
+    emitCPPType(method.getReturnType(), os);
+    os << "detail::" << interface.getName() << "InterfaceTraits::Model<"
+       << valueTemplate << ">::";
+    emitMethodNameAndArgs(method, os, valueType,
+                          /*addThisArg=*/!method.isStatic(),
+                          /*addConst=*/false);
+    os << " {\n  ";
 
     // Check for a provided body to the function.
     if (Optional<StringRef> body = method.getBody()) {
@@ -229,7 +244,7 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
         os << body->trim();
       else
         os << tblgen::tgfmt(body->trim(), &nonStaticMethodFmt);
-      os << "\n    }\n";
+      os << "\n}\n";
       continue;
     }
 
@@ -244,9 +259,8 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
     llvm::interleaveComma(
         method.getArguments(), os,
         [&](const InterfaceMethod::Argument &arg) { os << arg.name; });
-    os << ");\n    }\n";
+    os << ");\n}\n";
   }
-  os << "  };\n";
 }
 
 void InterfaceGenerator::emitTraitDecl(Interface &interface,
@@ -308,6 +322,10 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
 
+  // Emit a forward declaration of the interface class so that it becomes usable
+  // in the signature of its methods.
+  os << "class " << interfaceName << ";\n";
+
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
      << "struct " << interfaceTraitsName << " {\n";
@@ -339,6 +357,8 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
     os << *extraDecls << "\n";
 
   os << "};\n";
+
+  emitModelMethodsDef(interface);
 
   for (StringRef ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
