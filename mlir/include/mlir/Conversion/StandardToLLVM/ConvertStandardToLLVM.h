@@ -503,18 +503,6 @@ protected:
   Value createIndexConstant(ConversionPatternRewriter &builder, Location loc,
                             uint64_t value) const;
 
-  // Given subscript indices and array sizes in row-major order,
-  //   i_n, i_{n-1}, ..., i_1
-  //   s_n, s_{n-1}, ..., s_1
-  // obtain a value that corresponds to the linearized subscript
-  //   \sum_k i_k * \prod_{j=1}^{k-1} s_j
-  // by accumulating the running linearized value.
-  // Note that `indices` and `allocSizes` are passed in the same order as they
-  // appear in load/store operations and memref type declarations.
-  Value linearizeSubscripts(ConversionPatternRewriter &builder, Location loc,
-                            ArrayRef<Value> indices,
-                            ArrayRef<Value> allocSizes) const;
-
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
   Value getStridedElementPtr(Location loc, Type elementTypePtr,
