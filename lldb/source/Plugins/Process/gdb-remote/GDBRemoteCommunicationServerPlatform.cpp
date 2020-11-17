@@ -42,6 +42,69 @@ using namespace lldb;
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
 
+GDBRemoteCommunicationServerPlatform::PortMap::PortMap(uint16_t min_port,
+                                                       uint16_t max_port) {
+  for (; min_port < max_port; ++min_port)
+    m_port_map[min_port] = LLDB_INVALID_PROCESS_ID;
+}
+
+void GDBRemoteCommunicationServerPlatform::PortMap::AllowPort(uint16_t port) {
+  // Do not modify existing mappings
+  m_port_map.insert({port, LLDB_INVALID_PROCESS_ID});
+}
+
+llvm::Expected<uint16_t>
+GDBRemoteCommunicationServerPlatform::PortMap::GetNextAvailablePort() {
+  if (m_port_map.empty())
+    return 0; // Bind to port zero and get a port, we didn't have any
+              // limitations
+
+  for (auto &pair : m_port_map) {
+    if (pair.second == LLDB_INVALID_PROCESS_ID) {
+      pair.second = ~(lldb::pid_t)LLDB_INVALID_PROCESS_ID;
+      return pair.first;
+    }
+  }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "No free port found in port map");
+}
+
+bool GDBRemoteCommunicationServerPlatform::PortMap::AssociatePortWithProcess(
+    uint16_t port, lldb::pid_t pid) {
+  auto pos = m_port_map.find(port);
+  if (pos != m_port_map.end()) {
+    pos->second = pid;
+    return true;
+  }
+  return false;
+}
+
+bool GDBRemoteCommunicationServerPlatform::PortMap::FreePort(uint16_t port) {
+  std::map<uint16_t, lldb::pid_t>::iterator pos = m_port_map.find(port);
+  if (pos != m_port_map.end()) {
+    pos->second = LLDB_INVALID_PROCESS_ID;
+    return true;
+  }
+  return false;
+}
+
+bool GDBRemoteCommunicationServerPlatform::PortMap::FreePortForProcess(
+    lldb::pid_t pid) {
+  if (!m_port_map.empty()) {
+    for (auto &pair : m_port_map) {
+      if (pair.second == pid) {
+        pair.second = LLDB_INVALID_PROCESS_ID;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool GDBRemoteCommunicationServerPlatform::PortMap::empty() const {
+  return m_port_map.empty();
+}
+
 // GDBRemoteCommunicationServerPlatform constructor
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, const char *socket_scheme)
@@ -95,8 +158,13 @@ GDBRemoteCommunicationServerPlatform::~GDBRemoteCommunicationServerPlatform() {}
 Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     const lldb_private::Args &args, std::string hostname, lldb::pid_t &pid,
     uint16_t &port, std::string &socket_name) {
-  if (port == UINT16_MAX)
-    port = GetNextAvailablePort();
+  if (port == UINT16_MAX) {
+    llvm::Expected<uint16_t> available_port = m_port_map.GetNextAvailablePort();
+    if (available_port)
+      port = *available_port;
+    else
+      return Status(available_port.takeError());
+  }
 
   // Spawn a new thread to accept the port that gets bound after binding to
   // port 0 (zero).
@@ -152,10 +220,10 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     m_spawned_pids.insert(pid);
     if (port > 0)
-      AssociatePortWithProcess(port, pid);
+      m_port_map.AssociatePortWithProcess(port, pid);
   } else {
     if (port > 0)
-      FreePort(port);
+      m_port_map.FreePort(port);
   }
   return error;
 }
@@ -453,7 +521,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
 bool GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
     lldb::pid_t pid) {
   std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
-  FreePortForProcess(pid);
+  m_port_map.FreePortForProcess(pid);
   m_spawned_pids.erase(pid);
   return true;
 }
@@ -497,51 +565,6 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
 
 void GDBRemoteCommunicationServerPlatform::SetPortMap(PortMap &&port_map) {
   m_port_map = port_map;
-}
-
-uint16_t GDBRemoteCommunicationServerPlatform::GetNextAvailablePort() {
-  if (m_port_map.empty())
-    return 0; // Bind to port zero and get a port, we didn't have any
-              // limitations
-
-  for (auto &pair : m_port_map) {
-    if (pair.second == LLDB_INVALID_PROCESS_ID) {
-      pair.second = ~(lldb::pid_t)LLDB_INVALID_PROCESS_ID;
-      return pair.first;
-    }
-  }
-  return UINT16_MAX;
-}
-
-bool GDBRemoteCommunicationServerPlatform::AssociatePortWithProcess(
-    uint16_t port, lldb::pid_t pid) {
-  PortMap::iterator pos = m_port_map.find(port);
-  if (pos != m_port_map.end()) {
-    pos->second = pid;
-    return true;
-  }
-  return false;
-}
-
-bool GDBRemoteCommunicationServerPlatform::FreePort(uint16_t port) {
-  PortMap::iterator pos = m_port_map.find(port);
-  if (pos != m_port_map.end()) {
-    pos->second = LLDB_INVALID_PROCESS_ID;
-    return true;
-  }
-  return false;
-}
-
-bool GDBRemoteCommunicationServerPlatform::FreePortForProcess(lldb::pid_t pid) {
-  if (!m_port_map.empty()) {
-    for (auto &pair : m_port_map) {
-      if (pair.second == pid) {
-        pair.second = LLDB_INVALID_PROCESS_ID;
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 const FileSpec &GDBRemoteCommunicationServerPlatform::GetDomainSocketDir() {
