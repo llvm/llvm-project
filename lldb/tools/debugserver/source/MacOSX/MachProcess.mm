@@ -2600,7 +2600,8 @@ void *MachProcess::ProfileThread(void *arg) {
   return NULL;
 }
 
-pid_t MachProcess::AttachForDebug(pid_t pid, char *err_str, size_t err_len) {
+pid_t MachProcess::AttachForDebug(pid_t pid, bool unmask_signals, char *err_str,
+                                  size_t err_len) {
   // Clear out and clean up from any current state
   Clear();
   if (pid != 0) {
@@ -2617,7 +2618,7 @@ pid_t MachProcess::AttachForDebug(pid_t pid, char *err_str, size_t err_len) {
 
     SetState(eStateAttaching);
     m_pid = pid;
-    if (!m_task.StartExceptionThread(err)) {
+    if (!m_task.StartExceptionThread(unmask_signals, err)) {
       const char *err_cstr = err.AsString();
       ::snprintf(err_str, err_len, "%s",
                  err_cstr ? err_cstr : "unable to start the exception thread");
@@ -3077,7 +3078,7 @@ pid_t MachProcess::LaunchForDebug(
                                    // working directory for inferior to this
     const char *stdin_path, const char *stdout_path, const char *stderr_path,
     bool no_stdio, nub_launch_flavor_t launch_flavor, int disable_aslr,
-    const char *event_data, DNBError &launch_err) {
+    const char *event_data, bool unmask_signals, DNBError &launch_err) {
   // Clear out and clean up from any current state
   Clear();
 
@@ -3182,7 +3183,7 @@ pid_t MachProcess::LaunchForDebug(
     for (i = 0; (arg = argv[i]) != NULL; i++)
       m_args.push_back(arg);
 
-    m_task.StartExceptionThread(launch_err);
+    m_task.StartExceptionThread(unmask_signals, launch_err);
     if (launch_err.Fail()) {
       if (launch_err.AsString() == NULL)
         launch_err.SetErrorString("unable to start the exception thread");
@@ -3525,7 +3526,8 @@ static CFStringRef CopyBundleIDForPath(const char *app_bundle_path,
 
 pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
                                     char const *envp[], bool no_stdio,
-                                    bool disable_aslr, DNBError &launch_err) {
+                                    bool disable_aslr, bool unmask_signals,
+                                    DNBError &launch_err) {
   // Clear out and clean up from any current state
   Clear();
 
@@ -3541,7 +3543,7 @@ pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
     char const *arg;
     for (i = 0; (arg = argv[i]) != NULL; i++)
       m_args.push_back(arg);
-    m_task.StartExceptionThread(launch_err);
+    m_task.StartExceptionThread(unmask_signals, launch_err);
 
     if (launch_err.Fail()) {
       if (launch_err.AsString() == NULL)
@@ -3738,7 +3740,8 @@ pid_t MachProcess::SBForkChildForPTraceDebugging(
 #if defined(WITH_BKS) || defined(WITH_FBS)
 pid_t MachProcess::BoardServiceLaunchForDebug(
     const char *path, char const *argv[], char const *envp[], bool no_stdio,
-    bool disable_aslr, const char *event_data, DNBError &launch_err) {
+    bool disable_aslr, const char *event_data, bool unmask_signals,
+    DNBError &launch_err) {
   DNBLogThreadedIf(LOG_PROCESS, "%s( '%s', argv)", __FUNCTION__, path);
 
   // Fork a child process for debugging
@@ -3751,7 +3754,7 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
     char const *arg;
     for (i = 0; (arg = argv[i]) != NULL; i++)
       m_args.push_back(arg);
-    m_task.StartExceptionThread(launch_err);
+    m_task.StartExceptionThread(unmask_signals, launch_err);
 
     if (launch_err.Fail()) {
       if (launch_err.AsString() == NULL)
