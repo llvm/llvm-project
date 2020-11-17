@@ -9326,7 +9326,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // make a 4-byte splat element. For example: 2-byte splat of 0xABAB can be
   // turned into a 4-byte splat of 0xABABABAB.
   if (Subtarget.hasPrefixInstrs() && SplatSize == 2)
-    return getCanonicalConstSplat((SplatBits |= SplatBits << 16), SplatSize * 2,
+    return getCanonicalConstSplat(SplatBits | (SplatBits << 16), SplatSize * 2,
                                   Op.getValueType(), DAG, dl);
 
   if (Subtarget.hasPrefixInstrs() && SplatSize == 4)
