@@ -1962,16 +1962,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
 
   // and(ashr(subNSW(Y, X), ScalarSizeInBits(Y)-1), X) --> X s> Y ? X : 0.
-  {
-    Value *X, *Y;
-    const APInt *ShAmt;
-    if (match(&I, m_c_And(m_OneUse(m_AShr(m_NSWSub(m_Value(Y), m_Value(X)),
-                                          m_APInt(ShAmt))),
-                          m_Deferred(X))) &&
-        *ShAmt == Ty->getScalarSizeInBits() - 1) {
-      Value *NewICmpInst = Builder.CreateICmpSGT(X, Y);
-      return SelectInst::Create(NewICmpInst, X, ConstantInt::getNullValue(Ty));
-    }
+  if (match(&I, m_c_And(m_OneUse(m_AShr(
+                            m_NSWSub(m_Value(Y), m_Value(X)),
+                            m_SpecificInt(Ty->getScalarSizeInBits() - 1))),
+                        m_Deferred(X)))) {
+    Value *NewICmpInst = Builder.CreateICmpSGT(X, Y);
+    return SelectInst::Create(NewICmpInst, X, ConstantInt::getNullValue(Ty));
   }
 
   return nullptr;
