@@ -789,6 +789,15 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return End;
 }
 
+template <typename T, std::enable_if_t<!std::is_base_of<FunctionDecl, T>::value>
+                          * = nullptr>
+inline bool isDefaultedHelper(const T *) {
+  return false;
+}
+inline bool isDefaultedHelper(const FunctionDecl *FD) {
+  return FD->isDefaulted();
+}
+
 // Metafunction to determine if type T has a member called getDecl.
 template <typename Ty>
 class has_getDecl {
@@ -1056,6 +1065,8 @@ private:
   /// is \c NULL.
   bool matchesDecl(const Decl *Node, ASTMatchFinder *Finder,
                    BoundNodesTreeBuilder *Builder) const {
+    if (Finder->isTraversalIgnoringImplicitNodes() && Node->isImplicit())
+      return false;
     return Node != nullptr && this->InnerMatcher.matches(
                                   DynTypedNode::create(*Node), Finder, Builder);
   }
