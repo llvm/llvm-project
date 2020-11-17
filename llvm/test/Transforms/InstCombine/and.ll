@@ -1089,7 +1089,7 @@ define <2 x i8> @lowmask_add_2_splat(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @lowmask_add_2_splat(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 63, i8 63>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 63, i8 63>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
@@ -1128,7 +1128,7 @@ define <2 x i8> @lowmask_add_splat(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @lowmask_add_splat(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 32, i8 32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 32, i8 32>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
