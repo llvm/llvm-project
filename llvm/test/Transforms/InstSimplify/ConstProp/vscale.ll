@@ -208,7 +208,7 @@ define <vscale x 4 x i32> @shufflevector() {
 
 define <vscale x 2 x double> @load() {
 ; CHECK-LABEL: @load(
-; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
+; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1), align 16
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[R]]
 ;
   %r = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
@@ -262,7 +262,7 @@ define <vscale x 4 x i1> @icmp_undef() {
 
 define <vscale x 4 x i1> @icmp_zero() {
 ; CHECK-LABEL: @icmp_zero(
-; CHECK-NEXT:    ret <vscale x 4 x i1> icmp eq (<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> undef, i1 true, i32 0), <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer)
 ;
   %r = icmp eq <vscale x 4 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 4 x i1> %r
