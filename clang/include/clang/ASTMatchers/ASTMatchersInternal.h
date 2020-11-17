@@ -1062,7 +1062,7 @@ public:
 
   virtual bool IsMatchingInTemplateInstantiationNotSpelledInSource() const = 0;
 
-  bool isTraversalAsIs() const;
+  bool isTraversalIgnoringImplicitNodes() const;
 
 protected:
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
