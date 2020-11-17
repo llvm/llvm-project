@@ -1945,12 +1945,37 @@ struct ExtractElementFromDynamicTensorFromElements
   }
 };
 
+/// Canonicalizes the pattern of the form
+///
+/// %val = tensor_cast %source : : tensor<?xi32> to tensor<2xi32>
+/// %extracted_element = extract_element %val[%c0] : tensor<2xi32>
+///
+/// to
+///
+/// %extracted_element = extract_element %source[%c0] : tensor<?xi32>
+struct ExtractElementFromTensorCast
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorCast = extract.aggregate().getDefiningOp<TensorCastOp>();
+    if (!tensorCast)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ExtractElementOp>(extract, tensorCast.source(),
+                                                  extract.getIndices());
+    return success();
+  }
+};
+
 } // namespace
 
 void DynamicTensorFromElementsOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<ExtractElementFromDynamicTensorFromElements,
-                 StaticDynamicTensorFromElements>(context);
+                 ExtractElementFromTensorCast, StaticDynamicTensorFromElements>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
