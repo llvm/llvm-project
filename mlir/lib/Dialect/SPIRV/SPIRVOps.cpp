@@ -1036,7 +1036,7 @@ static LogicalResult verify(spirv::AccessChainOp accessChainOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv._address_of
+// spv.mlir.addressof
 //===----------------------------------------------------------------------===//
 
 void spirv::AddressOfOp::build(OpBuilder &builder, OperationState &state,

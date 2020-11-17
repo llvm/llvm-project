@@ -26,7 +26,7 @@ spv.func @access_chain_array(%arg0 : i32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.globalVariable and spv._address_of
+// spv.globalVariable and spv.mlir.addressof
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
@@ -40,7 +40,7 @@ spv.module Logical GLSL450 {
   //       CHECK:   llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (float, array<10 x float>)>>
   spv.globalVariable @struct : !spv.ptr<!spv.struct<(f32, !spv.array<10xf32>)>, Private>
   spv.func @func() "None" {
-    %0 = spv._address_of @struct : !spv.ptr<!spv.struct<(f32, !spv.array<10xf32>)>, Private>
+    %0 = spv.mlir.addressof @struct : !spv.ptr<!spv.struct<(f32, !spv.array<10xf32>)>, Private>
     spv.Return
   }
 }
@@ -51,7 +51,7 @@ spv.module Logical GLSL450 {
   //       CHECK:   llvm.mlir.addressof @bar_descriptor_set0_binding0 : !llvm.ptr<i32>
   spv.globalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
   spv.func @foo() "None" {
-    %0 = spv._address_of @bar : !spv.ptr<i32, StorageBuffer>
+    %0 = spv.mlir.addressof @bar : !spv.ptr<i32, StorageBuffer>
     spv.Return
   }
 }
@@ -62,7 +62,7 @@ spv.module @name Logical GLSL450 {
   //       CHECK:   llvm.mlir.addressof @name_bar_descriptor_set0_binding0 : !llvm.ptr<i32>
   spv.globalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
   spv.func @foo() "None" {
-    %0 = spv._address_of @bar : !spv.ptr<i32, StorageBuffer>
+    %0 = spv.mlir.addressof @bar : !spv.ptr<i32, StorageBuffer>
     spv.Return
   }
 }
