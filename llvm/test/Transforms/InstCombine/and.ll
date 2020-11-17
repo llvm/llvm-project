@@ -1085,6 +1085,19 @@ define i8 @lowmask_add_2_uses(i8 %x) {
   ret i8 %r
 }
 
+define <2 x i8> @lowmask_add_2_splat(<2 x i8> %x, <2 x i8>* %p) {
+; CHECK-LABEL: @lowmask_add_2_splat(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 63, i8 63>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
+  store <2 x i8> %a, <2 x i8>* %p
+  %r = and <2 x i8> %a, <i8 63, i8 63> ; 0x3f
+  ret <2 x i8> %r
+}
+
 define i8 @not_lowmask_add(i8 %x) {
 ; CHECK-LABEL: @not_lowmask_add(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
