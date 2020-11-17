@@ -119,30 +119,28 @@ Instruction *InstCombinerImpl::OptAndOp(BinaryOperator *Op, ConstantInt *AndRHS,
                                         BinaryOperator &TheAnd) {
   Value *X;
   const APInt *C;
-  if (!match(Op, m_OneUse(m_Add(m_Value(X), m_APInt(C)))))
+  if (!match(Op, m_Add(m_Value(X), m_APInt(C))))
     return nullptr;
 
-  // Adding a one to a single bit bit-field should be turned into an XOR
-  // of the bit.  First thing to check is to see if this AND is with a
-  // single bit constant.
+  // If we are adding zeros to every bit below a mask, the add has no effect:
+  // (X + HighC) & LowMaskC --> X & LowMaskC
   const APInt &AndRHSV = AndRHS->getValue();
+  unsigned Ctlz = AndRHSV.countLeadingZeros();
+  unsigned BitWidth = AndRHSV.getBitWidth();
+  APInt LowMask(APInt::getLowBitsSet(BitWidth, BitWidth - Ctlz));
+  if ((*C & LowMask).isNullValue())
+    return BinaryOperator::CreateAnd(X, TheAnd.getOperand(1));
 
   // If there is only one bit set.
-  if (AndRHSV.isPowerOf2()) {
+  if (AndRHSV.isPowerOf2() && Op->hasOneUse()) {
     // Ok, at this point, we know that we are masking the result of the
     // ADD down to exactly one bit.  If the constant we are adding has
     // no bits set below this bit, then we can eliminate the ADD.
-
     // Check to see if any bits below the one bit set in AndRHSV are set.
     if ((*C & (AndRHSV - 1)).isNullValue()) {
       // If not, the only thing that can effect the output of the AND is
-      // the bit specified by AndRHSV.  If that bit is set, the effect of
-      // the XOR is to toggle the bit.  If it is clear, then the ADD has
-      // no effect.
-      if ((*C & AndRHSV).isNullValue()) // Bit is not set, noop
-        return replaceOperand(TheAnd, 0, X);
-
-      // Pull the XOR out of the AND.
+      // the bit specified by AndRHSV. If that bit is set, the effect of
+      // the XOR is to toggle the bit.
       Value *NewAnd = Builder.CreateAnd(X, AndRHS);
       NewAnd->takeName(Op);
       return BinaryOperator::CreateXor(NewAnd, AndRHS);
