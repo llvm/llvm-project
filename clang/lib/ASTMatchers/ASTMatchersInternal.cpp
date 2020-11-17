@@ -290,7 +290,7 @@ bool DynTypedMatcher::matches(const DynTypedNode &DynNode,
                           Implementation->TraversalKind());
 
   if (Finder->isTraversalIgnoringImplicitNodes() &&
-      Finder->IsMatchingInTemplateInstantiationNotSpelledInSource())
+      Finder->IsMatchingInASTNodeNotSpelledInSource())
     return false;
 
   auto N =
@@ -314,7 +314,7 @@ bool DynTypedMatcher::matchesNoKindCheck(const DynTypedNode &DynNode,
                           Implementation->TraversalKind());
 
   if (Finder->isTraversalIgnoringImplicitNodes() &&
-      Finder->IsMatchingInTemplateInstantiationNotSpelledInSource())
+      Finder->IsMatchingInASTNodeNotSpelledInSource())
     return false;
 
   auto N =
