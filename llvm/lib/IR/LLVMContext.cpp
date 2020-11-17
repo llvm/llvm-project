@@ -146,11 +146,11 @@ bool LLVMContext::getDiagnosticsHotnessRequested() const {
   return pImpl->DiagnosticsHotnessRequested;
 }
 
-void LLVMContext::setDiagnosticsHotnessThreshold(uint64_t Threshold) {
+void LLVMContext::setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold) {
   pImpl->DiagnosticsHotnessThreshold = Threshold;
 }
 uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
-  return pImpl->DiagnosticsHotnessThreshold;
+  return pImpl->DiagnosticsHotnessThreshold.getValueOr(UINT64_MAX);
 }
 
 remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() {

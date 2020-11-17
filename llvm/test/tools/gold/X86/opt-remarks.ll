@@ -11,8 +11,22 @@
 ; RUN:    -plugin-opt=opt-remarks-format=yaml \
 ; RUN:    -plugin-opt=opt-remarks-with-hotness \
 ; RUN:	  -plugin-opt=opt-remarks-filename=%t.hot.yaml %t.o -o %t2.o 2>&1
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext -shared \
+; RUN:    -plugin-opt=opt-remarks-passes=inline \
+; RUN:    -plugin-opt=opt-remarks-format=yaml \
+; RUN:    -plugin-opt=opt-remarks-with-hotness \
+; RUN:    -plugin-opt=opt-remarks-hotness-threshold=300 \
+; RUN:	  -plugin-opt=opt-remarks-filename=%t.t300.yaml %t.o -o %t2.o 2>&1
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext -shared \
+; RUN:    -plugin-opt=opt-remarks-passes=inline \
+; RUN:    -plugin-opt=opt-remarks-format=yaml \
+; RUN:    -plugin-opt=opt-remarks-with-hotness \
+; RUN:    -plugin-opt=opt-remarks-hotness-threshold=301 \
+; RUN:	  -plugin-opt=opt-remarks-filename=%t.t301.yaml %t.o -o %t2.o 2>&1
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
 ; RUN: cat %t.hot.yaml | FileCheck %s -check-prefix=YAML-HOT
+; RUN: FileCheck %s -check-prefix=YAML-HOT < %t.t300.yaml
+; RUN: count 0 < %t.t301.yaml
 
 ; Check that @f is inlined after optimizations.
 ; CHECK-LABEL: define i32 @_start
@@ -46,7 +60,6 @@
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
 
-; YAML-HOT: ...
 ; YAML-HOT: --- !Passed
 ; YAML-HOT: Pass:            inline
 ; YAML-HOT-NEXT: Name:            Inlined
