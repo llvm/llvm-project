@@ -1202,6 +1202,21 @@ INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
       m);
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, pthread_cond_clockwait, void *c, void *m,
+            __sanitizer_clockid_t clock, void *abstime) {
+  void *cond = init_cond(c);
+  SCOPED_TSAN_INTERCEPTOR(pthread_cond_clockwait, cond, m, clock, abstime);
+  return cond_wait(
+      thr, pc, &si,
+      [=]() { return REAL(pthread_cond_clockwait)(cond, m, clock, abstime); },
+      cond, m);
+}
+#define TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT TSAN_INTERCEPT(pthread_cond_clockwait)
+#else
+#define TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT
+#endif
+
 #if SANITIZER_MAC
 INTERCEPTOR(int, pthread_cond_timedwait_relative_np, void *c, void *m,
             void *reltime) {
@@ -2715,6 +2730,8 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
   TSAN_INTERCEPT_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
   TSAN_INTERCEPT_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+
+  TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
 
   TSAN_INTERCEPT(pthread_mutex_init);
   TSAN_INTERCEPT(pthread_mutex_destroy);
