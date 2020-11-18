@@ -84,7 +84,7 @@ struct DictionaryAttributeStorage final
   construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
     auto size = DictionaryAttributeStorage::totalSizeToAlloc<NamedAttribute>(
         key.size());
-    auto rawMem = allocator.allocate(size, alignof(NamedAttribute));
+    auto rawMem = allocator.allocate(size, alignof(DictionaryAttributeStorage));
 
     // Initialize the storage and trailing attribute list.
     auto result = ::new (rawMem) DictionaryAttributeStorage(key.size());
