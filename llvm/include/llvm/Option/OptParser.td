@@ -156,20 +156,17 @@ class MarshallingInfo<code keypath, code defaultvalue> {
   code DefaultValue = defaultvalue;
 }
 
-class MarshallingInfoString<code keypath, code defaultvalue, code normalizerretty>
-  : MarshallingInfo<keypath, defaultvalue> {
-  code NormalizerRetTy = normalizerretty;
-}
+class MarshallingInfoString<code keypath, code defaultvalue>
+  : MarshallingInfo<keypath, defaultvalue> {}
 
-class MarshallingInfoFlag<code keypath, DefaultAnyOf defaults = DefaultAnyOf<[]>, code ty="unsigned">
+class MarshallingInfoFlag<code keypath, DefaultAnyOf defaults = DefaultAnyOf<[]>>
   : MarshallingInfo<keypath, defaults.DefaultValue> {
-  code NormalizerRetTy = ty;
   code Normalizer = "normalizeSimpleFlag";
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
 class MarshallingInfoBitfieldFlag<code keypath, code value>
-  : MarshallingInfoFlag<keypath, DefaultAnyOf<[], "0u", " | ">, "unsigned"> {
+  : MarshallingInfoFlag<keypath, DefaultAnyOf<[], "0u", " | ">> {
   code Normalizer = "(normalizeFlagToValue<unsigned, "#value#">)";
   code ValueMerger = "mergeMaskValue";
   code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
