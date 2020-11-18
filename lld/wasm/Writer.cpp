@@ -539,6 +539,25 @@ void Writer::populateTargetFeatures() {
   }
 }
 
+static bool shouldImport(Symbol *sym) {
+  // We don't generate imports for data symbols. They however can be imported
+  // as GOT entries.
+  if (isa<DataSymbol>(sym))
+    return false;
+
+  if (config->relocatable ||
+      config->unresolvedSymbols == UnresolvedPolicy::ImportFuncs)
+    return true;
+  if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
+    return true;
+  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
+    return g->importName.hasValue();
+  if (auto *f = dyn_cast<UndefinedFunction>(sym))
+    return f->importName.hasValue();
+
+  return false;
+}
+
 void Writer::calculateImports() {
   for (Symbol *sym : symtab->getSymbols()) {
     if (!sym->isUndefined())
@@ -549,13 +568,10 @@ void Writer::calculateImports() {
       continue;
     if (!sym->isUsedInRegularObj)
       continue;
-    // We don't generate imports for data symbols. They however can be imported
-    // as GOT entries.
-    if (isa<DataSymbol>(sym))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
-    out.importSec->addImport(sym);
+    if (shouldImport(sym)) {
+      LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
+      out.importSec->addImport(sym);
+    }
   }
 }
 

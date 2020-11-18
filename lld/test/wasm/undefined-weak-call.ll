@@ -89,11 +89,11 @@ define i32 @callWeakFuncs() {
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            'undefined:weakFunc1'
+; CHECK-NEXT:         Name:            'undefined_weak:weakFunc1'
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            'undefined:weakFunc2'
+; CHECK-NEXT:         Name:            'undefined_weak:weakFunc2'
 ; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Name:            'undefined:weakFunc3'
+; CHECK-NEXT:         Name:            'undefined_weak:weakFunc3'
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            callWeakFuncs
 ; CHECK-NEXT: ...
