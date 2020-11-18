@@ -26,7 +26,7 @@
          "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin"
          "noduplicate" "nofree" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
          "norecurse" "noundef" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
-         "speculatable" "nossp" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
+         "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "willreturn" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
