@@ -976,10 +976,6 @@ static bool isLoadCombineCandidate(Instruction *Or) {
 
 /// Return true if it may be profitable to convert this (X|Y) into (X+Y).
 static bool ShouldConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
-  // If this `or` appears to be a part of an load widening reduction, ignore it.
-  if (isLoadCombineCandidate(Or))
-    return false;
-
   // Don't bother to convert this up unless either the LHS is an associable add
   // or subtract or mul or if this is only used by one of the above.
   // This is only a compile-time improvement, it is not needed for correctness!
@@ -2217,7 +2213,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // If this is a bitwise or instruction of operands
   // with no common bits set, convert it to X+Y.
   if (I->getOpcode() == Instruction::Or &&
-      ShouldConvertOrWithNoCommonBitsToAdd(I) &&
+      ShouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
       haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
                           I->getModule()->getDataLayout(), /*AC=*/nullptr, I,
                           /*DT=*/nullptr)) {
