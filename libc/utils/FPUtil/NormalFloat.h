@@ -93,30 +93,47 @@ template <typename T> struct NormalFloat {
     // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
     constexpr int maxExponentValue = (1 << ExponentWidth<T>::value) - 2;
     if (biasedExponent > maxExponentValue) {
-      // TODO: Should infinity with the correct sign be returned?
-      return FPBits<T>::buildNaN(1);
+      return sign ? FPBits<T>::negInf() : FPBits<T>::inf();
     }
 
     FPBits<T> result(T(0.0));
+    result.sign = sign;
 
     constexpr int subnormalExponent = -FPBits<T>::exponentBias + 1;
     if (exponent < subnormalExponent) {
       unsigned shift = subnormalExponent - exponent;
-      if (shift <= MantissaWidth<T>::value) {
+      // Since exponent > subnormalExponent, shift is strictly greater than
+      // zero.
+      if (shift <= MantissaWidth<T>::value + 1) {
         // Generate a subnormal number. Might lead to loss of precision.
+        // We round to nearest and round halfway cases to even.
+        const UIntType shiftOutMask = (UIntType(1) << shift) - 1;
+        const UIntType shiftOutValue = mantissa & shiftOutMask;
+        const UIntType halfwayValue = UIntType(1) << (shift - 1);
         result.exponent = 0;
         result.mantissa = mantissa >> shift;
-        result.sign = sign;
+        UIntType newMantissa = result.mantissa;
+        if (shiftOutValue > halfwayValue) {
+          newMantissa += 1;
+        } else if (shiftOutValue == halfwayValue) {
+          // Round to even.
+          if (result.mantissa & 0x1)
+            newMantissa += 1;
+        }
+        result.mantissa = newMantissa;
+        // Adding 1 to mantissa can lead to overflow. This can only happen if
+        // mantissa was all ones (0b111..11). For such a case, we will carry
+        // the overflow into the exponent.
+        if (newMantissa == one)
+          result.exponent = 1;
         return result;
       } else {
-        // TODO: Should zero with the correct sign be returned?
-        return FPBits<T>::buildNaN(1);
+        return result;
       }
     }
 
     result.exponent = exponent + FPBits<T>::exponentBias;
     result.mantissa = mantissa;
-    result.sign = sign;
     return result;
   }
 
@@ -192,32 +209,50 @@ template <> inline NormalFloat<long double>::operator long double() const {
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
   constexpr int maxExponentValue = (1 << ExponentWidth<long double>::value) - 2;
   if (biasedExponent > maxExponentValue) {
-    // TODO: Should infinity with the correct sign be returned?
-    return FPBits<long double>::buildNaN(1);
+    return sign ? FPBits<long double>::negInf() : FPBits<long double>::inf();
   }
 
   FPBits<long double> result(0.0l);
+  result.sign = sign;
 
   constexpr int subnormalExponent = -FPBits<long double>::exponentBias + 1;
   if (exponent < subnormalExponent) {
     unsigned shift = subnormalExponent - exponent;
-    if (shift <= MantissaWidth<long double>::value) {
+    if (shift <= MantissaWidth<long double>::value + 1) {
       // Generate a subnormal number. Might lead to loss of precision.
+      // We round to nearest and round halfway cases to even.
+      const UIntType shiftOutMask = (UIntType(1) << shift) - 1;
+      const UIntType shiftOutValue = mantissa & shiftOutMask;
+      const UIntType halfwayValue = UIntType(1) << (shift - 1);
       result.exponent = 0;
       result.mantissa = mantissa >> shift;
-      result.implicitBit = 0;
-      result.sign = sign;
+      UIntType newMantissa = result.mantissa;
+      if (shiftOutValue > halfwayValue) {
+        newMantissa += 1;
+      } else if (shiftOutValue == halfwayValue) {
+        // Round to even.
+        if (result.mantissa & 0x1)
+          newMantissa += 1;
+      }
+      result.mantissa = newMantissa;
+      // Adding 1 to mantissa can lead to overflow. This can only happen if
+      // mantissa was all ones (0b111..11). For such a case, we will carry
+      // the overflow into the exponent and set the implicit bit to 1.
+      if (newMantissa == one) {
+        result.exponent = 1;
+        result.implicitBit = 1;
+      } else {
+        result.implicitBit = 0;
+      }
       return result;
     } else {
-      // TODO: Should zero with the correct sign be returned?
-      return FPBits<long double>::buildNaN(1);
+      return result;
     }
   }
 
   result.exponent = biasedExponent;
   result.mantissa = mantissa;
   result.implicitBit = 1;
-  result.sign = sign;
   return result;
 }
 #endif
