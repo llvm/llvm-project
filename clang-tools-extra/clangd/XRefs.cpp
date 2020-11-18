@@ -1124,6 +1124,58 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   return Result;
 }
 
+std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
+                                               const SymbolIndex *Index) {
+  // We rely on index to find the implementations in subclasses.
+  // FIXME: Index can be stale, so we may loose some latest results from the
+  // main file.
+  if (!Index)
+    return {};
+  const SourceManager &SM = AST.getSourceManager();
+  auto MainFilePath =
+      getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  if (!MainFilePath) {
+    elog("Failed to get a path for the main file, so no implementations.");
+    return {};
+  }
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    elog("Failed to convert position to source location: {0}",
+         CurLoc.takeError());
+    return {};
+  }
+  std::vector<LocatedSymbol> Results;
+  DeclRelationSet Relations =
+      DeclRelation::TemplatePattern | DeclRelation::Alias;
+  RelationsRequest Req;
+  Req.Predicate = RelationKind::OverriddenBy;
+  for (const NamedDecl *ND : getDeclAtPosition(AST, *CurLoc, Relations))
+    if (const CXXMethodDecl *CXXMD = llvm::dyn_cast<CXXMethodDecl>(ND))
+      if (CXXMD->isVirtual())
+        Req.Subjects.insert(getSymbolID(ND));
+
+  if (Req.Subjects.empty())
+    return Results;
+  Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+    auto DeclLoc =
+        indexToLSPLocation(Object.CanonicalDeclaration, *MainFilePath);
+    if (!DeclLoc) {
+      elog("Find implementation: {0}", DeclLoc.takeError());
+      return;
+    }
+    LocatedSymbol Loc;
+    Loc.Name = Object.Name.str();
+    Loc.PreferredDeclaration = *DeclLoc;
+    auto DefLoc = indexToLSPLocation(Object.Definition, *MainFilePath);
+    if (DefLoc)
+      Loc.Definition = *DefLoc;
+    else
+      llvm::consumeError(DefLoc.takeError());
+    Results.push_back(Loc);
+  });
+  return Results;
+}
+
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                 const SymbolIndex *Index) {
   if (!Limit)
