@@ -44,6 +44,7 @@ private:
 /// views as SSA values.
 class LinalgDependenceGraph {
 public:
+  enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
   struct LinalgOpView {
     Operation *op;
     unsigned operandIndex;
@@ -57,13 +58,14 @@ public:
     //   1. src in the case of dependencesFromDstGraphs.
     //   2. dst in the case of dependencesIntoGraphs.
     LinalgOpView indexingOpView;
+    // Type of the dependence.
+    DependenceType dependenceType;
   };
   using LinalgDependences = SmallVector<LinalgDependenceGraphElem, 8>;
   using DependenceGraph = DenseMap<Operation *, LinalgDependences>;
   using dependence_iterator = LinalgDependences::const_iterator;
   using dependence_range = iterator_range<dependence_iterator>;
 
-  enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
   static StringRef getDependenceTypeStr(DependenceType depType);
 
   // Builds a linalg dependence graph for the ops of type LinalgOp under `f`.
