@@ -199,6 +199,9 @@ class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";
 }
+class AutoNormalizeEnumJoined : AutoNormalizeEnum {
+  code Denormalizer = "denormalizeSimpleEnumJoined";
+}
 class ValueMerger<code merger> { code ValueMerger = merger; }
 class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
