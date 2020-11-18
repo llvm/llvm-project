@@ -24,7 +24,7 @@ define void @foo() {
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @foo(
-; AVX-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> <i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 2)>, i32 16, <2 x i1> <i1 true, i1 true>, <2 x i32> undef)
+; AVX-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> <i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 2)>, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i32> undef)
 ; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; AVX-NEXT:    store <8 x i32> [[SHUFFLE]], <8 x i32>* bitcast ([8 x i32]* @a to <8 x i32>*), align 16
 ; AVX-NEXT:    ret void
