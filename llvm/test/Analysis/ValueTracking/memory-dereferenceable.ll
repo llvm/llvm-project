@@ -1,4 +1,5 @@
 ; RUN: opt -print-memderefs -analyze -S < %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -passes=print-memderefs -S < %s -disable-output 2>&1 | FileCheck %s
 
 ; Uses the print-deref (+ analyze to print) pass to run
 ; isDereferenceablePointer() on many load instruction operands
