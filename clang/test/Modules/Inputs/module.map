@@ -2,16 +2,16 @@ module c_library [extern_c] { module inner { header "c-header.h" } }
 module cxx_library { header "cxx-header.h" requires cplusplus }
 module c_library_bad [extern_c] { header "c-header-bad.h" }
 module diamond_top { header "diamond_top.h" }
-module diamond_left {
-  header "diamond_left.h"
+module diamond_left { 
+  header "diamond_left.h" 
   export diamond_top
 }
-module diamond_right {
-  header "diamond_right.h"
+module diamond_right { 
+  header "diamond_right.h" 
   export diamond_top
 }
-module diamond_bottom {
-  header "diamond_bottom.h"
+module diamond_bottom { 
+  header "diamond_bottom.h" 
   export *
 }
 module irgen { header "irgen.h" }
@@ -24,47 +24,47 @@ module lookup_left_cxx { header "lookup_left.hpp" }
 module lookup_right_cxx { header "lookup_right.hpp" }
 module module_private_left { header "module_private_left.h" }
 module module_private_right { header "module_private_right.h" }
-module macros_top {
-  header "macros_top.h"
+module macros_top { 
+  header "macros_top.h" 
   explicit module b { header "macros_top_b.h" }
   explicit module c { header "macros_top_c.h" }
 }
-module macros_left {
-  header "macros_left.h"
+module macros_left { 
+  header "macros_left.h" 
   export *
 }
-module macros_right {
-  header "macros_right.h"
+module macros_right { 
+  header "macros_right.h" 
   export *
   explicit module undef {
     header "macros_right_undef.h"
   }
 }
-module macros_bottom {
-  header "macros_bottom.h"
+module macros_bottom { 
+  header "macros_bottom.h" 
   export *
 }
 module macros { header "macros.h" }
 module macros_other { header "macros_other.h" }
 module category_top { header "category_top.h" }
-module category_left {
-  header "category_left.h"
+module category_left { 
+  header "category_left.h" 
   export category_top
 
   explicit module sub {
     header "category_left_sub.h"
   }
 }
-module category_right {
-  header "category_right.h"
+module category_right { 
+  header "category_right.h" 
   export category_top
 
   explicit module sub {
     header "category_right_sub.h"
   }
 }
-module category_bottom {
-  header "category_bottom.h"
+module category_bottom { 
+  header "category_bottom.h" 
   export category_left
   export category_right
 }
@@ -84,52 +84,52 @@ module decldef {
   explicit module Def { header "def.h" }
 }
 
-module redecl_merge_top {
+module redecl_merge_top { 
   header "redecl-merge-top.h"
   explicit module Explicit { header "redecl-merge-top-explicit.h" }
   exclude header "nonexistent.h"
 }
-module redecl_merge_left {
-  header "redecl-merge-left.h"
+module redecl_merge_left { 
+  header "redecl-merge-left.h" 
   export *
 }
-module redecl_merge_left_left {
-  header "redecl-merge-left-left.h"
+module redecl_merge_left_left { 
+  header "redecl-merge-left-left.h" 
   export *
 }
-module redecl_merge_right {
-  header "redecl-merge-right.h"
+module redecl_merge_right { 
+  header "redecl-merge-right.h" 
   export *
 }
-module redecl_merge_bottom {
+module redecl_merge_bottom { 
   explicit module prefix {
     header "redecl-merge-bottom-prefix.h"
   }
 
-  header "redecl-merge-bottom.h"
+  header "redecl-merge-bottom.h" 
   export *
 }
-module namespaces_top {
+module namespaces_top { 
   header "namespaces-top.h"
   export *
 }
-module namespaces_left {
+module namespaces_left { 
   header "namespaces-left.h"
   export *
 }
-module namespaces_right {
+module namespaces_right { 
   header "namespaces-right.h"
   export *
 }
-module templates_top {
+module templates_top { 
   header "templates-top.h"
   export *
 }
-module templates_left {
+module templates_left { 
   header "templates-left.h"
   export *
 }
-module templates_right {
+module templates_right { 
   header "templates-right.h"
   export *
 }
@@ -159,7 +159,7 @@ module import_decl {
   header "import-decl.h"
 }
 
-framework module * {
+framework module * { 
   exclude NotAModule
 }
 
