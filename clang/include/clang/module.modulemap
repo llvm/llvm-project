@@ -3,7 +3,6 @@ module Clang_Analysis {
   umbrella "Analysis"
 
   textual header "Analysis/Analyses/ThreadSafetyOps.def"
-  textual header "Analysis/PathDiagnosticConsumers.def"
 
   module * { export * }
 

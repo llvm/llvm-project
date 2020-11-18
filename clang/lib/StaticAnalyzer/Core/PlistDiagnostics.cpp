@@ -1,4 +1,4 @@
-//===--- PlistPathDiagnosticConsumer.cpp - Plist Diagnostics ----*- C++ -*-===//
+//===--- PlistDiagnostics.cpp - Plist Diagnostics for Paths -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the PlistPathDiagnosticConsumer object.
+//  This file defines the PlistDiagnostics object.
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/PathDiagnostic.h"
-#include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
@@ -22,6 +21,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
+#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -38,7 +38,7 @@ using namespace markup;
 //===----------------------------------------------------------------------===//
 
 namespace {
-  class PlistPathDiagnosticConsumer : public PathDiagnosticConsumer {
+  class PlistDiagnostics : public PathDiagnosticConsumer {
     PathDiagnosticConsumerOptions DiagOpts;
     const std::string OutputFile;
     const Preprocessor &PP;
@@ -49,18 +49,18 @@ namespace {
                       const PathPieces &Path);
 
   public:
-    PlistPathDiagnosticConsumer(PathDiagnosticConsumerOptions DiagOpts,
+    PlistDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
                      const std::string &OutputFile, const Preprocessor &PP,
                      const cross_tu::CrossTranslationUnitContext &CTU,
                      bool supportsMultipleFiles);
 
-    ~PlistPathDiagnosticConsumer() override {}
+    ~PlistDiagnostics() override {}
 
     void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                               FilesMade *filesMade) override;
 
     StringRef getName() const override {
-      return "PlistPathDiagnosticConsumer";
+      return "PlistDiagnostics";
     }
 
     PathGenerationScheme getGenerationScheme() const override {
@@ -516,10 +516,10 @@ static void printCoverage(const PathDiagnostic *D,
 }
 
 //===----------------------------------------------------------------------===//
-// Methods of PlistPathDiagnosticConsumer.
+// Methods of PlistDiagnostics.
 //===----------------------------------------------------------------------===//
 
-PlistPathDiagnosticConsumer::PlistPathDiagnosticConsumer(
+PlistDiagnostics::PlistDiagnostics(
     PathDiagnosticConsumerOptions DiagOpts, const std::string &output,
     const Preprocessor &PP, const cross_tu::CrossTranslationUnitContext &CTU,
     bool supportsMultipleFiles)
@@ -538,8 +538,8 @@ void ento::createPlistDiagnosticConsumer(
   if (OutputFile.empty())
     return;
 
-  C.push_back(new PlistPathDiagnosticConsumer(DiagOpts, OutputFile, PP, CTU,
-                                              /*supportsMultipleFiles=*/false));
+  C.push_back(new PlistDiagnostics(DiagOpts, OutputFile, PP, CTU,
+                                   /*supportsMultipleFiles=*/false));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU);
 }
@@ -553,15 +553,14 @@ void ento::createPlistMultiFileDiagnosticConsumer(
   if (OutputFile.empty())
     return;
 
-  C.push_back(new PlistPathDiagnosticConsumer(DiagOpts, OutputFile, PP, CTU,
-                                              /*supportsMultipleFiles=*/true));
+  C.push_back(new PlistDiagnostics(DiagOpts, OutputFile, PP, CTU,
+                                   /*supportsMultipleFiles=*/true));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU);
 }
 
-void PlistPathDiagnosticConsumer::printBugPath(llvm::raw_ostream &o,
-                                               const FIDMap &FM,
-                                               const PathPieces &Path) {
+void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
+                                    const PathPieces &Path) {
   PlistPrinter Printer(FM, PP, CTU);
   assert(std::is_partitioned(Path.begin(), Path.end(),
                              [](const PathDiagnosticPieceRef &E) {
@@ -604,8 +603,9 @@ void PlistPathDiagnosticConsumer::printBugPath(llvm::raw_ostream &o,
   o << "   </array>\n";
 }
 
-void PlistPathDiagnosticConsumer::FlushDiagnosticsImpl(
-    std::vector<const PathDiagnostic *> &Diags, FilesMade *filesMade) {
+void PlistDiagnostics::FlushDiagnosticsImpl(
+                                    std::vector<const PathDiagnostic *> &Diags,
+                                    FilesMade *filesMade) {
   // Build up a set of FIDs that we use by scanning the locations and
   // ranges of the diagnostics.
   FIDMap FM;
