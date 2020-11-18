@@ -165,19 +165,24 @@ public:
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode or a debug intrinsic.
-  const Instruction* getFirstNonPHIOrDbg() const;
-  Instruction* getFirstNonPHIOrDbg() {
+  /// PHINode or a debug intrinsic, or any pseudo operation if \c SkipPseudoOp
+  /// is true.
+  const Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = false) const;
+  Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = false) {
     return const_cast<Instruction *>(
-                  static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbg());
+        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbg(
+            SkipPseudoOp));
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode, a debug intrinsic, or a lifetime intrinsic.
-  const Instruction* getFirstNonPHIOrDbgOrLifetime() const;
-  Instruction* getFirstNonPHIOrDbgOrLifetime() {
+  /// PHINode, a debug intrinsic, or a lifetime intrinsic, or any pseudo
+  /// operation if \c SkipPseudoOp is true.
+  const Instruction *
+  getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = false) const;
+  Instruction *getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = false) {
     return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbgOrLifetime());
+        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbgOrLifetime(
+            SkipPseudoOp));
   }
 
   /// Returns an iterator to the first instruction in this block that is
@@ -191,16 +196,18 @@ public:
   }
 
   /// Return a const iterator range over the instructions in the block, skipping
-  /// any debug instructions.
+  /// any debug instructions. Skip any pseudo operations as well if \c
+  /// SkipPseudoOp is true.
   iterator_range<filter_iterator<BasicBlock::const_iterator,
                                  std::function<bool(const Instruction &)>>>
-  instructionsWithoutDebug() const;
+  instructionsWithoutDebug(bool SkipPseudoOp = false) const;
 
   /// Return an iterator range over the instructions in the block, skipping any
-  /// debug instructions.
-  iterator_range<filter_iterator<BasicBlock::iterator,
-                                 std::function<bool(Instruction &)>>>
-  instructionsWithoutDebug();
+  /// debug instructions. Skip and any pseudo operations as well if \c
+  /// SkipPseudoOp is true.
+  iterator_range<
+      filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
+  instructionsWithoutDebug(bool SkipPseudoOp = false);
 
   /// Return the size of the basic block ignoring debug instructions
   filter_iterator<BasicBlock::const_iterator,
