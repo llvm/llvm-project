@@ -11,7 +11,7 @@ define internal void @inlined_function(i8* %arg) {
 ; TODO: This is a miscompile.
 define void @test(i8** %p) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[ARG:%.*]] = load i8*, i8** [[P:%.*]], align 8, !alias.scope !0, !noalias !0
+; CHECK-NEXT:    [[ARG:%.*]] = load i8*, i8** [[P:%.*]], align 8, !alias.scope !0
 ; CHECK-NEXT:    call void @external_function(i8* [[ARG]]), !noalias !0
 ; CHECK-NEXT:    ret void
 ;
