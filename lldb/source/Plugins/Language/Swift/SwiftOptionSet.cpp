@@ -31,6 +31,7 @@ using namespace lldb_private::formatters::swift;
 /// If this is a Clang enum wrapped in a Swift type, return the clang::EnumDecl.
 static std::pair<clang::EnumDecl *, TypeSystemClang *>
 GetAsEnumDecl(CompilerType swift_type) {
+  swift_type = swift_type.GetCanonicalType();
   if (!swift_type)
     return {nullptr, nullptr};
 

@@ -912,22 +912,26 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
   // Try the instance type metadata.
   bool did_log = false;
   llvm::Optional<uint64_t> result;
-  if (instance)
-    ForEachSuperClassTypeInfo(
-        *instance, [&](const swift::reflection::RecordTypeInfo &ti) -> bool {
-          if (!did_log) {
-            did_log = true;
-            LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                      "using instance type info");
-          }
-          for (auto &field : ti.getFields())
-            if (StringRef(field.Name) == member_name) {
-              result = field.Offset;
-              return true;
-            }
-          return false;
-        });
+  if (!instance)
+    return result;
+  ForEachSuperClassType(*instance, [&](SuperClassType super_class) -> bool {
+    auto *ti = super_class.get_record_type_info();
+    if (!ti)
+      return false;
 
+    if (!did_log) {
+      did_log = true;
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "using instance type info");
+    }
+
+    for (auto &field : ti->getFields())
+      if (StringRef(field.Name) == member_name) {
+        result = field.Offset;
+        return true;
+      }
+    return false;
+  });
   return result;
 }
 
@@ -991,20 +995,361 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   return offset;
 }
 
-bool SwiftLanguageRuntimeImpl::ForEachSuperClassTypeInfo(
-    ValueObject &instance,
-    std::function<bool(const swift::reflection::RecordTypeInfo &rti)> fn) {
-  lldb::addr_t pointer = instance.GetPointerValue();
+llvm::Optional<unsigned>
+SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
+                                         ValueObject *valobj) {
+  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+      type.GetTypeSystem());
+  if (!ts)
+    return {};
+
+  // Try the static type metadata.
+  auto frame =
+      valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
+  auto *ti = GetTypeInfo(type, frame);
+  // Structs and Tuples.
+  if (auto *rti =
+          llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
+    auto fields = rti->getFields();
+    return fields.size();
+  }
+  // FIXME: Implement more cases.
+  return {};
+}
+
+/// Return the base name of the topmost nominal type.
+static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node) {
+  if (!node)
+    return {};
+  using namespace swift::Demangle;
+  switch (node->getKind()) {
+  case Node::Kind::Structure:
+  case Node::Kind::Class: {
+    if (node->getNumChildren() != 2)
+      return {};
+    NodePointer ident = node->getChild(1);
+    if (ident && ident->hasText())
+      return ident->getText();
+    if (ident->getKind() == Node::Kind::PrivateDeclName) {
+      if (ident->getNumChildren() != 2)
+        return {};
+      ident = ident->getChild(1);
+      if (ident && ident->hasText())
+        return ident->getText();
+    }
+    return {};
+  }
+  default:
+    // Visit the child nodes.
+    for (NodePointer child : *node)
+      return GetBaseName(child);
+    return {};
+  }
+}
+
+static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
+                                    CompilerType type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  auto mangled = type.GetMangledTypeName().GetStringRef();
+  NodePointer n = dem.demangleSymbol(mangled);
+  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n ||
+      (n->getKind() != Node::Kind::Weak &&
+       n->getKind() != Node::Kind::Unowned &&
+       n->getKind() != Node::Kind::Unmanaged) ||
+      !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return {};
+  // FIXME: We only need to canonicalize this node, not the entire type.
+  n = ts.CanonicalizeSugar(dem, n->getFirstChild());
+  if (!n || n->getKind() != Node::Kind::SugaredOptional || !n->hasChildren())
+    return {};
+  n = n->getFirstChild();
+  return ts.RemangleAsType(dem, n);
+}
+
+static CompilerType
+GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
+                   const swift::reflection::TypeRef *type_ref) {
+  if (!type_ref)
+    return {};
+  swift::Demangle::Demangler dem;
+  swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
+  return ts.RemangleAsType(dem, node);
+  return ts.RemangleAsSwiftifiedType(dem, node);
+}
+
+CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
+    CompilerType type, size_t idx, bool transparent_pointers,
+    bool omit_empty_base_classes, bool ignore_array_bounds,
+    std::string &child_name, uint32_t &child_byte_size,
+    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
+    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
+    bool &child_is_deref_of_parent, ValueObject *valobj,
+    uint64_t &language_flags) {
+  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+      type.GetTypeSystem());
+  if (!ts)
+    return {};
+
+  // The actual conversion from the FieldInfo record.
+  auto get_from_field_info =
+      [&](const swift::reflection::FieldInfo &field,
+          llvm::Optional<TypeSystemSwift::TupleElement> tuple,
+          bool hide_existentials) -> CompilerType {
+    child_name = tuple ? tuple->element_name.GetStringRef().str() : field.Name;
+    child_byte_size = field.TI.getSize();
+    child_byte_offset = field.Offset;
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+    child_is_base_class = false;
+    child_is_deref_of_parent = false;
+    language_flags = 0;
+    // SwiftASTContext hardcodes the members of protocols as raw
+    // pointers. Remote Mirrors reports them as UnknownObject instead.
+    if (hide_existentials && ts->IsExistentialType(type.GetOpaqueQualType()))
+      return ts->GetRawPointerType();
+    CompilerType result =
+        tuple ? tuple->element_type : GetTypeFromTypeRef(*ts, field.TR);
+    // Bug-for-bug compatibility. See comment in SwiftASTContext::GetBitSize().
+    if (result.IsFunctionType(nullptr))
+      child_byte_size = ts->GetPointerByteSize();
+    return result;
+  };
+
+  // Try the static type metadata.
+  auto frame =
+      valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
+  auto *ti = GetTypeInfo(type, frame);
+  // Structs and Tuples.
+  if (auto *rti =
+          llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
+    auto fields = rti->getFields();
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "using record type info");
+
+    // Handle tuples.
+    if (idx > rti->getNumFields())
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "index %zu is out of bounds (%d)", idx, rti->getNumFields());
+    llvm::Optional<TypeSystemSwift::TupleElement> tuple;
+    if (rti->getRecordKind() == swift::reflection::RecordKind::Tuple)
+      tuple = ts->GetTupleElement(type.GetOpaqueQualType(), idx);
+    if (rti->getRecordKind() ==
+        swift::reflection::RecordKind::OpaqueExistential) {
+      // Compatibility with SwiftASTContext.
+      if (idx < 3) {
+        child_name = "payload_data_";
+        child_name += ('0' + idx);
+        child_byte_size = ts->GetPointerByteSize();
+        child_byte_offset = ts->GetPointerByteSize() * idx;
+        child_bitfield_bit_size = 0;
+        child_bitfield_bit_offset = 0;
+        child_is_base_class = false;
+        child_is_deref_of_parent = false;
+        language_flags = 0;
+        return ts->GetRawPointerType();
+      }
+      return get_from_field_info(fields[idx - 3], tuple, false);
+    }
+    if (rti->getRecordKind() ==
+        swift::reflection::RecordKind::ClassExistential) {
+      // Compatibility with SwiftASTContext.
+      if (idx == 0) {
+        child_name = fields[idx].Name;
+        child_byte_size = ts->GetPointerByteSize();
+        child_byte_offset = ts->GetPointerByteSize() * idx;
+        child_bitfield_bit_size = 0;
+        child_bitfield_bit_offset = 0;
+        child_is_base_class = false;
+        child_is_deref_of_parent = false;
+        language_flags = 0;
+          return ts->GetRawPointerType();
+      }
+    }
+    return get_from_field_info(fields[idx], tuple, true);
+  }
+  // Enums.
+  if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
+    unsigned i = 0;
+    for (auto &enum_case : eti->getCases()) {
+      // Skip non-payload cases.
+      if (!enum_case.TR)
+        continue;
+      if (i++ == idx) {
+        auto is_indirect = [](const swift::reflection::FieldInfo &field) {
+          // FIXME: This is by observation. What's the correct condition?
+          if (auto *tr =
+                  llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeRef>(
+                      field.TR))
+            return llvm::StringRef(tr->getMangledName()).equals("Bo");
+          return false;
+        };
+        auto result = get_from_field_info(enum_case, {}, true);
+        if (is_indirect(enum_case))
+          language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
+        return result;
+      }
+    }
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "index %zu is out of bounds (%d)", idx,
+              eti->getNumPayloadCases());
+    return {};
+  }
+  if (auto *rti =
+          llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
+    // Objects.
+    // Try the instance type metadata.
+    if (!valobj)
+      return {};
+    bool found_start = false;
+    swift::Demangle::Demangler dem;
+    auto mangled = type.GetMangledTypeName().GetStringRef();
+    NodePointer type_node = dem.demangleSymbol(mangled);
+    llvm::StringRef type_name = GetBaseName(ts->CanonicalizeSugar(dem, type_node));
+    llvm::SmallVector<SuperClassType, 2> supers;
+    ForEachSuperClassType(*valobj, [&](SuperClassType sc) -> bool {
+      if (!found_start) {
+        // The ValueObject always points to the same class instance,
+        // even when querying base classes. Drop base classes until we
+        // reach the requested type.
+        if (auto *tr = sc.get_typeref()) {
+          swift::Demangle::NodePointer base_class = tr->getDemangling(dem);
+          if (GetBaseName(base_class) != type_name)
+            return false;
+          found_start = true;
+        }
+      }
+      supers.push_back(sc);
+      return supers.size() >= 2;
+    });
+
+    if (supers.size() == 0) {
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't find the type metadata for %s in instance",
+                type.GetTypeName().AsCString());
+      return {};
+    }
+
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "using instance type info");
+
+    switch (rti->getReferenceKind()) {
+    case swift::reflection::ReferenceKind::Weak:
+    case swift::reflection::ReferenceKind::Unowned:
+    case swift::reflection::ReferenceKind::Unmanaged:
+      // Weak references are implicitly Optionals, so report the one
+      // child of Optional here.
+      if (idx != 0)
+        break; // Maybe assert that type is not an Optional?
+      child_name = "some";
+      child_byte_size = ts->GetPointerByteSize();
+      child_byte_offset = 0;
+      child_bitfield_bit_size = 0;
+      child_bitfield_bit_offset = 0;
+      child_is_base_class = false;
+      child_is_deref_of_parent = false;
+      language_flags = 0;
+      if (CompilerType optional = GetWeakReferent(*ts, type))
+        return optional;
+      break;
+    default:
+      break;
+    }
+
+    // Handle the artificial base class fields.
+    unsigned i = 0;
+    if (supers.size() > 1) {
+      auto *type_ref = supers[1].get_typeref();
+      auto *objc_tr =
+          llvm::dyn_cast_or_null<swift::reflection::ObjCClassTypeRef>(type_ref);
+      // SwiftASTContext hides the ObjC base class for Swift classes.
+      if (!objc_tr || objc_tr->getName() != "_TtCs12_SwiftObject")
+        if (i++ == idx) {
+          // A synthetic field for the base class itself.  Only the direct
+          // base class gets injected. Its parent will be a nested
+          // field in the base class.
+          if (!type_ref) {
+            child_name = "<base class>";
+            return {};
+          }
+          CompilerType super_type = GetTypeFromTypeRef(*ts, type_ref);
+          child_name = super_type.GetTypeName().GetStringRef().str();
+          // FIXME: This should be fixed in GetDisplayTypeName instead!
+          if (child_name == "__C.NSObject")
+            child_name = "ObjectiveC.NSObject";
+          if (auto *rti = supers[1].get_record_type_info())
+            child_byte_size = rti->getSize();
+          // FIXME: This seems wrong in SwiftASTContext.
+          child_byte_size = ts->GetPointerByteSize();
+          child_byte_offset = 0;
+          child_bitfield_bit_size = 0;
+          child_bitfield_bit_offset = 0;
+          child_is_base_class = true;
+          child_is_deref_of_parent = false;
+          language_flags = 0;
+          return super_type;
+        }
+    }
+
+    // Handle the "real" fields.
+    auto *object = supers[0].get_record_type_info();
+    if (!object)
+      return {};
+    for (auto &field : object->getFields())
+      if (i++ == idx)
+        return get_from_field_info(field, {}, true);
+
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "index %zu is out of bounds (%d)", idx, i);
+    return {};
+  }
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Cannot retrieve type information for %s",
+            type.GetTypeName().AsCString());
+  return {};
+}
+
+bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
+    ValueObject &instance, std::function<bool(SuperClassType)> fn) {
   auto *reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return false;
+
+  lldb::addr_t pointer = instance.GetPointerValue();
+  // Maybe this belongs into GetPointerValue, but on the other hand it
+  // is also nice to not hide the existence of reference storage
+  // types. Perhaps they should even be modelled in the ValueObject
+  // hierarchy. This also partially papers over the fact that
+  // libReflection cannot tell up how many bits to strip from
+  // multi-payload enum values.
+  auto addr_deref =
+    FixupPointerValue(pointer, instance.GetCompilerType());
+  pointer = addr_deref.first;
+  if (addr_deref.second) {
+      // This is a reference storage object.
+      if (!reflection_ctx->getReader().readInteger(
+              swift::reflection::RemoteAddress(addr_deref.first),
+              &pointer))
+        return false;
+  }
 
   auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
       instance.GetCompilerType().GetTypeSystem());
   if (!ts)
     return false;
 
-  LLDBTypeInfoProvider provider(*this, *ts);
   auto md_ptr = reflection_ctx->readMetadataFromInstance(pointer);
   if (!md_ptr)
     return false;
@@ -1013,20 +1358,27 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassTypeInfo(
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "found RecordTypeInfo for instance");
   while (md_ptr && *md_ptr) {
-    auto *ti = reflection_ctx->getMetadataTypeInfo(*md_ptr, &provider);
-    if (auto *class_type_info =
-            llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
-      if (fn(*class_type_info))
-        return true;
-    }
+    // Reading metadata is potentially expensive since (in a remote
+    // debugging scenario it may even incur network traffic) so we
+    // just return closures that the caller can use to query details
+    // if they need them.
+    auto metadata = *md_ptr;
+    if (fn({[=]() -> const swift::reflection::RecordTypeInfo * {
+              LLDBTypeInfoProvider tip(*this, *ts);
+              auto *ti = reflection_ctx->getMetadataTypeInfo(metadata, &tip);
+              return llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
+                  ti);
+            },
+            [=]() -> const swift::reflection::TypeRef * {
+              return reflection_ctx->readTypeFromMetadata(metadata);
+            }}))
+      return true;
 
     // Continue with the base class.
-    md_ptr = reflection_ctx->readSuperClassFromClassMetadata(*md_ptr);
+    md_ptr = reflection_ctx->readSuperClassFromClassMetadata(metadata);
   }
   return false;
 }
-
-
 
 bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
   // A variable is self if its name if "self", and it's either a
@@ -2022,16 +2374,14 @@ TypeAndOrName SwiftLanguageRuntimeImpl::FixUpDynamicType(
   return type_and_or_name;
 }
 
-bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
-                                           CompilerType type) {
-  if (!m_process)
-    return false;
+bool SwiftLanguageRuntimeImpl::IsTaggedPointer(lldb::addr_t addr,
+                                               CompilerType type) {
   swift::CanType swift_can_type = GetCanonicalSwiftType(type);
   if (!swift_can_type)
     return false;
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::UnownedStorage: {
-    Target &target = m_process->GetTarget();
+    Target &target = m_process.GetTarget();
     llvm::Triple triple = target.GetArchitecture().GetTriple();
     // On Darwin the Swift runtime stores unowned references to
     // Objective-C objects as a pointer to a struct that has the
@@ -2055,10 +2405,8 @@ bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
 }
 
 std::pair<lldb::addr_t, bool>
-SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
-  if (!m_process)
-    return {addr, false};
-
+SwiftLanguageRuntimeImpl::FixupPointerValue(lldb::addr_t addr,
+                                            CompilerType type) {
   // Check for an unowned Darwin Objective-C reference.
   if (IsTaggedPointer(addr, type)) {
     // Clear the discriminator bit to get at the pointer to Objective-C object.
@@ -2067,7 +2415,7 @@ SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
   }
 
   // Adjust the pointer to strip away the spare bits.
-  Target &target = m_process->GetTarget();
+  Target &target = m_process.GetTarget();
   llvm::Triple triple = target.GetArchitecture().GetTriple();
   switch (triple.getArch()) {
   case llvm::Triple::ArchType::aarch64:
@@ -2088,13 +2436,9 @@ SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
   return {addr, false};
 }
 
-/// This allows a language runtime to adjust references depending on the type.
-lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
-                                                CompilerType type,
-                                                Status &error) {
-  if (!m_process)
-    return addr;
-
+lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
+                                                    CompilerType type,
+                                                    Status &error) {
   swift::CanType swift_can_type = GetCanonicalSwiftType(type);
   if (!swift_can_type)
     return addr;
@@ -2102,8 +2446,8 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
   case swift::TypeKind::UnownedStorage: {
     // Peek into the reference to see whether it needs an extra deref.
     // If yes, return the fixed-up address we just read.
-    Target &target = m_process->GetTarget();
-    size_t ptr_size = m_process->GetAddressByteSize();
+    Target &target = m_process.GetTarget();
+    size_t ptr_size = m_process.GetAddressByteSize();
     lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
     target.ReadMemory(addr, false, &refd_addr, ptr_size, error);
     if (error.Success()) {
@@ -2173,7 +2517,7 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
       type = BindGenericTypeParameters(*frame, type);
     }
 
-  // DoArchetypeBindingForType imports the type into the scratch
+  // BindGenericTypeParameters imports the type into the scratch
   // context, but we need to resolve (any DWARF links in) the typeref
   // in the original module.
   const swift::reflection::TypeRef *type_ref =
