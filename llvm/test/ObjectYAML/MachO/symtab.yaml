@@ -363,117 +363,117 @@ LinkEditData:
 #CHECK:       n_desc:          128
 #CHECK:       n_value:         4294974832
 #CHECK:     - n_strx:          420
-#CHECK:       n_type:          0x0E
+#CHECK:       n_type:          0xE
 #CHECK:       n_sect:          4
 #CHECK:       n_desc:          0
 #CHECK:       n_value:         4294975104
 #CHECK:     - n_strx:          438
-#CHECK:       n_type:          0x0E
+#CHECK:       n_type:          0xE
 #CHECK:       n_sect:          4
 #CHECK:       n_desc:          0
 #CHECK:       n_value:         4294975280
 #CHECK:     - n_strx:          456
-#CHECK:       n_type:          0x0F
+#CHECK:       n_type:          0xF
 #CHECK:       n_sect:          1
 #CHECK:       n_desc:          16
 #CHECK:       n_value:         4294967296
 #CHECK:     - n_strx:          476
-#CHECK:       n_type:          0x0F
+#CHECK:       n_type:          0xF
 #CHECK:       n_sect:          1
 #CHECK:       n_desc:          0
 #CHECK:       n_value:         4294971744
 #CHECK:     - n_strx:          482
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          512
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          498
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          537
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          567
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          642
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          711
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          774
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          834
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          851
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          875
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          897
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          954
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          982
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          999
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          1018
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          1035
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          256
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          1057
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          512
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          1065
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          512
 #CHECK:       n_value:         0
 #CHECK:     - n_strx:          1073
-#CHECK:       n_type:          0x01
+#CHECK:       n_type:          0x1
 #CHECK:       n_sect:          0
 #CHECK:       n_desc:          512
 #CHECK:       n_value:         0

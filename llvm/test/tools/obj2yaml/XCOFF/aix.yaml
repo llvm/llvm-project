@@ -2,79 +2,79 @@
 # Test that we can parse the XCOFF object file correctly.
 # CHECK: --- !XCOFF
 # CHECK-NEXT: FileHeader:
-# CHECK-NEXT:   MagicNumber:     0x01DF
+# CHECK-NEXT:   MagicNumber:     0x1DF
 # CHECK-NEXT:   NumberOfSections: 2
 # CHECK-NEXT:   CreationTime:    1552337792
-# CHECK-NEXT:   OffsetToSymbolTable: 0x0000013A
+# CHECK-NEXT:   OffsetToSymbolTable: 0x13A
 # CHECK-NEXT:   EntriesInSymbolTable: 22
 # CHECK-NEXT:   AuxiliaryHeaderSize: 0
-# CHECK-NEXT:   Flags:           0x0000
+# CHECK-NEXT:   Flags:           0x0
 
 # CHECK: Symbols:
 # CHECK-NEXT:   - Name:      .file
-# CHECK-NEXT:     Value:     0x00000000
+# CHECK-NEXT:     Value:     0x0
 # CHECK-NEXT:     Section: N_DEBUG
-# CHECK-NEXT:     Type:      0x0003
+# CHECK-NEXT:     Type:      0x3
 # CHECK-NEXT:     StorageClass:    C_FILE
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      i
-# CHECK-NEXT:     Value:     0x00000000
+# CHECK-NEXT:     Value:     0x0
 # CHECK-NEXT:     Section: N_UNDEF
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_EXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      TestforXcoff
-# CHECK-NEXT:     Value:     0x00000000
+# CHECK-NEXT:     Value:     0x0
 # CHECK-NEXT:     Section: N_UNDEF
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_EXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      .text
-# CHECK-NEXT:     Value:     0x00000000
+# CHECK-NEXT:     Value:     0x0
 # CHECK-NEXT:     Section: .text
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      .main
-# CHECK-NEXT:     Value:     0x00000000
+# CHECK-NEXT:     Value:     0x0
 # CHECK-NEXT:     Section: .text
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_EXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      main
-# CHECK-NEXT:     Value:     0x00000060
+# CHECK-NEXT:     Value:     0x60
 # CHECK-NEXT:     Section: .data
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      main
-# CHECK-NEXT:     Value:     0x00000060
+# CHECK-NEXT:     Value:     0x60
 # CHECK-NEXT:     Section: .data
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_EXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      .data
-# CHECK-NEXT:     Value:     0x00000070
+# CHECK-NEXT:     Value:     0x70
 # CHECK-NEXT:     Section: .data
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      TOC
-# CHECK-NEXT:     Value:     0x00000074
+# CHECK-NEXT:     Value:     0x74
 # CHECK-NEXT:     Section: .data
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      i
-# CHECK-NEXT:     Value:     0x00000074
+# CHECK-NEXT:     Value:     0x74
 # CHECK-NEXT:     Section: .data
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT:   - Name:      TestforXcoff
-# CHECK-NEXT:     Value:     0x00000078
+# CHECK-NEXT:     Value:     0x78
 # CHECK-NEXT:     Section: .data
-# CHECK-NEXT:     Type:      0x0000
+# CHECK-NEXT:     Type:      0x0
 # CHECK-NEXT:     StorageClass:    C_HIDEXT
 # CHECK-NEXT:     NumberOfAuxEntries: 1
 # CHECK-NEXT: ...

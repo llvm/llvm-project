@@ -55,7 +55,7 @@ Sections:
 
 # NO-SHARED:      - Type:            MEMORY
 # NO-SHARED-NEXT:   Memories:
-# NO-SHARED-NEXT:     - Initial:         0x00000002
+# NO-SHARED-NEXT:     - Initial:         0x2
 # NO-SHARED-NOT:        Maximum:
 
 # SHARED: --shared-memory is disallowed by {{.*}}shared-memory-no-atomics.yaml.tmp1.o because it was not compiled with 'atomics' or 'bulk-memory' features.

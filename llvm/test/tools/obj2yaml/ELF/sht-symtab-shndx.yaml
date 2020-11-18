@@ -16,7 +16,7 @@
 # CASE1-NEXT:   - Name:    .symtab_shndx
 # CASE1-NEXT:     Type:    SHT_SYMTAB_SHNDX
 # CASE1-NEXT:     Link:    .symtab
-# CASE1-NEXT:     EntSize: 0x0000000000000004
+# CASE1-NEXT:     EntSize: 0x4
 # CASE1-NEXT:     Entries: [ 0, 1, 2 ]
 # CASE1-NEXT: Symbols:
 # CASE1-NEXT:   - Name:  bar

@@ -5,7 +5,7 @@
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -22,11 +22,11 @@
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000007
-; CHECK-NEXT:           Maximum:         0x00000007
+; CHECK-NEXT:           Initial:         0x7
+; CHECK-NEXT:           Maximum:         0x7
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Initial:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -217,7 +217,7 @@
 
 ; RELOC:      --- !WASM
 ; RELOC-NEXT: FileHeader:
-; RELOC-NEXT:   Version:         0x00000001
+; RELOC-NEXT:   Version:         0x1
 ; RELOC-NEXT: Sections:
 ; RELOC-NEXT:   - Type:            TYPE
 ; RELOC-NEXT:     Signatures:
@@ -234,11 +234,11 @@
 ; RELOC-NEXT:         ElemType:        FUNCREF
 ; RELOC-NEXT:         Limits:
 ; RELOC-NEXT:           Flags:           [ HAS_MAX ]
-; RELOC-NEXT:           Initial:         0x00000007
-; RELOC-NEXT:           Maximum:         0x00000007
+; RELOC-NEXT:           Initial:         0x7
+; RELOC-NEXT:           Maximum:         0x7
 ; RELOC-NEXT:   - Type:            MEMORY
 ; RELOC-NEXT:     Memories:
-; RELOC-NEXT:       - Initial:         0x00000001
+; RELOC-NEXT:       - Initial:         0x1
 ; RELOC-NEXT:   - Type:            ELEM
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - Offset:
@@ -249,40 +249,40 @@
 ; RELOC-NEXT:     Relocations:
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           18
-; RELOC-NEXT:         Offset:          0x00000013
+; RELOC-NEXT:         Offset:          0x13
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           3
-; RELOC-NEXT:         Offset:          0x0000001C
+; RELOC-NEXT:         Offset:          0x1C
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           19
-; RELOC-NEXT:         Offset:          0x00000025
+; RELOC-NEXT:         Offset:          0x25
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           16
-; RELOC-NEXT:         Offset:          0x0000002E
+; RELOC-NEXT:         Offset:          0x2E
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           0
-; RELOC-NEXT:         Offset:          0x00000037
+; RELOC-NEXT:         Offset:          0x37
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           17
-; RELOC-NEXT:         Offset:          0x00000040
+; RELOC-NEXT:         Offset:          0x40
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           10
-; RELOC-NEXT:         Offset:          0x00000058
+; RELOC-NEXT:         Offset:          0x58
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           22
-; RELOC-NEXT:         Offset:          0x00000061
+; RELOC-NEXT:         Offset:          0x61
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           23
-; RELOC-NEXT:         Offset:          0x0000006A
+; RELOC-NEXT:         Offset:          0x6A
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           8
-; RELOC-NEXT:         Offset:          0x00000073
+; RELOC-NEXT:         Offset:          0x73
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           20
-; RELOC-NEXT:         Offset:          0x0000007C
+; RELOC-NEXT:         Offset:          0x7C
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           21
-; RELOC-NEXT:         Offset:          0x00000085
+; RELOC-NEXT:         Offset:          0x85
 ; RELOC-NEXT:     Functions:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Locals:

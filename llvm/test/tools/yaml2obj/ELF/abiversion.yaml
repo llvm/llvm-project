@@ -5,7 +5,7 @@
 # RUN: obj2yaml %t | FileCheck %s --check-prefix=TOYAML
 
 # FROMYAML: ABIVersion: 5
-# TOYAML:   ABIVersion: 0x05
+# TOYAML:   ABIVersion: 0x5
 
 --- !ELF
 FileHeader:

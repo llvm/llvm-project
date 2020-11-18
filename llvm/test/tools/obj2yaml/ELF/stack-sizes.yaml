@@ -15,10 +15,10 @@
 # VALID-NEXT:   - Name: .stack_sizes
 # VALID-NEXT:     Type: SHT_PROGBITS
 # VALID-NEXT:     Entries:
-# VALID-NEXT:       - Address: 0x0000000000000010
-# VALID-NEXT:         Size:    0x0000000000000020
-# VALID-NEXT:       - Address: 0x0000000000000030
-# VALID-NEXT:         Size:    0x0000000000000040
+# VALID-NEXT:       - Address: 0x10
+# VALID-NEXT:         Size:    0x20
+# VALID-NEXT:       - Address: 0x30
+# VALID-NEXT:         Size:    0x40
 
 --- !ELF
 FileHeader:
@@ -95,17 +95,17 @@ Sections:
 # MULTI-NEXT:   - Name:    .stack_sizes
 # MULTI-NEXT:     Type:    SHT_PROGBITS
 # MULTI-NEXT:     Entries:
-# MULTI-NEXT:       - Address: 0x0000000000000010
-# MULTI-NEXT:         Size:    0x0000000000000020
-# MULTI-NEXT:       - Address: 0x0000000000000030
-# MULTI-NEXT:         Size:    0x0000000000000040
+# MULTI-NEXT:       - Address: 0x10
+# MULTI-NEXT:         Size:    0x20
+# MULTI-NEXT:       - Address: 0x30
+# MULTI-NEXT:         Size:    0x40
 # MULTI-NEXT:   - Name:    '.stack_sizes (1)'
 # MULTI-NEXT:     Type:    SHT_PROGBITS
 # MULTI-NEXT:     Entries:
-# MULTI-NEXT:       - Address: 0x0000000000000050
-# MULTI-NEXT:         Size:    0x0000000000000001
-# MULTI-NEXT:       - Address: 0x0000000000000060
-# MULTI-NEXT:         Size:    0x0000000000000002
+# MULTI-NEXT:       - Address: 0x50
+# MULTI-NEXT:         Size:    0x1
+# MULTI-NEXT:       - Address: 0x60
+# MULTI-NEXT:         Size:    0x2
 
 --- !ELF
 FileHeader:
@@ -116,14 +116,14 @@ Sections:
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
     Entries:
-      - Address: 0x0000000000000010
-        Size:    0x0000000000000020
-      - Address: 0x0000000000000030
-        Size:    0x0000000000000040
+      - Address: 0x10
+        Size:    0x20
+      - Address: 0x30
+        Size:    0x40
   - Name:    '.stack_sizes (1)'
     Type:    SHT_PROGBITS
     Entries:
-      - Address: 0x0000000000000050
-        Size:    0x0000000000000001
-      - Address: 0x0000000000000060
-        Size:    0x0000000000000002
+      - Address: 0x50
+        Size:    0x1
+      - Address: 0x60
+        Size:    0x2
