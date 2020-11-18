@@ -139,8 +139,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         Register DstReg = Dst.getReg();
         Register SrcReg = Src.getReg();
         // Just handle virtual registers.
-        if (Register::isVirtualRegister(DstReg) &&
-            Register::isVirtualRegister(SrcReg)) {
+        if (DstReg.isVirtual() && SrcReg.isVirtual()) {
           // Map the following:
           // %170 = SXTW %166
           // PeepholeMap[170] = %166
@@ -188,8 +187,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         Register DstReg = Dst.getReg();
         Register SrcReg = Src.getReg();
         // Just handle virtual registers.
-        if (Register::isVirtualRegister(DstReg) &&
-            Register::isVirtualRegister(SrcReg)) {
+        if (DstReg.isVirtual() && SrcReg.isVirtual()) {
           // Map the following:
           // %170 = NOT_xx %166
           // PeepholeMap[170] = %166
@@ -210,8 +208,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
         Register DstReg = Dst.getReg();
         Register SrcReg = Src.getReg();
-        if (Register::isVirtualRegister(DstReg) &&
-            Register::isVirtualRegister(SrcReg)) {
+        if (DstReg.isVirtual() && SrcReg.isVirtual()) {
           // Try to find in the map.
           if (unsigned PeepholeSrc = PeepholeMap.lookup(SrcReg)) {
             // Change the 1st operand.
@@ -242,7 +239,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
           if (RC0->getID() == Hexagon::PredRegsRegClassID) {
             // Handle instructions that have a prediate register in op0
             // (most cases of predicable instructions).
-            if (Register::isVirtualRegister(Reg0)) {
+            if (Reg0.isVirtual()) {
               // Try to find in the map.
               if (unsigned PeepholeSrc = PeepholeMap.lookup(Reg0)) {
                 // Change the 1st operand and, flip the opcode.
