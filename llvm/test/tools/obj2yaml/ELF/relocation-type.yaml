@@ -2,7 +2,7 @@
 
 ## Show that obj2yaml is able to dump relocation types when `e_machine` kind is unknown.
 # RUN: yaml2obj %s -o %t1 -DMACHINE=0x1234
-# RUN: obj2yaml %t1 | FileCheck %s -DMACHINE=0x1234 -DFIRST=0x00000000 -DSECOND=0x00000001
+# RUN: obj2yaml %t1 | FileCheck %s -DMACHINE=0x1234 -DFIRST=0x0 -DSECOND=0x1
 
 # CHECK:      --- !ELF
 # CHECK-NEXT: FileHeader:
@@ -14,14 +14,14 @@
 # CHECK-NEXT:   - Name:    .rela.text
 # CHECK-NEXT:     Type:    SHT_RELA
 # CHECK-NEXT:     Relocations:
-# CHECK-NEXT:       - Offset: 0x0000000000000009
+# CHECK-NEXT:       - Offset: 0x9
 # CHECK-NEXT:         Type:   [[FIRST]]
-# CHECK-NEXT:       - Offset: 0x0000000000000008
+# CHECK-NEXT:       - Offset: 0x8
 # CHECK-NEXT:         Type:   [[SECOND]]
-# CHECK-NEXT:       - Offset: 0x0000000000000007
-# CHECK-NEXT:         Type:   0x0000007F
-# CHECK-NEXT:       - Offset: 0x0000000000000006
-# CHECK-NEXT:         Type:   0x000000FF
+# CHECK-NEXT:       - Offset: 0x7
+# CHECK-NEXT:         Type:   0x7F
+# CHECK-NEXT:       - Offset: 0x6
+# CHECK-NEXT:         Type:   0xFF
 # CHECK-NEXT: ...
 
 ## Show how obj2yaml dumps relocation types when `e_machine` kind is known.

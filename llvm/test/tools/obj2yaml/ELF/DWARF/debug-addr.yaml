@@ -6,70 +6,58 @@
 # RUN: yaml2obj --docnum=1 %s -DADDRESS=0xFFFFFFFFFFFFFFFF \
 # RUN:   -DADDRSIZE=4 | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
-# RUN:     -DLENGTH1=0x0000000000000014 \
-# RUN:     -DADDRSIZE1=0x08             \
-# RUN:     -DADDR=0xFFFFFFFFFFFFFFFF    \
-# RUN:     -DLENGTH2=0x000000000000000C \
-# RUN:     -DADDRSIZE2=0x04
+# RUN:     -DLENGTH1=0x14 -DADDRSIZE1=0x8 -DADDR=0xFFFFFFFFFFFFFFFF \
+# RUN:     -DLENGTH2=0xC -DADDRSIZE2=0x4
 
 ## Dumping address tables from a big endian 64-bit object file.
 # RUN: yaml2obj --docnum=1 %s -DENDIAN=MSB -DADDRESS=0xFFFFFFFFFFFFFFFF \
 # RUN:   -DADDRSIZE=4 | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
-# RUN:     -DLENGTH1=0x0000000000000014 \
-# RUN:     -DADDRSIZE1=0x08             \
-# RUN:     -DADDR=0xFFFFFFFFFFFFFFFF    \
-# RUN:     -DLENGTH2=0x000000000000000C \
-# RUN:     -DADDRSIZE2=0x04
+# RUN:     -DLENGTH1=0x14 -DADDRSIZE1=0x8 -DADDR=0xFFFFFFFFFFFFFFFF \
+# RUN:     -DLENGTH2=0xC -DADDRSIZE2=0x4
 
 ## Dumping address tables from a little endian 32-bit object file.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DADDRESS=0xFFFFFFFF \
 # RUN:   -DADDRSIZE=8 | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
-# RUN:     -DLENGTH1=0x000000000000000C \
-# RUN:     -DADDRSIZE1=0x04             \
-# RUN:     -DADDR=0x00000000FFFFFFFF    \
-# RUN:     -DLENGTH2=0x0000000000000014 \
-# RUN:     -DADDRSIZE2=0x08
+# RUN:     -DLENGTH1=0xC -DADDRSIZE1=0x4 -DADDR=0xFFFFFFFF \
+# RUN:     -DLENGTH2=0x14 -DADDRSIZE2=0x8
 
 ## Dumping address tables from a big endian 32-bit object file.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DENDIAN=MSB -DADDRESS=0xFFFFFFFF \
 # RUN:   -DADDRSIZE=8 | obj2yaml | \
 # RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
-# RUN:     -DLENGTH1=0x000000000000000C \
-# RUN:     -DADDRSIZE1=0x04             \
-# RUN:     -DADDR=0x00000000FFFFFFFF    \
-# RUN:     -DLENGTH2=0x0000000000000014 \
-# RUN:     -DADDRSIZE2=0x08
+# RUN:     -DLENGTH1=0xC -DADDRSIZE1=0x4 -DADDR=0xFFFFFFFF \
+# RUN:     -DLENGTH2=0x14 -DADDRSIZE2=0x8
 
 #      BASIC: DWARF:
 # BASIC-NEXT:   debug_addr:
 # BASIC-NEXT:     - Length:      [[LENGTH1]]
-# BASIC-NEXT:       Version:     0x0005
+# BASIC-NEXT:       Version:     0x5
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE1]]
 # BASIC-NEXT:       Entries:
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:         - Address: 0x0000000000005678
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: 0x5678
 # BASIC-NEXT:     - Format:      DWARF64
 # BASIC-NEXT:       Length:      [[LENGTH1]]
-# BASIC-NEXT:       Version:     0x0005
+# BASIC-NEXT:       Version:     0x5
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE1]]
 # BASIC-NEXT:       Entries:
-# BASIC-NEXT:         - Address: 0x0000000000001234
+# BASIC-NEXT:         - Address: 0x1234
 # BASIC-NEXT:         - Address: [[ADDR]]
 # BASIC-NEXT:     - Length:      [[LENGTH2]]
-# BASIC-NEXT:       Version:     0x0005
+# BASIC-NEXT:       Version:     0x5
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE2]]
 # BASIC-NEXT:       Entries:
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:         - Address: 0x0000000000005678
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: 0x5678
 # BASIC-NEXT:     - Format:      DWARF64
 # BASIC-NEXT:       Length:      [[LENGTH2]]
-# BASIC-NEXT:       Version:     0x0005
+# BASIC-NEXT:       Version:     0x5
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE2]]
 # BASIC-NEXT:       Entries:
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:         - Address: 0x0000000000005678
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: 0x5678
 # BASIC-NEXT: ...
 
 --- !ELF
@@ -140,20 +128,20 @@ DWARF:
 #    COMMON-NEXT:     Type:         [[TYPE]]
 #     FLAGS-NEXT:     Flags:        [ SHF_ALLOC ]
 #      LINK-NEXT:     Link:         .sec
-#      ADDR-NEXT:     Address:      0x0000000000002020
-# ADDRALIGN-NEXT:     AddressAlign: 0x0000000000000003
-#   ENTSIZE-NEXT:     EntSize:      0x0000000000000003
-#      INFO-NEXT:     Info:         0x0000000000000003
+#      ADDR-NEXT:     Address:      0x2020
+# ADDRALIGN-NEXT:     AddressAlign: 0x3
+#   ENTSIZE-NEXT:     EntSize:      0x3
+#      INFO-NEXT:     Info:         0x3
 #    COMMON-NEXT:   - Name:         .sec
 #    COMMON-NEXT:     Type:         SHT_PROGBITS
 #    COMMON-NEXT: DWARF:
 #    COMMON-NEXT:   debug_addr:
-#    COMMON-NEXT:     - Length:      0x0000000000000014
-#    COMMON-NEXT:       Version:     0x0005
-#    COMMON-NEXT:       AddressSize: 0x08
+#    COMMON-NEXT:     - Length:      0x14
+#    COMMON-NEXT:       Version:     0x5
+#    COMMON-NEXT:       AddressSize: 0x8
 #    COMMON-NEXT:       Entries:
-#    COMMON-NEXT:         - Address: 0x0000000000001234
-#    COMMON-NEXT:         - Address: 0x0000000000005678
+#    COMMON-NEXT:         - Address: 0x1234
+#    COMMON-NEXT:         - Address: 0x5678
 #    COMMON-NEXT: ...
 
 --- !ELF
@@ -189,7 +177,7 @@ DWARF:
 #      RAW: Sections:
 # RAW-NEXT:   - Name:         .debug_addr
 # RAW-NEXT:     Type:         SHT_PROGBITS
-# RAW-NEXT:     AddressAlign: 0x0000000000000001
+# RAW-NEXT:     AddressAlign: 0x1
 # RAW-NEXT:     Content:      AABBCC
 # RAW-NEXT: ...
 

@@ -184,8 +184,8 @@ LinkEditData:
 #CHECK:           - TerminalSize:    2
 #CHECK:             NodeOffset:      33
 #CHECK:             Name:            _mh_execute_header
-#CHECK:             Address:         0x0000000000000000
+#CHECK:             Address:         0x0
 #CHECK:           - TerminalSize:    3
 #CHECK:             NodeOffset:      37
 #CHECK:             Name:            main
-#CHECK:             Address:         0x0000000000001160
+#CHECK:             Address:         0x1160
