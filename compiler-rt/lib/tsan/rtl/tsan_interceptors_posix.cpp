@@ -1123,20 +1123,22 @@ static void *init_cond(void *c, bool force = false) {
 }
 
 namespace {
+
+template <class Fn>
 struct CondMutexUnlockCtx {
   ScopedInterceptor *si;
   ThreadState *thr;
   uptr pc;
   void *m;
   void *c;
-  void *t;
-  int (*fn)(void *c, void *m, void *abstime);
+  const Fn &fn;
 
-  int Cancel() const { return fn(c, m, t); }
+  int Cancel() const { return fn(); }
   void Unlock() const;
 };
 
-void CondMutexUnlockCtx::Unlock() const {
+template <class Fn>
+void CondMutexUnlockCtx<Fn>::Unlock() const {
   // pthread_cond_wait interceptor has enabled async signal delivery
   // (see BlockingCall below). Disable async signals since we are running
   // tsan code. Also ScopedInterceptor and BlockingCall destructors won't run
@@ -1159,23 +1161,24 @@ INTERCEPTOR(int, pthread_cond_init, void *c, void *a) {
   return REAL(pthread_cond_init)(cond, a);
 }
 
-static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
-                     int (*fn)(void *c, void *m, void *abstime), void *c,
-                     void *m, void *t) {
+template <class Fn>
+int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si, const Fn &fn,
+              void *c, void *m) {
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
   MutexUnlock(thr, pc, (uptr)m);
-  CondMutexUnlockCtx arg = {si, thr, pc, m, c, t, fn};
   int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
   // See test/tsan/cond_cancel.cpp.
   {
     // Enable signal delivery while the thread is blocked.
     BlockingCall bc(thr);
+    CondMutexUnlockCtx<Fn> arg = {si, thr, pc, m, c, fn};
     res = call_pthread_cancel_with_cleanup(
         [](void *arg) -> int {
-          return ((const CondMutexUnlockCtx *)arg)->Cancel();
+          return ((const CondMutexUnlockCtx<Fn> *)arg)->Cancel();
         },
-        [](void *arg) { ((const CondMutexUnlockCtx *)arg)->Unlock(); }, &arg);
+        [](void *arg) { ((const CondMutexUnlockCtx<Fn> *)arg)->Unlock(); },
+        &arg);
   }
   if (res == errno_EOWNERDEAD) MutexRepair(thr, pc, (uptr)m);
   MutexPostLock(thr, pc, (uptr)m, MutexFlagDoPreLockOnPostLock);
@@ -1185,16 +1188,18 @@ static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
 INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_wait, cond, m);
-  return cond_wait(thr, pc, &si, (int (*)(void *c, void *m, void *abstime))REAL(
-                                     pthread_cond_wait),
-                   cond, m, 0);
+  return cond_wait(
+      thr, pc, &si, [=]() { return REAL(pthread_cond_wait)(cond, m); }, cond,
+      m);
 }
 
 INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait, cond, m, abstime);
-  return cond_wait(thr, pc, &si, REAL(pthread_cond_timedwait), cond, m,
-                   abstime);
+  return cond_wait(
+      thr, pc, &si,
+      [=]() { return REAL(pthread_cond_timedwait)(cond, m, abstime); }, cond,
+      m);
 }
 
 #if SANITIZER_MAC
@@ -1202,8 +1207,12 @@ INTERCEPTOR(int, pthread_cond_timedwait_relative_np, void *c, void *m,
             void *reltime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait_relative_np, cond, m, reltime);
-  return cond_wait(thr, pc, &si, REAL(pthread_cond_timedwait_relative_np), cond,
-                   m, reltime);
+  return cond_wait(
+      thr, pc, &si,
+      [=]() {
+        return REAL(pthread_cond_timedwait_relative_np)(cond, m, reltime);
+      },
+      cond, m);
 }
 #endif
 

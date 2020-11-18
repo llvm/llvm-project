@@ -106,6 +106,9 @@ def testGetDenseElementsF32():
     print(attr)
     # CHECK: is_splat: False
     print("is_splat:", attr.is_splat)
+    # CHECK: {{\[}}[1.1 2.2 3.3]
+    # CHECK: {{\[}}4.4 5.5 6.6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsF32)
 
@@ -117,6 +120,9 @@ def testGetDenseElementsF64():
     attr = DenseElementsAttr.get(array)
     # CHECK: dense<{{\[}}[1.100000e+00, 2.200000e+00, 3.300000e+00], [4.400000e+00, 5.500000e+00, 6.600000e+00]]> : tensor<2x3xf64>
     print(attr)
+    # CHECK: {{\[}}[1.1 2.2 3.3]
+    # CHECK: {{\[}}4.4 5.5 6.6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsF64)
 
@@ -129,6 +135,9 @@ def testGetDenseElementsI32Signless():
     attr = DenseElementsAttr.get(array)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsI32Signless)
 
@@ -140,6 +149,9 @@ def testGetDenseElementsUI32Signless():
     attr = DenseElementsAttr.get(array)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsUI32Signless)
 
@@ -150,6 +162,9 @@ def testGetDenseElementsI32():
     attr = DenseElementsAttr.get(array, signless=False)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xsi32>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsI32)
 
@@ -161,6 +176,9 @@ def testGetDenseElementsUI32():
     attr = DenseElementsAttr.get(array, signless=False)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xui32>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsUI32)
 
@@ -173,6 +191,9 @@ def testGetDenseElementsI64Signless():
     attr = DenseElementsAttr.get(array)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi64>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsI64Signless)
 
@@ -184,6 +205,9 @@ def testGetDenseElementsUI64Signless():
     attr = DenseElementsAttr.get(array)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi64>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsUI64Signless)
 
@@ -194,6 +218,9 @@ def testGetDenseElementsI64():
     attr = DenseElementsAttr.get(array, signless=False)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xsi64>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsI64)
 
@@ -205,6 +232,9 @@ def testGetDenseElementsUI64():
     attr = DenseElementsAttr.get(array, signless=False)
     # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xui64>
     print(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(np.array(attr))
 
 run(testGetDenseElementsUI64)
 

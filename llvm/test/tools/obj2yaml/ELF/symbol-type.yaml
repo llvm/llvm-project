@@ -6,7 +6,7 @@
 # CHECK-NEXT:     Type:    STT_OBJECT
 # CHECK-NEXT:     Binding: STB_GLOBAL
 # CHECK-NEXT:   - Name:    an_unknown_type
-# CHECK-NEXT:     Type:    0x07
+# CHECK-NEXT:     Type:    0x7
 # CHECK-NEXT:     Binding: STB_GLOBAL
 
 !ELF

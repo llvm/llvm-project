@@ -46,36 +46,36 @@ Slices:
 #CHECK:   magic:           0xCAFEBABE
 #CHECK:   nfat_arch:       2
 #CHECK: FatArchs:        
-#CHECK:   - cputype:         0x00000007
-#CHECK:     cpusubtype:      0x00000003
-#CHECK:     offset:          0x0000000000001000
+#CHECK:   - cputype:         0x7
+#CHECK:     cpusubtype:      0x3
+#CHECK:     offset:          0x1000
 #CHECK:     size:            15244
 #CHECK:     align:           12
-#CHECK:   - cputype:         0x01000007
+#CHECK:   - cputype:         0x1000007
 #CHECK:     cpusubtype:      0x80000003
-#CHECK:     offset:          0x0000000000005000
+#CHECK:     offset:          0x5000
 #CHECK:     size:            15380
 #CHECK:     align:           12
 #CHECK: Slices:          
 #CHECK:   - !mach-o
 #CHECK:     FileHeader:      
 #CHECK:       magic:           0xFEEDFACE
-#CHECK:       cputype:         0x00000007
-#CHECK:       cpusubtype:      0x00000003
-#CHECK:       filetype:        0x00000002
+#CHECK:       cputype:         0x7
+#CHECK:       cpusubtype:      0x3
+#CHECK:       filetype:        0x2
 #CHECK:       ncmds:           0
 #CHECK:       sizeofcmds:      0
-#CHECK:       flags:           0x01218085
+#CHECK:       flags:           0x1218085
 #CHECK:   - !mach-o
 #CHECK:     FileHeader:        
 #CHECK:       magic:           0xFEEDFACF
-#CHECK:       cputype:         0x01000007
+#CHECK:       cputype:         0x1000007
 #CHECK:       cpusubtype:      0x80000003
-#CHECK:       filetype:        0x00000002
+#CHECK:       filetype:        0x2
 #CHECK:       ncmds:           0
 #CHECK:       sizeofcmds:      0
-#CHECK:       flags:           0x00218085
-#CHECK:       reserved:        0x00000000
+#CHECK:       flags:           0x218085
+#CHECK:       reserved:        0x0
 #CHECK: ...
 
 ## b) Test that yaml2obj emits an error message if the number of 'FatArchs' is less than
