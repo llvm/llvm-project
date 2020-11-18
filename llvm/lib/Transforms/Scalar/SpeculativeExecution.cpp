@@ -245,6 +245,9 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
     case Instruction::FNeg:
     case Instruction::ICmp:
     case Instruction::FCmp:
+    case Instruction::ExtractElement:
+    case Instruction::InsertElement:
+    case Instruction::ShuffleVector:
       return TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 
     default:
