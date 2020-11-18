@@ -1,0 +1,11 @@
+module a {
+  header "a.h"
+}
+
+module b {
+  header "b.h"
+}
+
+module c {
+  header "c.h"
+}
