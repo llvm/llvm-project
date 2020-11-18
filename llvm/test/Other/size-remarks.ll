@@ -15,7 +15,7 @@
 ; test flakiness wrt instruction counts, but also ensure that the output values
 ; are equivalent in both outputs.
 
-; RUN: opt < %s -inline -pass-remarks-analysis='size-info' \
+; RUN: opt -enable-new-pm=0 < %s -inline -pass-remarks-analysis='size-info' \
 ; RUN: -pass-remarks-output=%t.yaml -S -o /dev/null 2> %t; \
 ; RUN: cat %t %t.yaml | FileCheck %s -check-prefix=CGSCC
 ; CGSCC: remark: <unknown>:0:0: Function Integration/Inlining:
@@ -55,7 +55,7 @@
 ; CGSCC-NEXT:   - DeltaInstrCount: '[[DELTAFN]]'
 ; CGSCC-NEXT: ...
 
-; RUN: opt < %s -instcombine -pass-remarks-analysis='size-info' \
+; RUN: opt -enable-new-pm=0 < %s -instcombine -pass-remarks-analysis='size-info' \
 ; RUN:-pass-remarks-output=%t.yaml -S -o /dev/null 2> %t; \
 ; RUN: cat %t %t.yaml | FileCheck %s -check-prefix=FUNC
 ; FUNC: remark: <unknown>:0:0: Combine redundant instructions:
@@ -128,7 +128,7 @@
 ; FUNC-NEXT:   - String:          '; Delta: '
 ; FUNC-NEXT:   - DeltaInstrCount: '[[DELTABAR]]'
 
-; RUN: opt < %s -globaldce -pass-remarks-analysis='size-info' \
+; RUN: opt -enable-new-pm=0 < %s -globaldce -pass-remarks-analysis='size-info' \
 ; RUN: -pass-remarks-output=%t.yaml -S -o /dev/null 2> %t; \
 ; RUN: cat %t %t.yaml | FileCheck %s -check-prefix=MODULE
 ; MODULE: remark:
@@ -168,7 +168,7 @@
 ; MODULE-NEXT:   - String:          '; Delta: '
 ; MODULE-NEXT:   - DeltaInstrCount: '[[DELTAFN]]'
 
-; RUN: opt < %s -dce -pass-remarks-analysis='size-info' \
+; RUN: opt -enable-new-pm=0 < %s -dce -pass-remarks-analysis='size-info' \
 ; RUN: -pass-remarks-output=%t.yaml -S -o /dev/null 2> %t; \
 ; RUN: cat %t %t.yaml | FileCheck %s -check-prefix=BB
 ; BB: remark: <unknown>:0:0: Dead Code Elimination:
@@ -206,7 +206,7 @@
 ; BB-NEXT:   - String:          '; Delta: '
 ; BB-NEXT:   - DeltaInstrCount: '[[DELTAFN]]'
 
-; RUN: opt < %s -loop-unroll -pass-remarks-analysis='size-info' \
+; RUN: opt -enable-new-pm=0 < %s -loop-unroll -pass-remarks-analysis='size-info' \
 ; RUN: -pass-remarks-output=%t.yaml -S -o /dev/null 2> %t; \
 ; RUN: cat %t %t.yaml | FileCheck %s -check-prefix=LOOP
 ; LOOP: remark: <unknown>:0:0: Unroll loops:
