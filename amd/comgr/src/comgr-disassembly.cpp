@@ -48,24 +48,14 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   std::string TT = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS +
                     "-" + Ident.Environ)
                        .str();
-  std::string Features;
-
-  bool EnableXNACK = false;
-  bool EnableSRAMECC = false;
+  std::string Isa = TT + Twine("-" + Ident.Processor).str();
+  SmallVector<StringRef, 2> FeaturesVec;
 
   for (auto &Feature : Ident.Features)
-    if (Feature == "xnack")
-      EnableXNACK = true;
-    else if (Feature == "sram-ecc")
-      EnableSRAMECC = true;
-    else
-      return AMD_COMGR_STATUS_ERROR;
+    FeaturesVec.push_back(
+        Twine(Feature.take_back() + Feature.drop_back()).str());
 
-  SmallVector<StringRef, 2> FeaturesVec;
-  FeaturesVec.push_back(EnableXNACK ? "+xnack" : "-xnack");
-  FeaturesVec.push_back(EnableSRAMECC ? "+sram-ecc" : "-sram-ecc");
-
-  Features = join(FeaturesVec, ",");
+  std::string Features = join(FeaturesVec, ",");
 
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);

@@ -94,7 +94,9 @@ class AMDGPUCompiler {
   std::string CPU;
   /// User supplied target GPU Arch.
   std::string GPUArch;
-  std::string CUDAGPUArch;
+  std::string OffloadArch;
+  /// ROCM include Path
+  std::string ROCMIncludePath;
   /// HIP and Clang Include Paths
   std::string HIPIncludePath;
   std::string ClangIncludePath;

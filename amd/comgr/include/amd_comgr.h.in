@@ -162,6 +162,12 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_1_8
 
+/**
+ * The function was introduced or changed in version 2.0 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.0"``.
+ */
+#define AMD_COMGR_VERSION_2_0
+
 /** @} */
 
 /**
@@ -391,7 +397,7 @@ typedef struct amd_comgr_disassembly_info_s {
  */
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_isa_count(
-  size_t *count) AMD_COMGR_VERSION_1_8;
+  size_t *count) AMD_COMGR_VERSION_2_0;
 
 /**
  * @brief Return the Nth isa name supported by this version of the
@@ -416,14 +422,14 @@ amd_comgr_get_isa_count(
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_isa_name(
   size_t index,
-  const char **isa_name) AMD_COMGR_VERSION_1_8;
+  const char **isa_name) AMD_COMGR_VERSION_2_0;
 
  /**
  * @brief Get a handle to the metadata of an isa name.
  *
- * The structure of the returned metadata is isa name specific. It can
- * include information about the limits for resources such as
- * registers and memory addressing.
+ * The structure of the returned metadata is isa name specific and versioned
+ * with details specified in README.md. It can include information about the
+ * limits for resources such as registers and memory addressing.
  *
  * @param[in] isa_name The isa name to query.
  *
@@ -445,7 +451,7 @@ amd_comgr_get_isa_name(
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_isa_metadata(
   const char *isa_name,
-  amd_comgr_metadata_node_t *metadata) AMD_COMGR_VERSION_1_8;
+  amd_comgr_metadata_node_t *metadata) AMD_COMGR_VERSION_2_0;
 
 /**
  * @brief Create a data object that can hold data of a specified kind.
@@ -613,14 +619,12 @@ amd_comgr_get_data(
  *
  * @param[in] data The data object to query.
  *
- * @param[in, out] size On entry, the size of @p name. On return, if @p name is
- * NULL, set to the size of the data object name including the terminating null
- * character.
+ * @param[in, out] size On entry, the size of @p name. On return, the size of
+ * the data object name including the terminating null character.
  *
  * @param[out] name If not NULL, then the first @p size characters of the
- * data object name are copied. If NULL, no name is copied, and
- * only @p size is updated (useful in order to find the size of buffer
- * required to copy the name).
+ * data object name are copied. If @p name is NULL, only @p size is updated
+ * (useful in order to find the size of buffer required to copy the name).
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
  * been executed successfully.
@@ -667,7 +671,7 @@ amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_data_isa_name(
   amd_comgr_data_t data,
   size_t *size,
-  char *isa_name) AMD_COMGR_VERSION_1_8;
+  char *isa_name) AMD_COMGR_VERSION_2_0;
 
  /**
  * @brief Get a handle to the metadata of a data object.
@@ -925,7 +929,7 @@ amd_comgr_destroy_action_info(
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_isa_name(
   amd_comgr_action_info_t action_info,
-  const char *isa_name) AMD_COMGR_VERSION_1_8;
+  const char *isa_name) AMD_COMGR_VERSION_2_0;
 
 /**
  * @brief Get the isa name and/or isa name length.
@@ -955,7 +959,7 @@ amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_isa_name(
   amd_comgr_action_info_t action_info,
   size_t *size,
-  char *isa_name) AMD_COMGR_VERSION_1_8;
+  char *isa_name) AMD_COMGR_VERSION_2_0;
 
 /**
  * @brief Set the source language of an action info object.
@@ -2046,7 +2050,7 @@ amd_comgr_create_disassembly_info(
   void (*print_address_annotation_callback)(
     uint64_t address,
     void *user_data),
-  amd_comgr_disassembly_info_t *disassembly_info) AMD_COMGR_VERSION_1_8;
+  amd_comgr_disassembly_info_t *disassembly_info) AMD_COMGR_VERSION_2_0;
 
 /**
  * @brief Destroy a disassembly info object.

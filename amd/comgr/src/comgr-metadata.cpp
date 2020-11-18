@@ -43,6 +43,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 #include <iostream>
 
 using namespace llvm;
@@ -74,8 +75,9 @@ getELFObjectFileBase(DataObject *DataP) {
 /// signals to stop searching and return @c AMD_COMGR_STATUS_SUCCESS. It should
 /// return @c false otherwise to continue iteration.
 ///
-/// @returns @c AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT If all notes are
-/// processed without @p ProcessNote returning @c true, otherwise
+/// @returns @c AMD_COMGR_STATUS_ERROR if an error was encountered in parsing
+/// the ELF file; @c AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if all notes are
+/// processed without @p ProcessNote returning @c true; otherwise @c
 /// AMD_COMGR_STATUS_SUCCESS.
 template <class ELFT, typename F>
 static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
@@ -86,7 +88,7 @@ static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
 
   auto ProgramHeadersOrError = ELFFile->program_headers();
   if (errorToBool(ProgramHeadersOrError.takeError()))
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    return AMD_COMGR_STATUS_ERROR;
 
   for (const auto &Phdr : *ProgramHeadersOrError) {
     if (Phdr.p_type != ELF::PT_NOTE)
@@ -105,7 +107,7 @@ static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
 
   auto SectionsOrError = ELFFile->sections();
   if (errorToBool(SectionsOrError.takeError()))
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    return AMD_COMGR_STATUS_ERROR;
 
   for (const auto &Shdr : *SectionsOrError) {
     if (Shdr.sh_type != ELF::SHT_NOTE)
@@ -205,7 +207,7 @@ static bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
   auto DescString = Note.getDescAsStringRef();
 
   if (Note.getName() == "AMD" &&
-      Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
+      Note.getType() == ELF::NT_AMD_HSA_METADATA) {
 
     if (!Root.isEmpty())
       return false;
@@ -310,7 +312,58 @@ amd_comgr_status_t getMetadataRoot(DataObject *DataP, DataMeta *MetaP) {
   return getElfMetadataRoot(ELF64BE, MetaP);
 }
 
-#define NT_AMDGPU_HSA_ISA 3
+struct IsaInfo {
+  const char* IsaName;
+  const char* Processor;
+  bool SrameccSupported;
+  bool XnackSupported;
+  unsigned ElfMachine;
+  bool TrapHandlerEnabled;
+  unsigned LDSSize;
+  unsigned LDSBankCount;
+  unsigned EUsPerCU;
+  unsigned MaxWavesPerCU;
+  unsigned MaxFlatWorkGroupSize;
+  unsigned SGPRAllocGranule;
+  unsigned TotalNumSGPRs;
+  unsigned AddressableNumSGPRs;
+  unsigned VGPRAllocGranule;
+  unsigned TotalNumVGPRs;
+  unsigned AddressableNumVGPRs;
+} IsaInfos[] = {
+#define HANDLE_ISA(TARGET_TRIPLE, PROCESSOR,                                   \
+        SRAMECC_SUPPORTED, XNACK_SUPPORTED,                                    \
+        ELF_MACHINE, TRAP_HANDLER_ENABLED, LDS_SIZE, LDS_BANK_COUNT,           \
+        EUS_PER_CU, MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,                \
+        SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS,            \
+        VGPR_ALLOC_GRANULE, TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS)            \
+  {TARGET_TRIPLE "-" PROCESSOR, PROCESSOR, SRAMECC_SUPPORTED, XNACK_SUPPORTED, \
+   ELF::ELF_MACHINE, TRAP_HANDLER_ENABLED, LDS_SIZE, LDS_BANK_COUNT,           \
+   EUS_PER_CU, MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,                     \
+   SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS,                 \
+   VGPR_ALLOC_GRANULE, TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS},
+#include "comgr-isa-metadata.def"
+};
+
+size_t getIsaCount() {
+  return std::distance(std::begin(IsaInfos), std::end(IsaInfos));
+}
+
+// NOLINTNEXTLINE(readability-identifier-naming)
+typedef struct amdgpu_hsa_note_code_object_version_s {
+  uint32_t major_version; // NOLINT(readability-identifier-naming)
+  uint32_t minor_version; // NOLINT(readability-identifier-naming)
+} amdgpu_hsa_note_code_object_version_t;
+
+// NOLINTNEXTLINE(readability-identifier-naming)
+typedef struct amdgpu_hsa_note_hsail_s {
+  uint32_t hsail_major_version; // NOLINT(readability-identifier-naming)
+  uint32_t hsail_minor_version; // NOLINT(readability-identifier-naming)
+  uint8_t profile;              // NOLINT(readability-identifier-naming)
+  uint8_t machine_model;        // NOLINT(readability-identifier-naming)
+  uint8_t default_float_round;  // NOLINT(readability-identifier-naming)
+} amdgpu_hsa_note_hsail_t;
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 typedef struct amdgpu_hsa_note_isa_s {
   uint16_t vendor_name_size;            // NOLINT(readability-identifier-naming)
@@ -321,82 +374,148 @@ typedef struct amdgpu_hsa_note_isa_s {
   char vendor_and_architecture_name[1]; // NOLINT(readability-identifier-naming)
 } amdgpu_hsa_note_isa_t;
 
-static amd_comgr_status_t
-getNoteIsaName(StringRef VendorName, StringRef ArchitectureName,
-               uint32_t MajorVersion, uint32_t MinorVersion, uint32_t Stepping,
-               uint32_t EFlags, std::string &NoteIsaName) {
-  std::string OldName;
-  OldName += VendorName;
-  OldName += ":";
-  OldName += ArchitectureName;
-  OldName += ":";
-  OldName += std::to_string(MajorVersion);
-  OldName += ":";
-  OldName += std::to_string(MinorVersion);
-  OldName += ":";
-  OldName += std::to_string(Stepping);
+static bool GetMachInfo(unsigned mach, std::string &processor, bool &sramecc_supported, bool &xnack_supported) {
+  auto IsaIterator = std::find_if(
+      std::begin(IsaInfos), std::end(IsaInfos),
+      [&](const IsaInfo &isa_info) { return mach == isa_info.ElfMachine; });
+  if (IsaIterator == std::end(IsaInfos))
+    return false;
 
-  if (OldName == "AMD:AMDGPU:7:0:0")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx700";
-  else if (OldName == "AMD:AMDGPU:7:0:1")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx701";
-  else if (OldName == "AMD:AMDGPU:7:0:2")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx702";
-  else if (OldName == "AMD:AMDGPU:7:0:3")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx703";
-  else if (OldName == "AMD:AMDGPU:7:0:4")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx704";
-  else if (OldName == "AMD:AMDGPU:8:0:1")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx801";
-  else if (OldName == "AMD:AMDGPU:8:0:2")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx802";
-  else if (OldName == "AMD:AMDGPU:8:0:3")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx803";
-  else if (OldName == "AMD:AMDGPU:8:1:0")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx810";
-  else if (OldName == "AMD:AMDGPU:9:0:0")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx900";
-  else if (OldName == "AMD:AMDGPU:9:0:2")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx902";
-  else if (OldName == "AMD:AMDGPU:9:0:4")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx904";
-  else if (OldName == "AMD:AMDGPU:9:0:6")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx906";
-  else if (OldName == "AMD:AMDGPU:9:0:8")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx908";
-  else if (OldName == "AMD:AMDGPU:9:0:9")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx909";
-  else if (OldName == "AMD:AMDGPU:10:1:0")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx1010";
-  else if (OldName == "AMD:AMDGPU:10:1:1")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx1011";
-  else if (OldName == "AMD:AMDGPU:10:1:2")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx1012";
-  else if (OldName == "AMD:AMDGPU:10:3:0")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx1030";
-  else if (OldName == "AMD:AMDGPU:10:3:1")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx1031";
-  else if (OldName == "AMD:AMDGPU:10:3:2")
-    NoteIsaName = "amdgcn-amd-amdhsa--gfx1032";
-  else
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  processor = IsaIterator->Processor;
+  sramecc_supported = IsaIterator->SrameccSupported;
+  xnack_supported = IsaIterator->XnackSupported;
+  return true;
+}
 
-  if (EFlags & ELF::EF_AMDGPU_XNACK)
-    NoteIsaName = NoteIsaName + "+xnack";
-  if (EFlags & ELF::EF_AMDGPU_SRAM_ECC)
-    NoteIsaName = NoteIsaName + "+sram-ecc";
+// This function is an exact copy of the ROCr loader function of the same name.
+static std::string ConvertOldTargetNameToNew(const std::string &old_name, bool is_finalizer, uint32_t e_flags) {
+  assert(!old_name.empty() && "Expecting non-empty old name");
 
-  return AMD_COMGR_STATUS_SUCCESS;
+  unsigned mach = 0;
+  if (old_name == "AMD:AMDGPU:7:0:0")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX700;
+  else if (old_name == "AMD:AMDGPU:7:0:1")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX701;
+  else if (old_name == "AMD:AMDGPU:7:0:2")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX702;
+  else if (old_name == "AMD:AMDGPU:7:0:3")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX703;
+  else if (old_name == "AMD:AMDGPU:7:0:4")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX704;
+  else if (old_name == "AMD:AMDGPU:8:0:1")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX801;
+  else if (old_name == "AMD:AMDGPU:8:0:2")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX802;
+  else if (old_name == "AMD:AMDGPU:8:0:3")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX803;
+  else if (old_name == "AMD:AMDGPU:8:1:0")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX810;
+  else if (old_name == "AMD:AMDGPU:9:0:0" || old_name == "AMD:AMDGPU:9:0:1")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX900;
+  else if (old_name == "AMD:AMDGPU:9:0:2" || old_name == "AMD:AMDGPU:9:0:3")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX902;
+  else if (old_name == "AMD:AMDGPU:9:0:4" || old_name == "AMD:AMDGPU:9:0:5")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
+  else if (old_name == "AMD:AMDGPU:9:0:6" || old_name == "AMD:AMDGPU:9:0:7")
+    mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
+  else {
+    // Code object v2 only supports asics up to gfx906. Do NOT add handling
+    // of new asics into this if-else-if* block.
+    return "";
+  }
+
+  std::string name;
+  bool sramecc_supported = false;
+  bool xnack_supported = false;
+  if (!GetMachInfo(mach, name, sramecc_supported, xnack_supported))
+    return "";
+
+  // Only "AMD:AMDGPU:9:0:6" and "AMD:AMDGPU:9:0:7" supports SRAMECC for
+  // code object V2, and it must be OFF.
+  if (sramecc_supported)
+    name += ":sramecc-";
+
+  if (is_finalizer) {
+    if (e_flags & ELF::EF_AMDGPU_FEATURE_XNACK_V2)
+      name += ":xnack+";
+    else if (xnack_supported)
+      name += ":xnack-";
+  } else {
+    if (old_name == "AMD:AMDGPU:8:0:1")
+      name += ":xnack+";
+    else if (old_name == "AMD:AMDGPU:8:1:0")
+      name += ":xnack+";
+    else if (old_name == "AMD:AMDGPU:9:0:1")
+      name += ":xnack+";
+    else if (old_name == "AMD:AMDGPU:9:0:3")
+      name += ":xnack+";
+    else if (old_name == "AMD:AMDGPU:9:0:5")
+      name += ":xnack+";
+    else if (old_name == "AMD:AMDGPU:9:0:7")
+      name += ":xnack+";
+    else if (xnack_supported)
+      name += ":xnack-";
+  }
+
+  return name;
 }
 
 template <class ELFT>
-static amd_comgr_status_t getElfIsaNameV2(const ELFObjectFile<ELFT> *Obj,
-                                          size_t *Size, char *IsaName) {
-  amd_comgr_status_t NoteStatus = AMD_COMGR_STATUS_SUCCESS;
+static amd_comgr_status_t getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
+                                                    size_t *Size, char *IsaName) {
+
+  auto ElfHeader = Obj->getELFFile()->getHeader();
+
+  // Only ELFABIVERSION_AMDGPU_HSA_V2 used note records for the isa name.
+  assert(ElfHeader.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_AMDGPU_HSA_V2);
+
+  bool IsError = false;
+  bool IsCodeObjectVersion = false;
+  bool IsHSAIL = false;
+  bool IsIsa = false;
+  uint32_t Major = 0;
+  uint32_t Minor = 0;
+  uint32_t Stepping = 0;
+  StringRef VendorName;
+  StringRef ArchitectureName;
+
   auto ProcessNote = [&](const Elf_Note<ELFT> &Note) {
-    if (Note.getName() == "AMD" && Note.getType() == NT_AMDGPU_HSA_ISA) {
-      if (Note.getDesc().size() <= sizeof(amdgpu_hsa_note_isa_s)) {
-        NoteStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    if (Note.getName() != "AMD") return false;
+
+    switch (Note.getType()) {
+    case ELF::NT_AMD_HSA_CODE_OBJECT_VERSION: {
+      if (Note.getDesc().size() < sizeof(amdgpu_hsa_note_code_object_version_s)) {
+        IsError = true;
+        return true;
+      }
+
+      auto NoteCodeObjectVersion = reinterpret_cast<const amdgpu_hsa_note_code_object_version_s *>(
+          Note.getDesc().data());
+
+      // Only code objects up to version 2 used note records.
+      if (NoteCodeObjectVersion->major_version > 2) {
+        IsError = true;
+        return true;
+      }
+
+      IsCodeObjectVersion = true;
+      break;
+    }
+
+    case ELF::NT_AMD_HSA_HSAIL: {
+      if (Note.getDesc().size() < sizeof(amdgpu_hsa_note_hsail_s)) {
+        IsError = true;
+        return true;
+      }
+
+      IsHSAIL = true;
+      break;
+    }
+
+    case ELF::NT_AMD_HSA_ISA_VERSION: {
+      if (Note.getDesc().size() <
+          offsetof(amdgpu_hsa_note_isa_s, vendor_and_architecture_name)) {
+        IsError = true;
         return true;
       }
 
@@ -404,48 +523,75 @@ static amd_comgr_status_t getElfIsaNameV2(const ELFObjectFile<ELFT> *Obj,
           Note.getDesc().data());
 
       if (!NoteIsa->vendor_name_size || !NoteIsa->architecture_name_size) {
-        NoteStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+        IsError = true;
         return true;
       }
 
-      auto VendorName = StringRef(NoteIsa->vendor_and_architecture_name,
-                                  NoteIsa->vendor_name_size - 1);
-      auto ArchitectureName = StringRef(NoteIsa->vendor_and_architecture_name +
-                                            NoteIsa->vendor_name_size,
-                                        NoteIsa->architecture_name_size - 1);
-      auto EFlags = Obj->getELFFile()->getHeader().e_flags;
-
-      std::string NoteIsaName;
-      NoteStatus = getNoteIsaName(VendorName, ArchitectureName, NoteIsa->major,
-                                  NoteIsa->minor, NoteIsa->stepping, EFlags,
-                                  NoteIsaName);
-      if (NoteStatus)
+      if (Note.getDesc().size() <
+          offsetof(amdgpu_hsa_note_isa_s, vendor_and_architecture_name) +
+              NoteIsa->vendor_name_size + NoteIsa->architecture_name_size) {
+        IsError = true;
         return true;
+      }
 
-      if (IsaName)
-        memcpy(IsaName, NoteIsaName.c_str(), *Size);
-      else
-        *Size = NoteIsaName.size() + 1;
+      Major = NoteIsa->major;
+      Minor = NoteIsa->minor;
+      Stepping = NoteIsa->stepping;
+      VendorName = StringRef(NoteIsa->vendor_and_architecture_name,
+                             NoteIsa->vendor_name_size - 1);
+      ArchitectureName = StringRef(NoteIsa->vendor_and_architecture_name +
+                                      NoteIsa->vendor_name_size,
+                                   NoteIsa->architecture_name_size - 1);
 
-      return true;
+      IsIsa = true;
+      break;
     }
-    return false;
+    }
+
+    // Only stop searching when found all the possible note records needed.
+    return IsCodeObjectVersion && IsHSAIL && IsIsa;
   };
-  if (auto ElfStatus = processElfNotes(Obj, ProcessNote))
-    return ElfStatus;
-  if (NoteStatus)
-    return NoteStatus;
+
+  if ((processElfNotes(Obj, ProcessNote) == AMD_COMGR_STATUS_ERROR) || IsError)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  // Code objects up to V2 must have both code object version and isa note
+  // records.
+  if (!(IsCodeObjectVersion && IsIsa))
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  std::string OldName;
+  OldName += VendorName;
+  OldName += ":";
+  OldName += ArchitectureName;
+  OldName += ":";
+  OldName += std::to_string(Major);
+  OldName += ":";
+  OldName += std::to_string(Minor);
+  OldName += ":";
+  OldName += std::to_string(Stepping);
+
+  std::string NoteIsaName = ConvertOldTargetNameToNew(OldName, IsHSAIL, ElfHeader.e_flags);
+  if (NoteIsaName.empty())
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  NoteIsaName = "amdgcn-amd-amdhsa--" + NoteIsaName;
+
+  if (IsaName)
+    memcpy(IsaName, NoteIsaName.c_str(), std::min(*Size, NoteIsaName.size() + 1));
+  *Size = NoteIsaName.size() + 1;
+
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 template <class ELFT>
-static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
-                                          size_t *Size, char *IsaName) {
-  auto EHdr = Obj->getELFFile()->getHeader();
+static amd_comgr_status_t getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
+                                                     size_t *Size, char *IsaName) {
+  auto ElfHeader = Obj->getELFFile()->getHeader();
 
   std::string ElfIsaName;
 
-  switch (EHdr.e_ident[ELF::EI_CLASS]) {
+  switch (ElfHeader.e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASSNONE:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   case ELF::ELFCLASS32:
@@ -456,9 +602,11 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
     break;
   }
 
+  if (ElfHeader.e_machine != ELF::EM_AMDGPU)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   ElfIsaName += "-amd-";
 
-  switch (EHdr.e_ident[ELF::EI_OSABI]) {
+  switch (ElfHeader.e_ident[ELF::EI_OSABI]) {
   case ELF::ELFOSABI_NONE:
     ElfIsaName += "unknown";
     break;
@@ -477,139 +625,62 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
 
   ElfIsaName += "--";
 
-  switch (EHdr.e_flags & ELF::EF_AMDGPU_MACH) {
-  case ELF::EF_AMDGPU_MACH_NONE:
+  std::string Processor;
+  bool SrameccSupported, XnackSupported;
+  if (!GetMachInfo(ElfHeader.e_flags & ELF::EF_AMDGPU_MACH,
+                   Processor, SrameccSupported, XnackSupported))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  case ELF::EF_AMDGPU_MACH_R600_R600:
-    ElfIsaName += "r600";
+  ElfIsaName += Processor;
+
+  switch (ElfHeader.e_ident[ELF::EI_ABIVERSION]) {
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V2: {
+    // ELFABIVERSION_AMDGPU_HSA_V2 uses ELF note records and is not supported.
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V3: {
+    if (SrameccSupported) {
+      if (ElfHeader.e_flags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V3)
+        ElfIsaName += ":sramecc+";
+      else
+        ElfIsaName += ":sramecc-";
+    }
+    if (XnackSupported) {
+      if (ElfHeader.e_flags & ELF::EF_AMDGPU_FEATURE_XNACK_V3)
+        ElfIsaName += ":xnack+";
+      else
+        ElfIsaName += ":xnack-";
+    }
     break;
-  case ELF::EF_AMDGPU_MACH_R600_R630:
-    ElfIsaName += "r630";
+  }
+
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V4: {
+    switch (ElfHeader.e_flags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4) {
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+      ElfIsaName += ":sramecc-";
+      break;
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+      ElfIsaName += ":sramecc+";
+      break;
+    }
+    switch (ElfHeader.e_flags & ELF::EF_AMDGPU_FEATURE_XNACK_V4) {
+    case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+      ElfIsaName += ":xnack-";
+      break;
+    case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
+      ElfIsaName += ":xnack+";
+      break;
+    }
     break;
-  case ELF::EF_AMDGPU_MACH_R600_RS880:
-    ElfIsaName += "rs880";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_RV670:
-    ElfIsaName += "rv670";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_RV710:
-    ElfIsaName += "rv710";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_RV730:
-    ElfIsaName += "rv730";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_RV770:
-    ElfIsaName += "rv770";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_CEDAR:
-    ElfIsaName += "cedar";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:
-    ElfIsaName += "cypress";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:
-    ElfIsaName += "juniper";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:
-    ElfIsaName += "redwood";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_SUMO:
-    ElfIsaName += "sumo";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_BARTS:
-    ElfIsaName += "barts";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_CAICOS:
-    ElfIsaName += "caicos";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:
-    ElfIsaName += "cayman";
-    break;
-  case ELF::EF_AMDGPU_MACH_R600_TURKS:
-    ElfIsaName += "turks";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600:
-    ElfIsaName += "gfx600";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:
-    ElfIsaName += "gfx601";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:
-    ElfIsaName += "gfx700";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701:
-    ElfIsaName += "gfx701";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702:
-    ElfIsaName += "gfx702";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703:
-    ElfIsaName += "gfx703";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:
-    ElfIsaName += "gfx704";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:
-    ElfIsaName += "gfx801";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802:
-    ElfIsaName += "gfx802";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:
-    ElfIsaName += "gfx803";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:
-    ElfIsaName += "gfx810";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900:
-    ElfIsaName += "gfx900";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902:
-    ElfIsaName += "gfx902";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904:
-    ElfIsaName += "gfx904";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906:
-    ElfIsaName += "gfx906";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX908:
-    ElfIsaName += "gfx908";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:
-    ElfIsaName += "gfx909";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
-    ElfIsaName += "gfx1010";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011:
-    ElfIsaName += "gfx1011";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012:
-    ElfIsaName += "gfx1012";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030:
-    ElfIsaName += "gfx1030";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031:
-    ElfIsaName += "gfx1031";
-    break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032:
-    ElfIsaName += "gfx1032";
-    break;
+  }
+
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  if (EHdr.e_flags & ELF::EF_AMDGPU_XNACK)
-    ElfIsaName += "+xnack";
-  if (EHdr.e_flags & ELF::EF_AMDGPU_SRAM_ECC)
-    ElfIsaName += "+sram-ecc";
-
   if (IsaName)
-    memcpy(IsaName, ElfIsaName.c_str(), *Size);
-  else
-    *Size = ElfIsaName.size() + 1;
+    memcpy(IsaName, ElfIsaName.c_str(), std::min(*Size, ElfIsaName.size() + 1));
+  *Size = ElfIsaName.size() + 1;
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -617,10 +688,12 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
 template <class ELFT>
 static amd_comgr_status_t getElfIsaNameImpl(const ELFObjectFile<ELFT> *Obj,
                                             size_t *Size, char *IsaName) {
-  auto EHdr = Obj->getELFFile()->getHeader();
-  if (EHdr.e_machine == ELF::EM_AMDGPU)
-    return getElfIsaNameV3(Obj, Size, IsaName);
-  return getElfIsaNameV2(Obj, Size, IsaName);
+  auto ElfHeader = Obj->getELFFile()->getHeader();
+
+  if (ElfHeader.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_AMDGPU_HSA_V2)
+    return getElfIsaNameFromElfNotes(Obj, Size, IsaName);
+
+  return getElfIsaNameFromElfHeader(Obj, Size, IsaName);
 }
 
 amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
@@ -640,54 +713,42 @@ amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
   return getElfIsaNameImpl(ELF64BE, Size, IsaName);
 }
 
-static const char *SupportedIsas[] = {
-#define HANDLE_ISA(NAME, ...) NAME,
-#include "comgr-isa-metadata.def"
-};
+amd_comgr_status_t getIsaIndex(StringRef IsaString, size_t &Index) {
+  auto IsaName = IsaString.take_until([](char c) { return c == ':'; });
+  auto IsaIterator = std::find_if(
+      std::begin(IsaInfos), std::end(IsaInfos),
+      [&](const IsaInfo &isa_info) { return IsaName == isa_info.IsaName; });
+  if (IsaIterator == std::end(IsaInfos))
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  Index = std::distance(std::begin(IsaInfos), IsaIterator);
 
-struct IsaInfo {
-  bool TrapHandlerEnabled;
-  unsigned LocalMemorySize;
-  unsigned EUsPerCU;
-  unsigned MaxWavesPerCU;
-  unsigned MaxFlatWorkGroupSize;
-  unsigned SGPRAllocGranule;
-  unsigned TotalNumSGPRs;
-  unsigned AddressableNumSGPRs;
-  unsigned VGPRAllocGranule;
-  unsigned TotalNumVGPRs;
-  unsigned AddressableNumVGPRs;
-  unsigned LDSBankCount;
-} IsaInfos[] = {
-#define HANDLE_ISA(NAME, TRAP_HANDLER_ENABLED, LOCAL_MEMORY_SIZE, EUS_PER_CU,  \
-                   MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,                 \
-                   SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS, \
-                   VGPR_ALLOC_GRANULE, TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS, \
-                   LDS_BANK_COUNT)                                             \
-  {TRAP_HANDLER_ENABLED, LOCAL_MEMORY_SIZE,        EUS_PER_CU,                 \
-   MAX_WAVES_PER_CU,     MAX_FLAT_WORK_GROUP_SIZE, SGPR_ALLOC_GRANULE,         \
-   TOTAL_NUM_SGPRS,      ADDRESSABLE_NUM_SGPRS,    VGPR_ALLOC_GRANULE,         \
-   TOTAL_NUM_VGPRS,      ADDRESSABLE_NUM_VGPRS,    LDS_BANK_COUNT},
-#include "comgr-isa-metadata.def"
-};
+  return AMD_COMGR_STATUS_SUCCESS;
+}
 
-static_assert((sizeof(SupportedIsas) / sizeof(*SupportedIsas)) ==
-                  (sizeof(IsaInfos) / sizeof(*IsaInfos)),
-              "all SupportedIsas must have matching IsaInfos");
+bool isSupportedFeature(size_t IsaIndex, StringRef Feature) {
+  if (Feature.empty() || (Feature.take_back() != "+" &&
+      Feature.take_back() != "-"))
+    return false;
 
-size_t getIsaCount() { return sizeof(SupportedIsas) / sizeof(*SupportedIsas); }
+  return (Feature.drop_back() == "xnack" && IsaInfos[IsaIndex].XnackSupported) ||
+         (Feature.drop_back() == "sramecc" &&
+          IsaInfos[IsaIndex].SrameccSupported);
+}
 
-const char *getIsaName(size_t Index) { return SupportedIsas[Index]; }
+const char *getIsaName(size_t Index) { return IsaInfos[Index].IsaName; }
 
 amd_comgr_status_t getIsaMetadata(StringRef IsaName,
                                   llvm::msgpack::Document &Doc) {
-  auto IsaIterator = find(SupportedIsas, IsaName);
-  if (IsaIterator == std::end(SupportedIsas))
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  auto IsaIndex = std::distance(std::begin(SupportedIsas), IsaIterator);
+  amd_comgr_status_t Status;
+  
+  size_t IsaIndex;
+  Status = getIsaIndex(IsaName, IsaIndex);
+  if (Status != AMD_COMGR_STATUS_SUCCESS)
+    return Status;
 
   TargetIdentifier Ident;
-  if (auto Status = parseTargetIdentifier(IsaName, Ident))
+  Status = parseTargetIdentifier(IsaName, Ident);
+  if (Status != AMD_COMGR_STATUS_SUCCESS)
     return Status;
 
   auto Root = Doc.getRoot().getMap(/*Convert=*/true);
@@ -698,23 +759,36 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName,
   Root["OS"] = Doc.getNode(Ident.OS, /*Copy=*/true);
   Root["Environment"] = Doc.getNode(Ident.Environ, /*Copy=*/true);
   Root["Processor"] = Doc.getNode(Ident.Processor, /*Copy=*/true);
-  auto XNACKEnabled = false;
-  auto FeaturesNode = Doc.getArrayNode();
-  for (size_t I = 0; I < Ident.Features.size(); ++I) {
-    FeaturesNode.push_back(Doc.getNode(Ident.Features[I], /*Copy=*/true));
-    if (Ident.Features[I] == "xnack")
-      XNACKEnabled = true;
-  }
-  Root["Features"] = FeaturesNode;
+  Root["Version"] = Doc.getNode("1.0.0", /*Copy=*/true);
 
-  Root["XNACKEnabled"] =
-      Doc.getNode(std::to_string(XNACKEnabled), /*Copy=*/true);
+  auto FeaturesNode = Doc.getMapNode();
+  if (IsaInfos[IsaIndex].XnackSupported)
+    FeaturesNode["xnack"] = Doc.getNode("any", /*Copy=*/true);
+  if (IsaInfos[IsaIndex].SrameccSupported)
+    FeaturesNode["sramecc"] = Doc.getNode("any", /*Copy=*/true);
+
+  for (size_t I = 0; I < Ident.Features.size(); ++I) {
+    if (FeaturesNode.find(Ident.Features[I].drop_back()) == FeaturesNode.end())
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+    auto State = Ident.Features[I].take_back();
+    if (State == "+")
+      FeaturesNode[Ident.Features[I].drop_back()] =
+          Doc.getNode("on", /*Copy=*/true);
+    else if (State == "-")
+      FeaturesNode[Ident.Features[I].drop_back()] =
+          Doc.getNode("off", /*Copy=*/true);
+    else
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  Root["Features"] = FeaturesNode;
 
   auto Info = IsaInfos[IsaIndex];
   Root["TrapHandlerEnabled"] =
       Doc.getNode(std::to_string(Info.TrapHandlerEnabled), /*Copy=*/true);
   Root["LocalMemorySize"] =
-      Doc.getNode(std::to_string(Info.LocalMemorySize), /*Copy=*/true);
+      Doc.getNode(std::to_string(Info.LDSSize), /*Copy=*/true);
   Root["EUsPerCU"] = Doc.getNode(std::to_string(Info.EUsPerCU), /*Copy=*/true);
   Root["MaxWavesPerCU"] =
       Doc.getNode(std::to_string(Info.MaxWavesPerCU), /*Copy=*/true);
@@ -738,13 +812,9 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-bool isValidIsaName(StringRef IsaName) {
-  auto IsaIterator = find(SupportedIsas, IsaName);
-  if (IsaIterator == std::end(SupportedIsas))
-    return false;
-
+bool isValidIsaName(StringRef IsaString) {
   TargetIdentifier Ident;
-  return parseTargetIdentifier(IsaName, Ident) == AMD_COMGR_STATUS_SUCCESS;
+  return parseTargetIdentifier(IsaString, Ident) == AMD_COMGR_STATUS_SUCCESS;
 }
 
 } // namespace metadata

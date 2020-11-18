@@ -294,10 +294,21 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
   Ident.Environ = IsaNameComponents[3];
 
   Ident.Features.clear();
-  IsaNameComponents[4].split(Ident.Features, '+');
+  IsaNameComponents[4].split(Ident.Features, ':');
 
   Ident.Processor = Ident.Features[0];
   Ident.Features.erase(Ident.Features.begin());
+
+  size_t IsaIndex;
+
+  amd_comgr_status_t Status = metadata::getIsaIndex(IdentStr, IsaIndex);
+  if (Status != AMD_COMGR_STATUS_SUCCESS)
+    return Status;
+
+  for (auto Feature : Ident.Features) {
+    if (!metadata::isSupportedFeature(IsaIndex, Feature))
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

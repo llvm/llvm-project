@@ -843,33 +843,20 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
   if (auto Status = parseTargetIdentifier(IdentStr, Ident))
     return Status;
   Triple = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS).str();
+
   GPUArch = Twine(Ident.Processor).str();
-  CPU = (Twine("-mcpu=") + GPUArch).str();
+  if (!Ident.Features.empty())
+    GPUArch += ":" + join(Ident.Features, ":");
 
   if (SrcToBC && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
-    CUDAGPUArch = (Twine("--cuda-gpu-arch=") + GPUArch).str();
-    Args.push_back(CUDAGPUArch.c_str());
-  }
-  else {
+    OffloadArch = (Twine("--offload-arch=") + GPUArch).str();
+    Args.push_back(OffloadArch.c_str());
+  } else {
+    CPU = (Twine("-mcpu=") + GPUArch).str();
     Args.push_back("-target");
     Args.push_back(Triple.c_str());
-
     Args.push_back(CPU.c_str());
   }
-
-  bool EnableXNACK = false;
-  bool EnableSRAMECC = false;
-
-  for (auto &Feature : Ident.Features)
-    if (Feature == "xnack")
-      EnableXNACK = true;
-    else if (Feature == "sram-ecc")
-      EnableSRAMECC = true;
-    else
-      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-
-  Args.push_back(EnableXNACK ? "-mxnack" : "-mno-xnack");
-  Args.push_back(EnableSRAMECC ? "-msram-ecc" : "-mno-sram-ecc");
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -877,6 +864,8 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
 amd_comgr_status_t
 AMDGPUCompiler::addCompilationFlags() {
   HIPIncludePath = (Twine(env::getHIPPath()) + "/include").str();
+  // HIP headers depend on hsa.h which is in ROCM_DIR/include.
+  ROCMIncludePath = (Twine(env::getROCMPath()) + "/include").str();
   ClangIncludePath = (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING).str();
   ClangIncludePath2 = (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING + "/include").str();
 
@@ -898,6 +887,8 @@ AMDGPUCompiler::addCompilationFlags() {
     Args.push_back("x86_64-unknown-linux-gnu");
     Args.push_back("--cuda-device-only");
     Args.push_back("-nogpulib");
+    Args.push_back("-isystem");
+    Args.push_back(ROCMIncludePath.c_str());
     Args.push_back("-isystem");
     Args.push_back(HIPIncludePath.c_str());
     Args.push_back("-isystem");

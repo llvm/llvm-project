@@ -63,29 +63,33 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_create_action_info(&dataAction);
   checkError(status, "amd_comgr_create_action_info");
 
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx803",
-               AMD_COMGR_STATUS_SUCCESS);
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx801+xnack",
-               AMD_COMGR_STATUS_SUCCESS);
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx908+xnack+sram-ecc",
-               AMD_COMGR_STATUS_SUCCESS);
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx1010+xnack",
-               AMD_COMGR_STATUS_SUCCESS);
-  parseIsaName(dataAction, "", AMD_COMGR_STATUS_SUCCESS);
-  parseIsaName(dataAction, NULL, AMD_COMGR_STATUS_SUCCESS);
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa-opencl-gfx803",
-               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa-gfx803",
-               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parseIsaName(dataAction, "gfx803", AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parseIsaName(dataAction, " amdgcn-amd-amdhsa--gfx803",
-               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parseIsaName(dataAction, " amdgcn-amd-amdhsa--gfx803 ",
-               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx803 ",
-               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
-  parseIsaName(dataAction, "   amdgcn-amd-amdhsa--gfx803  ",
-               AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT);
+#define PARSE_VALID_ISA_NAME(name)                                             \
+  parseIsaName(dataAction, name, AMD_COMGR_STATUS_SUCCESS)
+#define PARSE_INVALID_ISA_NAME(name)                                           \
+  parseIsaName(dataAction, name, AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT)
+
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx803");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx801:xnack+");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx801:xnack-");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx908:sramecc+");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx908:sramecc-");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx908:xnack+:sramecc+");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx908:xnack-:sramecc+");
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx908:xnack-:sramecc-");
+
+  PARSE_VALID_ISA_NAME("amdgcn-amd-amdhsa--gfx1010:xnack+");
+  PARSE_VALID_ISA_NAME("");
+  PARSE_VALID_ISA_NAME(NULL);
+
+  PARSE_INVALID_ISA_NAME("amdgcn-amd-amdhsa--gfx801:xnack+:sramecc+");
+  PARSE_INVALID_ISA_NAME("amdgcn-amd-amdhsa--gfx803:::");
+  PARSE_INVALID_ISA_NAME("amdgcn-amd-amdhsa-opencl-gfx803");
+  PARSE_INVALID_ISA_NAME("amdgcn-amd-amdhsa-gfx803");
+  PARSE_INVALID_ISA_NAME("gfx803");
+  PARSE_INVALID_ISA_NAME(" amdgcn-amd-amdhsa--gfx803");
+  PARSE_INVALID_ISA_NAME(" amdgcn-amd-amdhsa--gfx803 ");
+  PARSE_INVALID_ISA_NAME("amdgcn-amd-amdhsa--gfx803 ");
+  PARSE_INVALID_ISA_NAME("   amdgcn-amd-amdhsa--gfx803  ");
 
   status = amd_comgr_destroy_action_info(dataAction);
   checkError(status, "amd_comgr_destroy_action_info");

@@ -58,6 +58,10 @@ bool isValidIsaName(llvm::StringRef IsaName);
 amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
                                  char *IsaName);
 
+amd_comgr_status_t getIsaIndex(const llvm::StringRef IsaName, size_t &Index);
+
+bool isSupportedFeature(size_t IsaIndex, llvm::StringRef Feature);
+
 } // namespace metadata
 } // namespace COMGR
 

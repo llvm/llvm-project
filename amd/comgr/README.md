@@ -142,6 +142,7 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `2.0`: Add support for new target feature syntax introduced at [AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html).
 * `1.9`: Add gfx1031
 * `1.8`: Implement GNU Symbol Versioning for all exported functions. Rename
   some macros exposed in `amd_comgr.h` to avoid conflicts.
@@ -164,6 +165,21 @@ backwards-incompatible change introduced.
 * `1.2`: Introduce `amd_comgr_disassemble_instruction` and associated APIS.
 * `1.1`: First versioned release. Versions before this have no guaranteed
   compatibility.
+
+ISA Metadata and Versioning
+---------------------------
+Comgr supports multiple instruction set architectures (ISA) and APIs to query
+metadata associated with an ISA. The queried metadata follows a semantic
+versioning scheme e.g. major.minor.patch. The major version changes signifies
+backward incompatible changes.
+
+* `1.0.0` : Support for new target feature syntax introduced at [AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html).
+  Metadata query for a bare ISA string now returns the supported target
+  features along with other details. A new key for the version is introduced.
+* `0.0.x` : Support for querying the metadata for an ISA. The metadata is
+  supplied in a map format with details of target triple, features and
+  resource limits associated with registers and memory addressing. The
+  version key is absent in the Metadata.
 
 Coding Standards
 ----------------
