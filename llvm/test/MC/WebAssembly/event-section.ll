@@ -38,10 +38,10 @@ define i32 @test_throw1(i8* %p) {
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:         Offset:          0x00000006
+; CHECK-NEXT:         Offset:          0x6
 ; CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:         Offset:          0x00000011
+; CHECK-NEXT:         Offset:          0x11
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking

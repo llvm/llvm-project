@@ -10,7 +10,7 @@
 # CHECK-NEXT:        Field:           memory
 # CHECK-NEXT:        Kind:            MEMORY
 # CHECK-NEXT:        Memory:
-# CHECK-NEXT:          Initial:         0x00000002
+# CHECK-NEXT:          Initial:         0x2
 # CHECK-NEXT:  - Type:
 
 
@@ -28,8 +28,8 @@
 # CHECK-MAX-NEXT:        Kind:            MEMORY
 # CHECK-MAX-NEXT:        Memory:
 # CHECK-MAX-NEXT:          Flags:           [ HAS_MAX ]
-# CHECK-MAX-NEXT:          Initial:         0x00000004
-# CHECK-MAX-NEXT:          Maximum:         0x00000005
+# CHECK-MAX-NEXT:          Initial:         0x4
+# CHECK-MAX-NEXT:          Maximum:         0x5
 # CHECK-MAX-NEXT:  - Type:
 
 # RUN: wasm-ld --import-memory --shared-memory --features=atomics,bulk-memory \
@@ -45,6 +45,6 @@
 # CHECK-SHARED-NEXT:        Kind:            MEMORY
 # CHECK-SHARED-NEXT:        Memory:
 # CHECK-SHARED-NEXT:          Flags:           [ HAS_MAX, IS_SHARED ]
-# CHECK-SHARED-NEXT:          Initial:         0x00000004
-# CHECK-SHARED-NEXT:          Maximum:         0x00000005
+# CHECK-SHARED-NEXT:          Initial:         0x4
+# CHECK-SHARED-NEXT:          Maximum:         0x5
 # CHECK-SHARED-NEXT:  - Type:

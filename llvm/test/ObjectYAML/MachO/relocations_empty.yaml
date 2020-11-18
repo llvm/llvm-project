@@ -8,16 +8,16 @@
 # CHECK:    Sections:
 # CHECK-NEXT:      - sectname:        __text
 # CHECK-NEXT:        segname:         __TEXT
-# CHECK-NEXT:        addr:            0x0000000000000000
+# CHECK-NEXT:        addr:            0x0
 # CHECK-NEXT:        size:            0
-# CHECK-NEXT:        offset:          0x000000C8
+# CHECK-NEXT:        offset:          0xC8
 # CHECK-NEXT:        align:           0
-# CHECK-NEXT:        reloff:          0x00000000
+# CHECK-NEXT:        reloff:          0x0
 # CHECK-NEXT:        nreloc:          0
 # CHECK-NEXT:        flags:           0x80000000
-# CHECK-NEXT:        reserved1:       0x00000000
-# CHECK-NEXT:        reserved2:       0x00000000
-# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:        reserved1:       0x0
+# CHECK-NEXT:        reserved2:       0x0
+# CHECK-NEXT:        reserved3:       0x0
 # CHECK-NEXT:        content:         ''
 # CHECK-NOT:         relocations:
 

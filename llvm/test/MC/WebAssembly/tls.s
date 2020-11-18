@@ -19,10 +19,10 @@ tls_store:
 # CHECK-OBJ-NEXT:    Relocations:
 # CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_LEB
 # CHECK-OBJ-NEXT:        Index:           1
-# CHECK-OBJ-NEXT:        Offset:          0x00000004
+# CHECK-OBJ-NEXT:        Offset:          0x4
 # CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_TLS_SLEB
 # CHECK-OBJ-NEXT:        Index:           2
-# CHECK-OBJ-NEXT:        Offset:          0x0000000A
+# CHECK-OBJ-NEXT:        Offset:          0xA
 
 #      CHECK-OBJ:  - Type:            CUSTOM
 # CHECK-OBJ-NEXT:    Name:            linking
