@@ -11,21 +11,21 @@
 # CHECK-NEXT: filename:{{.*}}/Inputs/basic1.macho.x86_64.o
 # CHECK-NEXT: timestamp: 0
 # CHECK-NEXT: symbols:
-# CHECK-NEXT: sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000EA0, size: 0x00000024
+# CHECK-NEXT: sym: _main, objAddr: 0x0, binAddr: 0x100000EA0, size: 0x24
 # CHECK-NEXT: filename:{{.*}}/Inputs/./libbasic.a(basic2.macho.x86_64.o)'
 # CHECK-NEXT: timestamp: 0
 # CHECK-NEXT: symbols:
-# CHECK-DAG:   sym: _foo, objAddr: 0x0000000000000020, binAddr: 0x0000000100000ED0, size: 0x00000050
-# CHECK-DAG:   sym: _private_int, objAddr: 0x0000000000000560, binAddr: 0x0000000100001004, size: 0x00000000
-# CHECK-DAG:   sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F20, size: 0x00000017
-# CHECK-DAG:   sym: _baz, objAddr: 0x0000000000000310, binAddr: 0x0000000100001000, size: 0x00000000
+# CHECK-DAG:   sym: _foo, objAddr: 0x20, binAddr: 0x100000ED0, size: 0x50
+# CHECK-DAG:   sym: _private_int, objAddr: 0x560, binAddr: 0x100001004, size: 0x0
+# CHECK-DAG:   sym: _inc, objAddr: 0x70, binAddr: 0x100000F20, size: 0x17
+# CHECK-DAG:   sym: _baz, objAddr: 0x310, binAddr: 0x100001000, size: 0x0
 # CHECK-NOT: { sym:
 # CHECK-NEXT: filename:{{.*}}/Inputs/./libbasic.a(basic3.macho.x86_64.o)'
 # CHECK-NEXT: timestamp: 0
 # CHECK-NEXT: symbols:
-# CHECK-DAG:   sym: _val, binAddr: 0x0000000100001008, size: 0x00000000
-# CHECK-DAG:   sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050
-# CHECK-DAG:   sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019
+# CHECK-DAG:   sym: _val, binAddr: 0x100001008, size: 0x0
+# CHECK-DAG:   sym: _bar, objAddr: 0x20, binAddr: 0x100000F40, size: 0x50
+# CHECK-DAG:   sym: _inc, objAddr: 0x70, binAddr: 0x100000F90, size: 0x19
 # CHECK-NOT: { sym:
 # CHECK-NEXT: ...
 ---

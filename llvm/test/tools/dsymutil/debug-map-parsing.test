@@ -12,16 +12,16 @@ CHECK: ---
 CHECK: triple: 'x86_64-apple-darwin'
 CHECK: binary-path:{{.*}}/Inputs/basic.macho.x86_64
 CHECK: filename:{{.*}}/Inputs/basic1.macho.x86_64.o
-CHECK-DAG: sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000EA0, size: 0x00000024
+CHECK-DAG: sym: _main, objAddr: 0x0, binAddr: 0x100000EA0, size: 0x24
 CHECK: filename{{.*}}/Inputs/basic2.macho.x86_64.o
-CHECK-DAG: 	sym: _baz, objAddr: 0x0000000000000310, binAddr: 0x0000000100001000, size: 0x00000000
-CHECK-DAG: 	sym: _foo, objAddr: 0x0000000000000020, binAddr: 0x0000000100000ED0, size: 0x00000050
-CHECK-DAG: 	sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F20, size: 0x00000017
-CHECK-DAG: 	sym: _private_int, objAddr: 0x0000000000000560, binAddr: 0x0000000100001008, size: 0x00000000
+CHECK-DAG: 	sym: _baz, objAddr: 0x310, binAddr: 0x100001000, size: 0x0
+CHECK-DAG: 	sym: _foo, objAddr: 0x20, binAddr: 0x100000ED0, size: 0x50
+CHECK-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F20, size: 0x17
+CHECK-DAG: 	sym: _private_int, objAddr: 0x560, binAddr: 0x100001008, size: 0x0
 CHECK: filename{{.*}}/Inputs/basic3.macho.x86_64.o
-CHECK-DAG: 	sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050
-CHECK-DAG: 	sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019
-CHECK-DAG: 	sym: _val, binAddr: 0x0000000100001004, size: 0x00000000
+CHECK-DAG: 	sym: _bar, objAddr: 0x20, binAddr: 0x100000F40, size: 0x50
+CHECK-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F90, size: 0x19
+CHECK-DAG: 	sym: _val, binAddr: 0x100001004, size: 0x0
 CHECK: ...
 
 
@@ -32,12 +32,12 @@ CHECK-LTO: ---
 CHECK-LTO: triple: 'x86_64-apple-darwin'
 CHECK-LTO: binary-path:{{.*}}/Inputs/basic-lto.macho.x86_64
 CHECK-LTO: /Inputs/basic-lto.macho.x86_64.o
-CHECK-LTO-DAG: 	sym: _bar, objAddr: 0x0000000000000050, binAddr: 0x0000000100000F90, size: 0x00000024
-CHECK-LTO-DAG: 	sym: _baz, objAddr: 0x0000000000000658, binAddr: 0x0000000100001000, size: 0x00000000
-CHECK-LTO-DAG: 	sym: _foo, objAddr: 0x0000000000000010, binAddr: 0x0000000100000F50, size: 0x00000040
-CHECK-LTO-DAG: 	sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000F40, size: 0x00000010
-CHECK-LTO-DAG: 	sym: _private_int, objAddr: 0x00000000000008E8, binAddr: 0x0000000100001008, size: 0x00000000
-CHECK-LTO-DAG: 	sym: _val, objAddr: 0x00000000000008EC, binAddr: 0x0000000100001004, size: 0x00000000
+CHECK-LTO-DAG: 	sym: _bar, objAddr: 0x50, binAddr: 0x100000F90, size: 0x24
+CHECK-LTO-DAG: 	sym: _baz, objAddr: 0x658, binAddr: 0x100001000, size: 0x0
+CHECK-LTO-DAG: 	sym: _foo, objAddr: 0x10, binAddr: 0x100000F50, size: 0x40
+CHECK-LTO-DAG: 	sym: _main, objAddr: 0x0, binAddr: 0x100000F40, size: 0x10
+CHECK-LTO-DAG: 	sym: _private_int, objAddr: 0x8E8, binAddr: 0x100001008, size: 0x0
+CHECK-LTO-DAG: 	sym: _val, objAddr: 0x8EC, binAddr: 0x100001004, size: 0x0
 CHECK-LTO: ...
 
 Check thet we correctly handle debug maps with archive members (including only
@@ -56,16 +56,16 @@ CHECK-ARCHIVE: ---
 CHECK-ARCHIVE: triple: 'x86_64-apple-darwin'
 CHECK-ARCHIVE: binary-path:{{.*}}/Inputs/basic-archive.macho.x86_64
 CHECK-ARCHIVE: /Inputs/basic1.macho.x86_64.o
-CHECK-ARCHIVE-DAG: 	sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000EA0, size: 0x00000024
+CHECK-ARCHIVE-DAG: 	sym: _main, objAddr: 0x0, binAddr: 0x100000EA0, size: 0x24
 CHECK-ARCHIVE: /Inputs/./libbasic.a(basic2.macho.x86_64.o)
-CHECK-ARCHIVE-DAG: 	sym: _baz, objAddr: 0x0000000000000310, binAddr: 0x0000000100001000, size: 0x00000000
-CHECK-ARCHIVE-DAG: 	sym: _foo, objAddr: 0x0000000000000020, binAddr: 0x0000000100000ED0, size: 0x00000050
-CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F20, size: 0x00000017
-CHECK-ARCHIVE-DAG: 	sym: _private_int, objAddr: 0x0000000000000560, binAddr: 0x0000000100001004, size: 0x00000000
+CHECK-ARCHIVE-DAG: 	sym: _baz, objAddr: 0x310, binAddr: 0x100001000, size: 0x0
+CHECK-ARCHIVE-DAG: 	sym: _foo, objAddr: 0x20, binAddr: 0x100000ED0, size: 0x50
+CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F20, size: 0x17
+CHECK-ARCHIVE-DAG: 	sym: _private_int, objAddr: 0x560, binAddr: 0x100001004, size: 0x0
 CHECK-ARCHIVE: /Inputs/./libbasic.a(basic3.macho.x86_64.o)
-CHECK-ARCHIVE-DAG: 	sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050
-CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019
-CHECK-ARCHIVE-DAG: 	sym: _val, binAddr: 0x0000000100001008, size: 0x00000000
+CHECK-ARCHIVE-DAG: 	sym: _bar, objAddr: 0x20, binAddr: 0x100000F40, size: 0x50
+CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F90, size: 0x19
+CHECK-ARCHIVE-DAG: 	sym: _val, binAddr: 0x100001008, size: 0x0
 CHECK-ARCHIVE: ...
 
 Check that we warn about missing object files (this presumes that the files aren't

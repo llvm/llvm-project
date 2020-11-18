@@ -5,7 +5,7 @@
 # CHECK-NEXT:   - Name: known_type
 # CHECK-NEXT:     Type: SHT_PROGBITS
 # CHECK:        - Name: unknown_type
-# CHECK-NEXT:     Type: 0x0000ABCD
+# CHECK-NEXT:     Type: 0xABCD
 # CHECK:        - Name: machine_specific
 # CHECK-NEXT:     Type: SHT_X86_64_UNWIND
 # CHECK:        - Name: unknown_machine_specific

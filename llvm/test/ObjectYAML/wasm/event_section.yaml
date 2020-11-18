@@ -49,7 +49,7 @@ Sections:
 
 # CHECK:      --- !WASM
 # CHECK-NEXT: FileHeader:
-# CHECK-NEXT:   Version:         0x00000001
+# CHECK-NEXT:   Version:         0x1
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Type:            TYPE
 # CHECK-NEXT:     Signatures:
@@ -73,7 +73,7 @@ Sections:
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
 # CHECK-NEXT:         Index:           1
-# CHECK-NEXT:         Offset:          0x00000006
+# CHECK-NEXT:         Offset:          0x6
 # CHECK-NEXT:     Functions:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Locals:

@@ -10,8 +10,8 @@
 # CHECK-NEXT:         ElemType:        FUNCREF
 # CHECK-NEXT:         Limits:
 # CHECK-NEXT:           Flags:           [ HAS_MAX ]
-# CHECK-NEXT:           Initial:         0x00000001
-# CHECK-NEXT:           Maximum:         0x00000001
+# CHECK-NEXT:           Initial:         0x1
+# CHECK-NEXT:           Maximum:         0x1
 # CHECK-NEXT:   - Type:
 # CHECK:        - Type:            EXPORT
 # CHECK-NEXT:     Exports:
