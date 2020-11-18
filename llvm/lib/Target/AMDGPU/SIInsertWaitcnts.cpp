@@ -1428,9 +1428,19 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ScoreBrackets.dump();
   });
 
-  // Assume VCCZ is correct at basic block boundaries, unless and until we need
-  // to handle cases where that is not true.
+  // Track the correctness of vccz through this basic block. There are two
+  // reasons why it might be incorrect; see ST->hasReadVCCZBug() and
+  // ST->partialVCCWritesUpdateVCCZ().
   bool VCCZCorrect = true;
+  if (ST->hasReadVCCZBug()) {
+    // vccz could be incorrect at a basic block boundary if a predecessor wrote
+    // to vcc and then issued an smem load.
+    VCCZCorrect = false;
+  } else if (!ST->partialVCCWritesUpdateVCCZ()) {
+    // vccz could be incorrect at a basic block boundary if a predecessor wrote
+    // to vcc_lo or vcc_hi.
+    VCCZCorrect = false;
+  }
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
@@ -1451,15 +1461,21 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
-    // We might need to restore vccz to its correct value for either of two
-    // different reasons; see ST->hasReadVCCZBug() and
-    // ST->partialVCCWritesUpdateVCCZ().
-    bool RestoreVCCZ = false;
-    if (readsVCCZ(Inst)) {
-      if (!VCCZCorrect) {
-        // Restore vccz if it's not known to be correct already.
-        RestoreVCCZ = true;
-      } else if (ST->hasReadVCCZBug()) {
+    // Generate an s_waitcnt instruction to be placed before Inst, if needed.
+    Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr);
+    OldWaitcntInstr = nullptr;
+
+    // Restore vccz if it's not known to be correct already.
+    bool RestoreVCCZ = !VCCZCorrect && readsVCCZ(Inst);
+
+    // Don't examine operands unless we need to track vccz correctness.
+    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
+      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
+          Inst.definesRegister(AMDGPU::VCC_HI)) {
+        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+        if (!ST->partialVCCWritesUpdateVCCZ())
+          VCCZCorrect = false;
+      } else if (Inst.definesRegister(AMDGPU::VCC)) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
         // vccz bit, so when we detect that an instruction may read from a
         // corrupt vccz bit, we need to:
@@ -1467,12 +1483,16 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         //    operations to complete.
         // 2. Restore the correct value of vccz by writing the current value
         //    of vcc back to vcc.
-        if (ScoreBrackets.getScoreLB(LGKM_CNT) <
-            ScoreBrackets.getScoreUB(LGKM_CNT) &&
+        if (ST->hasReadVCCZBug() &&
+            ScoreBrackets.getScoreLB(LGKM_CNT) <
+                ScoreBrackets.getScoreUB(LGKM_CNT) &&
             ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-          // Restore vccz if there's an outstanding smem read, which could
-          // complete and clobber vccz at any time.
-          RestoreVCCZ = true;
+          // Writes to vcc while there's an outstanding smem read may get
+          // clobbered as soon as any read completes.
+          VCCZCorrect = false;
+        } else {
+          // Writes to vcc will fix any incorrect value in vccz.
+          VCCZCorrect = true;
         }
       }
     }
@@ -1482,23 +1502,11 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         const Value *Ptr = Memop->getValue();
         SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
       }
-    }
-
-    if (!ST->partialVCCWritesUpdateVCCZ()) {
-      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
-          Inst.definesRegister(AMDGPU::VCC_HI)) {
-        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+      if (ST->hasReadVCCZBug()) {
+        // This smem read could complete and clobber vccz at any time.
         VCCZCorrect = false;
-      } else if (Inst.definesRegister(AMDGPU::VCC)) {
-        // Writes to vcc will fix any incorrect value in vccz.
-        VCCZCorrect = true;
       }
     }
-
-    // Generate an s_waitcnt instruction to be placed before
-    // cur_Inst, if needed.
-    Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr);
-    OldWaitcntInstr = nullptr;
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
