@@ -57,10 +57,10 @@ const uint32_t mram_aligned_mask = ~mram_aligned_mod;
 // DPU handling
 // -----------------------------------------------------------------------------
 
-Dpu::Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_file_)
+Dpu::Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_file_, bool valid)
     : m_rank(rank), m_dpu(dpu), printf_enable(false),
       printf_buffer_last_idx((uint32_t)LLDB_INVALID_ADDRESS),
-      printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS) {
+      printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS), m_valid(valid) {
   nr_threads = m_rank->GetNrThreads();
   nr_reg_per_thread = rank->GetDesc()->hw.dpu.nr_of_work_registers_per_thread;
 
@@ -263,6 +263,9 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
 bool Dpu::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
                         bool allowed_polling) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
+  if (!m_valid) {
+    return false;
+  }
 
   if (!m_context->ContextReadyForResumeOrStep()) {
     m_context->RestoreFaultContext();

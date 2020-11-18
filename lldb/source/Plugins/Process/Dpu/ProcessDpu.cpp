@@ -68,6 +68,12 @@ const long k_ci_polling_interval_ns = 10000; /* ns */
 // Public Static Methods
 // -----------------------------------------------------------------------------
 
+extern "C" {
+// Function of libdpuverbose to force all output of the dpu libraries to be by
+// redirect in the given file
+extern void set_verbose_output_file(FILE *);
+}
+
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
                             NativeDelegate &native_delegate,
@@ -86,8 +92,20 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
     return Status("Cannot open terminal_fd ").ToError();
   }
 
+  bool verbose_set = getenv("UPMEM_VERBOSE") != NULL;
+  if (!verbose_set) {
+    set_verbose_output_file(stdout_fd);
+  }
+
   DpuRank *rank = new DpuRank();
   bool success = rank->Open(NULL, stdout_fd);
+  if (!success && !verbose_set) {
+    fprintf(stdout_fd, "***********************************************\n"
+                       "*** dpu-lldb: Could not allocate a DPU rank ***\n"
+                       "***********************************************\n");
+    setenv("UPMEM_PROFILE", "", true);
+    success = rank->Open("backend=simulator", stdout_fd, false);
+  }
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 
@@ -172,6 +190,11 @@ ProcessDpu::Factory::Attach(
   FILE *stdout_fd = fdopen(terminal_fd, "w");
   if (stdout_fd == NULL) {
     return Status("Cannot open terminal_fd ").ToError();
+  }
+
+  bool verbose_set = getenv("UPMEM_VERBOSE") != NULL;
+  if (!verbose_set) {
+    set_verbose_output_file(stdout_fd);
   }
 
   DpuRank *rank = new DpuRank();

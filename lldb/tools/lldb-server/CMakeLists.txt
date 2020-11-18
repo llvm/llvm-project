@@ -99,7 +99,7 @@ add_lldb_tool(lldb-server-dpu
 )
 
 target_include_directories(lldb-server-dpu PRIVATE "${LLDB_SOURCE_DIR}/source")
-target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "dpu")
+target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "dpu" "dpuverbose")
 set_property(TARGET lldb-server-dpu APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--enable-new-dtags")
 target_compile_options(lldb-server-dpu PRIVATE -DUSE_DPU)
 endif()
