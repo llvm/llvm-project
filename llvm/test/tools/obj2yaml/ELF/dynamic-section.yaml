@@ -8,121 +8,121 @@
 # CHECK:       Sections:
 # CHECK-NEXT:  - Name:            .dynamic
 # CHECK-NEXT:    Type:            SHT_DYNAMIC
-# CHECK-NEXT:    Address:         0x1000
-# CHECK-NEXT:    AddressAlign:    0x2000
+# CHECK-NEXT:    Address:         0x0000000000001000
+# CHECK-NEXT:    AddressAlign:    0x0000000000002000
 # CHECK-NEXT:    Entries:
 # CHECK-NEXT:      - Tag:             DT_NULL
-# CHECK-NEXT:        Value:           0x0
+# CHECK-NEXT:        Value:           0x0000000000000000
 # CHECK-NEXT:      - Tag:             DT_NEEDED
-# CHECK-NEXT:        Value:           0x1
+# CHECK-NEXT:        Value:           0x0000000000000001
 # CHECK-NEXT:      - Tag:             DT_PLTRELSZ
-# CHECK-NEXT:        Value:           0x2
+# CHECK-NEXT:        Value:           0x0000000000000002
 # CHECK-NEXT:      - Tag:             DT_PLTGOT
-# CHECK-NEXT:        Value:           0x3
+# CHECK-NEXT:        Value:           0x0000000000000003
 # CHECK-NEXT:      - Tag:             DT_HASH
-# CHECK-NEXT:        Value:           0x4
+# CHECK-NEXT:        Value:           0x0000000000000004
 # CHECK-NEXT:      - Tag:             DT_STRTAB
-# CHECK-NEXT:        Value:           0x5
+# CHECK-NEXT:        Value:           0x0000000000000005
 # CHECK-NEXT:      - Tag:             DT_SYMTAB
-# CHECK-NEXT:        Value:           0x6
+# CHECK-NEXT:        Value:           0x0000000000000006
 # CHECK-NEXT:      - Tag:             DT_RELA
-# CHECK-NEXT:        Value:           0x7
+# CHECK-NEXT:        Value:           0x0000000000000007
 # CHECK-NEXT:      - Tag:             DT_RELASZ
-# CHECK-NEXT:        Value:           0x8
+# CHECK-NEXT:        Value:           0x0000000000000008
 # CHECK-NEXT:      - Tag:             DT_RELAENT
-# CHECK-NEXT:        Value:           0x9
+# CHECK-NEXT:        Value:           0x0000000000000009
 # CHECK-NEXT:      - Tag:             DT_STRSZ
-# CHECK-NEXT:        Value:           0xA
+# CHECK-NEXT:        Value:           0x000000000000000A
 # CHECK-NEXT:      - Tag:             DT_SYMENT
-# CHECK-NEXT:        Value:           0xB
+# CHECK-NEXT:        Value:           0x000000000000000B
 # CHECK-NEXT:      - Tag:             DT_INIT
-# CHECK-NEXT:        Value:           0xC
+# CHECK-NEXT:        Value:           0x000000000000000C
 # CHECK-NEXT:      - Tag:             DT_FINI
-# CHECK-NEXT:        Value:           0xD
+# CHECK-NEXT:        Value:           0x000000000000000D
 # CHECK-NEXT:      - Tag:             DT_SONAME
-# CHECK-NEXT:        Value:           0xE
+# CHECK-NEXT:        Value:           0x000000000000000E
 # CHECK-NEXT:      - Tag:             DT_RPATH
-# CHECK-NEXT:        Value:           0xF
+# CHECK-NEXT:        Value:           0x000000000000000F
 # CHECK-NEXT:      - Tag:             DT_SYMBOLIC
-# CHECK-NEXT:        Value:           0x10
+# CHECK-NEXT:        Value:           0x0000000000000010
 # CHECK-NEXT:      - Tag:             DT_REL
-# CHECK-NEXT:        Value:           0x11
+# CHECK-NEXT:        Value:           0x0000000000000011
 # CHECK-NEXT:      - Tag:             DT_RELSZ
-# CHECK-NEXT:        Value:           0x12
+# CHECK-NEXT:        Value:           0x0000000000000012
 # CHECK-NEXT:      - Tag:             DT_RELENT
-# CHECK-NEXT:        Value:           0x13
+# CHECK-NEXT:        Value:           0x0000000000000013
 # CHECK-NEXT:      - Tag:             DT_PLTREL
-# CHECK-NEXT:        Value:           0x14
+# CHECK-NEXT:        Value:           0x0000000000000014
 # CHECK-NEXT:      - Tag:             DT_DEBUG
-# CHECK-NEXT:        Value:           0x15
+# CHECK-NEXT:        Value:           0x0000000000000015
 # CHECK-NEXT:      - Tag:             DT_TEXTREL
-# CHECK-NEXT:        Value:           0x16
+# CHECK-NEXT:        Value:           0x0000000000000016
 # CHECK-NEXT:      - Tag:             DT_JMPREL
-# CHECK-NEXT:        Value:           0x17
+# CHECK-NEXT:        Value:           0x0000000000000017
 # CHECK-NEXT:      - Tag:             DT_BIND_NOW
-# CHECK-NEXT:        Value:           0x18
+# CHECK-NEXT:        Value:           0x0000000000000018
 # CHECK-NEXT:      - Tag:             DT_INIT_ARRAY
-# CHECK-NEXT:        Value:           0x19
+# CHECK-NEXT:        Value:           0x0000000000000019
 # CHECK-NEXT:      - Tag:             DT_FINI_ARRAY
-# CHECK-NEXT:        Value:           0x1A
+# CHECK-NEXT:        Value:           0x000000000000001A
 # CHECK-NEXT:      - Tag:             DT_INIT_ARRAYSZ
-# CHECK-NEXT:        Value:           0x1B
+# CHECK-NEXT:        Value:           0x000000000000001B
 # CHECK-NEXT:      - Tag:             DT_FINI_ARRAYSZ
-# CHECK-NEXT:        Value:           0x1C
+# CHECK-NEXT:        Value:           0x000000000000001C
 # CHECK-NEXT:      - Tag:             DT_RUNPATH
-# CHECK-NEXT:        Value:           0x1D
+# CHECK-NEXT:        Value:           0x000000000000001D
 # CHECK-NEXT:      - Tag:             DT_FLAGS
-# CHECK-NEXT:        Value:           0x1E
+# CHECK-NEXT:        Value:           0x000000000000001E
 # CHECK-NEXT:      - Tag:             DT_PREINIT_ARRAY
-# CHECK-NEXT:        Value:           0x1F
+# CHECK-NEXT:        Value:           0x000000000000001F
 # CHECK-NEXT:      - Tag:             DT_PREINIT_ARRAYSZ
-# CHECK-NEXT:        Value:           0x20
+# CHECK-NEXT:        Value:           0x0000000000000020
 # CHECK-NEXT:      - Tag:             DT_SYMTAB_SHNDX
-# CHECK-NEXT:        Value:           0x21
+# CHECK-NEXT:        Value:           0x0000000000000021
 # CHECK-NEXT:      - Tag:             DT_RELRSZ
-# CHECK-NEXT:        Value:           0x22
+# CHECK-NEXT:        Value:           0x0000000000000022
 # CHECK-NEXT:      - Tag:             DT_RELR
-# CHECK-NEXT:        Value:           0x23
+# CHECK-NEXT:        Value:           0x0000000000000023
 # CHECK-NEXT:      - Tag:             DT_RELRENT
-# CHECK-NEXT:        Value:           0x24
+# CHECK-NEXT:        Value:           0x0000000000000024
 # CHECK-NEXT:      - Tag:             DT_ANDROID_REL
-# CHECK-NEXT:        Value:           0x25
+# CHECK-NEXT:        Value:           0x0000000000000025
 # CHECK-NEXT:      - Tag:             DT_ANDROID_RELSZ
-# CHECK-NEXT:        Value:           0x26
+# CHECK-NEXT:        Value:           0x0000000000000026
 # CHECK-NEXT:      - Tag:             DT_ANDROID_RELA
-# CHECK-NEXT:        Value:           0x27
+# CHECK-NEXT:        Value:           0x0000000000000027
 # CHECK-NEXT:      - Tag:             DT_ANDROID_RELASZ
-# CHECK-NEXT:        Value:           0x28
+# CHECK-NEXT:        Value:           0x0000000000000028
 # CHECK-NEXT:      - Tag:             DT_ANDROID_RELR
-# CHECK-NEXT:        Value:           0x29
+# CHECK-NEXT:        Value:           0x0000000000000029
 # CHECK-NEXT:      - Tag:             DT_ANDROID_RELRSZ
-# CHECK-NEXT:        Value:           0x2A
+# CHECK-NEXT:        Value:           0x000000000000002A
 # CHECK-NEXT:      - Tag:             DT_ANDROID_RELRENT
-# CHECK-NEXT:        Value:           0x2B
+# CHECK-NEXT:        Value:           0x000000000000002B
 # CHECK-NEXT:      - Tag:             DT_GNU_HASH
-# CHECK-NEXT:        Value:           0x2C
+# CHECK-NEXT:        Value:           0x000000000000002C
 # CHECK-NEXT:      - Tag:             DT_TLSDESC_PLT
-# CHECK-NEXT:        Value:           0x2D
+# CHECK-NEXT:        Value:           0x000000000000002D
 # CHECK-NEXT:      - Tag:             DT_TLSDESC_GOT
-# CHECK-NEXT:        Value:           0x2E
+# CHECK-NEXT:        Value:           0x000000000000002E
 # CHECK-NEXT:      - Tag:             DT_RELACOUNT
-# CHECK-NEXT:        Value:           0x2F
+# CHECK-NEXT:        Value:           0x000000000000002F
 # CHECK-NEXT:      - Tag:             DT_RELCOUNT
-# CHECK-NEXT:        Value:           0x30
+# CHECK-NEXT:        Value:           0x0000000000000030
 # CHECK-NEXT:      - Tag:             DT_FLAGS_1
-# CHECK-NEXT:        Value:           0x31
+# CHECK-NEXT:        Value:           0x0000000000000031
 # CHECK-NEXT:      - Tag:             DT_VERSYM
-# CHECK-NEXT:        Value:           0x32
+# CHECK-NEXT:        Value:           0x0000000000000032
 # CHECK-NEXT:      - Tag:             DT_VERDEF
-# CHECK-NEXT:        Value:           0x33
+# CHECK-NEXT:        Value:           0x0000000000000033
 # CHECK-NEXT:      - Tag:             DT_VERDEFNUM
-# CHECK-NEXT:        Value:           0x34
+# CHECK-NEXT:        Value:           0x0000000000000034
 # CHECK-NEXT:      - Tag:             DT_VERNEED
-# CHECK-NEXT:        Value:           0x35
+# CHECK-NEXT:        Value:           0x0000000000000035
 # CHECK-NEXT:      - Tag:             DT_VERNEEDNUM
-# CHECK-NEXT:        Value:           0x36
+# CHECK-NEXT:        Value:           0x0000000000000036
 # CHECK-NEXT:      - Tag:             DT_USED
-# CHECK-NEXT:        Value:           0x1
+# CHECK-NEXT:        Value:           0x0000000000000001
 
 !ELF
 FileHeader:

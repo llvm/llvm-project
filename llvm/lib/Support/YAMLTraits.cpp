@@ -1046,7 +1046,8 @@ StringRef ScalarTraits<float>::input(StringRef Scalar, void *, float &Val) {
 }
 
 void ScalarTraits<Hex8>::output(const Hex8 &Val, void *, raw_ostream &Out) {
-  Out << format("0x%" PRIX8, (uint8_t)Val);
+  uint8_t Num = Val;
+  Out << format("0x%02X", Num);
 }
 
 StringRef ScalarTraits<Hex8>::input(StringRef Scalar, void *, Hex8 &Val) {
@@ -1060,7 +1061,8 @@ StringRef ScalarTraits<Hex8>::input(StringRef Scalar, void *, Hex8 &Val) {
 }
 
 void ScalarTraits<Hex16>::output(const Hex16 &Val, void *, raw_ostream &Out) {
-  Out << format("0x%" PRIX16, (uint16_t)Val);
+  uint16_t Num = Val;
+  Out << format("0x%04X", Num);
 }
 
 StringRef ScalarTraits<Hex16>::input(StringRef Scalar, void *, Hex16 &Val) {
@@ -1074,7 +1076,8 @@ StringRef ScalarTraits<Hex16>::input(StringRef Scalar, void *, Hex16 &Val) {
 }
 
 void ScalarTraits<Hex32>::output(const Hex32 &Val, void *, raw_ostream &Out) {
-  Out << format("0x%" PRIX32, (uint32_t)Val);
+  uint32_t Num = Val;
+  Out << format("0x%08X", Num);
 }
 
 StringRef ScalarTraits<Hex32>::input(StringRef Scalar, void *, Hex32 &Val) {
@@ -1088,7 +1091,8 @@ StringRef ScalarTraits<Hex32>::input(StringRef Scalar, void *, Hex32 &Val) {
 }
 
 void ScalarTraits<Hex64>::output(const Hex64 &Val, void *, raw_ostream &Out) {
-  Out << format("0x%" PRIX64, (uint64_t)Val);
+  uint64_t Num = Val;
+  Out << format("0x%016llX", Num);
 }
 
 StringRef ScalarTraits<Hex64>::input(StringRef Scalar, void *, Hex64 &Val) {
