@@ -10,8 +10,8 @@ define i16 @p0_i8_i8_i16(i8* %ptr) {
 ; CHECK-NEXT:    [[I4:%.*]] = shl i16 [[I3]], 8
 ; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[PTR]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
-; CHECK-NEXT:    [[I7:%.*]] = add i16 [[I6]], 42
-; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], [[I4]]
+; CHECK-NEXT:    [[I7:%.*]] = or i16 [[I4]], [[I6]]
+; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
   %i = getelementptr inbounds i8, i8* %ptr, i64 1
@@ -34,8 +34,8 @@ define i16 @p1_i8_i8_i16_swapped(i8* %ptr) {
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 1
 ; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[I4]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
-; CHECK-NEXT:    [[I7:%.*]] = add i16 [[I6]], 42
-; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], [[I3]]
+; CHECK-NEXT:    [[I7:%.*]] = or i16 [[I3]], [[I6]]
+; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
   %i = load i8, i8* %ptr
@@ -58,8 +58,8 @@ define i16 @p2(i8* %ptr) {
 ; CHECK-NEXT:    [[I4:%.*]] = shl i16 [[I3]], 9
 ; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[PTR]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
-; CHECK-NEXT:    [[I7:%.*]] = add i16 [[I6]], 42
-; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], [[I4]]
+; CHECK-NEXT:    [[I7:%.*]] = or i16 [[I4]], [[I6]]
+; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
   %i = getelementptr inbounds i8, i8* %ptr, i64 1
@@ -79,8 +79,8 @@ define i16 @p3(i8* %ptr) {
 ; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[I]] to i16
 ; CHECK-NEXT:    [[I3:%.*]] = shl i16 [[I2]], 8
-; CHECK-NEXT:    [[I4:%.*]] = add i16 [[I2]], 42
-; CHECK-NEXT:    [[I5:%.*]] = add i16 [[I4]], [[I3]]
+; CHECK-NEXT:    [[I4:%.*]] = or i16 [[I3]], [[I2]]
+; CHECK-NEXT:    [[I5:%.*]] = add i16 [[I4]], 42
 ; CHECK-NEXT:    ret i16 [[I5]]
 ;
   %i = load i8, i8* %ptr
