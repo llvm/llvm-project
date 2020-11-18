@@ -270,15 +270,13 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 /// regardless of size, functions with any buffer regardless of type and size,
 /// functions with aggregates that contain any buffer regardless of type and
 /// size, and functions that contain stack-based variables that have had their
-/// address taken. The heuristic will be disregarded for functions explicitly
-/// marked nossp.
+/// address taken.
 bool StackProtector::RequiresStackProtector() {
   bool Strong = false;
   bool NeedsProtector = false;
   HasPrologue = findStackProtectorIntrinsic(*F);
 
-  if (F->hasFnAttribute(Attribute::SafeStack) ||
-      F->hasFnAttribute(Attribute::NoStackProtect))
+  if (F->hasFnAttribute(Attribute::SafeStack))
     return false;
 
   // We are constructing the OptimizationRemarkEmitter on the fly rather than
