@@ -1068,52 +1068,6 @@ int i = 0;
 )cpp");
     const auto *TUDecl = AST->getASTContext().getTranslationUnitDecl();
 
-#if _WIN32
-    EXPECT_EQ(dumpASTString(TK_AsIs, TUDecl),
-              R"cpp(
-TranslationUnitDecl
-|-CXXRecordDecl '_GUID'
-| `-TypeVisibilityAttr
-|-TypedefDecl '__int128_t'
-| `-BuiltinType
-|-TypedefDecl '__uint128_t'
-| `-BuiltinType
-|-TypedefDecl '__NSConstantString'
-| `-RecordType
-|-CXXRecordDecl 'type_info'
-| `-TypeVisibilityAttr
-|-TypedefDecl 'size_t'
-| `-BuiltinType
-|-TypedefDecl '__builtin_ms_va_list'
-| `-PointerType
-|   `-BuiltinType
-|-TypedefDecl '__builtin_va_list'
-| `-PointerType
-|   `-BuiltinType
-`-VarDecl 'i'
-  `-IntegerLiteral
-)cpp");
-#else
-    EXPECT_EQ(dumpASTString(TK_AsIs, TUDecl),
-              R"cpp(
-TranslationUnitDecl
-|-TypedefDecl '__int128_t'
-| `-BuiltinType
-|-TypedefDecl '__uint128_t'
-| `-BuiltinType
-|-TypedefDecl '__NSConstantString'
-| `-RecordType
-|-TypedefDecl '__builtin_ms_va_list'
-| `-PointerType
-|   `-BuiltinType
-|-TypedefDecl '__builtin_va_list'
-| `-ConstantArrayType
-|   `-RecordType
-`-VarDecl 'i'
-  `-IntegerLiteral
-)cpp");
-#endif
-
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, TUDecl),
               R"cpp(
 TranslationUnitDecl
