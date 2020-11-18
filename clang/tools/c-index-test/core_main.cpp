@@ -263,7 +263,7 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
       std::string(modulePath), *pchRdr, ASTUnit::LoadASTOnly, Diags,
       FileSystemOpts, /*UseDebugInfo=*/false,
       /*OnlyLocalDecls=*/true, None, CaptureDiagsKind::None,
-      /*AllowPCHWithCompilerErrors=*/true,
+      /*AllowASTWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/false);
   if (!AU) {
     errs() << "failed to create TU for: " << modulePath << '\n';

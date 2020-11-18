@@ -245,7 +245,6 @@ patterns:
             \\bspir_func\\b|\
             \\bspir_kernel\\b|\
             \\bsret\\b|\
-            \\bnossp\\b|\
             \\bssp\\b|\
             \\bsspreq\\b|\
             \\bsspstrong\\b|\

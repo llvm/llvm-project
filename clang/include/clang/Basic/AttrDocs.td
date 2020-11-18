@@ -3938,10 +3938,6 @@ option.
 
     int bar(int y); // bar can be built with the stack protector.
 
-A callee that has a stack protector will not be inlined into a
-``__attribute__((no_stack_protector))`` caller, and vice-versa, even if the
-callee is marked ``__attribute__((always_inline))``.
-
     }];
 }
 

@@ -1075,7 +1075,7 @@ function(process_llvm_pass_plugins)
       foreach(llvm_extension ${LLVM_STATIC_EXTENSIONS})
         get_property(llvm_plugin_deps TARGET ${llvm_extension} PROPERTY LINK_LIBRARIES)
 
-        file(APPEND "${ExtensionDeps}.tmp" "{{\"${llvm_extension}\", {")
+        file(APPEND "${ExtensionDeps}.tmp" "ExtensionDescriptor{\"${llvm_extension}\", {")
         foreach(llvm_plugin_dep ${llvm_plugin_deps})
             # Turn library dependency back to component name, if possible.
             # That way llvm-config can avoid redundant dependencies.
@@ -1089,7 +1089,7 @@ function(process_llvm_pass_plugins)
         endforeach()
 
         # Self + mandatory trailing null, because the number of RequiredLibraries differs between extensions.
-        file(APPEND "${ExtensionDeps}.tmp" \"${llvm_extension}\", "nullptr}}},\n")
+        file(APPEND "${ExtensionDeps}.tmp" \"${llvm_extension}\", "nullptr}},\n")
       endforeach()
       file(APPEND "${ExtensionDeps}.tmp" "};\n")
 

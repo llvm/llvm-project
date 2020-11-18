@@ -425,8 +425,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "speculative_load_hardening";
   if (hasAttribute(Attribute::Speculatable))
     return "speculatable";
-  if (hasAttribute(Attribute::NoStackProtect))
-    return "nossp";
   if (hasAttribute(Attribute::StackProtect))
     return "ssp";
   if (hasAttribute(Attribute::StackProtectReq))
@@ -1941,17 +1939,9 @@ static void setOR(Function &Caller, const Function &Callee) {
 /// If the inlined function had a higher stack protection level than the
 /// calling function, then bump up the caller's stack protection level.
 static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
-  assert(!(Callee.hasFnAttribute(Attribute::NoStackProtect) &&
-           (Caller.hasFnAttribute(Attribute::StackProtect) ||
-            Caller.hasFnAttribute(Attribute::StackProtectStrong) ||
-            Caller.hasFnAttribute(Attribute::StackProtectReq))) &&
-         "stack protected caller but callee requested no stack protector");
-  assert(!(Caller.hasFnAttribute(Attribute::NoStackProtect) &&
-           (Callee.hasFnAttribute(Attribute::StackProtect) ||
-            Callee.hasFnAttribute(Attribute::StackProtectStrong) ||
-            Callee.hasFnAttribute(Attribute::StackProtectReq))) &&
-         "stack protected callee but caller requested no stack protector");
   // If upgrading the SSP attribute, clear out the old SSP Attributes first.
+  // Having multiple SSP attributes doesn't actually hurt, but it adds useless
+  // clutter to the IR.
   AttrBuilder OldSSPAttr;
   OldSSPAttr.addAttribute(Attribute::StackProtect)
       .addAttribute(Attribute::StackProtectStrong)

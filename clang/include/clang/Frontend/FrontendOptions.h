@@ -303,6 +303,9 @@ public:
   /// When using -emit-module, treat the modulemap as a system module.
   unsigned IsSystemModule : 1;
 
+  /// Output (and read) PCM files regardless of compiler errors.
+  unsigned AllowPCMWithCompilerErrors : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -457,7 +460,8 @@ public:
         UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
         ASTDumpDecls(false), ASTDumpLookups(false),
         BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), UseTemporary(true), TimeTraceGranularity(500) {}
+        IncludeTimestamps(true), UseTemporary(true),
+        AllowPCMWithCompilerErrors(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
