@@ -3699,7 +3699,7 @@ def target_feature : Separate<["-"], "target-feature">,
   HelpText<"Target specific attributes">;
 def triple : Separate<["-"], "triple">,
   HelpText<"Specify target triple (e.g. i686-apple-darwin9)">,
-  MarshallingInfoString<"TargetOpts->Triple", "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())", "std::string">,
+  MarshallingInfoString<"TargetOpts->Triple", "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,
   AlwaysEmit, Normalizer<"normalizeTriple">, DenormalizeString;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">;
@@ -3892,7 +3892,7 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
   HelpText<"The relocation model to use">, Values<"static,pic,ropi,rwpi,ropi-rwpi,dynamic-no-pic">,
   NormalizedValuesScope<"llvm::Reloc">,
   NormalizedValues<["Static", "PIC_", "ROPI", "RWPI", "ROPI_RWPI", "DynamicNoPIC"]>,
-  MarshallingInfoString<"CodeGenOpts.RelocationModel", "PIC_", "llvm::Reloc::Model">,
+  MarshallingInfoString<"CodeGenOpts.RelocationModel", "PIC_">,
   AutoNormalizeEnum;
 def fno_math_builtin : Flag<["-"], "fno-math-builtin">,
   HelpText<"Disable implicit builtin knowledge of math functions">;
@@ -4335,7 +4335,7 @@ def arcmt_action_EQ : Joined<["-"], "arcmt-action=">, Flags<[CC1Option, NoDriver
   HelpText<"The ARC migration action to take">, Values<"check,modify,migrate">,
   NormalizedValuesScope<"FrontendOptions">,
   NormalizedValues<["ARCMT_Check", "ARCMT_Modify", "ARCMT_Migrate"]>,
-  MarshallingInfoString<"FrontendOpts.ARCMTAction", "ARCMT_None", "unsigned">,
+  MarshallingInfoString<"FrontendOpts.ARCMTAction", "ARCMT_None">,
   AutoNormalizeEnumJoined;
 
 def opt_record_file : Separate<["-"], "opt-record-file">,
