@@ -87,8 +87,8 @@ static bool isVectorPredicate(MachineInstr *MI) {
   return MI->findRegisterDefOperandIdx(ARM::VPR) != -1;
 }
 
-static bool hasVPRUse(MachineInstr *MI) {
-  return MI->findRegisterUseOperandIdx(ARM::VPR) != -1;
+static bool hasVPRUse(MachineInstr &MI) {
+  return MI.findRegisterUseOperandIdx(ARM::VPR) != -1;
 }
 
 static bool isDomainMVE(MachineInstr *MI) {
@@ -97,8 +97,7 @@ static bool isDomainMVE(MachineInstr *MI) {
 }
 
 static bool shouldInspect(MachineInstr &MI) {
-  return isDomainMVE(&MI) || isVectorPredicate(&MI) ||
-    hasVPRUse(&MI);
+  return isDomainMVE(&MI) || isVectorPredicate(&MI) || hasVPRUse(MI);
 }
 
 static bool isDo(MachineInstr *MI) {
@@ -1485,14 +1484,33 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
   for (auto &Block : LoLoop.getVPTBlocks()) {
     SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
 
-    if (VPTState::isEntryPredicatedOnVCTP(Block, /*exclusive*/true)) {
+    auto ReplaceVCMPWithVPT = [&](MachineInstr *&TheVCMP, MachineInstr *At) {
+      assert(TheVCMP && "Replacing a removed or non-existent VCMP");
+      // Replace the VCMP with a VPT
+      MachineInstrBuilder MIB =
+          BuildMI(*At->getParent(), At, At->getDebugLoc(),
+                  TII->get(VCMPOpcodeToVPT(TheVCMP->getOpcode())));
+      MIB.addImm(ARMVCC::Then);
+      // Register one
+      MIB.add(TheVCMP->getOperand(1));
+      // Register two
+      MIB.add(TheVCMP->getOperand(2));
+      // The comparison code, e.g. ge, eq, lt
+      MIB.add(TheVCMP->getOperand(3));
+      LLVM_DEBUG(dbgs() << "ARM Loops: Combining with VCMP to VPT: " << *MIB);
+      LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
+      LoLoop.ToRemove.insert(TheVCMP);
+      TheVCMP = nullptr;
+    };
+
+    if (VPTState::isEntryPredicatedOnVCTP(Block, /*exclusive*/ true)) {
+      MachineInstr *VPST = Insts.front();
       if (VPTState::hasUniformPredicate(Block)) {
         // A vpt block starting with VPST, is only predicated upon vctp and has no
         // internal vpr defs:
         // - Remove vpst.
         // - Unpredicate the remaining instructions.
-        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Insts.front());
-        LoLoop.ToRemove.insert(Insts.front());
+        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
         for (unsigned i = 1; i < Insts.size(); ++i)
           RemovePredicate(Insts[i]);
       } else {
@@ -1503,10 +1521,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         //   we come across the divergent vpr def.
         // - Insert a new vpst to predicate the instruction(s) that following
         //   the divergent vpr def.
-        // TODO: We could be producing more VPT blocks than necessary and could
-        // fold the newly created one into a proceeding one.
         MachineInstr *Divergent = VPTState::getDivergent(Block);
-        MachineInstr *VPST = Insts.front();
         auto DivergentNext = ++MachineBasicBlock::iterator(Divergent);
         bool DivergentNextIsPredicated =
             getVPTInstrPredicate(*DivergentNext) != ARMVCC::None;
@@ -1519,24 +1534,6 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         // with the VPST This should be the divergent instruction
         MachineInstr *VCMP =
             VCMPOpcodeToVPT(Divergent->getOpcode()) != 0 ? Divergent : nullptr;
-
-        auto ReplaceVCMPWithVPT = [&]() {
-          // Replace the VCMP with a VPT
-          MachineInstrBuilder MIB = BuildMI(
-              *Divergent->getParent(), Divergent, Divergent->getDebugLoc(),
-              TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
-          MIB.addImm(ARMVCC::Then);
-          // Register one
-          MIB.add(VCMP->getOperand(1));
-          // Register two
-          MIB.add(VCMP->getOperand(2));
-          // The comparison code, e.g. ge, eq, lt
-          MIB.add(VCMP->getOperand(3));
-          LLVM_DEBUG(dbgs()
-                     << "ARM Loops: Combining with VCMP to VPT: " << *MIB);
-          LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
-          LoLoop.ToRemove.insert(VCMP);
-        };
 
         if (DivergentNextIsPredicated) {
           // Insert a VPST at the divergent only if the next instruction
@@ -1553,17 +1550,48 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
             LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
           } else {
             // No RDA checks are necessary here since the VPST would have been
-            // directly before the VCMP
-            ReplaceVCMPWithVPT();
+            // directly after the VCMP
+            ReplaceVCMPWithVPT(VCMP, VCMP);
           }
         }
-        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
-        LoLoop.ToRemove.insert(VPST);
       }
+      LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
+      LoLoop.ToRemove.insert(VPST);
     } else if (Block.containsVCTP()) {
       // The vctp will be removed, so the block mask of the vp(s)t will need
       // to be recomputed.
       LoLoop.BlockMasksToRecompute.insert(Insts.front());
+    } else if (Insts.front()->getOpcode() == ARM::MVE_VPST) {
+      // If this block starts with a VPST then attempt to merge it with the
+      // preceeding un-merged VCMP into a VPT. This VCMP comes from a VPT
+      // block that no longer exists
+      MachineInstr *VPST = Insts.front();
+      auto Next = ++MachineBasicBlock::iterator(VPST);
+      assert(getVPTInstrPredicate(*Next) != ARMVCC::None &&
+             "The instruction after a VPST must be predicated");
+
+      MachineInstr *VprDef = RDA->getUniqueReachingMIDef(VPST, ARM::VPR);
+      if (VprDef && VCMPOpcodeToVPT(VprDef->getOpcode()) &&
+          !LoLoop.ToRemove.contains(VprDef)) {
+        MachineInstr *VCMP = VprDef;
+        // The VCMP and VPST can only be merged if the VCMP's operands will have
+        // the same values at the VPST
+        if (RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(1).getReg()) &&
+            RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(2).getReg())) {
+          bool IntermediateInstrsUseVPR =
+              std::any_of(++MachineBasicBlock::iterator(VCMP),
+                          MachineBasicBlock::iterator(VPST), hasVPRUse);
+          // If the instruction after the VCMP is predicated then a different
+          // code path is expected to have merged the VCMP and VPST already.
+          // This assertion protects against changes to that behaviour
+          assert(!IntermediateInstrsUseVPR &&
+                 "Instructions between the VCMP and VPST are not expected to "
+                 "be predicated");
+          ReplaceVCMPWithVPT(VCMP, VPST);
+          LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
+          LoLoop.ToRemove.insert(VPST);
+        }
+      }
     }
   }
 
