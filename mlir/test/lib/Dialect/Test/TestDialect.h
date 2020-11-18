@@ -14,6 +14,7 @@
 #ifndef MLIR_TESTDIALECT_H
 #define MLIR_TESTDIALECT_H
 
+#include "TestInterfaces.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Dialect.h"
@@ -30,7 +31,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "TestOpEnums.h.inc"
-
+#include "TestOpInterfaces.h.inc"
 #include "TestOpStructs.h.inc"
 #include "TestOpsDialect.h.inc"
 
