@@ -12,12 +12,12 @@
 # FIRST-SEC-NEXT: Sections:
 # FIRST-SEC-NEXT:   - Type:         SHT_NULL
 # FIRST-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
-# FIRST-SEC-NEXT:     Address:      0x0000000000000006
+# FIRST-SEC-NEXT:     Address:      0x6
 # FIRST-SEC-NEXT:     Link:         .foo
-# FIRST-SEC-NEXT:     AddressAlign: 0x0000000000000003
-# FIRST-SEC-NEXT:     EntSize:      0x0000000000000005
-# FIRST-SEC-NEXT:     Size:         0x0000000000000004
-# FIRST-SEC-NEXT:     Info:         0x0000000000000002
+# FIRST-SEC-NEXT:     AddressAlign: 0x3
+# FIRST-SEC-NEXT:     EntSize:      0x5
+# FIRST-SEC-NEXT:     Size:         0x4
+# FIRST-SEC-NEXT:     Info:         0x2
 # FIRST-SEC-NEXT:   - Name:         .foo
 # FIRST-SEC-NEXT:     Type:         SHT_PROGBITS
 # FIRST-SEC-NEXT: ...
@@ -55,12 +55,12 @@ Sections:
 # SECOND-SEC-NEXT:     Type:         SHT_PROGBITS
 # SECOND-SEC-NEXT:   - Type:         SHT_NULL
 # SECOND-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
-# SECOND-SEC-NEXT:     Address:      0x0000000000000006
+# SECOND-SEC-NEXT:     Address:      0x6
 # SECOND-SEC-NEXT:     Link:         .foo
-# SECOND-SEC-NEXT:     AddressAlign: 0x0000000000000003
-# SECOND-SEC-NEXT:     EntSize:      0x0000000000000005
+# SECOND-SEC-NEXT:     AddressAlign: 0x3
+# SECOND-SEC-NEXT:     EntSize:      0x5
 # SECOND-SEC-NEXT:     Content:      '00000000'
-# SECOND-SEC-NEXT:     Info:         0x0000000000000002
+# SECOND-SEC-NEXT:     Info:         0x2
 # SECOND-SEC-NEXT: ...
 
 --- !ELF

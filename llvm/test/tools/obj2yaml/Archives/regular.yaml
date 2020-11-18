@@ -36,7 +36,7 @@ Members: []
 # MULTIPLE-NEXT:     AccessMode:   '987'
 # MULTIPLE-NEXT:     Size:         '7'
 # MULTIPLE-NEXT:     Content:      2063636363200A
-# MULTIPLE-NEXT:     PaddingByte:  0x0A
+# MULTIPLE-NEXT:     PaddingByte:  0xA
 # MULTIPLE-NEXT:   - LastModified: ''
 # MULTIPLE-NEXT:     UID:          ''
 # MULTIPLE-NEXT:     GID:          ''
@@ -156,5 +156,5 @@ Members:
 # PADDING-BYTE-NEXT: Members:
 # PADDING-BYTE-NEXT:   - Size:        '1'
 # PADDING-BYTE-NEXT:     Content:     '61'
-# PADDING-BYTE-NEXT:     PaddingByte: 0x0A
+# PADDING-BYTE-NEXT:     PaddingByte: 0xA
 # PADDING-BYTE-NEXT: ...
