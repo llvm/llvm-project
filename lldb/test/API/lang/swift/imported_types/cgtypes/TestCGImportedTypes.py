@@ -45,4 +45,4 @@ class TestSwiftCGImportedTypes(TestBase):
         self.assertTrue(
             x_native.IsValid(),
             "Got valid native from cgrect.origin.x")
-        self.assertTrue(x_native.GetValue() == "10", "Value of x is correct")
+        self.assertEquals(x_native.GetValue(), "10", "Value of x is correct")

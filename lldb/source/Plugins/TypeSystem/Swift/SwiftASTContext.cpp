@@ -2295,7 +2295,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   return swift_ast_sp;
-  }
+}
 
 void SwiftASTContext::EnumerateSupportedLanguages(
     std::set<lldb::LanguageType> &languages_for_types,
@@ -6500,14 +6500,21 @@ GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx, CompilerType type,
   // The instance for a class-bound existential.
   if (idx == 0 && protocol_info.m_is_class_only) {
     CompilerType class_type;
-    if (protocol_info.m_superclass) {
+    // FIXME: Remove this comment once the TypeSystemSwiftTyperef
+    // transition is complete.
+    //
+    // There is not enough data available to support this in
+    // TypeSystemSwiftTypeRef, but there is also notuser-visible
+    // feature affected by this apart from the --raw-types output, so
+    // this was removed to match TypeSystemSwiftTyperef:
+    /* if (protocol_info.m_superclass) {
       class_type = protocol_info.m_superclass;
-    } else {
+      } else */ {
       auto raw_pointer = swift_ast_ctx->TheRawPointerType;
       class_type = ToCompilerType(raw_pointer.getPointer());
     }
 
-    return {class_type, "instance"};
+    return {class_type, "object"};
   }
 
   // The instance for an error existential.
@@ -6521,7 +6528,7 @@ GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx, CompilerType type,
     // The metatype for a non-class, non-error existential.
     auto any_metatype =
         swift::ExistentialMetatypeType::get(swift_ast_ctx->TheAnyType);
-    return {ToCompilerType(any_metatype), "instance_type"};
+    return {ToCompilerType(any_metatype), "metadata"};
   }
 
   // A witness table. Figure out which protocol it corresponds to.
@@ -6536,8 +6543,7 @@ GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx, CompilerType type,
       continue;
 
     if (witness_table_idx == 0) {
-      llvm::raw_string_ostream(name)
-          << "witness_table_" << proto->getBaseName().userFacingName();
+      name = "wtable";
       break;
     }
     --witness_table_idx;
@@ -7764,7 +7770,7 @@ bool SwiftASTContext::IsImportedType(opaque_compiler_type_t type,
 
   if (!type)
     return false;
-  if (swift::CanType swift_can_type = GetCanonicalSwiftType(type)) {
+  if (swift::Type swift_can_type = GetSwiftType(type)) {
     do {
       swift::NominalType *nominal_type =
           swift_can_type->getAs<swift::NominalType>();

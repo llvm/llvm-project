@@ -37,7 +37,7 @@ struct A {
 
 let x = A(x: 42)
 let y = A(y: 39)
-print("!")  //%self.expect("frame var -d run-target -- x", substrs=['(xx = 42)'])
-            //%self.expect("expr -d run-target -- x", substrs=['(xx = 42)'])
-            //%self.expect("frame var -d run-target -- y", substrs=['(yy = 39)'])
-            //%self.expect("expr -d run-target -- y", substrs=['(yy = 39)'])
+print("!")  //% self.expect("frame var -d run-target -- x", substrs=['(xx = 42)'])
+            //% self.expect("expr -d run-target -- x", substrs=['(xx = 42)'])
+            //% self.expect("frame var -d run-target -- y", substrs=['(yy = 39)'])
+            //% self.expect("expr -d run-target -- y", substrs=['(yy = 39)'])

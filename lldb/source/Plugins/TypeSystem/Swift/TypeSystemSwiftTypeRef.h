@@ -257,9 +257,15 @@ public:
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-  /// Return the nth tuple element's name, if it has one.
-  std::string GetTupleElementName(lldb::opaque_compiler_type_t type,
-                                  size_t idx);
+
+  /// Return the nth tuple element's type and name, if it has one.
+  llvm::Optional<TupleElement>
+  GetTupleElement(lldb::opaque_compiler_type_t type, size_t idx);
+
+  /// Get the Swift raw pointer type.
+  CompilerType GetRawPointerType();
+  /// Determine whether \p type is a protocol.
+  bool IsExistentialType(lldb::opaque_compiler_type_t type);
 
   /// Recursively transform the demangle tree starting a \p node by
   /// doing a post-order traversal and replacing each node with
@@ -269,6 +275,11 @@ public:
       swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
       std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
           fn);
+
+  /// Canonicalize Array, Dictionary and Optional to their sugared form.
+  static swift::Demangle::NodePointer
+  CanonicalizeSugar(swift::Demangle::Demangler &dem,
+                    swift::Demangle::NodePointer node);
 
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   static swift::Demangle::NodePointer
@@ -284,6 +295,12 @@ public:
   /// and create a CompilerType from it.
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
                               swift::Demangle::NodePointer node);
+
+  /// Create a CompilerType after applying Swiftification. This is
+  /// meant to be used for a demenagle tree generated from a \p
+  /// swift::reflection::TypeRef.
+  CompilerType RemangleAsSwiftifiedType(swift::Demangle::Demangler &Dem,
+                                        swift::Demangle::NodePointer node);
 
 private:
   /// Helper that creates an AST type from \p type.

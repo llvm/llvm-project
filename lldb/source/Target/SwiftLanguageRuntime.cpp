@@ -213,6 +213,23 @@ public:
     return {};
   }
 
+  bool IsTaggedPointer(lldb::addr_t addr, CompilerType type) {
+    STUB_LOG();
+    return false;
+  }
+
+  std::pair<lldb::addr_t, bool> FixupPointerValue(lldb::addr_t addr,
+                                                  CompilerType type) {
+    STUB_LOG();
+    return {addr, false};
+  }
+
+  lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
+                            Status &error) {
+    STUB_LOG();
+    return addr;
+  }
+
   SwiftLanguageRuntime::MetadataPromiseSP
   GetMetadataPromise(lldb::addr_t addr, ValueObject &for_object) {
     STUB_LOG();
@@ -230,6 +247,24 @@ public:
                                                    ValueObject *instance,
                                                    llvm::StringRef member_name,
                                                    Status *error) {
+    STUB_LOG();
+    return {};
+  }
+
+  llvm::Optional<unsigned> GetNumChildren(CompilerType type,
+                                          ValueObject *valobj) {
+    STUB_LOG();
+    return {};
+  }
+
+  CompilerType GetChildCompilerTypeAtIndex(
+      CompilerType type, size_t idx, bool transparent_pointers,
+      bool omit_empty_base_classes, bool ignore_array_bounds,
+      std::string &child_name, uint32_t &child_byte_size,
+      int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
+      uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
+      bool &child_is_deref_of_parent, ValueObject *valobj,
+      uint64_t &language_flags) {
     STUB_LOG();
     return {};
   }
@@ -2072,6 +2107,22 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   FORWARD(FixUpDynamicType, type_and_or_name, static_value);
 }
 
+bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
+                                           CompilerType type) {
+  FORWARD(IsTaggedPointer, addr, type);
+}
+
+std::pair<lldb::addr_t, bool>
+SwiftLanguageRuntime::FixupPointerValue(lldb::addr_t addr, CompilerType type) {
+  FORWARD(FixupPointerValue, addr, type);
+}
+
+lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
+                                                CompilerType type,
+                                                Status &error) {
+  FORWARD(FixupAddress, addr, type, error);
+}
+
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
                                          ValueObject &for_object) {
@@ -2086,6 +2137,27 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name, Status *error) {
   FORWARD(GetMemberVariableOffset, instance_type, instance, member_name, error);
+}
+
+llvm::Optional<unsigned>
+SwiftLanguageRuntime::GetNumChildren(CompilerType type, ValueObject *valobj) {
+  FORWARD(GetNumChildren, type, valobj);
+}
+
+CompilerType SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
+    CompilerType type, size_t idx, bool transparent_pointers,
+    bool omit_empty_base_classes, bool ignore_array_bounds,
+    std::string &child_name, uint32_t &child_byte_size,
+    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
+    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
+    bool &child_is_deref_of_parent, ValueObject *valobj,
+    uint64_t &language_flags) {
+  FORWARD(GetChildCompilerTypeAtIndex, type, idx, transparent_pointers,
+          omit_empty_base_classes, ignore_array_bounds, child_name,
+          child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, valobj,
+          language_flags);
 }
 
 bool SwiftLanguageRuntime::GetObjectDescription(Stream &str,
