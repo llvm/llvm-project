@@ -1569,7 +1569,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
       auto Next = ++MachineBasicBlock::iterator(VPST);
       assert(getVPTInstrPredicate(*Next) != ARMVCC::None &&
              "The instruction after a VPST must be predicated");
-
+      (void)Next;
       MachineInstr *VprDef = RDA->getUniqueReachingMIDef(VPST, ARM::VPR);
       if (VprDef && VCMPOpcodeToVPT(VprDef->getOpcode()) &&
           !LoLoop.ToRemove.contains(VprDef)) {
@@ -1578,13 +1578,11 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         // the same values at the VPST
         if (RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(1).getReg()) &&
             RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(2).getReg())) {
-          bool IntermediateInstrsUseVPR =
-              std::any_of(++MachineBasicBlock::iterator(VCMP),
-                          MachineBasicBlock::iterator(VPST), hasVPRUse);
           // If the instruction after the VCMP is predicated then a different
           // code path is expected to have merged the VCMP and VPST already.
           // This assertion protects against changes to that behaviour
-          assert(!IntermediateInstrsUseVPR &&
+          assert(!std::any_of(++MachineBasicBlock::iterator(VCMP),
+                              MachineBasicBlock::iterator(VPST), hasVPRUse) &&
                  "Instructions between the VCMP and VPST are not expected to "
                  "be predicated");
           ReplaceVCMPWithVPT(VCMP, VPST);
