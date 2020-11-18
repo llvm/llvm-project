@@ -186,4 +186,215 @@ entry:
 
 }
 
+define i64 @imm1() #0 {
+; CHECK-LABEL: imm1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 8465
+; CHECK-NEXT:    sldi 3, 3, 28
+; CHECK-NEXT:    blr
+entry:
+  ret i64 2272306135040 ;0x21110000000
+}
+
+define i64 @imm2() #0 {
+; CHECK-LABEL: imm2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    oris 3, 3, 65535
+; CHECK-NEXT:    ori 3, 3, 8465
+; CHECK-NEXT:    blr
+entry:
+  ret i64 4294910225 ;0xFFFF2111
+}
+
+define i64 @imm3() #0 {
+; CHECK-LABEL: imm3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    oris 3, 3, 65535
+; CHECK-NEXT:    ori 3, 3, 33041
+; CHECK-NEXT:    blr
+entry:
+  ret i64 4294934801 ;0xFFFF8111
+}
+
+define i64 @imm4() #0 {
+; CHECK-LABEL: imm4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, 33
+; CHECK-NEXT:    ori 3, 3, 4352
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    blr
+entry:
+  ret i64 9307365931290880 ;0x21110000211100
+}
+
+define i64 @imm5() #0 {
+; CHECK-LABEL: imm5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 28685
+; CHECK-NEXT:    rldicr 3, 3, 52, 63
+; CHECK-NEXT:    blr
+entry:
+  ret i64 58546795155816455 ;0xd0000000000007
+}
+
+define i64 @imm6() #0 {
+; CHECK-LABEL: imm6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, -1
+; CHECK-NEXT:    ori 3, 3, 28674
+; CHECK-NEXT:    rldicr 3, 3, 52, 63
+; CHECK-NEXT:    blr
+entry:
+  ret i64 13510798882111479 ;0x2ffffffffffff7
+}
+
+define i64 @imm7() #0 {
+; CHECK-LABEL: imm7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    ori 3, 3, 61713
+; CHECK-NEXT:    sldi 3, 3, 28
+; CHECK-NEXT:    blr
+entry:
+  ret i64 16565957296128 ;0xf1110000000
+}
+
+define i64 @imm8() #0 {
+; CHECK-LABEL: imm8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, 15
+; CHECK-NEXT:    ori 3, 3, 57617
+; CHECK-NEXT:    sldi 3, 3, 22
+; CHECK-NEXT:    blr
+entry:
+  ret i64 4364831817728 ;0x3f844400000
+}
+
+define i64 @imm9() #0 {
+; CHECK-LABEL: imm9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, -1
+; CHECK-NEXT:    ori 3, 3, 28674
+; CHECK-NEXT:    rldicr 3, 3, 52, 63
+; CHECK-NEXT:    blr
+entry:
+  ret i64 13510798882111479 ;0x2ffffffffffff7
+}
+
+define i64 @imm10() #0 {
+; CHECK-LABEL: imm10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    ori 3, 3, 61713
+; CHECK-NEXT:    sldi 3, 3, 28
+; CHECK-NEXT:    blr
+entry:
+  ret i64 16565957296128 ;0xf1110000000
+}
+
+define i64 @imm11() #0 {
+; CHECK-LABEL: imm11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, 15
+; CHECK-NEXT:    ori 3, 3, 57617
+; CHECK-NEXT:    sldi 3, 3, 22
+; CHECK-NEXT:    blr
+entry:
+  ret i64 4364831817728 ;0x3f844400000
+}
+
+define i64 @imm12() #0 {
+; CHECK-LABEL: imm12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 4094
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    oris 3, 3, 16324
+; CHECK-NEXT:    ori 3, 3, 4096
+; CHECK-NEXT:    blr
+entry:
+  ret i64 17584665923584 ;0xffe3fc41000
+}
+
+define i64 @imm13() #0 {
+; CHECK-LABEL: imm13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 19
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    oris 3, 3, 56895
+; CHECK-NEXT:    ori 3, 3, 65535
+; CHECK-NEXT:    blr
+entry:
+  ret i64 85333114879 ;0x13de3fffff
+}
+
+define i64 @imm13_2() #0 {
+; CHECK-LABEL: imm13_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 51
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    oris 3, 3, 56895
+; CHECK-NEXT:    ori 3, 3, 65535
+; CHECK-NEXT:    blr
+entry:
+  ret i64 222772068351 ;0x33de3fffff
+}
+
+define i64 @imm14() #0 {
+; CHECK-LABEL: imm14:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 254
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    oris 3, 3, 4383
+; CHECK-NEXT:    ori 3, 3, 65535
+; CHECK-NEXT:    blr
+entry:
+  ret i64 1091209003007 ;0xfe111fffff
+}
+
+define i64 @imm15() #0 {
+; CHECK-LABEL: imm15:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, -8065
+; CHECK-NEXT:    sldi 3, 3, 24
+; CHECK-NEXT:    blr
+entry:
+  ret i64 -135308247040
+}
+
+define i64 @imm16() #0 {
+; CHECK-LABEL: imm16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, -16392
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    oris 3, 3, 57217
+; CHECK-NEXT:    blr
+entry:
+  ret i64 -70399354142720
+}
+
+define i64 @imm17() #0 {
+; CHECK-LABEL: imm17:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, 158
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    ori 3, 3, 40689
+; CHECK-NEXT:    blr
+entry:
+  ret i64 44473046320324337 ;0x9e000000009ef1
+}
+
+define i64 @imm18() #0 {
+; CHECK-LABEL: imm18:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 2
+; CHECK-NEXT:    sldi 3, 3, 32
+; CHECK-NEXT:    oris 3, 3, 39436
+; CHECK-NEXT:    ori 3, 3, 61633
+; CHECK-NEXT:    blr
+entry:
+  ret i64 11174473921
+}
+
 attributes #0 = { nounwind readnone }
