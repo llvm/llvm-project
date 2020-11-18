@@ -68,7 +68,6 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("sanitize_thread", Attribute::SanitizeThread)
       .Case("sanitize_memtag", Attribute::SanitizeMemTag)
       .Case("speculative_load_hardening", Attribute::SpeculativeLoadHardening)
-      .Case("nossp", Attribute::NoStackProtect)
       .Case("ssp", Attribute::StackProtect)
       .Case("sspreq", Attribute::StackProtectReq)
       .Case("sspstrong", Attribute::StackProtectStrong)
