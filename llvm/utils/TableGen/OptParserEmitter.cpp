@@ -71,7 +71,6 @@ public:
   StringRef KeyPath;
   StringRef DefaultValue;
   StringRef NormalizedValuesScope;
-  StringRef NormalizerRetTy;
   StringRef Normalizer;
   StringRef Denormalizer;
   StringRef ValueMerger;
@@ -113,8 +112,6 @@ struct SimpleEnumValueTable {
     OS << KeyPath;
     OS << ", ";
     emitScopedNormalizedValue(OS, DefaultValue);
-    OS << ", ";
-    emitScopedNormalizedValue(OS, NormalizerRetTy);
     OS << ", ";
     OS << Normalizer;
     OS << ", ";
@@ -174,9 +171,9 @@ public:
 static MarshallingInfo::Ptr createMarshallingInfo(const Record &R) {
   assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
          !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
-         !isa<UnsetInit>(R.getValueInit("NormalizerRetTy")) &&
          !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
-         "MarshallingInfo must have a type");
+         "MarshallingInfo must have a provide a keypath, default value and a "
+         "value merger");
 
   MarshallingInfo::Ptr Ret;
   StringRef KindString = R.getValueAsString("MarshallingInfoKind");
@@ -191,7 +188,6 @@ static MarshallingInfo::Ptr createMarshallingInfo(const Record &R) {
   Ret->KeyPath = R.getValueAsString("KeyPath");
   Ret->DefaultValue = R.getValueAsString("DefaultValue");
   Ret->NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
-  Ret->NormalizerRetTy = R.getValueAsString("NormalizerRetTy");
 
   Ret->Normalizer = R.getValueAsString("Normalizer");
   Ret->Denormalizer = R.getValueAsString("Denormalizer");

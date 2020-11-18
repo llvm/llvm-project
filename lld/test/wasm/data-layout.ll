@@ -20,9 +20,9 @@
 
 ; CHECK:        - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHK32-NEXT:       - Initial:         0x00000002
+; CHK32-NEXT:       - Initial:         0x2
 ; CHK64-NEXT:       - Flags:           [ IS_64 ]
-; CHK64-NEXT:         Initial:         0x00000002
+; CHK64-NEXT:         Initial:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -70,8 +70,8 @@
 ; CHECK-MAX:        - Type:            MEMORY
 ; CHECK-MAX-NEXT:     Memories:
 ; CHECK-MAX-NEXT:       - Flags:           [ HAS_MAX ]
-; CHECK-MAX-NEXT:         Initial:         0x00000002
-; CHECK-MAX-NEXT:         Maximum:         0x00000002
+; CHECK-MAX-NEXT:         Initial:         0x2
+; CHECK-MAX-NEXT:         Maximum:         0x2
 
 ; RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
 ; RUN:     --features=atomics,bulk-memory --initial-memory=131072 \
@@ -81,8 +81,8 @@
 ; CHECK-SHARED:        - Type:            MEMORY
 ; CHECK-SHARED-NEXT:     Memories:
 ; CHECK-SHARED-NEXT:       - Flags:           [ HAS_MAX, IS_SHARED ]
-; CHECK-SHARED-NEXT:         Initial:         0x00000002
-; CHECK-SHARED-NEXT:         Maximum:         0x00000002
+; CHECK-SHARED-NEXT:         Initial:         0x2
+; CHECK-SHARED-NEXT:         Maximum:         0x2
 
 ; RUN: wasm-ld --relocatable -o %t_reloc.wasm %t32.o %t.hello32.o
 ; RUN: obj2yaml %t_reloc.wasm | FileCheck %s -check-prefix=RELOC
@@ -91,10 +91,10 @@
 ; RELOC-NEXT:     Relocations:
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; RELOC-NEXT:         Index:           3
-; RELOC-NEXT:         Offset:          0x00000024
+; RELOC-NEXT:         Offset:          0x24
 ; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; RELOC-NEXT:         Index:           4
-; RELOC-NEXT:         Offset:          0x0000002D
+; RELOC-NEXT:         Offset:          0x2D
 ; RELOC-NEXT:         Addend:          4
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - SectionOffset:   6

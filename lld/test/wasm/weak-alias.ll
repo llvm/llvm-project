@@ -18,7 +18,7 @@ entry:
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -37,11 +37,11 @@ entry:
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000002
-; CHECK-NEXT:           Maximum:         0x00000002
+; CHECK-NEXT:           Initial:         0x2
+; CHECK-NEXT:           Maximum:         0x2
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Initial:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -128,7 +128,7 @@ entry:
 
 ; RELOC:      --- !WASM
 ; RELOC-NEXT: FileHeader:
-; RELOC-NEXT:   Version:         0x00000001
+; RELOC-NEXT:   Version:         0x1
 ; RELOC-NEXT: Sections:
 ; RELOC-NEXT:   - Type:            TYPE
 ; RELOC-NEXT:     Signatures:
@@ -154,11 +154,11 @@ entry:
 ; RELOC-NEXT:         ElemType:        FUNCREF
 ; RELOC-NEXT:         Limits:
 ; RELOC-NEXT:           Flags:           [ HAS_MAX ]
-; RELOC-NEXT:           Initial:         0x00000002
-; RELOC-NEXT:           Maximum:         0x00000002
+; RELOC-NEXT:           Initial:         0x2
+; RELOC-NEXT:           Maximum:         0x2
 ; RELOC-NEXT:   - Type:            MEMORY
 ; RELOC-NEXT:     Memories:
-; RELOC-NEXT:       - Initial:         0x00000000
+; RELOC-NEXT:       - Initial:         0x0
 ; RELOC-NEXT:   - Type:            ELEM
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - Offset:
@@ -169,43 +169,43 @@ entry:
 ; RELOC-NEXT:     Relocations:
 ; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x00000004
+; RELOC-NEXT:         Offset:          0x4
 ; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           2
-; RELOC-NEXT:         Offset:          0x00000013
+; RELOC-NEXT:         Offset:          0x13
 ; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x0000001C
+; RELOC-NEXT:         Offset:          0x1C
 ; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
-; RELOC-NEXT:         Offset:          0x00000027
+; RELOC-NEXT:         Offset:          0x27
 ; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
-; RELOC-NEXT:         Offset:          0x00000032
+; RELOC-NEXT:         Offset:          0x32
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x0000003A
+; RELOC-NEXT:         Offset:          0x3A
 ; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
-; RELOC-NEXT:         Offset:          0x00000043
+; RELOC-NEXT:         Offset:          0x43
 ; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
-; RELOC-NEXT:         Offset:          0x00000050
+; RELOC-NEXT:         Offset:          0x50
 ; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
-; RELOC-NEXT:         Offset:          0x0000005D
+; RELOC-NEXT:         Offset:          0x5D
 ; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
-; RELOC-NEXT:         Offset:          0x00000068
+; RELOC-NEXT:         Offset:          0x68
 ; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           2
-; RELOC-NEXT:         Offset:          0x00000070
+; RELOC-NEXT:         Offset:          0x70
 ; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           2
-; RELOC-NEXT:         Offset:          0x00000079
+; RELOC-NEXT:         Offset:          0x79
 ; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
-; RELOC-NEXT:         Offset:          0x00000086
+; RELOC-NEXT:         Offset:          0x86
 ; RELOC-NEXT:     Functions:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Locals:

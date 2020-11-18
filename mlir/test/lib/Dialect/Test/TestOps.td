@@ -18,6 +18,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "TestInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -1721,7 +1722,8 @@ def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
 //===----------------------------------------------------------------------===//
 
 def SideEffectOp : TEST_Op<"side_effect_op",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
   let results = (outs AnyType:$result);
 }
 

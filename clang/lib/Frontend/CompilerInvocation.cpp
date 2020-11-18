@@ -171,6 +171,24 @@ static void denormalizeBooleanFlag(SmallVectorImpl<const char *> &Args,
     Args.push_back(NegSpelling);
 }
 
+static Optional<SimpleEnumValue>
+findValueTableByName(const SimpleEnumValueTable &Table, StringRef Name) {
+  for (int I = 0, E = Table.Size; I != E; ++I)
+    if (Name == Table.Table[I].Name)
+      return Table.Table[I];
+
+  return None;
+}
+
+static Optional<SimpleEnumValue>
+findValueTableByValue(const SimpleEnumValueTable &Table, unsigned Value) {
+  for (int I = 0, E = Table.Size; I != E; ++I)
+    if (Value == Table.Table[I].Value)
+      return Table.Table[I];
+
+  return None;
+}
+
 static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
                                                     unsigned TableIndex,
                                                     const ArgList &Args,
@@ -183,9 +201,8 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
     return None;
 
   StringRef ArgValue = Arg->getValue();
-  for (int I = 0, E = Table.Size; I != E; ++I)
-    if (ArgValue == Table.Table[I].Name)
-      return Table.Table[I].Value;
+  if (auto MaybeEnumVal = findValueTableByName(Table, ArgValue))
+    return MaybeEnumVal->Value;
 
   Diags.Report(diag::err_drv_invalid_value)
       << Arg->getAsString(Args) << ArgValue;
@@ -198,16 +215,26 @@ static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
                                   unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
-  for (int I = 0, E = Table.Size; I != E; ++I) {
-    if (Value == Table.Table[I].Value) {
-      Args.push_back(Spelling);
-      Args.push_back(Table.Table[I].Name);
-      return;
-    }
+  if (auto MaybeEnumVal = findValueTableByValue(Table, Value)) {
+    Args.push_back(Spelling);
+    Args.push_back(MaybeEnumVal->Name);
+  } else {
+    llvm_unreachable("The simple enum value was not correctly defined in "
+                     "the tablegen option description");
   }
+}
 
-  llvm_unreachable("The simple enum value was not correctly defined in "
-                   "the tablegen option description");
+static void denormalizeSimpleEnumJoined(SmallVectorImpl<const char *> &Args,
+                                        const char *Spelling,
+                                        CompilerInvocation::StringAllocator SA,
+                                        unsigned TableIndex, unsigned Value) {
+  assert(TableIndex < SimpleEnumValueTablesSize);
+  const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
+  if (auto MaybeEnumVal = findValueTableByValue(Table, Value))
+    Args.push_back(SA(Twine(Spelling) + MaybeEnumVal->Name));
+  else
+    llvm_unreachable("The simple enum value was not correctly defined in "
+                     "the tablegen option description");
 }
 
 static void denormalizeString(SmallVectorImpl<const char *> &Args,
@@ -243,6 +270,17 @@ template <typename T> static T extractForwardValue(T KeyPath) {
 template <typename T, typename U, U Value>
 static T extractMaskValue(T KeyPath) {
   return KeyPath & Value;
+}
+
+static void FixupInvocation(CompilerInvocation &Invocation) {
+  LangOptions &LangOpts = *Invocation.getLangOpts();
+  DiagnosticOptions &DiagOpts = Invocation.getDiagnosticOpts();
+  CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
+  CodeGenOpts.XRayInstrumentFunctions = LangOpts.XRayInstrument;
+  CodeGenOpts.XRayAlwaysEmitCustomEvents = LangOpts.XRayAlwaysEmitCustomEvents;
+  CodeGenOpts.XRayAlwaysEmitTypedEvents = LangOpts.XRayAlwaysEmitTypedEvents;
+
+  llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1189,16 +1227,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.InstrumentFunctionEntryBare =
       Args.hasArg(OPT_finstrument_function_entry_bare);
 
-  Opts.XRayInstrumentFunctions =
-      Args.hasArg(OPT_fxray_instrument);
-  Opts.XRayAlwaysEmitCustomEvents =
-      Args.hasArg(OPT_fxray_always_emit_customevents);
-  Opts.XRayAlwaysEmitTypedEvents =
-      Args.hasArg(OPT_fxray_always_emit_typedevents);
   Opts.XRayInstructionThreshold =
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
-  Opts.XRayIgnoreLoops = Args.hasArg(OPT_fxray_ignore_loops);
-  Opts.XRayOmitFunctionIndex = Args.hasArg(OPT_fno_xray_function_index);
   Opts.XRayTotalFunctionGroups =
       getLastArgIntValue(Args, OPT_fxray_function_groups, 1, Diags);
   Opts.XRaySelectedFunctionGroup =
@@ -2055,23 +2085,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
   Opts.StatsFile = std::string(Args.getLastArgValue(OPT_stats_file));
 
-  if (const Arg *A = Args.getLastArg(OPT_arcmt_check,
-                                     OPT_arcmt_modify,
-                                     OPT_arcmt_migrate)) {
-    switch (A->getOption().getID()) {
-    default:
-      llvm_unreachable("missed a case");
-    case OPT_arcmt_check:
-      Opts.ARCMTAction = FrontendOptions::ARCMT_Check;
-      break;
-    case OPT_arcmt_modify:
-      Opts.ARCMTAction = FrontendOptions::ARCMT_Modify;
-      break;
-    case OPT_arcmt_migrate:
-      Opts.ARCMTAction = FrontendOptions::ARCMT_Migrate;
-      break;
-    }
-  }
   Opts.MTMigrateDir =
       std::string(Args.getLastArgValue(OPT_mt_migrate_directory));
   Opts.ARCMTMigrateReportOut =
@@ -3447,13 +3460,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                                       systemBlacklists.begin(),
                                       systemBlacklists.end());
 
-  // -fxray-instrument
-  Opts.XRayInstrument = Args.hasArg(OPT_fxray_instrument);
-  Opts.XRayAlwaysEmitCustomEvents =
-      Args.hasArg(OPT_fxray_always_emit_customevents);
-  Opts.XRayAlwaysEmitTypedEvents =
-      Args.hasArg(OPT_fxray_always_emit_typedevents);
-
   // -fxray-{always,never}-instrument= filenames.
   Opts.XRayAlwaysInstrumentFiles =
       Args.getAllArgValues(OPT_fxray_always_instrument);
@@ -3767,22 +3773,24 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
   {                                                                            \
     this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
     if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags))      \
-      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
+      this->KEYPATH = MERGER(                                                  \
+          this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
   }
 
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
     NEG_SPELLING)                                                              \
   {                                                                            \
     if (auto MaybeValue =                                                      \
             NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
-      this->KEYPATH = MERGER(this->KEYPATH, static_cast<TYPE>(*MaybeValue));   \
+      this->KEYPATH = MERGER(                                                  \
+          this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
     else                                                                       \
       this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                    \
   }
@@ -3827,9 +3835,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   }
 
   Success &= Res.parseSimpleArgs(Args, Diags);
-
-  llvm::sys::Process::UseANSIEscapeCodes(
-      Res.DiagnosticOpts->UseANSIEscapeCodes);
+  FixupInvocation(Res);
 
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
@@ -4044,7 +4050,7 @@ void CompilerInvocation::generateCC1CommandLine(
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)            \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
   if (((FLAGS) & options::CC1Option) &&                                        \
       (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != (DEFAULT_VALUE))) {          \
     DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));   \
@@ -4053,7 +4059,7 @@ void CompilerInvocation::generateCC1CommandLine(
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    TYPE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,    \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
     NEG_SPELLING)                                                              \
   if (((FLAGS)&options::CC1Option) &&                                          \
       (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != DEFAULT_VALUE)) {            \
