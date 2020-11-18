@@ -1184,7 +1184,7 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     case AMDGPU::S_WAITCNT_VMCNT:
     case AMDGPU::S_WAITCNT_EXPCNT:
     case AMDGPU::S_WAITCNT_LGKMCNT:
-    case AMDGPU::S_WAITCNT_IDLE:
+    case AMDGPU::S_WAIT_IDLE:
       return true;
     default:
       break;
