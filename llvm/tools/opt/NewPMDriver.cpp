@@ -333,16 +333,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       return false;
     }
   }
-  // For compatibility with legacy pass manager.
-  // Alias analyses are not specially specified when using the legacy PM.
-  for (auto PassName : Passes) {
-    if (PB.isAAPassName(PassName)) {
-      if (auto Err = PB.parseAAPipeline(AA, PassName)) {
-        errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-        return false;
-      }
-    }
-  }
+
   // For compatibility with the legacy PM AA pipeline.
   // AAResultsWrapperPass by default provides basic-aa in the legacy PM
   // unless -disable-basic-aa is specified.
@@ -352,6 +343,17 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     if (auto Err = PB.parseAAPipeline(AA, "basic-aa")) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
+    }
+  }
+
+  // For compatibility with legacy pass manager.
+  // Alias analyses are not specially specified when using the legacy PM.
+  for (auto PassName : Passes) {
+    if (PB.isAAPassName(PassName)) {
+      if (auto Err = PB.parseAAPipeline(AA, PassName)) {
+        errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
+        return false;
+      }
     }
   }
 
