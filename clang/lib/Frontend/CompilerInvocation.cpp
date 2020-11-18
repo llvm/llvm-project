@@ -683,12 +683,6 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
                                                            << "a filename";
 }
 
-static bool ParseMigratorArgs(MigratorOptions &Opts, ArgList &Args) {
-  Opts.NoNSAllocReallocError = Args.hasArg(OPT_migrator_no_nsalloc_error);
-  Opts.NoFinalizeRemoval = Args.hasArg(OPT_migrator_no_finalize_removal);
-  return true;
-}
-
 static void ParseCommentArgs(CommentOptions &Opts, ArgList &Args) {
   Opts.BlockCommandNames = Args.getAllArgValues(OPT_fcomment_block_commands);
   Opts.ParseAllComments = Args.hasArg(OPT_fparse_all_comments);
@@ -3990,7 +3984,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   FixupInvocation(Res);
 
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
-  Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
   if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
       Res.getDependencyOutputOpts().Targets.empty()) {
