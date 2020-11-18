@@ -16457,6 +16457,13 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
       << Value.toString(10);
   }
 
+  // The size of the bit-field must not exceed our maximum permitted object
+  // size.
+  if (Value.getActiveBits() > ConstantArrayType::getMaxSizeBits(Context)) {
+    return Diag(FieldLoc, diag::err_bitfield_too_wide)
+           << !FieldName << FieldName << Value.toString(10);
+  }
+
   if (!FieldTy->isDependentType()) {
     uint64_t TypeStorageSize = Context.getTypeSize(FieldTy);
     uint64_t TypeWidth = Context.getIntWidth(FieldTy);
@@ -16474,25 +16481,21 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
           CStdConstraintViolation ? TypeWidth : TypeStorageSize;
       if (FieldName)
         return Diag(FieldLoc, diag::err_bitfield_width_exceeds_type_width)
-               << FieldName << (unsigned)Value.getZExtValue()
+               << FieldName << Value.toString(10)
                << !CStdConstraintViolation << DiagWidth;
 
       return Diag(FieldLoc, diag::err_anon_bitfield_width_exceeds_type_width)
-             << (unsigned)Value.getZExtValue() << !CStdConstraintViolation
+             << Value.toString(10) << !CStdConstraintViolation
              << DiagWidth;
     }
 
     // Warn on types where the user might conceivably expect to get all
     // specified bits as value bits: that's all integral types other than
     // 'bool'.
-    if (BitfieldIsOverwide && !FieldTy->isBooleanType()) {
-      if (FieldName)
-        Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-            << FieldName << (unsigned)Value.getZExtValue()
-            << (unsigned)TypeWidth;
-      else
-        Diag(FieldLoc, diag::warn_anon_bitfield_width_exceeds_type_width)
-            << (unsigned)Value.getZExtValue() << (unsigned)TypeWidth;
+    if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
+      Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
+          << FieldName << Value.toString(10)
+          << (unsigned)TypeWidth;
     }
   }
 
