@@ -1277,8 +1277,8 @@ public:
     //    addrspacecast shall be used when source/dst memrefs are not on
     //    address space 0.
     // TODO: support alignment when possible.
-    Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
-                               adaptor.indices(), rewriter);
+    Value dataPtr = getStridedElementPtr(loc, memRefType, adaptor.memref(),
+                                         adaptor.indices(), rewriter);
     auto vecTy =
         toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
     Value vectorDataPtr;
