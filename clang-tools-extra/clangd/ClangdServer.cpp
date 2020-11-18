@@ -718,6 +718,18 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
                            TUScheduler::InvalidateOnUpdate);
 }
 
+void ClangdServer::findImplementations(
+    PathRef File, Position Pos, Callback<std::vector<LocatedSymbol>> CB) {
+  auto Action = [Pos, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::findImplementations(InpAST->AST, Pos, Index));
+  };
+
+  WorkScheduler.runWithAST("Implementations", File, std::move(Action));
+}
+
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
                                   Callback<ReferencesResult> CB) {
   auto Action = [Pos, Limit, CB = std::move(CB),
