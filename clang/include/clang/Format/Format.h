@@ -1160,6 +1160,23 @@ struct FormatStyle {
   /// \endcode
   BraceWrappingFlags BraceWrapping;
 
+  /// If ``true``, struct left brace will be placed after line breaks.
+  /// \code
+  ///    true:
+  ///    struct new_struct struct_name =
+  ///    {
+  ///        a = 1,
+  ///        b = 2,
+  ///    };
+  ///
+  ///    false:
+  ///    struct new_struct struct_name = {
+  ///        a = 1,
+  ///        b = 2,
+  ///    };
+  /// \endcode
+  bool BreakBeforeStructInitialization;
+
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
@@ -2431,6 +2448,7 @@ struct FormatStyle {
            BinPackParameters == R.BinPackParameters &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeStructInitialization == R.BreakBeforeStructInitialization &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            CompactNamespaces == R.CompactNamespaces &&

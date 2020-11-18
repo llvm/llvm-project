@@ -953,6 +953,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   const FormatToken &Previous = *Current.Previous;
   // If we are continuing an expression, we want to use the continuation indent.
+  if (Style.BreakBeforeStructInitialization)
+      Style.ContinuationIndentWidth = 0;
   unsigned ContinuationIndent =
       std::max(State.Stack.back().LastSpace, State.Stack.back().Indent) +
       Style.ContinuationIndentWidth;
