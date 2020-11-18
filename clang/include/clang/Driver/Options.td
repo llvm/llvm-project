@@ -3791,10 +3791,12 @@ def analyzer_werror : Flag<["-"], "analyzer-werror">,
 // Migrator Options
 //===----------------------------------------------------------------------===//
 def migrator_no_nsalloc_error : Flag<["-"], "no-ns-alloc-error">,
-  HelpText<"Do not error on use of NSAllocateCollectable/NSReallocateCollectable">;
+  HelpText<"Do not error on use of NSAllocateCollectable/NSReallocateCollectable">,
+  MarshallingInfoFlag<"MigratorOpts.NoNSAllocReallocError">;
 
 def migrator_no_finalize_removal : Flag<["-"], "no-finalize-removal">,
-  HelpText<"Do not remove finalize method in gc mode">;
+  HelpText<"Do not remove finalize method in gc mode">,
+  MarshallingInfoFlag<"MigratorOpts.NoFinalizeRemoval">;
 
 //===----------------------------------------------------------------------===//
 // CodeGen Options
