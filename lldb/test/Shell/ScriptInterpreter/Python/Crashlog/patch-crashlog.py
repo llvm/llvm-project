@@ -24,7 +24,7 @@ class CrashLogPatcher:
         self.data = self.data.replace("@NAME@", os.path.basename(self.binary))
 
     def patch_uuid(self):
-        output = subprocess.check_output(['dwarfdump', '--uuid', self.binary])
+        output = subprocess.check_output(['dwarfdump', '--uuid', self.binary]).decode("utf-8")
         m = self.UUID_REGEX.match(output)
         if m:
             self.data = self.data.replace("@UUID@", m.group(1))
