@@ -37,6 +37,9 @@ vadd.vv v1, v3, v2, v4.t
 vadd.vv v1, v3, v2, v0
 # CHECK-ERROR: expected '.t' suffix
 
+vadd.vv v1, v3, a0
+# CHECK-ERROR: invalid operand for instruction
+
 vmslt.vi v1, v2, -16
 # CHECK-ERROR: immediate must be in the range [-15, 16]
 
