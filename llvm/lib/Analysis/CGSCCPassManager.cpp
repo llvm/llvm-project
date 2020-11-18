@@ -502,9 +502,9 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   // Now walk all references.
   for (Instruction &I : instructions(F))
     for (Value *Op : I.operand_values())
-      if (auto *C = dyn_cast<Constant>(Op))
-        if (Visited.insert(C).second)
-          Worklist.push_back(C);
+      if (auto *OpC = dyn_cast<Constant>(Op))
+        if (Visited.insert(OpC).second)
+          Worklist.push_back(OpC);
 
   auto VisitRef = [&](Function &Referee) {
     Node *RefereeN = G.lookup(Referee);
@@ -555,11 +555,11 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   }
 
   // Include synthetic reference edges to known, defined lib functions.
-  for (auto *F : G.getLibFunctions())
+  for (auto *LibFn : G.getLibFunctions())
     // While the list of lib functions doesn't have repeats, don't re-visit
     // anything handled above.
-    if (!Visited.count(F))
-      VisitRef(*F);
+    if (!Visited.count(LibFn))
+      VisitRef(*LibFn);
 
   // First remove all of the edges that are no longer present in this function.
   // The first step makes these edges uniformly ref edges and accumulates them
