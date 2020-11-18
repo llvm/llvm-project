@@ -1366,7 +1366,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, py::buffer_protocol());
     cls.def(py::init<PyAttribute &>(), py::keep_alive<0, 1>());
     DerivedTy::bindDerived(cls);
   }
@@ -1630,6 +1630,42 @@ public:
 
   intptr_t dunderLen() { return mlirElementsAttrGetNumElements(attr); }
 
+  py::buffer_info accessBuffer() {
+    MlirType shapedType = mlirAttributeGetType(this->attr);
+    MlirType elementType = mlirShapedTypeGetElementType(shapedType);
+
+    if (mlirTypeIsAF32(elementType)) {
+      // f32
+      return bufferInfo(shapedType, mlirDenseElementsAttrGetFloatValue);
+    } else if (mlirTypeIsAF64(elementType)) {
+      // f64
+      return bufferInfo(shapedType, mlirDenseElementsAttrGetDoubleValue);
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 32) {
+      if (mlirIntegerTypeIsSignless(elementType) ||
+          mlirIntegerTypeIsSigned(elementType)) {
+        // i32
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetInt32Value);
+      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+        // unsigned i32
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetUInt32Value);
+      }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 64) {
+      if (mlirIntegerTypeIsSignless(elementType) ||
+          mlirIntegerTypeIsSigned(elementType)) {
+        // i64
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetInt64Value);
+      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+        // unsigned i64
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetUInt64Value);
+      }
+    }
+
+    std::string message = "unimplemented array format.";
+    throw SetPyError(PyExc_ValueError, message);
+  }
+
   static void bindDerived(ClassTy &c) {
     c.def("__len__", &PyDenseElementsAttribute::dunderLen)
         .def_static("get", PyDenseElementsAttribute::getFromBuffer,
@@ -1642,7 +1678,8 @@ public:
         .def_property_readonly("is_splat",
                                [](PyDenseElementsAttribute &self) -> bool {
                                  return mlirDenseElementsAttrIsSplat(self.attr);
-                               });
+                               })
+        .def_buffer(&PyDenseElementsAttribute::accessBuffer);
   }
 
 private:
@@ -1674,6 +1711,34 @@ private:
     char code = format[0];
     return code == 'i' || code == 'b' || code == 'h' || code == 'l' ||
            code == 'q';
+  }
+
+  template <typename Type>
+  py::buffer_info bufferInfo(MlirType shapedType,
+                             Type (*value)(MlirAttribute, intptr_t)) {
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    // Prepare the data for the buffer_info.
+    // Buffer is configured for read-only access below.
+    Type *data = static_cast<Type *>(
+        const_cast<void *>(mlirDenseElementsAttrGetRawData(this->attr)));
+    // Prepare the shape for the buffer_info.
+    SmallVector<intptr_t, 4> shape;
+    for (intptr_t i = 0; i < rank; ++i)
+      shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
+    // Prepare the strides for the buffer_info.
+    SmallVector<intptr_t, 4> strides;
+    intptr_t strideFactor = 1;
+    for (intptr_t i = 1; i < rank; ++i) {
+      strideFactor = 1;
+      for (intptr_t j = i; j < rank; ++j) {
+        strideFactor *= mlirShapedTypeGetDimSize(shapedType, j);
+      }
+      strides.push_back(sizeof(Type) * strideFactor);
+    }
+    strides.push_back(sizeof(Type));
+    return py::buffer_info(data, sizeof(Type),
+                           py::format_descriptor<Type>::format(), rank, shape,
+                           strides, /*readonly=*/true);
   }
 }; // namespace
 
