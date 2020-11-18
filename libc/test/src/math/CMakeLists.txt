@@ -413,6 +413,48 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ldexp_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexp_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexp
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexpf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexpf_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexpf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexpl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexpl_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexpl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   logb_test
   SUITE
     libc_math_unittests
