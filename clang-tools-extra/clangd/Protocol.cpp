@@ -1209,6 +1209,58 @@ bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R,
   return fromJSON(Params, Base, P);
 }
 
+llvm::json::Value toJSON(SymbolTag Tag) {
+  return llvm::json::Value{static_cast<int>(Tag)};
+}
+
+llvm::json::Value toJSON(const CallHierarchyItem &I) {
+  llvm::json::Object Result{{"name", I.name},
+                            {"kind", static_cast<int>(I.kind)},
+                            {"range", I.range},
+                            {"selectionRange", I.selectionRange},
+                            {"uri", I.uri}};
+  if (!I.tags.empty())
+    Result["tags"] = I.tags;
+  if (!I.detail.empty())
+    Result["detail"] = I.detail;
+  if (!I.data.empty())
+    Result["data"] = I.data;
+  return std::move(Result);
+}
+
+bool fromJSON(const llvm::json::Value &Params, CallHierarchyItem &I,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+
+  // Populate the required fields only. We don't care about the
+  // optional fields `Tags` and `Detail` for the purpose of
+  // client --> server communication.
+  return O && O.map("name", I.name) && O.map("kind", I.kind) &&
+         O.map("uri", I.uri) && O.map("range", I.range) &&
+         O.map("selectionRange", I.selectionRange) &&
+         O.mapOptional("data", I.data);
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              CallHierarchyIncomingCallsParams &C, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O.map("item", C.item);
+}
+
+llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
+  return llvm::json::Object{{"from", C.from}, {"fromRanges", C.fromRanges}};
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              CallHierarchyOutgoingCallsParams &C, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O.map("item", C.item);
+}
+
+llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {
+  return llvm::json::Object{{"to", C.to}, {"fromRanges", C.fromRanges}};
+}
+
 static const char *toString(OffsetEncoding OE) {
   switch (OE) {
   case OffsetEncoding::UTF8:
