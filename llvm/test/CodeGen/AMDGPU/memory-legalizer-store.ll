@@ -321,9 +321,9 @@ entry:
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
 ; GFX10-NOT:     .amdhsa_memory_ordered 0
 define amdgpu_kernel void @nontemporal_private_0(
-    i32* %in, i32 addrspace(5)* %out) {
+    i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
-  %val = load i32, i32* %in, align 4
+  %val = load i32, i32 addrspace(1)* %in, align 4
   store i32 %val, i32 addrspace(5)* %out, !nontemporal !0
   ret void
 }
@@ -336,10 +336,10 @@ entry:
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
 ; GFX10-NOT:     .amdhsa_memory_ordered 0
 define amdgpu_kernel void @nontemporal_private_1(
-    i32* %in, i32 addrspace(5)* %out) {
+    i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val = load i32, i32* %in, align 4
+  %val = load i32, i32 addrspace(1)* %in, align 4
   %out.gep = getelementptr inbounds i32, i32 addrspace(5)* %out, i32 %tid
   store i32 %val, i32 addrspace(5)* %out.gep, !nontemporal !0
   ret void
@@ -354,9 +354,9 @@ entry:
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
 ; GFX10-NOT:     .amdhsa_memory_ordered 0
 define amdgpu_kernel void @nontemporal_global_0(
-    i32* %in, i32 addrspace(1)* %out) {
+    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
-  %val = load i32, i32* %in, align 4
+  %val = load i32, i32 addrspace(1)* %in, align 4
   store i32 %val, i32 addrspace(1)* %out, !nontemporal !0
   ret void
 }
@@ -370,10 +370,10 @@ entry:
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
 ; GFX10-NOT:     .amdhsa_memory_ordered 0
 define amdgpu_kernel void @nontemporal_global_1(
-    i32* %in, i32 addrspace(1)* %out) {
+    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val = load i32, i32* %in, align 4
+  %val = load i32, i32 addrspace(1)* %in, align 4
   %out.gep = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
   store i32 %val, i32 addrspace(1)* %out.gep, !nontemporal !0
   ret void
@@ -386,9 +386,9 @@ entry:
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
 ; GFX10-NOT:     .amdhsa_memory_ordered 0
 define amdgpu_kernel void @nontemporal_local_0(
-    i32* %in, i32 addrspace(3)* %out) {
+    i32 addrspace(1)* %in, i32 addrspace(3)* %out) {
 entry:
-  %val = load i32, i32* %in, align 4
+  %val = load i32, i32 addrspace(1)* %in, align 4
   store i32 %val, i32 addrspace(3)* %out, !nontemporal !0
   ret void
 }
@@ -400,10 +400,10 @@ entry:
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
 ; GFX10-NOT:     .amdhsa_memory_ordered 0
 define amdgpu_kernel void @nontemporal_local_1(
-    i32* %in, i32 addrspace(3)* %out) {
+    i32 addrspace(1)* %in, i32 addrspace(3)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val = load i32, i32* %in, align 4
+  %val = load i32, i32 addrspace(1)* %in, align 4
   %out.gep = getelementptr inbounds i32, i32 addrspace(3)* %out, i32 %tid
   store i32 %val, i32 addrspace(3)* %out.gep, !nontemporal !0
   ret void
