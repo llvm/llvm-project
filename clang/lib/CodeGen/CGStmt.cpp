@@ -2306,8 +2306,21 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinSize());
     } else {
-      ArgTypes.push_back(Dest.getAddress(*this).getType());
-      Args.push_back(Dest.getPointer(*this));
+      llvm::Type *DestAddrTy = Dest.getAddress(*this).getType();
+      llvm::Value *DestPtr = Dest.getPointer(*this);
+      // Matrix types in memory are represented by arrays, but accessed through
+      // vector pointers, with the alignment specified on the access operation.
+      // For inline assembly, update pointer arguments to use vector pointers.
+      // Otherwise there will be a mis-match if the matrix is also an
+      // input-argument which is represented as vector.
+      if (isa<MatrixType>(OutExpr->getType().getCanonicalType())) {
+        DestAddrTy = llvm::PointerType::get(
+            ConvertType(OutExpr->getType()),
+            cast<llvm::PointerType>(DestAddrTy)->getAddressSpace());
+        DestPtr = Builder.CreateBitCast(DestPtr, DestAddrTy);
+      }
+      ArgTypes.push_back(DestAddrTy);
+      Args.push_back(DestPtr);
       Constraints += "=*";
       Constraints += OutputConstraint;
       ReadOnly = ReadNone = false;
