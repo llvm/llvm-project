@@ -31,10 +31,11 @@ entry:
   ret void
 }
 
-define void @caller(float* nocapture %a, float* nocapture %b, float* nocapture readonly %c) #0 {
+define void @caller(float* nocapture %a, float* nocapture %b, float** nocapture readonly %c_ptr) #0 {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C:%.*]], align 4, !noalias !6
+; CHECK-NEXT:    [[C:%.*]] = load float*, float** [[C_PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !noalias !6
 ; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 5
 ; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I_I]], align 4, !alias.scope !12, !noalias !13
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 8
@@ -69,6 +70,7 @@ define void @caller(float* nocapture %a, float* nocapture %b, float* nocapture r
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %c = load float*, float** %c_ptr, !alias.scope !0
   call void @callee_with_metadata(float* %a, float* %b, float* %c), !noalias !0
   call void @callee_with_metadata(float* %b, float* %b, float* %a), !alias.scope !0
   call void @callee_without_metadata(float* %a, float* %b, float* %c), !noalias !0
