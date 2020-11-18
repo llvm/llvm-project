@@ -336,7 +336,7 @@ define void @test.not.uge.uge.nonconst(i8* %start, i8* %low, i8* %high, i64 %off
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[START_OFF_2:%.*]] = getelementptr inbounds i8, i8* [[START]], i64 [[OFF]]
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8* [[START_OFF_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[START_1:%.*]] = getelementptr inbounds i8, i8* [[START]], i64 1
@@ -344,7 +344,7 @@ define void @test.not.uge.uge.nonconst(i8* %start, i8* %low, i8* %high, i64 %off
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_OFF:%.*]] = getelementptr inbounds i8, i8* [[START]], i64 [[OFF]]
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp uge i8* [[START_OFF]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[F_0]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
