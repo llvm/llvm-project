@@ -28,12 +28,20 @@ class SwiftNSErrorTest(TestBase):
     def test_swift_nserror(self):
         """Tests that Swift displays NSError correctly"""
         self.build()
-        self.nserror_commands()
+        self.nserror_commands(check_userInfo=False)
+
+    @skipUnlessDarwin
+    @swiftTest
+    @expectedFailureAll(bugnumber="rdar://71549869")
+    def test_swift_nserror_fails(self):
+        """Tests that Swift displays NSError correctly"""
+        self.build()
+        self.nserror_commands(check_userInfo=True)
 
     def setUp(self):
         TestBase.setUp(self)
 
-    def nserror_commands(self):
+    def nserror_commands(self, check_userInfo=True):
         """Tests that Swift displays NSError correctly"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_source_regexp(
@@ -46,19 +54,26 @@ class SwiftNSErrorTest(TestBase):
             "thread list", STOPPED_DUE_TO_BREAKPOINT,
             substrs=['stopped', 'stop reason = breakpoint'])
 
+        substrs = [
+            '0 = " "',
+            '0 = "x+y"',
+            '1 = 0x',
+            'domain: "lldbrocks" - code: 3133079277 {',
+            'domain: "lldbrocks" - code: 0 {'
+        ]
+
+        if check_userInfo:
+            substrs.extend([
+                '_userInfo = 2 key/value pairs {',
+                    '[0] = {',
+                    '[1] = {',
+                        'key = "x"',
+                        'key = "y"',
+                        'value = 0',
+                        'value = 3',
+                        'value = 4'])
+
         self.expect(
             "frame variable -d run --ptr-depth=2",
             ordered=False,
-            substrs=[
-              '0 = " "',
-              '0 = "x+y"',
-              '1 = 0x', 'domain: "lldbrocks" - code: 3133079277 {',
-                        'domain: "lldbrocks" - code: 0 {',
-                '_userInfo = 2 key/value pairs {',
-                  '[0] = {',
-                  '[1] = {',
-                    'key = "x"',
-                    'key = "y"',
-                    'value = 0',
-                    'value = 3',
-                    'value = 4'])
+            substrs=substrs)
