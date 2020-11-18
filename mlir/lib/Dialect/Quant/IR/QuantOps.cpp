@@ -24,7 +24,7 @@ using namespace mlir::quant;
 using namespace mlir::quant::detail;
 
 void QuantizationDialect::initialize() {
-  addTypes<AnyQuantizedType, UniformQuantizedType,
+  addTypes<AnyQuantizedType, CalibratedQuantizedType, UniformQuantizedType,
            UniformQuantizedPerAxisType>();
   addOperations<
 #define GET_OP_LIST
