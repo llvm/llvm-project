@@ -360,7 +360,7 @@ public:
     return CodeAction::REFACTOR_KIND;
   }
   std::string title() const override {
-    return "Move function body to out-of-line.";
+    return "Move function body to out-of-line";
   }
 
   bool prepare(const Selection &Sel) override {
