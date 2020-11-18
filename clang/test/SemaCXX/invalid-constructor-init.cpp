@@ -2,7 +2,7 @@
 
 struct X {
   int Y;
-  constexpr X() // expected-error {{constexpr constructor never produces}}
+  constexpr X()
       : Y(foo()) {} // expected-error {{use of undeclared identifier 'foo'}}
 };
 // no crash on evaluating the constexpr ctor.
@@ -10,12 +10,12 @@ constexpr int Z = X().Y; // expected-error {{constexpr variable 'Z' must be init
 
 struct X2 {
   int Y = foo();    // expected-error {{use of undeclared identifier 'foo'}}
-  constexpr X2() {} // expected-error {{constexpr constructor never produces a constant expression}}
+  constexpr X2() {}
 };
 
 struct X3 {
   int Y;
-  constexpr X3() // expected-error {{constexpr constructor never produces}}
+  constexpr X3()
       : Y(({foo();})) {} // expected-error {{use of undeclared identifier 'foo'}}
 };
 
