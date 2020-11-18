@@ -182,13 +182,9 @@ func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 // CHECK:         %[[J:.*]]: !llvm.i64)
 func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr<float>
   %0 = load %mixed[%i, %j] : memref<42x?xf32>
@@ -207,13 +203,9 @@ func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 // CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr<float>
   %0 = load %dynamic[%i, %j] : memref<?x?xf32>
@@ -232,13 +224,9 @@ func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 // CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-// CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-// CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-// CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+// CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 // CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  [[C1:%.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
 // CHECK-NEXT:  [[C3:%.*]] = llvm.mlir.constant(3 : i32) : !llvm.i32
@@ -270,13 +258,9 @@ func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 // CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
   store %val, %dynamic[%i, %j] : memref<?x?xf32>
@@ -295,13 +279,9 @@ func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f
 // CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : !llvm.i64
-//  CHECK-NEXT:  %[[off0:.*]] = llvm.add %[[off]], %[[offI]] : !llvm.i64
-//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-//  CHECK-NEXT:  %[[offJ:.*]] = llvm.mul %[[J]], %[[st1]] : !llvm.i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[off0]], %[[offJ]] : !llvm.i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : !llvm.i64
 //  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : !llvm.ptr<float>
   store %val, %mixed[%i, %j] : memref<42x?xf32>
