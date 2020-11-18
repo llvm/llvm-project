@@ -245,6 +245,17 @@ static T extractMaskValue(T KeyPath) {
   return KeyPath & Value;
 }
 
+static void FixupInvocation(CompilerInvocation &Invocation) {
+  LangOptions &LangOpts = *Invocation.getLangOpts();
+  DiagnosticOptions &DiagOpts = Invocation.getDiagnosticOpts();
+  CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
+  CodeGenOpts.XRayInstrumentFunctions = LangOpts.XRayInstrument;
+  CodeGenOpts.XRayAlwaysEmitCustomEvents = LangOpts.XRayAlwaysEmitCustomEvents;
+  CodeGenOpts.XRayAlwaysEmitTypedEvents = LangOpts.XRayAlwaysEmitTypedEvents;
+
+  llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
+}
+
 //===----------------------------------------------------------------------===//
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
@@ -1275,16 +1286,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.InstrumentFunctionEntryBare =
       Args.hasArg(OPT_finstrument_function_entry_bare);
 
-  Opts.XRayInstrumentFunctions =
-      Args.hasArg(OPT_fxray_instrument);
-  Opts.XRayAlwaysEmitCustomEvents =
-      Args.hasArg(OPT_fxray_always_emit_customevents);
-  Opts.XRayAlwaysEmitTypedEvents =
-      Args.hasArg(OPT_fxray_always_emit_typedevents);
   Opts.XRayInstructionThreshold =
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
-  Opts.XRayIgnoreLoops = Args.hasArg(OPT_fxray_ignore_loops);
-  Opts.XRayOmitFunctionIndex = Args.hasArg(OPT_fno_xray_function_index);
   Opts.XRayTotalFunctionGroups =
       getLastArgIntValue(Args, OPT_fxray_function_groups, 1, Diags);
   Opts.XRaySelectedFunctionGroup =
@@ -3574,13 +3577,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                                       systemBlacklists.begin(),
                                       systemBlacklists.end());
 
-  // -fxray-instrument
-  Opts.XRayInstrument = Args.hasArg(OPT_fxray_instrument);
-  Opts.XRayAlwaysEmitCustomEvents =
-      Args.hasArg(OPT_fxray_always_emit_customevents);
-  Opts.XRayAlwaysEmitTypedEvents =
-      Args.hasArg(OPT_fxray_always_emit_typedevents);
-
   // -fxray-{always,never}-instrument= filenames.
   Opts.XRayAlwaysInstrumentFiles =
       Args.getAllArgValues(OPT_fxray_always_instrument);
@@ -3979,9 +3975,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   }
 
   Success &= Res.parseSimpleArgs(Args, Diags);
-
-  llvm::sys::Process::UseANSIEscapeCodes(
-      Res.DiagnosticOpts->UseANSIEscapeCodes);
+  FixupInvocation(Res);
 
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
