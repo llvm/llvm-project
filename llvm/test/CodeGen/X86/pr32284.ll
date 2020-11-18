@@ -9,12 +9,12 @@
 define void @foo() {
 ; X86-O0-LABEL: foo:
 ; X86-O0:       # %bb.0: # %entry
+; X86-O0-NEXT:    movzbl c, %ecx
+; X86-O0-NEXT:    xorl %eax, %eax
+; X86-O0-NEXT:    subl %ecx, %eax
+; X86-O0-NEXT:    movslq %eax, %rcx
 ; X86-O0-NEXT:    xorl %eax, %eax
 ; X86-O0-NEXT:    # kill: def $rax killed $eax
-; X86-O0-NEXT:    xorl %ecx, %ecx
-; X86-O0-NEXT:    movzbl c, %edx
-; X86-O0-NEXT:    subl %edx, %ecx
-; X86-O0-NEXT:    movslq %ecx, %rcx
 ; X86-O0-NEXT:    subq %rcx, %rax
 ; X86-O0-NEXT:    # kill: def $al killed $al killed $rax
 ; X86-O0-NEXT:    cmpb $0, %al
