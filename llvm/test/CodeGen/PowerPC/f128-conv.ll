@@ -50,6 +50,57 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
+define void @sdwConv2qp_01(fp128* nocapture %a, i128 %b) {
+; CHECK-LABEL: sdwConv2qp_01:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    mr r30, r3
+; CHECK-NEXT:    mr r3, r4
+; CHECK-NEXT:    mr r4, r5
+; CHECK-NEXT:    bl __floattitf
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    stxv v2, 0(r30)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: sdwConv2qp_01:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    std r0, 16(r1)
+; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    mr r30, r3
+; CHECK-P8-NEXT:    mr r3, r4
+; CHECK-P8-NEXT:    mr r4, r5
+; CHECK-P8-NEXT:    bl __floattitf
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    std r4, 8(r30)
+; CHECK-P8-NEXT:    std r3, 0(r30)
+; CHECK-P8-NEXT:    addi r1, r1, 48
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %conv = sitofp i128 %b to fp128
+  store fp128 %conv, fp128* %a, align 16
+  ret void
+
+}
+
+; Function Attrs: norecurse nounwind
 define void @sdwConv2qp_02(fp128* nocapture %a) {
 ; CHECK-LABEL: sdwConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
@@ -161,6 +212,57 @@ define void @udwConv2qp(fp128* nocapture %a, i64 %b) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = uitofp i64 %b to fp128
+  store fp128 %conv, fp128* %a, align 16
+  ret void
+
+}
+
+; Function Attrs: norecurse nounwind
+define void @udwConv2qp_01(fp128* nocapture %a, i128 %b) {
+; CHECK-LABEL: udwConv2qp_01:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    mr r30, r3
+; CHECK-NEXT:    mr r3, r4
+; CHECK-NEXT:    mr r4, r5
+; CHECK-NEXT:    bl __floatuntitf
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    stxv v2, 0(r30)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: udwConv2qp_01:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    std r0, 16(r1)
+; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    mr r30, r3
+; CHECK-P8-NEXT:    mr r3, r4
+; CHECK-P8-NEXT:    mr r4, r5
+; CHECK-P8-NEXT:    bl __floatuntitf
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    std r4, 8(r30)
+; CHECK-P8-NEXT:    std r3, 0(r30)
+; CHECK-P8-NEXT:    addi r1, r1, 48
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %conv = uitofp i128 %b to fp128
   store fp128 %conv, fp128* %a, align 16
   ret void
 
@@ -1955,3 +2057,82 @@ entry:
   store fp128 %conv1, fp128* %res, align 16
   ret void
 }
+
+; Function Attrs: norecurse nounwind readonly
+define i128 @qpConv2i128(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qpConv2i128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    bl __fixtfti
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: qpConv2i128:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    std r0, 16(r1)
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    ld r5, 0(r3)
+; CHECK-P8-NEXT:    ld r4, 8(r3)
+; CHECK-P8-NEXT:    mr r3, r5
+; CHECK-P8-NEXT:    bl __fixtfti
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %conv = fptosi fp128 %0 to i128
+  ret i128 %conv
+}
+
+; Function Attrs: norecurse nounwind readonly
+define i128 @qpConv2ui128(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qpConv2ui128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    bl __fixunstfti
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: qpConv2ui128:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    std r0, 16(r1)
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    ld r5, 0(r3)
+; CHECK-P8-NEXT:    ld r4, 8(r3)
+; CHECK-P8-NEXT:    mr r3, r5
+; CHECK-P8-NEXT:    bl __fixunstfti
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %conv = fptoui fp128 %0 to i128
+  ret i128 %conv
+}
+
