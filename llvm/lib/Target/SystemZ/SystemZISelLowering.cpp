@@ -164,6 +164,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
        ++I) {
     MVT VT = MVT::SimpleValueType(I);
     if (isTypeLegal(VT)) {
+      setOperationAction(ISD::ABS, VT, Legal);
+
       // Expand individual DIV and REMs into DIVREMs.
       setOperationAction(ISD::SDIV, VT, Expand);
       setOperationAction(ISD::UDIV, VT, Expand);
@@ -358,6 +360,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SUB, VT, Legal);
       if (VT != MVT::v2i64)
         setOperationAction(ISD::MUL, VT, Legal);
+      setOperationAction(ISD::ABS, VT, Legal);
       setOperationAction(ISD::AND, VT, Legal);
       setOperationAction(ISD::OR, VT, Legal);
       setOperationAction(ISD::XOR, VT, Legal);
@@ -2960,7 +2963,7 @@ static bool isAbsolute(SDValue CmpOp, SDValue Pos, SDValue Neg) {
 // Return the absolute or negative absolute of Op; IsNegative decides which.
 static SDValue getAbsolute(SelectionDAG &DAG, const SDLoc &DL, SDValue Op,
                            bool IsNegative) {
-  Op = DAG.getNode(SystemZISD::IABS, DL, Op.getValueType(), Op);
+  Op = DAG.getNode(ISD::ABS, DL, Op.getValueType(), Op);
   if (IsNegative)
     Op = DAG.getNode(ISD::SUB, DL, Op.getValueType(),
                      DAG.getConstant(0, DL, Op.getValueType()), Op);
@@ -5559,7 +5562,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(TLS_LDCALL);
     OPCODE(PCREL_WRAPPER);
     OPCODE(PCREL_OFFSET);
-    OPCODE(IABS);
     OPCODE(ICMP);
     OPCODE(FCMP);
     OPCODE(STRICT_FCMP);
