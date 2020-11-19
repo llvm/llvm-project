@@ -8,6 +8,7 @@
 
 #include "TraceIntelPT.h"
 
+#include "CommandObjectTraceStartIntelPT.h"
 #include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
@@ -21,10 +22,14 @@ using namespace llvm;
 
 LLDB_PLUGIN_DEFINE(TraceIntelPT)
 
+CommandObjectSP GetStartCommand(CommandInterpreter &interpreter) {
+  return CommandObjectSP(new CommandObjectTraceStartIntelPT(interpreter));
+}
+
 void TraceIntelPT::Initialize() {
-  PluginManager::RegisterPlugin(GetPluginNameStatic(), "Intel Processor Trace",
-                                CreateInstance,
-                                TraceIntelPTSessionFileParser::GetSchema());
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), "Intel Processor Trace", CreateInstance,
+      TraceIntelPTSessionFileParser::GetSchema(), GetStartCommand);
 }
 
 void TraceIntelPT::Terminate() {
