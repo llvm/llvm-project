@@ -70,6 +70,11 @@ bool VETargetLowering::CanLowerReturn(
   return CCInfo.CheckReturn(Outs, RetCC);
 }
 
+static const MVT AllVectorVTs[] = {MVT::v256i32, MVT::v512i32, MVT::v256i64,
+                                   MVT::v256f32, MVT::v512f32, MVT::v256f64};
+
+static const MVT AllMaskVTs[] = {MVT::v256i1, MVT::v512i1};
+
 void VETargetLowering::initRegisterClasses() {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &VE::I32RegClass);
@@ -79,46 +84,10 @@ void VETargetLowering::initRegisterClasses() {
   addRegisterClass(MVT::f128, &VE::F128RegClass);
 
   if (Subtarget->enableVPU()) {
-    addRegisterClass(MVT::v2i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v4i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v8i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v16i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v32i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v64i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v128i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v256i32, &VE::V64RegClass);
-    addRegisterClass(MVT::v512i32, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v2i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v4i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v8i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v16i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v32i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v64i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v128i64, &VE::V64RegClass);
-    addRegisterClass(MVT::v256i64, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v2f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v4f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v8f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v16f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v32f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v64f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v128f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v256f32, &VE::V64RegClass);
-    addRegisterClass(MVT::v512f32, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v2f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v4f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v8f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v16f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v32f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v64f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v128f64, &VE::V64RegClass);
-    addRegisterClass(MVT::v256f64, &VE::V64RegClass);
-
-    addRegisterClass(MVT::v256i1, &VE::VMRegClass);
-    addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+    for (MVT VecVT : AllVectorVTs)
+      addRegisterClass(VecVT, &VE::V64RegClass);
+    for (MVT MaskVT : AllMaskVTs)
+      addRegisterClass(MaskVT, &VE::VMRegClass);
   }
 }
 
@@ -285,7 +254,8 @@ void VETargetLowering::initSPUActions() {
 }
 
 void VETargetLowering::initVPUActions() {
-  // TODO upstream vector isel
+  for (MVT LegalVecVT : AllVectorVTs)
+    setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
 }
 
 SDValue
@@ -898,6 +868,7 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(GETTLSADDR)
     TARGET_NODE_CASE(MEMBARRIER)
     TARGET_NODE_CASE(CALL)
+    TARGET_NODE_CASE(VEC_BROADCAST)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(GLOBAL_BASE_REG)
   }
@@ -1403,6 +1374,32 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
+static SDValue getSplatValue(SDNode *N) {
+  if (auto *BuildVec = dyn_cast<BuildVectorSDNode>(N)) {
+    return BuildVec->getSplatValue();
+  }
+  return SDValue();
+}
+
+SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  unsigned NumEls = Op.getValueType().getVectorNumElements();
+  MVT ElemVT = Op.getSimpleValueType().getVectorElementType();
+
+  if (SDValue ScalarV = getSplatValue(Op.getNode())) {
+    // lower to VEC_BROADCAST
+    MVT LegalResVT = MVT::getVectorVT(ElemVT, 256);
+
+    auto AVL = DAG.getConstant(NumEls, DL, MVT::i32);
+    return DAG.getNode(VEISD::VEC_BROADCAST, DL, LegalResVT, Op.getOperand(0),
+                       AVL);
+  }
+
+  // Expand
+  return SDValue();
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
@@ -1423,6 +1420,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerJumpTable(Op, DAG);
   case ISD::LOAD:
     return lowerLOAD(Op, DAG);
+  case ISD::BUILD_VECTOR:
+    return lowerBUILD_VECTOR(Op, DAG);
   case ISD::STORE:
     return lowerSTORE(Op, DAG);
   case ISD::VASTART:
