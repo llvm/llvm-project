@@ -216,7 +216,7 @@ R803 entity-decl ->
        function-name [* char-length]
 R804 object-name -> name
 R805 initialization -> = constant-expr | => null-init | => initial-data-target
-R806 null-init -> function-reference
+R806 null-init -> function-reference     {constrained to be NULL()}
 R807 access-spec -> PUBLIC | PRIVATE
 R808 language-binding-spec ->
        BIND ( C [, NAME = scalar-default-char-constant-expr] )

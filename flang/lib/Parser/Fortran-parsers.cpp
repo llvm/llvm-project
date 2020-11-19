@@ -644,9 +644,8 @@ constexpr auto objectName{name};
 TYPE_PARSER(construct<EntityDecl>(objectName, maybe(arraySpec),
     maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
 
-// R806 null-init -> function-reference
-// TODO: confirm in semantics that NULL still intrinsic in this scope
-TYPE_PARSER(construct<NullInit>("NULL ( )"_tok) / !"("_tok)
+// R806 null-init -> function-reference   ... which must resolve to NULL()
+TYPE_PARSER(lookAhead(name / "( )") >> construct<NullInit>(expr))
 
 // R807 access-spec -> PUBLIC | PRIVATE
 TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
@@ -827,7 +826,11 @@ TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
 //        signed-int-literal-constant | signed-real-literal-constant |
-//        null-init | initial-data-target | structure-constructor
+//        null-init | initial-data-target |
+//        constant-structure-constructor
+// null-init and a structure-constructor without parameters or components
+// are syntactically ambiguous in DATA, so "x()" is misparsed into a
+// null-init then fixed up later in expression semantics.
 // TODO: Some structure constructors can be misrecognized as array
 // references into constant subobjects.
 TYPE_PARSER(sourced(first(
