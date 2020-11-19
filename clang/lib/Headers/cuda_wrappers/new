@@ -33,66 +33,76 @@
 #define CUDA_NOEXCEPT
 #endif
 
+#pragma push_macro("__DEVICE__")
+#if defined __device__
+#define __DEVICE__ __device__
+#else
+// <new> has been included too early from the standard libc++ headers and the
+// standard CUDA macros are not available yet. We have to define our own.
+#define __DEVICE__ __attribute__((device))
+#endif
+
 // Device overrides for non-placement new and delete.
-__device__ inline void *operator new(__SIZE_TYPE__ size) {
+__DEVICE__ inline void *operator new(__SIZE_TYPE__ size) {
   if (size == 0) {
     size = 1;
   }
   return ::malloc(size);
 }
-__device__ inline void *operator new(__SIZE_TYPE__ size,
+__DEVICE__ inline void *operator new(__SIZE_TYPE__ size,
                                      const std::nothrow_t &) CUDA_NOEXCEPT {
   return ::operator new(size);
 }
 
-__device__ inline void *operator new[](__SIZE_TYPE__ size) {
+__DEVICE__ inline void *operator new[](__SIZE_TYPE__ size) {
   return ::operator new(size);
 }
-__device__ inline void *operator new[](__SIZE_TYPE__ size,
+__DEVICE__ inline void *operator new[](__SIZE_TYPE__ size,
                                        const std::nothrow_t &) {
   return ::operator new(size);
 }
 
-__device__ inline void operator delete(void* ptr) CUDA_NOEXCEPT {
+__DEVICE__ inline void operator delete(void* ptr) CUDA_NOEXCEPT {
   if (ptr) {
     ::free(ptr);
   }
 }
-__device__ inline void operator delete(void *ptr,
+__DEVICE__ inline void operator delete(void *ptr,
                                        const std::nothrow_t &) CUDA_NOEXCEPT {
   ::operator delete(ptr);
 }
 
-__device__ inline void operator delete[](void* ptr) CUDA_NOEXCEPT {
+__DEVICE__ inline void operator delete[](void* ptr) CUDA_NOEXCEPT {
   ::operator delete(ptr);
 }
-__device__ inline void operator delete[](void *ptr,
+__DEVICE__ inline void operator delete[](void *ptr,
                                          const std::nothrow_t &) CUDA_NOEXCEPT {
   ::operator delete(ptr);
 }
 
 // Sized delete, C++14 only.
 #if __cplusplus >= 201402L
-__device__ inline void operator delete(void *ptr,
+__DEVICE__ inline void operator delete(void *ptr,
                                        __SIZE_TYPE__ size) CUDA_NOEXCEPT {
   ::operator delete(ptr);
 }
-__device__ inline void operator delete[](void *ptr,
+__DEVICE__ inline void operator delete[](void *ptr,
                                          __SIZE_TYPE__ size) CUDA_NOEXCEPT {
   ::operator delete(ptr);
 }
 #endif
 
 // Device overrides for placement new and delete.
-__device__ inline void *operator new(__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
+__DEVICE__ inline void *operator new(__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
   return __ptr;
 }
-__device__ inline void *operator new[](__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
+__DEVICE__ inline void *operator new[](__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
   return __ptr;
 }
-__device__ inline void operator delete(void *, void *) CUDA_NOEXCEPT {}
-__device__ inline void operator delete[](void *, void *) CUDA_NOEXCEPT {}
+__DEVICE__ inline void operator delete(void *, void *) CUDA_NOEXCEPT {}
+__DEVICE__ inline void operator delete[](void *, void *) CUDA_NOEXCEPT {}
 
+#pragma pop_macro("__DEVICE__")
 #pragma pop_macro("CUDA_NOEXCEPT")
 
 #endif // include guard
