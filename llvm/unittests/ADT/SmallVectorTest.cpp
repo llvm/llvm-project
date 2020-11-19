@@ -252,7 +252,9 @@ TYPED_TEST(SmallVectorTest, PushPopTest) {
   this->theVector.push_back(Constructable(2));
   this->assertValuesInOrder(this->theVector, 2u, 1, 2);
 
-  // Insert at beginning
+  // Insert at beginning. Reserve space to avoid reference invalidation from
+  // this->theVector[1].
+  this->theVector.reserve(this->theVector.size() + 1);
   this->theVector.insert(this->theVector.begin(), this->theVector[1]);
   this->assertValuesInOrder(this->theVector, 3u, 2, 1, 2);
 
@@ -997,6 +999,200 @@ TEST(SmallVectorTest, InitializerList) {
   EXPECT_TRUE(makeArrayRef(V2).equals({4, 3, 2}));
   V2.insert(V2.begin() + 1, 5);
   EXPECT_TRUE(makeArrayRef(V2).equals({4, 5, 3, 2}));
+}
+
+template <class VectorT>
+class SmallVectorReferenceInvalidationTest : public SmallVectorTestBase {
+protected:
+  const char *AssertionMessage =
+      "Attempting to reference an element of the vector in an operation \" "
+      "\"that invalidates it";
+
+  VectorT V;
+
+  template <typename T, unsigned N>
+  static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
+    return N;
+  }
+
+  void SetUp() override {
+    SmallVectorTestBase::SetUp();
+
+    // Fill up the small size so that insertions move the elements.
+    V.append({0, 0, 0});
+  }
+};
+
+// Test one type that's trivially copyable (int) and one that isn't
+// (Constructable) since reference invalidation may be fixed differently for
+// each.
+using SmallVectorReferenceInvalidationTestTypes =
+    ::testing::Types<SmallVector<int, 3>, SmallVector<Constructable, 3>>;
+
+TYPED_TEST_CASE(SmallVectorReferenceInvalidationTest,
+                SmallVectorReferenceInvalidationTestTypes);
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBack) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.push_back(V.back()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBackMoved) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.push_back(std::move(V.back())), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, Resize) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.resize(2, V.back()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, Append) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.append(1, V.back()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, AppendRange) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.append(V.begin(), V.begin() + 1), this->AssertionMessage);
+
+  ASSERT_EQ(3u, this->NumBuiltinElts(V));
+  ASSERT_EQ(3u, V.size());
+  V.pop_back();
+  ASSERT_EQ(2u, V.size());
+
+  // Confirm this checks for growth when there's more than one element
+  // appended.
+  EXPECT_DEATH(V.append(V.begin(), V.end()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, Assign) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  // Regardless of capacity, assign should never reference an internal element.
+  EXPECT_DEATH(V.assign(1, V.back()), this->AssertionMessage);
+  EXPECT_DEATH(V.assign(this->NumBuiltinElts(V), V.back()),
+               this->AssertionMessage);
+  EXPECT_DEATH(V.assign(this->NumBuiltinElts(V) + 1, V.back()),
+               this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, AssignRange) {
+  auto &V = this->V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.assign(V.begin(), V.end()), this->AssertionMessage);
+  EXPECT_DEATH(V.assign(V.begin(), V.end() - 1), this->AssertionMessage);
+#endif
+  V.assign(V.begin(), V.begin());
+  EXPECT_TRUE(V.empty());
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, Insert) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.insert(V.begin(), V.back()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertMoved) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.insert(V.begin(), std::move(V.back())),
+               this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertN) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.insert(V.begin(), 2, V.back()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertRange) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.insert(V.begin(), V.begin(), V.begin() + 1),
+               this->AssertionMessage);
+
+  ASSERT_EQ(3u, this->NumBuiltinElts(V));
+  ASSERT_EQ(3u, V.size());
+  V.pop_back();
+  ASSERT_EQ(2u, V.size());
+
+  // Confirm this checks for growth when there's more than one element
+  // inserted.
+  EXPECT_DEATH(V.insert(V.begin(), V.begin(), V.end()), this->AssertionMessage);
+#endif
+}
+
+TYPED_TEST(SmallVectorReferenceInvalidationTest, EmplaceBack) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.emplace_back(V.back()), this->AssertionMessage);
+#endif
+}
+
+template <class VectorT>
+class SmallVectorInternalReferenceInvalidationTest
+    : public SmallVectorTestBase {
+protected:
+  const char *AssertionMessage =
+      "Attempting to reference an element of the vector in an operation \" "
+      "\"that invalidates it";
+
+  VectorT V;
+
+  template <typename T, unsigned N>
+  static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
+    return N;
+  }
+
+  void SetUp() override {
+    SmallVectorTestBase::SetUp();
+
+    // Fill up the small size so that insertions move the elements.
+    V.push_back(std::make_pair(0, 0));
+  }
+};
+
+// Test pairs of the same types from SmallVectorReferenceInvalidationTestTypes.
+using SmallVectorInternalReferenceInvalidationTestTypes =
+    ::testing::Types<SmallVector<std::pair<int, int>, 1>,
+                     SmallVector<std::pair<Constructable, Constructable>, 1>>;
+
+TYPED_TEST_CASE(SmallVectorInternalReferenceInvalidationTest,
+                SmallVectorInternalReferenceInvalidationTestTypes);
+
+TYPED_TEST(SmallVectorInternalReferenceInvalidationTest, EmplaceBack) {
+  auto &V = this->V;
+  (void)V;
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(V.emplace_back(V.back().first, 0), this->AssertionMessage);
+  EXPECT_DEATH(V.emplace_back(0, V.back().second), this->AssertionMessage);
+#endif
 }
 
 } // end namespace

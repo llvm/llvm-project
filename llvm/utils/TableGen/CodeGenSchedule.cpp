@@ -1540,6 +1540,7 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
   if (SchedRW.IsVariadic) {
     unsigned OperIdx = RWSequences.size()-1;
     // Make N-1 copies of this transition's last sequence.
+    RWSequences.reserve(RWSequences.size() + SelectedRWs.size() - 1);
     RWSequences.insert(RWSequences.end(), SelectedRWs.size() - 1,
                        RWSequences[OperIdx]);
     // Push each of the N elements of the SelectedRWs onto a copy of the last
@@ -1625,6 +1626,7 @@ void PredTransitions::substituteVariantOperand(
       //    any transition with compatible CPU ID.
       // In such case we create new empty transition with zero (AnyCPU)
       // index.
+      TransVec.reserve(TransVec.size() + 1);
       TransVec.emplace_back(TransVec[StartIdx].PredTerm);
       TransVec.back().ReadSequences.emplace_back();
       CollectAndAddVariants(TransVec.size() - 1, SchedRW);
