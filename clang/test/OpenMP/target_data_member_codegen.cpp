@@ -33,7 +33,7 @@ struct S {
 
 // CHECK-LABEL: @main
 int main() {
-  // CHECK: call i32 @__tgt_target_mapper(i64 -1, i8* @.{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPTYPES]], i32 0, i32 0), i8** null, i8** null)
+  // CHECK: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPTYPES]], i32 0, i32 0), i8** null, i8** null)
     S s;
 #pragma omp target map(s.p)
     { }

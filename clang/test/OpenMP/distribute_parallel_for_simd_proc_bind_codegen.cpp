@@ -49,9 +49,9 @@ int main() {
   return tmain<int>();
 }
 
-// CHECK: call {{.*}}@__tgt_target_teams_mapper({{.+}})
+// CHECK: call {{.*}}@__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}})
 // CHECK: call void [[OFFL1:@.+]]()
-// CHECK: call {{.*}}@__tgt_target_teams_mapper({{.+}})
+// CHECK: call {{.*}}@__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}})
 // CHECK: call void [[OFFL2:@.+]]()
 // CHECK: [[CALL_RET:%.+]] = call{{.+}} i32 [[TMAIN:@.+]]()
 // CHECK: ret i32 [[CALL_RET]]
@@ -81,7 +81,7 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define{{.+}} [[TMAIN]]()
-// CHECK: call {{.*}}@__tgt_target_teams_mapper({{.+}})
+// CHECK: call {{.*}}@__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}})
 // CHECK: call void [[OFFL3:@.+]]()
 
 // CHECK: define{{.+}} [[OFFL3]]()
