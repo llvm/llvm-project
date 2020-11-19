@@ -237,6 +237,7 @@ public:
   MaybeExpr Analyze(const parser::SignedComplexLiteralConstant &);
   MaybeExpr Analyze(const parser::StructureConstructor &);
   MaybeExpr Analyze(const parser::InitialDataTarget &);
+  MaybeExpr Analyze(const parser::NullInit &);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -255,7 +256,6 @@ private:
   MaybeExpr Analyze(const parser::HollerithLiteralConstant &);
   MaybeExpr Analyze(const parser::BOZLiteralConstant &);
   MaybeExpr Analyze(const parser::NamedConstant &);
-  MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::DataStmtConstant &);
   MaybeExpr Analyze(const parser::Substring &);
   MaybeExpr Analyze(const parser::ArrayElement &);
