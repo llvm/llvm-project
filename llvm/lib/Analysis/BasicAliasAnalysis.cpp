@@ -875,8 +875,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
       // If this is a no-capture pointer argument, see if we can tell that it
       // is impossible to alias the pointer we're checking.
-      AliasResult AR = getBestAAResults().alias(MemoryLocation(*CI),
-                                                MemoryLocation(Object), AAQI);
+      AliasResult AR = getBestAAResults().alias(
+          MemoryLocation(*CI, LocationSize::unknown()),
+          MemoryLocation(Object, LocationSize::unknown()), AAQI);
       if (AR != MustAlias)
         IsMustAlias = false;
       // Operand doesn't alias 'Object', continue looking for other aliases
@@ -922,7 +923,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   if (isMallocOrCallocLikeFn(Call, &TLI)) {
     // Be conservative if the accessed pointer may alias the allocation -
     // fallback to the generic handling below.
-    if (getBestAAResults().alias(MemoryLocation(Call), Loc, AAQI) == NoAlias)
+    if (getBestAAResults().alias(MemoryLocation(Call, LocationSize::unknown()),
+                                 Loc, AAQI) == NoAlias)
       return ModRefInfo::NoModRef;
   }
 
