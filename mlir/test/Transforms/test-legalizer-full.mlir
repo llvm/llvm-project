@@ -84,3 +84,18 @@ func @test_undo_region_inline() {
 
   "test.return"() : () -> ()
 }
+
+// -----
+
+// Test that multiple block erases can be properly undone.
+func @test_undo_block_erase() {
+   // expected-error@+1 {{failed to legalize operation 'test.region'}}
+  "test.region"() ({
+    ^bb1(%i0: i64):
+       br ^bb2(%i0 : i64)
+    ^bb2(%i1: i64):
+      "test.invalid"(%i1) : (i64) -> ()
+  }) {legalizer.should_clone, legalizer.erase_old_blocks} : () -> ()
+
+  "test.return"() : () -> ()
+}
