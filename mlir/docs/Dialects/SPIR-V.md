@@ -92,7 +92,7 @@ The SPIR-V dialect adopts the following conventions for IR:
     (de)serialization.
 *   Ops with `mlir.snake_case` names are those that have no corresponding
     instructions (or concepts) in the binary format. They are introduced to
-    satisfy MLIR structural requirements. For example, `spv.mlir.module_end` and
+    satisfy MLIR structural requirements. For example, `spv.mlir.endmodule` and
     `spv.mlir.merge`. They map to no instructions during (de)serialization.
 
 (TODO: consider merging the last two cases and adopting `spv.mlir.` prefix for
