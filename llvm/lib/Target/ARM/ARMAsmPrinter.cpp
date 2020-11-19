@@ -2192,10 +2192,33 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInstISB);
     return;
   }
+  case ARM::t2SpeculationBarrierISBDSBEndBB: {
+    // Print DSB SYS + ISB
+    MCInst TmpInstDSB;
+    TmpInstDSB.setOpcode(ARM::t2DSB);
+    TmpInstDSB.addOperand(MCOperand::createImm(0xf));
+    TmpInstDSB.addOperand(MCOperand::createImm(ARMCC::AL));
+    TmpInstDSB.addOperand(MCOperand::createReg(0));
+    EmitToStreamer(*OutStreamer, TmpInstDSB);
+    MCInst TmpInstISB;
+    TmpInstISB.setOpcode(ARM::t2ISB);
+    TmpInstISB.addOperand(MCOperand::createImm(0xf));
+    TmpInstISB.addOperand(MCOperand::createImm(ARMCC::AL));
+    TmpInstISB.addOperand(MCOperand::createReg(0));
+    EmitToStreamer(*OutStreamer, TmpInstISB);
+    return;
+  }
   case ARM::SpeculationBarrierSBEndBB: {
     // Print SB
     MCInst TmpInstSB;
     TmpInstSB.setOpcode(ARM::SB);
+    EmitToStreamer(*OutStreamer, TmpInstSB);
+    return;
+  }
+  case ARM::t2SpeculationBarrierSBEndBB: {
+    // Print SB
+    MCInst TmpInstSB;
+    TmpInstSB.setOpcode(ARM::t2SB);
     EmitToStreamer(*OutStreamer, TmpInstSB);
     return;
   }
