@@ -107,6 +107,11 @@ static cl::opt<std::string> PipelineStartEPPipeline(
     cl::desc("A textual description of the module pass pipeline inserted at "
              "the PipelineStart extension point into default pipelines"),
     cl::Hidden);
+static cl::opt<std::string> PipelineEarlySimplificationEPPipeline(
+    "passes-ep-pipeline-early-simplification",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the EarlySimplification extension point into default pipelines"),
+    cl::Hidden);
 static cl::opt<std::string> OptimizerLastEPPipeline(
     "passes-ep-optimizer-last",
     cl::desc("A textual description of the module pass pipeline inserted at "
@@ -194,6 +199,13 @@ static void registerEPCallbacks(PassBuilder &PB) {
         [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
           ExitOnError Err("Unable to parse PipelineStartEP pipeline: ");
           Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, PipelineEarlySimplificationEPPipeline))
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
+          ExitOnError Err("Unable to parse EarlySimplification pipeline: ");
+          Err(PB.parsePassPipeline(PM, PipelineEarlySimplificationEPPipeline));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(

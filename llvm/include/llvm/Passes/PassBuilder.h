@@ -597,6 +597,15 @@ public:
     PipelineStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point.
+  ///
+  /// This extension point allows adding optimization right after passes that do
+  /// basic simplification of the input IR.
+  void registerPipelineEarlySimplificationEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    PipelineEarlySimplificationEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for a default optimizer pipeline extension point
   ///
   /// This extension point allows adding optimizations at the very end of the
@@ -729,6 +738,9 @@ private:
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      PipelineEarlySimplificationEPCallbacks;
+
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>
       ModuleAnalysisRegistrationCallbacks;
   SmallVector<std::function<bool(StringRef, ModulePassManager &,

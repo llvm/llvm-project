@@ -1032,6 +1032,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (Phase == ThinLTOPhase::PostLink)
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
 
+  for (auto &C : PipelineEarlySimplificationEPCallbacks)
+    C(MPM, Level);
+
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
@@ -1702,6 +1705,8 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
         /* IsCS */ false, PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
 
   for (auto &C : PipelineStartEPCallbacks)
+    C(MPM, Level);
+  for (auto &C : PipelineEarlySimplificationEPCallbacks)
     C(MPM, Level);
 
   // Build a minimal pipeline based on the semantics required by LLVM,
