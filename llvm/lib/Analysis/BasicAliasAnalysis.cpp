@@ -1050,8 +1050,7 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 
   // If we don't know the size of the accesses through both GEPs, we can't
   // determine whether the struct fields accessed can't alias.
-  if (MaybeV1Size == LocationSize::unknown() ||
-      MaybeV2Size == LocationSize::unknown())
+  if (!MaybeV1Size.hasValue() || !MaybeV2Size.hasValue())
     return MayAlias;
 
   const uint64_t V1Size = MaybeV1Size.getValue();
@@ -1185,7 +1184,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
       LocationSize MaybeObjectAccessSize) {
   // If the object access size is unknown, or the GEP isn't inbounds, bail.
-  if (MaybeObjectAccessSize == LocationSize::unknown() || !GEPOp->isInBounds())
+  if (!MaybeObjectAccessSize.hasValue() || !GEPOp->isInBounds())
     return false;
 
   const uint64_t ObjectAccessSize = MaybeObjectAccessSize.getValue();
@@ -1302,7 +1301,7 @@ AliasResult BasicAAResult::aliasGEP(
     // pointer, we know they cannot alias.
 
     // If both accesses are unknown size, we can't do anything useful here.
-    if (V1Size == LocationSize::unknown() && V2Size == LocationSize::unknown())
+    if (!V1Size.hasValue() && !V2Size.hasValue())
       return MayAlias;
 
     AliasResult R = aliasCheck(UnderlyingV1, LocationSize::unknown(),
@@ -1877,8 +1876,8 @@ bool BasicAAResult::constantOffsetHeuristic(
     const SmallVectorImpl<VariableGEPIndex> &VarIndices,
     LocationSize MaybeV1Size, LocationSize MaybeV2Size, const APInt &BaseOffset,
     AssumptionCache *AC, DominatorTree *DT) {
-  if (VarIndices.size() != 2 || MaybeV1Size == LocationSize::unknown() ||
-      MaybeV2Size == LocationSize::unknown())
+  if (VarIndices.size() != 2 || !MaybeV1Size.hasValue() ||
+      !MaybeV2Size.hasValue())
     return false;
 
   const uint64_t V1Size = MaybeV1Size.getValue();
