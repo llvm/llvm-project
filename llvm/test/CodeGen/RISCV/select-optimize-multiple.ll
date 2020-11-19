@@ -222,14 +222,13 @@ define double @cmovdouble(i1 %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw a4, 12(sp)
 ; RV32I-NEXT:    fld ft0, 8(sp)
 ; RV32I-NEXT:    sw a1, 8(sp)
-; RV32I-NEXT:    sw a2, 12(sp)
-; RV32I-NEXT:    fld ft1, 8(sp)
 ; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    bnez a0, .LBB5_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    fmv.d ft1, ft0
+; RV32I-NEXT:    sw a2, 12(sp)
+; RV32I-NEXT:    beqz a0, .LBB5_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    fld ft0, 8(sp)
 ; RV32I-NEXT:  .LBB5_2: # %entry
-; RV32I-NEXT:    fsd ft1, 8(sp)
+; RV32I-NEXT:    fsd ft0, 8(sp)
 ; RV32I-NEXT:    lw a0, 8(sp)
 ; RV32I-NEXT:    lw a1, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
