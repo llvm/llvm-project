@@ -7126,7 +7126,10 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS: {
     auto *FPCmp = dyn_cast<ConstrainedFPCmpIntrinsic>(&FPI);
-    Opers.push_back(DAG.getCondCode(getFCmpCondCode(FPCmp->getPredicate())));
+    ISD::CondCode Condition = getFCmpCondCode(FPCmp->getPredicate());
+    if (TM.Options.NoNaNsFPMath)
+      Condition = getFCmpCodeWithoutNaN(Condition);
+    Opers.push_back(DAG.getCondCode(Condition));
     break;
   }
   }
