@@ -17,12 +17,14 @@ body:             |
   ; GXN:   successors: %bb.1(0x80000000)
   ; GXN:   liveins: $vgpr0, $sgpr0_sgpr1
   ; GXN:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
-  ; GXN:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
   ; GXN:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $exec
+  ; GXN:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GXN:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $exec
   ; GXN: bb.1:
   ; GXN:   successors: %bb.2(0x80000000)
-  ; GXN: bb.2:
   ; GXN:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
+  ; GXN: bb.2:
+  ; GXN:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GXN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GXN:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GXN:   DS_WRITE_B32 [[DEF]], [[DEF1]], 0, 0, implicit $m0, implicit $exec :: (store 4, addrspace 3)

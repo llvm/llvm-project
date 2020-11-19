@@ -6,6 +6,8 @@ define amdgpu_ps float @simple_test_return_to_epilog(float %a) #0 {
   ; GCN-LABEL: name: simple_test_return_to_epilog
   ; GCN: bb.0.entry:
   ; GCN:   liveins: $vgpr0
+  ; GCN:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; GCN:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GCN:   SI_RETURN_TO_EPILOG killed $vgpr0
 entry:
   ret float %a
@@ -16,6 +18,8 @@ define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float
   ; GCN: bb.0.entry:
   ; GCN:   successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
   ; GCN:   liveins: $sgpr2, $vgpr0
+  ; GCN:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; GCN:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GCN:   S_CMP_LT_I32 killed renamable $sgpr2, 1, implicit-def $scc
   ; GCN:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN: bb.1.if:
@@ -42,6 +46,8 @@ define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a,
   ; GCN: bb.0.entry:
   ; GCN:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
   ; GCN:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
+  ; GCN:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; GCN:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GCN:   S_CMP_LT_I32 killed renamable $sgpr2, 1, implicit-def $scc
   ; GCN:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN: bb.1.if:
@@ -83,6 +89,8 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN: bb.0.entry:
   ; GCN:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
   ; GCN:   liveins: $vgpr0
+  ; GCN:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; GCN:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GCN:   renamable $vgpr1 = nofpexcept V_RCP_F32_e32 $vgpr0, implicit $mode, implicit $exec
   ; GCN:   nofpexcept V_CMP_NGT_F32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $mode, implicit $exec
   ; GCN:   $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec

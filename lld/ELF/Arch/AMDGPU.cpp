@@ -22,6 +22,10 @@ using namespace lld::elf;
 
 namespace {
 class AMDGPU final : public TargetInfo {
+private:
+  uint32_t calcEFlagsV3() const;
+  uint32_t calcEFlagsV4() const;
+
 public:
   AMDGPU();
   uint32_t calcEFlags() const override;
@@ -40,12 +44,27 @@ AMDGPU::AMDGPU() {
   symbolicRel = R_AMDGPU_ABS64;
 }
 
+static uint8_t getAbiVersion(InputFile *file) {
+  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_ident[EI_ABIVERSION];
+}
+
 static uint32_t getEFlags(InputFile *file) {
   return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_flags;
 }
 
-uint32_t AMDGPU::calcEFlags() const {
-  assert(!objectFiles.empty());
+static uint32_t getMach(InputFile *file) {
+  return getEFlags(file) & EF_AMDGPU_MACH;
+}
+
+static uint32_t getXnackV4(InputFile *file) {
+  return getEFlags(file) & EF_AMDGPU_FEATURE_XNACK_V4;
+}
+
+static uint32_t getSramEccV4(InputFile *file) {
+  return getEFlags(file) & EF_AMDGPU_FEATURE_SRAMECC_V4;
+}
+
+uint32_t AMDGPU::calcEFlagsV3() const {
   uint32_t ret = getEFlags(objectFiles[0]);
 
   // Verify that all input files have the same e_flags.
@@ -56,6 +75,62 @@ uint32_t AMDGPU::calcEFlags() const {
     return 0;
   }
   return ret;
+}
+
+uint32_t AMDGPU::calcEFlagsV4() const {
+  uint32_t retMach = getMach(objectFiles[0]);
+  uint32_t retXnack = getXnackV4(objectFiles[0]);
+  uint32_t retSramEcc = getSramEccV4(objectFiles[0]);
+
+  // Verify that all input files have compatible e_flags (same mach, all
+  // features in the same category are either ANY, ANY and ON, or ANY and OFF).
+  for (InputFile *f : makeArrayRef(objectFiles).slice(1)) {
+    if (retMach != getMach(f)) {
+      error("incompatible mach: " + toString(f));
+      return 0;
+    }
+
+    if ((retXnack == EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4) ||
+        (retXnack != EF_AMDGPU_FEATURE_XNACK_ANY_V4 &&
+            getXnackV4(f) != EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
+      if (retXnack != getXnackV4(f)) {
+        error("incompatible xnack: " + toString(f));
+        return 0;
+      }
+    } else {
+      if (retXnack == EF_AMDGPU_FEATURE_XNACK_ANY_V4) {
+        retXnack = getXnackV4(f);
+      }
+    }
+
+    if ((retSramEcc == EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4) ||
+        (retSramEcc != EF_AMDGPU_FEATURE_SRAMECC_ANY_V4 &&
+            getSramEccV4(f) != EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
+      if (retSramEcc != getSramEccV4(f)) {
+        error("incompatible sramecc: " + toString(f));
+        return 0;
+      }
+    } else {
+      if (retSramEcc == EF_AMDGPU_FEATURE_SRAMECC_ANY_V4) {
+        retSramEcc = getSramEccV4(f);
+      }
+    }
+  }
+
+  return retMach | retXnack | retSramEcc;
+}
+
+uint32_t AMDGPU::calcEFlags() const {
+  assert(!objectFiles.empty());
+  switch (getAbiVersion(objectFiles[0])) {
+  case ELFABIVERSION_AMDGPU_HSA_V2:
+  case ELFABIVERSION_AMDGPU_HSA_V3:
+    return calcEFlagsV3();
+  case ELFABIVERSION_AMDGPU_HSA_V4:
+    return calcEFlagsV4();
+  default:
+    llvm_unreachable("Unknown ABI Version");
+  }
 }
 
 void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {

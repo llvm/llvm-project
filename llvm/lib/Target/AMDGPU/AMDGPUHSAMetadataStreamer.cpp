@@ -18,8 +18,8 @@
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
@@ -231,8 +231,8 @@ MetadataStreamerV2::getHSADebugProps(const MachineFunction &MF,
 void MetadataStreamerV2::emitVersion() {
   auto &Version = HSAMetadata.mVersion;
 
-  Version.push_back(VersionMajor);
-  Version.push_back(VersionMinor);
+  Version.push_back(VersionMajorV2);
+  Version.push_back(VersionMinorV2);
 }
 
 void MetadataStreamerV2::emitPrintf(const Module &Mod) {
@@ -440,7 +440,8 @@ bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(getHSAMetadata());
 }
 
-void MetadataStreamerV2::begin(const Module &Mod) {
+void MetadataStreamerV2::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
 }
@@ -613,8 +614,8 @@ MetadataStreamerV3::getWorkGroupDimensions(MDNode *Node) const {
 
 void MetadataStreamerV3::emitVersion() {
   auto Version = HSAMetadataDoc->getArrayNode();
-  Version.push_back(Version.getDocument()->getNode(VersionMajor));
-  Version.push_back(Version.getDocument()->getNode(VersionMinor));
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV3));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV3));
   getRootMetadata("amdhsa.version") = Version;
 }
 
@@ -886,7 +887,8 @@ bool MetadataStreamerV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
-void MetadataStreamerV3::begin(const Module &Mod) {
+void MetadataStreamerV3::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
@@ -924,6 +926,30 @@ void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
   }
 
   Kernels.push_back(Kern);
+}
+
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV4
+//===----------------------------------------------------------------------===//
+
+void MetadataStreamerV4::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV4));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV4));
+  getRootMetadata("amdhsa.version") = Version;
+}
+
+void MetadataStreamerV4::emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID) {
+  getRootMetadata("amdhsa.target") =
+      HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
+}
+
+void MetadataStreamerV4::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
+  emitVersion();
+  emitTargetID(TargetID);
+  emitPrintf(Mod);
+  getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }
 
 } // end namespace HSAMD

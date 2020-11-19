@@ -15,9 +15,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
 #include "AMDGPU.h"
-#include "AMDKernelCodeT.h"
 #include "AMDGPUHSAMetadataStreamer.h"
+#include "AMDKernelCodeT.h"
 #include "SIProgramInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
@@ -54,6 +55,8 @@ private:
     int32_t getTotalNumSGPRs(const GCNSubtarget &ST) const;
     int32_t getTotalNumVGPRs(const GCNSubtarget &ST) const;
   };
+
+  void initializeTargetID(const Module &M);
 
   SIProgramInfo CurrentProgramInfo;
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;

@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX6 %s
 ; RUN: llc -regalloc=basic -march=amdgcn -mcpu=tonga -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX7 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX9-FLATSCR,FLATSCR %s
+; RUN: llc -march=amdgcn -mattr=-xnack -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX9-FLATSCR,FLATSCR %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX10-FLATSCR,FLATSCR %s
 ;
 ; There is something about Tonga that causes this test to spend a lot of time

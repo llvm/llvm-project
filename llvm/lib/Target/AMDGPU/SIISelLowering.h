@@ -137,6 +137,9 @@ private:
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTRAP_ENDPGM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTRAP_AMDHSA_QUEUE_PTR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTRAP_AMDHSA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const;
 
   SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;

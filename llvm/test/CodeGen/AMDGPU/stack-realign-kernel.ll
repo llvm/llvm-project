@@ -81,6 +81,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:     .amdhsa_next_free_vgpr 1
 ; GFX9-NEXT:     .amdhsa_next_free_sgpr 8
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
+; GFX9-NEXT:     .amdhsa_reserve_xnack_mask 1
 ; GFX9-NEXT:     .amdhsa_float_round_mode_32 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_16_64 0
 ; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 3
@@ -180,6 +181,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:     .amdhsa_next_free_vgpr 1
 ; GFX9-NEXT:     .amdhsa_next_free_sgpr 8
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
+; GFX9-NEXT:     .amdhsa_reserve_xnack_mask 1
 ; GFX9-NEXT:     .amdhsa_float_round_mode_32 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_16_64 0
 ; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 3
@@ -279,6 +281,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:     .amdhsa_next_free_vgpr 1
 ; GFX9-NEXT:     .amdhsa_next_free_sgpr 8
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
+; GFX9-NEXT:     .amdhsa_reserve_xnack_mask 1
 ; GFX9-NEXT:     .amdhsa_float_round_mode_32 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_16_64 0
 ; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 3

@@ -31,7 +31,7 @@ body:             |
     ; CHECK-LABEL: name: undef_identity_copy
     ; CHECK: renamable $vgpr40_vgpr41_vgpr42_vgpr43 = FLAT_LOAD_DWORDX4 undef renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
     ; CHECK: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead $scc
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
+    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95, implicit-def $scc
     ; CHECK: $sgpr4 = COPY $sgpr95
     ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @foo, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4
     ; CHECK: ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95

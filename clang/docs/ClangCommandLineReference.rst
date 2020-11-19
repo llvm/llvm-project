@@ -26,6 +26,14 @@ Add <dir> to search path for binaries and object files used implicitly
 
 Add directory to framework include search path
 
+.. option:: -Mallocatable=<arg>
+
+Select semantics for assignments to allocatables (F03 or F95)
+
+.. option:: -Minform=<arg>
+
+Set error level of messages to display
+
 .. option:: -ObjC
 
 Treat source input files as Objective-C inputs
@@ -324,6 +332,10 @@ Make the next included directory (-I or -F) an indexer header map
 
 Enforce targets of indirect branches and function returns
 
+.. option:: -menable-unsafe-fp-math
+
+Allow unsafe floating-point math optimizations which may decrease precision
+
 .. option:: -mharden-sls=<arg>
 
 Select straight-line speculation hardening scope
@@ -476,11 +488,15 @@ Only modify files with a filename contained in the provided directory path
 
 .. option:: --offload-arch=<arg>, --cuda-gpu-arch=<arg>, --no-offload-arch=<arg>
 
-CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID in the form of a device architecture followed by target ID features delimited by a colon. Each target ID feature is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sram-ecc-).  May be specified more than once.
+CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID in the form of a device architecture followed by target ID features delimited by a colon. Each target ID feature is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sramecc-).  May be specified more than once.
 
 .. option:: -p, --profile
 
 .. option:: -pagezero\_size<arg>
+
+.. option:: -parallel-jobs=<arg>
+
+Number of parallel jobs
 
 .. option:: -pg
 
@@ -1601,7 +1617,7 @@ Enable support for int128\_t type
 
 .. option:: -ffp-contract=<arg>
 
-Form fused FP ops (e.g. FMAs): fast (everywhere) \| on (according to FP\_CONTRACT pragma) \| off (never fuse). Default is 'fast' for CUDA/HIP and 'on' otherwise.
+Form fused FP ops (e.g. FMAs): fast (fuses across statements disregarding pragmas) \| on (only fuses in the same statement unless dictated by pragmas) \| off (never fuses) \| fast-honor-pragmas (fuses across statements unless diectated by pragmas). Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.
 
 .. option:: -ffp-exception-behavior=<arg>
 
@@ -1737,6 +1753,12 @@ Specify the maximum alignment to enforce on pointers lacking an explicit alignme
 
 Enable heap memory profiling
 
+.. program:: clang1
+.. option:: -fmemory-profile=<directory>
+.. program:: clang
+
+Enable heap memory profiling and dump results into <directory>
+
 .. option:: -fmerge-all-constants, -fno-merge-all-constants
 
 Allow merging of constants
@@ -1843,6 +1865,10 @@ Directly create compilation output files. This may lead to incorrect incremental
 
 .. program:: clang1
 .. option:: -fno\_pch-validate-input-files-content
+.. program:: clang
+
+.. program:: clang2
+.. option:: -fno\_prebuilt-implicit-modules
 .. program:: clang
 
 .. option:: -fnoxray-link-deps
@@ -1968,6 +1994,10 @@ Validate PCH input files based on content if mtime differs
 .. option:: -fplugin=<dsopath>
 
 Load the named plugin (dynamic shared object)
+
+.. option:: -fprebuilt-implicit-modules
+
+Look up implicit modules in the prebuilt module path
 
 .. option:: -fpreserve-as-comments, -fno-preserve-as-comments
 
@@ -2127,6 +2157,8 @@ Which overload candidates to show when overload resolution fails: best\|all; def
 char is signed
 
 .. option:: -fsigned-zeros, -fno-signed-zeros
+
+Allow optimizations that ignore the sign of floating point zeros
 
 .. option:: -fsized-deallocation, -fno-sized-deallocation
 
@@ -2323,6 +2355,22 @@ Generate verbose assembly output
 
 Enables dead virtual function elimination optimization. Requires -flto=full
 
+.. option:: -fvisibility-dllexport=<arg>
+
+The visibility for dllexport defintions \[-fvisibility-from-dllstorageclass\]
+
+.. option:: -fvisibility-externs-dllimport=<arg>
+
+The visibility for dllimport external declarations \[-fvisibility-from-dllstorageclass\]
+
+.. option:: -fvisibility-externs-nodllstorageclass=<arg>
+
+The visibility for external declarations without an explicit DLL dllstorageclass \[-fvisibility-from-dllstorageclass\]
+
+.. option:: -fvisibility-from-dllstorageclass, -fno-visibility-from-dllstorageclass
+
+Set the visiblity of symbols in the generated code from their DLL storage class
+
 .. option:: -fvisibility-global-new-delete-hidden
 
 Give global C++ operator new and delete declarations hidden visibility
@@ -2338,6 +2386,10 @@ When -fvisibility-inlines-hidden is enabled, static variables in inline C++ memb
 .. option:: -fvisibility-ms-compat
 
 Give global types 'default' visibility and global functions and variables 'hidden' visibility by default
+
+.. option:: -fvisibility-nodllstorageclass=<arg>
+
+The visibility for defintiions without an explicit DLL export class \[-fvisibility-from-dllstorageclass\]
 
 .. option:: -fvisibility=<arg>
 
@@ -2663,6 +2715,10 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
 
+.. option:: -mcode-object-version=<version>
+
+Specify code object ABI version. Defaults to 4. (AMDGPU only)
+
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2827,6 +2883,10 @@ Use software floating point
 
 .. option:: -mspeculative-load-hardening, -mno-speculative-load-hardening
 
+.. option:: -msram-ecc, -mno-sram-ecc
+
+Legacy option to specify SRAM ECC mode (AMDGPU only)
+
 .. option:: -mstack-alignment=<arg>
 
 Set the stack alignment
@@ -2959,13 +3019,9 @@ AMDGPU
 
 Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
 
-.. option:: -msram-ecc, -mno-sram-ecc
-
-Specify SRAM ECC mode (AMDGPU only)
-
 .. option:: -mxnack, -mno-xnack
 
-Specify XNACK mode (AMDGPU only)
+Legacy option to specify XNACK mode (AMDGPU only)
 
 ARM
 ---
@@ -3537,6 +3593,10 @@ a Fortran input.
 
 .. option:: -J<arg>
 
+.. option:: -byteswapio
+
+Swap byte-order for unformatted input/output
+
 .. option:: -cpp
 
 .. option:: -faggressive-function-elimination, -fno-aggressive-function-elimination
@@ -3545,9 +3605,15 @@ a Fortran input.
 
 .. option:: -fall-intrinsics, -fno-all-intrinsics
 
+.. option:: -fallow-fortran-gnu-ext, -fno-allow-fortran-gnu-ext
+
+Allow Fortran GNU extensions
+
 .. option:: -fautomatic, -fno-automatic
 
 .. option:: -fbackslash, -fno-backslash
+
+Treat backslash as C-style escape character
 
 .. option:: -fbacktrace, -fno-backtrace
 
@@ -3587,17 +3653,17 @@ a Fortran input.
 
 .. option:: -ff2c, -fno-f2c
 
-.. option:: -ffixed-form, -fno-fixed-form
-
 .. option:: -ffixed-line-length-<arg>
 
 .. option:: -ffpe-trap=<arg>
 
-.. option:: -ffree-form, -fno-free-form
-
 .. option:: -ffree-line-length-<arg>
 
 .. option:: -ffrontend-optimize, -fno-frontend-optimize
+
+.. option:: -ffunc-args-alias, -fno-func-args-alias
+
+Function argument may alias (equivalent to ansi alias)
 
 .. option:: -fimplicit-none, -fno-implicit-none
 
@@ -3626,6 +3692,10 @@ a Fortran input.
 .. option:: -fmax-subrecord-length=<arg>
 
 .. option:: -fmodule-private, -fno-module-private
+
+.. option:: -fno-fortran-main
+
+Don't link in Fortran main
 
 .. option:: -fpack-derived, -fno-pack-derived
 
@@ -3661,6 +3731,10 @@ a Fortran input.
 
 .. option:: -funderscoring, -fno-underscoring
 
+.. option:: -fuse-flang-math-libs, -fno-use-flang-math-libs
+
+Use Flang internal runtime math library instead of LLVM math intrinsics.
+
 .. option:: -fwhole-file, -fno-whole-file
 
 .. option:: -imultilib <arg>
@@ -3668,6 +3742,26 @@ a Fortran input.
 .. option:: -nocpp
 
 .. option:: -static-libgfortran
+
+Fortran format Group
+~~~~~~~~~~~~~~~~~~~~
+.. option:: -ffixed-form, -fno-fixed-form
+
+Enable fixed-form format for Fortran
+
+.. option:: -ffree-form, -fno-free-form
+
+Enable free-form format for Fortran
+
+Flang runtime library Group
+===========================
+.. option:: -no-flang-libs
+
+Do not link against Flang libraries
+
+.. option:: -static-flang-libs
+
+Link using static Flang libraries
 
 Linker flags
 ============
@@ -3764,3 +3858,4 @@ undef all system defines
 .. option:: -z <arg>
 
 Pass -z <arg> to the linker
+

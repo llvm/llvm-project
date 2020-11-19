@@ -1,15 +1,15 @@
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GFX8,NONGFX90A,NONGFX10,AMDHSA,ALL
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=NONGFX8,NONGFX90A,GFX10,AMDHSA,ALL
-// RUN: not llvm-mc -triple amdgcn-amd- -mcpu=gfx803 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=NONAMDHSA,ALL
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GFX8,NONGFX90A,NONGFX10,AMDHSA,ALL
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=NONGFX8,NONGFX90A,GFX10,AMDHSA,ALL
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd- -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=NONAMDHSA,ALL
 
 .text
 
 // ALL-LABEL: warning: test_target
 // GFX8-NOT: error:
-// GFX10: error: target must match options
-// NONAMDHSA: error: unknown directive
+// GFX10: error: target id must match options
+// NONAMDHSA: error: target id must match options
 .warning "test_target"
-.amdgcn_target "amdgcn-amd-amdhsa--gfx803+xnack"
+.amdgcn_target "amdgcn-amd-amdhsa--gfx810+xnack"
 
 // ALL-LABEL: warning: test_amdhsa_kernel_no_name
 // ALL: error: unknown directive

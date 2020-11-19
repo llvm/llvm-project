@@ -395,6 +395,14 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
 
+  // TODO: Remove during upstreaming target id.
+  if (Args.getLastArg(options::OPT_msram_ecc_legacy)) {
+    Features.push_back("+sramecc");
+  }
+  if (Args.getLastArg(options::OPT_mno_sram_ecc_legacy)) {
+    Features.push_back("-sramecc");
+  }
+
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);
 }
@@ -403,8 +411,14 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args),
-      OptionsDefault({{options::OPT_O, "3"},
-                      {options::OPT_cl_std_EQ, "CL1.2"}}) {}
+      OptionsDefault(
+          {{options::OPT_O, "3"}, {options::OPT_cl_std_EQ, "CL1.2"}}) {
+  // Check code object version options. Emit warnings for legacy options
+  // and errors for the last invalid code object version options.
+  // It is done here to avoid repeated warning or error messages for
+  // each tool invocation.
+  (void)getOrCheckAMDGPUCodeObjectVersion(D, Args, /*Diagnose=*/true);
+}
 
 Tool *AMDGPUToolChain::buildLinker() const {
   return new tools::amdgpu::Linker(*this);

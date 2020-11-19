@@ -1195,7 +1195,8 @@ define void @store_load_i64_aligned(i64 addrspace(5)* nocapture %arg) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX9-NEXT:    scratch_store_dword v0, v1, off
 ; GFX9-NEXT:    scratch_load_dword v1, v0, off offset:4
-; GFX9-NEXT:    scratch_load_dword v0, v0, off
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    scratch_load_dword v2, v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1236,19 +1237,14 @@ define void @store_load_i64_unaligned(i64 addrspace(5)* nocapture %arg) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX9-NEXT:    scratch_store_byte v0, v1, off
 ; GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:6
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:7
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:5
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:2
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    scratch_load_ubyte v1, v0, off offset:3
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    scratch_load_ubyte v1, v0, off
-; GFX9-NEXT:    scratch_load_ubyte v0, v0, off offset:1
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    scratch_load_ubyte v2, v0, off offset:7
+; GFX9-NEXT:    scratch_load_ubyte v3, v0, off offset:4
+; GFX9-NEXT:    scratch_load_ubyte v4, v0, off offset:5
+; GFX9-NEXT:    scratch_load_ubyte v5, v0, off offset:2
+; GFX9-NEXT:    scratch_load_ubyte v6, v0, off offset:3
+; GFX9-NEXT:    scratch_load_ubyte v7, v0, off
+; GFX9-NEXT:    scratch_load_ubyte v8, v0, off offset:1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -12,6 +12,11 @@ body:             |
 
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_m0
     ; CHECK: liveins: $vgpr0
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
+    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def $m0
     ; CHECK: $sgpr0 = S_MOV_B32 $m0
@@ -41,6 +46,11 @@ body:             |
 
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_m0
     ; CHECK: liveins: $vgpr0
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+    ; CHECK: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
+    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $m0
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, undef $vgpr0

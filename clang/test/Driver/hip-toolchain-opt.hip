@@ -58,7 +58,7 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,Og %s
 
-// ALL: "{{.*}}clang{{.*}}" "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// ALL: "{{.*}}clang{{.*}}" "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
 // DEFAULT-NOT: "-O{{.}}"
 // O0-SAME: "-O0"
 // O1-SAME: "-O1"

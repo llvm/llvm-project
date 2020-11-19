@@ -208,6 +208,8 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
   FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
+  FeatureString = std::string(FS);
+
   if (!TuneCPU.empty())
     CPUSchedModel = &getSchedModelForCPU(TuneCPU);
   else
@@ -217,6 +219,7 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
                                          StringRef FS) {
   FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
+  FeatureString = std::string(FS);
 }
 
 MCSubtargetInfo::MCSubtargetInfo(const Triple &TT, StringRef C, StringRef TC,

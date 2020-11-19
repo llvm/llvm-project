@@ -1367,11 +1367,6 @@ def DSTOMOD {
   int NONE = 0;
 }
 
-def TRAPID{
-  int LLVM_TRAP = 2;
-  int LLVM_DEBUG_TRAP = 3;
-}
-
 def HWREG {
   int MODE = 1;
   int STATUS = 2;

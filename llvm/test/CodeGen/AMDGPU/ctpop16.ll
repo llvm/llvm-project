@@ -11,8 +11,7 @@ declare <16 x i16> @llvm.ctpop.v16i16(<16 x i16>) nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}s_ctpop_i16:
-; GCN: s_load_dword [[SVAL:s[0-9]+]],
-; GCN: s_bcnt1_i32_b32 [[SRESULT:s[0-9]+]], [[SVAL]]
+; GCN: s_bcnt1_i32_b32 [[SRESULT:s[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_short [[VRESULT]],
 ; GCN: s_endpgm

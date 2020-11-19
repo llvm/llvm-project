@@ -204,7 +204,7 @@ define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %o
 ; FUNC-LABEL: {{^}}scalar_xor_inline_imm_i64:
 ; SI: s_load_dwordx2 s{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-NOT: xor_b32
-; SI: s_xor_b32 s[[VAL_LO]], s{{[0-9]+}}, 63
+; SI: s_xor_b32 s{{[0-9]}}, s{{[0-9]+}}, 63
 ; SI-NOT: xor_b32
 ; SI: v_mov_b32_e32 v[[VLO:[0-9]+]], s{{[0-9]+}}
 ; SI-NOT: xor_b32

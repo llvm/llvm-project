@@ -1835,3 +1835,44 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
     }
   }
 }
+
+unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
+    const Driver &D, const llvm::opt::ArgList &Args, bool Diagnose) {
+  const unsigned MinCodeObjVer = 2;
+  const unsigned MaxCodeObjVer = 4;
+  unsigned CodeObjVer = 4;
+
+  // Emit warnings for legacy options even if they are overridden.
+  if (Diagnose) {
+    if (Args.hasArg(options::OPT_mno_code_object_v3_legacy))
+      D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
+                                            << "-mcode-object-version=2";
+
+    if (Args.hasArg(options::OPT_mcode_object_v3_legacy))
+      D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
+                                            << "-mcode-object-version=3";
+  }
+
+  // The last of -mcode-object-v3, -mno-code-object-v3 and
+  // -mcode-object-version=<version> wins.
+  if (auto *CodeObjArg =
+          Args.getLastArg(options::OPT_mcode_object_v3_legacy,
+                          options::OPT_mno_code_object_v3_legacy,
+                          options::OPT_mcode_object_version_EQ)) {
+    if (CodeObjArg->getOption().getID() ==
+        options::OPT_mno_code_object_v3_legacy) {
+      CodeObjVer = 2;
+    } else if (CodeObjArg->getOption().getID() ==
+               options::OPT_mcode_object_v3_legacy) {
+      CodeObjVer = 3;
+    } else {
+      auto Remnant =
+          StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
+      if (Diagnose &&
+          (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer))
+        D.Diag(diag::err_drv_invalid_int_value)
+            << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+    }
+  }
+  return CodeObjVer;
+}

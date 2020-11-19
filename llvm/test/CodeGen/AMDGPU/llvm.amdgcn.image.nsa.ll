@@ -32,8 +32,9 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_nsa:
-; GCN: image_sample_c_l v0, v[0:7],
-; NSA: image_sample v1, [v6, v7, v5],
+; NONSA: image_sample_c_l v5, v[0:7],
+; NSA: image_sample_c_l v8, v[0:7],
+; NSA: image_sample v9, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_contig_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -44,8 +45,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_nsa_nsa:
-; NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
-; NSA: image_sample v1, [v6, v7, v5],
+; NSA: image_sample_c_l v8, [v1, v2, v3, v4, v0],
+; NSA: image_sample v9, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_nsa_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %lod, float %zcompare, float %s1, float %t1, float %r1, float %r2, float %s2, float %t2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -56,8 +57,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_nsa_contig:
-; NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
-; NSA: image_sample v1, v[5:7],
+; NSA: image_sample_c_l v8, [v1, v2, v3, v4, v0],
+; NSA: image_sample v9, v[5:7],
 define amdgpu_ps <2 x float> @sample_nsa_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %lod, float %zcompare, float %s1, float %t1, float %r1, float %s2, float %t2, float %r2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -68,9 +69,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_contig:
-; GCN: image_sample_c_l v0, v[0:7],
-; NSA: image_sample v1, v[5:7],
-; NONSA: image_sample v1, v[5:7],
+; NSA: image_sample_c_l v8, v[0:7],
+; NSA: image_sample v9, v[5:7],
+; NONSA: image_sample_c_l v8, v[0:7],
+; NONSA: image_sample v9, v[5:7],
 define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %s2, float %t2, float %r2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

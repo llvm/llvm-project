@@ -21,7 +21,7 @@
 // RUN: not %clang -### -target x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908:unknown+ \
-// RUN:   --offload-arch=gfx908+sram-ecc+unknown \
+// RUN:   --offload-arch=gfx908+sramecc+unknown \
 // RUN:   --offload-arch=gfx900+xnack \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=UNK %s

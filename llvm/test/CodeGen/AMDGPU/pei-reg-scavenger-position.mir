@@ -26,6 +26,8 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+  ; CHECK:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; CHECK:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK:   $sgpr0 = S_ADD_U32 $sgpr0, $sgpr4, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr5 = S_MOV_B32 524288

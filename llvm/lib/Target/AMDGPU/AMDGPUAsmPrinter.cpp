@@ -107,12 +107,14 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeAMDGPUAsmPrinter() {
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
-  : AsmPrinter(TM, std::move(Streamer)) {
+    : AsmPrinter(TM, std::move(Streamer)) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     if (isHsaAbiVersion2(getGlobalSTI())) {
       HSAMetadataStream.reset(new MetadataStreamerV2());
-    } else {
+    } else if (isHsaAbiVersion3(getGlobalSTI())) {
       HSAMetadataStream.reset(new MetadataStreamerV3());
+    } else {
+      HSAMetadataStream.reset(new MetadataStreamerV4());
     }
   }
 }
@@ -132,34 +134,34 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (isHsaAbiVersion3(getGlobalSTI())) {
-    std::string ExpectedTarget;
-    raw_string_ostream ExpectedTargetOS(ExpectedTarget);
-    IsaInfo::streamIsaVersion(getGlobalSTI(), ExpectedTargetOS);
-
-    getTargetStreamer()->EmitDirectiveAMDGCNTarget(ExpectedTarget);
-  }
+  // TODO: Which one is called first, emitStartOfAsmFile or
+  // emitFunctionBodyStart?
+  if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
+    initializeTargetID(M);
 
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
       TM.getTargetTriple().getOS() != Triple::AMDPAL)
     return;
 
+  if (isHsaAbiVersion3Or4(getGlobalSTI()))
+    getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    HSAMetadataStream->begin(M);
+    HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 
-  if (isHsaAbiVersion3(getGlobalSTI()))
+  if (isHsaAbiVersion3Or4(getGlobalSTI()))
     return;
 
-  // HSA emits NT_AMDGPU_HSA_CODE_OBJECT_VERSION for code objects v2.
+  // HSA emits NT_AMD_HSA_CODE_OBJECT_VERSION for code objects v2.
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
     getTargetStreamer()->EmitDirectiveHSACodeObjectVersion(2, 1);
 
-  // HSA and PAL emit NT_AMDGPU_HSA_ISA for code objects v2.
+  // HSA and PAL emit NT_AMD_HSA_ISA_VERSION for code objects v2.
   IsaVersion Version = getIsaVersion(getGlobalSTI()->getCPU());
-  getTargetStreamer()->EmitDirectiveHSACodeObjectISA(
+  getTargetStreamer()->EmitDirectiveHSACodeObjectISAV2(
       Version.Major, Version.Minor, Version.Stepping, "AMD", "AMDGPU");
 }
 
@@ -169,15 +171,11 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
     return;
 
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
-      isHsaAbiVersion2(getGlobalSTI())) {
-    // Emit ISA Version (NT_AMD_AMDGPU_ISA).
-    std::string ISAVersionString;
-    raw_string_ostream ISAVersionStream(ISAVersionString);
-    IsaInfo::streamIsaVersion(getGlobalSTI(), ISAVersionStream);
-    getTargetStreamer()->EmitISAVersion(ISAVersionStream.str());
-  }
+      isHsaAbiVersion2(getGlobalSTI()))
+    getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
+  // Emit HSA Metadata (NT_AMD_HSA_METADATA).
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     HSAMetadataStream->end();
     bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
@@ -202,11 +200,33 @@ bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
 
 void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
+  const Function &F = MF->getFunction();
+
+  // TODO: Which one is called first, emitStartOfAsmFile or
+  // emitFunctionBodyStart?
+  if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
+    initializeTargetID(*F.getParent());
+
+  const auto &FunctionTargetID = STM.getTargetID();
+  // Make sure function's xnack settings are compatible with module's
+  // xnack settings.
+  if (FunctionTargetID.isXnackSupported() &&
+      FunctionTargetID.getXnackSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getXnackSetting() != getTargetStreamer()->getTargetID()->getXnackSetting())
+    report_fatal_error("xnack setting of '" + Twine(MF->getName()) +
+                       "' function does not match module xnack setting");
+  // Make sure function's sramecc settings are compatible with module's
+  // sramecc settings.
+  if (FunctionTargetID.isSramEccSupported() &&
+      FunctionTargetID.getSramEccSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getSramEccSetting() != getTargetStreamer()->getTargetID()->getSramEccSetting())
+    report_fatal_error("sramecc setting of '" + Twine(MF->getName()) +
+                       "' function does not match module sramecc setting");
+
   if (!MFI.isEntryFunction())
     return;
 
-  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
-  const Function &F = MF->getFunction();
   if ((STM.isMesaKernel(F) || isHsaAbiVersion2(getGlobalSTI())) &&
       (F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
        F.getCallingConv() == CallingConv::SPIR_KERNEL)) {
@@ -242,26 +262,25 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   if (ReadOnlySection.getAlignment() < 64)
     ReadOnlySection.setAlignment(Align(64));
 
-  const MCSubtargetInfo &STI = MF->getSubtarget();
+  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
 
   SmallString<128> KernelName;
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
-      STI, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
+      STM, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
       CurrentProgramInfo.NumVGPRsForWavesPerEU,
       CurrentProgramInfo.NumSGPRsForWavesPerEU -
-          IsaInfo::getNumExtraSGPRs(&STI,
+          IsaInfo::getNumExtraSGPRs(&STM,
                                     CurrentProgramInfo.VCCUsed,
                                     CurrentProgramInfo.FlatUsed),
-      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
-      hasXNACK(STI));
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.PopSection();
 }
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA &&
-      isHsaAbiVersion3(getGlobalSTI())) {
+      isHsaAbiVersion3Or4(getGlobalSTI())) {
     AsmPrinter::emitFunctionEntryLabel();
     return;
   }
@@ -576,6 +595,37 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
+// TODO: Fold this into emitFunctionBodyStart.
+void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
+  // In the beginning all features are either 'Any' or 'NotSupported',
+  // depending on global target features. This will cover empty modules.
+  getTargetStreamer()->initializeTargetID(
+      *getGlobalSTI(), getGlobalSTI()->getFeatureString());
+
+  // If module is empty, we are done.
+  if (M.empty())
+    return;
+
+  // If module is not empty, need to find first 'Off' or 'On' feature
+  // setting per feature from functions in module.
+  for (auto &F : M) {
+    if ((!getTargetStreamer()->getTargetID()->isXnackSupported() ||
+            getTargetStreamer()->getTargetID()->isXnackOnOrOff()) &&
+        (!getTargetStreamer()->getTargetID()->isSramEccSupported() ||
+            getTargetStreamer()->getTargetID()->isSramEccOnOrOff()))
+      break;
+
+    const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
+    const IsaInfo::AMDGPUTargetID &TID = STM.getTargetID();
+    if (getTargetStreamer()->getTargetID()->isXnackSupported())
+      if (getTargetStreamer()->getTargetID()->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
+        getTargetStreamer()->getTargetID()->setXnackSetting(TID.getXnackSetting());
+    if (getTargetStreamer()->getTargetID()->isSramEccSupported())
+      if (getTargetStreamer()->getTargetID()->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
+        getTargetStreamer()->getTargetID()->setSramEccSetting(TID.getSramEccSetting());
+  }
+}
+
 uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = STM.getInstrInfo();
@@ -610,8 +660,8 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
 
 int32_t AMDGPUAsmPrinter::SIFunctionResourceInfo::getTotalNumSGPRs(
   const GCNSubtarget &ST) const {
-  return NumExplicitSGPR + IsaInfo::getNumExtraSGPRs(&ST,
-                                                     UsesVCC, UsesFlatScratch);
+  return NumExplicitSGPR + IsaInfo::getNumExtraSGPRs(
+      &ST, UsesVCC, UsesFlatScratch, ST.getTargetID().isXnackOnOrAny());
 }
 
 int32_t AMDGPUAsmPrinter::SIFunctionResourceInfo::getTotalNumVGPRs(

@@ -150,8 +150,8 @@ main_body:
 ; GCN-LABEL: {{^}}smrd_load_const1:
 ; SICI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xff ; encoding: [0xff
 ; SICI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xff glc ; encoding: [0xff
-; VIGFX9_10-DAG: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3fc ;
-; VIGFX9_10-DAG: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3fc glc ;
+; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]+}}], 0x3fc ;
+; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]+}}], 0x3fc glc ;
 define amdgpu_ps void @smrd_load_const1(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, <4 x i32> addrspace(4)* inreg %in) #0 {
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
@@ -173,8 +173,8 @@ main_body:
 ; SI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], s[[OFFSET]] ; encoding: [0x0[[OFFSET]]
 ; CI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x100
 ; CI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x100
-; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x400
-; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x400
+; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]+}}], 0x400
+; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]+}}], 0x400
 define amdgpu_ps void @smrd_load_const2(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, <4 x i32> addrspace(4)* inreg %in) #0 {
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
@@ -194,8 +194,8 @@ main_body:
 ; SI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
 ; CI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3ffff
 ; CI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3ffff
-; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xffffc
-; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xffffc
+; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]+}}], 0xffffc
+; VIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]+}}], 0xffffc
 define amdgpu_ps void @smrd_load_const3(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, <4 x i32> addrspace(4)* inreg %in) #0 {
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
@@ -211,8 +211,8 @@ main_body:
 ; SMRD load with an offset greater than the largest possible immediate on VI
 ; GCN-LABEL: {{^}}smrd_load_const4:
 ; SIVIGFX9_10: s_mov_b32 [[OFFSET:s[0-9]+]], 0x100000
-; SIVIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
-; SIVIGFX9_10: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
+; SIVIGFX9_10: s_buffer_load_dword s{{[0-9]+}}, s[{{[0-9]:[0-9]+}}], [[OFFSET]]
+; SIVIGFX9_10: s_buffer_load_dword s{{[0-9]+}}, s[{{[0-9]:[0-9]+}}], [[OFFSET]]
 ; CI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x40000
 ; CI: s_buffer_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x40000
 ; GCN: s_endpgm

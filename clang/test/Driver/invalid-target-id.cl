@@ -21,16 +21,16 @@
 // UNK: error: Invalid target ID: gfx908:unknown+
 
 // RUN: not %clang -target amdgcn-amd-amdhsa \
-// RUN:   -mcpu=gfx908:sram-ecc+:unknown+ -nostdlib \
+// RUN:   -mcpu=gfx908:sramecc+:unknown+ -nostdlib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MIXED %s
 
-// MIXED: error: Invalid target ID: gfx908:sram-ecc+:unknown+
+// MIXED: error: Invalid target ID: gfx908:sramecc+:unknown+
 
 // RUN: not %clang -target amdgcn-amd-amdhsa \
-// RUN:   -mcpu=gfx900:sram-ecc+ -nostdlib \
+// RUN:   -mcpu=gfx900:sramecc+ -nostdlib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=UNSUP %s
 
-// UNSUP: error: Invalid target ID: gfx900:sram-ecc+
+// UNSUP: error: Invalid target ID: gfx900:sramecc+
 
 // RUN: not %clang -target amdgcn-amd-amdhsa \
 // RUN:   -mcpu=gfx900:xnack -nostdlib \

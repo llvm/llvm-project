@@ -272,24 +272,16 @@ class GCNSubtarget : public AMDGPUGenSubtargetInfo,
   using AMDGPUSubtarget::getMaxWavesPerEU;
 
 public:
-  enum TrapHandlerAbi {
-    TrapHandlerAbiNone = 0,
-    TrapHandlerAbiHsa = 1
+  // Following 2 enums are documented at:
+  //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
+  enum class TrapHandlerAbi {
+    NONE   = 0x00,
+    AMDHSA = 0x01,
   };
 
-  enum TrapID {
-    TrapIDHardwareReserved = 0,
-    TrapIDHSADebugTrap = 1,
-    TrapIDLLVMTrap = 2,
-    TrapIDLLVMDebugTrap = 3,
-    TrapIDDebugBreakpoint = 7,
-    TrapIDDebugReserved8 = 8,
-    TrapIDDebugReservedFE = 0xfe,
-    TrapIDDebugReservedFF = 0xff
-  };
-
-  enum TrapRegValues {
-    LLVMTrapHandlerRegValue = 1
+  enum class TrapID {
+    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSADebugTrap = 0x03,
   };
 
 private:
@@ -299,6 +291,8 @@ private:
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
+
+  Optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
 
 protected:
   // Basic subtarget description.
@@ -320,8 +314,12 @@ protected:
   bool UnalignedBufferAccess;
   bool UnalignedAccessMode;
   bool HasApertureRegs;
+  bool SupportsXNACK;
+
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for XNACK.
   bool EnableXNACK;
-  bool DoesNotSupportXNACK;
+
   bool EnableCuMode;
   bool TrapHandler;
 
@@ -375,8 +373,12 @@ protected:
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
   bool HasAtomicFaddInsts;
+  bool SupportsSRAMECC;
+
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for SRAMECC.
   bool EnableSRAMECC;
-  bool DoesNotSupportSRAMECC;
+
   bool HasNoSdstCMPX;
   bool HasVscnt;
   bool HasGetWaveIdInst;
@@ -467,6 +469,11 @@ public:
 
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
+  }
+
+  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
+    assert(TargetID.hasValue() && "TargetID has not be initialized");
+    return *TargetID;
   }
 
   // Nothing implemented, just prevent crashes on use.
@@ -594,7 +601,12 @@ public:
   }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
-    return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
+    return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
+  }
+
+  bool supportsGetDoorbellID() const {
+    // The S_GETREG DOORBELL_ID is supported by all GFX9 onward targets.
+    return getGeneration() >= GFX9;
   }
 
   /// True if the offset field of DS instructions works as expected. On SI, the
@@ -723,7 +735,7 @@ public:
   }
 
   bool isXNACKEnabled() const {
-    return EnableXNACK;
+    return getTargetID().isXnackOnOrAny();
   }
 
   bool isCuModeEnabled() const {
@@ -786,7 +798,7 @@ public:
   }
 
   bool d16PreservesUnusedBits() const {
-    return hasD16LoadStore() && !isSRAMECCEnabled();
+    return hasD16LoadStore() && !getTargetID().isSramEccOnOrAny();
   }
 
   bool hasD16Images() const {
@@ -892,10 +904,6 @@ public:
 
   bool hasAtomicFaddInsts() const {
     return HasAtomicFaddInsts;
-  }
-
-  bool isSRAMECCEnabled() const {
-    return EnableSRAMECC;
   }
 
   bool hasNoSdstCMPX() const {

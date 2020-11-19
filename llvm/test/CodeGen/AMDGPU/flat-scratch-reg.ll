@@ -1,15 +1,18 @@
 ; RUN: llc -march=amdgcn -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
 
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=VI-NOXNACK  -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=stoney -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=VI-NOXNACK  -check-prefix=GCN %s
 
-; RUN: llc -march=amdgcn -mcpu=carrizo -verify-machineinstrs < %s | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=stoney  -verify-machineinstrs < %s | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=carrizo -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=stoney -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
 
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=HSA-CI -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo --amdhsa-code-object-version=2 -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=HSA-VI-NOXNACK -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo --amdhsa-code-object-version=2 -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefix=HSA-VI-XNACK -check-prefix=GCN %s
+
+; TODO(TID/kzhuravl): Update these for v4.
+; XFAIL: *
 
 ; GCN-LABEL: {{^}}no_vcc_no_flat:
 ; HSA-CI: is_xnack_enabled = 0

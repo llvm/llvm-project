@@ -13,18 +13,19 @@
 
 #include "AMDGPUSubtarget.h"
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
-#include "SIMachineFunctionInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -85,9 +86,9 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   //
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
+  TargetID.emplace(*this);
 
-  // Assuming ECC is enabled is the conservative default.
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,+sram-ecc,+xnack,");
+  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
@@ -140,20 +141,12 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
-  // Disable XNACK on targets where it is not enabled by default unless it is
-  // explicitly requested.
-  if (!FS.contains("+xnack") && DoesNotSupportXNACK && EnableXNACK) {
-    ToggleFeature(AMDGPU::FeatureXNACK);
-    EnableXNACK = false;
-  }
+  TargetID->setTargetIDFromFeaturesString(FS);
 
-  // ECC is on by default, but turn it off if the hardware doesn't support it
-  // anyway. This matters for the gfx9 targets with d16 loads, but don't support
-  // ECC.
-  if (DoesNotSupportSRAMECC && EnableSRAMECC) {
-    ToggleFeature(AMDGPU::FeatureSRAMECC);
-    EnableSRAMECC = false;
-  }
+  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
+                    << TargetID->getXnackSetting() << '\n');
+  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
+                    << TargetID->getSramEccSetting() << '\n');
 
   return *this;
 }
@@ -198,8 +191,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     UnalignedAccessMode(false),
 
     HasApertureRegs(false),
+    SupportsXNACK(false),
     EnableXNACK(false),
-    DoesNotSupportXNACK(false),
     EnableCuMode(false),
     TrapHandler(false),
 
@@ -248,8 +241,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasMAIInsts(false),
     HasPkFmacF16Inst(false),
     HasAtomicFaddInsts(false),
+    SupportsSRAMECC(false),
     EnableSRAMECC(false),
-    DoesNotSupportSRAMECC(false),
     HasNoSdstCMPX(false),
     HasVscnt(false),
     HasGetWaveIdInst(false),

@@ -14,10 +14,10 @@ body:             |
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.6 (align 64):
   ; GCN:   successors: %bb.7(0x04000000), %bb.1(0x7c000000)
-  ; GCN:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc
+  ; GCN:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc_lo
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc
+  ; GCN:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
   ; GCN:   SI_MASK_BRANCH %bb.6, implicit $exec
@@ -44,6 +44,7 @@ body:             |
   ; GCN:   successors: %bb.6(0x80000000)
   ; GCN:   S_BRANCH %bb.6
   ; GCN: bb.7:
+  ; GCN:   S_INST_PREFETCH 2
   ; GCN:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)

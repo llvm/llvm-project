@@ -26,8 +26,8 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
     return Ret;
   auto Features = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
                                : llvm::AMDGPU::getArchAttrR600(ProcKind);
-  if (Features & llvm::AMDGPU::FEATURE_SRAM_ECC)
-    Ret.push_back("sram-ecc");
+  if (Features & llvm::AMDGPU::FEATURE_SRAMECC)
+    Ret.push_back("sramecc");
   if (Features & llvm::AMDGPU::FEATURE_XNACK)
     Ret.push_back("xnack");
   return Ret;
@@ -61,7 +61,7 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
 //
 // A target ID is a processor name followed by a list of target features
 // delimited by colon. Each target feature is a string post-fixed by a plus
-// or minus sign, e.g. gfx908:sram-ecc+:xnack-.
+// or minus sign, e.g. gfx908:sramecc+:xnack-.
 static llvm::Optional<llvm::StringRef>
 parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
                                     llvm::StringMap<bool> *FeatureMap) {

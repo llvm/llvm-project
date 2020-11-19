@@ -672,8 +672,8 @@ bb:
 ; SI: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 ; FIXME: VI not matching med3
-; VI: v_min_u16
-; VI: v_max_u16
+; VI-DAG: v_min_u16
+; VI-DAG: v_max_u16
 ; VI: v_min_u16
 ; VI: v_max_u16
 

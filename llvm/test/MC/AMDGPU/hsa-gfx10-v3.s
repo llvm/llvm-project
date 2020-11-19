@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=3 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=3 -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-readobj -elf-output-style=GNU -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -98,7 +98,7 @@ special_sgpr:
   .amdhsa_next_free_sgpr 27
   .amdhsa_reserve_vcc 0
   .amdhsa_reserve_flat_scratch 0
-  .amdhsa_reserve_xnack_mask 0
+  .amdhsa_reserve_xnack_mask 1
   .amdhsa_float_round_mode_32 1
   .amdhsa_float_round_mode_16_64 1
   .amdhsa_float_denorm_mode_32 1
@@ -139,7 +139,7 @@ special_sgpr:
 // ASM-NEXT: .amdhsa_next_free_sgpr 27
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM-NEXT: .amdhsa_reserve_flat_scratch 0
-// ASM-NEXT: .amdhsa_reserve_xnack_mask 0
+// ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 1
 // ASM-NEXT: .amdhsa_float_denorm_mode_32 1
@@ -169,7 +169,7 @@ special_sgpr:
   .amdhsa_reserve_flat_scratch 1
 
   .amdhsa_reserve_vcc 0
-  .amdhsa_reserve_xnack_mask 0
+  .amdhsa_reserve_xnack_mask 1
 
   .amdhsa_float_denorm_mode_16_64 0
   .amdhsa_dx10_clamp 0
@@ -181,7 +181,7 @@ special_sgpr:
 // ASM: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 27
 // ASM-NEXT: .amdhsa_reserve_vcc 0
-// ASM-NEXT: .amdhsa_reserve_xnack_mask 0
+// ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM-NEXT: .amdhsa_dx10_clamp 0
 // ASM-NEXT: .amdhsa_ieee_mode 0

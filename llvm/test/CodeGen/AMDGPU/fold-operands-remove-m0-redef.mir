@@ -29,6 +29,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_same_copy
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
@@ -53,6 +54,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: multi_redef_m0_same_copy
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
@@ -78,6 +80,7 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_different_copy
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -105,6 +108,7 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_mixed_copy0
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -134,6 +138,7 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_mixed_copy1
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -163,6 +168,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_same_mov_imm
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = S_MOV_B32 -1
@@ -187,6 +193,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_different_inst0
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
@@ -212,6 +219,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_different_inst1
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
@@ -237,6 +245,7 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_mixed_read_m0
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -266,6 +275,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_same_copy_call
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
@@ -292,6 +302,7 @@ body:             |
   ; GCN-LABEL: name: redef_m0_same_copy_multi_block
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
+  ; GCN:   liveins: $vgpr0, $sgpr0
   ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GCN:   $m0 = COPY [[COPY1]]
@@ -323,6 +334,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_copy_self
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
@@ -348,6 +360,7 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_copy_physreg
+    ; GCN: liveins: $vgpr0, $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY $sgpr0

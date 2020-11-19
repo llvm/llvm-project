@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; FIXME: Merge into imm.ll
 

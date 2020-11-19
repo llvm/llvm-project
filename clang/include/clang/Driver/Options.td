@@ -641,7 +641,7 @@ def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[NoXa
 def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[NoXarchOption]>,
   HelpText<"CUDA offloading device architecture (e.g. sm_35), or HIP offloading target ID in the form of a "
            "device architecture followed by target ID features delimited by a colon. Each target ID feature "
-           "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sram-ecc-).  May be "
+           "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sramecc-).  May be "
            "specified more than once.">;
 def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[NoXarchOption]>,
   Alias<offload_arch_EQ>;
@@ -2509,6 +2509,10 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
+def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
+  HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
+  MetaVarName<"<version>">, Values<"2,3,4">;
+
 def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
   HelpText<"Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)">;
 def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>;
@@ -2517,17 +2521,19 @@ def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
   HelpText<"Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)">;
 def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>;
 
-def msram_ecc : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Specify SRAM ECC mode (AMDGPU only)">;
-def mno_sram_ecc : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>;
+// TODO: Remove during upstreaming target id.
+def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_Group>,
+  HelpText<"Legacy option to specify SRAM ECC mode (AMDGPU only)">;
+def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_Group>;
 
 def mwavefrontsize64 : Flag<["-"], "mwavefrontsize64">, Group<m_Group>,
   HelpText<"Specify wavefront size 64 mode (AMDGPU only)">;
 def mno_wavefrontsize64 : Flag<["-"], "mno-wavefrontsize64">, Group<m_Group>,
   HelpText<"Specify wavefront size 32 mode (AMDGPU only)">;
 
+// TODO: Remove during upstreaming target id.
 def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Specify XNACK mode (AMDGPU only)">;
+  HelpText<"Legacy option to specify XNACK mode (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[NoXarchOption]>;

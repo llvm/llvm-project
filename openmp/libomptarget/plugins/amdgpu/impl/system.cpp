@@ -659,7 +659,7 @@ find_metadata(void *binary, size_t binSize) {
 
         if (note->n_type == 7 || note->n_type == 8) {
           return failure;
-        } else if (note->n_type == 10 /* NT_AMD_AMDGPU_HSA_METADATA */ &&
+        } else if (note->n_type == 10 /* NT_AMD_HSA_METADATA */ &&
                    note->n_namesz == sizeof "AMD" &&
                    !memcmp(name, "AMD", note->n_namesz)) {
           // code object v2 uses yaml metadata, no longer supported
