@@ -16,8 +16,6 @@ define void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+112(0), 1
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+80(0), 1
-; LE-PAIRED-NEXT:    xxmtacc acc0
-; LE-PAIRED-NEXT:    xxmfacc acc0
 ; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+176(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs1, f@PCREL+160(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs2, f@PCREL+144(0), 1
@@ -32,8 +30,6 @@ define void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-NEXT:    lxv vs0, 64(r3)
 ; BE-PAIRED-NEXT:    lxv vs3, 112(r3)
 ; BE-PAIRED-NEXT:    lxv vs2, 96(r3)
-; BE-PAIRED-NEXT:    xxmtacc acc0
-; BE-PAIRED-NEXT:    xxmfacc acc0
 ; BE-PAIRED-NEXT:    stxv vs1, 144(r3)
 ; BE-PAIRED-NEXT:    stxv vs0, 128(r3)
 ; BE-PAIRED-NEXT:    stxv vs3, 176(r3)
@@ -58,8 +54,6 @@ define void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    lxvx vs3, r5, r3
 ; LE-PAIRED-NEXT:    lxv vs2, 16(r6)
 ; LE-PAIRED-NEXT:    sldi r3, r4, 6
-; LE-PAIRED-NEXT:    xxmtacc acc0
-; LE-PAIRED-NEXT:    xxmfacc acc0
 ; LE-PAIRED-NEXT:    stxvx vs3, r5, r3
 ; LE-PAIRED-NEXT:    add r3, r5, r3
 ; LE-PAIRED-NEXT:    stxv vs0, 48(r3)
@@ -78,8 +72,6 @@ define void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-NEXT:    lxv vs1, 16(r6)
 ; BE-PAIRED-NEXT:    lxv vs3, 48(r6)
 ; BE-PAIRED-NEXT:    lxv vs2, 32(r6)
-; BE-PAIRED-NEXT:    xxmtacc acc0
-; BE-PAIRED-NEXT:    xxmfacc acc0
 ; BE-PAIRED-NEXT:    stxvx vs0, r5, r3
 ; BE-PAIRED-NEXT:    add r3, r5, r3
 ; BE-PAIRED-NEXT:    stxv vs1, 16(r3)
@@ -101,8 +93,6 @@ define void @testUnalignedLdSt() {
 ; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+59(0), 1
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+27(0), 1
-; LE-PAIRED-NEXT:    xxmtacc acc0
-; LE-PAIRED-NEXT:    xxmfacc acc0
 ; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+67(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs1, f@PCREL+51(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs2, f@PCREL+35(0), 1
@@ -122,8 +112,6 @@ define void @testUnalignedLdSt() {
 ; BE-PAIRED-NEXT:    li r4, 59
 ; BE-PAIRED-NEXT:    lxvx vs3, r3, r4
 ; BE-PAIRED-NEXT:    li r4, 35
-; BE-PAIRED-NEXT:    xxmtacc acc0
-; BE-PAIRED-NEXT:    xxmfacc acc0
 ; BE-PAIRED-NEXT:    stxvx vs1, r3, r4
 ; BE-PAIRED-NEXT:    li r4, 19
 ; BE-PAIRED-NEXT:    stxvx vs0, r3, r4
