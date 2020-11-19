@@ -163,10 +163,8 @@ static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
                                      AliasSetTracker *CurAST, Loop *CurLoop,
                                      AAResults *AA);
 static bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
-                                             Loop *CurLoop, Instruction &I,
+                                             Loop *CurLoop,
                                              SinkAndHoistLICMFlags &Flags);
-static bool pointerInvalidatedByBlockWithMSSA(BasicBlock &BB, MemorySSA &MSSA,
-                                              MemoryUse &MU);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater *MSSAU);
@@ -1157,7 +1155,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                                              CurLoop, AA);
     else
       Invalidated = pointerInvalidatedByLoopWithMSSA(
-          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(LI)), CurLoop, I, *Flags);
+          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(LI)), CurLoop, *Flags);
     // Check loop-invariant address because this may also be a sinkable load
     // whose address is not necessarily loop-invariant.
     if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
@@ -1213,7 +1211,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                   CurAST, CurLoop, AA);
             else
               Invalidated = pointerInvalidatedByLoopWithMSSA(
-                  MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I,
+                  MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop,
                   *Flags);
             if (Invalidated)
               return false;
@@ -1314,6 +1312,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
               }
             }
         }
+
       auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
       Flags->incrementClobberingCalls();
       // If there are no clobbering Defs in the loop, store is safe to hoist.
@@ -2286,7 +2285,7 @@ static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
 }
 
 bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
-                                      Loop *CurLoop, Instruction &I,
+                                      Loop *CurLoop,
                                       SinkAndHoistLICMFlags &Flags) {
   // For hoisting, use the walker to determine safety
   if (!Flags.getIsSink()) {
@@ -2322,22 +2321,12 @@ bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
   if (Flags.tooManyMemoryAccesses())
     return true;
   for (auto *BB : CurLoop->getBlocks())
-    if (pointerInvalidatedByBlockWithMSSA(*BB, *MSSA, *MU))
-      return true;
-  // When sinking, the source block may not be part of the loop so check it.
-  if (!CurLoop->contains(&I))
-    return pointerInvalidatedByBlockWithMSSA(*I.getParent(), *MSSA, *MU);
-
-  return false;
-}
-
-bool pointerInvalidatedByBlockWithMSSA(BasicBlock &BB, MemorySSA &MSSA,
-                                       MemoryUse &MU) {
-  if (const auto *Accesses = MSSA.getBlockDefs(&BB))
-    for (const auto &MA : *Accesses)
-      if (const auto *MD = dyn_cast<MemoryDef>(&MA))
-        if (MU.getBlock() != MD->getBlock() || !MSSA.locallyDominates(MD, &MU))
-          return true;
+    if (auto *Accesses = MSSA->getBlockDefs(BB))
+      for (const auto &MA : *Accesses)
+        if (const auto *MD = dyn_cast<MemoryDef>(&MA))
+          if (MU->getBlock() != MD->getBlock() ||
+              !MSSA->locallyDominates(MD, MU))
+            return true;
   return false;
 }
 
