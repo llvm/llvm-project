@@ -2450,11 +2450,18 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
                   "operator"_err_en_US);
       return std::nullopt;
     }
-    analyzer.ConvertBOZ(0, analyzer.GetType(1));
-    analyzer.ConvertBOZ(1, analyzer.GetType(0));
+    std::optional<DynamicType> leftType{analyzer.GetType(0)};
+    std::optional<DynamicType> rightType{analyzer.GetType(1)};
+    analyzer.ConvertBOZ(0, rightType);
+    analyzer.ConvertBOZ(1, leftType);
     if (analyzer.IsIntrinsicRelational(opr)) {
       return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
           analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
+    } else if (leftType && leftType->category() == TypeCategory::Logical &&
+        rightType && rightType->category() == TypeCategory::Logical) {
+      context.Say("LOGICAL operands must be compared using .EQV. or "
+                  ".NEQV."_err_en_US);
+      return std::nullopt;
     } else {
       return analyzer.TryDefinedOp(opr,
           "Operands of %s must have comparable types; have %s and %s"_err_en_US);
