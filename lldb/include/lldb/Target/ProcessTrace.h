@@ -9,13 +9,13 @@
 #ifndef LLDB_TARGET_PROCESSTRACE_H
 #define LLDB_TARGET_PROCESSTRACE_H
 
-#include "lldb/Target/Process.h"
+#include "lldb/Target/PostMortemProcess.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
 
-class ProcessTrace : public Process {
+class ProcessTrace : public PostMortemProcess {
 public:
   static void Initialize();
 

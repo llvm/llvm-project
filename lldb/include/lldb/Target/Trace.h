@@ -13,6 +13,7 @@
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -174,6 +175,18 @@ public:
       const Thread &thread, size_t position, TraceDirection direction,
       std::function<bool(size_t index, llvm::Expected<lldb::addr_t> load_addr)>
           callback) = 0;
+
+  /// Stop tracing a live thread
+  ///
+  /// \param[in] thread
+  ///     The thread object to stop tracing.
+  ///
+  /// \return
+  ///     An \a llvm::Error if stopping tracing failed, or \b
+  ///     llvm::Error::success() otherwise.
+  virtual llvm::Error StopTracingThread(const Thread &thread) {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   /// Get the number of available instructions in the trace of the given thread.
   ///
