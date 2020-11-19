@@ -39,10 +39,12 @@ spv.module Logical GLSL450 {
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:     spv.func @foo_1
+// CHECK-NEXT:       spv.FAdd
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:     spv.func @foo_2
+// CHECK-NEXT:       spv.ISub
 // CHECK-NEXT:       spv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -57,13 +59,15 @@ spv.module Logical GLSL450 {
 
 spv.module Logical GLSL450 {
   spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+    %0 = spv.FAdd %arg0, %arg0 : f32
+    spv.ReturnValue %0 : f32
   }
 }
 
 spv.module Logical GLSL450 {
   spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+    %0 = spv.ISub %arg0, %arg0 : i32
+    spv.ReturnValue %0 : i32
   }
 }
 }
@@ -578,9 +582,9 @@ spv.module Logical GLSL450 {
 
 // CHECK:      module {
 // CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.globalVariable @foo_1
+// CHECK-NEXT:     spv.globalVariable @foo_1 bind(1, 0)
 
-// CHECK-NEXT:     spv.globalVariable @foo
+// CHECK-NEXT:     spv.globalVariable @foo bind(2, 0)
 // CHECK-NEXT: }
 
 module {
@@ -589,7 +593,26 @@ spv.module Logical GLSL450 {
 }
 
 spv.module Logical GLSL450 {
-  spv.globalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+  spv.globalVariable @foo bind(2, 0) : !spv.ptr<f32, Input>
+}
+}
+
+// -----
+
+// CHECK:      module {
+// CHECK-NEXT:   spv.module Logical GLSL450 {
+// CHECK-NEXT:     spv.globalVariable @foo_1 built_in("GlobalInvocationId")
+
+// CHECK-NEXT:     spv.globalVariable @foo built_in("LocalInvocationId")
+// CHECK-NEXT: }
+
+module {
+spv.module Logical GLSL450 {
+  spv.globalVariable @foo built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+}
+
+spv.module Logical GLSL450 {
+  spv.globalVariable @foo built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
 }
 }
 
