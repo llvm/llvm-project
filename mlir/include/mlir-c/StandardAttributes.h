@@ -47,7 +47,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsAArray(MlirAttribute attr);
  * context. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirArrayAttrGet(MlirContext ctx,
                                                   intptr_t numElements,
-                                                  MlirAttribute *elements);
+                                                  MlirAttribute const *elements);
 
 /// Returns the number of elements stored in the given array attribute.
 MLIR_CAPI_EXPORTED intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr);
@@ -66,7 +66,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsADictionary(MlirAttribute attr);
 /** Creates a dictionary attribute containing the given list of elements in the
  * provided context. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirDictionaryAttrGet(
-    MlirContext ctx, intptr_t numElements, MlirNamedAttribute *elements);
+    MlirContext ctx, intptr_t numElements, MlirNamedAttribute const *elements);
 
 /// Returns the number of attributes contained in a dictionary attribute.
 MLIR_CAPI_EXPORTED intptr_t
@@ -207,7 +207,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsASymbolRef(MlirAttribute attr);
  * null-terminated and its length must be specified. */
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length, const char *symbol,
-                     intptr_t numReferences, MlirAttribute *references);
+                     intptr_t numReferences, MlirAttribute const *references);
 
 /** Returns the string reference to the root referenced symbol. The data remains
  * live as long as the context in which the attribute lives. */
