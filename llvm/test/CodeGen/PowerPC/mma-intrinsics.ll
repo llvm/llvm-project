@@ -16,8 +16,6 @@ define void @ass_acc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    xxlor vs2, v2, v2
 ; CHECK-NEXT:    xxlor vs3, v3, v3
-; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
@@ -31,8 +29,6 @@ define void @ass_acc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    xxlor vs1, v3, v3
 ; CHECK-BE-NEXT:    xxlor vs2, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs3, v3, v3
-; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
@@ -77,8 +73,6 @@ define void @int_xxmtacc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-NEXT:    xxlor vs2, v2, v2
 ; CHECK-NEXT:    xxlor vs3, v3, v3
 ; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
@@ -93,8 +87,6 @@ define void @int_xxmtacc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    xxlor vs2, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs3, v3, v3
 ; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
@@ -119,9 +111,6 @@ define void @int_xxmfacc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    xxlor vs2, v2, v2
 ; CHECK-NEXT:    xxlor vs3, v3, v3
-; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmfacc acc0
-; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
@@ -135,9 +124,6 @@ define void @int_xxmfacc(<512 x i1>* %ptr, <16 x i8> %vc) {
 ; CHECK-BE-NEXT:    xxlor vs1, v3, v3
 ; CHECK-BE-NEXT:    xxlor vs2, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs3, v3, v3
-; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
@@ -262,8 +248,6 @@ define void @testBranch(<512 x i1>* %ptr, <16 x i8> %vc, i32 %val) {
 ; CHECK-NEXT:    xvi4ger8pp acc0, v2, v2
 ; CHECK-NEXT:  .LBB7_3: # %if.end
 ; CHECK-NEXT:    xxmfacc acc0
-; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
@@ -285,8 +269,6 @@ define void @testBranch(<512 x i1>* %ptr, <16 x i8> %vc, i32 %val) {
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi4ger8pp acc0, v2, v2
 ; CHECK-BE-NEXT:  .LBB7_3: # %if.end
-; CHECK-BE-NEXT:    xxmfacc acc0
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
@@ -637,8 +619,6 @@ define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind
 ; CHECK-NEXT:    lxvp vsp0, r1(r3)
 ; CHECK-NEXT:    li r3, 32
 ; CHECK-NEXT:    lxvp vsp2, r1(r3)
-; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 112(r30)
 ; CHECK-NEXT:    stxv vs1, 96(r30)
 ; CHECK-NEXT:    stxv vs2, 80(r30)
@@ -675,8 +655,6 @@ define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind
 ; CHECK-BE-NEXT:    lxvp vsp0, r1(r3)
 ; CHECK-BE-NEXT:    li r3, 144
 ; CHECK-BE-NEXT:    lxvp vsp2, r1(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs3, 112(r30)
 ; CHECK-BE-NEXT:    stxv vs2, 96(r30)
 ; CHECK-BE-NEXT:    stxv vs1, 80(r30)
