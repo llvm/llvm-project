@@ -223,7 +223,7 @@ static void addResumeFunction(ModuleOp module) {
   auto *block = resumeOp.addEntryBlock();
   OpBuilder blockBuilder = OpBuilder::atBlockEnd(block);
 
-  blockBuilder.create<LLVM::CallOp>(loc, Type(),
+  blockBuilder.create<LLVM::CallOp>(loc, TypeRange(),
                                     blockBuilder.getSymbolRefAttr(kCoroResume),
                                     resumeOp.getArgument(0));
 
@@ -343,7 +343,8 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
       ValueRange({coroId.getResult(0), coroHdl.getResult(0)}));
 
   // Free the memory.
-  builder.create<LLVM::CallOp>(loc, Type(), builder.getSymbolRefAttr(kFree),
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
+                               builder.getSymbolRefAttr(kFree),
                                ValueRange(coroMem.getResult(0)));
   // Branch into the suspend block.
   builder.create<BranchOp>(loc, suspendBlock);
@@ -503,7 +504,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
   // Call async runtime API to execute a coroutine in the managed thread.
   SmallVector<Value, 2> executeArgs = {coro.coroHandle, resumePtr.res()};
-  builder.create<CallOp>(loc, Type(), kExecute, executeArgs);
+  builder.create<CallOp>(loc, TypeRange(), kExecute, executeArgs);
 
   // Split the entry block before the terminator.
   Block *resume = addSuspensionPoint(coro, coroSave.getResult(0),
@@ -524,7 +525,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // to async runtime to emplace the result token.
   for (Operation &op : execute.body().getOps()) {
     if (isa<async::YieldOp>(op)) {
-      builder.create<CallOp>(loc, kEmplaceToken, Type(), coro.asyncToken);
+      builder.create<CallOp>(loc, kEmplaceToken, TypeRange(), coro.asyncToken);
       continue;
     }
     builder.clone(op, valueMapping);
@@ -671,7 +672,7 @@ public:
     // Inside regular function we convert await operation to the blocking
     // async API await function call.
     if (!isInCoroutine)
-      rewriter.create<CallOp>(loc, Type(), blockingAwaitFuncName,
+      rewriter.create<CallOp>(loc, TypeRange(), blockingAwaitFuncName,
                               ValueRange(op->getOperand(0)));
 
     // Inside the coroutine we convert await operation into coroutine suspension
@@ -696,7 +697,7 @@ public:
       // the async await argument becomes ready.
       SmallVector<Value, 3> awaitAndExecuteArgs = {
           await.getOperand(), coro.coroHandle, resumePtr.res()};
-      builder.create<CallOp>(loc, Type(), coroAwaitFuncName,
+      builder.create<CallOp>(loc, TypeRange(), coroAwaitFuncName,
                              awaitAndExecuteArgs);
 
       // Split the entry block before the await operation.
