@@ -670,6 +670,8 @@ RecoveryReproducerContext::RecoveryReproducerContext(
 
   // Make sure that the handler is registered, and update the current context.
   llvm::sys::SmartScopedLock<true> producerLock(*reproducerMutex);
+  if (reproducerSet->empty())
+    llvm::CrashRecoveryContext::Enable();
   registerSignalHandler();
   reproducerSet->insert(this);
 }
@@ -677,6 +679,8 @@ RecoveryReproducerContext::RecoveryReproducerContext(
 RecoveryReproducerContext::~RecoveryReproducerContext() {
   llvm::sys::SmartScopedLock<true> producerLock(*reproducerMutex);
   reproducerSet->remove(this);
+  if (reproducerSet->empty())
+    llvm::CrashRecoveryContext::Disable();
 }
 
 LogicalResult RecoveryReproducerContext::generate(std::string &error) {
@@ -745,7 +749,6 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
                                     verifyPasses);
 
   // Safely invoke the passes within a recovery context.
-  llvm::CrashRecoveryContext::Enable();
   LogicalResult passManagerResult = failure();
   llvm::CrashRecoveryContext recoveryContext;
   recoveryContext.RunSafelyOnThread([&] {
@@ -754,7 +757,6 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
         return;
     passManagerResult = success();
   });
-  llvm::CrashRecoveryContext::Disable();
   if (succeeded(passManagerResult))
     return success();
 
