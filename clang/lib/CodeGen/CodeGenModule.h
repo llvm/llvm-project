@@ -1478,7 +1478,8 @@ private:
   // FIXME: Hardcoding priority here is gross.
   void AddGlobalCtor(llvm::Function *Ctor, int Priority = 65535,
                      llvm::Constant *AssociatedData = nullptr);
-  void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535);
+  void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
+                     bool IsDtorAttrFunc = false);
 
   /// EmitCtorList - Generates a global array of functions and priorities using
   /// the given list and name. This array will have appending linkage and is
@@ -1507,6 +1508,11 @@ private:
   /// Register functions annotated with __attribute__((destructor)) using
   /// __cxa_atexit, if it is available, or atexit otherwise.
   void registerGlobalDtorsWithAtExit();
+
+  // When using sinit and sterm functions, unregister
+  // __attribute__((destructor)) annotated functions which were previously
+  // registered by the atexit subroutine using unatexit.
+  void unregisterGlobalDtorsWithUnAtExit();
 
   void emitMultiVersionFunctions();
 
