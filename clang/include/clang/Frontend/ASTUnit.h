@@ -694,7 +694,7 @@ public:
       const FileSystemOptions &FileSystemOpts, bool UseDebugInfo = false,
       bool OnlyLocalDecls = false, ArrayRef<RemappedFile> RemappedFiles = None,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      bool AllowPCHWithCompilerErrors = false,
+      bool AllowASTWithCompilerErrors = false,
       bool UserFilesAreVolatile = false);
 
 private:
