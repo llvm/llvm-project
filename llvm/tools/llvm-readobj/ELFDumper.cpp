@@ -170,6 +170,22 @@ struct DynRegionInfo {
   }
 };
 
+struct GroupMember {
+  StringRef Name;
+  uint64_t Index;
+};
+
+struct GroupSection {
+  StringRef Name;
+  std::string Signature;
+  uint64_t ShName;
+  uint64_t Index;
+  uint32_t Link;
+  uint32_t Info;
+  uint32_t Type;
+  std::vector<GroupMember> Members;
+};
+
 namespace {
 struct VerdAux {
   unsigned Offset;
@@ -773,6 +789,8 @@ public:
   const ELFDumper<ELFT> &dumper() const { return Dumper; }
 
 protected:
+  std::vector<GroupSection> getGroups();
+
   void printDependentLibsHelper(
       function_ref<void(const Elf_Shdr &)> OnSectionStart,
       function_ref<void(StringRef, uint64_t)> OnSectionEntry);
@@ -3551,29 +3569,21 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
   printFields(OS, "Section header string table index:", Str);
 }
 
-namespace {
-struct GroupMember {
-  StringRef Name;
-  uint64_t Index;
-};
+template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
+  auto GetSignature = [&](const Elf_Sym &Sym,
+                          const Elf_Shdr &Symtab) -> StringRef {
+    Expected<StringRef> StrTableOrErr = Obj.getStringTableForSymtab(Symtab);
+    if (!StrTableOrErr) {
+      reportUniqueWarning(createError("unable to get the string table for " +
+                                      describe(Obj, Symtab) + ": " +
+                                      toString(StrTableOrErr.takeError())));
+      return "<?>";
+    }
 
-struct GroupSection {
-  StringRef Name;
-  std::string Signature;
-  uint64_t ShName;
-  uint64_t Index;
-  uint32_t Link;
-  uint32_t Info;
-  uint32_t Type;
-  std::vector<GroupMember> Members;
-};
-
-template <class ELFT>
-std::vector<GroupSection> getGroups(const ELFFile<ELFT> &Obj,
-                                    StringRef FileName) {
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Word = typename ELFT::Word;
+    // TODO: this might lead to a crash or produce a wrong result, when the
+    // st_name goes past the end of the string table.
+    return StrTableOrErr->data() + Sym.st_name;
+  };
 
   std::vector<GroupSection> Ret;
   uint64_t I = 0;
@@ -3584,15 +3594,14 @@ std::vector<GroupSection> getGroups(const ELFFile<ELFT> &Obj,
 
     const Elf_Shdr *Symtab =
         unwrapOrError(FileName, Obj.getSection(Sec.sh_link));
-    StringRef StrTable =
-        unwrapOrError(FileName, Obj.getStringTableForSymtab(*Symtab));
+
     const Elf_Sym *Sym = unwrapOrError(
         FileName, Obj.template getEntry<Elf_Sym>(*Symtab, Sec.sh_info));
     auto Data = unwrapOrError(
         FileName, Obj.template getSectionContentsAsArray<Elf_Word>(Sec));
 
     StringRef Name = unwrapOrError(FileName, Obj.getSectionName(Sec));
-    StringRef Signature = StrTable.data() + Sym->st_name;
+    StringRef Signature = GetSignature(*Sym, *Symtab);
     Ret.push_back({Name,
                    maybeDemangle(Signature),
                    Sec.sh_name,
@@ -3612,7 +3621,7 @@ std::vector<GroupSection> getGroups(const ELFFile<ELFT> &Obj,
   return Ret;
 }
 
-DenseMap<uint64_t, const GroupSection *>
+static DenseMap<uint64_t, const GroupSection *>
 mapSectionsToGroups(ArrayRef<GroupSection> Groups) {
   DenseMap<uint64_t, const GroupSection *> Ret;
   for (const GroupSection &G : Groups)
@@ -3621,10 +3630,8 @@ mapSectionsToGroups(ArrayRef<GroupSection> Groups) {
   return Ret;
 }
 
-} // namespace
-
 template <class ELFT> void GNUStyle<ELFT>::printGroupSections() {
-  std::vector<GroupSection> V = getGroups<ELFT>(this->Obj, this->FileName);
+  std::vector<GroupSection> V = this->getGroups();
   DenseMap<uint64_t, const GroupSection *> Map = mapSectionsToGroups(V);
   for (const GroupSection &G : V) {
     OS << "\n"
@@ -6256,7 +6263,7 @@ template <class ELFT> void LLVMStyle<ELFT>::printFileHeaders() {
 
 template <class ELFT> void LLVMStyle<ELFT>::printGroupSections() {
   DictScope Lists(W, "Groups");
-  std::vector<GroupSection> V = getGroups<ELFT>(this->Obj, this->FileName);
+  std::vector<GroupSection> V = this->getGroups();
   DenseMap<uint64_t, const GroupSection *> Map = mapSectionsToGroups(V);
   for (const GroupSection &G : V) {
     DictScope D(W, "Group");
