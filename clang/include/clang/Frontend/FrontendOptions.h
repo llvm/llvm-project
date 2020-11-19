@@ -303,6 +303,9 @@ public:
   /// When using -emit-module, treat the modulemap as a system module.
   unsigned IsSystemModule : 1;
 
+  unsigned IndexIgnoreSystemSymbols : 1;
+  unsigned IndexRecordCodegenName : 1;
+
   /// Output (and read) PCM files regardless of compiler errors.
   unsigned AllowPCMWithCompilerErrors : 1;
 
@@ -378,8 +381,6 @@ public:
   std::string ARCMTMigrateReportOut;
 
   std::string IndexStorePath;
-  unsigned IndexIgnoreSystemSymbols : 1;
-  unsigned IndexRecordCodegenName : 1;
 
   /// The input files and their types.
   SmallVector<FrontendInputFile, 0> Inputs;
