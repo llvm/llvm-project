@@ -9,7 +9,7 @@
 #include "TestDialect.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"

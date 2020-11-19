@@ -19,7 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -2290,7 +2290,7 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto callOp = cast<CallOpType>(op);
 
     // Pack the result types into a struct.
-    Type packedResult;
+    Type packedResult = nullptr;
     unsigned numResults = callOp.getNumResults();
     auto resultTypes = llvm::to_vector<4>(callOp.getResultTypes());
 
@@ -2302,8 +2302,9 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
 
     auto promoted = this->typeConverter.promoteOperands(
         op->getLoc(), /*opOperands=*/op->getOperands(), operands, rewriter);
-    auto newOp = rewriter.create<LLVM::CallOp>(op->getLoc(), packedResult,
-                                               promoted, op->getAttrs());
+    auto newOp = rewriter.create<LLVM::CallOp>(
+        op->getLoc(), packedResult ? TypeRange(packedResult) : TypeRange(),
+        promoted, op->getAttrs());
 
     SmallVector<Value, 4> results;
     if (numResults < 2) {

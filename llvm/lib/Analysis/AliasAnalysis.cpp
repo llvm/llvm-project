@@ -668,7 +668,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
          !Call->isByValArgument(ArgNo)))
       continue;
 
-    AliasResult AR = alias(MemoryLocation(*CI), MemoryLocation(Object));
+    AliasResult AR = alias(*CI, Object);
     // If this is a no-capture pointer argument, see if we can tell that it
     // is impossible to alias the pointer we're checking.  If not, we have to
     // assume that the call could touch the pointer, even though it doesn't

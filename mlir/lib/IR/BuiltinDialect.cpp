@@ -5,10 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains the Builtin dialect that contains all of the attributes,
+// operations, and types that are necessary for the validity of the IR.
+//
+//===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
@@ -42,8 +48,6 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
 };
 } // end anonymous namespace.
 
-/// A builtin dialect to define types/etc that are necessary for the validity of
-/// the IR.
 void BuiltinDialect::initialize() {
   addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
            FunctionType, IndexType, IntegerType, MemRefType, UnrankedMemRefType,

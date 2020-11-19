@@ -13,7 +13,7 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
@@ -188,24 +188,24 @@ MlirOperationState mlirOperationStateGet(const char *name, MlirLocation loc) {
   state->sizeName += n;
 
 void mlirOperationStateAddResults(MlirOperationState *state, intptr_t n,
-                                  MlirType *results) {
+                                  MlirType const *results) {
   APPEND_ELEMS(MlirType, nResults, results);
 }
 
 void mlirOperationStateAddOperands(MlirOperationState *state, intptr_t n,
-                                   MlirValue *operands) {
+                                   MlirValue const *operands) {
   APPEND_ELEMS(MlirValue, nOperands, operands);
 }
 void mlirOperationStateAddOwnedRegions(MlirOperationState *state, intptr_t n,
-                                       MlirRegion *regions) {
+                                       MlirRegion const *regions) {
   APPEND_ELEMS(MlirRegion, nRegions, regions);
 }
 void mlirOperationStateAddSuccessors(MlirOperationState *state, intptr_t n,
-                                     MlirBlock *successors) {
+                                     MlirBlock const *successors) {
   APPEND_ELEMS(MlirBlock, nSuccessors, successors);
 }
 void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
-                                     MlirNamedAttribute *attributes) {
+                                     MlirNamedAttribute const *attributes) {
   APPEND_ELEMS(MlirNamedAttribute, nAttributes, attributes);
 }
 
@@ -390,7 +390,7 @@ void mlirRegionDestroy(MlirRegion region) {
 // Block API.
 //===----------------------------------------------------------------------===//
 
-MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args) {
+MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType const *args) {
   Block *b = new Block;
   for (intptr_t i = 0; i < nArgs; ++i)
     b->addArgument(unwrap(args[i]));

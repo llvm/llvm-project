@@ -433,6 +433,12 @@ public:
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
                                             ModuleSummaryIndex *ExportSummary);
 
+  /// Build an O0 pipeline with the minimal semantically required passes.
+  ///
+  /// This should only be used for non-LTO and LTO pre-link pipelines.
+  ModulePassManager buildO0DefaultPipeline(OptimizationLevel Level,
+                                           bool LTOPreLink = false);
+
   /// Build the default `AAManager` with the default alias analysis pipeline
   /// registered.
   AAManager buildDefaultAAPipeline();
@@ -600,14 +606,6 @@ public:
     OptimizerLastEPCallbacks.push_back(C);
   }
 
-  /// Run all registered extension point callbacks
-  ///
-  /// This runs the registered callbacks in the order they would be run in a
-  /// typical build*Pipeline(). This allows for reusing register*EPCallback()
-  /// between O0 and O[123] pipelines.
-  void runRegisteredEPCallbacks(ModulePassManager &MPM, OptimizationLevel Level,
-                                bool DebugLogging);
-
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -687,6 +685,8 @@ private:
   FunctionPassManager
   buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                         ThinLTOPhase Phase);
+
+  void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
