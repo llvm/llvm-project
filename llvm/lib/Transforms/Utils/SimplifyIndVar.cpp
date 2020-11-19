@@ -1540,6 +1540,30 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
   bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
   auto AnotherOpExtKind = ExtKind;
+
+  // Check that all uses are either s/zext, or narrow def (in case of we are
+  // widening the IV increment).
+  SmallVector<Instruction *, 4> ExtUsers;
+  for (Use &U : NarrowUse->uses()) {
+    if (U.getUser() == NarrowDef)
+      continue;
+    Instruction *User = nullptr;
+    if (ExtKind == SignExtended)
+      User = dyn_cast<SExtInst>(U.getUser());
+    else
+      User = dyn_cast<ZExtInst>(U.getUser());
+    if (!User || User->getType() != WideType)
+      return false;
+    ExtUsers.push_back(User);
+  }
+  // We'll prove some facts that should be true in the context of ext users. IF
+  // there is no users, we are done now. If there are some, pick their common
+  // dominator as context.
+  if (ExtUsers.empty()) {
+    DeadInsts.emplace_back(NarrowUse);
+    return true;
+  }
+
   if (!CanSignExtend && !CanZeroExtend) {
     // Because InstCombine turns 'sub nuw' to 'add' losing the no-wrap flag, we
     // will most likely not see it. Let's try to prove it.
@@ -1565,22 +1589,6 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   const SCEVAddRecExpr *AddRecOp1 = dyn_cast<SCEVAddRecExpr>(Op1);
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
-
-  // Check that all uses are either s/zext, or narrow def (in case of we are
-  // widening the IV increment).
-  SmallVector<Instruction *, 4> ExtUsers;
-  for (Use &U : NarrowUse->uses()) {
-    if (U.getUser() == NarrowDef)
-      continue;
-    Instruction *User = nullptr;
-    if (ExtKind == SignExtended)
-      User = dyn_cast<SExtInst>(U.getUser());
-    else
-      User = dyn_cast<ZExtInst>(U.getUser());
-    if (!User || User->getType() != WideType)
-      return false;
-    ExtUsers.push_back(User);
-  }
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
