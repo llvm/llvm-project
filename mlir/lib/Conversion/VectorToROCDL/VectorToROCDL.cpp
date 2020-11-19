@@ -102,8 +102,8 @@ public:
     // Note that the dataPtr starts at the offset address specified by
     // indices, so no need to calculate offset size in bytes again in
     // the MUBUF instruction.
-    Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
-                               adaptor.indices(), rewriter);
+    Value dataPtr = getStridedElementPtr(loc, memRefType, adaptor.memref(),
+                                         adaptor.indices(), rewriter);
 
     // 1. Create and fill a <4 x i32> dwordConfig with:
     //    1st two elements holding the address of dataPtr.

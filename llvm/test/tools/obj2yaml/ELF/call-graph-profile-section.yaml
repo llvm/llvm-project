@@ -15,7 +15,7 @@
 # BASIC-NEXT:   - Name:    .llvm.call-graph-profile
 # BASIC-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # BASIC-NEXT:     Link:    .symtab
-# BASIC-NEXT:     EntSize: 0x0000000000000010
+# BASIC-NEXT:     EntSize: 0x10
 # BASIC-NEXT:     Entries:
 # BASIC-NEXT:       - From:   foo
 # BASIC-NEXT:         To:     bar
@@ -58,11 +58,11 @@ Symbols:
 # INVALID-NEXT:   - Name:    .empty
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:   - Name:    .multiple.16.valid
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Entries:
 # INVALID-NEXT:       - From:   foo
 # INVALID-NEXT:         To:     bar
@@ -70,39 +70,39 @@ Symbols:
 # INVALID-NEXT:   - Name:    .non.multiple.16
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Content: '0000000100000002000000000000000300'
 # INVALID-NEXT:   - Name:    .multiple.16.invalid
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Content: 00112233445566778899AABBCCDDEEFF
 # INVALID-NEXT:   - Name:    .unknown.symbol.1
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Content: 000000FF000000020000000000000003
 # INVALID-NEXT:   - Name:    .unknown.symbol.2
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Content: 00000001000000FF0000000000000003
 # INVALID-NEXT:   - Name:    .link.to.symtable
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Entries:
 # INVALID-NEXT:       - From:   foo
 # INVALID-NEXT:         To:     bar
 # INVALID-NEXT:         Weight: 0
 # INVALID-NEXT:   - Name:    .link.to.non.symtable.1
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Content: '00000001000000020000000000000000'
 # INVALID-NEXT:   - Name:    .link.to.non.symtable.2
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .empty
-# INVALID-NEXT:     EntSize: 0x0000000000000010
+# INVALID-NEXT:     EntSize: 0x10
 # INVALID-NEXT:     Content: '00000001000000020000000000000000'
 # INVALID-NEXT:   - Name: .zero.entry.size
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
@@ -114,7 +114,7 @@ Symbols:
 # INVALID-NEXT:   - Name: .invalid.entry.size
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
-# INVALID-NEXT:     EntSize: 0x0000000000000001
+# INVALID-NEXT:     EntSize: 0x1
 # INVALID-NEXT:     Entries:
 # INVALID-NEXT:       - From:   foo
 # INVALID-NEXT:         To:     bar

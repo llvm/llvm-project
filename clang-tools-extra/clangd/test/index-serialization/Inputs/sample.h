@@ -1,4 +1,6 @@
 #pragma once
 
 // Introduce a symbol.
-struct Foo {};
+struct Foo {
+  virtual void Func() {}
+};

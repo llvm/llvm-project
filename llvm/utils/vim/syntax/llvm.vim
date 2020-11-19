@@ -148,7 +148,6 @@ syn keyword llvmKeyword
       \ spir_func
       \ spir_kernel
       \ sret
-      \ nossp
       \ ssp
       \ sspreq
       \ sspstrong

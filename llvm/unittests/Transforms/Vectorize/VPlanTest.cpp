@@ -521,5 +521,56 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUser) {
   delete Load;
 }
 
+struct VPDoubleValueDef : public VPUser, public VPDef {
+  VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPUser(Operands), VPDef() {
+    new VPValue(nullptr, this);
+    new VPValue(nullptr, this);
+  }
+};
+
+TEST(VPDoubleValueDefTest, traverseUseLists) {
+  // Check that the def-use chains of a multi-def can be traversed in both
+  // directions.
+
+  // Create a new VPDef which defines 2 values and has 2 operands.
+  VPInstruction Op0(20, {});
+  VPInstruction Op1(30, {});
+  VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
+
+  // Create a new users of the defined values.
+  VPInstruction I1(
+      1, {DoubleValueDef.getVPValue(0), DoubleValueDef.getVPValue(1)});
+  VPInstruction I2(2, {DoubleValueDef.getVPValue(0)});
+  VPInstruction I3(3, {DoubleValueDef.getVPValue(1)});
+
+  // Check operands of the VPDef (traversing upwards).
+  SmallVector<VPValue *, 4> DoubleOperands(DoubleValueDef.op_begin(),
+                                           DoubleValueDef.op_end());
+  EXPECT_EQ(2u, DoubleOperands.size());
+  EXPECT_EQ(&Op0, DoubleOperands[0]);
+  EXPECT_EQ(&Op1, DoubleOperands[1]);
+
+  // Check users of the defined values (traversing downwards).
+  SmallVector<VPUser *, 4> DoubleValueDefV0Users(
+      DoubleValueDef.getVPValue(0)->user_begin(),
+      DoubleValueDef.getVPValue(0)->user_end());
+  EXPECT_EQ(2u, DoubleValueDefV0Users.size());
+  EXPECT_EQ(&I1, DoubleValueDefV0Users[0]);
+  EXPECT_EQ(&I2, DoubleValueDefV0Users[1]);
+
+  SmallVector<VPUser *, 4> DoubleValueDefV1Users(
+      DoubleValueDef.getVPValue(1)->user_begin(),
+      DoubleValueDef.getVPValue(1)->user_end());
+  EXPECT_EQ(2u, DoubleValueDefV1Users.size());
+  EXPECT_EQ(&I1, DoubleValueDefV1Users[0]);
+  EXPECT_EQ(&I3, DoubleValueDefV1Users[1]);
+
+  // Now check that we can get the right VPDef for each defined value.
+  EXPECT_EQ(&DoubleValueDef, I1.getOperand(0)->getDef());
+  EXPECT_EQ(&DoubleValueDef, I1.getOperand(1)->getDef());
+  EXPECT_EQ(&DoubleValueDef, I2.getOperand(0)->getDef());
+  EXPECT_EQ(&DoubleValueDef, I3.getOperand(0)->getDef());
+}
+
 } // namespace
 } // namespace llvm

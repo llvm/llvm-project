@@ -253,6 +253,56 @@ struct UniformQuantizedPerAxisTypeStorage : public QuantizedTypeStorage {
   int32_t quantizedDimension;
 };
 
+struct CalibratedQuantizedTypeStorage : public QuantizedTypeStorage {
+  struct KeyTy {
+    KeyTy(Type expressedType, double min, double max)
+        : expressedType(expressedType), min(min), max(max) {}
+    // Floating point type that the quantized type approximates.
+    Type expressedType;
+
+    double min;
+    double max;
+
+    // Check for equality of two structures that share KeyTy data members
+    // (by name).
+    template <typename T, typename U>
+    static bool genericIsEqual(const T &lhs, const U &rhs) {
+      return lhs.expressedType == rhs.expressedType && lhs.min == rhs.min &&
+             lhs.max == rhs.max;
+    }
+
+    bool operator==(const KeyTy &other) const {
+      return genericIsEqual(*this, other);
+    }
+
+    unsigned getHashValue() const {
+      int64_t minBits = llvm::bit_cast<double>(min);
+      int64_t maxBits = llvm::bit_cast<double>(max);
+      return llvm::hash_combine(expressedType, minBits, maxBits);
+    }
+  };
+
+  CalibratedQuantizedTypeStorage(const KeyTy &key)
+      : QuantizedTypeStorage(0, NoneType(), key.expressedType, 0, 0),
+        min(key.min), max(key.max) {}
+
+  bool operator==(const KeyTy &key) const {
+    return KeyTy::genericIsEqual(*this, key);
+  }
+
+  /// Construction.
+  static CalibratedQuantizedTypeStorage *
+  construct(TypeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<CalibratedQuantizedTypeStorage>())
+        CalibratedQuantizedTypeStorage(key);
+  }
+
+  static unsigned hashKey(const KeyTy &key) { return key.getHashValue(); }
+
+  double min;
+  double max;
+};
+
 } // namespace detail
 } // namespace quant
 } // namespace mlir

@@ -43,6 +43,9 @@ Value Aliases::find(Value v) {
     if (!defOp)
       return v;
 
+    if (isa<TensorToMemrefOp>(defOp))
+      return v;
+
     if (auto memEffect = dyn_cast<MemoryEffectOpInterface>(defOp)) {
       // Collect all memory effects on `v`.
       SmallVector<MemoryEffects::EffectInstance, 1> effects;
@@ -113,9 +116,9 @@ void LinalgDependenceGraph::addDependenceElem(DependenceType dt,
                     << ") -> \n\t\t(" << *dependentOpView.op << ", "
                     << dependentOpView.operandIndex << ")");
   dependencesFromGraphs[dt][indexingOpView.op].push_back(
-      LinalgDependenceGraphElem{dependentOpView, indexingOpView});
+      LinalgDependenceGraphElem{dependentOpView, indexingOpView, dt});
   dependencesIntoGraphs[dt][dependentOpView.op].push_back(
-      LinalgDependenceGraphElem{indexingOpView, dependentOpView});
+      LinalgDependenceGraphElem{indexingOpView, dependentOpView, dt});
 }
 
 LinalgDependenceGraph::dependence_range

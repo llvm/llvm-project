@@ -1111,7 +1111,7 @@ uint32_t NativeRegisterContextLinux_arm64::CalculateSVEOffset(
     sve_reg_offset =
         SVE_PT_FPSIMD_OFFSET + (reg - GetRegisterInfo().GetRegNumSVEZ0()) * 16;
   } else if (m_sve_state == SVEState::Full) {
-    uint32_t sve_z0_offset = GetGPRSize() + 8;
+    uint32_t sve_z0_offset = GetGPRSize() + 16;
     sve_reg_offset =
         SVE_SIG_REGS_OFFSET + reg_info->byte_offset - sve_z0_offset;
   }

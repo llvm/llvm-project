@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
 // RUN: %clang_cc1 -fsyntax-only -std=c++1z %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -triple i386-windows-pc -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z %s -triple i386-windows-pc -verify
 
 void test_conversion() {
   int (*fp1)(int) = [](int x) { return x + 1; };

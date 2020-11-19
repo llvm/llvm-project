@@ -404,6 +404,10 @@ mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirDenseElementsAttrGetStringValue(MlirAttribute attr, intptr_t pos);
 
+/** Returns the raw data of the given dense elements attribute. */
+MLIR_CAPI_EXPORTED const void *
+mlirDenseElementsAttrGetRawData(MlirAttribute attr);
+
 //===----------------------------------------------------------------------===//
 // Opaque elements attribute.
 //===----------------------------------------------------------------------===//

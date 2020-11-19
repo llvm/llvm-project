@@ -219,7 +219,6 @@
 ; CHECK-NEXT:     Flags [ (0x10)
 ; CHECK-NEXT:       UNDEFINED (0x10)
 ; CHECK-NEXT:     ]
-; CHECK-NEXT:     ImportName: __stack_pointer
 ; CHECK-NEXT:     ImportModule: env
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }

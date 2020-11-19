@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains support for writing the metadata for Windows Control Flow
-// Guard, including address-taken functions, and valid longjmp targets.
+// Guard, including address-taken functions and valid longjmp targets.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +17,8 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -78,20 +78,50 @@ static bool isPossibleIndirectCallTarget(const Function *F) {
   return false;
 }
 
+MCSymbol *WinCFGuard::lookupImpSymbol(const MCSymbol *Sym) {
+  if (Sym->getName().startswith("__imp_"))
+    return nullptr;
+  return Asm->OutContext.lookupSymbol(Twine("__imp_") + Sym->getName());
+}
+
 void WinCFGuard::endModule() {
   const Module *M = Asm->MMI->getModule();
-  std::vector<const Function *> Functions;
-  for (const Function &F : *M)
-    if (isPossibleIndirectCallTarget(&F))
-      Functions.push_back(&F);
-  if (Functions.empty() && LongjmpTargets.empty())
+  std::vector<const MCSymbol *> GFIDsEntries;
+  std::vector<const MCSymbol *> GIATsEntries;
+  for (const Function &F : *M) {
+    if (isPossibleIndirectCallTarget(&F)) {
+      // If F is a dllimport and has an "__imp_" symbol already defined, add the
+      // "__imp_" symbol to the .giats section.
+      if (F.hasDLLImportStorageClass()) {
+        if (MCSymbol *impSym = lookupImpSymbol(Asm->getSymbol(&F))) {
+          GIATsEntries.push_back(impSym);
+        }
+      }
+      // Add the function's symbol to the .gfids section.
+      // Note: For dllimport functions, MSVC sometimes does not add this symbol
+      // to the .gfids section, but only adds the corresponding "__imp_" symbol
+      // to the .giats section. Here we always add the symbol to the .gfids
+      // section, since this does not introduce security risks.
+      GFIDsEntries.push_back(Asm->getSymbol(&F));
+    }
+  }
+
+  if (GFIDsEntries.empty() && GIATsEntries.empty() && LongjmpTargets.empty())
     return;
+
+  // Emit the symbol index of each GFIDs entry to form the .gfids section.
   auto &OS = *Asm->OutStreamer;
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGFIDsSection());
-  for (const Function *F : Functions)
-    OS.EmitCOFFSymbolIndex(Asm->getSymbol(F));
+  for (const MCSymbol *S : GFIDsEntries)
+    OS.EmitCOFFSymbolIndex(S);
 
-  // Emit the symbol index of each longjmp target.
+  // Emit the symbol index of each GIATs entry to form the .giats section.
+  OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGIATsSection());
+  for (const MCSymbol *S : GIATsEntries) {
+    OS.EmitCOFFSymbolIndex(S);
+  }
+
+  // Emit the symbol index of each longjmp target to form the .gljmp section.
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGLJMPSection());
   for (const MCSymbol *S : LongjmpTargets) {
     OS.EmitCOFFSymbolIndex(S);

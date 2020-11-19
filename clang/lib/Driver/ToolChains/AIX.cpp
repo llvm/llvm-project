@@ -216,11 +216,11 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, UP.str());
 }
 
-void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &DriverArgs,
-                              llvm::opt::ArgStringList &CC1Args) const {
-  switch (GetCXXStdlibType(DriverArgs)) {
+void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CmdArgs) const {
+  switch (GetCXXStdlibType(Args)) {
   case ToolChain::CST_Libcxx:
-    CC1Args.push_back("-lc++");
+    CmdArgs.push_back("-lc++");
     return;
   case ToolChain::CST_Libstdcxx:
     llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");

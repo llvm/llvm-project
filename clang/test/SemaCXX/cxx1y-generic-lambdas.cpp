@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fms-extensions %s -DMS_EXTENSIONS
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -triple i386-windows-pc -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -triple i386-windows-pc -fdelayed-template-parsing %s -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -triple i386-windows-pc -fms-extensions %s -DMS_EXTENSIONS
+// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only -fblocks -triple i386-windows-pc -fdelayed-template-parsing -fms-extensions %s -DMS_EXTENSIONS -DDELAYED_TEMPLATE_PARSING
 
 template<class F, class ...Rest> struct first_impl { typedef F type; };
 template<class ...Args> using first = typename first_impl<Args...>::type;

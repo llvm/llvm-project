@@ -154,6 +154,11 @@ The low-level design of VPlan comprises of the following classes.
   A VPUser represents an entity that uses a number of VPValues as operands.
   VPUser is similar in some aspects to LLVM's User class.
 
+:VPDef:
+  A VPDef represents an entity that defines zero, one or multiple VPValues.
+  It is used to model the fact that recipes in VPlan can define multiple
+  VPValues.
+
 :VPInstruction:
   A VPInstruction is both a VPRecipe and a VPUser. It models a single
   VPlan-level instruction to be generated if the VPlan is executed, including

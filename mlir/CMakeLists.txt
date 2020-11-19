@@ -100,12 +100,6 @@ include_directories( ${MLIR_INCLUDE_DIR})
 # from another directory like tools
 add_subdirectory(tools/mlir-tblgen)
 
-# Create an anchor target that will depend on dialect-specific op bindings.
-if (MLIR_BINDINGS_PYTHON_ENABLED)
-  add_custom_target(MLIRBindingsPythonIncGen)
-  include(AddMLIRPythonExtension)
-endif()
-
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
 # C API needs all dialects for registration, but should be built before tests.

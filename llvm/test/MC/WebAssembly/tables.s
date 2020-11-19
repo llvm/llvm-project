@@ -124,41 +124,41 @@ table_fill:
 # BIN-NEXT:      - Index:           1
 # BIN-NEXT:        ElemType:        EXTERNREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Initial:         0x00000000
+# BIN-NEXT:          Initial:         0x0
 # BIN-NEXT:      - Index:           2
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Initial:         0x00000000
+# BIN-NEXT:          Initial:         0x0
 
 #      BIN:  - Type:            CODE
 # BIN-NEXT:    Relocations:
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x00000009
+# BIN-NEXT:        Offset:          0x9
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x00000010
+# BIN-NEXT:        Offset:          0x10
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           3
-# BIN-NEXT:        Offset:          0x00000015
+# BIN-NEXT:        Offset:          0x15
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x00000020
+# BIN-NEXT:        Offset:          0x20
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x0000002D
+# BIN-NEXT:        Offset:          0x2D
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x00000038
+# BIN-NEXT:        Offset:          0x38
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x00000041
+# BIN-NEXT:        Offset:          0x41
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x00000051
+# BIN-NEXT:        Offset:          0x51
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x0000005A
+# BIN-NEXT:        Offset:          0x5A
 # BIN-NEXT:    Functions:
 # BIN-NEXT:      - Index:           0
 # BIN-NEXT:        Locals:          []

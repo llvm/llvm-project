@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumInjectedSources.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
@@ -56,7 +57,7 @@ static DbiStream *getDbiStreamPtr(PDBFile &File) {
 NativeSession::NativeSession(std::unique_ptr<PDBFile> PdbFile,
                              std::unique_ptr<BumpPtrAllocator> Allocator)
     : Pdb(std::move(PdbFile)), Allocator(std::move(Allocator)),
-      Cache(*this, getDbiStreamPtr(*Pdb)) {}
+      Cache(*this, getDbiStreamPtr(*Pdb)), AddrToModuleIndex(IMapAllocator) {}
 
 NativeSession::~NativeSession() = default;
 
@@ -255,6 +256,9 @@ std::unique_ptr<PDBSymbol> NativeSession::findSymbolByRVA(uint32_t RVA,
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
                                       PDB_SymType Type) {
+  if (AddrToModuleIndex.empty())
+    parseSectionContribs();
+
   return Cache.findSymbolBySectOffset(Sect, Offset, Type);
 }
 
@@ -385,4 +389,75 @@ uint32_t NativeSession::getRVAFromSectOffset(uint32_t Section,
 uint64_t NativeSession::getVAFromSectOffset(uint32_t Section,
                                             uint32_t Offset) const {
   return LoadAddress + getRVAFromSectOffset(Section, Offset);
+}
+
+bool NativeSession::moduleIndexForVA(uint64_t VA, uint16_t &ModuleIndex) const {
+  ModuleIndex = 0;
+  auto Iter = AddrToModuleIndex.find(VA);
+  if (Iter == AddrToModuleIndex.end())
+    return false;
+  ModuleIndex = Iter.value();
+  return true;
+}
+
+bool NativeSession::moduleIndexForSectOffset(uint32_t Sect, uint32_t Offset,
+                                             uint16_t &ModuleIndex) const {
+  ModuleIndex = 0;
+  auto Iter = AddrToModuleIndex.find(getVAFromSectOffset(Sect, Offset));
+  if (Iter == AddrToModuleIndex.end())
+    return false;
+  ModuleIndex = Iter.value();
+  return true;
+}
+
+void NativeSession::parseSectionContribs() {
+  auto Dbi = Pdb->getPDBDbiStream();
+  if (!Dbi)
+    return;
+
+  class Visitor : public ISectionContribVisitor {
+    NativeSession &Session;
+    IMap &AddrMap;
+
+  public:
+    Visitor(NativeSession &Session, IMap &AddrMap)
+        : Session(Session), AddrMap(AddrMap) {}
+    void visit(const SectionContrib &C) override {
+      if (C.Size == 0)
+        return;
+
+      uint64_t VA = Session.getVAFromSectOffset(C.ISect, C.Off);
+      uint64_t End = VA + C.Size;
+
+      // Ignore overlapping sections based on the assumption that a valid
+      // PDB file should not have overlaps.
+      if (!AddrMap.overlaps(VA, End))
+        AddrMap.insert(VA, End, C.Imod);
+    }
+    void visit(const SectionContrib2 &C) override { visit(C.Base); }
+  };
+
+  Visitor V(*this, AddrToModuleIndex);
+  Dbi->visitSectionContributions(V);
+}
+
+Expected<ModuleDebugStreamRef>
+NativeSession::getModuleDebugStream(uint32_t Index) const {
+  auto *Dbi = getDbiStreamPtr(*Pdb);
+  assert(Dbi && "Dbi stream not present");
+
+  DbiModuleDescriptor Modi = Dbi->modules().getModuleDescriptor(Index);
+
+  uint16_t ModiStream = Modi.getModuleStreamIndex();
+  if (ModiStream == kInvalidStreamIndex)
+    return make_error<RawError>("Module stream not present");
+
+  std::unique_ptr<msf::MappedBlockStream> ModStreamData =
+      Pdb->createIndexedStream(ModiStream);
+
+  ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
+  if (auto EC = ModS.reload())
+    return std::move(EC);
+
+  return std::move(ModS);
 }

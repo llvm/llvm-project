@@ -619,6 +619,130 @@ inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
   return Matcher<T>(Implementation);
 }
 
+/// Interface that allows matchers to traverse the AST.
+/// FIXME: Find a better name.
+///
+/// This provides three entry methods for each base node type in the AST:
+/// - \c matchesChildOf:
+///   Matches a matcher on every child node of the given node. Returns true
+///   if at least one child node could be matched.
+/// - \c matchesDescendantOf:
+///   Matches a matcher on all descendant nodes of the given node. Returns true
+///   if at least one descendant matched.
+/// - \c matchesAncestorOf:
+///   Matches a matcher on all ancestors of the given node. Returns true if
+///   at least one ancestor matched.
+///
+/// FIXME: Currently we only allow Stmt and Decl nodes to start a traversal.
+/// In the future, we want to implement this for all nodes for which it makes
+/// sense. In the case of matchesAncestorOf, we'll want to implement it for
+/// all nodes, as all nodes have ancestors.
+class ASTMatchFinder {
+public:
+  /// Defines how bindings are processed on recursive matches.
+  enum BindKind {
+    /// Stop at the first match and only bind the first match.
+    BK_First,
+
+    /// Create results for all combinations of bindings that match.
+    BK_All
+  };
+
+  /// Defines which ancestors are considered for a match.
+  enum AncestorMatchMode {
+    /// All ancestors.
+    AMM_All,
+
+    /// Direct parent only.
+    AMM_ParentOnly
+  };
+
+  virtual ~ASTMatchFinder() = default;
+
+  /// Returns true if the given C++ class is directly or indirectly derived
+  /// from a base type matching \c base.
+  ///
+  /// A class is not considered to be derived from itself.
+  virtual bool classIsDerivedFrom(const CXXRecordDecl *Declaration,
+                                  const Matcher<NamedDecl> &Base,
+                                  BoundNodesTreeBuilder *Builder,
+                                  bool Directly) = 0;
+
+  /// Returns true if the given Objective-C class is directly or indirectly
+  /// derived from a base class matching \c base.
+  ///
+  /// A class is not considered to be derived from itself.
+  virtual bool objcClassIsDerivedFrom(const ObjCInterfaceDecl *Declaration,
+                                      const Matcher<NamedDecl> &Base,
+                                      BoundNodesTreeBuilder *Builder,
+                                      bool Directly) = 0;
+
+  template <typename T>
+  bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
+                      BoundNodesTreeBuilder *Builder, TraversalKind Traverse,
+                      BindKind Bind) {
+    static_assert(std::is_base_of<Decl, T>::value ||
+                      std::is_base_of<Stmt, T>::value ||
+                      std::is_base_of<NestedNameSpecifier, T>::value ||
+                      std::is_base_of<NestedNameSpecifierLoc, T>::value ||
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<QualType, T>::value,
+                  "unsupported type for recursive matching");
+    return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
+                          Builder, Traverse, Bind);
+  }
+
+  template <typename T>
+  bool matchesDescendantOf(const T &Node, const DynTypedMatcher &Matcher,
+                           BoundNodesTreeBuilder *Builder, BindKind Bind) {
+    static_assert(std::is_base_of<Decl, T>::value ||
+                      std::is_base_of<Stmt, T>::value ||
+                      std::is_base_of<NestedNameSpecifier, T>::value ||
+                      std::is_base_of<NestedNameSpecifierLoc, T>::value ||
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<QualType, T>::value,
+                  "unsupported type for recursive matching");
+    return matchesDescendantOf(DynTypedNode::create(Node), getASTContext(),
+                               Matcher, Builder, Bind);
+  }
+
+  // FIXME: Implement support for BindKind.
+  template <typename T>
+  bool matchesAncestorOf(const T &Node, const DynTypedMatcher &Matcher,
+                         BoundNodesTreeBuilder *Builder,
+                         AncestorMatchMode MatchMode) {
+    static_assert(std::is_base_of<Decl, T>::value ||
+                      std::is_base_of<NestedNameSpecifierLoc, T>::value ||
+                      std::is_base_of<Stmt, T>::value ||
+                      std::is_base_of<TypeLoc, T>::value,
+                  "type not allowed for recursive matching");
+    return matchesAncestorOf(DynTypedNode::create(Node), getASTContext(),
+                             Matcher, Builder, MatchMode);
+  }
+
+  virtual ASTContext &getASTContext() const = 0;
+
+  virtual bool IsMatchingInASTNodeNotSpelledInSource() const = 0;
+
+  bool isTraversalIgnoringImplicitNodes() const;
+
+protected:
+  virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
+                              const DynTypedMatcher &Matcher,
+                              BoundNodesTreeBuilder *Builder,
+                              TraversalKind Traverse, BindKind Bind) = 0;
+
+  virtual bool matchesDescendantOf(const DynTypedNode &Node, ASTContext &Ctx,
+                                   const DynTypedMatcher &Matcher,
+                                   BoundNodesTreeBuilder *Builder,
+                                   BindKind Bind) = 0;
+
+  virtual bool matchesAncestorOf(const DynTypedNode &Node, ASTContext &Ctx,
+                                 const DynTypedMatcher &Matcher,
+                                 BoundNodesTreeBuilder *Builder,
+                                 AncestorMatchMode MatchMode) = 0;
+};
+
 /// Specialization of the conversion functions for QualType.
 ///
 /// This specialization provides the Matcher<Type>->Matcher<QualType>
@@ -663,6 +787,15 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
     }
   }
   return End;
+}
+
+template <typename T, std::enable_if_t<!std::is_base_of<FunctionDecl, T>::value>
+                          * = nullptr>
+inline bool isDefaultedHelper(const T *) {
+  return false;
+}
+inline bool isDefaultedHelper(const FunctionDecl *FD) {
+  return FD->isDefaulted();
 }
 
 // Metafunction to determine if type T has a member called getDecl.
@@ -932,6 +1065,8 @@ private:
   /// is \c NULL.
   bool matchesDecl(const Decl *Node, ASTMatchFinder *Finder,
                    BoundNodesTreeBuilder *Builder) const {
+    if (Finder->isTraversalIgnoringImplicitNodes() && Node->isImplicit())
+      return false;
     return Node != nullptr && this->InnerMatcher.matches(
                                   DynTypedNode::create(*Node), Finder, Builder);
   }
@@ -952,134 +1087,6 @@ struct IsBaseType {
 };
 template <typename T>
 const bool IsBaseType<T>::value;
-
-/// Interface that allows matchers to traverse the AST.
-/// FIXME: Find a better name.
-///
-/// This provides three entry methods for each base node type in the AST:
-/// - \c matchesChildOf:
-///   Matches a matcher on every child node of the given node. Returns true
-///   if at least one child node could be matched.
-/// - \c matchesDescendantOf:
-///   Matches a matcher on all descendant nodes of the given node. Returns true
-///   if at least one descendant matched.
-/// - \c matchesAncestorOf:
-///   Matches a matcher on all ancestors of the given node. Returns true if
-///   at least one ancestor matched.
-///
-/// FIXME: Currently we only allow Stmt and Decl nodes to start a traversal.
-/// In the future, we want to implement this for all nodes for which it makes
-/// sense. In the case of matchesAncestorOf, we'll want to implement it for
-/// all nodes, as all nodes have ancestors.
-class ASTMatchFinder {
-public:
-
-  /// Defines how bindings are processed on recursive matches.
-  enum BindKind {
-    /// Stop at the first match and only bind the first match.
-    BK_First,
-
-    /// Create results for all combinations of bindings that match.
-    BK_All
-  };
-
-  /// Defines which ancestors are considered for a match.
-  enum AncestorMatchMode {
-    /// All ancestors.
-    AMM_All,
-
-    /// Direct parent only.
-    AMM_ParentOnly
-  };
-
-  virtual ~ASTMatchFinder() = default;
-
-  /// Returns true if the given C++ class is directly or indirectly derived
-  /// from a base type matching \c base.
-  ///
-  /// A class is not considered to be derived from itself.
-  virtual bool classIsDerivedFrom(const CXXRecordDecl *Declaration,
-                                  const Matcher<NamedDecl> &Base,
-                                  BoundNodesTreeBuilder *Builder,
-                                  bool Directly) = 0;
-
-  /// Returns true if the given Objective-C class is directly or indirectly
-  /// derived from a base class matching \c base.
-  ///
-  /// A class is not considered to be derived from itself.
-  virtual bool objcClassIsDerivedFrom(const ObjCInterfaceDecl *Declaration,
-                                      const Matcher<NamedDecl> &Base,
-                                      BoundNodesTreeBuilder *Builder,
-                                      bool Directly) = 0;
-
-  template <typename T>
-  bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
-                      BoundNodesTreeBuilder *Builder, TraversalKind Traverse,
-                      BindKind Bind) {
-    static_assert(std::is_base_of<Decl, T>::value ||
-                  std::is_base_of<Stmt, T>::value ||
-                  std::is_base_of<NestedNameSpecifier, T>::value ||
-                  std::is_base_of<NestedNameSpecifierLoc, T>::value ||
-                  std::is_base_of<TypeLoc, T>::value ||
-                  std::is_base_of<QualType, T>::value,
-                  "unsupported type for recursive matching");
-    return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
-                          Builder, Traverse, Bind);
-  }
-
-  template <typename T>
-  bool matchesDescendantOf(const T &Node,
-                           const DynTypedMatcher &Matcher,
-                           BoundNodesTreeBuilder *Builder,
-                           BindKind Bind) {
-    static_assert(std::is_base_of<Decl, T>::value ||
-                  std::is_base_of<Stmt, T>::value ||
-                  std::is_base_of<NestedNameSpecifier, T>::value ||
-                  std::is_base_of<NestedNameSpecifierLoc, T>::value ||
-                  std::is_base_of<TypeLoc, T>::value ||
-                  std::is_base_of<QualType, T>::value,
-                  "unsupported type for recursive matching");
-    return matchesDescendantOf(DynTypedNode::create(Node), getASTContext(),
-                               Matcher, Builder, Bind);
-  }
-
-  // FIXME: Implement support for BindKind.
-  template <typename T>
-  bool matchesAncestorOf(const T &Node,
-                         const DynTypedMatcher &Matcher,
-                         BoundNodesTreeBuilder *Builder,
-                         AncestorMatchMode MatchMode) {
-    static_assert(std::is_base_of<Decl, T>::value ||
-                      std::is_base_of<NestedNameSpecifierLoc, T>::value ||
-                      std::is_base_of<Stmt, T>::value ||
-                      std::is_base_of<TypeLoc, T>::value,
-                  "type not allowed for recursive matching");
-    return matchesAncestorOf(DynTypedNode::create(Node), getASTContext(),
-                             Matcher, Builder, MatchMode);
-  }
-
-  virtual ASTContext &getASTContext() const = 0;
-
-  virtual bool IsMatchingInTemplateInstantiationNotSpelledInSource() const = 0;
-
-  bool isTraversalAsIs() const;
-
-protected:
-  virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
-                              const DynTypedMatcher &Matcher,
-                              BoundNodesTreeBuilder *Builder,
-                              TraversalKind Traverse, BindKind Bind) = 0;
-
-  virtual bool matchesDescendantOf(const DynTypedNode &Node, ASTContext &Ctx,
-                                   const DynTypedMatcher &Matcher,
-                                   BoundNodesTreeBuilder *Builder,
-                                   BindKind Bind) = 0;
-
-  virtual bool matchesAncestorOf(const DynTypedNode &Node, ASTContext &Ctx,
-                                 const DynTypedMatcher &Matcher,
-                                 BoundNodesTreeBuilder *Builder,
-                                 AncestorMatchMode MatchMode) = 0;
-};
 
 /// A type-list implementation.
 ///

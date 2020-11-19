@@ -1825,22 +1825,6 @@ example:
     undefined behavior, the undefined behavior may be observed even
     if the call site is dead code.
 
-``nossp``
-    This attribute indicates the function should not emit a stack smashing
-    protector. This is useful for code that intentionally manipulates the stack
-    canary, such as operating system kernel code that must save/restore such
-    canary values on context switch.
-
-    If a function with the ``nossp`` attribute calls a callee function that has
-    a stack protector function attribute, such as ``ssp``, ``sspreq``, or
-    ``sspstrong`` (or vice-versa), then the callee will not be inline
-    substituted into the caller. Even when the callee is ``alwaysinline``, the
-    above holds.
-
-    Such inlining might break assumptions in the function that was built
-    without stack protection. This permits the functions that would have stack
-    protection to retain their stack protector.
-
 ``ssp``
     This attribute indicates that the function should emit a stack
     smashing protector. It is in the form of a "canary" --- a random value

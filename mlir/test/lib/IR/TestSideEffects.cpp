@@ -47,6 +47,20 @@ struct SideEffectsPass
         diag << " on resource '" << instance.getResource()->getName() << "'";
       }
     });
+
+    SmallVector<TestEffects::EffectInstance, 1> testEffects;
+    module.walk([&](TestEffectOpInterface op) {
+      testEffects.clear();
+      op.getEffects(testEffects);
+
+      if (testEffects.empty())
+        return;
+
+      for (const TestEffects::EffectInstance &instance : testEffects) {
+        op.emitRemark() << "found a parametric effect with "
+                        << instance.getParameters();
+      }
+    });
   }
 };
 } // end anonymous namespace

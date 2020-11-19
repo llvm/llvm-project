@@ -832,16 +832,13 @@ def GOT : Alias<6, (outs GR64:$R1), (ins),
 
 let Defs = [CC] in {
   let CCValues = 0xF, CompareZeroCCMask = 0x8 in {
-    def LPR  : UnaryRR <"lpr",  0x10,   z_iabs, GR32, GR32>;
-    def LPGR : UnaryRRE<"lpgr", 0xB900, z_iabs, GR64, GR64>;
+    def LPR  : UnaryRR <"lpr",  0x10,   abs, GR32, GR32>;
+    def LPGR : UnaryRRE<"lpgr", 0xB900, abs, GR64, GR64>;
   }
   let CCValues = 0xE, CompareZeroCCMask = 0xE in
     def LPGFR : UnaryRRE<"lpgfr", 0xB910, null_frag, GR64, GR32>;
 }
-def : Pat<(z_iabs32 GR32:$src), (LPR  GR32:$src)>;
-def : Pat<(z_iabs64 GR64:$src), (LPGR GR64:$src)>;
-defm : SXU<z_iabs,   LPGFR>;
-defm : SXU<z_iabs64, LPGFR>;
+defm : SXU<abs, LPGFR>;
 
 let Defs = [CC] in {
   let CCValues = 0xF, CompareZeroCCMask = 0x8 in {
@@ -851,10 +848,7 @@ let Defs = [CC] in {
   let CCValues = 0xE, CompareZeroCCMask = 0xE in
     def LNGFR : UnaryRRE<"lngfr", 0xB911, null_frag, GR64, GR32>;
 }
-def : Pat<(z_inegabs32 GR32:$src), (LNR  GR32:$src)>;
-def : Pat<(z_inegabs64 GR64:$src), (LNGR GR64:$src)>;
-defm : SXU<z_inegabs,   LNGFR>;
-defm : SXU<z_inegabs64, LNGFR>;
+defm : SXU<z_inegabs, LNGFR>;
 
 let Defs = [CC] in {
   let CCValues = 0xF, CompareZeroCCMask = 0x8 in {

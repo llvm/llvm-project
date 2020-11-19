@@ -905,7 +905,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
   }
 
   // The output buffer, into which the global index will be written.
-  SmallVector<char, 16> OutputBuffer;
+  SmallString<16> OutputBuffer;
   {
     llvm::BitstreamWriter OutputStream(OutputBuffer);
     if (Builder.writeIndex(OutputStream))
@@ -913,9 +913,8 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                                      "failed writing index");
   }
 
-  return llvm::writeFileAtomically(
-      (IndexPath + "-%%%%%%%%").str(), IndexPath,
-      llvm::StringRef(OutputBuffer.data(), OutputBuffer.size()));
+  return llvm::writeFileAtomically((IndexPath + "-%%%%%%%%").str(), IndexPath,
+                                   OutputBuffer);
 }
 
 namespace {

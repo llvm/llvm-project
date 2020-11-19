@@ -69,6 +69,28 @@ static const opt::OptTable::Info optInfo[] = {
 
 MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
 
+// Set color diagnostics according to --color-diagnostics={auto,always,never}
+// or --no-color-diagnostics flags.
+static void handleColorDiagnostics(opt::InputArgList &args) {
+  auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
+                              OPT_no_color_diagnostics);
+  if (!arg)
+    return;
+  if (arg->getOption().getID() == OPT_color_diagnostics) {
+    lld::errs().enable_colors(true);
+  } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
+    lld::errs().enable_colors(false);
+  } else {
+    StringRef s = arg->getValue();
+    if (s == "always")
+      lld::errs().enable_colors(true);
+    else if (s == "never")
+      lld::errs().enable_colors(false);
+    else if (s != "auto")
+      error("unknown option: --color-diagnostics=" + s);
+  }
+}
+
 opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
@@ -79,6 +101,8 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");
+
+  handleColorDiagnostics(args);
 
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + arg->getSpelling());

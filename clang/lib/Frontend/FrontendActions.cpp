@@ -177,7 +177,8 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
       CI.getFrontendOpts().ModuleFileExtensions,
-      /*AllowASTWithErrors=*/false,
+      /*AllowASTWithErrors=*/
+      +CI.getFrontendOpts().AllowPCMWithCompilerErrors,
       /*IncludeTimestamps=*/
       +CI.getFrontendOpts().BuildingImplicitModule,
       /*ShouldCacheASTInMemory=*/
@@ -185,6 +186,11 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
+}
+
+bool GenerateModuleAction::shouldEraseOutputFiles() {
+  return !getCompilerInstance().getFrontendOpts().AllowPCMWithCompilerErrors &&
+         ASTFrontendAction::shouldEraseOutputFiles();
 }
 
 bool GenerateModuleFromModuleMapAction::BeginSourceFileAction(
@@ -339,7 +345,7 @@ void VerifyPCHAction::ExecuteAction() {
       CI.getPCHContainerReader(), CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       /*DisableValidation*/ false,
-      /*AllowPCHWithCompilerErrors*/ false,
+      /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
       /*ValidateSystemInputs*/ true));
 

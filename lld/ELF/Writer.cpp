@@ -1988,7 +1988,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (in.iplt && in.iplt->isNeeded())
     in.iplt->addSymbols();
 
-  if (!config->allowShlibUndefined) {
+  if (config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
     // Error on undefined symbols in a shared object, if all of its DT_NEEDED
     // entries are seen. These cases would otherwise lead to runtime errors
     // reported by the dynamic linker.
@@ -2005,9 +2005,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     for (Symbol *sym : symtab->symbols())
       if (sym->isUndefined() && !sym->isWeak())
         if (auto *f = dyn_cast_or_null<SharedFile>(sym->file))
-          if (f->allNeededIsKnown)
-            errorOrWarn(toString(f) + ": undefined reference to " +
-                        toString(*sym) + " [--no-allow-shlib-undefined]");
+          if (f->allNeededIsKnown) {
+            auto diagnose = config->unresolvedSymbolsInShlib ==
+                                    UnresolvedPolicy::ReportError
+                                ? errorOrWarn
+                                : warn;
+            diagnose(toString(f) + ": undefined reference to " +
+                     toString(*sym) + " [--no-allow-shlib-undefined]");
+          }
   }
 
   {
