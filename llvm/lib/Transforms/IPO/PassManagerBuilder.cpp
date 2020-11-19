@@ -111,7 +111,7 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
-static cl::opt<bool>
+cl::opt<bool>
     DisablePreInliner("disable-preinline", cl::init(false), cl::Hidden,
                       cl::desc("Disable pre-instrumentation inliner"));
 
