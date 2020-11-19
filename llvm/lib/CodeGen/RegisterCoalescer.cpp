@@ -538,8 +538,8 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
   }
 
   // Now check that Dst matches DstReg.
-  if (Register::isPhysicalRegister(DstReg)) {
-    if (!Register::isPhysicalRegister(Dst))
+  if (DstReg.isPhysical()) {
+    if (!Dst.isPhysical())
       return false;
     assert(!DstIdx && !SrcIdx && "Inconsistent CoalescerPair state.");
     // DstSub could be set for a physreg from INSERT_SUBREG.
@@ -549,7 +549,7 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
     if (!SrcSub)
       return DstReg == Dst;
     // This is a partial register copy. Check that the parts match.
-    return TRI.getSubReg(DstReg, SrcSub) == Dst;
+    return Register(TRI.getSubReg(DstReg, SrcSub)) == Dst;
   } else {
     // DstReg is virtual.
     if (DstReg != Dst)

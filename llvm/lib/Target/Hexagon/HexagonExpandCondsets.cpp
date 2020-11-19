@@ -582,17 +582,16 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
   using namespace Hexagon;
 
   if (SO.isReg()) {
-    Register PhysR;
+    MCRegister PhysR;
     RegisterRef RS = SO;
     if (RS.Reg.isVirtual()) {
       const TargetRegisterClass *VC = MRI->getRegClass(RS.Reg);
       assert(VC->begin() != VC->end() && "Empty register class");
       PhysR = *VC->begin();
     } else {
-      assert(Register::isPhysicalRegister(RS.Reg));
       PhysR = RS.Reg;
     }
-    Register PhysS = (RS.Sub == 0) ? PhysR : TRI->getSubReg(PhysR, RS.Sub);
+    MCRegister PhysS = (RS.Sub == 0) ? PhysR : TRI->getSubReg(PhysR, RS.Sub);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysS);
     switch (TRI->getRegSizeInBits(*RC)) {
       case 32:
