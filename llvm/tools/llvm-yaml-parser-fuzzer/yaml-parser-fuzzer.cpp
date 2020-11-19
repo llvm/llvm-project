@@ -21,12 +21,32 @@ static bool isValidYaml(const uint8_t *Data, size_t Size) {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   std::vector<uint8_t> Input(Data, Data + Size);
 
+  // Ensure we don't crash on any arbitrary byte string.
+  isValidYaml(Input.data(), Input.size());
+
+  // Ensure we don't crash on byte strings with no null characters.
+  Input.erase(std::remove(Input.begin(), Input.end(), 0), Input.end());
+  Input.shrink_to_fit();
+  bool IsValidWithout0s = isValidYaml(Input.data(), Input.size());
+
   // Ensure we don't crash on byte strings where the only null character is
   // one-past-the-end of the actual input to the parser.
-  Input.erase(std::remove(Input.begin(), Input.end(), 0), Input.end());
   Input.push_back(0);
   Input.shrink_to_fit();
-  isValidYaml(Input.data(), Input.size() - 1);
+  bool IsValidWhen0Terminated = isValidYaml(Input.data(), Input.size() - 1);
+
+  // Ensure we don't crash on byte strings with no null characters, but with
+  // an invalid character one-past-the-end of the actual input to the parser.
+  Input.back() = 1;
+  bool IsValidWhen1Terminated = isValidYaml(Input.data(), Input.size() - 1);
+
+  // The parser should either accept all of these inputs, or reject all of
+  // them, because the parser sees an identical byte string in each case. This
+  // should hopefully catch some cases where the parser is sensitive to what is
+  // present one-past-the-end of the actual input.
+  if (IsValidWithout0s != IsValidWhen0Terminated ||
+      IsValidWhen0Terminated != IsValidWhen1Terminated)
+    LLVM_BUILTIN_TRAP;
 
   return 0;
 }
