@@ -193,9 +193,14 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
-/// Returns the argument pop size.
-static uint64_t getArgumentPopSize(MachineFunction &MF,
-                                   MachineBasicBlock &MBB) {
+/// Returns how much of the incoming argument stack area (in bytes) we should
+/// clean up in an epilogue. For the C calling convention this will be 0, for
+/// guaranteed tail call conventions it can be positive (a normal return or a
+/// tail call to a function that uses less stack space for arguments) or
+/// negative (for a tail call to a function that needs more stack space than us
+/// for arguments).
+static int64_t getArgumentStackToRestore(MachineFunction &MF,
+                                         MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   bool IsTailCallReturn = false;
   if (MBB.end() != MBBI) {
@@ -206,7 +211,7 @@ static uint64_t getArgumentPopSize(MachineFunction &MF,
   }
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-  uint64_t ArgumentPopSize = 0;
+  int64_t ArgumentPopSize = 0;
   if (IsTailCallReturn) {
     MachineOperand &StackAdjust = MBBI->getOperand(1);
 
@@ -255,7 +260,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   if (MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF))
     return false;
-  if (Exit && getArgumentPopSize(MF, *Exit))
+  if (Exit && getArgumentStackToRestore(MF, *Exit))
     return false;
 
   return true;
@@ -311,10 +316,10 @@ static unsigned getFixedObjectSize(const MachineFunction &MF,
                                    const AArch64FunctionInfo *AFI, bool IsWin64,
                                    bool IsFunclet) {
   if (!IsWin64 || IsFunclet) {
-    // Only Win64 uses fixed objects, and then only for the function (not
-    // funclets)
-    return 0;
+    return AFI->getTailCallReservedStack();
   } else {
+    if (AFI->getTailCallReservedStack() != 0)
+      report_fatal_error("cannot generate ABI-changing tail call for Win64");
     // Var args are stored here in the primary function.
     const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
     // To support EH funclets we allocate an UnwindHelp object
@@ -887,21 +892,17 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     ++MBBI;
   }
   unsigned NewOpc;
-  int Scale = 1;
   switch (MBBI->getOpcode()) {
   default:
     llvm_unreachable("Unexpected callee-save save/restore opcode!");
   case AArch64::STPXi:
     NewOpc = AArch64::STPXpre;
-    Scale = 8;
     break;
   case AArch64::STPDi:
     NewOpc = AArch64::STPDpre;
-    Scale = 8;
     break;
   case AArch64::STPQi:
     NewOpc = AArch64::STPQpre;
-    Scale = 16;
     break;
   case AArch64::STRXui:
     NewOpc = AArch64::STRXpre;
@@ -914,15 +915,12 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     break;
   case AArch64::LDPXi:
     NewOpc = AArch64::LDPXpost;
-    Scale = 8;
     break;
   case AArch64::LDPDi:
     NewOpc = AArch64::LDPDpost;
-    Scale = 8;
     break;
   case AArch64::LDPQi:
     NewOpc = AArch64::LDPQpost;
-    Scale = 16;
     break;
   case AArch64::LDRXui:
     NewOpc = AArch64::LDRXpost;
@@ -941,9 +939,18 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       SEH->eraseFromParent();
   }
 
+  TypeSize Scale = TypeSize::Fixed(1);
+  unsigned Width;
+  int64_t MinOffset, MaxOffset;
+  bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
+      NewOpc, Scale, Width, MinOffset, MaxOffset);
+  (void)Success;
+  assert(Success && "unknown load/store opcode");
+
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
-  if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0) {
+  if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
+      CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII,
                     InProlog ? MachineInstr::FrameSetup
@@ -966,7 +973,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   assert(MBBI->getOperand(OpndIdx - 1).getReg() == AArch64::SP &&
          "Unexpected base register in callee-save save/restore instruction!");
   assert(CSStackSizeInc % Scale == 0);
-  MIB.addImm(CSStackSizeInc / Scale);
+  MIB.addImm(CSStackSizeInc / (int)Scale);
 
   MIB.setMIFlags(MBBI->getFlags());
   MIB.setMemRefs(MBBI->memoperands());
@@ -1667,9 +1674,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  // Initial and residual are named for consistency with the prologue. Note that
-  // in the epilogue, the residual adjustment is executed first.
-  uint64_t ArgumentPopSize = getArgumentPopSize(MF, MBB);
+  // How much of the stack used by incoming arguments this function is expected
+  // to restore in this particular epilogue.
+  int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
 
   // The stack frame should be like below,
   //
@@ -1704,7 +1711,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
-  uint64_t AfterCSRPopSize = ArgumentPopSize;
+  int64_t AfterCSRPopSize = ArgumentStackToRestore;
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   // We cannot rely on the local stack size set in emitPrologue if the function
   // has funclets, as funclets have different local stack size requirements, and
@@ -1741,8 +1748,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // Converting the last ldp to a post-index ldp is valid only if the last
     // ldp's offset is 0.
     const MachineOperand &OffsetOp = Pop->getOperand(Pop->getNumOperands() - 1);
-    // If the offset is 0, convert it to a post-index ldp.
-    if (OffsetOp.getImm() == 0)
+    // If the offset is 0 and the AfterCSR pop is not actually trying to
+    // allocate more stack for arguments (in space that an untimely interrupt
+    // may clobber), convert it to a post-index ldp.
+    if (OffsetOp.getImm() == 0 && AfterCSRPopSize >= 0)
       convertCalleeSaveRestoreToSPPrePostIncDec(
           MBB, Pop, DL, TII, PrologueSaveSize, NeedsWinCFI, &HasWinCFI, false);
     else {
@@ -1913,6 +1922,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // assumes the SP is at the same location as it was after the callee-save save
   // code in the prologue.
   if (AfterCSRPopSize) {
+    assert(AfterCSRPopSize > 0 && "attempting to reallocate arg stack that an "
+                                  "interrupt may have clobbered");
     // Find an insertion point for the first ldp so that it goes before the
     // shadow call stack epilog instruction. This ensures that the restore of
     // lr from x18 is placed after the restore from sp.
@@ -1928,7 +1939,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     adaptForLdStOpt(MBB, FirstSPPopI, LastPopI);
 
     emitFrameOffset(MBB, FirstSPPopI, DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed((int64_t)AfterCSRPopSize), TII,
+                    StackOffset::getFixed(AfterCSRPopSize), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
   }
   if (HasWinCFI)
@@ -2146,7 +2157,8 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
   AttributeList Attrs = MF.getFunction().getAttributes();
   return Subtarget.isTargetMachO() &&
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
-           Attrs.hasAttrSomewhere(Attribute::SwiftError));
+           Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
+         MF.getFunction().getCallingConv() != CallingConv::SwiftTail;
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
@@ -2260,6 +2272,7 @@ static void computeCalleeSaveRegisterPairs(
     FirstReg = Count - 1;
   }
   int ScalableByteOffset = AFI->getSVECalleeSavedStackSize();
+  bool NeedGapToAlignStack = AFI->hasCalleeSaveStackFreeSpace();
 
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
@@ -2369,17 +2382,16 @@ static void computeCalleeSaveRegisterPairs(
 
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
-    if (AFI->hasCalleeSaveStackFreeSpace() && !NeedsWinCFI &&
+    if (NeedGapToAlignStack && !NeedsWinCFI &&
         !RPI.isScalable() && RPI.Type != RegPairInfo::FPR128 &&
-        !RPI.isPaired()) {
+        !RPI.isPaired() && ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
-      assert(ByteOffset % 16 == 0);
       assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
       // A stack frame with a gap looks like this, bottom up:
       // d9, d8. x21, gap, x20, x19.
-      // Set extra alignment on the x21 object (the only unpaired register)
-      // to create the gap above it.
+      // Set extra alignment on the x21 object to create the gap above it.
       MFI.setObjectAlignment(RPI.FrameIdx, Align(16));
+      NeedGapToAlignStack = false;
     }
 
     int OffsetPost = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
