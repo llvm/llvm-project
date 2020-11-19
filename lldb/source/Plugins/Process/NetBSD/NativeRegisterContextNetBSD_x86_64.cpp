@@ -607,13 +607,9 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case lldb_fstat_x86_64:
     reg_value = (uint16_t)m_xstate.xs_fxsave.fx_sw;
     break;
-  case lldb_ftag_x86_64: {
-    llvm::ArrayRef<MMSReg> st_regs{
-        reinterpret_cast<MMSReg *>(m_xstate.xs_fxsave.fx_87_ac), 8};
-    reg_value = (uint16_t)AbridgedToFullTagWord(
-        m_xstate.xs_fxsave.fx_tw, m_xstate.xs_fxsave.fx_sw, st_regs);
+  case lldb_ftag_x86_64:
+    reg_value = (uint16_t)m_xstate.xs_fxsave.fx_tw;
     break;
-  }
   case lldb_fop_x86_64:
     reg_value = (uint64_t)m_xstate.xs_fxsave.fx_opcode;
     break;
@@ -909,7 +905,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     m_xstate.xs_fxsave.fx_sw = reg_value.GetAsUInt16();
     break;
   case lldb_ftag_x86_64:
-    m_xstate.xs_fxsave.fx_tw = FullToAbridgedTagWord(reg_value.GetAsUInt16());
+    m_xstate.xs_fxsave.fx_tw = reg_value.GetAsUInt16();
     break;
   case lldb_fop_x86_64:
     m_xstate.xs_fxsave.fx_opcode = reg_value.GetAsUInt16();
