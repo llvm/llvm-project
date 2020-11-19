@@ -3489,6 +3489,9 @@ static bool isAllmanBraceIncludedBreakableLambda(
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) {
   const FormatToken &Left = *Right.Previous;
+   if (Style.BreakBeforeStructInitialization && Right.is(tok::l_brace) &&
+       (Right.is(BK_BracedInit) || Left.is(tok::equal)))
+    return true;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
     return true;
 

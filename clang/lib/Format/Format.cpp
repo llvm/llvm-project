@@ -513,6 +513,12 @@ template <> struct MappingTraits<FormatStyle> {
         Style.BreakInheritanceList == FormatStyle::BILS_BeforeColon)
       Style.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
 
+    IO.mapOptional("BreakBeforeInlineASMColon",
+                   Style.BreakBeforeInlineASMColon);
+
+    IO.mapOptional("BreakBeforeStructInitialization",
+                   Style.BreakBeforeStructInitialization);
+
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
 
