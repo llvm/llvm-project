@@ -802,13 +802,30 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
     const MCSymbol &Sym = SRE->getSymbol();
+    const auto Kind = SRE->getKind();
 
     // Evaluate recursively if this is a variable.
-    if (Sym.isVariable() && SRE->getKind() == MCSymbolRefExpr::VK_None &&
+    if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
         canExpand(Sym, InSet)) {
       bool IsMachO = SRE->hasSubsectionsViaSymbols();
       if (Sym.getVariableValue()->evaluateAsRelocatableImpl(
               Res, Asm, Layout, Fixup, Addrs, InSet || IsMachO)) {
+        if (Kind != MCSymbolRefExpr::VK_None) {
+          if (Res.isAbsolute()) {
+            Res = MCValue::get(SRE, nullptr, 0);
+            return true;
+          }
+          // If the reference has a variant kind, we can only handle expressions
+          // which evaluate exactly to a single unadorned symbol. Attach the
+          // original VariantKind to SymA of the result.
+          if (Res.getRefKind() != MCSymbolRefExpr::VK_None || !Res.getSymA() ||
+              Res.getSymB() || Res.getConstant())
+            return false;
+          Res =
+              MCValue::get(MCSymbolRefExpr::create(&Res.getSymA()->getSymbol(),
+                                                   Kind, Asm->getContext()),
+                           Res.getSymB(), Res.getConstant(), Res.getRefKind());
+        }
         if (!IsMachO)
           return true;
 
