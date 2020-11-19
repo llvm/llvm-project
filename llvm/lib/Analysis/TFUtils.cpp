@@ -19,6 +19,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "tensorflow/c/c_api.h"
@@ -216,27 +217,34 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
   return None;
 }
 
-bool loadOutputSpecs(LLVMContext &Ctx, StringRef FileName,
-                     StringRef ExpectedDecisionName,
-                     std::vector<LoggedFeatureSpec> &Ret) {
+Optional<std::vector<LoggedFeatureSpec>>
+loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
+                StringRef ModelPath, StringRef SpecFileOverride) {
+  SmallVector<char, 128> OutputSpecsPath;
+  StringRef FileName = SpecFileOverride;
+  if (FileName.empty()) {
+    llvm::sys::path::append(OutputSpecsPath, ModelPath, "output_spec.json");
+    FileName = {OutputSpecsPath.data(), OutputSpecsPath.size()};
+  }
+
   auto BufferOrError = MemoryBuffer::getFileOrSTDIN(FileName);
   if (!BufferOrError) {
     Ctx.emitError("Error opening output specs file: " + FileName + " : " +
                   BufferOrError.getError().message());
-    return false;
+    return None;
   }
   auto ParsedJSONValues = json::parse(BufferOrError.get()->getBuffer());
   if (!ParsedJSONValues) {
     Ctx.emitError("Could not parse specs file: " + FileName);
-    return false;
+    return None;
   }
   auto ValuesArray = ParsedJSONValues->getAsArray();
   if (!ValuesArray) {
     Ctx.emitError("Expected an array of {tensor_spec:<TensorSpec>, "
                   "logging_name:<name>} dictionaries");
-    return false;
+    return None;
   }
-
+  std::vector<LoggedFeatureSpec> Ret;
   for (const auto &Value : *ValuesArray)
     if (const auto *Obj = Value.getAsObject())
       if (const auto *SpecPart = Obj->get("tensor_spec"))
@@ -249,7 +257,7 @@ bool loadOutputSpecs(LLVMContext &Ctx, StringRef FileName,
                   "Only int64, int32, and float tensors are supported. "
                   "Found unsupported type for tensor named " +
                   TensorSpec->name());
-              return false;
+              return None;
             }
             Ret.push_back({*TensorSpec, LoggingName->str()});
           }
@@ -261,15 +269,15 @@ bool loadOutputSpecs(LLVMContext &Ctx, StringRef FileName,
         "with a json object describing a TensorSpec; and a 'logging_name' key, "
         "which is a string to use as name when logging this tensor in the "
         "training log.");
-    return false;
+    return None;
   }
   if (Ret.empty() || *Ret[0].LoggingName != ExpectedDecisionName) {
     Ctx.emitError("The first output spec must describe the decision tensor, "
                   "and must have the logging_name " +
                   StringRef(ExpectedDecisionName));
-    return false;
+    return None;
   }
-  return true;
+  return Ret;
 }
 
 class TFModelEvaluatorImpl {
