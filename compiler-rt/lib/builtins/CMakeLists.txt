@@ -179,6 +179,7 @@ set(GENERIC_TF_SOURCES
   divtc3.c
   divtf3.c
   extenddftf2.c
+  extendhftf2.c
   extendsftf2.c
   fixtfdi.c
   fixtfsi.c
@@ -197,6 +198,7 @@ set(GENERIC_TF_SOURCES
   powitf2.c
   subtf3.c
   trunctfdf2.c
+  trunctfhf2.c
   trunctfsf2.c
 )
 
@@ -627,6 +629,8 @@ if (APPLE)
   darwin_add_builtin_libraries(${BUILTIN_SUPPORTED_OS})
 else ()
   set(BUILTIN_CFLAGS "")
+
+  append_list_if(COMPILER_RT_HAS_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS)
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
 

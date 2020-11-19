@@ -44,6 +44,9 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
+  append_list_if(COMPILER_RT_HAS_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTINS_TEST_TARGET_CFLAGS)
+  string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+
   # Compute builtins available in library and add them as lit features.
   if(APPLE)
     # TODO: Support other Apple platforms.

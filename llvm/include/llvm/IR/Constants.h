@@ -888,6 +888,42 @@ struct OperandTraits<BlockAddress> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
+/// Wrapper for a function that represents a value that
+/// functionally represents the original function. This can be a function,
+/// global alias to a function, or an ifunc.
+class DSOLocalEquivalent final : public Constant {
+  friend class Constant;
+
+  DSOLocalEquivalent(GlobalValue *GV);
+
+  void *operator new(size_t s) { return User::operator new(s, 1); }
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
+
+public:
+  /// Return a DSOLocalEquivalent for the specified global value.
+  static DSOLocalEquivalent *get(GlobalValue *GV);
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  GlobalValue *getGlobalValue() const {
+    return cast<GlobalValue>(Op<0>().get());
+  }
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *V) {
+    return V->getValueID() == DSOLocalEquivalentVal;
+  }
+};
+
+template <>
+struct OperandTraits<DSOLocalEquivalent>
+    : public FixedNumOperandTraits<DSOLocalEquivalent, 1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(DSOLocalEquivalent, Value)
+
 //===----------------------------------------------------------------------===//
 /// A constant value that is initialized with an expression using
 /// other constant values.

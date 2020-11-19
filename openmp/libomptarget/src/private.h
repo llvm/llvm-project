@@ -28,11 +28,10 @@ extern int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
                          map_var_info_t *arg_names, void **ArgMappers,
                          __tgt_async_info *AsyncInfo);
 
-extern int target_data_update(DeviceTy &Device, int32_t arg_num,
-                              void **args_base, void **args, int64_t *arg_sizes,
-                              int64_t *arg_types, map_var_info_t *arg_names,
-                              void **arg_mappers,
-                              __tgt_async_info *async_info_ptr = nullptr);
+extern int targetDataUpdate(DeviceTy &Device, int32_t arg_num, void **args_base,
+                            void **args, int64_t *arg_sizes, int64_t *arg_types,
+                            map_var_info_t *arg_names, void **arg_mappers,
+                            __tgt_async_info *async_info_ptr = nullptr);
 
 extern int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
@@ -68,7 +67,7 @@ struct MapperComponentsTy {
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t);
 
 // Function pointer type for target_data_* functions (targetDataBegin,
-// targetDataEnd and target_data_update).
+// targetDataEnd and targetDataUpdate).
 typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
                                    int64_t *, int64_t *, map_var_info_t *,
                                    void **, __tgt_async_info *);
@@ -103,8 +102,8 @@ static inline void dumpTargetPointerMappings(const DeviceTy &Device) {
     fprintf(stderr, DPxMOD " " DPxMOD " %-8lu %s at %s:%d:%d\n",
             DPxPTR(HostTargetMap.HstPtrBegin),
             DPxPTR(HostTargetMap.TgtPtrBegin),
-            HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
-            info.name.c_str(), info.filename.c_str(), info.line, info.column);
+            HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin, info.getName(),
+            info.getFilename(), info.getLine(), info.getColumn());
   }
 }
 

@@ -417,8 +417,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
+  setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
 

@@ -3783,6 +3783,43 @@ long as the original value is reconstituted before the ``indirectbr`` or
 Finally, some targets may provide defined semantics when using the value
 as the operand to an inline assembly, but that is target specific.
 
+.. _dso_local_equivalent:
+
+DSO Local Equivalent
+--------------------
+
+``dso_local_equivalent @func``
+
+A '``dso_local_equivalent``' constant represents a function which is
+functionally equivalent to a given function, but is always defined in the
+current linkage unit. The resulting pointer has the same type as the underlying
+function. The resulting pointer is permitted, but not required, to be different
+from a pointer to the function, and it may have different values in different
+translation units.
+
+The target function may not have ``extern_weak`` linkage.
+
+``dso_local_equivalent`` can be implemented as such:
+
+- If the function has local linkage, hidden visibility, or is
+  ``dso_local``, ``dso_local_equivalent`` can be implemented as simply a pointer
+  to the function.
+- ``dso_local_equivalent`` can be implemented with a stub that tail-calls the
+  function. Many targets support relocations that resolve at link time to either
+  a function or a stub for it, depending on if the function is defined within the
+  linkage unit; LLVM will use this when available. (This is commonly called a
+  "PLT stub".) On other targets, the stub may need to be emitted explicitly.
+
+This can be used wherever a ``dso_local`` instance of a function is needed without
+needing to explicitly make the original function ``dso_local``. An instance where
+this can be used is for static offset calculations between a function and some other
+``dso_local`` symbol. This is especially useful for the Relative VTables C++ ABI,
+where dynamic relocations for function pointers in VTables can be replaced with
+static relocations for offsets between the VTable and virtual functions which
+may not be ``dso_local``.
+
+This is currently only supported for ELF binary formats.
+
 .. _constantexprs:
 
 Constant Expressions

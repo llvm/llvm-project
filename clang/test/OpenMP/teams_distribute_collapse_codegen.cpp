@@ -26,7 +26,7 @@ struct SS{
   // CK1: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
     
-    // CK1: call i32 @__tgt_target_teams_mapper(
+    // CK1: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
     // CK1: call void @[[OFFL1:.+]](
     #pragma omp target
     #pragma omp teams distribute collapse(2)
@@ -107,7 +107,7 @@ int main (int argc, char **argv) {
 }
 
 // CK2: define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// CK2: call i32 @__tgt_target_teams_mapper(
+// CK2: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CK2: call void @[[OFFL1:.+]]({{.+}})
 // CK2: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK2: ret
@@ -123,7 +123,7 @@ int main (int argc, char **argv) {
 // CK2: call void @__kmpc_for_static_fini(
 // CK2: ret void
 // CK2: define {{.*}}i32 @[[TMAIN]]({{.+}})
-// CK2: call i32 @__tgt_target_teams_mapper(
+// CK2: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}},
 // CK2: call void @[[OFFLT1:.+]]({{.+}})
 // CK2:  ret
 // CK2-NEXT: }

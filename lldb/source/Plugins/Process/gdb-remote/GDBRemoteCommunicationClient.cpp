@@ -3465,8 +3465,11 @@ GDBRemoteCommunicationClient::SendGetSupportedTraceType() {
   if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
                                    true) ==
       GDBRemoteCommunication::PacketResult::Success) {
-    if (!response.IsNormalResponse())
+    if (response.IsErrorResponse())
       return response.GetStatus().ToError();
+    if (response.IsUnsupportedResponse())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "jLLDBTraceSupportedType is unsupported");
 
     if (llvm::Expected<TraceTypeInfo> type =
             llvm::json::parse<TraceTypeInfo>(response.Peek()))

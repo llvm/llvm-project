@@ -95,6 +95,12 @@ void ReportFile::SetReportPath(const char *path) {
   }
 }
 
+const char *ReportFile::GetReportPath() {
+  SpinMutexLock l(mu);
+  ReopenIfNecessary();
+  return full_path;
+}
+
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
                       uptr *read_len, uptr max_len, error_t *errno_p) {
   *buff = nullptr;
@@ -212,6 +218,10 @@ void __sanitizer_set_report_path(const char *path) {
 void __sanitizer_set_report_fd(void *fd) {
   report_file.fd = (fd_t)reinterpret_cast<uptr>(fd);
   report_file.fd_pid = internal_getpid();
+}
+
+const char *__sanitizer_get_report_path() {
+  return report_file.GetReportPath();
 }
 } // extern "C"
 

@@ -170,7 +170,7 @@ int foo(int n) {
     a += 1;
   }
 
-  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZET2]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT2]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 1, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZET2]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT2]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
   // CHECK-DAG:   [[BP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPR:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PR:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPR]], i32 0, i32 [[IDX0:[0-9]+]]
@@ -194,7 +194,7 @@ int foo(int n) {
   // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 10
   // CHECK:       br i1 [[IF]], label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
   // CHECK:       [[IFTHEN]]
-  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT3]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT3]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%[^,]+]], i32 0, i32 0
 
@@ -249,7 +249,7 @@ int foo(int n) {
   // CHECK-32:    [[CNSZSIZE:%.+]] = mul nuw i32 [[CNELEMSIZE2]], 8
   // CHECK-32:    [[CNSIZE:%.+]] = sext i32 [[CNSZSIZE]] to i64
 
-  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 9, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([9 x i64], [9 x i64]* [[MAPT4]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 9, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([9 x i64], [9 x i64]* [[MAPT4]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[P:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[SR]] = getelementptr inbounds [9 x i64], [9 x i64]* [[S:%[^,]+]], i32 0, i32 0
@@ -373,7 +373,7 @@ int foo(int n) {
 // CHECK-NEXT:  }
 
 // CHECK:       define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SIZE:%[^,]+]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT]], i32 0, i32 0), i8** null, i8** null, i32 {{[^,]+}}, i32 {{[^)]+}})
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BP:%[^,]+]], i8** [[P:%[^,]+]], i64* [[SIZE:%[^,]+]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT]], i32 0, i32 0), i8** null, i8** null, i32 {{[^,]+}}, i32 {{[^)]+}})
 // CHECK-DAG:   [[BP]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BPADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
 // CHECK-DAG:   [[P]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
 // CHECK-DAG:   [[SIZE]] = getelementptr inbounds [3 x i64], [3 x i64]* [[SIZEADDR:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
@@ -608,7 +608,7 @@ int bar(int n){
 // CHECK-32:    [[CSZSIZE:%.+]] = mul nuw i32 [[CELEMSIZE2]], 2
 // CHECK-32:    [[CSIZE:%.+]] = sext i32 [[CSZSIZE]] to i64
 
-// OMP45-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT5]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+// OMP45-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT5]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
 // OMP45-DAG:   [[BPR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP:%.+]], i32 0, i32 0
 // OMP45-DAG:   [[PR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P:%.+]], i32 0, i32 0
 // OMP45-DAG:   [[SR]] = getelementptr inbounds [5 x i64], [5 x i64]* [[S:%.+]], i32 0, i32 0
@@ -627,7 +627,7 @@ int bar(int n){
 // OMP45-DAG:   [[SADDR4:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[S]], i32 [[IDX4:[0-9]+]]
 // OMP45-DAG:   [[BPADDR4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP]], i32 [[IDX4]]
 // OMP45-DAG:   [[PADDR4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P]], i32 [[IDX4]]
-// OMP50-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 6, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MAPT5]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+// OMP50-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 6, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SR:%[^,]+]], i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MAPT5]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
 // OMP50-DAG:   [[BPR]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP:%.+]], i32 0, i32 0
 // OMP50-DAG:   [[PR]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P:%.+]], i32 0, i32 0
 // OMP50-DAG:   [[SR]] = getelementptr inbounds [6 x i64], [6 x i64]* [[S:%.+]], i32 0, i32 0
@@ -703,7 +703,7 @@ int bar(int n){
 // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 50
 // CHECK:       br i1 [[IF]], label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CHECK:       [[IFTHEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZET6]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT6]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZET6]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT6]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
 // CHECK-DAG:   [[BPR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP:%.+]], i32 0, i32 0
 // CHECK-DAG:   [[PR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P:%.+]], i32 0, i32 0
 
@@ -760,7 +760,7 @@ int bar(int n){
 // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 40
 // CHECK:       br i1 [[IF]], label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CHECK:       [[IFTHEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[SIZET7]], i32 0, i32 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT7]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[SIZET7]], i32 0, i32 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPT7]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
 // CHECK-DAG:   [[BPR]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP:%.+]], i32 0, i32 0
 // CHECK-DAG:   [[PR]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P:%.+]], i32 0, i32 0
 

@@ -219,6 +219,7 @@ define void @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
 ; CHECK: ret
 }
 
+@varhalf = global half 0.0, align 2
 @varfloat = global float 0.0, align 4
 @vardouble = global double 0.0, align 8
 
@@ -226,6 +227,12 @@ define void @test_round() {
 ; CHECK-LABEL: test_round:
 
   %val = load fp128, fp128* @lhs, align 16
+
+  %half = fptrunc fp128 %val to half
+  store half %half, half* @varhalf, align 2
+; CHECK: ldr q0, [{{x[0-9]+}}, :lo12:lhs]
+; CHECK: bl __trunctfhf2
+; CHECK: str h0, [{{x[0-9]+}}, :lo12:varhalf]
 
   %float = fptrunc fp128 %val to float
   store float %float, float* @varfloat, align 4
@@ -244,6 +251,13 @@ define void @test_extend() {
 ; CHECK-LABEL: test_extend:
 
   %val = load fp128, fp128* @lhs, align 16
+
+  %half = load half, half* @varhalf
+  %fromhalf = fpext half %half to fp128
+  store volatile fp128 %fromhalf, fp128* @lhs, align 16
+; CHECK: ldr h0, [{{x[0-9]+}}, :lo12:varhalf]
+; CHECK: bl __extendhftf2
+; CHECK: str q0, [{{x[0-9]+}}, :lo12:lhs]
 
   %float = load float, float* @varfloat
   %fromfloat = fpext float %float to fp128
