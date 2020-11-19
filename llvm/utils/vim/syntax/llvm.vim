@@ -153,6 +153,7 @@ syn keyword llvmKeyword
       \ sspstrong
       \ strictfp
       \ swiftcc
+      \ swifttailcc
       \ swiftself
       \ tail
       \ target
