@@ -488,7 +488,7 @@ func @module_end_not_in_module() -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv._reference_of
+// spv.mlir.referenceof
 //===----------------------------------------------------------------------===//
 
 spv.module Logical GLSL450 {
@@ -500,23 +500,23 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @reference
   spv.func @reference() -> i1 "None" {
-    // CHECK: spv._reference_of @sc1 : i1
-    %0 = spv._reference_of @sc1 : i1
+    // CHECK: spv.mlir.referenceof @sc1 : i1
+    %0 = spv.mlir.referenceof @sc1 : i1
     spv.ReturnValue %0 : i1
   }
 
   // CHECK-LABEL: @reference_composite
   spv.func @reference_composite() -> i1 "None" {
-    // CHECK: spv._reference_of @scc : !spv.struct<(i1, i64, f32)>
-    %0 = spv._reference_of @scc : !spv.struct<(i1, i64, f32)>
+    // CHECK: spv.mlir.referenceof @scc : !spv.struct<(i1, i64, f32)>
+    %0 = spv.mlir.referenceof @scc : !spv.struct<(i1, i64, f32)>
     %1 = spv.CompositeExtract %0[0 : i32] : !spv.struct<(i1, i64, f32)>
     spv.ReturnValue %1 : i1
   }
 
   // CHECK-LABEL: @initialize
   spv.func @initialize() -> i64 "None" {
-    // CHECK: spv._reference_of @sc2 : i64
-    %0 = spv._reference_of @sc2 : i64
+    // CHECK: spv.mlir.referenceof @sc2 : i64
+    %0 = spv.mlir.referenceof @sc2 : i64
     %1 = spv.Variable init(%0) : !spv.ptr<i64, Function>
     %2 = spv.Load "Function" %1 : i64
     spv.ReturnValue %2 : i64
@@ -524,8 +524,8 @@ spv.module Logical GLSL450 {
 
   // CHECK-LABEL: @compute
   spv.func @compute() -> f32 "None" {
-    // CHECK: spv._reference_of @sc3 : f32
-    %0 = spv._reference_of @sc3 : f32
+    // CHECK: spv.mlir.referenceof @sc3 : f32
+    %0 = spv.mlir.referenceof @sc3 : f32
     %1 = spv.constant 6.0 : f32
     %2 = spv.FAdd %0, %1 : f32
     spv.ReturnValue %2 : f32
@@ -537,8 +537,8 @@ spv.module Logical GLSL450 {
 // Allow taking reference of spec constant in other module-like ops
 spv.specConstant @sc = 5 : i32
 func @reference_of() {
-  // CHECK: spv._reference_of @sc
-  %0 = spv._reference_of @sc : i32
+  // CHECK: spv.mlir.referenceof @sc
+  %0 = spv.mlir.referenceof @sc : i32
   return
 }
 
@@ -548,8 +548,8 @@ spv.specConstant @sc = 5 : i32
 spv.specConstantComposite @scc (@sc) : !spv.array<1 x i32>
 
 func @reference_of_composite() {
-  // CHECK: spv._reference_of @scc : !spv.array<1 x i32>
-  %0 = spv._reference_of @scc : !spv.array<1 x i32>
+  // CHECK: spv.mlir.referenceof @scc : !spv.array<1 x i32>
+  %0 = spv.mlir.referenceof @scc : !spv.array<1 x i32>
   %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<1 x i32>
   return
 }
@@ -559,7 +559,7 @@ func @reference_of_composite() {
 spv.module Logical GLSL450 {
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spv.specConstant or spv.SpecConstantComposite symbol}}
-    %0 = spv._reference_of @sc : i32
+    %0 = spv.mlir.referenceof @sc : i32
     spv.Return
   }
 }
@@ -570,7 +570,7 @@ spv.module Logical GLSL450 {
   spv.specConstant @sc = 42 : i32
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
-    %0 = spv._reference_of @sc : f32
+    %0 = spv.mlir.referenceof @sc : f32
     spv.Return
   }
 }
@@ -582,7 +582,7 @@ spv.module Logical GLSL450 {
   spv.specConstantComposite @scc (@sc) : !spv.array<1 x i32>
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
-    %0 = spv._reference_of @scc : f32
+    %0 = spv.mlir.referenceof @scc : f32
     spv.Return
   }
 }
