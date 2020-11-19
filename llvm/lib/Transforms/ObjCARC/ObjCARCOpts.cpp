@@ -675,7 +675,7 @@ bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
 
     SmallVector<const Value *, 4> ArgUsers;
     getEquivalentPHIs(*PN, ArgUsers);
-    if (llvm::find(ArgUsers, AutoreleaseRVArg) == ArgUsers.end())
+    if (!llvm::is_contained(ArgUsers, AutoreleaseRVArg))
       return false;
   }
 
