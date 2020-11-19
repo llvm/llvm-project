@@ -1259,8 +1259,8 @@ TEST(GoToInclude, All) {
   Annotations HeaderAnnotations(HeaderContents);
   FS.Files[FooH] = std::string(HeaderAnnotations.code());
 
-  Server.addDocument(FooH, HeaderAnnotations.code());
-  Server.addDocument(FooCpp, SourceAnnotations.code());
+  runAddDocument(Server, FooH, HeaderAnnotations.code());
+  runAddDocument(Server, FooCpp, SourceAnnotations.code());
 
   // Test include in preamble.
   auto Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point());
@@ -1307,7 +1307,7 @@ TEST(GoToInclude, All) {
   auto FooM = testPath("foo.m");
   FS.Files[FooM] = std::string(ObjC.code());
 
-  Server.addDocument(FooM, ObjC.code());
+  runAddDocument(Server, FooM, ObjC.code());
   Locations = runLocateSymbolAt(Server, FooM, ObjC.point());
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
   EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
