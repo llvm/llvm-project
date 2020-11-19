@@ -360,10 +360,10 @@ if config.android:
   except ValueError:
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb): got '%s'" % (adb, android_api_level_str))
   android_api_level = min(android_api_level, int(config.android_api_level))
-  if android_api_level >= 26:
-    config.available_features.add('android-26')
-  if android_api_level >= 28:
-    config.available_features.add('android-28')
+  for required in [26, 28, 30]:
+    if android_api_level >= required:
+      config.available_features.add('android-%s' % required)
+  # FIXME: Replace with appropriate version when availible.  
   if android_api_level > 30 or (android_api_level == 30 and android_api_codename == 'S'):
     config.available_features.add('android-thread-properties-api')
 
@@ -389,9 +389,9 @@ if config.host_os == 'Linux':
   if not config.android and ver_line.startswith(b"ldd "):
     from distutils.version import LooseVersion
     ver = LooseVersion(ver_line.split()[-1].decode())
-    # 2.27 introduced some incompatibilities
-    if ver >= LooseVersion("2.27"):
-      config.available_features.add("glibc-2.27")
+    for required in ["2.27", "2.30"]:
+      if ver >= LooseVersion(required):
+        config.available_features.add("glibc-" + required)  
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):

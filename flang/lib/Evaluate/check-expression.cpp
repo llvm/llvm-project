@@ -190,6 +190,9 @@ public:
   template <typename T> bool operator()(const Parentheses<T> &x) const {
     return (*this)(x.left());
   }
+  template <typename T> bool operator()(const FunctionRef<T> &x) const {
+    return false;
+  }
   bool operator()(const Relational<SomeType> &) const { return false; }
 
 private:

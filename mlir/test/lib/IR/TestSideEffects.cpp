@@ -43,6 +43,8 @@ struct SideEffectsPass
 
         if (instance.getValue())
           diag << " on a value,";
+        else if (SymbolRefAttr symbolRef = instance.getSymbolRef())
+          diag << " on a symbol '" << symbolRef << "',";
 
         diag << " on resource '" << instance.getResource()->getName() << "'";
       }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "gwp_asan/stack_trace_compressor.h"
-#include "gtest/gtest.h"
+#include "gwp_asan/tests/harness.h"
 
 namespace gwp_asan {
 namespace compression {

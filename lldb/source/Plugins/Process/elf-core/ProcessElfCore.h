@@ -19,7 +19,7 @@
 #include <list>
 #include <vector>
 
-#include "lldb/Target/Process.h"
+#include "lldb/Target/PostMortemProcess.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
@@ -28,7 +28,7 @@
 
 struct ThreadData;
 
-class ProcessElfCore : public lldb_private::Process {
+class ProcessElfCore : public lldb_private::PostMortemProcess {
 public:
   // Constructors and Destructors
   static lldb::ProcessSP

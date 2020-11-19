@@ -100,6 +100,20 @@ private:
 Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
                                            const json::Value &Value);
 
+struct LoggedFeatureSpec {
+  TensorSpec Spec;
+  Optional<std::string> LoggingName;
+};
+
+/// Load the output specs. If SpecFileOverride is not empty, that path is used.
+/// Otherwise, the file is assumed to be called 'output_spec.json' and be found
+/// under ModelPath (the model directory).
+/// The first output tensor name must match ExpectedDecisionName.
+/// In case of error, the return is None and the error is logged.
+Optional<std::vector<LoggedFeatureSpec>>
+loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
+                StringRef ModelPath, StringRef SpecFileOverride = StringRef());
+
 /// Logging utility - given an ordered specification of features, and assuming
 /// a scalar reward, allow logging feature values and rewards, and then print
 /// as tf.train.SequenceExample text protobuf.
@@ -121,11 +135,6 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
 /// At the end, call print to generate the protobuf.
 class Logger final {
 public:
-  struct LoggedFeatureSpec {
-    TensorSpec Spec;
-    Optional<std::string> LoggingName;
-  };
-
   /// Construct a Logger. If IncludeReward is false, then logReward shouldn't
   /// be called, and the reward feature won't be printed out.
   Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
@@ -201,6 +210,11 @@ public:
                    const std::vector<TensorSpec> &InputSpecs,
                    const std::vector<TensorSpec> &OutputSpecs,
                    const char *Tags = "serve");
+  TFModelEvaluator(StringRef SavedModelPath,
+                   const std::vector<TensorSpec> &InputSpecs,
+                   function_ref<TensorSpec(size_t)> GetOutputSpecs,
+                   size_t OutputSpecsSize, const char *Tags = "serve");
+
   ~TFModelEvaluator();
   TFModelEvaluator(const TFModelEvaluator &) = delete;
   TFModelEvaluator(TFModelEvaluator &&) = delete;

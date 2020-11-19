@@ -1088,8 +1088,6 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 
   auto *Ty = GetElementPtrInst::getIndexedType(
     GEP1->getSourceElementType(), IntermediateIndices);
-  StructType *LastIndexedStruct = dyn_cast<StructType>(Ty);
-
   if (isa<ArrayType>(Ty) || isa<VectorType>(Ty)) {
     // We know that:
     // - both GEPs begin indexing from the exact same pointer;
@@ -1143,44 +1141,7 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
       } else if (isKnownNonEqual(GEP1LastIdx, GEP2LastIdx, DL))
         return NoAlias;
     }
-    return MayAlias;
-  } else if (!LastIndexedStruct || !C1 || !C2) {
-    return MayAlias;
   }
-
-  if (C1->getValue().getActiveBits() > 64 ||
-      C2->getValue().getActiveBits() > 64)
-    return MayAlias;
-
-  // We know that:
-  // - both GEPs begin indexing from the exact same pointer;
-  // - the last indices in both GEPs are constants, indexing into a struct;
-  // - said indices are different, hence, the pointed-to fields are different;
-  // - both GEPs only index through arrays prior to that.
-  //
-  // This lets us determine that the struct that GEP1 indexes into and the
-  // struct that GEP2 indexes into must either precisely overlap or be
-  // completely disjoint.  Because they cannot partially overlap, indexing into
-  // different non-overlapping fields of the struct will never alias.
-
-  // Therefore, the only remaining thing needed to show that both GEPs can't
-  // alias is that the fields are not overlapping.
-  const StructLayout *SL = DL.getStructLayout(LastIndexedStruct);
-  const uint64_t StructSize = SL->getSizeInBytes();
-  const uint64_t V1Off = SL->getElementOffset(C1->getZExtValue());
-  const uint64_t V2Off = SL->getElementOffset(C2->getZExtValue());
-
-  auto EltsDontOverlap = [StructSize](uint64_t V1Off, uint64_t V1Size,
-                                      uint64_t V2Off, uint64_t V2Size) {
-    return V1Off < V2Off && V1Off + V1Size <= V2Off &&
-           ((V2Off + V2Size <= StructSize) ||
-            (V2Off + V2Size - StructSize <= V1Off));
-  };
-
-  if (EltsDontOverlap(V1Off, V1Size, V2Off, V2Size) ||
-      EltsDontOverlap(V2Off, V2Size, V1Off, V1Size))
-    return NoAlias;
-
   return MayAlias;
 }
 
@@ -1392,16 +1353,15 @@ AliasResult BasicAAResult::aliasGEP(
   }
 
   if (!DecompGEP1.VarIndices.empty()) {
-    APInt Modulo(MaxPointerSize, 0);
+    APInt GCD;
     bool AllNonNegative = GEP1BaseOffset.isNonNegative();
     bool AllNonPositive = GEP1BaseOffset.isNonPositive();
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
-
-      // Try to distinguish something like &A[i][1] against &A[42][0].
-      // Grab the least significant bit set in any of the scales. We
-      // don't need std::abs here (even if the scale's negative) as we'll
-      // be ^'ing Modulo with itself later.
-      Modulo |= DecompGEP1.VarIndices[i].Scale;
+      const APInt &Scale = DecompGEP1.VarIndices[i].Scale;
+      if (i == 0)
+        GCD = Scale.abs();
+      else
+        GCD = APIntOps::GreatestCommonDivisor(GCD, Scale.abs());
 
       if (AllNonNegative || AllNonPositive) {
         // If the Value could change between cycles, then any reasoning about
@@ -1420,7 +1380,6 @@ AliasResult BasicAAResult::aliasGEP(
         SignKnownZero |= IsZExt;
         SignKnownOne &= !IsZExt;
 
-        APInt Scale = DecompGEP1.VarIndices[i].Scale;
         AllNonNegative &= (SignKnownZero && Scale.isNonNegative()) ||
                           (SignKnownOne && Scale.isNonPositive());
         AllNonPositive &= (SignKnownZero && Scale.isNonPositive()) ||
@@ -1428,15 +1387,18 @@ AliasResult BasicAAResult::aliasGEP(
       }
     }
 
-    Modulo = Modulo ^ (Modulo & (Modulo - 1));
-
-    // We can compute the difference between the two addresses
-    // mod Modulo. Check whether that difference guarantees that the
-    // two locations do not alias.
-    APInt ModOffset = GEP1BaseOffset & (Modulo - 1);
+    // We now have accesses at two offsets from the same base:
+    //  1. (...)*GCD + GEP1BaseOffset with size V1Size
+    //  2. 0 with size V2Size
+    // Using arithmetic modulo GCD, the accesses are at
+    // [ModOffset..ModOffset+V1Size) and [0..V2Size). If the first access fits
+    // into the range [V2Size..GCD), then we know they cannot overlap.
+    APInt ModOffset = GEP1BaseOffset.srem(GCD);
+    if (ModOffset.isNegative())
+      ModOffset += GCD; // We want mod, not rem.
     if (V1Size != LocationSize::unknown() &&
         V2Size != LocationSize::unknown() && ModOffset.uge(V2Size.getValue()) &&
-        (Modulo - ModOffset).uge(V1Size.getValue()))
+        (GCD - ModOffset).uge(V1Size.getValue()))
       return NoAlias;
 
     // If we know all the variables are non-negative, then the total offset is

@@ -82,6 +82,11 @@ struct ComputationSliceState {
 
   // Clears all bounds and operands in slice state.
   void clearBounds();
+
+  /// Return true if the computation slice is empty.
+  bool isEmpty() const { return ivs.empty(); }
+
+  void dump() const;
 };
 
 /// Computes the computation slice loop bounds for one loop nest as affine maps
@@ -212,7 +217,7 @@ struct MemRefRegion {
   /// The last field is a 2-d FlatAffineConstraints symbolic in %i.
   ///
   LogicalResult compute(Operation *op, unsigned loopDepth,
-                        ComputationSliceState *sliceState = nullptr,
+                        const ComputationSliceState *sliceState = nullptr,
                         bool addMemRefDimBounds = true);
 
   FlatAffineConstraints *getConstraints() { return &cst; }
@@ -308,6 +313,11 @@ bool isLoopParallel(AffineForOp forOp);
 /// Returns the simplified integer set. This method runs in time linear in the
 /// number of constraints.
 IntegerSet simplifyIntegerSet(IntegerSet set);
+
+/// Returns the innermost common loop depth for the set of operations in 'ops'.
+unsigned getInnermostCommonLoopDepth(
+    ArrayRef<Operation *> ops,
+    SmallVectorImpl<AffineForOp> *surroundingLoops = nullptr);
 
 } // end namespace mlir
 

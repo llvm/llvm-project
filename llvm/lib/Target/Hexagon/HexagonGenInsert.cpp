@@ -613,7 +613,7 @@ void HexagonGenInsert::buildOrderingMF(RegisterOrdering &RO) const {
         if (MO.isReg() && MO.isDef()) {
           Register R = MO.getReg();
           assert(MO.getSubReg() == 0 && "Unexpected subregister in definition");
-          if (Register::isVirtualRegister(R))
+          if (R.isVirtual())
             RO.insert(std::make_pair(R, Index++));
         }
       }
@@ -730,7 +730,7 @@ void HexagonGenInsert::getInstrDefs(const MachineInstr *MI,
     if (!MO.isReg() || !MO.isDef())
       continue;
     Register R = MO.getReg();
-    if (!Register::isVirtualRegister(R))
+    if (!R.isVirtual())
       continue;
     Defs.insert(R);
   }
@@ -743,7 +743,7 @@ void HexagonGenInsert::getInstrUses(const MachineInstr *MI,
     if (!MO.isReg() || !MO.isUse())
       continue;
     Register R = MO.getReg();
-    if (!Register::isVirtualRegister(R))
+    if (!R.isVirtual())
       continue;
     Uses.insert(R);
   }
@@ -1483,7 +1483,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register R = MO.getReg();
-      if (!Register::isVirtualRegister(R) || !MRI->use_nodbg_empty(R)) {
+      if (!R.isVirtual() || !MRI->use_nodbg_empty(R)) {
         AllDead = false;
         break;
       }

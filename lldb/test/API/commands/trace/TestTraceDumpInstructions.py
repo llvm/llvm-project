@@ -32,7 +32,7 @@ class TestTraceDumpInstructions(TestBase):
         self.expect("run")
 
         self.expect("thread trace dump instructions",
-            substrs=["error: this thread is not being traced"],
+            substrs=["error: Process is not being traced"],
             error=True)
 
     def testRawDumpInstructions(self):

@@ -399,7 +399,7 @@ private:
   /// Get the Value associated with a result <id>.
   ///
   /// This method materializes normal constants and inserts "casting" ops
-  /// (`spv.mlir.addressof` and `spv._reference_of`) to turn an symbol into a
+  /// (`spv.mlir.addressof` and `spv.mlir.referenceof`) to turn an symbol into a
   /// SSA value for handling uses of module scope constants/variables in
   /// functions.
   Value getValue(uint32_t id);

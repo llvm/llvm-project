@@ -532,8 +532,9 @@ void LinkingSection::addToSymtab(Symbol *sym) {
   symtabEntries.emplace_back(sym);
 }
 
-unsigned NameSection::numNames() const {
+unsigned NameSection::numNamedFunctions() const {
   unsigned numNames = out.importSec->getNumImportedFunctions();
+
   for (const InputFunction *f : out.functionSec->inputFunctions)
     if (!f->getName().empty() || !f->getDebugName().empty())
       ++numNames;
@@ -541,32 +542,74 @@ unsigned NameSection::numNames() const {
   return numNames;
 }
 
+unsigned NameSection::numNamedGlobals() const {
+  unsigned numNames = out.importSec->getNumImportedGlobals();
+
+  for (const InputGlobal *g : out.globalSec->inputGlobals)
+    if (!g->getName().empty())
+      ++numNames;
+
+  numNames += out.globalSec->internalGotSymbols.size();
+  return numNames;
+}
+
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
-  SubSection sub(WASM_NAMES_FUNCTION);
-  writeUleb128(sub.os, numNames(), "name count");
+  unsigned count = numNamedFunctions();
+  if (count) {
+    SubSection sub(WASM_NAMES_FUNCTION);
+    writeUleb128(sub.os, count, "name count");
 
-  // Names must appear in function index order.  As it happens importedSymbols
-  // and inputFunctions are numbered in order with imported functions coming
-  // first.
-  for (const Symbol *s : out.importSec->importedSymbols) {
-    if (auto *f = dyn_cast<FunctionSymbol>(s)) {
-      writeUleb128(sub.os, f->getFunctionIndex(), "func index");
-      writeStr(sub.os, toString(*s), "symbol name");
-    }
-  }
-  for (const InputFunction *f : out.functionSec->inputFunctions) {
-    if (!f->getName().empty()) {
-      writeUleb128(sub.os, f->getFunctionIndex(), "func index");
-      if (!f->getDebugName().empty()) {
-        writeStr(sub.os, f->getDebugName(), "symbol name");
-      } else {
-        writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
+    // Function names appear in function index order.  As it happens
+    // importedSymbols and inputFunctions are numbered in order with imported
+    // functions coming first.
+    for (const Symbol *s : out.importSec->importedSymbols) {
+      if (auto *f = dyn_cast<FunctionSymbol>(s)) {
+        writeUleb128(sub.os, f->getFunctionIndex(), "func index");
+        writeStr(sub.os, toString(*s), "symbol name");
       }
     }
+    for (const InputFunction *f : out.functionSec->inputFunctions) {
+      if (!f->getName().empty()) {
+        writeUleb128(sub.os, f->getFunctionIndex(), "func index");
+        if (!f->getDebugName().empty()) {
+          writeStr(sub.os, f->getDebugName(), "symbol name");
+        } else {
+          writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
+        }
+      }
+    }
+    sub.writeTo(bodyOutputStream);
   }
 
-  sub.writeTo(bodyOutputStream);
+  count = numNamedGlobals();
+  if (count) {
+    SubSection sub(WASM_NAMES_GLOBAL);
+    writeUleb128(sub.os, count, "name count");
+
+    for (const Symbol *s : out.importSec->importedSymbols) {
+      if (auto *g = dyn_cast<GlobalSymbol>(s)) {
+        writeUleb128(sub.os, g->getGlobalIndex(), "global index");
+        writeStr(sub.os, toString(*s), "symbol name");
+      }
+    }
+    for (const Symbol *s : out.importSec->gotSymbols) {
+      writeUleb128(sub.os, s->getGOTIndex(), "global index");
+      writeStr(sub.os, toString(*s), "symbol name");
+    }
+    for (const InputGlobal *g : out.globalSec->inputGlobals) {
+      if (!g->getName().empty()) {
+        writeUleb128(sub.os, g->getGlobalIndex(), "global index");
+        writeStr(sub.os, maybeDemangleSymbol(g->getName()), "symbol name");
+      }
+    }
+    for (Symbol *s : out.globalSec->internalGotSymbols) {
+      writeUleb128(sub.os, s->getGOTIndex(), "global index");
+      writeStr(sub.os, toString(*s), "symbol name");
+    }
+
+    sub.writeTo(bodyOutputStream);
+  }
 }
 
 void ProducersSection::addInfo(const WasmProducerInfo &info) {

@@ -1237,7 +1237,7 @@ spv.module Logical GLSL450 {
   spv.specConstant @sc = 42 : i32
   // CHECK-LABEL: @variable_init_spec_constant
   spv.func @variable_init_spec_constant() -> () "None" {
-    %0 = spv._reference_of @sc : i32
+    %0 = spv.mlir.referenceof @sc : i32
     // CHECK: spv.Variable init(%0) : !spv.ptr<i32, Function>
     %1 = spv.Variable init(%0) : !spv.ptr<i32, Function>
     spv.Return

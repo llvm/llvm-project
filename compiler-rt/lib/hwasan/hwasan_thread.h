@@ -74,8 +74,6 @@ class Thread {
   HeapAllocationsRingBuffer *heap_allocations_;
   StackAllocationsRingBuffer *stack_allocations_;
 
-  Thread *next_;  // All live threads form a linked list.
-
   u64 unique_id_;  // counting from zero.
 
   u32 tagging_disabled_;  // if non-zero, malloc uses zero tag in this thread.

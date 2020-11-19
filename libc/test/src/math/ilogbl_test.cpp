@@ -10,13 +10,10 @@
 
 #include "include/math.h"
 #include "src/math/ilogbl.h"
-#include "utils/CPP/Functional.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
-
-#include <limits.h>
 
 using RunContext = __llvm_libc::testing::RunContext;
 

@@ -74,8 +74,8 @@ unsigned SystemZHazardRecognizer::getCurrCycleIdx(SUnit *SU) const {
 }
 
 ScheduleHazardRecognizer::HazardType SystemZHazardRecognizer::
-getHazardType(SUnit *m, int Stalls) {
-  return (fitsIntoCurrentGroup(m) ? NoHazard : Hazard);
+getHazardType(SUnit *SU, int Stalls) {
+  return (fitsIntoCurrentGroup(SU) ? NoHazard : Hazard);
 }
 
 void SystemZHazardRecognizer::Reset() {

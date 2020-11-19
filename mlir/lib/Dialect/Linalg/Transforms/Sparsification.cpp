@@ -830,21 +830,15 @@ struct GenericOpSparsifier : public OpRewritePattern<linalg::GenericOp> {
 
   LogicalResult matchAndRewrite(linalg::GenericOp op,
                                 PatternRewriter &rewriter) const override {
-    unsigned numTensors = op.getNumInputsAndOutputs();
-    unsigned numLoops = op.iterator_types().getValue().size();
-    Merger merger(numTensors, numLoops);
-
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
     if (!op.hasSparseSemantics())
       return failure();
+    assert(op.getNumOutputs() == 1);
+    unsigned numTensors = op.getNumInputsAndOutputs();
+    unsigned numLoops = op.iterator_types().getValue().size();
+    Merger merger(numTensors, numLoops);
     findSparseAnnotations(op, merger.sparse());
-
-    // Accept only single, dense result.
-    if (op.getNumOutputs() != 1 ||
-        std::any_of(merger.sparse().back().begin(),
-                    merger.sparse().back().end(), [](bool b) { return b; }))
-      return failure();
 
     // Computes a topologically sorted iteration graph to ensure
     // tensors are visited in natural index order. Fails on cycles.
@@ -858,10 +852,7 @@ struct GenericOpSparsifier : public OpRewritePattern<linalg::GenericOp> {
 
     // Finds the terminating yield statement and builds the tensor
     // expression for the Linalg operation in SSA form.
-    auto &region = op.region();
-    if (!llvm::hasSingleElement(region))
-      return failure(); // single block only
-    Operation *yield = region.front().getTerminator();
+    Operation *yield = op.region().front().getTerminator();
     Optional<unsigned> exp = buildTensorExp(merger, op, yield->getOperand(0));
     if (!exp.hasValue())
       return failure(); // build failure

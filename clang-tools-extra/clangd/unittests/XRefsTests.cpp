@@ -43,6 +43,7 @@ using ::testing::IsEmpty;
 using ::testing::Matcher;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
+using ::testing::UnorderedPointwise;
 
 MATCHER_P2(FileRange, File, Range, "") {
   return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
@@ -1161,12 +1162,12 @@ TEST(LocateSymbol, Alias) {
     )cpp",
   };
 
-  for (const auto* Case : Tests) {
+  for (const auto *Case : Tests) {
     SCOPED_TRACE(Case);
     auto T = Annotations(Case);
     auto AST = TestTU::withCode(T.code()).build();
     EXPECT_THAT(locateSymbolAt(AST, T.point()),
-                ::testing::UnorderedPointwise(DeclRange(), T.ranges()));
+                UnorderedPointwise(DeclRange(), T.ranges()));
   }
 }
 
@@ -1258,8 +1259,8 @@ TEST(GoToInclude, All) {
   Annotations HeaderAnnotations(HeaderContents);
   FS.Files[FooH] = std::string(HeaderAnnotations.code());
 
-  Server.addDocument(FooH, HeaderAnnotations.code());
-  Server.addDocument(FooCpp, SourceAnnotations.code());
+  runAddDocument(Server, FooH, HeaderAnnotations.code());
+  runAddDocument(Server, FooCpp, SourceAnnotations.code());
 
   // Test include in preamble.
   auto Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point());
@@ -1306,7 +1307,7 @@ TEST(GoToInclude, All) {
   auto FooM = testPath("foo.m");
   FS.Files[FooM] = std::string(ObjC.code());
 
-  Server.addDocument(FooM, ObjC.code());
+  runAddDocument(Server, FooM, ObjC.code());
   Locations = runLocateSymbolAt(Server, FooM, ObjC.point());
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
   EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
@@ -1462,6 +1463,67 @@ TEST(LocateSymbol, NearbyIdentifier) {
     else
       EXPECT_EQ(Nearby, T.range()) << Test;
   }
+}
+
+TEST(FindImplementations, Inheritance) {
+  llvm::StringRef Test = R"cpp(
+    struct Base {
+      virtual void F$1^oo();
+      void C$4^oncrete();
+    };
+    struct Child1 : Base {
+      void $1[[Fo$3^o]]() override;
+      virtual void B$2^ar();
+      void Concrete();  // No implementations for concrete methods.
+    };
+    struct Child2 : Child1 {
+      void $3[[Foo]]() override;
+      void $2[[Bar]]() override;
+    };
+    void FromReference() {
+      Base* B;
+      B->Fo$1^o();
+      B->C$4^oncrete();
+      &Base::Fo$1^o;
+      Child1 * C1;
+      C1->B$2^ar();
+      C1->Fo$3^o();
+    }
+  )cpp";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  for (const std::string &Label : {"1", "2", "3", "4"}) {
+    for (const auto &Point : Code.points(Label)) {
+      EXPECT_THAT(findImplementations(AST, Point, TU.index().get()),
+                  UnorderedPointwise(DeclRange(), Code.ranges(Label)))
+          << Code.code() << " at " << Point << " for Label " << Label;
+    }
+  }
+}
+
+TEST(FindImplementations, CaptureDefintion) {
+  llvm::StringRef Test = R"cpp(
+    struct Base {
+      virtual void F^oo();
+    };
+    struct Child1 : Base {
+      void $Decl[[Foo]]() override;
+    };
+    struct Child2 : Base {
+      void $Child2[[Foo]]() override;
+    };
+    void Child1::$Def[[Foo]]() { /* Definition */ }
+  )cpp";
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  EXPECT_THAT(
+      findImplementations(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(Sym("Foo", Code.range("Decl"), Code.range("Def")),
+                           Sym("Foo", Code.range("Child2"), llvm::None)))
+      << Test;
 }
 
 TEST(FindReferences, WithinAST) {

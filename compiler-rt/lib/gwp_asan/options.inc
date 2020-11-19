@@ -10,7 +10,18 @@
 #error "Define GWP_ASAN_OPTION prior to including this file!"
 #endif
 
-GWP_ASAN_OPTION(bool, Enabled, true, "Is GWP-ASan enabled? Defaults to true.")
+#ifndef GWP_ASAN_DEFAULT_ENABLED
+#define GWP_ASAN_DEFAULT_ENABLED true
+#endif
+
+#ifndef GWP_ASAN_STRINGIFY
+#define GWP_ASAN_STRINGIFY(S) GWP_ASAN_STRINGIFY_(S)
+#define GWP_ASAN_STRINGIFY_(S) #S
+#endif
+
+GWP_ASAN_OPTION(bool, Enabled, GWP_ASAN_DEFAULT_ENABLED,
+                "Is GWP-ASan enabled? Defaults to " GWP_ASAN_STRINGIFY(
+                    GWP_ASAN_DEFAULT_ENABLED) ".")
 
 GWP_ASAN_OPTION(
     bool, PerfectlyRightAlign, false,

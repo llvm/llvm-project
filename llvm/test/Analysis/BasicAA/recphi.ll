@@ -188,4 +188,27 @@ bb5:                                              ; preds = %bb3, %bb4
   ret i16 0
 }
 
+; TODO: Currently yields an asymmetric result.
+; CHECK-LABEL: Function: symmetry
+; CHECK: MayAlias:  i32* %p, i32* %p.base
+; CHECK: MayAlias:  i32* %p.base, i32* %p.next
+; CHECK: NoAlias:   i32* %p, i32* %p.next
+; CHECK: MayAlias:  i32* %p.base, i32* %result
+; CHECK: NoAlias:   i32* %p, i32* %result
+; CHECK: MustAlias: i32* %p.next, i32* %result
+define i32* @symmetry(i32* %p.base, i1 %c) {
+entry:
+  br label %loop
+
+loop:
+  %p = phi i32* [ %p.base, %entry ], [ %p.next, %loop ]
+  %p.next = getelementptr inbounds i32, i32* %p, i32 1
+  br i1 %c, label %loop, label %exit
+
+exit:
+  %result = phi i32* [ %p.next, %loop ]
+  ret i32* %result
+}
+
+
 declare i16 @call(i32)

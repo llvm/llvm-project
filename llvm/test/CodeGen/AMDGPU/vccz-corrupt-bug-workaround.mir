@@ -168,6 +168,8 @@ body: |
 
 # CHECK-LABEL: name: vcc_def_pred
 # CHECK: bb.1:
+# SI:  $vcc = S_MOV_B64 $vcc
+# GFX9:  $vcc = S_MOV_B64 $vcc
 # CHECK: S_CBRANCH_VCCZ %bb.2, implicit $vcc
 
 name: vcc_def_pred
@@ -243,7 +245,7 @@ body: |
 # SI-NEXT: $vcc = S_MOV_B64 0
 # SI-NEXT: S_WAITCNT 127
 # SI-NEXT: S_NOP 0
-# FIXME should have $vcc = S_MOV_B64 $vcc
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: load_def_wait_nop_use
 body: |
@@ -298,7 +300,7 @@ body: |
 # SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
 # SI-NEXT: S_WAITCNT 127
 # SI-NEXT: S_NOP 0
-# FIXME should have $vcc = S_MOV_B64 $vcc
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
 # SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
 name: def_load_wait_nop_use
 body: |

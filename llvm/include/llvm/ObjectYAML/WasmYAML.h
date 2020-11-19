@@ -221,6 +221,7 @@ struct NameSection : CustomSection {
   }
 
   std::vector<NameEntry> FunctionNames;
+  std::vector<NameEntry> GlobalNames;
 };
 
 struct LinkingSection : CustomSection {

@@ -32,7 +32,8 @@ enum syntax_option_type
     extended   = unspecified,
     awk        = unspecified,
     grep       = unspecified,
-    egrep      = unspecified
+    egrep      = unspecified,
+    multiline  = unspecified
 };
 
 constexpr syntax_option_type operator~(syntax_option_type f);
@@ -142,6 +143,7 @@ public:
     static constexpr regex_constants::syntax_option_type awk = regex_constants::awk;
     static constexpr regex_constants::syntax_option_type grep = regex_constants::grep;
     static constexpr regex_constants::syntax_option_type egrep = regex_constants::egrep;
+    static constexpr regex_constants::syntax_option_type multiline = regex_constants::multiline;
 
     // construct/copy/destroy:
     basic_regex();
@@ -802,7 +804,9 @@ enum syntax_option_type
     extended   = 1 << 5,
     awk        = 1 << 6,
     grep       = 1 << 7,
-    egrep      = 1 << 8
+    egrep      = 1 << 8,
+    // 1 << 9 may be used by ECMAScript
+    multiline  = 1 << 10
 };
 
 inline _LIBCPP_CONSTEXPR
@@ -1982,27 +1986,43 @@ __word_boundary<_CharT, _Traits>::__exec(__state& __s) const
 // __l_anchor
 
 template <class _CharT>
-class __l_anchor
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+bool __is_eol(_CharT c)
+{
+    return c == '\r' || c == '\n';
+}
+
+template <class _CharT>
+class __l_anchor_multiline
     : public __owns_one_state<_CharT>
 {
     typedef __owns_one_state<_CharT> base;
+
+    bool __multiline;
 
 public:
     typedef _VSTD::__state<_CharT> __state;
 
     _LIBCPP_INLINE_VISIBILITY
-    __l_anchor(__node<_CharT>* __s)
-        : base(__s) {}
+    __l_anchor_multiline(bool __multiline, __node<_CharT>* __s)
+        : base(__s), __multiline(__multiline) {}
 
     virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
 void
-__l_anchor<_CharT>::__exec(__state& __s) const
+__l_anchor_multiline<_CharT>::__exec(__state& __s) const
 {
     if (__s.__at_first_ && __s.__current_ == __s.__first_ &&
         !(__s.__flags_ & regex_constants::match_not_bol))
+    {
+        __s.__do_ = __state::__accept_but_not_consume;
+        __s.__node_ = this->first();
+    }
+    else if (__multiline &&
+             !__s.__at_first_ &&
+             __is_eol(*_VSTD::prev(__s.__current_)))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2017,27 +2037,34 @@ __l_anchor<_CharT>::__exec(__state& __s) const
 // __r_anchor
 
 template <class _CharT>
-class __r_anchor
+class __r_anchor_multiline
     : public __owns_one_state<_CharT>
 {
     typedef __owns_one_state<_CharT> base;
+
+    bool __multiline;
 
 public:
     typedef _VSTD::__state<_CharT> __state;
 
     _LIBCPP_INLINE_VISIBILITY
-    __r_anchor(__node<_CharT>* __s)
-        : base(__s) {}
+    __r_anchor_multiline(bool __multiline, __node<_CharT>* __s)
+        : base(__s), __multiline(__multiline) {}
 
     virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
 void
-__r_anchor<_CharT>::__exec(__state& __s) const
+__r_anchor_multiline<_CharT>::__exec(__state& __s) const
 {
     if (__s.__current_ == __s.__last_ &&
         !(__s.__flags_ & regex_constants::match_not_eol))
+    {
+        __s.__do_ = __state::__accept_but_not_consume;
+        __s.__node_ = this->first();
+    }
+    else if (__multiline && __is_eol(*__s.__current_))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2541,6 +2568,7 @@ public:
     static const regex_constants::syntax_option_type awk = regex_constants::awk;
     static const regex_constants::syntax_option_type grep = regex_constants::grep;
     static const regex_constants::syntax_option_type egrep = regex_constants::egrep;
+    static const regex_constants::syntax_option_type multiline = regex_constants::multiline;
 
     // construct/copy/destroy:
     _LIBCPP_INLINE_VISIBILITY
@@ -2706,6 +2734,12 @@ public:
 private:
     _LIBCPP_INLINE_VISIBILITY
     unsigned __loop_count() const {return __loop_count_;}
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool __use_multiline() const
+    {
+        return __get_grammar(__flags_) == ECMAScript && (__flags_ & multiline);
+    }
 
     template <class _ForwardIterator>
         void
@@ -4746,7 +4780,7 @@ template <class _CharT, class _Traits>
 void
 basic_regex<_CharT, _Traits>::__push_l_anchor()
 {
-    __end_->first() = new __l_anchor<_CharT>(__end_->first());
+    __end_->first() = new __l_anchor_multiline<_CharT>(__use_multiline(), __end_->first());
     __end_ = static_cast<__owns_one_state<_CharT>*>(__end_->first());
 }
 
@@ -4754,7 +4788,7 @@ template <class _CharT, class _Traits>
 void
 basic_regex<_CharT, _Traits>::__push_r_anchor()
 {
-    __end_->first() = new __r_anchor<_CharT>(__end_->first());
+    __end_->first() = new __r_anchor_multiline<_CharT>(__use_multiline(), __end_->first());
     __end_ = static_cast<__owns_one_state<_CharT>*>(__end_->first());
 }
 

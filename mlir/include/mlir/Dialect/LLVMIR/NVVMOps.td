@@ -40,9 +40,9 @@ class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
 
 class NVVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<OpTrait> traits,
-                  bit hasResult>
+                  int numResults>
   : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
-                    overloadedResults, overloadedOperands, traits, hasResult>;
+                    overloadedResults, overloadedOperands, traits, numResults>;
 
 
 //===----------------------------------------------------------------------===//

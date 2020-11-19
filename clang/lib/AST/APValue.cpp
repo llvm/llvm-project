@@ -1062,7 +1062,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   }
 
   case APValue::Union:
-    if (const auto *FD = V.getUnionField())
+    if (V.getUnionField())
       Merge(V.getUnionValue());
     break;
 

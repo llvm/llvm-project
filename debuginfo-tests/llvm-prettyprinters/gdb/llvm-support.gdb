@@ -40,6 +40,9 @@ p StringRef
 # CHECK: "\"foo\"\"bar\""
 p Twine
 
+# CHECK: llvm::StringMap with 2 elements = {["foo"] = 123, ["bar"] = 456}
+p StringMap
+
 # CHECK: {pointer = 0xabc, value = 1}
 p PointerIntPair
 

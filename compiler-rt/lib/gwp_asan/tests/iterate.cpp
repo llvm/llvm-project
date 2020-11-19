@@ -8,6 +8,9 @@
 
 #include "gwp_asan/tests/harness.h"
 
+#include <set>
+#include <vector>
+
 TEST_F(CustomGuardedPoolAllocator, Iterate) {
   InitNumSlots(7);
   std::vector<std::pair<void *, size_t>> Allocated;
