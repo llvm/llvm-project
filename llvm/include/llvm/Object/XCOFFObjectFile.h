@@ -395,6 +395,23 @@ public:
   bool isFunction() const;
 };
 
+class TBVectorExt {
+  friend class XCOFFTracebackTable;
+
+  uint16_t Data;
+  uint32_t VecParmsInfo;
+
+  TBVectorExt(StringRef TBvectorStrRef);
+
+public:
+  uint8_t geNumberOfVRSaved() const;
+  bool isVRSavedOnStack() const;
+  bool hasVarArgs() const;
+  uint8_t getNumberOfVectorParms() const;
+  bool hasVMXInstruction() const;
+  SmallString<32> getVectorParmsInfoString() const;
+};
+
 /// This class provides methods to extract traceback table data from a buffer.
 /// The various accessors may reference the buffer provided via the constructor.
 
@@ -407,9 +424,10 @@ class XCOFFTracebackTable {
   Optional<SmallVector<uint32_t, 8>> ControlledStorageInfoDisp;
   Optional<StringRef> FunctionName;
   Optional<uint8_t> AllocaRegister;
+  Optional<TBVectorExt> VecExt;
+  Optional<uint8_t> ExtensionTable;
 
   XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err);
-
 public:
   /// Parse an XCOFF Traceback Table from \a Ptr with \a Size bytes.
   /// Returns an XCOFFTracebackTable upon successful parsing, otherwise an
@@ -469,6 +487,8 @@ public:
   }
   const Optional<StringRef> &getFunctionName() const { return FunctionName; }
   const Optional<uint8_t> &getAllocaRegister() const { return AllocaRegister; }
+  const Optional<TBVectorExt> &getVectorExt() const { return VecExt; }
+  const Optional<uint8_t> &getExtensionTable() const { return ExtensionTable; }
 };
 
 bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes);
