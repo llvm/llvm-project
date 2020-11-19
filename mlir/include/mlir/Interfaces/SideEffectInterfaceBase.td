@@ -110,9 +110,20 @@ class EffectOpInterfaceBase<string name, string baseEffect>
       llvm::erase_if(effects, [&](auto &it) { return it.getValue() != value; });
     }
 
+    /// Collect all of the effect instances that operate on the provided symbol
+    /// reference and place them in 'effects'.
+    void getEffectsOnSymbol(::mlir::SymbolRefAttr value,
+              llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+              }] # baseEffect # [{>> & effects) {
+      getEffects(effects);
+      llvm::erase_if(effects, [&](auto &it) {
+        return it.getSymbolRef() != value;
+      });
+    }
+
     /// Collect all of the effect instances that operate on the provided
     /// resource and place them in 'effects'.
-    void getEffectsOnValue(::mlir::SideEffects::Resource *resource,
+    void getEffectsOnResource(::mlir::SideEffects::Resource *resource,
               llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
               }] # baseEffect # [{>> & effects) {
       getEffects(effects);
