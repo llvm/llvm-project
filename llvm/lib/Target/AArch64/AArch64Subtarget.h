@@ -195,6 +195,7 @@ protected:
   // Enable 64-bit vectorization in SLP.
   unsigned MinVectorRegisterBitWidth = 64;
 
+  bool OutlineAtomics = false;
   bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
@@ -470,6 +471,8 @@ public:
   bool isTargetILP32() const { return TargetTriple.isArch32Bit(); }
 
   bool useAA() const override { return UseAA; }
+
+  bool outlineAtomics() const { return OutlineAtomics; }
 
   bool hasVH() const { return HasVH; }
   bool hasPAN() const { return HasPAN; }

@@ -491,6 +491,10 @@ def warn_drv_moutline_unsupported_opt : Warning<
   "The '%0' architecture does not support -moutline; flag ignored">,
   InGroup<OptionIgnored>;
 
+def warn_drv_moutline_atomics_unsupported_opt : Warning<
+  "The '%0' architecture does not support -moutline-atomics; flag ignored">,
+  InGroup<OptionIgnored>;
+
 def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;

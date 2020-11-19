@@ -2664,6 +2664,10 @@ def msmall_data_threshold_EQ : Joined <["-"], "msmall-data-threshold=">,
   Group<m_Group>, Alias<G>;
 def msoft_float : Flag<["-"], "msoft-float">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Use software floating point">;
+def moutline_atomics : Flag<["-"], "moutline-atomics">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"Generate local calls to out-of-line atomic operations">;
+def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
