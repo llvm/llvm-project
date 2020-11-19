@@ -40,7 +40,7 @@ somedata:
 # CHECK-NEXT:     400       5a        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.data.somedata)
 # CHECK-NEXT:     400       5a        4                 somedata
 # CHECK-NEXT:       -       60       12 CUSTOM(.debug_info)
-# CHECK-NEXT:       -       72       17 CUSTOM(name)
+# CHECK-NEXT:       -       72       2b CUSTOM(name)
 
 # RUN: not wasm-ld %t1.o -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck -check-prefix=FAIL %s

@@ -127,6 +127,9 @@ entry:
 ; CHECK-NEXT:         Name:            .Lcall_dtors.2002
 ; CHECK-NEXT:       - Index:           22
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.2002
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
 
 ; RUN: wasm-ld -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
