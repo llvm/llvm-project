@@ -2728,9 +2728,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
     __u.__bucket_list_.reset(__npp);
     }
     _VSTD::swap(__bucket_list_.get_deleter().size(), __u.__bucket_list_.get_deleter().size());
-    _VSTD::__swap_allocator(__bucket_list_.get_deleter().__alloc(),
+    __swap_allocator(__bucket_list_.get_deleter().__alloc(),
              __u.__bucket_list_.get_deleter().__alloc());
-    _VSTD::__swap_allocator(__node_alloc(), __u.__node_alloc());
+    __swap_allocator(__node_alloc(), __u.__node_alloc());
     _VSTD::swap(__p1_.first().__next_, __u.__p1_.first().__next_);
     __p2_.swap(__u.__p2_);
     __p3_.swap(__u.__p3_);
