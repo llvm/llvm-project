@@ -100,6 +100,8 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+sve2-bitperm");
   if (Extensions & AEK_RCPC)
     Features.push_back("+rcpc");
+  if (Extensions & AEK_BRBE)
+    Features.push_back("+brbe");
 
   return true;
 }

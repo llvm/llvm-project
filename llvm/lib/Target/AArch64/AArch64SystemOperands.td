@@ -1574,6 +1574,25 @@ def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
 let Requires = [{ {AArch64::FeatureLS64} }] in
 def : RWSysReg<"ACCDATA_EL1",       0b11, 0b000, 0b1101, 0b0000, 0b101>;
 
+// Branch Record Buffer system registers
+let Requires = [{ {AArch64::FeatureBRBE} }] in {
+def : RWSysReg<"BRBCR_EL1",         0b10, 0b001, 0b1001, 0b0000, 0b000>;
+def : RWSysReg<"BRBCR_EL12",        0b10, 0b101, 0b1001, 0b0000, 0b000>;
+def : RWSysReg<"BRBCR_EL2",         0b10, 0b100, 0b1001, 0b0000, 0b000>;
+def : RWSysReg<"BRBFCR_EL1",        0b10, 0b001, 0b1001, 0b0000, 0b001>;
+def : ROSysReg<"BRBIDR0_EL1",       0b10, 0b001, 0b1001, 0b0010, 0b000>;
+def : RWSysReg<"BRBINFINJ_EL1",     0b10, 0b001, 0b1001, 0b0001, 0b000>;
+def : RWSysReg<"BRBSRCINJ_EL1",     0b10, 0b001, 0b1001, 0b0001, 0b001>;
+def : RWSysReg<"BRBTGTINJ_EL1",     0b10, 0b001, 0b1001, 0b0001, 0b010>;
+def : RWSysReg<"BRBTS_EL1",         0b10, 0b001, 0b1001, 0b0000, 0b010>;
+foreach n = 0-31 in {
+  defvar nb = !cast<bits<5>>(n);
+  def : ROSysReg<"BRBINF"#n#"_EL1", 0b10, 0b001, 0b1000, nb{3-0}, {nb{4},0b00}>;
+  def : ROSysReg<"BRBSRC"#n#"_EL1", 0b10, 0b001, 0b1000, nb{3-0}, {nb{4},0b01}>;
+  def : ROSysReg<"BRBTGT"#n#"_EL1", 0b10, 0b001, 0b1000, nb{3-0}, {nb{4},0b10}>;
+}
+}
+
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcAppleA7} }] in

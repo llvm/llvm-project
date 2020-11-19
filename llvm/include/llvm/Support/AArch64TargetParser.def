@@ -107,6 +107,7 @@ AARCH64_ARCH_EXT_NAME("f32mm",        AArch64::AEK_F32MM,       "+f32mm", "-f32m
 AARCH64_ARCH_EXT_NAME("f64mm",        AArch64::AEK_F64MM,       "+f64mm", "-f64mm")
 AARCH64_ARCH_EXT_NAME("tme",          AArch64::AEK_TME,         "+tme",   "-tme")
 AARCH64_ARCH_EXT_NAME("ls64",         AArch64::AEK_LS64,        "+ls64",  "-ls64")
+AARCH64_ARCH_EXT_NAME("brbe",         AArch64::AEK_BRBE,        "+brbe",  "-brbe")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME
