@@ -144,8 +144,7 @@ int __dfsan::vmaSize;
 #endif
 
 static uptr UnusedAddr() {
-  return MappingArchImpl<MAPPING_UNION_TABLE_ADDR>()
-         + sizeof(dfsan_union_table_t);
+  return UnionTableAddr() + sizeof(dfsan_union_table_t);
 }
 
 static atomic_dfsan_label *union_table(dfsan_label l1, dfsan_label l2) {
