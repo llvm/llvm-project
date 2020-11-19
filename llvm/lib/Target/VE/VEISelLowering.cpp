@@ -801,30 +801,6 @@ bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   return true;
 }
 
-bool VETargetLowering::hasAndNot(SDValue Y) const {
-  EVT VT = Y.getValueType();
-
-  // VE doesn't have vector and not instruction.
-  if (VT.isVector())
-    return false;
-
-  // VE allows different immediate values for X and Y where ~X & Y.
-  // Only simm7 works for X, and only mimm works for Y on VE.  However, this
-  // function is used to check whether an immediate value is OK for and-not
-  // instruction as both X and Y.  Generating additional instruction to
-  // retrieve an immediate value is no good since the purpose of this
-  // function is to convert a series of 3 instructions to another series of
-  // 3 instructions with better parallelism.  Therefore, we return false
-  // for all immediate values now.
-  // FIXME: Change hasAndNot function to have two operands to make it work
-  //        correctly with Aurora VE.
-  if (isa<ConstantSDNode>(Y))
-    return false;
-
-  // It's ok for generic registers.
-  return true;
-}
-
 VETargetLowering::VETargetLowering(const TargetMachine &TM,
                                    const VESubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -1617,7 +1593,7 @@ SDValue VETargetLowering::PerformDAGCombine(SDNode *N,
 }
 
 //===----------------------------------------------------------------------===//
-//                         VE Inline Assembly Support
+// VE Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
 VETargetLowering::ConstraintType
@@ -1665,4 +1641,28 @@ unsigned VETargetLowering::getMinimumJumpTableEntries() const {
     return 8;
 
   return TargetLowering::getMinimumJumpTableEntries();
+}
+
+bool VETargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // VE doesn't have vector and not instruction.
+  if (VT.isVector())
+    return false;
+
+  // VE allows different immediate values for X and Y where ~X & Y.
+  // Only simm7 works for X, and only mimm works for Y on VE.  However, this
+  // function is used to check whether an immediate value is OK for and-not
+  // instruction as both X and Y.  Generating additional instruction to
+  // retrieve an immediate value is no good since the purpose of this
+  // function is to convert a series of 3 instructions to another series of
+  // 3 instructions with better parallelism.  Therefore, we return false
+  // for all immediate values now.
+  // FIXME: Change hasAndNot function to have two operands to make it work
+  //        correctly with Aurora VE.
+  if (isa<ConstantSDNode>(Y))
+    return false;
+
+  // It's ok for generic registers.
+  return true;
 }
