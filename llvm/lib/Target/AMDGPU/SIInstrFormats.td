@@ -346,6 +346,13 @@ class EXPe_ComprVM : EXPe {
   let Inst{12} = vm;
 }
 
+// GFX11+ encoding has row bit.
+class EXPe_Row : EXPe {
+  bits<1> row;
+
+  let Inst{13} = row;
+}
+
 let Uses = [EXEC] in {
 
 class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
