@@ -9,3 +9,4 @@
 
 < A.swift
 // LLDB: could not read file at path 'A.swift'
+// RUN: rm -f A.swift
