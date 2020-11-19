@@ -15,7 +15,7 @@
 #include "toy/Parser.h"
 
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"

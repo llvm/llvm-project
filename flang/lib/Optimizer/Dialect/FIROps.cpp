@@ -12,7 +12,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/StringSwitch.h"

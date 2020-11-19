@@ -9,7 +9,7 @@
 #ifndef MLIR_ANALYSIS_MLFUNCTIONMATCHER_H_
 #define MLIR_ANALYSIS_MLFUNCTIONMATCHER_H_
 
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Allocator.h"
 

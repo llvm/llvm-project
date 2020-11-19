@@ -16,7 +16,7 @@
 #define MLIR_CAPI_IR_H
 
 #include "mlir/CAPI/Wrap.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
