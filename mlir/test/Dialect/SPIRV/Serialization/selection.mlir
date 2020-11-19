@@ -36,8 +36,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK-NEXT:   ^bb3:
     ^merge:
-// CHECK-NEXT:     spv._merge
-      spv._merge
+// CHECK-NEXT:     spv.mlir.merge
+      spv.mlir.merge
     }
 
     spv.Return
@@ -72,8 +72,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK:        ^bb2:
     ^merge:
-// CHECK-NEXT:     spv._merge
-      spv._merge
+// CHECK-NEXT:     spv.mlir.merge
+      spv.mlir.merge
     }
 
     %one = spv.constant 1 : i32

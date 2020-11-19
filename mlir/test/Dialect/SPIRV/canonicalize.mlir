@@ -507,7 +507,7 @@ func @canonicalize_selection_op_scalar_type(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -538,7 +538,7 @@ func @canonicalize_selection_op_vector_type(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -575,7 +575,7 @@ func @cannot_canonicalize_selection_op_0(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -611,7 +611,7 @@ func @cannot_canonicalize_selection_op_1(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -643,7 +643,7 @@ func @cannot_canonicalize_selection_op_2(%cond: i1) -> () {
     spv.Branch ^then
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -675,7 +675,7 @@ func @cannot_canonicalize_selection_op_3(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
@@ -707,7 +707,7 @@ func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
     spv.Branch ^merge
 
   ^merge:
-    spv._merge
+    spv.mlir.merge
   }
   spv.Return
 }
