@@ -96,6 +96,9 @@ static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
 
   Location loc = scfOp.getLoc();
   auto &allocas = scfToSPIRVContext->outputVars[newOp];
+  // Clearing the allocas is necessary in case a dialect conversion path failed
+  // previously, and this is the second attempt of this conversion.
+  allocas.clear();
   SmallVector<Value, 8> resultValue;
   for (Type convertedType : returnTypes) {
     auto pointerType =
@@ -214,12 +217,13 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
   auto selectionControl = rewriter.getI32IntegerAttr(
       static_cast<uint32_t>(spirv::SelectionControl::None));
   auto selectionOp = rewriter.create<spirv::SelectionOp>(loc, selectionControl);
-  selectionOp.addMergeBlock();
-  auto *mergeBlock = selectionOp.getMergeBlock();
+  auto *mergeBlock =
+      rewriter.createBlock(&selectionOp.body(), selectionOp.body().end());
+  rewriter.create<spirv::MergeOp>(loc);
 
   OpBuilder::InsertionGuard guard(rewriter);
-  auto *selectionHeaderBlock = new Block();
-  selectionOp.body().getBlocks().push_front(selectionHeaderBlock);
+  auto *selectionHeaderBlock =
+      rewriter.createBlock(&selectionOp.body().front());
 
   // Inline `then` region before the merge block and branch to it.
   auto &thenRegion = ifOp.thenRegion();
