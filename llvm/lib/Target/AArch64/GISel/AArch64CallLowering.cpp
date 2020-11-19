@@ -888,6 +888,11 @@ bool AArch64CallLowering::lowerTailCall(
     // actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
 
+    // Update the required reserved area if this is the tail call requiring the
+    // most argument stack space.
+    if (FPDiff < 0 && FuncInfo->getTailCallReservedStack() < (unsigned)-FPDiff)
+      FuncInfo->setTailCallReservedStack(-FPDiff);
+
     // The stack pointer must be 16-byte aligned at all times it's used for a
     // memory operation, which in practice means at *all* times and in
     // particular across call boundaries. Therefore our own arguments started at
@@ -929,12 +934,12 @@ bool AArch64CallLowering::lowerTailCall(
   // sequence start and end here.
   if (!IsSibCall) {
     MIB->getOperand(1).setImm(FPDiff);
-    CallSeqStart.addImm(NumBytes).addImm(0);
+    CallSeqStart.addImm(0).addImm(0);
     // End the call sequence *before* emitting the call. Normally, we would
     // tidy the frame up after the call. However, here, we've laid out the
     // parameters so that when SP is reset, they will be in the correct
     // location.
-    MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP).addImm(NumBytes).addImm(0);
+    MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP).addImm(0).addImm(0);
   }
 
   // Now we can add the actual call instruction to the correct basic block.
