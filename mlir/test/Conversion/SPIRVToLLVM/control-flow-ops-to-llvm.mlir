@@ -112,7 +112,7 @@ spv.module Logical GLSL450 {
       // Do nothing
       spv.Branch ^header
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -138,7 +138,7 @@ spv.module Logical GLSL450 {
     spv.selection {
       spv.BranchConditional %cond, ^merge, ^merge
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
@@ -156,7 +156,7 @@ spv.module Logical GLSL450 {
     // CHECK: ^bb2:
     ^merge:
       // CHECK: llvm.br ^bb3
-      spv._merge
+      spv.mlir.merge
     }
     // CHECK: ^bb3:
     // CHECK-NEXT: llvm.return
@@ -180,7 +180,7 @@ spv.module Logical GLSL450 {
     // CHECK: ^bb3:
     ^merge:
       // CHECK: llvm.br ^bb4
-      spv._merge
+      spv.mlir.merge
     }
     // CHECK: ^bb4:
     // CHECK-NEXT: llvm.return
@@ -200,7 +200,7 @@ spv.module Logical GLSL450 {
     // CHECK: ^bb2:
     ^merge:
       // CHECK: llvm.br ^bb3
-      spv._merge
+      spv.mlir.merge
     }
     // CHECK: ^bb3:
     %one = spv.constant 1 : i32

@@ -272,7 +272,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
     one loop header block, one loop continue block, one loop merge block.
     The entry block should be the first block and it should jump to the loop
     header block, which is the second block. The loop merge block should be the
-    last block. The merge block should only contain a `spv._merge` op.
+    last block. The merge block should only contain a `spv.mlir.merge` op.
     The continue block should be the second to last block and it should have a
     branch to the loop header block. The loop continue block should be the only
     block, except the entry block, branching to the header block.
@@ -302,7 +302,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
     Block *getMergeBlock();
 
     // Adds an empty entry block and loop merge block containing one
-    // spv._merge op.
+    // spv.mlir.merge op.
     void addEntryAndMergeBlock();
   }];
 
@@ -313,7 +313,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
 
 // -----
 
-def SPV_MergeOp : SPV_Op<"_merge", [NoSideEffect, Terminator]> {
+def SPV_MergeOp : SPV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -435,7 +435,7 @@ def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
     The `spv.selection` region should contain at least two blocks: one selection
     header block, and one selection merge. The selection header block should be
     the first block. The selection merge block should be the last block.
-    The merge block should only contain a `spv._merge` op.
+    The merge block should only contain a `spv.mlir.merge` op.
   }];
 
   let arguments = (ins
@@ -453,7 +453,7 @@ def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
     /// Returns the selection merge block.
     Block *getMergeBlock();
 
-    /// Adds a selection merge block containing one spv._merge op.
+    /// Adds a selection merge block containing one spv.mlir.merge op.
     void addMergeBlock();
 
     /// Creates a spv.selection op for `if (<condition>) then { <thenBody> }`

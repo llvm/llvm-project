@@ -25,7 +25,7 @@ module attributes {
       // CHECK-NEXT:  [[TRUE]]:
       // CHECK:         spv.Branch [[MERGE]]
       // CHECK-NEXT:  [[MERGE]]:
-      // CHECK-NEXT:    spv._merge
+      // CHECK-NEXT:    spv.mlir.merge
       // CHECK-NEXT:  }
       // CHECK-NEXT:  spv.Return
 
@@ -51,7 +51,7 @@ module attributes {
       // CHECK-NEXT:    [[FALSE_NESTED_TRUE_PATH]]:
       // CHECK:           spv.Branch [[MERGE_NESTED_TRUE_PATH]]
       // CHECK-NEXT:    [[MERGE_NESTED_TRUE_PATH]]:
-      // CHECK-NEXT:      spv._merge
+      // CHECK-NEXT:      spv.mlir.merge
       // CHECK-NEXT:    }
       // CHECK-NEXT:    spv.Branch [[MERGE_TOP:\^.*]]
       // CHECK-NEXT:  [[FALSE_TOP]]:
@@ -62,11 +62,11 @@ module attributes {
       // CHECK-NEXT:    [[FALSE_NESTED_FALSE_PATH]]:
       // CHECK:           spv.Branch [[MERGE_NESTED_FALSE_PATH]]
       // CHECK:         [[MERGE_NESTED_FALSE_PATH]]:
-      // CHECK-NEXT:      spv._merge
+      // CHECK-NEXT:      spv.mlir.merge
       // CHECK-NEXT:    }
       // CHECK-NEXT:    spv.Branch [[MERGE_TOP]]
       // CHECK-NEXT:  [[MERGE_TOP]]:
-      // CHECK-NEXT:    spv._merge
+      // CHECK-NEXT:    spv.mlir.merge
       // CHECK-NEXT:  }
       // CHECK-NEXT:  spv.Return
 
@@ -109,7 +109,7 @@ module attributes {
       // CHECK-DAG:     spv.Store "Function" %[[VAR2]], %[[RET2FALSE]] : f32
       // CHECK:         spv.Branch ^[[MERGE]]
       // CHECK-NEXT:  ^[[MERGE]]:
-      // CHECK:         spv._merge
+      // CHECK:         spv.mlir.merge
       // CHECK-NEXT:  }
       // CHECK-DAG:   %[[OUT1:.*]] = spv.Load "Function" %[[VAR1]] : f32
       // CHECK-DAG:   %[[OUT2:.*]] = spv.Load "Function" %[[VAR2]] : f32
@@ -145,7 +145,7 @@ module attributes {
     // CHECK:         spv.Store "Function" %[[VAR]], {{%.*}} : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
     // CHECK:         spv.Branch ^[[MERGE]]
     // CHECK-NEXT:  ^[[MERGE]]:
-    // CHECK:         spv._merge
+    // CHECK:         spv.mlir.merge
     // CHECK-NEXT:  }
     // CHECK:       %[[OUT:.*]] = spv.Load "Function" %[[VAR]] : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
     // CHECK:       %[[ADD:.*]] = spv.AccessChain %[[OUT]][{{%.*}}, {{%.*}}] : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>

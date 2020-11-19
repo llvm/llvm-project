@@ -119,20 +119,21 @@ static_assert((sizeof(g_gpr_regnums_x86_64) / sizeof(g_gpr_regnums_x86_64[0])) -
               "g_gpr_regnums_x86_64 has wrong number of register infos");
 
 static const uint32_t g_lldb_regnums_x86_64[] = {
-    lldb_fctrl_x86_64,     lldb_fstat_x86_64, lldb_ftag_x86_64,
-    lldb_fop_x86_64,       lldb_fiseg_x86_64, lldb_fioff_x86_64,
-    lldb_foseg_x86_64,     lldb_fooff_x86_64, lldb_mxcsr_x86_64,
-    lldb_mxcsrmask_x86_64, lldb_st0_x86_64,   lldb_st1_x86_64,
-    lldb_st2_x86_64,       lldb_st3_x86_64,   lldb_st4_x86_64,
-    lldb_st5_x86_64,       lldb_st6_x86_64,   lldb_st7_x86_64,
-    lldb_mm0_x86_64,       lldb_mm1_x86_64,   lldb_mm2_x86_64,
-    lldb_mm3_x86_64,       lldb_mm4_x86_64,   lldb_mm5_x86_64,
-    lldb_mm6_x86_64,       lldb_mm7_x86_64,   lldb_xmm0_x86_64,
-    lldb_xmm1_x86_64,      lldb_xmm2_x86_64,  lldb_xmm3_x86_64,
-    lldb_xmm4_x86_64,      lldb_xmm5_x86_64,  lldb_xmm6_x86_64,
-    lldb_xmm7_x86_64,      lldb_xmm8_x86_64,  lldb_xmm9_x86_64,
-    lldb_xmm10_x86_64,     lldb_xmm11_x86_64, lldb_xmm12_x86_64,
-    lldb_xmm13_x86_64,     lldb_xmm14_x86_64, lldb_xmm15_x86_64,
+    lldb_fctrl_x86_64,  lldb_fstat_x86_64, lldb_ftag_x86_64,
+    lldb_fop_x86_64,    lldb_fiseg_x86_64, lldb_fioff_x86_64,
+    lldb_fip_x86_64,    lldb_foseg_x86_64, lldb_fooff_x86_64,
+    lldb_fdp_x86_64,    lldb_mxcsr_x86_64, lldb_mxcsrmask_x86_64,
+    lldb_st0_x86_64,    lldb_st1_x86_64,   lldb_st2_x86_64,
+    lldb_st3_x86_64,    lldb_st4_x86_64,   lldb_st5_x86_64,
+    lldb_st6_x86_64,    lldb_st7_x86_64,   lldb_mm0_x86_64,
+    lldb_mm1_x86_64,    lldb_mm2_x86_64,   lldb_mm3_x86_64,
+    lldb_mm4_x86_64,    lldb_mm5_x86_64,   lldb_mm6_x86_64,
+    lldb_mm7_x86_64,    lldb_xmm0_x86_64,  lldb_xmm1_x86_64,
+    lldb_xmm2_x86_64,   lldb_xmm3_x86_64,  lldb_xmm4_x86_64,
+    lldb_xmm5_x86_64,   lldb_xmm6_x86_64,  lldb_xmm7_x86_64,
+    lldb_xmm8_x86_64,   lldb_xmm9_x86_64,  lldb_xmm10_x86_64,
+    lldb_xmm11_x86_64,  lldb_xmm12_x86_64, lldb_xmm13_x86_64,
+    lldb_xmm14_x86_64,  lldb_xmm15_x86_64,
     LLDB_INVALID_REGNUM // Register sets must be terminated with
                         // LLDB_INVALID_REGNUM.
 };
@@ -274,6 +275,16 @@ uint32_t RegisterContextPOSIX_x86::g_invalidate_r14[] = {
 uint32_t RegisterContextPOSIX_x86::g_invalidate_r15[] = {
     lldb_r15_x86_64, lldb_r15d_x86_64, lldb_r15w_x86_64, lldb_r15l_x86_64,
     LLDB_INVALID_REGNUM};
+
+uint32_t RegisterContextPOSIX_x86::g_contained_fip[] = {lldb_fip_x86_64,
+                                                        LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_contained_fdp[] = {lldb_fdp_x86_64,
+                                                        LLDB_INVALID_REGNUM};
+
+uint32_t RegisterContextPOSIX_x86::g_invalidate_fip[] = {
+    lldb_fip_x86_64, lldb_fioff_x86_64, lldb_fiseg_x86_64, LLDB_INVALID_REGNUM};
+uint32_t RegisterContextPOSIX_x86::g_invalidate_fdp[] = {
+    lldb_fdp_x86_64, lldb_fooff_x86_64, lldb_foseg_x86_64, LLDB_INVALID_REGNUM};
 
 // Number of register sets provided by this context.
 enum { k_num_extended_register_sets = 1, k_num_register_sets = 3 };

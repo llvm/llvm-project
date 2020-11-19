@@ -2530,48 +2530,132 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
   CGF.EmitNounwindRuntimeCall(atexit, args);
 }
 
+static llvm::Function *createGlobalInitOrCleanupFn(CodeGen::CodeGenModule &CGM,
+                                                   StringRef FnName) {
+  // Create a function that registers/unregisters destructors that have the same
+  // priority.
+  llvm::FunctionType *FTy = llvm::FunctionType::get(CGM.VoidTy, false);
+  llvm::Function *GlobalInitOrCleanupFn = CGM.CreateGlobalInitOrCleanUpFunction(
+      FTy, FnName, CGM.getTypes().arrangeNullaryFunction(), SourceLocation());
+
+  return GlobalInitOrCleanupFn;
+}
+
+static FunctionDecl *
+createGlobalInitOrCleanupFnDecl(CodeGen::CodeGenModule &CGM, StringRef FnName) {
+  ASTContext &Ctx = CGM.getContext();
+  QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {});
+  return FunctionDecl::Create(
+      Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+      &Ctx.Idents.get(FnName), FunctionTy, nullptr, SC_Static, false, false);
+}
+
+void CodeGenModule::unregisterGlobalDtorsWithUnAtExit() {
+  for (const auto &I : DtorsUsingAtExit) {
+    int Priority = I.first;
+    std::string GlobalCleanupFnName =
+        std::string("__GLOBAL_cleanup_") + llvm::to_string(Priority);
+
+    llvm::Function *GlobalCleanupFn =
+        createGlobalInitOrCleanupFn(*this, GlobalCleanupFnName);
+
+    FunctionDecl *GlobalCleanupFD =
+        createGlobalInitOrCleanupFnDecl(*this, GlobalCleanupFnName);
+
+    CodeGenFunction CGF(*this);
+    CGF.StartFunction(GlobalDecl(GlobalCleanupFD), getContext().VoidTy,
+                      GlobalCleanupFn, getTypes().arrangeNullaryFunction(),
+                      FunctionArgList(), SourceLocation(), SourceLocation());
+
+    // Get the destructor function type, void(*)(void).
+    llvm::FunctionType *dtorFuncTy = llvm::FunctionType::get(CGF.VoidTy, false);
+    llvm::Type *dtorTy = dtorFuncTy->getPointerTo();
+
+    // Destructor functions are run/unregistered in non-ascending
+    // order of their priorities.
+    const llvm::TinyPtrVector<llvm::Function *> &Dtors = I.second;
+    auto itv = Dtors.rbegin();
+    while (itv != Dtors.rend()) {
+      llvm::Function *Dtor = *itv;
+
+      // We're assuming that the destructor function is something we can
+      // reasonably call with the correct CC.  Go ahead and cast it to the
+      // right prototype.
+      llvm::Constant *dtor = llvm::ConstantExpr::getBitCast(Dtor, dtorTy);
+      llvm::Value *V = CGF.unregisterGlobalDtorWithUnAtExit(dtor);
+      llvm::Value *NeedsDestruct =
+          CGF.Builder.CreateIsNull(V, "needs_destruct");
+
+      llvm::BasicBlock *DestructCallBlock =
+          CGF.createBasicBlock("destruct.call");
+      llvm::BasicBlock *EndBlock = CGF.createBasicBlock(
+          (itv + 1) != Dtors.rend() ? "unatexit.call" : "destruct.end");
+      // Check if unatexit returns a value of 0. If it does, jump to
+      // DestructCallBlock, otherwise jump to EndBlock directly.
+      CGF.Builder.CreateCondBr(NeedsDestruct, DestructCallBlock, EndBlock);
+
+      CGF.EmitBlock(DestructCallBlock);
+
+      // Emit the call to casted Dtor.
+      llvm::CallInst *CI = CGF.Builder.CreateCall(dtorFuncTy, dtor);
+      // Make sure the call and the callee agree on calling convention.
+      CI->setCallingConv(Dtor->getCallingConv());
+
+      CGF.EmitBlock(EndBlock);
+
+      itv++;
+    }
+
+    CGF.FinishFunction();
+    AddGlobalDtor(GlobalCleanupFn, Priority);
+  }
+}
+
 void CodeGenModule::registerGlobalDtorsWithAtExit() {
   for (const auto &I : DtorsUsingAtExit) {
     int Priority = I.first;
-    const llvm::TinyPtrVector<llvm::Function *> &Dtors = I.second;
+    std::string GlobalInitFnName =
+        std::string("__GLOBAL_init_") + llvm::to_string(Priority);
+    llvm::Function *GlobalInitFn =
+        createGlobalInitOrCleanupFn(*this, GlobalInitFnName);
+    FunctionDecl *GlobalInitFD =
+        createGlobalInitOrCleanupFnDecl(*this, GlobalInitFnName);
 
-    // Create a function that registers destructors that have the same priority.
-    //
+    CodeGenFunction CGF(*this);
+    CGF.StartFunction(GlobalDecl(GlobalInitFD), getContext().VoidTy,
+                      GlobalInitFn, getTypes().arrangeNullaryFunction(),
+                      FunctionArgList(), SourceLocation(), SourceLocation());
+
     // Since constructor functions are run in non-descending order of their
     // priorities, destructors are registered in non-descending order of their
     // priorities, and since destructor functions are run in the reverse order
     // of their registration, destructor functions are run in non-ascending
     // order of their priorities.
-    CodeGenFunction CGF(*this);
-    std::string GlobalInitFnName =
-        std::string("__GLOBAL_init_") + llvm::to_string(Priority);
-    llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
-    llvm::Function *GlobalInitFn = CreateGlobalInitOrCleanUpFunction(
-        FTy, GlobalInitFnName, getTypes().arrangeNullaryFunction(),
-        SourceLocation());
-    ASTContext &Ctx = getContext();
-    QualType ReturnTy = Ctx.VoidTy;
-    QualType FunctionTy = Ctx.getFunctionType(ReturnTy, llvm::None, {});
-    FunctionDecl *FD = FunctionDecl::Create(
-        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        &Ctx.Idents.get(GlobalInitFnName), FunctionTy, nullptr, SC_Static,
-        false, false);
-    CGF.StartFunction(GlobalDecl(FD), ReturnTy, GlobalInitFn,
-                      getTypes().arrangeNullaryFunction(), FunctionArgList(),
-                      SourceLocation(), SourceLocation());
-
+    const llvm::TinyPtrVector<llvm::Function *> &Dtors = I.second;
     for (auto *Dtor : Dtors) {
       // Register the destructor function calling __cxa_atexit if it is
       // available. Otherwise fall back on calling atexit.
-      if (getCodeGenOpts().CXAAtExit)
+      if (getCodeGenOpts().CXAAtExit) {
         emitGlobalDtorWithCXAAtExit(CGF, Dtor, nullptr, false);
-      else
-        CGF.registerGlobalDtorWithAtExit(Dtor);
+      } else {
+        // Get the destructor function type, void(*)(void).
+        llvm::Type *dtorTy =
+            llvm::FunctionType::get(CGF.VoidTy, false)->getPointerTo();
+
+        // We're assuming that the destructor function is something we can
+        // reasonably call with the correct CC.  Go ahead and cast it to the
+        // right prototype.
+        CGF.registerGlobalDtorWithAtExit(
+            llvm::ConstantExpr::getBitCast(Dtor, dtorTy));
+      }
     }
 
     CGF.FinishFunction();
     AddGlobalCtor(GlobalInitFn, Priority, nullptr);
   }
+
+  if (getCXXABI().useSinitAndSterm())
+    unregisterGlobalDtorsWithUnAtExit();
 }
 
 /// Register a global destructor as best as we know how.
