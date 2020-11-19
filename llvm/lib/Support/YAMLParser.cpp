@@ -200,13 +200,12 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   StringRef::iterator End = Range.end();
   // 1 byte: [0x00, 0x7f]
   // Bit pattern: 0xxxxxxx
-  if ((*Position & 0x80) == 0) {
-     return std::make_pair(*Position, 1);
+  if (Position < End && (*Position & 0x80) == 0) {
+    return std::make_pair(*Position, 1);
   }
   // 2 bytes: [0x80, 0x7ff]
   // Bit pattern: 110xxxxx 10xxxxxx
-  if (Position + 1 != End &&
-      ((*Position & 0xE0) == 0xC0) &&
+  if (Position + 1 < End && ((*Position & 0xE0) == 0xC0) &&
       ((*(Position + 1) & 0xC0) == 0x80)) {
     uint32_t codepoint = ((*Position & 0x1F) << 6) |
                           (*(Position + 1) & 0x3F);
@@ -215,8 +214,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   }
   // 3 bytes: [0x8000, 0xffff]
   // Bit pattern: 1110xxxx 10xxxxxx 10xxxxxx
-  if (Position + 2 != End &&
-      ((*Position & 0xF0) == 0xE0) &&
+  if (Position + 2 < End && ((*Position & 0xF0) == 0xE0) &&
       ((*(Position + 1) & 0xC0) == 0x80) &&
       ((*(Position + 2) & 0xC0) == 0x80)) {
     uint32_t codepoint = ((*Position & 0x0F) << 12) |
@@ -230,8 +228,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   }
   // 4 bytes: [0x10000, 0x10FFFF]
   // Bit pattern: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-  if (Position + 3 != End &&
-      ((*Position & 0xF8) == 0xF0) &&
+  if (Position + 3 < End && ((*Position & 0xF8) == 0xF0) &&
       ((*(Position + 1) & 0xC0) == 0x80) &&
       ((*(Position + 2) & 0xC0) == 0x80) &&
       ((*(Position + 3) & 0xC0) == 0x80)) {
@@ -773,7 +770,7 @@ void Scanner::init(MemoryBufferRef Buffer) {
   IsSimpleKeyAllowed = true;
   Failed = false;
   std::unique_ptr<MemoryBuffer> InputBufferOwner =
-      MemoryBuffer::getMemBuffer(Buffer);
+      MemoryBuffer::getMemBuffer(Buffer, /*RequiresNullTerminator=*/false);
   SM.AddNewSourceBuffer(std::move(InputBufferOwner), SMLoc());
 }
 
@@ -1036,7 +1033,7 @@ bool Scanner::rollIndent( int ToColumn
 }
 
 void Scanner::skipComment() {
-  if (*Current != '#')
+  if (Current == End || *Current != '#')
     return;
   while (true) {
     // This may skip more than one byte, thus Column is only incremented
@@ -1051,7 +1048,7 @@ void Scanner::skipComment() {
 
 void Scanner::scanToNextToken() {
   while (true) {
-    while (*Current == ' ' || *Current == '\t') {
+    while (Current != End && (*Current == ' ' || *Current == '\t')) {
       skip(1);
     }
 
@@ -1286,7 +1283,7 @@ bool Scanner::scanFlowScalar(bool IsDoubleQuoted) {
              && wasEscaped(Start + 1, Current));
   } else {
     skip(1);
-    while (true) {
+    while (Current != End) {
       // Skip a ' followed by another '.
       if (Current + 1 < End && *Current == '\'' && *(Current + 1) == '\'') {
         skip(2);
@@ -1334,13 +1331,14 @@ bool Scanner::scanPlainScalar() {
   unsigned LeadingBlanks = 0;
   assert(Indent >= -1 && "Indent must be >= -1 !");
   unsigned indent = static_cast<unsigned>(Indent + 1);
-  while (true) {
+  while (Current != End) {
     if (*Current == '#')
       break;
 
-    while (!isBlankOrBreak(Current)) {
-      if (  FlowLevel && *Current == ':'
-          && !(isBlankOrBreak(Current + 1) || *(Current + 1) == ',')) {
+    while (Current != End && !isBlankOrBreak(Current)) {
+      if (FlowLevel && *Current == ':' &&
+          (Current + 1 == End ||
+           !(isBlankOrBreak(Current + 1) || *(Current + 1) == ','))) {
         setError("Found unexpected ':' while scanning a plain scalar", Current);
         return false;
       }
@@ -1410,7 +1408,7 @@ bool Scanner::scanAliasOrAnchor(bool IsAlias) {
   StringRef::iterator Start = Current;
   unsigned ColStart = Column;
   skip(1);
-  while(true) {
+  while (Current != End) {
     if (   *Current == '[' || *Current == ']'
         || *Current == '{' || *Current == '}'
         || *Current == ','
