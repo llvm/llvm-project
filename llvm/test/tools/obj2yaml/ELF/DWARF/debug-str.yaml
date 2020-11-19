@@ -73,10 +73,10 @@ DWARF:
 #  COMMON-NEXT:   Type:         SHT_[[TYPE]]
 #  COMMON-NEXT:   Flags:        [[FLAGS]]
 #    LINK-NEXT:   Link:         .sec
-# ADDRESS-NEXT:   Address:      0x[[#%.16x,ADDRESS]]
-#  COMMON-NEXT:   AddressAlign: 0x[[#%.16x,ADDRALIGN]]
-# ENTSIZE-NEXT:   EntSize:      0x[[#%.16x,ENTSIZE]]
-#    INFO-NEXT:   Info:         0x[[#%.16x,INFO]]
+# ADDRESS-NEXT:   Address:      0x[[#%x,ADDRESS]]
+#  COMMON-NEXT:   AddressAlign: 0x[[#%x,ADDRALIGN]]
+# ENTSIZE-NEXT:   EntSize:      0x[[#%x,ENTSIZE]]
+#    INFO-NEXT:   Info:         0x[[#%x,INFO]]
 #        BASIC: DWARF:
 #   BASIC-NEXT:   debug_str:
 #   BASIC-NEXT:     - a

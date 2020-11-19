@@ -1,4 +1,5 @@
 # UNSUPPORTED: system-windows
+# XFAIL: system-freebsd
 
 # Synchronous
 # RUN: %lldb -o 'platform select remote-gdb-server' -o 'process connect connect://localhost:4321' 2>&1 | FileCheck %s

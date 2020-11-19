@@ -53,14 +53,12 @@ struct AA {
     return 2;
   }
   static constexpr int foo2() {
-    return AA<T>::getB(); // expected-error{{no matching function for call to 'getB'}} \
-                          // expected-note {{subexpression not valid in a constant expression}}
+    return AA<T>::getB(); // expected-error{{no matching function for call to 'getB'}}
   }
 };
 // FIXME: should we suppress the "be initialized by a constant expression" diagnostic?
 constexpr auto x2 = AA<int>::foo2(); // expected-error {{be initialized by a constant expression}} \
-                                     // expected-note {{in instantiation of member function}} \
-                                     // expected-note {{in call to}}
+                                     // expected-note {{in instantiation of member function}}
 }
 
 // verify no assertion failure on violating value category.

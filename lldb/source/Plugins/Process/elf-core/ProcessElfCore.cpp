@@ -97,7 +97,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : Process(target_sp, listener_sp), m_core_file(core_file) {}
+    : PostMortemProcess(target_sp, listener_sp), m_core_file(core_file) {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {

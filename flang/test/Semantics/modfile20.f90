@@ -33,7 +33,7 @@ end
 !    integer(4)::a=123_4
 !    type(t),pointer::b=>NULL()
 !  end type
+!  intrinsic::null
 !  type(t),parameter::x=t(a=456_4,b=NULL())
 !  type(t),parameter::y=t(a=789_4,b=NULL())
-!  intrinsic::null
 !end

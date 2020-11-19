@@ -188,14 +188,12 @@ public:
     if (context().HasError(symbol)) {
       return std::nullopt;
     }
-    auto maybeExpr{AnalyzeExpr(*context_, expr)};
-    if (!maybeExpr) {
-      return std::nullopt;
-    }
-    auto exprType{maybeExpr->GetType()};
-    auto converted{evaluate::ConvertToType(symbol, std::move(*maybeExpr))};
-    if (!converted) {
-      if (exprType) {
+    if (auto maybeExpr{AnalyzeExpr(*context_, expr)}) {
+      if (auto converted{
+              evaluate::ConvertToType(symbol, std::move(*maybeExpr))}) {
+        return FoldExpr(std::move(*converted));
+      }
+      if (auto exprType{maybeExpr->GetType()}) {
         Say(source,
             "Initialization expression could not be converted to declared type of '%s' from %s"_err_en_US,
             symbol.name(), exprType->AsFortran());
@@ -204,9 +202,8 @@ public:
             "Initialization expression could not be converted to declared type of '%s'"_err_en_US,
             symbol.name());
       }
-      return std::nullopt;
     }
-    return FoldExpr(std::move(*converted));
+    return std::nullopt;
   }
 
   template <typename T> MaybeIntExpr EvaluateIntExpr(const T &expr) {
@@ -3345,6 +3342,10 @@ bool DeclarationVisitor::Pre(const parser::ExternalStmt &x) {
     if (!ConvertToProcEntity(*symbol)) {
       SayWithDecl(
           name, *symbol, "EXTERNAL attribute not allowed on '%s'"_err_en_US);
+    } else if (symbol->attrs().test(Attr::INTRINSIC)) { // C840
+      Say(symbol->name(),
+          "Symbol '%s' cannot have both INTRINSIC and EXTERNAL attributes"_err_en_US,
+          symbol->name());
     }
   }
   return false;
@@ -5730,18 +5731,27 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
     // derived types may still need more attention.
     return;
   }
-  if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
+  if (auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
     // TODO: check C762 - all bounds and type parameters of component
     // are colons or constant expressions if component is initialized
-    bool isNullPointer{false};
     std::visit(
         common::visitors{
             [&](const parser::ConstantExpr &expr) {
               NonPointerInitialization(name, expr, inComponentDecl);
             },
-            [&](const parser::NullInit &) {
-              isNullPointer = true;
-              details->set_init(SomeExpr{evaluate::NullPointer{}});
+            [&](const parser::NullInit &null) {
+              Walk(null);
+              if (auto nullInit{EvaluateExpr(null)}) {
+                if (!evaluate::IsNullPointer(*nullInit)) {
+                  Say(name,
+                      "Pointer initializer must be intrinsic NULL()"_err_en_US); // C813
+                } else if (IsPointer(ultimate)) {
+                  object->set_init(std::move(*nullInit));
+                } else {
+                  Say(name,
+                      "Non-pointer component '%s' initialized with null pointer"_err_en_US);
+                }
+              }
             },
             [&](const parser::InitialDataTarget &) {
               DIE("InitialDataTarget can't appear here");
@@ -5757,15 +5767,6 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
             },
         },
         init.u);
-    if (isNullPointer) {
-      if (!IsPointer(ultimate)) {
-        Say(name,
-            "Non-pointer component '%s' initialized with null pointer"_err_en_US);
-      }
-    } else if (IsPointer(ultimate)) {
-      Say(name,
-          "Object pointer component '%s' initialized with non-pointer expression"_err_en_US);
-    }
   }
 }
 
@@ -5885,8 +5886,6 @@ void ResolveNamesVisitor::HandleProcedureName(
     }
     ConvertToProcEntity(*symbol);
     SetProcFlag(name, *symbol, flag);
-  } else if (symbol->has<UnknownDetails>()) {
-    DIE("unexpected UnknownDetails");
   } else if (CheckUseError(name)) {
     // error was reported
   } else {

@@ -87,7 +87,7 @@ alias_address:
 # CHECK-NEXT:         Field:           __linear_memory
 # CHECK-NEXT:         Kind:            MEMORY
 # CHECK-NEXT:         Memory:
-# CHECK-NEXT:           Initial:         0x00000001
+# CHECK-NEXT:           Initial:         0x1
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           __indirect_function_table
 # CHECK-NEXT:         Kind:            TABLE
@@ -95,7 +95,7 @@ alias_address:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
-# CHECK-NEXT:             Initial:         0x00000001
+# CHECK-NEXT:             Initial:         0x1
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
 # CHECK-NEXT:   - Type:            ELEM
@@ -110,22 +110,22 @@ alias_address:
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 # CHECK-NEXT:         Index:           0
-# CHECK-NEXT:         Offset:          0x00000009
+# CHECK-NEXT:         Offset:          0x9
 # CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 # CHECK-NEXT:         Index:           3
-# CHECK-NEXT:         Offset:          0x00000012
+# CHECK-NEXT:         Offset:          0x12
 # CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
 # CHECK-NEXT:         Index:           5
-# CHECK-NEXT:         Offset:          0x0000001E
+# CHECK-NEXT:         Offset:          0x1E
 # CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 # CHECK-NEXT:         Index:           0
-# CHECK-NEXT:         Offset:          0x00000024
+# CHECK-NEXT:         Offset:          0x24
 # CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
 # CHECK-NEXT:         Index:           7
-# CHECK-NEXT:         Offset:          0x00000031
+# CHECK-NEXT:         Offset:          0x31
 # CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 # CHECK-NEXT:         Index:           0
-# CHECK-NEXT:         Offset:          0x00000037
+# CHECK-NEXT:         Offset:          0x37
 # CHECK-NEXT:     Functions:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Locals:
@@ -146,10 +146,10 @@ alias_address:
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 # CHECK-NEXT:         Index:           0
-# CHECK-NEXT:         Offset:          0x00000013
+# CHECK-NEXT:         Offset:          0x13
 # CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 # CHECK-NEXT:         Index:           3
-# CHECK-NEXT:         Offset:          0x00000020
+# CHECK-NEXT:         Offset:          0x20
 # CHECK-NEXT:     Segments:
 # CHECK-NEXT:       - SectionOffset:   6
 # CHECK-NEXT:         InitFlags:       0

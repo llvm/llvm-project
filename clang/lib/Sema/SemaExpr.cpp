@@ -7212,6 +7212,28 @@ static bool breakDownVectorType(QualType type, uint64_t &len,
   return true;
 }
 
+/// Are the two types SVE-bitcast-compatible types? I.e. is bitcasting from the
+/// first SVE type (e.g. an SVE VLAT) to the second type (e.g. an SVE VLST)
+/// allowed?
+///
+/// This will also return false if the two given types do not make sense from
+/// the perspective of SVE bitcasts.
+bool Sema::isValidSveBitcast(QualType srcTy, QualType destTy) {
+  assert(srcTy->isVectorType() || destTy->isVectorType());
+
+  auto ValidScalableConversion = [](QualType FirstType, QualType SecondType) {
+    if (!FirstType->isSizelessBuiltinType())
+      return false;
+
+    const auto *VecTy = SecondType->getAs<VectorType>();
+    return VecTy &&
+           VecTy->getVectorKind() == VectorType::SveFixedLengthDataVector;
+  };
+
+  return ValidScalableConversion(srcTy, destTy) ||
+         ValidScalableConversion(destTy, srcTy);
+}
+
 /// Are the two types lax-compatible vector types?  That is, given
 /// that one of them is a vector, do they have equal storage sizes,
 /// where the storage size is the number of elements times the element

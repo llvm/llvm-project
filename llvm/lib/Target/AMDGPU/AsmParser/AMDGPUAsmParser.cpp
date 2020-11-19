@@ -7031,7 +7031,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2
     ++it;
-    Inst.insert(it, Inst.getOperand(0)); // src2 = dst
+    // Copy the operand to ensure it's not invalidated when Inst grows.
+    Inst.insert(it, MCOperand(Inst.getOperand(0))); // src2 = dst
   }
 }
 

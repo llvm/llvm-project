@@ -364,7 +364,6 @@ inline bool operator!=(const ProcessModID &lhs, const ProcessModID &rhs) {
 /// A plug-in interface definition class for debugging a process.
 class Process : public std::enable_shared_from_this<Process>,
                 public ProcessProperties,
-                public UserID,
                 public Broadcaster,
                 public ExecutionContextScope,
                 public PluginInterface {
@@ -559,6 +558,15 @@ public:
   lldb::ByteOrder GetByteOrder() const;
 
   uint32_t GetAddressByteSize() const;
+
+  /// Sets the stored pid.
+  ///
+  /// This does not change the pid of underlying process.
+  lldb::pid_t GetID() const { return m_pid; }
+
+  /// Returns the pid of the process or LLDB_INVALID_PROCESS_ID if there is
+  /// no known pid.
+  void SetID(lldb::pid_t new_pid) { m_pid = new_pid; }
 
   uint32_t GetUniqueID() const { return m_process_unique_id; }
 
@@ -1391,6 +1399,8 @@ public:
   ///     Returns \b true if the process is still valid, \b false
   ///     otherwise.
   virtual bool IsAlive();
+
+  virtual bool IsLiveDebugSession() const { return true; };
 
   /// Before lldb detaches from a process, it warns the user that they are
   /// about to lose their debug session. In some cases, this warning doesn't
@@ -2551,9 +2561,7 @@ void PruneThreadPlans();
   ///  \return
   ///     The supported trace type or an \a llvm::Error if tracing is
   ///     not supported for the inferior.
-  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType() {
-    return llvm::make_error<UnimplementedError>();
-  }
+  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType();
 
   // This calls a function of the form "void * (*)(void)".
   bool CallVoidArgVoidPtrReturn(const Address *address,
@@ -2730,6 +2738,7 @@ protected:
 
   // Member variables
   std::weak_ptr<Target> m_target_wp; ///< The target that owns this process.
+  lldb::pid_t m_pid = LLDB_INVALID_PROCESS_ID;
   ThreadSafeValue<lldb::StateType> m_public_state;
   ThreadSafeValue<lldb::StateType>
       m_private_state;                     // The actual state of our process

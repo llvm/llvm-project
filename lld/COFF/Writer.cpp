@@ -227,6 +227,9 @@ private:
   void markSymbolsForRVATable(ObjFile *file,
                               ArrayRef<SectionChunk *> symIdxChunks,
                               SymbolRVASet &tableSymbols);
+  void getSymbolsFromSections(ObjFile *file,
+                              ArrayRef<SectionChunk *> symIdxChunks,
+                              std::vector<Symbol *> &symbols);
   void maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
                         StringRef countSym);
   void setSectionPermissions();
@@ -607,8 +610,9 @@ void Writer::run() {
 
   createImportTables();
   createSections();
-  createMiscChunks();
   appendImportThunks();
+  // Import thunks must be added before the Control Flow Guard tables are added.
+  createMiscChunks();
   createExportTable();
   mergeSections();
   removeUnusedSections();
@@ -1628,6 +1632,8 @@ static void markSymbolsWithRelocations(ObjFile *file,
 // table.
 void Writer::createGuardCFTables() {
   SymbolRVASet addressTakenSyms;
+  SymbolRVASet giatsRVASet;
+  std::vector<Symbol *> giatsSymbols;
   SymbolRVASet longJmpTargets;
   for (ObjFile *file : ObjFile::instances) {
     // If the object was compiled with /guard:cf, the address taken symbols
@@ -1637,6 +1643,8 @@ void Writer::createGuardCFTables() {
     // possibly address-taken.
     if (file->hasGuardCF()) {
       markSymbolsForRVATable(file, file->getGuardFidChunks(), addressTakenSyms);
+      markSymbolsForRVATable(file, file->getGuardIATChunks(), giatsRVASet);
+      getSymbolsFromSections(file, file->getGuardIATChunks(), giatsSymbols);
       markSymbolsForRVATable(file, file->getGuardLJmpChunks(), longJmpTargets);
     } else {
       markSymbolsWithRelocations(file, addressTakenSyms);
@@ -1651,6 +1659,16 @@ void Writer::createGuardCFTables() {
   for (Export &e : config->exports)
     maybeAddAddressTakenFunction(addressTakenSyms, e.sym);
 
+  // For each entry in the .giats table, check if it has a corresponding load
+  // thunk (e.g. because the DLL that defines it will be delay-loaded) and, if
+  // so, add the load thunk to the address taken (.gfids) table.
+  for (Symbol *s : giatsSymbols) {
+    if (auto *di = dyn_cast<DefinedImportData>(s)) {
+      if (di->loadThunkSym)
+        addSymbolToRVASet(addressTakenSyms, di->loadThunkSym);
+    }
+  }
+
   // Ensure sections referenced in the gfid table are 16-byte aligned.
   for (const ChunkAndOffset &c : addressTakenSyms)
     if (c.inputChunk->getAlignment() < 16)
@@ -1658,6 +1676,10 @@ void Writer::createGuardCFTables() {
 
   maybeAddRVATable(std::move(addressTakenSyms), "__guard_fids_table",
                    "__guard_fids_count");
+
+  // Add the Guard Address Taken IAT Entry Table (.giats).
+  maybeAddRVATable(std::move(giatsRVASet), "__guard_iat_table",
+                   "__guard_iat_count");
 
   // Add the longjmp target table unless the user told us not to.
   if (config->guardCF == GuardCFLevel::Full)
@@ -1675,11 +1697,11 @@ void Writer::createGuardCFTables() {
 }
 
 // Take a list of input sections containing symbol table indices and add those
-// symbols to an RVA table. The challenge is that symbol RVAs are not known and
+// symbols to a vector. The challenge is that symbol RVAs are not known and
 // depend on the table size, so we can't directly build a set of integers.
-void Writer::markSymbolsForRVATable(ObjFile *file,
+void Writer::getSymbolsFromSections(ObjFile *file,
                                     ArrayRef<SectionChunk *> symIdxChunks,
-                                    SymbolRVASet &tableSymbols) {
+                                    std::vector<Symbol *> &symbols) {
   for (SectionChunk *c : symIdxChunks) {
     // Skip sections discarded by linker GC. This comes up when a .gfids section
     // is associated with something like a vtable and the vtable is discarded.
@@ -1697,7 +1719,7 @@ void Writer::markSymbolsForRVATable(ObjFile *file,
     }
 
     // Read each symbol table index and check if that symbol was included in the
-    // final link. If so, add it to the table symbol set.
+    // final link. If so, add it to the vector of symbols.
     ArrayRef<ulittle32_t> symIndices(
         reinterpret_cast<const ulittle32_t *>(data.data()), data.size() / 4);
     ArrayRef<Symbol *> objSymbols = file->getSymbols();
@@ -1709,10 +1731,22 @@ void Writer::markSymbolsForRVATable(ObjFile *file,
       }
       if (Symbol *s = objSymbols[symIndex]) {
         if (s->isLive())
-          addSymbolToRVASet(tableSymbols, cast<Defined>(s));
+          symbols.push_back(cast<Symbol>(s));
       }
     }
   }
+}
+
+// Take a list of input sections containing symbol table indices and add those
+// symbols to an RVA table.
+void Writer::markSymbolsForRVATable(ObjFile *file,
+                                    ArrayRef<SectionChunk *> symIdxChunks,
+                                    SymbolRVASet &tableSymbols) {
+  std::vector<Symbol *> syms;
+  getSymbolsFromSections(file, symIdxChunks, syms);
+
+  for (Symbol *s : syms)
+    addSymbolToRVASet(tableSymbols, cast<Defined>(s));
 }
 
 // Replace the absolute table symbol with a synthetic symbol pointing to

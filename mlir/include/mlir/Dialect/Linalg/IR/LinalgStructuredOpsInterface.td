@@ -803,6 +803,17 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
             &res->getRegion(ridx), map);
         return res;
       }]
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/[{
+        Returns the region builder for constructing the body for linalg.generic.
+        Returns a null function if this named op does not define a region
+        builder.
+      }],
+      /*retTy=*/"std::function<void(Block &)>",
+      /*methodName=*/"getRegionBuilder",
+      (ins),
+      [{ return ConcreteOp::getRegionBuilder(); }]
     >
   ];
 

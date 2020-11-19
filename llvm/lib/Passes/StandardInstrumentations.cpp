@@ -32,18 +32,12 @@
 
 using namespace llvm;
 
-// TODO: remove once all required passes are marked as such.
-static cl::opt<bool>
-    EnableOptnone("enable-npm-optnone", cl::init(true),
-                  cl::desc("Enable skipping optional passes optnone functions "
-                           "under new pass manager"));
-
 cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
     "verify-cfg-preserved", cl::Hidden,
 #ifdef NDEBUG
     cl::init(false));
 #else
-    cl::init(true));
+    cl::init(false));
 #endif
 
 // FIXME: Change `-debug-pass-manager` from boolean to enum type. Similar to
@@ -545,8 +539,6 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  if (!EnableOptnone)
-    return true;
   const Function *F = nullptr;
   if (any_isa<const Function *>(IR)) {
     F = any_cast<const Function *>(IR);

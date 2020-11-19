@@ -13,7 +13,7 @@ entry:
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -36,16 +36,16 @@ entry:
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:           Maximum:         0x00000001
+; CHECK-NEXT:           Initial:         0x1
+; CHECK-NEXT:           Maximum:         0x1
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000000
+; CHECK-NEXT:       - Initial:         0x0
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:         Offset:          0x00000004
+; CHECK-NEXT:         Offset:          0x4
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
@@ -69,4 +69,7 @@ entry:
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...

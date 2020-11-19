@@ -80,20 +80,21 @@ static_assert((sizeof(g_gpr_regnums_x86_64) / sizeof(g_gpr_regnums_x86_64[0])) -
 
 // x86 64-bit floating point registers.
 static const uint32_t g_fpu_regnums_x86_64[] = {
-    lldb_fctrl_x86_64,     lldb_fstat_x86_64, lldb_ftag_x86_64,
-    lldb_fop_x86_64,       lldb_fiseg_x86_64, lldb_fioff_x86_64,
-    lldb_foseg_x86_64,     lldb_fooff_x86_64, lldb_mxcsr_x86_64,
-    lldb_mxcsrmask_x86_64, lldb_st0_x86_64,   lldb_st1_x86_64,
-    lldb_st2_x86_64,       lldb_st3_x86_64,   lldb_st4_x86_64,
-    lldb_st5_x86_64,       lldb_st6_x86_64,   lldb_st7_x86_64,
-    lldb_mm0_x86_64,       lldb_mm1_x86_64,   lldb_mm2_x86_64,
-    lldb_mm3_x86_64,       lldb_mm4_x86_64,   lldb_mm5_x86_64,
-    lldb_mm6_x86_64,       lldb_mm7_x86_64,   lldb_xmm0_x86_64,
-    lldb_xmm1_x86_64,      lldb_xmm2_x86_64,  lldb_xmm3_x86_64,
-    lldb_xmm4_x86_64,      lldb_xmm5_x86_64,  lldb_xmm6_x86_64,
-    lldb_xmm7_x86_64,      lldb_xmm8_x86_64,  lldb_xmm9_x86_64,
-    lldb_xmm10_x86_64,     lldb_xmm11_x86_64, lldb_xmm12_x86_64,
-    lldb_xmm13_x86_64,     lldb_xmm14_x86_64, lldb_xmm15_x86_64,
+    lldb_fctrl_x86_64,  lldb_fstat_x86_64, lldb_ftag_x86_64,
+    lldb_fop_x86_64,    lldb_fiseg_x86_64, lldb_fioff_x86_64,
+    lldb_fip_x86_64,    lldb_foseg_x86_64, lldb_fooff_x86_64,
+    lldb_fdp_x86_64,    lldb_mxcsr_x86_64, lldb_mxcsrmask_x86_64,
+    lldb_st0_x86_64,    lldb_st1_x86_64,   lldb_st2_x86_64,
+    lldb_st3_x86_64,    lldb_st4_x86_64,   lldb_st5_x86_64,
+    lldb_st6_x86_64,    lldb_st7_x86_64,   lldb_mm0_x86_64,
+    lldb_mm1_x86_64,    lldb_mm2_x86_64,   lldb_mm3_x86_64,
+    lldb_mm4_x86_64,    lldb_mm5_x86_64,   lldb_mm6_x86_64,
+    lldb_mm7_x86_64,    lldb_xmm0_x86_64,  lldb_xmm1_x86_64,
+    lldb_xmm2_x86_64,   lldb_xmm3_x86_64,  lldb_xmm4_x86_64,
+    lldb_xmm5_x86_64,   lldb_xmm6_x86_64,  lldb_xmm7_x86_64,
+    lldb_xmm8_x86_64,   lldb_xmm9_x86_64,  lldb_xmm10_x86_64,
+    lldb_xmm11_x86_64,  lldb_xmm12_x86_64, lldb_xmm13_x86_64,
+    lldb_xmm14_x86_64,  lldb_xmm15_x86_64,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_fpu_regnums_x86_64) / sizeof(g_fpu_regnums_x86_64[0])) -
@@ -280,7 +281,7 @@ NativeRegisterContextFreeBSD_x86_64::NativeRegisterContextFreeBSD_x86_64(
     llvm_unreachable("Unhandled target architecture.");
   }
 
-  for (int i: {FPRegSet, DBRegSet})
+  for (int i : {FPRegSet, DBRegSet})
     m_regset_offsets[i] = GetRegisterInfoInterface()
                               .GetRegisterInfo()[first_regnos[i]]
                               .byte_offset;
@@ -450,10 +451,16 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   switch (set) {
   case GPRegSet:
   case FPRegSet:
-  case DBRegSet:
-    reg_value.SetBytes(GetOffsetRegSetData(set, reg_info->byte_offset),
-                       reg_info->byte_size, endian::InlHostByteOrder());
+  case DBRegSet: {
+    void *data = GetOffsetRegSetData(set, reg_info->byte_offset);
+    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_fpr.data());
+    if (data == &fpr->ftag) // ftag
+      reg_value.SetUInt16(
+          AbridgedToFullTagWord(fpr->ftag, fpr->fstat, fpr->stmm));
+    else
+      reg_value.SetBytes(data, reg_info->byte_size, endian::InlHostByteOrder());
     break;
+  }
   case YMMRegSet: {
     llvm::Optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
     if (!ymm_reg) {
@@ -510,10 +517,15 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
   switch (set) {
   case GPRegSet:
   case FPRegSet:
-  case DBRegSet:
-    ::memcpy(GetOffsetRegSetData(set, reg_info->byte_offset),
-             reg_value.GetBytes(), reg_value.GetByteSize());
+  case DBRegSet: {
+    void *data = GetOffsetRegSetData(set, reg_info->byte_offset);
+    FXSAVE *fpr = reinterpret_cast<FXSAVE *>(m_fpr.data());
+    if (data == &fpr->ftag) // ftag
+      fpr->ftag = FullToAbridgedTagWord(reg_value.GetAsUInt16());
+    else
+      ::memcpy(data, reg_value.GetBytes(), reg_value.GetByteSize());
     break;
+  }
   case YMMRegSet: {
     llvm::Optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
     if (!ymm_reg) {

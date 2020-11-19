@@ -1300,7 +1300,7 @@ let SubtargetPredicate = isGFX10Plus in {
     SOPP_Pseudo<"s_inst_prefetch", (ins s16imm:$simm16), "$simm16">;
   def S_CLAUSE :
     SOPP_Pseudo<"s_clause", (ins s16imm:$simm16), "$simm16">;
-  def S_WAITCNT_IDLE :
+  def S_WAIT_IDLE :
     SOPP_Pseudo <"s_wait_idle", (ins), ""> {
       let simm16 = 0;
       let fixed_imm = 1;
@@ -1759,7 +1759,7 @@ defm S_ENDPGM_ORDERED_PS_DONE   : SOPP_Real_32_gfx8_gfx9_gfx10<0x01e>;
 defm S_CODE_END                 : SOPP_Real_32_gfx10<0x01f>;
 defm S_INST_PREFETCH            : SOPP_Real_32_gfx10<0x020>;
 defm S_CLAUSE                   : SOPP_Real_32_gfx10<0x021>;
-defm S_WAITCNT_IDLE             : SOPP_Real_32_gfx10<0x022>;
+defm S_WAIT_IDLE                : SOPP_Real_32_gfx10<0x022>;
 defm S_WAITCNT_DEPCTR           : SOPP_Real_32_gfx10<0x023>;
 defm S_ROUND_MODE               : SOPP_Real_32_gfx10<0x024>;
 defm S_DENORM_MODE              : SOPP_Real_32_gfx10<0x025>;

@@ -744,18 +744,28 @@ void SideEffectOp::getEffects(
             .Case("read", MemoryEffects::Read::get())
             .Case("write", MemoryEffects::Write::get());
 
-    // Check for a result to affect.
-    Value value;
-    if (effectElement.get("on_result"))
-      value = getResult();
-
     // Check for a non-default resource to use.
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
 
-    effects.emplace_back(effect, value, resource);
+    // Check for a result to affect.
+    if (effectElement.get("on_result"))
+      effects.emplace_back(effect, getResult(), resource);
+    else if (Attribute ref = effectElement.get("on_reference"))
+      effects.emplace_back(effect, ref.cast<SymbolRefAttr>(), resource);
+    else
+      effects.emplace_back(effect, resource);
   }
+}
+
+void SideEffectOp::getEffects(
+    SmallVectorImpl<TestEffects::EffectInstance> &effects) {
+  auto effectsAttr = getAttrOfType<AffineMapAttr>("effect_parameter");
+  if (!effectsAttr)
+    return;
+
+  effects.emplace_back(TestEffects::Concrete::get(), effectsAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -911,6 +921,7 @@ void RegionIfOp::getSuccessorRegions(
 }
 
 #include "TestOpEnums.cpp.inc"
+#include "TestOpInterfaces.cpp.inc"
 #include "TestOpStructs.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
 

@@ -1487,7 +1487,7 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
       // Propagating an undefined shuffle mask element to integer div/rem is not
       // allowed because those opcodes can create immediate undefined behavior
       // from an undefined element in an operand.
-      if (llvm::any_of(Mask, [](int M){ return M == -1; }))
+      if (llvm::is_contained(Mask, -1))
         return false;
       LLVM_FALLTHROUGH;
     case Instruction::Add:

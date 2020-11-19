@@ -134,7 +134,7 @@ Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
     // FIXME: Make every symbol (including absolute symbols) contain a
     // reference to their originating file, then add that file name to this
     // error message.
-    if (auto *defined = dyn_cast<Defined>(s))
+    if (isa<Defined>(s))
       error("found defined symbol with illegal name " + DSOHandle::name);
   }
   replaceSymbol<DSOHandle>(s, header);

@@ -199,7 +199,7 @@ int main() {
 }
 
 // HCHECK: define {{.*}}i{{[0-9]+}} @main()
-// HCHECK: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, {{.+}} null, {{.+}} null, i8** null, i32 0, i32 0)
+// HCHECK: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, {{.+}} null, {{.+}} null, i8** null, i8** null, i32 0, i32 0)
 // HCHECK: call void @[[OFFL1:.+]]()
 // HCHECK: {{%.+}} = call{{.*}} i32 @[[TMAIN_INT:.+]]()
 // HCHECK:  ret

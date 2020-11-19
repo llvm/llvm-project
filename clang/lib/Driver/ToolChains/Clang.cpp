@@ -3191,13 +3191,13 @@ static void RenderARCMigrateToolOptions(const Driver &D, const ArgList &Args,
       switch (A->getOption().getID()) {
       default: llvm_unreachable("missed a case");
       case options::OPT_ccc_arcmt_check:
-        CmdArgs.push_back("-arcmt-check");
+        CmdArgs.push_back("-arcmt-action=check");
         break;
       case options::OPT_ccc_arcmt_modify:
-        CmdArgs.push_back("-arcmt-modify");
+        CmdArgs.push_back("-arcmt-action=modify");
         break;
       case options::OPT_ccc_arcmt_migrate:
-        CmdArgs.push_back("-arcmt-migrate");
+        CmdArgs.push_back("-arcmt-action=migrate");
         CmdArgs.push_back("-mt-migrate-directory");
         CmdArgs.push_back(A->getValue());
 

@@ -4145,6 +4145,9 @@ bool MasmParser::parseDirectiveNestedStruct(StringRef Directive,
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
 
+  // Reserve space to ensure Alignment doesn't get invalidated when
+  // StructInProgress grows.
+  StructInProgress.reserve(StructInProgress.size() + 1);
   StructInProgress.emplace_back(Name, DirKind == DK_UNION,
                                 StructInProgress.back().Alignment);
   return false;

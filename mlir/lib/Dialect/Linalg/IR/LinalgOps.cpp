@@ -419,6 +419,8 @@ LogicalResult AnnotationsVerifier<GenericOp>::verify(GenericOp op) {
   // Verify consistency of sparse annotations.
   if (!op.hasTensorSemantics())
     return op.emitOpError("expected sparse annotations on tensors only");
+  if (op.getNumOutputs() != 1)
+    return op.emitOpError("expected single output tensor");
   unsigned numTensors = op.getNumInputsAndOutputs();
   if (sparseAttr.size() != numTensors)
     return op.emitOpError("expected one sparse annotation for each tensor");

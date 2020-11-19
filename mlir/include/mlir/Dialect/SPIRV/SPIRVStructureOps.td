@@ -468,7 +468,7 @@ def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
 
 // -----
 
-def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
+def SPV_ReferenceOfOp : SPV_Op<"mlir.referenceof", [NoSideEffect]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
@@ -482,14 +482,14 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    spv-reference-of-op ::= ssa-id `=` `spv._reference_of` symbol-ref-id
+    spv-reference-of-op ::= ssa-id `=` `spv.mlir.referenceof` symbol-ref-id
                                        `:` spirv-scalar-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv._reference_of @spec_const : f32
+    %0 = spv.mlir.referenceof @spec_const : f32
     ```
 
     TODO Add support for composite specialization constants.

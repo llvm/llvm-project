@@ -28977,17 +28977,27 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   SDValue In = Op.getOperand(0);
   SDLoc DL(Op);
 
+  assert(VT.getScalarType() == MVT::i8 &&
+         "Only byte vector BITREVERSE supported");
+
   // Split v64i8 without BWI so that we can still use the PSHUFB lowering.
   if (VT == MVT::v64i8 && !Subtarget.hasBWI())
     return splitVectorIntUnary(Op, DAG);
 
-  unsigned NumElts = VT.getVectorNumElements();
-  assert(VT.getScalarType() == MVT::i8 &&
-         "Only byte vector BITREVERSE supported");
-
   // Decompose 256-bit ops into smaller 128-bit ops on pre-AVX2.
-  if (VT.is256BitVector() && !Subtarget.hasInt256())
+  if (VT == MVT::v32i8 && !Subtarget.hasInt256())
     return splitVectorIntUnary(Op, DAG);
+
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // If we have GFNI, we can use GF2P8AFFINEQB to reverse the bits.
+  if (Subtarget.hasGFNI()) {
+    MVT MatrixVT = MVT::getVectorVT(MVT::i64, NumElts / 8);
+    SDValue Matrix = DAG.getConstant(0x8040201008040201ULL, DL, MatrixVT);
+    Matrix = DAG.getBitcast(VT, Matrix);
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, In, Matrix,
+                       DAG.getTargetConstant(0, DL, MVT::i8));
+  }
 
   // Perform BITREVERSE using PSHUFB lookups. Each byte is split into
   // two nibbles and a PSHUFB lookup to find the bitreverse of each
@@ -36705,8 +36715,10 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
     // Share broadcast with the longest vector and extract low subvector (free).
+    // Ensure the same SDValue from the SDNode use is being used.
     for (SDNode *User : Src->uses())
       if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
+          Src == User->getOperand(0) &&
           User->getValueSizeInBits(0).getFixedSize() >
               VT.getFixedSizeInBits()) {
         return extractSubVector(SDValue(User, 0), 0, DAG, DL,

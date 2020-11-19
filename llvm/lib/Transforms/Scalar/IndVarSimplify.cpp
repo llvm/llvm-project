@@ -1360,6 +1360,18 @@ static bool optimizeLoopExitWithUnknownExitCount(
   if (Inverted)
     return false;
 
+  auto *ARTy = LHSS->getType();
+  auto *MaxIterTy = MaxIter->getType();
+  // If possible, adjust types.
+  if (SE->getTypeSizeInBits(ARTy) > SE->getTypeSizeInBits(MaxIterTy))
+    MaxIter = SE->getZeroExtendExpr(MaxIter, ARTy);
+  else if (SE->getTypeSizeInBits(ARTy) < SE->getTypeSizeInBits(MaxIterTy)) {
+    const SCEV *MinusOne = SE->getMinusOne(ARTy);
+    auto *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
+    if (SE->isKnownPredicateAt(ICmpInst::ICMP_ULE, MaxIter, MaxAllowedIter, BI))
+      MaxIter = SE->getTruncateExpr(MaxIter, ARTy);
+  }
+
   if (SkipLastIter) {
     const SCEV *One = SE->getOne(MaxIter->getType());
     MaxIter = SE->getMinusSCEV(MaxIter, One);
@@ -1778,7 +1790,9 @@ bool IndVarSimplify::run(Loop *L) {
   if (optimizeLoopExits(L, Rewriter))  {
     Changed = true;
     // Given we've changed exit counts, notify SCEV
-    SE->forgetLoop(L);
+    // Some nested loops may share same folded exit basic block,
+    // thus we need to notify top most loop.
+    SE->forgetTopmostLoop(L);
   }
 
   // Try to form loop invariant tests for loop exits by changing how many

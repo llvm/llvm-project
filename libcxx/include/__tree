@@ -1819,7 +1819,7 @@ __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
     using _VSTD::swap;
     swap(__begin_node_, __t.__begin_node_);
     swap(__pair1_.first(), __t.__pair1_.first());
-    __swap_allocator(__node_alloc(), __t.__node_alloc());
+    _VSTD::__swap_allocator(__node_alloc(), __t.__node_alloc());
     __pair3_.swap(__t.__pair3_);
     if (size() == 0)
         __begin_node() = __end_node();

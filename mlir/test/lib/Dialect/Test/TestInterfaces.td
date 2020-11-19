@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_INTERFACES
-#define TEST_INTERFACES
+#ifndef MLIR_TEST_DIALECT_TEST_INTERFACES
+#define MLIR_TEST_DIALECT_TEST_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaceBase.td"
 
 // A type interface used to test the ODS generation of type interfaces.
 def TestTypeInterface : TypeInterface<"TestTypeInterface"> {
@@ -52,4 +53,18 @@ def TestTypeInterface : TypeInterface<"TestTypeInterface"> {
   }];
 }
 
-#endif // TEST_INTERFACES
+def TestEffectOpInterface
+    : EffectOpInterfaceBase<"TestEffectOpInterface",
+                            "::mlir::TestEffects::Effect"> {
+  let cppNamespace = "::mlir";
+}
+
+class TestEffect<string effectName>
+    : SideEffect<TestEffectOpInterface, effectName, DefaultResource>;
+
+class TestEffects<list<TestEffect> effects = []>
+   : SideEffectsTraitBase<TestEffectOpInterface, effects>;
+
+def TestConcreteEffect : TestEffect<"TestEffects::Concrete">;
+
+#endif // MLIR_TEST_DIALECT_TEST_INTERFACES

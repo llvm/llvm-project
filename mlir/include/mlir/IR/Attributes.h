@@ -1714,7 +1714,8 @@ template <> struct PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::Attribute getFromVoidPointer(void *ptr) {
     return mlir::Attribute::getFromOpaquePointer(ptr);
   }
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = llvm::PointerLikeTypeTraits<
+      mlir::AttributeStorage *>::NumLowBitsAvailable;
 };
 
 template <>

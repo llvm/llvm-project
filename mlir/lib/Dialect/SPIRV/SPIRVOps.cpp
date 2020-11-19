@@ -2571,7 +2571,7 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv._reference_of
+// spv.mlir.referenceof
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {

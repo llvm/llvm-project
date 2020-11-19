@@ -618,7 +618,7 @@ As well as:
 *   spv.GLSL.SSign
 *   spv.GLSL.FSign
 *   spv.MemoryBarrier
-*   spv._reference_of
+*   spv.mlir.referenceof
 *   spv.SMod
 *   spv.specConstant
 *   spv.SubgroupBallotKHR

@@ -701,8 +701,7 @@ bool LoopInterchangeLegality::findInductionAndReductions(
         Value *V = followLCSSA(PHI.getIncomingValueForBlock(L->getLoopLatch()));
         PHINode *InnerRedPhi = findInnerReductionPhi(InnerLoop, V);
         if (!InnerRedPhi ||
-            !llvm::any_of(InnerRedPhi->incoming_values(),
-                          [&PHI](Value *V) { return V == &PHI; })) {
+            !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI)) {
           LLVM_DEBUG(
               dbgs()
               << "Failed to recognize PHI as an induction or reduction.\n");

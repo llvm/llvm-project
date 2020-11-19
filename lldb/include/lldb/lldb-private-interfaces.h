@@ -114,6 +114,8 @@ typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 typedef llvm::Expected<lldb::TraceSP> (*TraceCreateInstance)(
     const llvm::json::Value &trace_session_file,
     llvm::StringRef session_file_dir, lldb_private::Debugger &debugger);
+typedef lldb::CommandObjectSP (*TraceGetStartCommand)(
+    CommandInterpreter &interpreter);
 
 } // namespace lldb_private
 

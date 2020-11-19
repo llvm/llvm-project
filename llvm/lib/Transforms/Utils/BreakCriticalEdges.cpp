@@ -270,7 +270,7 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
     SmallVector<DominatorTree::UpdateType, 3> Updates;
     Updates.push_back({DominatorTree::Insert, TIBB, NewBB});
     Updates.push_back({DominatorTree::Insert, NewBB, DestBB});
-    if (llvm::find(successors(TIBB), DestBB) == succ_end(TIBB))
+    if (!llvm::is_contained(successors(TIBB), DestBB))
       Updates.push_back({DominatorTree::Delete, TIBB, DestBB});
 
     if (DT)

@@ -82,6 +82,11 @@ entry:
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            use_global
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            used_global
 ; CHECK-NEXT: ...
 
 ; RUN: wasm-ld -print-gc-sections --no-gc-sections -o %t1.no-gc.wasm \
@@ -150,6 +155,13 @@ entry:
 ; NO-GC-NEXT:         Name:            _start
 ; NO-GC-NEXT:       - Index:           4
 ; NO-GC-NEXT:         Name:            use_global
+; NO-GC-NEXT:     GlobalNames:
+; NO-GC-NEXT:       - Index:           0
+; NO-GC-NEXT:         Name:            __stack_pointer
+; NO-GC-NEXT:       - Index:           1
+; NO-GC-NEXT:         Name:            unused_global
+; NO-GC-NEXT:       - Index:           2
+; NO-GC-NEXT:         Name:            used_global
 ; NO-GC-NEXT: ...
 
 ; RUN: not wasm-ld --gc-sections --relocatable -o %t1.no-gc.wasm %t.o 2>&1 | FileCheck %s -check-prefix=CHECK-ERROR

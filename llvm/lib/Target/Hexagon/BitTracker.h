@@ -62,7 +62,7 @@ private:
   void visitPHI(const MachineInstr &PI);
   void visitNonBranch(const MachineInstr &MI);
   void visitBranchesFrom(const MachineInstr &BI);
-  void visitUsesOf(unsigned Reg);
+  void visitUsesOf(Register Reg);
 
   using CFGEdge = std::pair<int, int>;
   using EdgeSetType = std::set<CFGEdge>;
@@ -131,19 +131,20 @@ struct BitTracker::BitRef {
     return Reg == BR.Reg && (Reg == 0 || Pos == BR.Pos);
   }
 
-  unsigned Reg;
+  Register Reg;
   uint16_t Pos;
 };
 
 // Abstraction of a register reference in MachineOperand.  It contains the
 // register number and the subregister index.
+// FIXME: Consolidate duplicate definitions of RegisterRef
 struct BitTracker::RegisterRef {
-  RegisterRef(unsigned R = 0, unsigned S = 0)
-    : Reg(R), Sub(S) {}
+  RegisterRef(Register R = 0, unsigned S = 0) : Reg(R), Sub(S) {}
   RegisterRef(const MachineOperand &MO)
       : Reg(MO.getReg()), Sub(MO.getSubReg()) {}
 
-  unsigned Reg, Sub;
+  Register Reg;
+  unsigned Sub;
 };
 
 // Value that a single bit can take.  This is outside of the context of
@@ -312,7 +313,7 @@ struct BitTracker::RegisterCell {
     return Bits[BitN];
   }
 
-  bool meet(const RegisterCell &RC, unsigned SelfR);
+  bool meet(const RegisterCell &RC, Register SelfR);
   RegisterCell &insert(const RegisterCell &RC, const BitMask &M);
   RegisterCell extract(const BitMask &M) const;  // Returns a new cell.
   RegisterCell &rol(uint16_t Sh);    // Rotate left.
@@ -461,7 +462,7 @@ struct BitTracker::MachineEvaluator {
   // Sub == 0, in this case, the function should return a mask that spans
   // the entire register Reg (which is what the default implementation
   // does).
-  virtual BitMask mask(unsigned Reg, unsigned Sub) const;
+  virtual BitMask mask(Register Reg, unsigned Sub) const;
   // Indicate whether a given register class should be tracked.
   virtual bool track(const TargetRegisterClass *RC) const { return true; }
   // Evaluate a non-branching machine instruction, given the cell map with
@@ -484,7 +485,7 @@ struct BitTracker::MachineEvaluator {
     llvm_unreachable("Unimplemented composeWithSubRegIndex");
   }
   // Return the size in bits of the physical register Reg.
-  virtual uint16_t getPhysRegBitWidth(unsigned Reg) const;
+  virtual uint16_t getPhysRegBitWidth(Register Reg) const;
 
   const TargetRegisterInfo &TRI;
   MachineRegisterInfo &MRI;

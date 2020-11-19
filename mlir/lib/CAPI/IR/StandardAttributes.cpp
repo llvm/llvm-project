@@ -517,6 +517,14 @@ MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
 }
 
 //===----------------------------------------------------------------------===//
+// Raw data accessors.
+
+const void *mlirDenseElementsAttrGetRawData(MlirAttribute attr) {
+  return static_cast<const void *>(
+      unwrap(attr).cast<DenseElementsAttr>().getRawData().data());
+}
+
+//===----------------------------------------------------------------------===//
 // Opaque elements attribute.
 //===----------------------------------------------------------------------===//
 

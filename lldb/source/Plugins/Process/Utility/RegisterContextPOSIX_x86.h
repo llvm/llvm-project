@@ -106,6 +106,12 @@ public:
   static uint32_t g_invalidate_r14[];
   static uint32_t g_invalidate_r15[];
 
+  static uint32_t g_contained_fip[];
+  static uint32_t g_contained_fdp[];
+
+  static uint32_t g_invalidate_fip[];
+  static uint32_t g_invalidate_fdp[];
+
 protected:
   struct RegInfo {
     uint32_t num_registers;

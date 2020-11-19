@@ -27,7 +27,7 @@ define i32 @callWeakFuncs() {
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -50,11 +50,11 @@ define i32 @callWeakFuncs() {
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:           Maximum:         0x00000001
+; CHECK-NEXT:           Initial:         0x1
+; CHECK-NEXT:           Maximum:         0x1
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Initial:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -96,4 +96,7 @@ define i32 @callWeakFuncs() {
 ; CHECK-NEXT:         Name:            'undefined_weak:weakFunc3'
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            callWeakFuncs
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
