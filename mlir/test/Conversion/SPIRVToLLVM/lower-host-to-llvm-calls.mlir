@@ -24,7 +24,7 @@ module attributes {gpu.container_module, spv.target_env = #spv.target_env<#spv.v
   spv.module @__spv__foo Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]> {
     spv.globalVariable @bar_arg_0 bind(0, 0) : !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4> [0])>, StorageBuffer>
     spv.func @bar() "None" attributes {workgroup_attributions = 0 : i64} {
-      %0 = spv._address_of @bar_arg_0 : !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4> [0])>, StorageBuffer>
+      %0 = spv.mlir.addressof @bar_arg_0 : !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4> [0])>, StorageBuffer>
       spv.Return
     }
     spv.EntryPoint "GLCompute" @bar

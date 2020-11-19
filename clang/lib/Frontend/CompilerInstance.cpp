@@ -1523,7 +1523,9 @@ void CompilerInstance::createASTReader() {
   HeaderSearchOptions &HSOpts = getHeaderSearchOpts();
   std::string Sysroot = HSOpts.Sysroot;
   const PreprocessorOptions &PPOpts = getPreprocessorOpts();
+  const FrontendOptions &FEOpts = getFrontendOpts();
   std::unique_ptr<llvm::Timer> ReadTimer;
+
   if (FrontendTimerGroup)
     ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
                                                 "Reading modules",
@@ -1532,7 +1534,7 @@ void CompilerInstance::createASTReader() {
       getPreprocessor(), getModuleCache(), &getASTContext(),
       getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(), PPOpts.DisablePCHValidation,
-      /*AllowASTWithCompilerErrors=*/false,
+      /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
       /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
       HSOpts.ValidateASTInputFilesContent,
       getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));

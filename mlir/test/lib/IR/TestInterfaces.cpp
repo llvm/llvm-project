@@ -25,6 +25,10 @@ struct TestTypeInterfaces
           testInterface.printTypeB(op->getLoc());
           testInterface.printTypeC(op->getLoc());
           testInterface.printTypeD(op->getLoc());
+          // Just check that we can assign the result to a variable of interface
+          // type.
+          TestTypeInterface result = testInterface.printTypeRet(op->getLoc());
+          (void)result;
         }
         if (auto testType = type.dyn_cast<TestType>())
           testType.printTypeE(op->getLoc());

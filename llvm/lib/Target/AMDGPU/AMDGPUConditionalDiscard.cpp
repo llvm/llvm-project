@@ -189,9 +189,18 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
             PredBranchInst->setSuccessor(0, OldKillBlockSucc);
           else
             PredBranchInst->setSuccessor(1, OldKillBlockSucc);
-
-          // Update successors' phi.
-          BB.replaceSuccessorsPhiUsesWith(&BB, PredBlock);
+          // For OldKillBlockSucc's PHINode, the incoming block should be
+          // updated from BB to PredBlock, and the incoming value may also need
+          // to be updated if PredBlock is OldKillBlockSucc's predecessor. This
+          // could avoid leaving the PHINode with different incoming values for
+          // the PredBlock.
+          for (PHINode &PN : OldKillBlockSucc->phis()) {
+            if (PN.getBasicBlockIndex(PredBlock) >= 0) {
+              auto *PredIncoming = PN.getIncomingValueForBlock(PredBlock);
+              PN.setIncomingValue(PN.getBasicBlockIndex(&BB), PredIncoming);
+            }
+            PN.replaceIncomingBlockWith(&BB, PredBlock);
+          }
 
           KillBlocksToRemove.push_back(&BB);
         }

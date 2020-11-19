@@ -16,7 +16,7 @@
 //------------------------------------------------------------------------------
 
 class GenericInstruction : StandardPseudoInstruction {
-  let isPreISelOpcode = 1;
+  let isPreISelOpcode = true;
 }
 
 // Provide a variant of an instruction with the same operands, but
@@ -31,8 +31,8 @@ class ConstrainedIntruction<GenericInstruction baseInst> :
 
   // TODO: Do we need a better way to mark reads from FP mode than
   // hasSideEffects?
-  let hasSideEffects = 1;
-  let mayRaiseFPException = 1;
+  let hasSideEffects = true;
+  let mayRaiseFPException = true;
 }
 
 // Extend the underlying scalar type of an operation, leaving the high bits
@@ -40,7 +40,7 @@ class ConstrainedIntruction<GenericInstruction baseInst> :
 def G_ANYEXT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Sign extend the underlying scalar type of an operation, copying the sign bit
@@ -48,7 +48,7 @@ def G_ANYEXT : GenericInstruction {
 def G_SEXT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Sign extend the a value from an arbitrary bit position, copying the sign bit
@@ -62,7 +62,7 @@ def G_SEXT : GenericInstruction {
 def G_SEXT_INREG : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, untyped_imm_0:$sz);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Zero extend the underlying scalar type of an operation, putting zero bits
@@ -70,7 +70,7 @@ def G_SEXT_INREG : GenericInstruction {
 def G_ZEXT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 
@@ -79,150 +79,150 @@ def G_ZEXT : GenericInstruction {
 def G_TRUNC : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_IMPLICIT_DEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_PHI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FRAME_INDEX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_GLOBAL_VALUE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_INTTOPTR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_PTRTOINT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_BITCAST : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Only supports scalar result types
 def G_CONSTANT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$imm);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Only supports scalar result types
 def G_FCONSTANT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$imm);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_VASTART : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$list);
-  let hasSideEffects = 0;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayStore = true;
 }
 
 def G_VAARG : GenericInstruction {
   let OutOperandList = (outs type0:$val);
   let InOperandList = (ins type1:$list, unknown:$align);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 def G_CTLZ : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_CTLZ_ZERO_UNDEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_CTTZ : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_CTTZ_ZERO_UNDEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_CTPOP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_BSWAP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_BITREVERSE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_ADDRSPACE_CAST : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_BLOCK_ADDR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$ba);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_JUMP_TABLE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$jti);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_DYN_STACKALLOC : GenericInstruction {
   let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins type1:$size, i32imm:$align);
-  let hasSideEffects = 1;
+  let hasSideEffects = true;
 }
 
 def G_FREEZE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 //------------------------------------------------------------------------------
@@ -233,101 +233,101 @@ def G_FREEZE : GenericInstruction {
 def G_ADD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic subtraction.
 def G_SUB : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic multiplication.
 def G_MUL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic signed division.
 def G_SDIV : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic unsigned division.
 def G_UDIV : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic signed remainder.
 def G_SREM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic unsigned remainder.
 def G_UREM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic bitwise and.
 def G_AND : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic bitwise or.
 def G_OR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic bitwise xor.
 def G_XOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic left-shift.
 def G_SHL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic logical right-shift.
 def G_LSHR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic arithmetic right-shift.
 def G_ASHR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
@@ -335,7 +335,7 @@ def G_ASHR : GenericInstruction {
 def G_FSHL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
@@ -343,35 +343,35 @@ def G_FSHL : GenericInstruction {
 def G_FSHR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic integer comparison.
 def G_ICMP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$tst, type1:$src1, type1:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic floating-point comparison.
 def G_FCMP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$tst, type1:$src1, type1:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic select
 def G_SELECT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$tst, type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic pointer offset.
 def G_PTR_ADD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic pointer mask. type1 should be an integer with the same
@@ -379,46 +379,46 @@ def G_PTR_ADD : GenericInstruction {
 def G_PTRMASK : GenericInstruction {
   let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins ptype0:$src, type1:$bits);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic signed integer minimum.
 def G_SMIN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic signed integer maximum.
 def G_SMAX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic unsigned integer minimum.
 def G_UMIN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic unsigned integer maximum.
 def G_UMAX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic integer absolute value.
 def G_ABS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 //------------------------------------------------------------------------------
@@ -429,73 +429,73 @@ def G_ABS : GenericInstruction {
 def G_UADDO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic unsigned addition consuming and producing a carry flag.
 def G_UADDE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic signed addition producing a carry flag.
 def G_SADDO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic signed addition consuming and producing a carry flag.
 def G_SADDE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic unsigned subtraction producing a carry flag.
 def G_USUBO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 // Generic unsigned subtraction consuming and producing a carry flag.
 def G_USUBE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic signed subtraction producing a carry flag.
 def G_SSUBO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic signed subtraction consuming and producing a carry flag.
 def G_SSUBE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic unsigned multiplication producing a carry flag.
 def G_UMULO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic signed multiplication producing a carry flag.
 def G_SMULO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Multiply two numbers at twice the incoming bit width (unsigned) and return
@@ -503,8 +503,8 @@ def G_SMULO : GenericInstruction {
 def G_UMULH : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Multiply two numbers at twice the incoming bit width (signed) and return
@@ -512,8 +512,8 @@ def G_UMULH : GenericInstruction {
 def G_SMULH : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 //------------------------------------------------------------------------------
@@ -524,48 +524,48 @@ def G_SMULH : GenericInstruction {
 def G_UADDSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic saturating signed addition.
 def G_SADDSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic saturating unsigned subtraction.
 def G_USUBSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic saturating signed subtraction.
 def G_SSUBSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic saturating unsigned left shift.
 def G_USHLSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic saturating signed left shift.
 def G_SSHLSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 /// RESULT = [US]MULFIX(LHS, RHS, SCALE) - Perform fixed point
@@ -576,15 +576,15 @@ def G_SSHLSAT : GenericInstruction {
 def G_SMULFIX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 def G_UMULFIX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 /// Same as the corresponding unsaturated fixed point instructions, but the
@@ -593,15 +593,15 @@ def G_UMULFIX : GenericInstruction {
 def G_SMULFIXSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 def G_UMULFIXSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 /// RESULT = [US]DIVFIX(LHS, RHS, SCALE) - Perform fixed point division on
@@ -611,15 +611,15 @@ def G_UMULFIXSAT : GenericInstruction {
 def G_SDIVFIX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 def G_UDIVFIX : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 /// Same as the corresponding unsaturated fixed point instructions,
@@ -628,15 +628,15 @@ def G_UDIVFIX : GenericInstruction {
 def G_SDIVFIXSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 def G_UDIVFIXSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 //------------------------------------------------------------------------------
@@ -646,61 +646,61 @@ def G_UDIVFIXSAT : GenericInstruction {
 def G_FNEG : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FPEXT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FPTRUNC : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FPTOSI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FPTOUI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_SITOFP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_UITOFP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FABS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FCOPYSIGN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type1:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_FCANONICALIZE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
@@ -713,15 +713,15 @@ def G_FCANONICALIZE : GenericInstruction {
 def G_FMINNUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 def G_FMAXNUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimum or maximum on
@@ -731,15 +731,15 @@ def G_FMAXNUM : GenericInstruction {
 def G_FMINNUM_IEEE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 def G_FMAXNUM_IEEE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
@@ -748,15 +748,15 @@ def G_FMAXNUM_IEEE : GenericInstruction {
 def G_FMINIMUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 def G_FMAXIMUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 //------------------------------------------------------------------------------
@@ -767,24 +767,24 @@ def G_FMAXIMUM : GenericInstruction {
 def G_FADD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic FP subtraction.
 def G_FSUB : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic FP multiplication.
 def G_FMUL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 // Generic fused multiply-add instruction.
@@ -792,8 +792,8 @@ def G_FMUL : GenericInstruction {
 def G_FMA : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 /// Generic FP multiply and add. Perform a * b + c, while getting the
@@ -801,92 +801,92 @@ def G_FMA : GenericInstruction {
 def G_FMAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
-  let hasSideEffects = 0;
-  let isCommutable = 0;
+  let hasSideEffects = false;
+  let isCommutable = false;
 }
 
 // Generic FP division.
 def G_FDIV : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic FP remainder.
 def G_FREM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point exponentiation.
 def G_FPOW : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point exponentiation, with an integer power.
 def G_FPOWI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type1:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point base-e exponential of a value.
 def G_FEXP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point base-2 exponential of a value.
 def G_FEXP2 : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point base-e logarithm of a value.
 def G_FLOG : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point base-2 logarithm of a value.
 def G_FLOG2 : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point base-10 logarithm of a value.
 def G_FLOG10 : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point ceiling of a value.
 def G_FCEIL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point cosine of a value.
 def G_FCOS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point sine of a value.
 def G_FSIN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point square root of a value.
@@ -896,28 +896,28 @@ def G_FSIN : GenericInstruction {
 def G_FSQRT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point floor of a value.
 def G_FFLOOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point round to next integer.
 def G_FRINT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Floating point round to the nearest integer.
 def G_FNEARBYINT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 //------------------------------------------------------------------------------
@@ -926,31 +926,31 @@ def G_FNEARBYINT : GenericInstruction {
 def G_INTRINSIC_TRUNC : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_INTRINSIC_ROUND : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_INTRINSIC_LRINT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_INTRINSIC_ROUNDEVEN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_READCYCLECOUNTER : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
-  let hasSideEffects = 1;
+  let hasSideEffects = true;
 }
 
 //------------------------------------------------------------------------------
@@ -965,24 +965,24 @@ def G_READCYCLECOUNTER : GenericInstruction {
 def G_LOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
 }
 
 // Generic sign-extended load. Expects a MachineMemOperand in addition to explicit operands.
 def G_SEXTLOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
 }
 
 // Generic zero-extended load. Expects a MachineMemOperand in addition to explicit operands.
 def G_ZEXTLOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
 }
 
 // Generic indexed load. Combines a GEP with a load. $newaddr is set to $base + $offset.
@@ -991,32 +991,32 @@ def G_ZEXTLOAD : GenericInstruction {
 def G_INDEXED_LOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
   let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
 }
 
 // Same as G_INDEXED_LOAD except that the load performed is sign-extending, as with G_SEXTLOAD.
 def G_INDEXED_SEXTLOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
   let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
 }
 
 // Same as G_INDEXED_LOAD except that the load performed is zero-extending, as with G_ZEXTLOAD.
 def G_INDEXED_ZEXTLOAD : GenericInstruction {
   let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
   let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
 }
 
 // Generic store. Expects a MachineMemOperand in addition to explicit operands.
 def G_STORE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayStore = true;
 }
 
 // Combines a store with a GEP. See description of G_INDEXED_LOAD for indexing behaviour.
@@ -1024,8 +1024,8 @@ def G_INDEXED_STORE : GenericInstruction {
   let OutOperandList = (outs ptype0:$newaddr);
   let InOperandList = (ins type1:$src, ptype0:$base, ptype2:$offset,
                            unknown:$am);
-  let hasSideEffects = 0;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayStore = true;
 }
 
 // Generic atomic cmpxchg with internal success check. Expects a
@@ -1033,9 +1033,9 @@ def G_INDEXED_STORE : GenericInstruction {
 def G_ATOMIC_CMPXCHG_WITH_SUCCESS : GenericInstruction {
   let OutOperandList = (outs type0:$oldval, type1:$success);
   let InOperandList = (ins type2:$addr, type0:$cmpval, type0:$newval);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 // Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
@@ -1043,9 +1043,9 @@ def G_ATOMIC_CMPXCHG_WITH_SUCCESS : GenericInstruction {
 def G_ATOMIC_CMPXCHG : GenericInstruction {
   let OutOperandList = (outs type0:$oldval);
   let InOperandList = (ins ptype1:$addr, type0:$cmpval, type0:$newval);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 // Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
@@ -1053,9 +1053,9 @@ def G_ATOMIC_CMPXCHG : GenericInstruction {
 class G_ATOMICRMW_OP : GenericInstruction {
   let OutOperandList = (outs type0:$oldval);
   let InOperandList = (ins ptype1:$addr, type0:$val);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 def G_ATOMICRMW_XCHG : G_ATOMICRMW_OP;
@@ -1075,7 +1075,7 @@ def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i32imm:$ordering, i32imm:$scope);
-  let hasSideEffects = 1;
+  let hasSideEffects = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1088,7 +1088,7 @@ def G_FENCE : GenericInstruction {
 def G_EXTRACT : GenericInstruction {
   let OutOperandList = (outs type0:$res);
   let InOperandList = (ins type1:$src, untyped_imm_0:$offset);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Extract multiple registers specified size, starting from blocks given by
@@ -1100,14 +1100,14 @@ def G_EXTRACT : GenericInstruction {
 def G_UNMERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst0, variable_ops);
   let InOperandList = (ins type1:$src);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Insert a smaller register into a larger one at the specified bit-index.
 def G_INSERT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$op, untyped_imm_0:$offset);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Concatenate multiple registers of the same size into a wider register.
@@ -1117,7 +1117,7 @@ def G_INSERT : GenericInstruction {
 def G_MERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 /// Create a vector from multiple scalar registers. No implicit
@@ -1126,7 +1126,7 @@ def G_MERGE_VALUES : GenericInstruction {
 def G_BUILD_VECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 /// Like G_BUILD_VECTOR, but truncates the larger operand types to fit the
@@ -1134,21 +1134,21 @@ def G_BUILD_VECTOR : GenericInstruction {
 def G_BUILD_VECTOR_TRUNC : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 /// Create a vector by concatenating vectors together.
 def G_CONCAT_VECTORS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Intrinsic without side effects.
 def G_INTRINSIC : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$intrin, variable_ops);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 
   // Conservatively assume this is convergent. If there turnes out to
   // be a need, there should be separate convergent intrinsic opcodes.
@@ -1159,13 +1159,13 @@ def G_INTRINSIC : GenericInstruction {
 def G_INTRINSIC_W_SIDE_EFFECTS : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$intrin, variable_ops);
-  let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = true;
+  let mayLoad = true;
+  let mayStore = true;
 
   // Conservatively assume this is convergent. If there turnes out to
   // be a need, there should be separate convergent intrinsic opcodes.
-  let isConvergent = 1;
+  let isConvergent = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1176,61 +1176,61 @@ def G_INTRINSIC_W_SIDE_EFFECTS : GenericInstruction {
 def G_BR : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$src1);
-  let hasSideEffects = 0;
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
+  let hasSideEffects = false;
+  let isBranch = true;
+  let isTerminator = true;
+  let isBarrier = true;
 }
 
 // Generic conditional branch.
 def G_BRCOND : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$tst, unknown:$truebb);
-  let hasSideEffects = 0;
-  let isBranch = 1;
-  let isTerminator = 1;
+  let hasSideEffects = false;
+  let isBranch = true;
+  let isTerminator = true;
 }
 
 // Generic indirect branch.
 def G_BRINDIRECT : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isIndirectBranch = 1;
+  let hasSideEffects = false;
+  let isBranch = true;
+  let isTerminator = true;
+  let isBarrier = true;
+  let isIndirectBranch = true;
 }
 
 // Generic branch to jump table entry
 def G_BRJT : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins ptype0:$tbl, unknown:$jti, type1:$idx);
-  let hasSideEffects = 0;
-  let isBranch = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isIndirectBranch = 1;
+  let hasSideEffects = false;
+  let isBranch = true;
+  let isTerminator = true;
+  let isBarrier = true;
+  let isIndirectBranch = true;
 }
 
 def G_READ_REGISTER : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$register);
-  let hasSideEffects = 1;
+  let hasSideEffects = true;
 
   // Assume convergent. It's probably not worth the effort of somehow
   // modeling convergent and nonconvergent register accesses.
-  let isConvergent = 1;
+  let isConvergent = true;
 }
 
 def G_WRITE_REGISTER : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$register, type0:$value);
-  let hasSideEffects = 1;
+  let hasSideEffects = true;
 
   // Assume convergent. It's probably not worth the effort of somehow
   // modeling convergent and nonconvergent register accesses.
-  let isConvergent = 1;
+  let isConvergent = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1241,14 +1241,14 @@ def G_WRITE_REGISTER : GenericInstruction {
 def G_INSERT_VECTOR_ELT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$elt, type2:$idx);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic extractelement.
 def G_EXTRACT_VECTOR_ELT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src, type2:$idx);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 // Generic shufflevector.
@@ -1258,7 +1258,7 @@ def G_EXTRACT_VECTOR_ELT : GenericInstruction {
 def G_SHUFFLE_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$v1, type1:$v2, unknown:$mask);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 //------------------------------------------------------------------------------
@@ -1268,19 +1268,19 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 class VectorReduction : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$v);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_VECREDUCE_SEQ_FADD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$acc, type2:$v);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_VECREDUCE_SEQ_FMUL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$acc, type2:$v);
-  let hasSideEffects = 0;
+  let hasSideEffects = false;
 }
 
 def G_VECREDUCE_FADD : VectorReduction;
@@ -1318,22 +1318,22 @@ def G_STRICT_FSQRT : ConstrainedIntruction<G_FSQRT>;
 def G_MEMCPY : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins ptype0:$dst_addr, ptype1:$src_addr, type2:$size, untyped_imm_0:$tailcall);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 def G_MEMMOVE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins ptype0:$dst_addr, ptype1:$src_addr, type2:$size, untyped_imm_0:$tailcall);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 def G_MEMSET : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins ptype0:$dst_addr, type1:$value, type2:$size, untyped_imm_0:$tailcall);
-  let hasSideEffects = 0;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayStore = true;
 }

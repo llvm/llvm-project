@@ -13,7 +13,7 @@ int main()
   at[1].key = omp_atk_fallback;
   at[1].value = omp_atv_default_mem_fb;
   a = omp_init_allocator(omp_large_cap_mem_space, 2, at);
-  printf("allocator large created: %p\n", a);
+  printf("allocator large created: %p\n", (void *)a);
   #pragma omp parallel num_threads(2)
   {
     int i = omp_get_thread_num();

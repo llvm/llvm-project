@@ -30,7 +30,7 @@ test0:
 
 # BIN:      --- !WASM
 # BIN-NEXT: FileHeader:
-# BIN-NEXT:   Version:         0x00000001
+# BIN-NEXT:   Version:         0x1
 # BIN-NEXT: Sections:
 # BIN-NEXT:   - Type:            TYPE
 # BIN-NEXT:     Signatures:
@@ -44,7 +44,7 @@ test0:
 # BIN-NEXT:         Field:           __linear_memory
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
-# BIN-NEXT:           Initial:         0x00000001
+# BIN-NEXT:           Initial:         0x1
 # BIN-NEXT:       - Module:          env
 # BIN-NEXT:         Field:           __indirect_function_table
 # BIN-NEXT:         Kind:            TABLE
@@ -52,7 +52,7 @@ test0:
 # BIN-NEXT:           Index:           0
 # BIN-NEXT:           ElemType:        FUNCREF
 # BIN-NEXT:           Limits:
-# BIN-NEXT:             Initial:         0x00000000
+# BIN-NEXT:             Initial:         0x0
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            DATACOUNT
@@ -61,7 +61,7 @@ test0:
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 # BIN-NEXT:         Index:           1
-# BIN-NEXT:         Offset:          0x00000004
+# BIN-NEXT:         Offset:          0x4
 # BIN-NEXT:     Functions:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Locals:          []

@@ -1,6 +1,7 @@
-// RUN: mlir-tblgen -gen-python-op-bindings -bind-dialect=test -I %S/../../include %s | FileCheck %s
+// RUN: mlir-tblgen -gen-python-op-bindings -bind-dialect=test -I %S/../../include -I %S/../../lib/Bindings/Python %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "Attributes.td"
 
 // CHECK: @_cext.register_dialect
 // CHECK: class _Dialect(_ir.Dialect):
@@ -30,7 +31,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:   if variadic2 is not None: operands.append(variadic2)
   // CHECK:   operand_segment_sizes.append(0 if variadic2 is None else 1)
   // CHECK:   attributes["operand_segment_sizes"] = _ir.DenseElementsAttr.get(operand_segment_sizes,
-  // CHECK:       context=Location.current.context if loc is None else loc.context)
+  // CHECK:       context=_get_default_loc_context(loc))
   // CHECK:   super().__init__(_ir.Operation.create(
   // CHECK:     "test.attr_sized_operands", attributes=attributes, operands=operands, results=results,
   // CHECK:     loc=loc, ip=ip))
@@ -76,7 +77,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:   if variadic2 is not None: results.append(variadic2)
   // CHECK:   result_segment_sizes.append(0 if variadic2 is None else 1)
   // CHECK:   attributes["result_segment_sizes"] = _ir.DenseElementsAttr.get(result_segment_sizes,
-  // CHECK:       context=Location.current.context if loc is None else loc.context)
+  // CHECK:       context=_get_default_loc_context(loc))
   // CHECK:   super().__init__(_ir.Operation.create(
   // CHECK:     "test.attr_sized_results", attributes=attributes, operands=operands, results=results,
   // CHECK:     loc=loc, ip=ip))
@@ -104,6 +105,75 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   let results = (outs Optional<AnyType>:$variadic1, AnyType:$non_variadic,
                  Optional<AnyType>:$variadic2);
 }
+
+
+// CHECK: @_cext.register_operation(_Dialect)
+// CHECK: class AttributedOp(_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.attributed_op"
+def AttributedOp : TestOp<"attributed_op"> {
+  // CHECK: def __init__(self, i32attr, optionalF32Attr, unitAttr, in_, loc=None, ip=None):
+  // CHECK:   operands = []
+  // CHECK:   results = []
+  // CHECK:   attributes = {}
+  // CHECK:   attributes["i32attr"] = i32attr
+  // CHECK:   if optionalF32Attr is not None: attributes["optionalF32Attr"] = optionalF32Attr
+  // CHECK:   if bool(unitAttr): attributes["unitAttr"] = _ir.UnitAttr.get(
+  // CHECK:     _get_default_loc_context(loc))
+  // CHECK:   attributes["in"] = in_
+  // CHECK:   super().__init__(_ir.Operation.create(
+  // CHECK:     "test.attributed_op", attributes=attributes, operands=operands, results=results,
+  // CHECK:     loc=loc, ip=ip))
+
+  // CHECK: @property
+  // CHECK: def i32attr(self):
+  // CHECK:   return _ir.IntegerAttr(self.operation.attributes["i32attr"])
+
+  // CHECK: @property
+  // CHECK: def optionalF32Attr(self):
+  // CHECK:   if "optionalF32Attr" not in self.operation.attributes:
+  // CHECK:     return None
+  // CHECK:   return _ir.FloatAttr(self.operation.attributes["optionalF32Attr"])
+
+  // CHECK: @property
+  // CHECK: def unitAttr(self):
+  // CHECK:   return "unitAttr" in self.operation.attributes
+
+  // CHECK: @property
+  // CHECK: def in_(self):
+  // CHECK:   return _ir.IntegerAttr(self.operation.attributes["in"])
+  let arguments = (ins I32Attr:$i32attr, OptionalAttr<F32Attr>:$optionalF32Attr,
+                   UnitAttr:$unitAttr, I32Attr:$in);
+}
+
+// CHECK: @_cext.register_operation(_Dialect)
+// CHECK: class AttributedOpWithOperands(_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.attributed_op_with_operands"
+def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
+  // CHECK: def __init__(self, _gen_arg_0, in_, _gen_arg_2, is_, loc=None, ip=None):
+  // CHECK:   operands = []
+  // CHECK:   results = []
+  // CHECK:   attributes = {}
+  // CHECK:   operands.append(_gen_arg_0)
+  // CHECK:   operands.append(_gen_arg_2)
+  // CHECK:   if bool(in_): attributes["in"] = _ir.UnitAttr.get(
+  // CHECK:     _get_default_loc_context(loc))
+  // CHECK:   if is_ is not None: attributes["is"] = is_
+  // CHECK:   super().__init__(_ir.Operation.create(
+  // CHECK:     "test.attributed_op_with_operands", attributes=attributes, operands=operands, results=results,
+  // CHECK:     loc=loc, ip=ip))
+
+  // CHECK: @property
+  // CHECK: def in_(self):
+  // CHECK:   return "in" in self.operation.attributes
+
+  // CHECK: @property
+  // CHECK: def is_(self):
+  // CHECK:   if "is" not in self.operation.attributes:
+  // CHECK:     return None
+  // CHECK:   return _ir.FloatAttr(self.operation.attributes["is"])
+  let arguments = (ins I32, UnitAttr:$in, F32, OptionalAttr<F32Attr>:$is);
+}
+
 
 // CHECK: @_cext.register_operation(_Dialect)
 // CHECK: class EmptyOp(_ir.OpView):

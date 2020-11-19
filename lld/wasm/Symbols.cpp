@@ -109,6 +109,9 @@ const WasmSignature *Symbol::getSignature() const {
 InputChunk *Symbol::getChunk() const {
   if (auto *f = dyn_cast<DefinedFunction>(this))
     return f->function;
+  if (auto *f = dyn_cast<UndefinedFunction>(this))
+    if (f->stubFunction)
+      return f->stubFunction->function;
   if (auto *d = dyn_cast<DefinedData>(this))
     return d->segment;
   return nullptr;
@@ -207,6 +210,11 @@ bool Symbol::isNoStrip() const {
 uint32_t FunctionSymbol::getFunctionIndex() const {
   if (auto *f = dyn_cast<DefinedFunction>(this))
     return f->function->getFunctionIndex();
+  if (const auto *u = dyn_cast<UndefinedFunction>(this)) {
+    if (u->stubFunction) {
+      return u->stubFunction->getFunctionIndex();
+    }
+  }
   assert(functionIndex != INVALID_INDEX);
   return functionIndex;
 }

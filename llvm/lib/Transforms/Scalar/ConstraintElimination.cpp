@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
@@ -38,7 +39,11 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 
-static Optional<std::pair<int64_t, Value *>> decompose(Value *V) {
+// Decomposes \p V into a vector of pairs of the form { c, X } where c * X. The
+// sum of the pairs equals \p V.  The first pair is the constant-factor and X
+// must be nullptr. If the expression cannot be decomposed, returns an empty
+// vector.
+static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->isNegative() || CI->uge(MaxConstraintValue))
       return {};
@@ -49,9 +54,10 @@ static Optional<std::pair<int64_t, Value *>> decompose(Value *V) {
       isa<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))) {
     return {{cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))
                  ->getSExtValue(),
-             GEP->getPointerOperand()}};
+             nullptr},
+            {1, GEP->getPointerOperand()}};
   }
-  return {{0, V}};
+  return {{0, nullptr}, {1, V}};
 }
 
 /// Turn a condition \p CmpI into a constraint vector, using indices from \p
@@ -60,8 +66,6 @@ static Optional<std::pair<int64_t, Value *>> decompose(Value *V) {
 static SmallVector<int64_t, 8>
 getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
               DenseMap<Value *, unsigned> &Value2Index, bool ShouldAdd) {
-  Value *A, *B;
-
   int64_t Offset1 = 0;
   int64_t Offset2 = 0;
 
@@ -81,33 +85,46 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     return getConstraint(CmpInst::getSwappedPredicate(Pred), Op1, Op0,
                          Value2Index, ShouldAdd);
 
-  if (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) {
-    auto ADec = decompose(Op0);
-    auto BDec = decompose(Op1);
-    if (!ADec || !BDec)
+  // Only ULE and ULT predicates are supported at the moment.
+  if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
+    return {};
+
+  auto ADec = decompose(Op0);
+  auto BDec = decompose(Op1);
+  // Skip if decomposing either of the values failed.
+  if (ADec.empty() || BDec.empty())
+    return {};
+
+  // Skip trivial constraints without any variables.
+  if (ADec.size() == 1 && BDec.size() == 1)
+    return {};
+
+  Offset1 = ADec[0].first;
+  Offset2 = BDec[0].first;
+  Offset1 *= -1;
+
+  // Create iterator ranges that skip the constant-factor.
+  auto VariablesA = make_range(std::next(ADec.begin()), ADec.end());
+  auto VariablesB = make_range(std::next(BDec.begin()), BDec.end());
+
+  // Check if each referenced value in the constraint is already in the system
+  // or can be added (if ShouldAdd is true).
+  for (const auto &KV :
+       concat<std::pair<int64_t, Value *>>(VariablesA, VariablesB))
+    if (!TryToGetIndex(KV.second))
       return {};
-    std::tie(Offset1, A) = *ADec;
-    std::tie(Offset2, B) = *BDec;
-    Offset1 *= -1;
 
-    if (!A && !B)
-      return {};
+  // Build result constraint, by first adding all coefficients from A and then
+  // subtracting all coefficients from B.
+  SmallVector<int64_t, 8> R(Value2Index.size() + 1, 0);
+  for (const auto &KV : VariablesA)
+    R[Value2Index[KV.second]] += KV.first;
 
-    auto AIdx = A ? TryToGetIndex(A) : None;
-    auto BIdx = B ? TryToGetIndex(B) : None;
-    if ((A && !AIdx) || (B && !BIdx))
-      return {};
+  for (const auto &KV : VariablesB)
+    R[Value2Index[KV.second]] -= KV.first;
 
-    SmallVector<int64_t, 8> R(Value2Index.size() + 1, 0);
-    if (AIdx)
-      R[*AIdx] = 1;
-    if (BIdx)
-      R[*BIdx] = -1;
-    R[0] = Offset1 + Offset2 + (Pred == CmpInst::ICMP_ULT ? -1 : 0);
-    return R;
-  }
-
-  return {};
+  R[0] = Offset1 + Offset2 + (Pred == CmpInst::ICMP_ULT ? -1 : 0);
+  return R;
 }
 
 static SmallVector<int64_t, 8>
@@ -182,6 +199,21 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     }
 
+    // If the condition is an AND of 2 compares and the true successor only has
+    // the current block as predecessor, queue both conditions for the true
+    // successor.
+    if (match(Br->getCondition(), m_And(m_Cmp(), m_Cmp()))) {
+      BasicBlock *TrueSuccessor = Br->getSuccessor(0);
+      if (TrueSuccessor->getSinglePredecessor()) {
+        auto *AndI = cast<Instruction>(Br->getCondition());
+        WorkList.emplace_back(DT.getNode(TrueSuccessor),
+                              cast<CmpInst>(AndI->getOperand(0)), false);
+        WorkList.emplace_back(DT.getNode(TrueSuccessor),
+                              cast<CmpInst>(AndI->getOperand(1)), false);
+      }
+      continue;
+    }
+
     auto *CmpI = dyn_cast<CmpInst>(Br->getCondition());
     if (!CmpI)
       continue;
@@ -237,7 +269,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         if (!Cmp)
           continue;
         auto R = getConstraint(Cmp, Value2Index, false);
-        if (R.empty())
+        if (R.empty() || R.size() == 1)
           continue;
         if (CS.isConditionImplied(R)) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))

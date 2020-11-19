@@ -113,11 +113,11 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
 // -chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--", "-"], "chroot">;
 
-def color_diagnostics: F<"color-diagnostics">,
-  HelpText<"Alias for --color-diagnostics=always">;
-
+defm color_diagnostics: B<"color-diagnostics",
+  "Alias for --color-diagnostics=always",
+  "Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics">,
+  HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
 
 defm cref: B<"cref",
@@ -273,9 +273,6 @@ def nmagic: F<"nmagic">, MetaVarName<"<magic>">,
 
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
-
-def no_color_diagnostics: F<"no-color-diagnostics">,
-  HelpText<"Do not use colors in diagnostics">;
 
 def no_dynamic_linker: F<"no-dynamic-linker">,
   HelpText<"Inhibit output of .interp section">;

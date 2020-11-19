@@ -67,7 +67,8 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
     return 2;
 
   // System headers are sorted to the end.
-  if (IsAngled || Filename.startswith("gtest/"))
+  if (IsAngled || Filename.startswith("gtest/") ||
+      Filename.startswith("gmock/"))
     return 3;
 
   // Other headers are inserted between the main module header and LLVM headers.

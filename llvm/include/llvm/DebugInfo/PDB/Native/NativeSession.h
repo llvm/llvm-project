@@ -110,9 +110,14 @@ public:
   const SymbolCache &getSymbolCache() const { return Cache; }
   uint32_t getRVAFromSectOffset(uint32_t Section, uint32_t Offset) const;
   uint64_t getVAFromSectOffset(uint32_t Section, uint32_t Offset) const;
+  bool moduleIndexForVA(uint64_t VA, uint16_t &ModuleIndex) const;
+  bool moduleIndexForSectOffset(uint32_t Sect, uint32_t Offset,
+                                uint16_t &ModuleIndex) const;
+  Expected<ModuleDebugStreamRef> getModuleDebugStream(uint32_t Index) const;
 
 private:
   void initializeExeSymbol();
+  void parseSectionContribs();
 
   std::unique_ptr<PDBFile> Pdb;
   std::unique_ptr<BumpPtrAllocator> Allocator;
@@ -120,6 +125,12 @@ private:
   SymbolCache Cache;
   SymIndexId ExeSymbol = 0;
   uint64_t LoadAddress = 0;
+
+  /// Map from virtual address to module index.
+  using IMap =
+      IntervalMap<uint64_t, uint16_t, 8, IntervalMapHalfOpenInfo<uint64_t>>;
+  IMap::Allocator IMapAllocator;
+  IMap AddrToModuleIndex;
 };
 } // namespace pdb
 } // namespace llvm

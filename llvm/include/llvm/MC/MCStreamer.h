@@ -452,6 +452,10 @@ public:
   /// so we can sort on them later.
   void AssignFragment(MCSymbol *Symbol, MCFragment *Fragment);
 
+  /// Returns the mnemonic for \p MI, if the streamer has access to a
+  /// instruction printer and returns an empty string otherwise.
+  virtual StringRef getMnemonic(MCInst &MI) { return ""; }
+
   /// Emit a label for \p Symbol into the current section.
   ///
   /// This corresponds to an assembler statement such as:

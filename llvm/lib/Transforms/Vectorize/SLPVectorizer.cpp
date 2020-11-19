@@ -1552,8 +1552,10 @@ private:
     /// The Scalars are vectorized into this value. It is initialized to Null.
     Value *VectorizedValue = nullptr;
 
-    /// Do we need to gather this sequence ?
-    enum EntryState { Vectorize, NeedToGather };
+    /// Do we need to gather this sequence or vectorize it
+    /// (either with vector instruction or with scatter/gather
+    /// intrinsics for store/load)?
+    enum EntryState { Vectorize, ScatterVectorize, NeedToGather };
     EntryState State;
 
     /// Does this sequence require some shuffling?
@@ -1701,6 +1703,9 @@ private:
       case Vectorize:
         dbgs() << "Vectorize\n";
         break;
+      case ScatterVectorize:
+        dbgs() << "ScatterVectorize\n";
+        break;
       case NeedToGather:
         dbgs() << "NeedToGather\n";
         break;
@@ -1745,17 +1750,33 @@ private:
                           const EdgeInfo &UserTreeIdx,
                           ArrayRef<unsigned> ReuseShuffleIndices = None,
                           ArrayRef<unsigned> ReorderIndices = None) {
-    bool Vectorized = (bool)Bundle;
+    TreeEntry::EntryState EntryState =
+        Bundle ? TreeEntry::Vectorize : TreeEntry::NeedToGather;
+    return newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
+                        ReuseShuffleIndices, ReorderIndices);
+  }
+
+  TreeEntry *newTreeEntry(ArrayRef<Value *> VL,
+                          TreeEntry::EntryState EntryState,
+                          Optional<ScheduleData *> Bundle,
+                          const InstructionsState &S,
+                          const EdgeInfo &UserTreeIdx,
+                          ArrayRef<unsigned> ReuseShuffleIndices = None,
+                          ArrayRef<unsigned> ReorderIndices = None) {
+    assert(!(Bundle && EntryState == TreeEntry::NeedToGather) &&
+           "Need to gather vectorized entry?");
+    assert((Bundle || EntryState == TreeEntry::NeedToGather) &&
+           "Need to vectorize gather entry?");
     VectorizableTree.push_back(std::make_unique<TreeEntry>(VectorizableTree));
     TreeEntry *Last = VectorizableTree.back().get();
     Last->Idx = VectorizableTree.size() - 1;
     Last->Scalars.insert(Last->Scalars.begin(), VL.begin(), VL.end());
-    Last->State = Vectorized ? TreeEntry::Vectorize : TreeEntry::NeedToGather;
+    Last->State = EntryState;
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
     Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     Last->setOperations(S);
-    if (Vectorized) {
+    if (Last->State != TreeEntry::NeedToGather) {
       for (Value *V : VL) {
         assert(!getTreeEntry(V) && "Scalar already in tree!");
         ScalarToTreeEntry[V] = Last;
@@ -2841,6 +2862,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           }
           return;
         }
+        // Vectorizing non-consecutive loads with `llvm.masked.gather`.
+        TreeEntry *TE = newTreeEntry(VL, TreeEntry::ScatterVectorize, Bundle, S,
+                                     UserTreeIdx, ReuseShuffleIndicies);
+        TE->setOperandsInOrder();
+        buildTree_rec(PointerOps, Depth + 1, {TE, 0});
+        LLVM_DEBUG(dbgs() << "SLP: added a vector of non-consecutive loads.\n");
+        return;
       }
 
       LLVM_DEBUG(dbgs() << "SLP: Gathering non-consecutive loads.\n");
@@ -3427,7 +3455,9 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     return ReuseShuffleCost + getGatherCost(VL);
   }
-  assert(E->State == TreeEntry::Vectorize && "Unhandled state");
+  assert((E->State == TreeEntry::Vectorize ||
+          E->State == TreeEntry::ScatterVectorize) &&
+         "Unhandled state");
   assert(E->getOpcode() && allSameType(VL) && allSameBlock(VL) && "Invalid VL");
   Instruction *VL0 = E->getMainOp();
   unsigned ShuffleOrOp =
@@ -3682,9 +3712,16 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
       int ScalarLdCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecLdCost =
-          TTI->getMemoryOpCost(Instruction::Load, VecTy, alignment, 0,
-                               CostKind, VL0);
+      int VecLdCost;
+      if (E->State == TreeEntry::Vectorize) {
+        VecLdCost = TTI->getMemoryOpCost(Instruction::Load, VecTy, alignment, 0,
+                                         CostKind, VL0);
+      } else {
+        assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
+        VecLdCost = TTI->getGatherScatterOpCost(
+            Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
+            /*VariableMask=*/false, alignment, CostKind, VL0);
+      }
       if (!E->ReorderIndices.empty()) {
         // TODO: Merge this shuffle with the ReuseShuffleCost.
         VecLdCost += TTI->getShuffleCost(
@@ -4276,7 +4313,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return Vec;
   }
 
-  assert(E->State == TreeEntry::Vectorize && "Unhandled state");
+  assert((E->State == TreeEntry::Vectorize ||
+          E->State == TreeEntry::ScatterVectorize) &&
+         "Unhandled state");
   unsigned ShuffleOrOp =
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   Instruction *VL0 = E->getMainOp();
@@ -4505,20 +4544,32 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       setInsertPointAfterBundle(E);
 
       LoadInst *LI = cast<LoadInst>(VL0);
+      Instruction *NewLI;
       unsigned AS = LI->getPointerAddressSpace();
-
-      Value *VecPtr = Builder.CreateBitCast(LI->getPointerOperand(),
-                                            VecTy->getPointerTo(AS));
-
-      // The pointer operand uses an in-tree scalar so we add the new BitCast to
-      // ExternalUses list to make sure that an extract will be generated in the
-      // future.
       Value *PO = LI->getPointerOperand();
-      if (getTreeEntry(PO))
-        ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
+      if (E->State == TreeEntry::Vectorize) {
 
-      LI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
-      Value *V = propagateMetadata(LI, E->Scalars);
+        Value *VecPtr = Builder.CreateBitCast(PO, VecTy->getPointerTo(AS));
+
+        // The pointer operand uses an in-tree scalar so we add the new BitCast
+        // to ExternalUses list to make sure that an extract will be generated
+        // in the future.
+        if (getTreeEntry(PO))
+          ExternalUses.emplace_back(PO, cast<User>(VecPtr), 0);
+
+        NewLI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
+      } else {
+        assert(E->State == TreeEntry::ScatterVectorize && "Unhandled state");
+        Value *VecPtr = vectorizeTree(E->getOperand(0));
+        // Use the minimum alignment of the gathered loads.
+        Align CommonAlignment = LI->getAlign();
+        for (Value *V : E->Scalars)
+          CommonAlignment =
+              commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
+        NewLI = Builder.CreateMaskedGather(VecPtr, CommonAlignment);
+      }
+      Value *V = propagateMetadata(NewLI, E->Scalars);
+
       if (IsReorder) {
         SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
@@ -4795,7 +4846,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       continue;
     TreeEntry *E = getTreeEntry(Scalar);
     assert(E && "Invalid scalar");
-    assert(E->State == TreeEntry::Vectorize && "Extracting from a gather list");
+    assert(E->State != TreeEntry::NeedToGather &&
+           "Extracting from a gather list");
 
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
@@ -7639,10 +7691,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Try to vectorize the incoming values of the PHI, to catch reductions
       // that feed into PHIs.
       for (unsigned I = 0, E = P->getNumIncomingValues(); I != E; I++) {
-        // Skip if the incoming block is the current BB for now.
+        // Skip if the incoming block is the current BB for now. Also, bypass
+        // unreachable IR for efficiency and to avoid crashing.
         // TODO: Collect the skipped incoming values and try to vectorize them
         // after processing BB.
-        if (BB == P->getIncomingBlock(I))
+        if (BB == P->getIncomingBlock(I) ||
+            !DT->isReachableFromEntry(P->getIncomingBlock(I)))
           continue;
 
         Changed |= vectorizeRootInstruction(nullptr, P->getIncomingValue(I),

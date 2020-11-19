@@ -170,6 +170,14 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
         ++MustAliasCount;
         break;
       }
+
+      // We assume that alias(I1, I2) == alias(I2, I1) and only print one
+      // order. Make sure this assumption actually holds.
+      // TODO: We should probably assert this in AA itself under
+      // EXPENSIVE_CHECKS. This would need some more thorough verification that
+      // all AA queries are symmetric first.
+      assert(AR == AA.alias(*I2, I2Size, *I1, I1Size) &&
+             "AA query not symmetric");
     }
   }
 

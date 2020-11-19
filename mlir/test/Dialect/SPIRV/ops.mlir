@@ -735,7 +735,7 @@ spv.module Logical GLSL450 {
   // CHECK_LABEL: @simple_load
   spv.func @simple_load() -> () "None" {
     // CHECK: spv.Load "Input" {{%.*}} : f32
-    %0 = spv._address_of @var0 : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @var0 : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
     spv.Return
   }
@@ -1151,7 +1151,7 @@ func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
 spv.module Logical GLSL450 {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
   spv.func @simple_store(%arg0 : f32) -> () "None" {
-    %0 = spv._address_of @var0 : !spv.ptr<f32, Input>
+    %0 = spv.mlir.addressof @var0 : !spv.ptr<f32, Input>
     // CHECK: spv.Store  "Input" {{%.*}}, {{%.*}} : f32
     spv.Store  "Input" %0, %arg0 : f32
     spv.Return
@@ -1224,7 +1224,7 @@ func @variable_init_normal_constant() -> () {
 spv.module Logical GLSL450 {
   spv.globalVariable @global : !spv.ptr<f32, Workgroup>
   spv.func @variable_init_global_variable() -> () "None" {
-    %0 = spv._address_of @global : !spv.ptr<f32, Workgroup>
+    %0 = spv.mlir.addressof @global : !spv.ptr<f32, Workgroup>
     // CHECK: spv.Variable init({{.*}}) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
     %1 = spv.Variable init(%0) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
     spv.Return

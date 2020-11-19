@@ -132,6 +132,13 @@ protected:
     compareSnippets(Expected, rewrite(Input));
   }
 
+  template <typename R> void testRuleFailure(R Rule, StringRef Input) {
+    Transformers.push_back(
+        std::make_unique<Transformer>(std::move(Rule), consumer()));
+    Transformers.back()->registerMatchers(&MatchFinder);
+    ASSERT_FALSE(rewrite(Input)) << "Expected failure to rewrite code";
+  }
+
   // Transformers are referenced by MatchFinder.
   std::vector<std::unique_ptr<Transformer>> Transformers;
   clang::ast_matchers::MatchFinder MatchFinder;
@@ -1065,6 +1072,252 @@ TEST_F(TransformerTest, ErrorOccurredMatchSkipped) {
   // ... and no changes or errors are produced in the process.
   EXPECT_THAT(Changes, IsEmpty());
   EXPECT_EQ(ErrorCount, 0);
+}
+
+TEST_F(TransformerTest, ImplicitNodes_ConstructorDecl) {
+
+  std::string OtherStructPrefix = R"cpp(
+struct Other {
+)cpp";
+  std::string OtherStructSuffix = "};";
+
+  std::string CopyableStructName = "struct Copyable";
+  std::string BrokenStructName = "struct explicit Copyable";
+
+  std::string CodeSuffix = R"cpp(
+{
+    Other m_i;
+    Copyable();
+};
+)cpp";
+
+  std::string CopyCtor = "Other(const Other&) = default;";
+  std::string ExplicitCopyCtor = "explicit Other(const Other&) = default;";
+  std::string BrokenExplicitCopyCtor =
+      "explicit explicit explicit Other(const Other&) = default;";
+
+  std::string RewriteInput = OtherStructPrefix + CopyCtor + OtherStructSuffix +
+                             CopyableStructName + CodeSuffix;
+  std::string ExpectedRewriteOutput = OtherStructPrefix + ExplicitCopyCtor +
+                                      OtherStructSuffix + CopyableStructName +
+                                      CodeSuffix;
+  std::string BrokenRewriteOutput = OtherStructPrefix + BrokenExplicitCopyCtor +
+                                    OtherStructSuffix + BrokenStructName +
+                                    CodeSuffix;
+
+  auto MatchedRecord =
+      cxxConstructorDecl(isCopyConstructor()).bind("copyConstructor");
+
+  auto RewriteRule =
+      changeTo(before(node("copyConstructor")), cat("explicit "));
+
+  testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedRecord),
+                    RewriteRule),
+           RewriteInput, ExpectedRewriteOutput);
+
+  testRule(makeRule(traverse(TK_AsIs, MatchedRecord), RewriteRule),
+           RewriteInput, BrokenRewriteOutput);
+}
+
+TEST_F(TransformerTest, ImplicitNodes_RangeFor) {
+
+  std::string CodePrefix = R"cpp(
+struct Container
+{
+    int* begin() const;
+    int* end() const;
+    int* cbegin() const;
+    int* cend() const;
+};
+
+void foo()
+{
+  const Container c;
+)cpp";
+
+  std::string BeginCallBefore = "  c.begin();";
+  std::string BeginCallAfter = "  c.cbegin();";
+
+  std::string ForLoop = "for (auto i : c)";
+  std::string BrokenForLoop = "for (auto i :.cbegin() c)";
+
+  std::string CodeSuffix = R"cpp(
+  {
+  }
+}
+)cpp";
+
+  std::string RewriteInput =
+      CodePrefix + BeginCallBefore + ForLoop + CodeSuffix;
+  std::string ExpectedRewriteOutput =
+      CodePrefix + BeginCallAfter + ForLoop + CodeSuffix;
+  std::string BrokenRewriteOutput =
+      CodePrefix + BeginCallAfter + BrokenForLoop + CodeSuffix;
+
+  auto MatchedRecord =
+      cxxMemberCallExpr(on(expr(hasType(qualType(isConstQualified(),
+                                                 hasDeclaration(cxxRecordDecl(
+                                                     hasName("Container"))))))
+                               .bind("callTarget")),
+                        callee(cxxMethodDecl(hasName("begin"))))
+          .bind("constBeginCall");
+
+  auto RewriteRule =
+      changeTo(node("constBeginCall"), cat(name("callTarget"), ".cbegin()"));
+
+  testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedRecord),
+                    RewriteRule),
+           RewriteInput, ExpectedRewriteOutput);
+
+  testRule(makeRule(traverse(TK_AsIs, MatchedRecord), RewriteRule),
+           RewriteInput, BrokenRewriteOutput);
+}
+
+TEST_F(TransformerTest, ImplicitNodes_ForStmt) {
+
+  std::string CodePrefix = R"cpp(
+struct NonTrivial {
+    NonTrivial() {}
+    NonTrivial(NonTrivial&) {}
+    NonTrivial& operator=(NonTrivial const&) { return *this; }
+
+    ~NonTrivial() {}
+};
+
+struct ContainsArray {
+    NonTrivial arr[2];
+    ContainsArray& operator=(ContainsArray const&) = default;
+};
+
+void testIt()
+{
+    ContainsArray ca1;
+    ContainsArray ca2;
+    ca2 = ca1;
+)cpp";
+
+  auto CodeSuffix = "}";
+
+  auto LoopBody = R"cpp(
+    {
+
+    }
+)cpp";
+
+  auto RawLoop = "for (auto i = 0; i != 5; ++i)";
+
+  auto RangeLoop = "for (auto i : boost::irange(5))";
+
+  // Expect to rewrite the raw loop to the ranged loop.
+  // This works in TK_IgnoreUnlessSpelledInSource mode, but TK_AsIs
+  // mode also matches the hidden for loop generated in the copy assignment
+  // operator of ContainsArray. Transformer then fails to transform the code at
+  // all.
+
+  auto RewriteInput =
+      CodePrefix + RawLoop + LoopBody + RawLoop + LoopBody + CodeSuffix;
+
+  auto RewriteOutput =
+      CodePrefix + RangeLoop + LoopBody + RangeLoop + LoopBody + CodeSuffix;
+
+    auto MatchedLoop = forStmt(
+        has(declStmt(
+            hasSingleDecl(varDecl(hasInitializer(integerLiteral(equals(0))))
+                              .bind("loopVar")))),
+        has(binaryOperator(hasOperatorName("!="),
+                           hasLHS(ignoringImplicit(declRefExpr(
+                               to(varDecl(equalsBoundNode("loopVar")))))),
+                           hasRHS(expr().bind("upperBoundExpr")))),
+        has(unaryOperator(hasOperatorName("++"),
+                          hasUnaryOperand(declRefExpr(
+                              to(varDecl(equalsBoundNode("loopVar"))))))
+                .bind("incrementOp")));
+
+    auto RewriteRule =
+        changeTo(transformer::enclose(node("loopVar"), node("incrementOp")),
+                 cat("auto ", name("loopVar"), " : boost::irange(",
+                     node("upperBoundExpr"), ")"));
+
+    testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedLoop),
+                      RewriteRule),
+             RewriteInput, RewriteOutput);
+
+    testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
+                    RewriteInput);
+
+}
+
+TEST_F(TransformerTest, ImplicitNodes_ForStmt2) {
+
+  std::string CodePrefix = R"cpp(
+struct NonTrivial {
+    NonTrivial() {}
+    NonTrivial(NonTrivial&) {}
+    NonTrivial& operator=(NonTrivial const&) { return *this; }
+
+    ~NonTrivial() {}
+};
+
+struct ContainsArray {
+    NonTrivial arr[2];
+    ContainsArray& operator=(ContainsArray const&) = default;
+};
+
+void testIt()
+{
+    ContainsArray ca1;
+    ContainsArray ca2;
+    ca2 = ca1;
+)cpp";
+
+  auto CodeSuffix = "}";
+
+  auto LoopBody = R"cpp(
+    {
+
+    }
+)cpp";
+
+  auto RawLoop = "for (auto i = 0; i != 5; ++i)";
+
+  auto RangeLoop = "for (auto i : boost::irange(5))";
+
+  // Expect to rewrite the raw loop to the ranged loop.
+  // This works in TK_IgnoreUnlessSpelledInSource mode, but TK_AsIs
+  // mode also matches the hidden for loop generated in the copy assignment
+  // operator of ContainsArray. Transformer then fails to transform the code at
+  // all.
+
+  auto RewriteInput =
+      CodePrefix + RawLoop + LoopBody + RawLoop + LoopBody + CodeSuffix;
+
+  auto RewriteOutput =
+      CodePrefix + RangeLoop + LoopBody + RangeLoop + LoopBody + CodeSuffix;
+    auto MatchedLoop = forStmt(
+        hasLoopInit(declStmt(
+            hasSingleDecl(varDecl(hasInitializer(integerLiteral(equals(0))))
+                              .bind("loopVar")))),
+        hasCondition(binaryOperator(hasOperatorName("!="),
+                                    hasLHS(ignoringImplicit(declRefExpr(to(
+                                        varDecl(equalsBoundNode("loopVar")))))),
+                                    hasRHS(expr().bind("upperBoundExpr")))),
+        hasIncrement(unaryOperator(hasOperatorName("++"),
+                                   hasUnaryOperand(declRefExpr(to(
+                                       varDecl(equalsBoundNode("loopVar"))))))
+                         .bind("incrementOp")));
+
+    auto RewriteRule =
+        changeTo(transformer::enclose(node("loopVar"), node("incrementOp")),
+                 cat("auto ", name("loopVar"), " : boost::irange(",
+                     node("upperBoundExpr"), ")"));
+
+    testRule(makeRule(traverse(TK_IgnoreUnlessSpelledInSource, MatchedLoop),
+                      RewriteRule),
+             RewriteInput, RewriteOutput);
+
+    testRuleFailure(makeRule(traverse(TK_AsIs, MatchedLoop), RewriteRule),
+                    RewriteInput);
+
 }
 
 TEST_F(TransformerTest, TemplateInstantiation) {

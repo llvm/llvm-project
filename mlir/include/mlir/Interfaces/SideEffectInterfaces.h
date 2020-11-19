@@ -131,8 +131,9 @@ struct AutomaticAllocationScopeResource
 
 /// This class represents a specific instance of an effect. It contains the
 /// effect being applied, a resource that corresponds to where the effect is
-/// applied, and an optional value(either operand, result, or region entry
-/// argument) that the effect is applied to.
+/// applied, an optional value (either operand, result, or region entry
+/// argument) that the effect is applied to, and an optional parameters
+/// attribute further specifying the details of the effect.
 template <typename EffectT> class EffectInstance {
 public:
   EffectInstance(EffectT *effect, Resource *resource = DefaultResource::get())
@@ -140,6 +141,13 @@ public:
   EffectInstance(EffectT *effect, Value value,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value) {}
+  EffectInstance(EffectT *effect, Attribute parameters,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), parameters(parameters) {}
+  EffectInstance(EffectT *effect, Value value, Attribute parameters,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), value(value),
+        parameters(parameters) {}
 
   /// Return the effect being applied.
   EffectT *getEffect() const { return effect; }
@@ -151,6 +159,9 @@ public:
   /// Return the resource that the effect applies to.
   Resource *getResource() const { return resource; }
 
+  /// Return the parameters of the effect, if any.
+  Attribute getParameters() const { return parameters; }
+
 private:
   /// The specific effect being applied.
   EffectT *effect;
@@ -160,6 +171,11 @@ private:
 
   /// The value that the effect applies to. This is optionally null.
   Value value;
+
+  /// Additional parameters of the effect instance. An attribute is used for
+  /// type-safe structured storage and context-based uniquing. Concrete effects
+  /// can use this at their convenience. This is optionally null.
+  Attribute parameters;
 };
 } // namespace SideEffects
 

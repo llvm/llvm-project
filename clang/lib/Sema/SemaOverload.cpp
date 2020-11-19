@@ -1644,11 +1644,12 @@ static bool IsVectorConversion(Sema &S, QualType FromType,
     }
   }
 
-  if ((ToType->isSizelessBuiltinType() || FromType->isSizelessBuiltinType()) &&
-      S.Context.areCompatibleSveTypes(FromType, ToType)) {
-    ICK = ICK_SVE_Vector_Conversion;
-    return true;
-  }
+  if (ToType->isSizelessBuiltinType() || FromType->isSizelessBuiltinType())
+    if (S.Context.areCompatibleSveTypes(FromType, ToType) ||
+        S.Context.areLaxCompatibleSveTypes(FromType, ToType)) {
+      ICK = ICK_SVE_Vector_Conversion;
+      return true;
+    }
 
   // We can perform the conversion between vector types in the following cases:
   // 1)vector types are equivalent AltiVec and GCC vector types
@@ -10217,6 +10218,27 @@ bool Sema::checkAddressOfFunctionIsAvailable(const FunctionDecl *Function,
                                              Loc);
 }
 
+// Don't print candidates other than the one that matches the calling
+// convention of the call operator, since that is guaranteed to exist.
+static bool shouldSkipNotingLambdaConversionDecl(FunctionDecl *Fn) {
+  const auto *ConvD = dyn_cast<CXXConversionDecl>(Fn);
+
+  if (!ConvD)
+    return false;
+  const auto *RD = cast<CXXRecordDecl>(Fn->getParent());
+  if (!RD->isLambda())
+    return false;
+
+  CXXMethodDecl *CallOp = RD->getLambdaCallOperator();
+  CallingConv CallOpCC =
+      CallOp->getType()->getAs<FunctionType>()->getCallConv();
+  QualType ConvRTy = ConvD->getType()->getAs<FunctionType>()->getReturnType();
+  CallingConv ConvToCC =
+      ConvRTy->getPointeeType()->getAs<FunctionType>()->getCallConv();
+
+  return ConvToCC != CallOpCC;
+}
+
 // Notes the location of an overload candidate.
 void Sema::NoteOverloadCandidate(NamedDecl *Found, FunctionDecl *Fn,
                                  OverloadCandidateRewriteKind RewriteKind,
@@ -10226,22 +10248,8 @@ void Sema::NoteOverloadCandidate(NamedDecl *Found, FunctionDecl *Fn,
   if (Fn->isMultiVersion() && Fn->hasAttr<TargetAttr>() &&
       !Fn->getAttr<TargetAttr>()->isDefaultVersion())
     return;
-  if (isa<CXXConversionDecl>(Fn) &&
-      cast<CXXRecordDecl>(Fn->getParent())->isLambda()) {
-    // Don't print candidates other than the one that matches the calling
-    // convention of the call operator, since that is guaranteed to exist.
-    const auto *RD = cast<CXXRecordDecl>(Fn->getParent());
-    CXXMethodDecl *CallOp = RD->getLambdaCallOperator();
-    CallingConv CallOpCC =
-        CallOp->getType()->getAs<FunctionType>()->getCallConv();
-    CXXConversionDecl *ConvD = cast<CXXConversionDecl>(Fn);
-    QualType ConvRTy = ConvD->getType()->getAs<FunctionType>()->getReturnType();
-    CallingConv ConvToCC =
-        ConvRTy->getPointeeType()->getAs<FunctionType>()->getCallConv();
-
-    if (ConvToCC != CallOpCC)
-      return;
-  }
+  if (shouldSkipNotingLambdaConversionDecl(Fn))
+    return;
 
   std::string FnDesc;
   std::pair<OverloadCandidateKind, OverloadCandidateSelect> KSPair =
@@ -11101,6 +11109,8 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
                                   bool TakingCandidateAddress,
                                   LangAS CtorDestAS = LangAS::Default) {
   FunctionDecl *Fn = Cand->Function;
+  if (shouldSkipNotingLambdaConversionDecl(Fn))
+    return;
 
   // Note deleted candidates, but only if they're viable.
   if (Cand->Viable) {
@@ -11217,6 +11227,9 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 }
 
 static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
+  if (shouldSkipNotingLambdaConversionDecl(Cand->Surrogate))
+    return;
+
   // Desugar the type of the surrogate down to a function type,
   // retaining as many typedefs as possible while still showing
   // the function type (and, therefore, its parameter types).

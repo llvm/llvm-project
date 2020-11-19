@@ -230,7 +230,9 @@ release of Clang. Users of the build system should adjust accordingly.
 AST Matchers
 ------------
 
-- ...
+- The behavior of TK_IgnoreUnlessSpelledInSource with the traverse() matcher
+  has been changed to no longer match on template instantiations or on
+  implicit nodes which are not spelled in the source.
 
 clang-format
 ------------

@@ -28,8 +28,8 @@ func private @store_tuple(tuple<!fir.type<qq1{f1:i32}>>) -> ()
 func private @get_method_box() -> !fir.box<!fir.type<derived3{f:f32}>>
 func private @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
 
-// CHECK-LABEL: func @nop()
-// CHECK-LABEL: func @get_func() -> (() -> ())
+// CHECK-LABEL: func private @nop()
+// CHECK-LABEL: func private @get_func() -> (() -> ())
 func private @nop()
 func private @get_func() -> (() -> ())
 

@@ -758,6 +758,15 @@ void SideEffectOp::getEffects(
   }
 }
 
+void SideEffectOp::getEffects(
+    SmallVectorImpl<TestEffects::EffectInstance> &effects) {
+  auto effectsAttr = getAttrOfType<AffineMapAttr>("effect_parameter");
+  if (!effectsAttr)
+    return;
+
+  effects.emplace_back(TestEffects::Concrete::get(), effectsAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // StringAttrPrettyNameOp
 //===----------------------------------------------------------------------===//
@@ -911,6 +920,7 @@ void RegionIfOp::getSuccessorRegions(
 }
 
 #include "TestOpEnums.cpp.inc"
+#include "TestOpInterfaces.cpp.inc"
 #include "TestOpStructs.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
 

@@ -60,8 +60,10 @@ add_pdb_impl_folder(Native
   Native/NativeEnumLineNumbers.cpp
   Native/NativeEnumModules.cpp
   Native/NativeEnumTypes.cpp
+  Native/NativeEnumSymbols.cpp
   Native/NativeExeSymbol.cpp
   Native/NativeFunctionSymbol.cpp
+  Native/NativeInlineSiteSymbol.cpp
   Native/NativeLineNumber.cpp
   Native/NativePublicSymbol.cpp
   Native/NativeRawSymbol.cpp

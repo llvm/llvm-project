@@ -66,11 +66,11 @@ Sections:
 
 # ATOMICS-RELOCATABLE:        - Type:            MEMORY
 # ATOMICS-RELOCATABLE-NEXT:     Memories:
-# ATOMICS-RELOCATABLE-NEXT:         Initial:         0x00000001
+# ATOMICS-RELOCATABLE-NEXT:         Initial:         0x1
 # ATOMICS-RELOCATABLE-NEXT:   - Type:
 
 # SHARED:        - Type:            MEMORY
 # SHARED-NEXT:     Memories:
 # SHARED-NEXT:       - Flags:           [ HAS_MAX, IS_SHARED ]
-# SHARED-NEXT:         Initial:         0x00000002
-# SHARED-NEXT:         Maximum:         0x00000002
+# SHARED-NEXT:         Initial:         0x2
+# SHARED-NEXT:         Maximum:         0x2

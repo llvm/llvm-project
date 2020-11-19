@@ -52,7 +52,7 @@ REGISTER_TWEAK(AddUsing)
 
 std::string AddUsing::title() const {
   return std::string(llvm::formatv(
-      "Add using-declaration for {0} and remove qualifier.", Name));
+      "Add using-declaration for {0} and remove qualifier", Name));
 }
 
 // Locates all "using" statements relevant to SelectionDeclContext.

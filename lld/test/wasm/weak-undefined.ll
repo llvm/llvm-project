@@ -24,12 +24,13 @@ define void @_start() #0 {
 entry:
     %call1 = call i32* @get_address_of_global_var()
     %call2 = call i8* @get_address_of_foo()
+    call i32 @foo()
     ret void
 }
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -41,18 +42,18 @@ entry:
 ; CHECK-NEXT:         ParamTypes:      []
 ; CHECK-NEXT:         ReturnTypes:     []
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:           Maximum:         0x00000001
+; CHECK-NEXT:           Initial:         0x1
+; CHECK-NEXT:           Maximum:         0x1
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Initial:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -68,16 +69,19 @@ entry:
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4180808080000B
+; CHECK-NEXT:         Body:            000B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4180808080000B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            1081808080001A1080808080001A0B
+; CHECK-NEXT:         Body:            4180808080000B
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            1082808080001A1081808080001A1080808080001A0B
 ; CHECK-NEXT: ...

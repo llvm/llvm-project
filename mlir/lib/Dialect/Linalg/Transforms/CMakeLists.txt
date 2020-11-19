@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   Promotion.cpp
+  Sparsification.cpp
   Tiling.cpp
   Transforms.cpp
   Vectorization.cpp

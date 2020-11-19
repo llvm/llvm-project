@@ -2783,6 +2783,22 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     MVT MTy = LT.second;
 
     // Attempt to lookup cost.
+    if (ISD == ISD::BITREVERSE && ST->hasGFNI() && ST->hasSSSE3() &&
+        MTy.isVector()) {
+      // With PSHUFB the code is very similar for all types. If we have integer
+      // byte operations, we just need a GF2P8AFFINEQB for vXi8. For other types
+      // we also need a PSHUFB.
+      unsigned Cost = MTy.getVectorElementType() == MVT::i8 ? 1 : 2;
+
+      // Without byte operations, we need twice as many GF2P8AFFINEQB and PSHUFB
+      // instructions. We also need an extract and an insert.
+      if (!(MTy.is128BitVector() || (ST->hasAVX2() && MTy.is256BitVector()) ||
+            (ST->hasBWI() && MTy.is512BitVector())))
+        Cost = Cost * 2 + 2;
+
+      return LT.first * Cost;
+    }
+
     if (ST->useGLMDivSqrtCosts())
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
         return LT.first * Entry->Cost;

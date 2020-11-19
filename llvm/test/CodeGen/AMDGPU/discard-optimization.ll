@@ -260,6 +260,31 @@ exit:                                               ; preds = %.entry
   ret void
 }
 
+; This case will not be able to really catch regression as llc don't have -verify-ir option
+; I just add the case here to show how the failure ir looks like.
+
+; GCN-LABEL: {{^}}update_phi_value:
+define amdgpu_ps <4 x float> @update_phi_value(float %arg0) {
+.entry:
+  %t0 = fptosi float %arg0 to i32
+  %t1 = icmp slt i32 %t0, 270
+  br i1 %t1, label %end, label %kill_pred
+
+kill_pred:
+  %t2 = fcmp ule float %arg0, 0.000000e+00
+  br i1 %t2, label %end, label %kill
+
+kill:
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %end
+
+end:
+  %t3 = phi float [ undef, %kill ], [ 1.000000e+00, %kill_pred ], [ 5.000000e-01, %.entry ]
+  %t4 = insertelement <4 x float> <float 5.000000e-01, float 5.000000e-01, float undef, float 1.000000e+00>, float %t3, i32 2
+  ret <4 x float> %t4
+}
+
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 

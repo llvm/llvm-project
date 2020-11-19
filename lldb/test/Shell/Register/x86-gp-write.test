@@ -1,6 +1,6 @@
 # XFAIL: system-windows
 # REQUIRES: native && target-x86
-# RUN: %clangxx_host -fomit-frame-pointer %p/Inputs/x86-gp-write.cpp -o %t
+# RUN: %clangxx_host -mmmx -fomit-frame-pointer %p/Inputs/x86-gp-write.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch
 

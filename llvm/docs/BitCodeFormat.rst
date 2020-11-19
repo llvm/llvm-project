@@ -1070,7 +1070,6 @@ The integer codes are mapped to well-known attributes as follows.
 * code 68: ``noundef``
 * code 69: ``byref``
 * code 70: ``mustprogress``
-* code 71: ``nossp``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two

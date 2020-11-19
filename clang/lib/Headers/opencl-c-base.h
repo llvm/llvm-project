@@ -568,4 +568,7 @@ typedef struct {
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
 
+// Disable any extensions we may have enabled previously.
+#pragma OPENCL EXTENSION all : disable
+
 #endif //_OPENCL_BASE_H_

@@ -20,11 +20,12 @@ multiclass B<string name, string help1, string help2> {
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
-def color_diagnostics: F<"color-diagnostics">,
-  HelpText<"Use colors in diagnostics">;
-
+defm color_diagnostics: B<"color-diagnostics",
+  "Alias for --color-diagnostics=always",
+  "Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
+  HelpText<"Use colors in diagnostics (default: auto)">,
+  MetaVarName<"[auto,always,never]">;
 
 def compress_relocations: F<"compress-relocations">,
   HelpText<"Compress the relocation targets in the code section.">;
@@ -34,6 +35,9 @@ defm demangle: B<"demangle",
     "Do not demangle symbol names">;
 
 def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
+
+def error_unresolved_symbols: F<"error-unresolved-symbols">,
+  HelpText<"Report unresolved symbols as errors">;
 
 defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",
@@ -69,9 +73,6 @@ def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 def mllvm: S<"mllvm">, HelpText<"Options to pass to LLVM">;
 
 defm Map: Eq<"Map", "Print a link map to the specified file">;
-
-def no_color_diagnostics: F<"no-color-diagnostics">,
-  HelpText<"Do not use colors in diagnostics">;
 
 def no_fatal_warnings: F<"no-fatal-warnings">;
 
@@ -114,17 +115,23 @@ defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
 
 defm undefined: Eq<"undefined", "Force undefined symbol during linking">;
 
+defm unresolved_symbols:
+  Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
+
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def version: F<"version">, HelpText<"Display the version number and exit">;
 
-def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
-  HelpText<"Linker option extensions">;
+def warn_unresolved_symbols: F<"warn-unresolved-symbols">,
+  HelpText<"Report unresolved symbols as warnings">;
 
 defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
   MetaVarName<"<symbol>=<symbol>">;
+
+def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
+  HelpText<"Linker option extensions">;
 
 // The follow flags are unique to wasm
 

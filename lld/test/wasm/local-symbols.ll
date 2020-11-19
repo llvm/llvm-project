@@ -22,7 +22,7 @@ entry:
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -41,11 +41,11 @@ entry:
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:           Maximum:         0x00000001
+; CHECK-NEXT:           Initial:         0x1
+; CHECK-NEXT:           Maximum:         0x1
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Initial:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
