@@ -136,6 +136,14 @@ static llvm::Optional<bool> normalizeSimpleFlag(OptSpecifier Opt,
   return None;
 }
 
+static Optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt, unsigned,
+                                                  const ArgList &Args,
+                                                  DiagnosticsEngine &) {
+  if (Args.hasArg(Opt))
+    return false;
+  return None;
+}
+
 void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
                            const char *Spelling,
                            CompilerInvocation::StringAllocator SA,
@@ -278,9 +286,11 @@ static void FixupInvocation(CompilerInvocation &Invocation) {
   LangOptions &LangOpts = *Invocation.getLangOpts();
   DiagnosticOptions &DiagOpts = Invocation.getDiagnosticOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
+  FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
   CodeGenOpts.XRayInstrumentFunctions = LangOpts.XRayInstrument;
   CodeGenOpts.XRayAlwaysEmitCustomEvents = LangOpts.XRayAlwaysEmitCustomEvents;
   CodeGenOpts.XRayAlwaysEmitTypedEvents = LangOpts.XRayAlwaysEmitTypedEvents;
+  FrontendOpts.GenerateGlobalModuleIndex = FrontendOpts.UseGlobalModuleIndex;
 
   llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
 }
@@ -2016,32 +2026,16 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value)
         << A->getAsString(Args) << A->getValue();
   }
-  Opts.DisableFree = Args.hasArg(OPT_disable_free);
 
   Opts.OutputFile = std::string(Args.getLastArgValue(OPT_o));
   Opts.Plugins = Args.getAllArgValues(OPT_load);
-  Opts.RelocatablePCH = Args.hasArg(OPT_relocatable_pch);
-  Opts.ShowHelp = Args.hasArg(OPT_help);
-  Opts.ShowStats = Args.hasArg(OPT_print_stats);
-  Opts.ShowTimers = Args.hasArg(OPT_ftime_report);
-  Opts.PrintSupportedCPUs = Args.hasArg(OPT_print_supported_cpus);
-  Opts.TimeTrace = Args.hasArg(OPT_ftime_trace);
   Opts.TimeTraceGranularity = getLastArgIntValue(
       Args, OPT_ftime_trace_granularity_EQ, Opts.TimeTraceGranularity, Diags);
-  Opts.ShowVersion = Args.hasArg(OPT_version);
   Opts.ASTMergeFiles = Args.getAllArgValues(OPT_ast_merge);
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
-  Opts.FixWhatYouCan = Args.hasArg(OPT_fix_what_you_can);
-  Opts.FixOnlyWarnings = Args.hasArg(OPT_fix_only_warnings);
-  Opts.FixAndRecompile = Args.hasArg(OPT_fixit_recompile);
-  Opts.FixToTemporaries = Args.hasArg(OPT_fixit_to_temp);
   Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump, OPT_ast_dump_EQ);
   Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
   Opts.ASTDumpFilter = std::string(Args.getLastArgValue(OPT_ast_dump_filter));
-  Opts.ASTDumpLookups = Args.hasArg(OPT_ast_dump_lookups);
-  Opts.ASTDumpDeclTypes = Args.hasArg(OPT_ast_dump_decl_types);
-  Opts.UseGlobalModuleIndex = !Args.hasArg(OPT_fno_modules_global_index);
-  Opts.GenerateGlobalModuleIndex = Opts.UseGlobalModuleIndex;
   Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);
   // Only the -fmodule-file=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -2050,28 +2044,11 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       Opts.ModuleFiles.push_back(std::string(Val));
   }
   Opts.ModulesEmbedFiles = Args.getAllArgValues(OPT_fmodules_embed_file_EQ);
-  Opts.ModulesEmbedAllFiles = Args.hasArg(OPT_fmodules_embed_all_files);
-  Opts.IncludeTimestamps = !Args.hasArg(OPT_fno_pch_timestamp);
-  Opts.UseTemporary = !Args.hasArg(OPT_fno_temp_file);
-  Opts.IsSystemModule = Args.hasArg(OPT_fsystem_module);
   Opts.AllowPCMWithCompilerErrors = Args.hasArg(OPT_fallow_pcm_with_errors);
 
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-
-  Opts.CodeCompleteOpts.IncludeMacros
-    = Args.hasArg(OPT_code_completion_macros);
-  Opts.CodeCompleteOpts.IncludeCodePatterns
-    = Args.hasArg(OPT_code_completion_patterns);
-  Opts.CodeCompleteOpts.IncludeGlobals
-    = !Args.hasArg(OPT_no_code_completion_globals);
-  Opts.CodeCompleteOpts.IncludeNamespaceLevelDecls
-    = !Args.hasArg(OPT_no_code_completion_ns_level_decls);
-  Opts.CodeCompleteOpts.IncludeBriefComments
-    = Args.hasArg(OPT_code_completion_brief_comments);
-  Opts.CodeCompleteOpts.IncludeFixIts
-    = Args.hasArg(OPT_code_completion_with_fixits);
 
   Opts.OverrideRecordLayoutsFile =
       std::string(Args.getLastArgValue(OPT_foverride_record_layout_EQ));
@@ -2086,8 +2063,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       std::string(Args.getLastArgValue(OPT_mt_migrate_directory));
   Opts.ARCMTMigrateReportOut =
       std::string(Args.getLastArgValue(OPT_arcmt_migrate_report_output));
-  Opts.ARCMTMigrateEmitARCErrors
-    = Args.hasArg(OPT_arcmt_migrate_emit_arc_errors);
 
   Opts.ObjCMTWhiteListPath =
       std::string(Args.getLastArgValue(OPT_objcmt_whitelist_dir_path));
