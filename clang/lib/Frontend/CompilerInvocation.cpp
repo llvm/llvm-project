@@ -3789,9 +3789,12 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   {                                                                            \
     this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
+    if (IMPLIED_CHECK)                                                         \
+      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
     if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags))      \
       this->KEYPATH = MERGER(                                                  \
           this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
@@ -3800,15 +3803,16 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
-    NEG_SPELLING)                                                              \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX, NEG_ID, NEG_SPELLING)                                         \
   {                                                                            \
+    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
+    if (IMPLIED_CHECK)                                                         \
+      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
     if (auto MaybeValue =                                                      \
             NORMALIZER(OPT_##ID, OPT_##NEG_ID, TABLE_INDEX, Args, Diags))      \
       this->KEYPATH = MERGER(                                                  \
           this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue));   \
-    else                                                                       \
-      this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                    \
   }
 
 #include "clang/Driver/Options.inc"
@@ -4067,10 +4071,12 @@ void CompilerInvocation::generateCC1CommandLine(
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   if ((FLAGS)&options::CC1Option) {                                            \
     [&](const auto &Extracted) {                                               \
-      if (ALWAYS_EMIT || Extracted != (DEFAULT_VALUE))                         \
+      if (ALWAYS_EMIT || (Extracted != ((IMPLIED_CHECK) ? (IMPLIED_VALUE)      \
+                                                        : (DEFAULT_VALUE))))   \
         DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, Extracted);              \
     }(EXTRACTOR(this->KEYPATH));                                               \
   }
@@ -4078,11 +4084,12 @@ void CompilerInvocation::generateCC1CommandLine(
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
-    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
-    NEG_SPELLING)                                                              \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX, NEG_ID, NEG_SPELLING)                                         \
   if ((FLAGS)&options::CC1Option) {                                            \
     bool Extracted = EXTRACTOR(this->KEYPATH);                                 \
-    if (ALWAYS_EMIT || Extracted != (DEFAULT_VALUE))                           \
+    if (ALWAYS_EMIT ||                                                         \
+        (Extracted != ((IMPLIED_CHECK) ? (IMPLIED_VALUE) : (DEFAULT_VALUE))))  \
       DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX, Extracted);  \
   }
 

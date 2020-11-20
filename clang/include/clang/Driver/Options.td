@@ -246,10 +246,11 @@ def clang_ignored_gcc_optimization_f_Group : OptionGroup<
 // This is useful if the option is usually disabled.
 multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
                       string help="", list<OptionFlag> flags=[], code keypath="",
-                      DefaultAnyOf defaults = DefaultAnyOf<[]>> {
+                      list<Option> enablers = []> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<!listconcat([CC1Option], flags)>,
                Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>,
-               MarshallingInfoFlag<keypath, defaults>;
+               MarshallingInfoFlag<keypath, "false">,
+               ImpliedByAnyOf<enablers, "true">;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<flags>,
                Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>;
 }
@@ -258,12 +259,13 @@ multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
 // Args.hasArg(OPT_fno_foo) is used to check that the flag is disabled.
 multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
                        string help="", list<OptionFlag> flags=[], code keypath="",
-                       DefaultAnyOf defaults = DefaultAnyOf<[]>> {
+                       list<Option> disablers = []> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<flags>,
                Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<!listconcat([CC1Option], flags)>,
                Group<f_Group>, HelpText<!strconcat(neg_prefix, help)>,
-               MarshallingInfoFlag<keypath, defaults>;
+               MarshallingInfoFlag<keypath, "false">,
+               ImpliedByAnyOf<disablers, "true">;
 }
 
 multiclass BooleanMarshalledFFlag<string name, code keypath, code default_value, string pos_help = "", string neg_help=""> {
@@ -606,7 +608,8 @@ def cl_fast_relaxed_math : Flag<["-"], "cl-fast-relaxed-math">, Group<opencl_Gro
   MarshallingInfoFlag<"LangOpts->FastRelaxedMath">;
 def cl_mad_enable : Flag<["-"], "cl-mad-enable">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. Allow use of less precise MAD computations in the generated binary.">,
-  MarshallingInfoFlag<"CodeGenOpts.LessPreciseFPMAD", DefaultAnyOf<[cl_unsafe_math_optimizations, cl_fast_relaxed_math]>>;
+  MarshallingInfoFlag<"CodeGenOpts.LessPreciseFPMAD">,
+  ImpliedByAnyOf<[cl_unsafe_math_optimizations, cl_fast_relaxed_math]>;
 def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
   MarshallingInfoFlag<"LangOpts->CLNoSignedZero">;
@@ -1048,10 +1051,11 @@ def ffp_model_EQ : Joined<["-"], "ffp-model=">, Group<f_Group>, Flags<[NoXarchOp
 def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Specifies the exception behavior of floating-point operations.">;
 defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations", "", "", [],
-  "LangOpts->FastMath", DefaultAnyOf<[cl_fast_relaxed_math]>>;
+  "LangOpts->FastMath", [cl_fast_relaxed_math]>;
 def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">, Flags<[CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
-  MarshallingInfoFlag<"LangOpts->UnsafeFPMath", DefaultAnyOf<[cl_unsafe_math_optimizations, ffast_math]>>;
+  MarshallingInfoFlag<"LangOpts->UnsafeFPMath">,
+  ImpliedByAnyOf<[cl_unsafe_math_optimizations, ffast_math]>;
 defm math_errno : OptInFFlag<"math-errno", "Require math functions to indicate errors by setting errno">;
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>, Flags<[CoreOption]>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
@@ -1265,13 +1269,13 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
 def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
 defm reciprocal_math : OptInFFlag<"reciprocal-math", "Allow division operations to be reassociated", "", "", [],
-  "LangOpts->AllowRecip", DefaultAnyOf<[menable_unsafe_fp_math]>>;
+  "LangOpts->AllowRecip", [menable_unsafe_fp_math]>;
 def fapprox_func : Flag<["-"], "fapprox-func">, Group<f_Group>, Flags<[CC1Option, NoDriverOption]>,
-  MarshallingInfoFlag<"LangOpts->ApproxFunc", DefaultAnyOf<[menable_unsafe_fp_math]>>;
+  MarshallingInfoFlag<"LangOpts->ApproxFunc">, ImpliedByAnyOf<[menable_unsafe_fp_math]>;
 defm finite_math_only : OptInFFlag<"finite-math-only", "", "", "", [],
-  "LangOpts->FiniteMathOnly", DefaultAnyOf<[cl_finite_math_only, ffast_math]>>;
+  "LangOpts->FiniteMathOnly", [cl_finite_math_only, ffast_math]>;
 defm signed_zeros : OptOutFFlag<"signed-zeros", "Allow optimizations that ignore the sign of floating point zeros", "", "", [],
-  "LangOpts->NoSignedZero", DefaultAnyOf<[cl_no_signed_zeros, menable_unsafe_fp_math]>>;
+  "LangOpts->NoSignedZero", [cl_no_signed_zeros, menable_unsafe_fp_math]>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;
 def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Group<f_Group>;
 def fhonor_infinities : Flag<["-"], "fhonor-infinities">, Group<f_Group>;
@@ -3941,13 +3945,13 @@ def mdisable_tail_calls : Flag<["-"], "mdisable-tail-calls">,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">;
 def menable_no_infinities : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
-  MarshallingInfoFlag<"LangOpts->NoHonorInfs", DefaultAnyOf<[ffinite_math_only]>>;
+  MarshallingInfoFlag<"LangOpts->NoHonorInfs">, ImpliedByAnyOf<[ffinite_math_only]>;
 def menable_no_nans : Flag<["-"], "menable-no-nans">,
   HelpText<"Allow optimization to assume there are no NaNs.">,
-  MarshallingInfoFlag<"LangOpts->NoHonorNaNs", DefaultAnyOf<[ffinite_math_only]>>;
+  MarshallingInfoFlag<"LangOpts->NoHonorNaNs">, ImpliedByAnyOf<[ffinite_math_only]>;
 def mreassociate : Flag<["-"], "mreassociate">,
   HelpText<"Allow reassociation transformations for floating-point instructions">,
-  MarshallingInfoFlag<"LangOpts->AllowFPReassoc", DefaultAnyOf<[menable_unsafe_fp_math]>>;
+  MarshallingInfoFlag<"LangOpts->AllowFPReassoc">, ImpliedByAnyOf<[menable_unsafe_fp_math]>;
 def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,
@@ -4067,9 +4071,11 @@ def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
 //===----------------------------------------------------------------------===//
 
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
-  HelpText<"Include system headers in dependency output">;
+  HelpText<"Include system headers in dependency output">,
+  MarshallingInfoFlag<"DependencyOutputOpts.IncludeSystemHeaders">;
 def module_file_deps : Flag<["-"], "module-file-deps">,
-  HelpText<"Include module files in dependency output">;
+  HelpText<"Include module files in dependency output">,
+  MarshallingInfoFlag<"DependencyOutputOpts.IncludeModuleFiles">;
 def header_include_file : Separate<["-"], "header-include-file">,
   HelpText<"Filename (or -) to write header include output to">;
 def show_includes : Flag<["--"], "show-includes">,

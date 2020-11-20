@@ -134,7 +134,36 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineSeparateEnum) {
   ASSERT_THAT(GeneratedArgs, Each(StrNe(RelocationModelCStr)));
 }
 
-TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineImpliedFlags) {
+TEST_F(CC1CommandLineGenerationTest, NotPresentAndNotImpliedNotGenerated) {
+  const char *Args[] = {"clang", "-xc++"};
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Missing options are not generated.
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+}
+
+TEST_F(CC1CommandLineGenerationTest, NotPresentAndImpliedNotGenerated) {
+  const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations"};
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Missing options that were implied are not generated.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
+}
+
+TEST_F(CC1CommandLineGenerationTest, PresentAndImpliedNotGenerated) {
   const char *Args[] = {"clang", "-xc++", "-cl-unsafe-math-optimizations",
                         "-cl-mad-enable", "-menable-unsafe-fp-math"};
 
@@ -143,11 +172,23 @@ TEST_F(CC1CommandLineGenerationTest, CanGenerateCC1CommandLineImpliedFlags) {
 
   CInvok.generateCC1CommandLine(GeneratedArgs, *this);
 
-  // Explicitly provided flags that were also implied by another flag are not
-  // generated.
+  // Present options that were also implied are not generated.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-menable-unsafe-fp-math"))));
 }
 
+TEST_F(CC1CommandLineGenerationTest, PresentAndNotImpliedGenerated) {
+  const char *Args[] = {"clang", "-xc++", "-cl-mad-enable",
+                        "-menable-unsafe-fp-math"};
+
+  CompilerInvocation CInvok;
+  CompilerInvocation::CreateFromArgs(CInvok, Args, *Diags);
+
+  CInvok.generateCC1CommandLine(GeneratedArgs, *this);
+
+  // Present options that were not implied are generated.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-menable-unsafe-fp-math")));
+}
 } // anonymous namespace
