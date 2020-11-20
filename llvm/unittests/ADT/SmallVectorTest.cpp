@@ -1051,9 +1051,13 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBackMoved) {
 TYPED_TEST(SmallVectorReferenceInvalidationTest, Resize) {
   auto &V = this->V;
   (void)V;
+  int N = this->NumBuiltinElts(V);
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(V.resize(2, V.back()), this->AssertionMessage);
+  EXPECT_DEATH(V.resize(N + 1, V.back()), this->AssertionMessage);
 #endif
+
+  // No assertion when shrinking, since the parameter isn't accessed.
+  V.resize(N - 1, V.back());
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, Append) {
