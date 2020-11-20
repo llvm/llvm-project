@@ -12,10 +12,12 @@
 
 #include "mlir/Dialect/SPIRV/ModuleCombiner.h"
 
+#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
@@ -57,6 +59,59 @@ static LogicalResult updateSymbolAndAllUses(SymbolOpInterface op,
 
   SymbolTable::setSymbolName(op, newSymName);
   return success();
+}
+
+template <typename KeyTy, typename SymbolOpTy>
+static SymbolOpTy
+emplaceOrGetReplacementSymbol(KeyTy key, SymbolOpTy symbolOp,
+                              DenseMap<KeyTy, SymbolOpTy> &deduplicationMap) {
+  auto result = deduplicationMap.try_emplace(key, symbolOp);
+
+  if (result.second)
+    return SymbolOpTy();
+
+  return result.first->second;
+}
+
+/// Computes a hash code to represent the argument SymbolOpInterface based on
+/// all the Op's attributes except for the symbol name.
+///
+/// \return the hash code computed from the Op's attributes as described above.
+///
+/// Note: We use the operation's name (not the symbol name) as part of the hash
+/// computation. This prevents, for example, mistakenly considering a global
+/// variable and a spec constant as duplicates because their descriptor set +
+/// binding and spec_id, repectively, happen to hash to the same value.
+static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
+  llvm::hash_code hashCode(0);
+  hashCode = llvm::hash_combine(symbolOp.getOperation()->getName());
+
+  for (auto attr : symbolOp.getOperation()->getAttrs()) {
+    if (attr.first == SymbolTable::getSymbolAttrName())
+      continue;
+    hashCode = llvm::hash_combine(hashCode, attr);
+  }
+
+  return hashCode;
+}
+
+/// Computes a hash code from the argument Block.
+llvm::hash_code computeHash(Block *block) {
+  // TODO: Consider extracting BlockEquivalenceData into a common header and
+  // re-using it here.
+  llvm::hash_code hash(0);
+
+  for (Operation &op : *block) {
+    // TODO: Properly handle operations with regions.
+    if (op.getNumRegions() > 0)
+      return 0;
+
+    hash = llvm::hash_combine(
+        hash, OperationEquivalence::computeHash(
+                  &op, OperationEquivalence::Flags::IgnoreOperands));
+  }
+
+  return hash;
 }
 
 namespace mlir {
@@ -173,6 +228,48 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
     for (auto &op : moduleClone.getBlock().without_terminator())
       combinedModuleBuilder.insert(op.clone());
   }
+
+  // Deduplicate identical global variables, spec constants, and functions.
+  DenseMap<llvm::hash_code, SymbolOpInterface> hashToSymbolOp;
+  SmallVector<SymbolOpInterface, 0> eraseList;
+
+  for (auto &op : combinedModule.getBlock().without_terminator()) {
+    llvm::hash_code hashCode(0);
+    SymbolOpInterface symbolOp = dyn_cast<SymbolOpInterface>(op);
+
+    if (!symbolOp)
+      continue;
+
+    hashCode = computeHash(symbolOp);
+
+    // A 0 hash code means the op is not suitable for deduplication and should
+    // be skipped. An example of this is when a function has ops with regions
+    // which are not properly supported yet.
+    if (!hashCode)
+      continue;
+
+    if (auto funcOp = dyn_cast<FuncOp>(op))
+      for (auto &blk : funcOp)
+        hashCode = llvm::hash_combine(hashCode, computeHash(&blk));
+
+    SymbolOpInterface replacementSymOp =
+        emplaceOrGetReplacementSymbol(hashCode, symbolOp, hashToSymbolOp);
+
+    if (!replacementSymOp)
+      continue;
+
+    if (failed(SymbolTable::replaceAllSymbolUses(
+            symbolOp, replacementSymOp.getName(), combinedModule))) {
+      symbolOp.emitError("unable to update all symbol uses for ")
+          << symbolOp.getName() << " to " << replacementSymOp.getName();
+      return nullptr;
+    }
+
+    eraseList.push_back(symbolOp);
+  }
+
+  for (auto symbolOp : eraseList)
+    symbolOp.erase();
 
   return combinedModule;
 }
