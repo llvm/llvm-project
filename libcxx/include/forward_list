@@ -603,7 +603,7 @@ __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
                     __is_nothrow_swappable<__node_allocator>::value)
 #endif
 {
-    _VSTD::__swap_allocator(__alloc(), __x.__alloc(),
+    __swap_allocator(__alloc(), __x.__alloc(),
             integral_constant<bool, __node_traits::propagate_on_container_swap::value>());
     using _VSTD::swap;
     swap(__before_begin()->__next_, __x.__before_begin()->__next_);
