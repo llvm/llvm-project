@@ -309,7 +309,7 @@ MLIR_CAPI_EXPORTED int mlirAttributeIsADenseFPElements(MlirAttribute attr);
 /** Creates a dense elements attribute with the given Shaped type and elements
  * in the same context as the type. */
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrGet(
-    MlirType shapedType, intptr_t numElements, MlirAttribute *elements);
+    MlirType shapedType, intptr_t numElements, MlirAttribute const *elements);
 
 /** Creates a dense elements attribute with the given Shaped type containing a
  * single replicated element (splat). */
@@ -353,7 +353,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrDoubleGet(
  * provided as a separate argument co-indexed with the strs argument. */
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrStringGet(MlirType shapedType, intptr_t numElements,
-                               intptr_t *strLengths, const char **strs);
+                               intptr_t const *strLengths, const char **strs);
 /** Creates a dense elements attribute that has the same data as the given dense
  * elements attribute and a different shaped type. The new type must have the
  * same total number of elements. */
