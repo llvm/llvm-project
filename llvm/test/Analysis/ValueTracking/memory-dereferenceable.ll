@@ -24,8 +24,8 @@ define void @test(%struct.A* sret %result,
                   i32 addrspace(1)* dereferenceable(8) %dparam,
                   i8 addrspace(1)* dereferenceable(32) align 1 %dparam.align1,
                   i8 addrspace(1)* dereferenceable(32) align 16 %dparam.align16,
-                  i8* byval %i8_byval,
-                  %struct.A* byval %A_byval)
+                  i8* byval(i8) %i8_byval,
+                  %struct.A* byval(%struct.A) %A_byval)
     gc "statepoint-example" {
 ; CHECK: The following are dereferenceable:
 entry:
@@ -177,7 +177,7 @@ entry:
 define i32 @f_0(i32 %val) {
   %ptr = inttoptr i32 %val to i32*, !dereferenceable !0
   %load29 = load i32, i32* %ptr, align 8
-  ret i32 %load29 
+  ret i32 %load29
 }
 
 ; Just check that we don't crash.

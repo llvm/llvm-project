@@ -8,7 +8,7 @@ target triple = "i386-apple-darwin9"
 define void @foo(i8* %context) nounwind  {
 entry:
 	%tmp1 = bitcast i8* %context to %struct.NSRect*		; <%struct.NSRect*> [#uses=1]
-	call void (i32, ...) @bar( i32 3, %struct.NSRect* byval align 4  %tmp1 ) nounwind 
+	call void (i32, ...) @bar( i32 3, %struct.NSRect* byval(%struct.NSRect) align 4  %tmp1 ) nounwind
 	ret void
 }
 

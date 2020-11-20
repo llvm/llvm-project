@@ -178,32 +178,32 @@ define void @test3_addrspacecast() {
 
 define void @test4() {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    call void @baz(i8* byval getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
+; CHECK-NEXT:    call void @baz(i8* byval(i8) getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
   %a = bitcast %T* %A to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 bitcast (%T* @G to i8*), i64 124, i1 false)
-  call void @baz(i8* byval %a)
+  call void @baz(i8* byval(i8) %a)
   ret void
 }
 
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    call void @baz(i8* byval getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
+; CHECK-NEXT:    call void @baz(i8* byval(i8) getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
   %a = bitcast %T* %A to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %a)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 bitcast (%T* @G to i8*), i64 124, i1 false)
-  call void @baz(i8* byval %a)
+  call void @baz(i8* byval(i8) %a)
   ret void
 }
 
 
-declare void @baz(i8* byval)
+declare void @baz(i8* byval(i8))
 
 
 define void @test6() {

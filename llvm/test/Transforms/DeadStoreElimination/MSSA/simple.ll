@@ -138,7 +138,7 @@ define i32 @test8() {
 
 ; Test for byval handling.
 %struct.x = type { i32, i32, i32, i32 }
-define void @test9(%struct.x* byval  %a) nounwind  {
+define void @test9(%struct.x* byval(%struct.x)  %a) nounwind  {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    ret void
 ;
@@ -249,20 +249,20 @@ define void @test14(i32* %Q) {
 }
 
 ; The store here is not dead because the byval call reads it.
-declare void @test19f({i32}* byval align 4 %P)
+declare void @test19f({i32}* byval({i32}) align 4 %P)
 
-define void @test19({i32} * nocapture byval align 4 %arg5) nounwind ssp {
+define void @test19({i32}* nocapture byval({i32}) align 4 %arg5) nounwind ssp {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[ARG5:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 912, i32* [[TMP7]], align 4
-; CHECK-NEXT:    call void @test19f({ i32 }* byval align 4 [[ARG5]])
+; CHECK-NEXT:    call void @test19f({ i32 }* byval({ i32 }) align 4 [[ARG5]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %tmp7 = getelementptr inbounds {i32}, {i32}* %arg5, i32 0, i32 0
   store i32 912, i32* %tmp7
-  call void @test19f({i32}* byval align 4 %arg5)
+  call void @test19f({i32}* byval({i32}) align 4 %arg5)
   ret void
 
 }

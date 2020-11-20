@@ -53,13 +53,13 @@ entry:
   store i8 %b, i8 addrspace(5)* %block.captured1, align 8
   %tmp1 = bitcast <{ i32, i32, i8 addrspace(1)*, i8 }> addrspace(5)* %block to void () addrspace(5)*
   %tmp4 = addrspacecast void () addrspace(5)* %tmp1 to i8*
-  %tmp5 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval nonnull %tmp,
+  %tmp5 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval(%struct.ndrange_t) nonnull %tmp,
     i8* bitcast (void (<{ i32, i32, i8 addrspace(1)*, i8 }>)* @__test_block_invoke_kernel to i8*), i8* nonnull %tmp4) #2
-  %tmp10 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval nonnull %tmp,
+  %tmp10 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval(%struct.ndrange_t) nonnull %tmp,
     i8* bitcast (void (<{ i32, i32, i8 addrspace(1)*, i8 }>)* @__test_block_invoke_kernel to i8*), i8* nonnull %tmp4) #2
-  %tmp11 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval nonnull %tmp,
+  %tmp11 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval(%struct.ndrange_t) nonnull %tmp,
     i8* bitcast (void (<{ i32, i32, i8 addrspace(1)*, i8 }>)* @0 to i8*), i8* nonnull %tmp4) #2
-  %tmp12 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval nonnull %tmp,
+  %tmp12 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval(%struct.ndrange_t) nonnull %tmp,
     i8* bitcast (void (<{ i32, i32, i8 addrspace(1)*, i8 }>)* @1 to i8*), i8* nonnull %tmp4) #2
   %block.size4 = getelementptr inbounds <{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }>, <{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }> addrspace(5)* %block2, i32 0, i32 0
   store i32 41, i32 addrspace(5)* %block.size4, align 8
@@ -75,7 +75,7 @@ entry:
   store i64 %d, i64 addrspace(5)* %block.captured10, align 8
   %tmp6 = bitcast <{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }> addrspace(5)* %block2 to void () addrspace(5)*
   %tmp8 = addrspacecast void () addrspace(5)* %tmp6 to i8*
-  %tmp9 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval nonnull %tmp3,
+  %tmp9 = call i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)* undef, i32 0, %struct.ndrange_t addrspace(5)* byval(%struct.ndrange_t) nonnull %tmp3,
     i8* bitcast (void (<{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }>)* @__test_block_invoke_2_kernel to i8*), i8* nonnull %tmp8) #2
   ret void
 }

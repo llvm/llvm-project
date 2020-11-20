@@ -535,8 +535,8 @@ entry:
 
 ; MIPS64R6:      ld $[[SPTR:[0-9]+]], %got_disp(arr)(
 
-  tail call void @extern_func([7 x i8]* byval @arr) nounwind
+  tail call void @extern_func([7 x i8]* byval([7 x i8]) @arr) nounwind
   ret void
 }
 
-declare void @extern_func([7 x i8]* byval)
+declare void @extern_func([7 x i8]* byval([7 x i8]))

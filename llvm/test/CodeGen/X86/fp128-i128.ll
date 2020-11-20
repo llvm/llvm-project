@@ -440,7 +440,7 @@ declare fp128 @fabsl(fp128) #1
 declare fp128 @copysignl(fp128, fp128) #1
 
 ; Test more complicated logical operations generated from copysignl.
-define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret %agg.result, { fp128, fp128 }* byval nocapture readonly align 16 %z) #0 {
+define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret %agg.result, { fp128, fp128 }* byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
 ; SSE-LABEL: TestCopySign:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rbp

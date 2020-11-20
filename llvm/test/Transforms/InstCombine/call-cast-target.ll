@@ -73,7 +73,7 @@ entry:
   ret i32 %call
 }
 
-declare i1 @fn5({ i32, i32 }* byval align 4 %r)
+declare i1 @fn5({ i32, i32 }* byval({ i32, i32 }) align 4 %r)
 
 define i1 @test5() {
 ; CHECK-LABEL: @test5

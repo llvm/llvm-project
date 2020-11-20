@@ -11,7 +11,7 @@ declare void @usePtr(%struct8bytes8align*)
 ; a -> r0
 ; b -> r1..r3
 ; c -> sp+0..sp+7
-define void @foo1(i32 %a, %struct12bytes* byval %b, i64 %c) {
+define void @foo1(i32 %a, %struct12bytes* byval(%struct12bytes) %b, i64 %c) {
 ; CHECK-LABEL: foo1
 ; CHECK: sub  sp, sp, #12
 ; CHECK: push  {r11, lr}
@@ -30,7 +30,7 @@ define void @foo1(i32 %a, %struct12bytes* byval %b, i64 %c) {
 
 ; a -> r0
 ; b -> r2..r3
-define void @foo2(i32 %a, %struct8bytes8align* byval %b) {
+define void @foo2(i32 %a, %struct8bytes8align* byval(%struct8bytes8align) %b) {
 ; CHECK-LABEL: foo2
 ; CHECK: sub  sp, sp, #8
 ; CHECK: push  {r11, lr}
@@ -47,7 +47,7 @@ define void @foo2(i32 %a, %struct8bytes8align* byval %b) {
 
 ; a -> r0..r1
 ; b -> r2
-define void @foo3(%struct8bytes8align* byval %a, %struct4bytes* byval %b) {
+define void @foo3(%struct8bytes8align* byval(%struct8bytes8align) %a, %struct4bytes* byval(%struct4bytes) %b) {
 ; CHECK-LABEL: foo3
 ; CHECK: sub  sp, sp, #16
 ; CHECK: push  {r11, lr}
@@ -64,7 +64,7 @@ define void @foo3(%struct8bytes8align* byval %a, %struct4bytes* byval %b) {
 
 ; a -> r0
 ; b -> r2..r3
-define void @foo4(%struct4bytes* byval %a, %struct8bytes8align* byval %b) {
+define void @foo4(%struct4bytes* byval(%struct4bytes) %a, %struct8bytes8align* byval(%struct8bytes8align) %b) {
 ; CHECK-LABEL: foo4
 ; CHECK: sub     sp, sp, #16
 ; CHECK: push    {r11, lr}
@@ -84,7 +84,7 @@ define void @foo4(%struct4bytes* byval %a, %struct8bytes8align* byval %b) {
 ; a -> r0..r1
 ; b -> r2
 ; c -> r3
-define void @foo5(%struct8bytes8align* byval %a, %struct4bytes* byval %b, %struct4bytes* byval %c) {
+define void @foo5(%struct8bytes8align* byval(%struct8bytes8align) %a, %struct4bytes* byval(%struct4bytes) %b, %struct4bytes* byval(%struct4bytes) %c) {
 ; CHECK-LABEL: foo5
 ; CHECK: sub     sp, sp, #16
 ; CHECK: push    {r11, lr}
@@ -102,7 +102,7 @@ define void @foo5(%struct8bytes8align* byval %a, %struct4bytes* byval %b, %struc
 
 ; a..c -> r0..r2
 ; d -> sp+0..sp+7
-define void @foo6(i32 %a, i32 %b, i32 %c, %struct8bytes8align* byval %d) {
+define void @foo6(i32 %a, i32 %b, i32 %c, %struct8bytes8align* byval(%struct8bytes8align) %d) {
 ; CHECK-LABEL: foo6
 ; CHECK: push {r11, lr}
 ; CHECK: add  r0, sp, #8

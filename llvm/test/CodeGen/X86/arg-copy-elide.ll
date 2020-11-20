@@ -217,7 +217,7 @@ entry:
 ; CHECK: retl
 
 
-define void @avoid_byval(i32* byval %x) {
+define void @avoid_byval(i32* byval(i32) %x) {
 entry:
   %x.p.p = alloca i32*
   store i32* %x, i32** %x.p.p

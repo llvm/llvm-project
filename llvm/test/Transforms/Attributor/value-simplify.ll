@@ -490,10 +490,10 @@ define %struct.X* @complicated_args_nest() {
 }
 
 @S = external global %struct.X
-define internal void @test_byval(%struct.X* byval %a) {
+define internal void @test_byval(%struct.X* byval(%struct.X) %a) {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test_byval
-; IS__CGSCC_OPM-SAME: (%struct.X* noalias nocapture nofree noundef nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]]) [[ATTR1]] {
+; IS__CGSCC_OPM-SAME: (%struct.X* noalias nocapture nofree noundef nonnull writeonly byval(%struct.X) align 8 dereferenceable(8) [[A:%.*]]) [[ATTR1]] {
 ; IS__CGSCC_OPM-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* [[A]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    store i8* null, i8** [[G0]], align 8
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -532,7 +532,7 @@ define void @complicated_args_byval() {
   ret void
 }
 
-define internal i8*@test_byval2(%struct.X* byval %a) {
+define internal i8*@test_byval2(%struct.X* byval(%struct.X) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_byval2
 ; IS__TUNIT____-SAME: () [[ATTR3:#.*]] {

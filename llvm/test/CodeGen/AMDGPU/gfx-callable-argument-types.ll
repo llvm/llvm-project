@@ -86,8 +86,8 @@ declare hidden amdgpu_gfx i32 @external_i32_func_i32(i32) #0
 
 ; Structs
 declare hidden amdgpu_gfx void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare hidden amdgpu_gfx void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval) #0
-declare hidden amdgpu_gfx void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval) #0
+declare hidden amdgpu_gfx void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
+declare hidden amdgpu_gfx void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }), { i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
 
 declare hidden amdgpu_gfx void @external_void_func_v16i8(<16 x i8>) #0
 
@@ -3392,7 +3392,7 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-NEXT:    s_setpc_b64 s[4:5]
 entry:
   %alloca = alloca double, align 8, addrspace(5)
-  tail call amdgpu_gfx void @byval_align16_f64_arg(<32 x i32> %val, double addrspace(5)* byval align 16 %alloca)
+  tail call amdgpu_gfx void @byval_align16_f64_arg(<32 x i32> %val, double addrspace(5)* byval(double) align 16 %alloca)
   ret void
 }
 
@@ -6542,7 +6542,7 @@ entry:
   ret void
 }
 
-declare hidden amdgpu_gfx void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
+declare hidden amdgpu_gfx void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval(double) align 16) #0
 declare hidden amdgpu_gfx void @stack_passed_f64_arg(<32 x i32>, double) #0
 declare hidden amdgpu_gfx void @external_void_func_12xv3i32(<3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>,
     <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) #0

@@ -78,7 +78,7 @@ if.end:                                           ; preds = %entry
   %4 = bitcast %struct.r* %agg.tmp to i8*, !dbg !33
   %5 = bitcast %struct.r* %r to i8*, !dbg !33
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %4, i8* align 8 %5, i64 40, i1 false), !dbg !33
-  %call4 = call i32 @_Z7call_me1r(%struct.r* byval align 8 %agg.tmp), !dbg !33
+  %call4 = call i32 @_Z7call_me1r(%struct.r* byval(%struct.r) align 8 %agg.tmp), !dbg !33
   store i32 %call4, i32* %retval, !dbg !33
   br label %return, !dbg !33
 
@@ -95,7 +95,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 ; Function Attrs: nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
 
-declare i32 @_Z7call_me1r(%struct.r* byval align 8)
+declare i32 @_Z7call_me1r(%struct.r* byval(%struct.r) align 8)
 
 attributes #0 = { nounwind }
 attributes #2 = { nounwind readnone }

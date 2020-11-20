@@ -18,7 +18,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; value. Since the target does bitcast through memory and we no longer
 ; remember the address we need to do the store in a fresh local
 ; address.
-define ppc_fp128 @test(%struct.S* byval %x) nounwind {
+define ppc_fp128 @test(%struct.S* byval(%struct.S) %x) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std 5, -16(1)

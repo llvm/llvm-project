@@ -70,7 +70,7 @@ entry:
 	store i8 %5, i8* %7, align 1
 	%8 = getelementptr %struct.X, %struct.X* %xxx, i32 0, i32 0		; <i8*> [#uses=1]
 	store i8 15, i8* %8, align 1
-	%9 = call i32 (...) bitcast (i32 (%struct.X*, %struct.X*)* @f to i32 (...)*)(%struct.X* byval align 4 %xxx, %struct.X* byval align 4 %xxx) nounwind		; <i32> [#uses=1]
+	%9 = call i32 (...) bitcast (i32 (%struct.X*, %struct.X*)* @f to i32 (...)*)(%struct.X* byval(%struct.X) align 4 %xxx, %struct.X* byval(%struct.X) align 4 %xxx) nounwind		; <i32> [#uses=1]
 	store i32 %9, i32* %0, align 4
 	%10 = load i32, i32* %0, align 4		; <i32> [#uses=1]
 	store i32 %10, i32* %retval, align 4
@@ -81,4 +81,4 @@ return:		; preds = %entry
 	ret i32 %retval1
 }
 
-declare i32 @f(%struct.X* byval align 4, %struct.X* byval align 4) nounwind ssp
+declare i32 @f(%struct.X* byval(%struct.X) align 4, %struct.X* byval(%struct.X) align 4) nounwind ssp

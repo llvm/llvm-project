@@ -19,7 +19,7 @@ define i32 @caller(%struct.sphere* %i) {
   %shadow_ray = alloca %struct.ray, align 8
   call void @fix(%struct.ray* %shadow_ray)
 
-  %call = call i32 @ray_sphere(%struct.sphere* %i, %struct.ray* byval align 8 %shadow_ray, %struct.spoint* null)
+  %call = call i32 @ray_sphere(%struct.sphere* %i, %struct.ray* byval(%struct.ray) align 8 %shadow_ray, %struct.spoint* null)
   ret i32 %call
 
 ; CHECK-LABEL: @caller(
@@ -29,7 +29,7 @@ define i32 @caller(%struct.sphere* %i) {
 
 declare void @fix(%struct.ray*)
 
-define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture byval align 8 %ray, %struct.spoint* %sp) nounwind uwtable ssp {
+define i32 @ray_sphere(%struct.sphere* nocapture %sph, %struct.ray* nocapture byval(%struct.ray) align 8 %ray, %struct.spoint* %sp) nounwind uwtable ssp {
   %1 = getelementptr inbounds %struct.ray, %struct.ray* %ray, i64 0, i32 1, i32 0
   %2 = load double, double* %1, align 8
   %3 = fmul double %2, %2

@@ -9,7 +9,7 @@
 
   declare void @good(i32, i32, i32, i32)
 
-  declare void @struct(%struct.s* byval, i32, i32, i32)
+  declare void @struct(%struct.s* byval(%struct.s), i32, i32, i32)
 
   ; Function Attrs: optsize
   define void @test9() #0 {
@@ -20,7 +20,7 @@
     call void @good(i32 1, i32 2, i32 3, i32 4)
     %pv = ptrtoint i32* %p to i32
     %qv = ptrtoint i32* %q to i32
-    call void @struct(%struct.s* byval %s, i32 6, i32 %qv, i32 %pv)
+    call void @struct(%struct.s* byval(%struct.s) %s, i32 6, i32 %qv, i32 %pv)
     ret void
   }
 
