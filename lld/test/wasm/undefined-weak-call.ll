@@ -96,4 +96,7 @@ define i32 @callWeakFuncs() {
 ; CHECK-NEXT:         Name:            'undefined_weak:weakFunc3'
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            callWeakFuncs
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
