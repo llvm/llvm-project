@@ -992,7 +992,15 @@ static void computeKnownBitsFromShiftOperator(
   computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
   computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
 
-  if (Known.isConstant()) {
+  // Note: We cannot use Known.Zero.getLimitedValue() here, because if
+  // BitWidth > 64 and any upper bits are known, we'll end up returning the
+  // limit value (which implies all bits are known).
+  uint64_t ShiftAmtKZ = Known.Zero.zextOrTrunc(64).getZExtValue();
+  uint64_t ShiftAmtKO = Known.One.zextOrTrunc(64).getZExtValue();
+  bool ShiftAmtIsConstant = Known.isConstant();
+  bool MaxShiftAmtIsOutOfRange = Known.getMaxValue().uge(BitWidth);
+
+  if (ShiftAmtIsConstant) {
     Known = KF(Known2, Known);
 
     // If the known bits conflict, this must be an overflowing left shift, so
@@ -1008,16 +1016,10 @@ static void computeKnownBitsFromShiftOperator(
   // LHS, the value could be poison, but bail out because the check below is
   // expensive.
   // TODO: Should we just carry on?
-  if (Known.getMaxValue().uge(BitWidth)) {
+  if (MaxShiftAmtIsOutOfRange) {
     Known.resetAll();
     return;
   }
-
-  // Note: We cannot use Known.Zero.getLimitedValue() here, because if
-  // BitWidth > 64 and any upper bits are known, we'll end up returning the
-  // limit value (which implies all bits are known).
-  uint64_t ShiftAmtKZ = Known.Zero.zextOrTrunc(64).getZExtValue();
-  uint64_t ShiftAmtKO = Known.One.zextOrTrunc(64).getZExtValue();
 
   // It would be more-clearly correct to use the two temporaries for this
   // calculation. Reusing the APInts here to prevent unnecessary allocations.
