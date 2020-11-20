@@ -47,9 +47,7 @@ module {
 //      CHECK:     %[[TILE_N_2:.+]] = affine.min #[[MAP2]](%[[IV1]])[%[[N_2]]]
 //      CHECK:     %[[SV3:.+]] = subview %[[ARG2]][%[[IV0]], %[[IV1]]]
 // CHECK-SAME:       [%[[TILE_M_2]], %[[TILE_N_2]]]
-//      CHECK:     %[[SV3_2:.+]] = subview %[[ARG2]][%[[IV0]], %[[IV1]]]
-// CHECK-SAME:       [%[[TILE_M]], %[[TILE_N]]]
-//      CHECK:     linalg.fill(%[[SV3_2]], %[[CST]])
+//      CHECK:     linalg.fill(%[[SV3]], %[[CST]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_basic_fusion_producer"
 //      CHECK:     scf.for %[[IV2:.+]] = %[[C0]] to %[[K]] step %[[C16]] {
 //      CHECK:       %[[TILE_K:.+]] = affine.min #[[MAP3]](%[[IV2]])[%[[K]]]
@@ -111,12 +109,9 @@ module {
 //      CHECK:     %[[TILE_N_2:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[N_2]]]
 //      CHECK:     %[[SV2:.+]] = subview %[[ARG3]][0, %[[IV0]]]
 // CHECK-SAME:       [%[[M]], %[[TILE_N_2]]]
-//      CHECK:     %[[K_2:.+]] = dim %[[ARG1]], %[[C0]]
 //      CHECK:     %[[SV3:.+]] = subview %[[ARG1]][0, %[[IV0]]]
-// CHECK-SAME:       [%[[K_2]], %[[TILE_N]]]
-//      CHECK:     %[[SV3_2:.+]] = subview %[[ARG2]][0, %[[IV0]]]
-// CHECK-SAME:       [%[[K_2]], %[[TILE_N]]]
-//      CHECK:     linalg.copy(%[[SV3]], %[[SV3_2]])
+// CHECK-SAME:       [%[[K]], %[[TILE_N]]]
+//      CHECK:     linalg.copy(%[[SV3]], %[[SV1]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_rhs_fusion_producer"
 //  CHECK-NOT:     linalg.fill
 //  CHECK-DAG:     %[[M_2:.+]] = dim %[[ARG0]], %[[C0]]
@@ -191,16 +186,11 @@ module {
 //      CHECK:     %[[N:.+]] = dim %[[ARG3]], %[[C1]]
 //      CHECK:     %[[SV2:.+]] = subview %[[ARG3]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M_2]], %[[N]]]
-//      CHECK:     %[[SV2_2:.+]] = subview %[[ARG3]][%[[IV0]], 0]
-// CHECK-SAME:       [%[[TILE_M]], %[[N]]]
-//      CHECK:     %[[K_2:.+]] = dim %[[ARG0]], %[[C1]]
 //      CHECK:     %[[SV3:.+]] = subview %[[ARG0]][%[[IV0]], 0]
-// CHECK-SAME:       [%[[TILE_M]], %[[K_2]]]
-//      CHECK:     %[[SV3_2:.+]] = subview %[[ARG1]][%[[IV0]], 0]
-// CHECK-SAME:       [%[[TILE_M]], %[[K_2]]]
-//      CHECK:     linalg.copy(%[[SV3]], %[[SV3_2]])
+// CHECK-SAME:       [%[[TILE_M]], %[[K]]]
+//      CHECK:     linalg.copy(%[[SV3]], %[[SV1]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_two_operand_fusion_producer"
-//      CHECK:     linalg.fill(%[[SV2_2]], %[[CST]])
+//      CHECK:     linalg.fill(%[[SV2]], %[[CST]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_two_operand_fusion_producer"
 //  CHECK-DAG:     %[[N_2:.+]] = dim %[[ARG2]], %[[C1]]
 //      CHECK:     scf.parallel (%[[IV1:.+]]) =
@@ -271,18 +261,15 @@ module {
 //      CHECK:     %[[N:.+]] = dim %[[ARG4]], %[[C1]]
 //      CHECK:     %[[SV2:.+]] = subview %[[ARG4]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M_2]], %[[N]]]
-//      CHECK:     %[[K2_2:.+]] = dim %[[ARG1]], %[[C1]]
 //      CHECK:     %[[K1:.+]] = dim %[[ARG0]], %[[C1]]
 //      CHECK:     %[[SV3:.+]] = subview %[[ARG0]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M]], %[[K1]]]
-//      CHECK:     %[[SV4:.+]] = subview %[[ARG1]][0, 0] [%[[K1]], %[[K2_2]]]
-//      CHECK:     %[[SV1_2:.+]] = subview %[[ARG2]][%[[IV0]], 0]
-// CHECK-SAME:       [%[[TILE_M]], %[[K2_2]]]
+//      CHECK:     %[[SV4:.+]] = subview %[[ARG1]][0, 0] [%[[K1]], %[[K2]]]
 //      CHECK:     linalg.matmul
 // CHECK-SAME:         __internal_linalg_transform__ = "after_lhs_fusion_producer"
 // CHECK-SAME:         ins(%[[SV3]], %[[SV4]]
 // CHECK-SAME:           : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32, #[[MAP1]]>)
-// CHECK-SAME:         outs(%[[SV1_2]] : memref<?x?xf32, #[[MAP1]]>)
+// CHECK-SAME:         outs(%[[SV1]] : memref<?x?xf32, #[[MAP1]]>)
 //  CHECK-DAG:     %[[N_2:.+]] = dim %[[ARG3]], %[[C1]]
 //      CHECK:     scf.parallel (%[[IV1:.+]]) =
 // CHECK-SAME:       (%[[C0]]) to (%[[N_2]]) step (%[[C64]]) {
