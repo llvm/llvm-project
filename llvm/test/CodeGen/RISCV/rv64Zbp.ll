@@ -759,12 +759,12 @@ define signext i32 @grev16_i32_fshl(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: grev16_i32_fshl:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    greviw a0, a0, 16
+; RV64IB-NEXT:    roriw a0, a0, 16
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev16_i32_fshl:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    greviw a0, a0, 16
+; RV64IBP-NEXT:    roriw a0, a0, 16
 ; RV64IBP-NEXT:    ret
   %or = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
   ret i32 %or
@@ -781,12 +781,12 @@ define signext i32 @grev16_i32_fshr(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: grev16_i32_fshr:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    greviw a0, a0, 16
+; RV64IB-NEXT:    roriw a0, a0, 16
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev16_i32_fshr:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    greviw a0, a0, 16
+; RV64IBP-NEXT:    roriw a0, a0, 16
 ; RV64IBP-NEXT:    ret
   %or = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 16)
   ret i32 %or
