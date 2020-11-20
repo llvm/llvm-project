@@ -82,11 +82,15 @@ TEST(RegisterContextFreeBSDTest, x86_64) {
   EXPECT_OFF(ftag_x86_64, 0x04, 2);
   EXPECT_OFF(fop_x86_64, 0x06, 2);
   // NB: Technically fiseg/foseg are 16-bit long and the higher 16 bits
-  // are reserved.  However, we use them to access/recombine 64-bit FIP/FDP.
+  // are reserved.  However, LLDB defines them to be 32-bit long for backwards
+  // compatibility, as they were used to reconstruct FIP/FDP before explicit
+  // register entries for them were added.  Also, this is still how GDB does it.
   EXPECT_OFF(fioff_x86_64, 0x08, 4);
   EXPECT_OFF(fiseg_x86_64, 0x0C, 4);
+  EXPECT_OFF(fip_x86_64, 0x08, 8);
   EXPECT_OFF(fooff_x86_64, 0x10, 4);
   EXPECT_OFF(foseg_x86_64, 0x14, 4);
+  EXPECT_OFF(fdp_x86_64, 0x10, 8);
   EXPECT_OFF(mxcsr_x86_64, 0x18, 4);
   EXPECT_OFF(mxcsrmask_x86_64, 0x1C, 4);
   EXPECT_OFF(st0_x86_64, 0x20, 10);
