@@ -268,6 +268,10 @@ private:
   FilterConstraintType filter;
 };
 
+/// Implements transfer op write to read forwarding and dead transfer write
+/// optimizations.
+void transferOpflowOpt(FuncOp func);
+
 } // namespace vector
 
 //===----------------------------------------------------------------------===//
