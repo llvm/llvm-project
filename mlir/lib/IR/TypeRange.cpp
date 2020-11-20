@@ -14,7 +14,10 @@ using namespace mlir;
 // TypeRange
 
 TypeRange::TypeRange(ArrayRef<Type> types)
-    : TypeRange(types.data(), types.size()) {}
+    : TypeRange(types.data(), types.size()) {
+  assert(llvm::all_of(types, [](Type t) { return t; }) &&
+         "attempting to construct a TypeRange with null types");
+}
 TypeRange::TypeRange(OperandRange values)
     : TypeRange(values.begin().getBase(), values.size()) {}
 TypeRange::TypeRange(ResultRange values)
