@@ -376,62 +376,6 @@ bool RISCVDAGToDAGISel::SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
   return true;
 }
 
-// Check that it is a RORIW (i32 Right Rotate Immediate on RV64).
-// We first check that it is the right node tree:
-//
-//  (SIGN_EXTEND_INREG (OR (SHL RS1, VC2),
-//                         (SRL (AND RS1, VC3), VC1)))
-//
-// Then we check that the constant operands respect these constraints:
-//
-// VC2 == 32 - VC1
-// VC3 | maskTrailingOnes<uint64_t>(VC1) == 0xffffffff
-//
-// being VC1 the Shamt we need, VC2 the complementary of Shamt over 32
-// and VC3 being 0xffffffff after accounting for SimplifyDemandedBits removing
-// some bits due to the right shift.
-
-bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
-  if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-      Subtarget->getXLenVT() == MVT::i64 &&
-      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
-    if (N.getOperand(0).getOpcode() == ISD::OR) {
-      SDValue Or = N.getOperand(0);
-      SDValue Shl = Or.getOperand(0);
-      SDValue Srl = Or.getOperand(1);
-
-      // OR is commutable so canonicalize SHL to LHS.
-      if (Srl.getOpcode() == ISD::SHL)
-        std::swap(Shl, Srl);
-
-      if (Shl.getOpcode() == ISD::SHL && Srl.getOpcode() == ISD::SRL) {
-        if (Srl.getOperand(0).getOpcode() == ISD::AND) {
-          SDValue And = Srl.getOperand(0);
-          if (And.getOperand(0) == Shl.getOperand(0) &&
-              isa<ConstantSDNode>(Srl.getOperand(1)) &&
-              isa<ConstantSDNode>(Shl.getOperand(1)) &&
-              isa<ConstantSDNode>(And.getOperand(1))) {
-            uint64_t VC1 = Srl.getConstantOperandVal(1);
-            uint64_t VC2 = Shl.getConstantOperandVal(1);
-            uint64_t VC3 = And.getConstantOperandVal(1);
-            // The mask needs to be 0xffffffff, but SimplifyDemandedBits may
-            // have removed lower bits that aren't necessary due to the right
-            // shift.
-            if (VC2 == (32 - VC1) &&
-                (VC3 | maskTrailingOnes<uint64_t>(VC1)) == 0xffffffff) {
-              RS1 = Shl.getOperand(0);
-              Shamt = CurDAG->getTargetConstant(VC1, SDLoc(N),
-                                              Srl.getOperand(1).getValueType());
-              return true;
-            }
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
 // Merge an ADDI into the offset of a load/store instruction where possible.
 // (load (addi base, off1), off2) -> (load base, off1+off2)
 // (store val, (addi base, off1), off2) -> (store val, base, off1+off2)

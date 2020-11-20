@@ -151,7 +151,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, XLenVT, Custom);
   setOperationAction(ISD::SRA_PARTS, XLenVT, Custom);
 
-  if (!(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp())) {
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp()) {
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::ROTL, MVT::i32, Custom);
+      setOperationAction(ISD::ROTR, MVT::i32, Custom);
+    }
+  } else {
     setOperationAction(ISD::ROTL, XLenVT, Expand);
     setOperationAction(ISD::ROTR, XLenVT, Expand);
   }
@@ -908,6 +913,10 @@ static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
     return RISCVISD::DIVUW;
   case ISD::UREM:
     return RISCVISD::REMUW;
+  case ISD::ROTL:
+    return RISCVISD::ROLW;
+  case ISD::ROTR:
+    return RISCVISD::RORW;
   case RISCVISD::GREVI:
     return RISCVISD::GREVIW;
   case RISCVISD::GORCI:
@@ -1011,6 +1020,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() == ISD::Constant)
       return;
+    Results.push_back(customLegalizeToWOp(N, DAG));
+    break;
+  case ISD::ROTL:
+  case ISD::ROTR:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOp(N, DAG));
     break;
   case ISD::SDIV:
@@ -1267,7 +1282,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case RISCVISD::SLLW:
   case RISCVISD::SRAW:
-  case RISCVISD::SRLW: {
+  case RISCVISD::SRLW:
+  case RISCVISD::ROLW:
+  case RISCVISD::RORW: {
     // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
@@ -1392,6 +1409,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::DIVW:
   case RISCVISD::DIVUW:
   case RISCVISD::REMUW:
+  case RISCVISD::ROLW:
+  case RISCVISD::RORW:
   case RISCVISD::GREVIW:
   case RISCVISD::GORCIW:
     // TODO: As the result is sign-extended, this is conservatively correct. A
@@ -2829,6 +2848,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(DIVW)
   NODE_NAME_CASE(DIVUW)
   NODE_NAME_CASE(REMUW)
+  NODE_NAME_CASE(ROLW)
+  NODE_NAME_CASE(RORW)
   NODE_NAME_CASE(FMV_W_X_RV64)
   NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
