@@ -1753,6 +1753,7 @@ def DimOp : Std_Op<"dim", [NoSideEffect]> {
     Optional<int64_t> getConstantIndex();
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
