@@ -1277,6 +1277,13 @@ def int_donothing : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrWillReturn]>;
 // which specify that infinite loops must be preserved.
 def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly, IntrWillReturn]>;
 
+// The pseudoprobe intrinsic works as a place holder to the block it probes.
+// Like the sideeffect intrinsic defined above, this intrinsic is treated by the 
+// optimizer as having opaque side effects so that it won't be get rid of or moved 
+// out of the block it probes.
+def int_pseudoprobe : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
+                                    [IntrInaccessibleMemOnly, IntrWillReturn]>;
+
 // Intrinsics to support half precision floating point format
 let IntrProperties = [IntrNoMem, IntrWillReturn] in {
 def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
