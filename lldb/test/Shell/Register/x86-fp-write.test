@@ -1,5 +1,5 @@
 # XFAIL: system-windows
-# REQUIRES: native && target-x86
+# REQUIRES: native && (target-x86 || target-x86_64)
 # RUN: %clangxx_host %p/Inputs/x86-fp-write.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch
@@ -31,8 +31,11 @@ process continue
 # CHECK-DAG: fstat = 0x8884
 # CHECK-DAG: ftag = 0xa961
 # CHECK-DAG: fop = 0x0033
-# CHECK-DAG: fip = 0x89abcdef
-# CHECK-DAG: fdp = 0x76543210
+
+# This test is run both on 32-bit and 64-bit systems, in order to test
+# that fioff/fooff setting works as well as fip/fdp.
+# CHECK-DAG: fip = 0x{{(00000000)?}}89abcdef
+# CHECK-DAG: fdp = 0x{{(00000000)?}}76543210
 
 # CHECK-DAG: st0 = { 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x80 0x00 0x40 }
 # CHECK-DAG: st1 = { 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x3f 0x00 0x00 }
