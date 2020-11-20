@@ -951,7 +951,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 {
 
     __annotate_delete();
-    __construct_backward_with_exception_guarantees(this->__alloc(), this->__begin_, this->__end_, __v.__begin_);
+    _VSTD::__construct_backward_with_exception_guarantees(this->__alloc(), this->__begin_, this->__end_, __v.__begin_);
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -966,8 +966,8 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 {
     __annotate_delete();
     pointer __r = __v.__begin_;
-    __construct_backward_with_exception_guarantees(this->__alloc(), this->__begin_, __p, __v.__begin_);
-    __construct_forward_with_exception_guarantees(this->__alloc(), __p, this->__end_, __v.__end_);
+    _VSTD::__construct_backward_with_exception_guarantees(this->__alloc(), this->__begin_, __p, __v.__begin_);
+    _VSTD::__construct_forward_with_exception_guarantees(this->__alloc(), __p, this->__end_, __v.__end_);
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -1074,7 +1074,7 @@ typename enable_if
 vector<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n)
 {
     _ConstructTransaction __tx(*this, __n);
-    __construct_range_forward(this->__alloc(), __first, __last, __tx.__pos_);
+    _VSTD::__construct_range_forward(this->__alloc(), __first, __last, __tx.__pos_);
 }
 
 //  Default constructs __n objects starting at __end_
@@ -2054,7 +2054,7 @@ vector<_Tp, _Allocator>::swap(vector& __x)
     _VSTD::swap(this->__begin_, __x.__begin_);
     _VSTD::swap(this->__end_, __x.__end_);
     _VSTD::swap(this->__end_cap(), __x.__end_cap());
-    __swap_allocator(this->__alloc(), __x.__alloc(),
+    _VSTD::__swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool,__alloc_traits::propagate_on_container_swap::value>());
 #if _LIBCPP_DEBUG_LEVEL == 2
     __get_db()->swap(this, &__x);
@@ -3232,7 +3232,7 @@ vector<bool, _Allocator>::swap(vector& __x)
     _VSTD::swap(this->__begin_, __x.__begin_);
     _VSTD::swap(this->__size_, __x.__size_);
     _VSTD::swap(this->__cap(), __x.__cap());
-    __swap_allocator(this->__alloc(), __x.__alloc(),
+    _VSTD::__swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool, __alloc_traits::propagate_on_container_swap::value>());
 }
 
