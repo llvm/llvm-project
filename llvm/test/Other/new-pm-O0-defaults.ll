@@ -10,6 +10,9 @@
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
+; RUN: opt -disable-verify -debug-pass-manager -enable-matrix \
+; RUN:     -passes='default<O0>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-PRE-LINK
@@ -27,6 +30,8 @@
 ; CHECK-DEFAULT-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-DEFAULT-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DEFAULT-NEXT: Running analysis: ProfileSummaryAnalysis
+; CHECK-MATRIX-NEXT: Running pass: LowerMatrixIntrinsicsPass
+; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-PRE-LINK-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-THINLTO-NEXT: Running pass: Annotation2MetadataPass
