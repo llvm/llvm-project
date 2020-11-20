@@ -1699,14 +1699,14 @@ bool LLParser::parseOptionalParamAttrs(AttrBuilder &B) {
     }
     case lltok::kw_byval: {
       Type *Ty;
-      if (parseOptionalTypeAttr(Ty, lltok::kw_byval))
+      if (parseRequiredTypeAttr(Ty, lltok::kw_byval))
         return true;
       B.addByValAttr(Ty);
       continue;
     }
     case lltok::kw_sret: {
       Type *Ty;
-      if (parseOptionalTypeAttr(Ty, lltok::kw_sret))
+      if (parseRequiredTypeAttr(Ty, lltok::kw_sret))
         return true;
       B.addStructRetAttr(Ty);
       continue;
@@ -2625,22 +2625,6 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
                     "in varargs function");
 
   Lex.Lex();  // Lex the ')'.
-  return false;
-}
-
-/// parseByValWithOptionalType
-///   ::= byval
-///   ::= byval(<ty>)
-bool LLParser::parseOptionalTypeAttr(Type *&Result, lltok::Kind AttrName) {
-  Result = nullptr;
-  if (!EatIfPresent(AttrName))
-    return true;
-  if (!EatIfPresent(lltok::lparen))
-    return false;
-  if (parseType(Result))
-    return true;
-  if (!EatIfPresent(lltok::rparen))
-    return error(Lex.getLoc(), "expected ')'");
   return false;
 }
 
