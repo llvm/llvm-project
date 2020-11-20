@@ -363,7 +363,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
                 th_gtid, flag->get()));
 
   __kmp_suspend_initialize_thread(th);
-  __kmp_lock_suspend_mx(th);
+  __kmp_win32_mutex_lock(&th->th.th_suspend_mx);
 
   KF_TRACE(10, ("__kmp_suspend_template: T#%d setting sleep bit for flag's"
                 " loc(%p)\n",
@@ -375,7 +375,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
       __kmp_pause_status != kmp_soft_paused) {
     flag->unset_sleeping();
-    __kmp_unlock_suspend_mx(th);
+    __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
     return;
   }
 
@@ -437,25 +437,20 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
     }
   }
 
-  __kmp_unlock_suspend_mx(th);
+  __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
+
   KF_TRACE(30, ("__kmp_suspend_template: T#%d exit\n", th_gtid));
 }
 
-template <bool C, bool S>
-void __kmp_suspend_32(int th_gtid, kmp_flag_32<C, S> *flag) {
+void __kmp_suspend_32(int th_gtid, kmp_flag_32 *flag) {
   __kmp_suspend_template(th_gtid, flag);
 }
-template <bool C, bool S>
-void __kmp_suspend_64(int th_gtid, kmp_flag_64<C, S> *flag) {
+void __kmp_suspend_64(int th_gtid, kmp_flag_64 *flag) {
   __kmp_suspend_template(th_gtid, flag);
 }
 void __kmp_suspend_oncore(int th_gtid, kmp_flag_oncore *flag) {
   __kmp_suspend_template(th_gtid, flag);
 }
-
-template void __kmp_suspend_32<false, false>(int, kmp_flag_32<false, false> *);
-template void __kmp_suspend_64<false, true>(int, kmp_flag_64<false, true> *);
-template void __kmp_suspend_64<true, false>(int, kmp_flag_64<true, false> *);
 
 /* This routine signals the thread specified by target_gtid to wake up
    after setting the sleep bit indicated by the flag argument to FALSE */
@@ -472,7 +467,7 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
                 gtid, target_gtid));
 
   __kmp_suspend_initialize_thread(th);
-  __kmp_lock_suspend_mx(th);
+  __kmp_win32_mutex_lock(&th->th.th_suspend_mx);
 
   if (!flag) { // coming from __kmp_null_resume_wrapper
     flag = (C *)th->th.th_sleep_loc;
@@ -486,7 +481,7 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
     KF_TRACE(5, ("__kmp_resume_template: T#%d exiting, thread T#%d already "
                  "awake: flag's loc(%p)\n",
                  gtid, target_gtid, NULL));
-    __kmp_unlock_suspend_mx(th);
+    __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
     return;
   } else {
     typename C::flag_t old_spin = flag->unset_sleeping();
@@ -494,7 +489,7 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
       KF_TRACE(5, ("__kmp_resume_template: T#%d exiting, thread T#%d already "
                    "awake: flag's loc(%p): %u => %u\n",
                    gtid, target_gtid, flag->get(), old_spin, *(flag->get())));
-      __kmp_unlock_suspend_mx(th);
+      __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
       return;
     }
   }
@@ -504,27 +499,22 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
                gtid, target_gtid, flag->get()));
 
   __kmp_win32_cond_signal(&th->th.th_suspend_cv);
-  __kmp_unlock_suspend_mx(th);
+  __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
 
   KF_TRACE(30, ("__kmp_resume_template: T#%d exiting after signaling wake up"
                 " for T#%d\n",
                 gtid, target_gtid));
 }
 
-template <bool C, bool S>
-void __kmp_resume_32(int target_gtid, kmp_flag_32<C, S> *flag) {
+void __kmp_resume_32(int target_gtid, kmp_flag_32 *flag) {
   __kmp_resume_template(target_gtid, flag);
 }
-template <bool C, bool S>
-void __kmp_resume_64(int target_gtid, kmp_flag_64<C, S> *flag) {
+void __kmp_resume_64(int target_gtid, kmp_flag_64 *flag) {
   __kmp_resume_template(target_gtid, flag);
 }
 void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag) {
   __kmp_resume_template(target_gtid, flag);
 }
-
-template void __kmp_resume_32<false, true>(int, kmp_flag_32<false, true> *);
-template void __kmp_resume_64<false, true>(int, kmp_flag_64<false, true> *);
 
 void __kmp_yield() { Sleep(0); }
 
