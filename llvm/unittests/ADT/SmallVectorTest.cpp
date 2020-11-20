@@ -1146,9 +1146,17 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, Resize) {
 TYPED_TEST(SmallVectorReferenceInvalidationTest, Append) {
   auto &V = this->V;
   (void)V;
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(V.append(1, V.back()), this->AssertionMessage);
-#endif
+  V.append(1, V.back());
+  int N = this->NumBuiltinElts(V);
+  EXPECT_EQ(N, V[N - 1]);
+
+  // Append enough more elements that V will grow again. This tests growing
+  // when already in large mode.
+  //
+  // If reference invalidation breaks in the future, sanitizers should be able
+  // to catch a use-after-free here.
+  V.append(V.capacity() - V.size() + 1, V.front());
+  EXPECT_EQ(1, V.back());
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, AppendRange) {
@@ -1244,9 +1252,20 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertMoved) {
 TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertN) {
   auto &V = this->V;
   (void)V;
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(V.insert(V.begin(), 2, V.back()), this->AssertionMessage);
-#endif
+
+  // Cover NumToInsert <= this->end() - I.
+  V.insert(V.begin() + 1, 1, V.back());
+  int N = this->NumBuiltinElts(V);
+  EXPECT_EQ(N, V[1]);
+
+  // Cover NumToInsert > this->end() - I, inserting enough elements that V will
+  // also grow again; V.capacity() will be more elements than necessary but
+  // it's a simple way to cover both conditions.
+  //
+  // If reference invalidation breaks in the future, sanitizers should be able
+  // to catch a use-after-free here.
+  V.insert(V.begin(), V.capacity(), V.front());
+  EXPECT_EQ(1, V.front());
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertRange) {
