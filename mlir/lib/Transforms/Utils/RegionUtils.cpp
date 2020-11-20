@@ -464,10 +464,6 @@ private:
   /// A set of operand+index pairs that correspond to operands that need to be
   /// replaced by arguments when the cluster gets merged.
   std::set<std::pair<int, int>> operandsToMerge;
-
-  /// A map of operations with external uses to a replacement within the leader
-  /// block.
-  DenseMap<Operation *, Operation *> opsToReplace;
 };
 } // end anonymous namespace
 
@@ -480,7 +476,6 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 
   // A set of operands that mismatch between the leader and the new block.
   SmallVector<std::pair<int, int>, 8> mismatchedOperands;
-  SmallVector<std::pair<Operation *, Operation *>, 2> newOpsToReplace;
   auto lhsIt = leaderBlock->begin(), lhsE = leaderBlock->end();
   auto rhsIt = blockData.block->begin(), rhsE = blockData.block->end();
   for (int opI = 0; lhsIt != lhsE && rhsIt != rhsE; ++lhsIt, ++rhsIt, ++opI) {
@@ -519,9 +514,16 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
         return failure();
     }
 
-    // If the rhs has external uses, it will need to be replaced.
-    if (rhsIt->isUsedOutsideOfBlock(mergeBlock))
-      newOpsToReplace.emplace_back(&*rhsIt, &*lhsIt);
+    // If the lhs or rhs has external uses, the blocks cannot be merged as the
+    // merged version of this operation will not be either the lhs or rhs
+    // alone (thus semantically incorrect), but some mix dependening on which
+    // block preceeded this.
+    // TODO allow merging of operations when one block does not dominate the
+    // other
+    if (rhsIt->isUsedOutsideOfBlock(mergeBlock) ||
+        lhsIt->isUsedOutsideOfBlock(leaderBlock)) {
+      return failure();
+    }
   }
   // Make sure that the block sizes are equivalent.
   if (lhsIt != lhsE || rhsIt != rhsE)
@@ -529,7 +531,6 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 
   // If we get here, the blocks are equivalent and can be merged.
   operandsToMerge.insert(mismatchedOperands.begin(), mismatchedOperands.end());
-  opsToReplace.insert(newOpsToReplace.begin(), newOpsToReplace.end());
   blocksToMerge.insert(blockData.block);
   return success();
 }
@@ -560,10 +561,6 @@ LogicalResult BlockMergeCluster::merge() {
     if (!ableToUpdatePredOperands(leaderBlock) ||
         !llvm::all_of(blocksToMerge, ableToUpdatePredOperands))
       return failure();
-
-    // Replace any necessary operations.
-    for (std::pair<Operation *, Operation *> &it : opsToReplace)
-      it.first->replaceAllUsesWith(it.second);
 
     // Collect the iterators for each of the blocks to merge. We will walk all
     // of the iterators at once to avoid operand index invalidation.
