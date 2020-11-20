@@ -352,11 +352,15 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
 GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                                LinkageTypes Link, Constant *InitVal,
                                const Twine &Name, GlobalVariable *Before,
-                               ThreadLocalMode TLMode, unsigned AddressSpace,
+                               ThreadLocalMode TLMode,
+                               Optional<unsigned> AddressSpace,
                                bool isExternallyInitialized)
     : GlobalObject(Ty, Value::GlobalVariableVal,
                    OperandTraits<GlobalVariable>::op_begin(this),
-                   InitVal != nullptr, Link, Name, AddressSpace),
+                   InitVal != nullptr, Link, Name,
+                   AddressSpace
+                       ? *AddressSpace
+                       : M.getDataLayout().getDefaultGlobalsAddressSpace()),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
   assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
