@@ -48,6 +48,18 @@ typedef struct AsyncGroup MLIR_AsyncGroup;
 using CoroHandle = void *;           // coroutine handle
 using CoroResume = void (*)(void *); // coroutine resume function
 
+// Async runtime uses reference counting to manage the lifetime of async values
+// (values of async types like tokens, values and groups).
+using RefCountedObjPtr = void *;
+
+// Adds references to reference counted runtime object.
+extern "C" MLIR_ASYNCRUNTIME_EXPORT void
+    mlirAsyncRuntimeAddRef(RefCountedObjPtr, int32_t);
+
+// Drops references from reference counted runtime object.
+extern "C" MLIR_ASYNCRUNTIME_EXPORT void
+    mlirAsyncRuntimeDropRef(RefCountedObjPtr, int32_t);
+
 // Create a new `async.token` in not-ready state.
 extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncToken *mlirAsyncRuntimeCreateToken();
 
