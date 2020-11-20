@@ -1297,26 +1297,36 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
     return Status();
   }
 
-  auto BufferOrError = getProcFile(GetID(), "maps");
-  if (!BufferOrError) {
-    m_supports_mem_region = LazyBool::eLazyBoolNo;
-    return BufferOrError.getError();
-  }
   Status Result;
-  ParseLinuxMapRegions(BufferOrError.get()->getBuffer(),
-                       [&](const MemoryRegionInfo &Info, const Status &ST) {
-                         if (ST.Success()) {
-                           FileSpec file_spec(Info.GetName().GetCString());
-                           FileSystem::Instance().Resolve(file_spec);
-                           m_mem_region_cache.emplace_back(Info, file_spec);
-                           return true;
-                         } else {
-                           m_supports_mem_region = LazyBool::eLazyBoolNo;
-                           LLDB_LOG(log, "failed to parse proc maps: {0}", ST);
-                           Result = ST;
-                           return false;
-                         }
-                       });
+  LinuxMapCallback callback = [&](llvm::Expected<MemoryRegionInfo> Info) {
+    if (Info) {
+      FileSpec file_spec(Info->GetName().GetCString());
+      FileSystem::Instance().Resolve(file_spec);
+      m_mem_region_cache.emplace_back(*Info, file_spec);
+      return true;
+    }
+
+    Result = Info.takeError();
+    m_supports_mem_region = LazyBool::eLazyBoolNo;
+    LLDB_LOG(log, "failed to parse proc maps: {0}", Result);
+    return false;
+  };
+
+  // Linux kernel since 2.6.14 has /proc/{pid}/smaps
+  // if CONFIG_PROC_PAGE_MONITOR is enabled
+  auto BufferOrError = getProcFile(GetID(), "smaps");
+  if (BufferOrError)
+    ParseLinuxSMapRegions(BufferOrError.get()->getBuffer(), callback);
+  else {
+    BufferOrError = getProcFile(GetID(), "maps");
+    if (!BufferOrError) {
+      m_supports_mem_region = LazyBool::eLazyBoolNo;
+      return BufferOrError.getError();
+    }
+
+    ParseLinuxMapRegions(BufferOrError.get()->getBuffer(), callback);
+  }
+
   if (Result.Fail())
     return Result;
 
