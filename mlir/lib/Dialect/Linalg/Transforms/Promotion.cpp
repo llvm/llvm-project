@@ -166,6 +166,11 @@ struct LinalgOpInstancePromotionOptions {
   /// Alignment of promoted buffer.
   Optional<unsigned> alignment;
 };
+
+struct PromotionInfo {
+  Value fullLocalView;
+  Value partialLocalView;
+};
 } // namespace
 
 LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
@@ -228,10 +233,10 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
 // To account for general boundary effects, padding must be performed on the
 // boundary tiles. For now this is done with an unconditional `fill` op followed
 // by a partial `copy` op.
-Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
-    OpBuilder &b, Location loc, SubViewOp subView,
-    AllocBufferCallbackFn allocationFn, OperationFolder *folder) {
-  ScopedContext scopedContext(b, loc);
+static Optional<PromotionInfo>
+promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, SubViewOp subView,
+                          LinalgOpInstancePromotionOptions const &options,
+                          OperationFolder *folder) {
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
   SmallVector<Value, 4> fullSizes, partialSizes;
@@ -249,7 +254,8 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), -1);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
-  Optional<Value> fullLocalView = allocationFn(b, subView, fullSizes, folder);
+  Optional<Value> fullLocalView =
+      options.allocationFn(b, subView, fullSizes, folder);
   if (!fullLocalView)
     return {};
   auto zero = folded_std_constant_index(folder, 0);
@@ -273,8 +279,8 @@ promoteSubViews(OpBuilder &b, Location loc,
 
   for (auto v : options.subViews) {
     SubViewOp subView = cast<SubViewOp>(v.second.getDefiningOp());
-    Optional<PromotionInfo> promotionInfo = promoteSubviewAsNewBuffer(
-        b, loc, subView, options.allocationFn, folder);
+    Optional<PromotionInfo> promotionInfo =
+        promoteSubviewAsNewBuffer(b, loc, subView, options, folder);
     if (!promotionInfo)
       return {};
     promotionInfoMap[v.first] = *promotionInfo;
