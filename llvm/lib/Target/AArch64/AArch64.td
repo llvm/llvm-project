@@ -673,7 +673,9 @@ def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
 def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
                                "Cortex-R82 ARM Processors", [
-                               // All features are implied by v8_0r ops:
+                               FeaturePostRAScheduler,
+                               // TODO: crypto and FuseAES
+                               // All other features are implied by v8_0r ops:
                                HasV8_0rOps,
                                ]>;
 
