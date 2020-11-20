@@ -73,4 +73,8 @@ def Async_AnyValueType : DialectType<AsyncDialect,
 def Async_AnyValueOrTokenType : AnyTypeOf<[Async_AnyValueType,
                                            Async_TokenType]>;
 
+def Async_AnyAsyncType : AnyTypeOf<[Async_AnyValueType,
+                                    Async_TokenType,
+                                    Async_GroupType]>;
+
 #endif // ASYNC_BASE_TD
