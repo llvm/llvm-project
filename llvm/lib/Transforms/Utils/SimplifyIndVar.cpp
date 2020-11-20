@@ -1556,9 +1556,6 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       return false;
     ExtUsers.push_back(User);
   }
-  // We'll prove some facts that should be true in the context of ext users. IF
-  // there is no users, we are done now. If there are some, pick their common
-  // dominator as context.
   if (ExtUsers.empty()) {
     DeadInsts.emplace_back(NarrowUse);
     return true;
