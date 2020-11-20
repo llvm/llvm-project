@@ -332,6 +332,7 @@ public:
 };
 #endif
 
+#ifndef LLVM_ADDRESS_SANITIZER_BUILD
 // Test that our deserialization detects invalid array sizes without allocating.
 // If this detection fails, the test should allocate a huge array and crash.
 TEST(SerializationTest, NoCrashOnBadArraySize) {
@@ -382,6 +383,7 @@ TEST(SerializationTest, NoCrashOnBadArraySize) {
   EXPECT_EQ(llvm::toString(CorruptParsed.takeError()),
             "malformed or truncated include uri");
 }
+#endif
 
 } // namespace
 } // namespace clangd
