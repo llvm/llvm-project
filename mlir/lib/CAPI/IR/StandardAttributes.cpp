@@ -40,7 +40,7 @@ int mlirAttributeIsAArray(MlirAttribute attr) {
 }
 
 MlirAttribute mlirArrayAttrGet(MlirContext ctx, intptr_t numElements,
-                               MlirAttribute *elements) {
+                               MlirAttribute const *elements) {
   SmallVector<Attribute, 8> attrs;
   return wrap(ArrayAttr::get(
       unwrapList(static_cast<size_t>(numElements), elements, attrs),
@@ -64,7 +64,7 @@ int mlirAttributeIsADictionary(MlirAttribute attr) {
 }
 
 MlirAttribute mlirDictionaryAttrGet(MlirContext ctx, intptr_t numElements,
-                                    MlirNamedAttribute *elements) {
+                                    MlirNamedAttribute const *elements) {
   SmallVector<NamedAttribute, 8> attributes;
   attributes.reserve(numElements);
   for (intptr_t i = 0; i < numElements; ++i)
@@ -207,7 +207,7 @@ int mlirAttributeIsASymbolRef(MlirAttribute attr) {
 
 MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length,
                                    const char *symbol, intptr_t numReferences,
-                                   MlirAttribute *references) {
+                                   MlirAttribute const *references) {
   SmallVector<FlatSymbolRefAttr, 4> refs;
   refs.reserve(numReferences);
   for (intptr_t i = 0; i < numReferences; ++i)
@@ -324,7 +324,7 @@ int mlirAttributeIsADenseFPElements(MlirAttribute attr) {
 
 MlirAttribute mlirDenseElementsAttrGet(MlirType shapedType,
                                        intptr_t numElements,
-                                       MlirAttribute *elements) {
+                                       MlirAttribute const *elements) {
   SmallVector<Attribute, 8> attributes;
   return wrap(
       DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(),
@@ -423,7 +423,7 @@ MlirAttribute mlirDenseElementsAttrDoubleGet(MlirType shapedType,
 
 MlirAttribute mlirDenseElementsAttrStringGet(MlirType shapedType,
                                              intptr_t numElements,
-                                             intptr_t *strLengths,
+                                             intptr_t const *strLengths,
                                              const char **strs) {
   SmallVector<StringRef, 8> values;
   values.reserve(numElements);

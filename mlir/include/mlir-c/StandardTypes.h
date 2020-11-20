@@ -225,7 +225,7 @@ MLIR_CAPI_EXPORTED int mlirTypeIsAUnrankedMemRef(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(MlirType elementType,
                                               intptr_t rank, int64_t *shape,
                                               intptr_t numMaps,
-                                              MlirAttribute *affineMaps,
+                                              MlirAttribute const *affineMaps,
                                               unsigned memorySpace);
 
 /** Creates a MemRef type with the given rank, shape, memory space and element
@@ -277,7 +277,7 @@ MLIR_CAPI_EXPORTED int mlirTypeIsATuple(MlirType type);
  * type is owned by the context. */
 MLIR_CAPI_EXPORTED MlirType mlirTupleTypeGet(MlirContext ctx,
                                              intptr_t numElements,
-                                             MlirType *elements);
+                                             MlirType const *elements);
 
 /// Returns the number of types contained in a tuple.
 MLIR_CAPI_EXPORTED intptr_t mlirTupleTypeGetNumTypes(MlirType type);
@@ -295,9 +295,9 @@ MLIR_CAPI_EXPORTED int mlirTypeIsAFunction(MlirType type);
 /// Creates a function type, mapping a list of input types to result types.
 MLIR_CAPI_EXPORTED MlirType mlirFunctionTypeGet(MlirContext ctx,
                                                 intptr_t numInputs,
-                                                MlirType *inputs,
+                                                MlirType const *inputs,
                                                 intptr_t numResults,
-                                                MlirType *results);
+                                                MlirType const *results);
 
 /// Returns the number of input types.
 MLIR_CAPI_EXPORTED intptr_t mlirFunctionTypeGetNumInputs(MlirType type);

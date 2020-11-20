@@ -224,19 +224,19 @@ MLIR_CAPI_EXPORTED MlirOperationState mlirOperationStateGet(const char *name,
 /// Adds a list of components to the operation state.
 MLIR_CAPI_EXPORTED void mlirOperationStateAddResults(MlirOperationState *state,
                                                      intptr_t n,
-                                                     MlirType *results);
+                                                     MlirType const *results);
 MLIR_CAPI_EXPORTED void mlirOperationStateAddOperands(MlirOperationState *state,
                                                       intptr_t n,
-                                                      MlirValue *operands);
+                                                      MlirValue const *operands);
 MLIR_CAPI_EXPORTED void
 mlirOperationStateAddOwnedRegions(MlirOperationState *state, intptr_t n,
-                                  MlirRegion *regions);
+                                  MlirRegion const *regions);
 MLIR_CAPI_EXPORTED void
 mlirOperationStateAddSuccessors(MlirOperationState *state, intptr_t n,
-                                MlirBlock *successors);
+                                MlirBlock const *successors);
 MLIR_CAPI_EXPORTED void
 mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
-                                MlirNamedAttribute *attributes);
+                                MlirNamedAttribute const *attributes);
 
 //===----------------------------------------------------------------------===//
 // Op Printing flags API.
@@ -425,7 +425,7 @@ MLIR_CAPI_EXPORTED void mlirRegionInsertOwnedBlockBefore(MlirRegion region,
 
 /** Creates a new empty block with the given argument types and transfers
  * ownership to the caller. */
-MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args);
+MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType const *args);
 
 /// Takes a block owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirBlockDestroy(MlirBlock block);
