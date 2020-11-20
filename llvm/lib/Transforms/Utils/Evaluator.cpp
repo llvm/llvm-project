@@ -551,6 +551,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           LLVM_DEBUG(dbgs() << "Skipping sideeffect intrinsic.\n");
           ++CurInst;
           continue;
+        } else if (II->getIntrinsicID() == Intrinsic::pseudoprobe) {
+          LLVM_DEBUG(dbgs() << "Skipping pseudoprobe intrinsic.\n");
+          ++CurInst;
+          continue;
         }
 
         LLVM_DEBUG(dbgs() << "Unknown intrinsic. Can not evaluate.\n");

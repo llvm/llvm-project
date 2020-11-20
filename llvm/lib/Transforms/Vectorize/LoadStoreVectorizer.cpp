@@ -666,6 +666,10 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
                cast<IntrinsicInst>(&I)->getIntrinsicID() ==
                    Intrinsic::sideeffect) {
       // Ignore llvm.sideeffect calls.
+    } else if (isa<IntrinsicInst>(&I) &&
+               cast<IntrinsicInst>(&I)->getIntrinsicID() ==
+                   Intrinsic::pseudoprobe) {
+      // Ignore llvm.pseudoprobe calls.
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
       LLVM_DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I
                         << '\n');

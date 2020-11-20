@@ -527,6 +527,7 @@ bool llvm::isAssumeLikeIntrinsic(const Instruction *I) {
       // FIXME: This list is repeated from NoTTI::getIntrinsicCost.
       case Intrinsic::assume:
       case Intrinsic::sideeffect:
+      case Intrinsic::pseudoprobe:
       case Intrinsic::dbg_declare:
       case Intrinsic::dbg_value:
       case Intrinsic::dbg_label:

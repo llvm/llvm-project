@@ -7407,7 +7407,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI, VFRange &Range,
 
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
   if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
-             ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect))
+             ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect ||
+             ID == Intrinsic::pseudoprobe))
     return nullptr;
 
   auto willWiden = [&](ElementCount VF) -> bool {
