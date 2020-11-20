@@ -322,6 +322,8 @@ extern cl::opt<bool> EnableKnowledgeRetention;
 
 extern cl::opt<bool> EnableMatrix;
 
+extern cl::opt<bool> DisablePreInliner;
+
 const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::O0 = {
     /*SpeedLevel*/ 0,
     /*SizeLevel*/ 0};
@@ -822,7 +824,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   // the size grows, so let's be conservative here and skip this simplification
   // at -Os/Oz. We will not do this  inline for context sensistive PGO (when
   // IsCS is true).
-  if (!Level.isOptimizingForSize() && !IsCS) {
+  if (!Level.isOptimizingForSize() && !IsCS && !DisablePreInliner) {
     InlineParams IP;
 
     IP.DefaultThreshold = PreInlineThreshold;

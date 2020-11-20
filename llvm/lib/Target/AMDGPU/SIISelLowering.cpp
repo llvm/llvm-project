@@ -2031,7 +2031,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchIDReg);
   }
 
-  if (Info.hasFlatScratchInit()) {
+  if (Info.hasFlatScratchInit() && !getSubtarget()->isAmdPalOS()) {
     Register FlatScratchInitReg = Info.addFlatScratchInit(TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(FlatScratchInitReg);
