@@ -26879,12 +26879,20 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
       // uaddsat X, Y --> (X >u (X + Y)) ? -1 : X + Y
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, X, Y);
       SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Add, ISD::SETUGT);
+      // TODO: Move this to DAGCombiner?
+      if (SetCCResultType == VT &&
+          DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
+        return DAG.getNode(ISD::OR, DL, VT, Cmp, Add);
       return DAG.getSelect(DL, VT, Cmp, DAG.getAllOnesConstant(DL, VT), Add);
     }
     if (Opcode == ISD::USUBSAT && !TLI.isOperationLegal(ISD::UMAX, VT)) {
       // usubsat X, Y --> (X >u Y) ? X - Y : 0
       SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
       SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
+      // TODO: Move this to DAGCombiner?
+      if (SetCCResultType == VT &&
+          DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
+        return DAG.getNode(ISD::AND, DL, VT, Cmp, Sub);
       return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
     }
     // Use default expansion.
