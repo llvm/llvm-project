@@ -57,7 +57,7 @@ entry:
 			to label %invcont.i unwind label %lpad.i
 
 invcont.i:		; preds = %entry
-	invoke fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias sret undef, i32 %degree)
+	invoke fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias sret(%"struct.std::vector<int,std::allocator<int> >") undef, i32 %degree)
 			to label %invcont1.i unwind label %lpad120.i
 
 invcont1.i:		; preds = %invcont.i
@@ -65,7 +65,7 @@ invcont1.i:		; preds = %invcont.i
 			to label %invcont3.i unwind label %lpad124.i
 
 invcont3.i:		; preds = %invcont1.i
-	invoke fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias sret undef, i32 %degree)
+	invoke fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias sret(%"struct.std::vector<int,std::allocator<int> >") undef, i32 %degree)
 			to label %invcont4.i unwind label %lpad128.i
 
 invcont4.i:		; preds = %invcont3.i
@@ -73,11 +73,11 @@ invcont4.i:		; preds = %invcont3.i
 			to label %invcont6.i unwind label %lpad132.i
 
 invcont6.i:		; preds = %invcont4.i
-	invoke fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias sret undef, i32 %degree)
+	invoke fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias sret(%"struct.std::vector<int,std::allocator<int> >") undef, i32 %degree)
 			to label %invcont7.i unwind label %lpad136.i
 
 invcont7.i:		; preds = %invcont6.i
-	invoke fastcc void @_ZN11Polynomials19LagrangeEquidistant23generate_complete_basisEj(%"struct.std::vector<Polynomials::Polynomial<double>,std::allocator<Polynomials::Polynomial<double> > >"* noalias sret undef, i32 %degree)
+	invoke fastcc void @_ZN11Polynomials19LagrangeEquidistant23generate_complete_basisEj(%"struct.std::vector<Polynomials::Polynomial<double>,std::allocator<Polynomials::Polynomial<double> > >"* noalias sret(%"struct.std::vector<Polynomials::Polynomial<double>,std::allocator<Polynomials::Polynomial<double> > >") undef, i32 %degree)
 			to label %invcont9.i unwind label %lpad140.i
 
 invcont9.i:		; preds = %invcont7.i
@@ -179,7 +179,7 @@ bb.i.i.i.i.i.i.i.i.i.i:		; preds = %bb.i.i.i.i.i.i.i.i.i.i, %_ZNSt12_Vector_base
 	br i1 undef, label %bb50.i.i.i, label %bb.i.i.i.i.i.i.i.i.i.i
 
 bb50.i.i.i:		; preds = %bb.i.i.i.i.i.i.i.i.i.i, %_ZNSt12_Vector_baseIjSaIjEEC2EmRKS0_.exit.i.i.i12.i.i
-	invoke fastcc void @_ZN11FE_Q_Helper12_GLOBAL__N_116invert_numberingERKSt6vectorIjSaIjEE(%"struct.std::vector<int,std::allocator<int> >"* noalias sret undef, %"struct.std::vector<int,std::allocator<int> >"* undef)
+	invoke fastcc void @_ZN11FE_Q_Helper12_GLOBAL__N_116invert_numberingERKSt6vectorIjSaIjEE(%"struct.std::vector<int,std::allocator<int> >"* noalias sret(%"struct.std::vector<int,std::allocator<int> >") undef, %"struct.std::vector<int,std::allocator<int> >"* undef)
 			to label %bb83.i unwind label %lpad188.i
 
 lpad.i19.i.i:		; preds = %lpad.i.i.i.i8.i.i
@@ -213,7 +213,7 @@ bb.i.i.i.i.i.i.i.i320.i:		; preds = %bb.i.i.i.i.i.i.i.i320.i, %_ZNSt12_Vector_ba
 	br i1 undef, label %bb50.i.i, label %bb.i.i.i.i.i.i.i.i320.i
 
 bb50.i.i:		; preds = %bb.i.i.i.i.i.i.i.i320.i, %_ZNSt12_Vector_baseIjSaIjEEC2EmRKS0_.exit.i.i.i.i
-	invoke fastcc void @_ZN11FE_Q_Helper12_GLOBAL__N_116invert_numberingERKSt6vectorIjSaIjEE(%"struct.std::vector<int,std::allocator<int> >"* noalias sret undef, %"struct.std::vector<int,std::allocator<int> >"* undef)
+	invoke fastcc void @_ZN11FE_Q_Helper12_GLOBAL__N_116invert_numberingERKSt6vectorIjSaIjEE(%"struct.std::vector<int,std::allocator<int> >"* noalias sret(%"struct.std::vector<int,std::allocator<int> >") undef, %"struct.std::vector<int,std::allocator<int> >"* undef)
 			to label %invcont86.i unwind label %lpad200.i
 
 lpad.i352.i:		; preds = %lpad.i.i.i.i315.i

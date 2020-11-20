@@ -67,7 +67,7 @@
 
   %struct.string = type { i32, i32, i8* }
 
-  define void @fun(%struct.string* noalias sret %agg.result, %struct.string* noalias %str) !dbg !12 {
+  define void @fun(%struct.string* noalias sret(%struct.string) %agg.result, %struct.string* noalias %str) !dbg !12 {
   entry:
     call void @llvm.dbg.value(metadata %struct.string* %agg.result, metadata !23, metadata !24), !dbg !25
     call void @llvm.dbg.value(metadata %struct.string* %str, metadata !26, metadata !28), !dbg !25

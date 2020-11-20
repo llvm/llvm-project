@@ -44,7 +44,7 @@ target triple = "x86_64--linux"
 %struct.string = type { i32 }
 
 ; Function Attrs: uwtable
-define void @_Z10get_stringv(%struct.string* noalias sret %agg.result) #0 !dbg !7 {
+define void @_Z10get_stringv(%struct.string* noalias sret(%struct.string) %agg.result) #0 !dbg !7 {
 entry:
   %nrvo = alloca i1, align 1
   store i1 false, i1* %nrvo, align 1, !dbg !24

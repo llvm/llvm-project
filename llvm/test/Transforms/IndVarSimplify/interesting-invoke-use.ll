@@ -32,11 +32,11 @@ invcont127:             ; preds = %bb123
   br i1 %2, label %bb178, label %bb128
 
 bb128:          ; preds = %invcont127
-  invoke void @system__img_int__image_integer(%struct.string___XUP* noalias sret null, i32 %i.0)
+  invoke void @system__img_int__image_integer(%struct.string___XUP* noalias sret(%struct.string___XUP) null, i32 %i.0)
       to label %invcont129 unwind label %lpad266
 
 invcont129:             ; preds = %bb128
-  invoke void @system__string_ops__str_concat(%struct.string___XUP* noalias sret null, [0 x i8]* bitcast ([24 x i8]* @.str7 to [0 x i8]*), %struct.string___XUB* @C.17.316, [0 x i8]* null, %struct.string___XUB* null)
+  invoke void @system__string_ops__str_concat(%struct.string___XUP* noalias sret(%struct.string___XUP) null, [0 x i8]* bitcast ([24 x i8]* @.str7 to [0 x i8]*), %struct.string___XUB* @C.17.316, [0 x i8]* null, %struct.string___XUB* null)
       to label %invcont138 unwind label %lpad266
 
 invcont138:             ; preds = %invcont129

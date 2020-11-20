@@ -2,7 +2,7 @@
 
 %struct.aaa = type { i8 }
 
-define void @chrome(%struct.aaa* noalias sret %arg) local_unnamed_addr #0 align 2 personality i8* bitcast (i32 (...)* @chrome2 to i8*) {
+define void @chrome(%struct.aaa* noalias sret(%struct.aaa) %arg) local_unnamed_addr #0 align 2 personality i8* bitcast (i32 (...)* @chrome2 to i8*) {
 bb:
   %tmp = load i32, i32* undef, align 4
   %tmp1 = icmp eq i32 %tmp, 0

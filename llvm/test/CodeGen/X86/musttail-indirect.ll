@@ -126,13 +126,13 @@ entry:
 ; CHECK-LABEL: j_thunk:
 ; CHECK: jmpl
 ; CHECK-NOT: ret
-define x86_thiscallcc void @j_thunk(%struct.A* noalias sret %agg.result, %struct.B* %this, i32) {
+define x86_thiscallcc void @j_thunk(%struct.A* noalias sret(%struct.A) %agg.result, %struct.B* %this, i32) {
 entry:
   %1 = bitcast %struct.B* %this to void (%struct.A*, %struct.B*, i32)***
   %vtable = load void (%struct.A*, %struct.B*, i32)**, void (%struct.A*, %struct.B*, i32)*** %1
   %vfn = getelementptr inbounds void (%struct.A*, %struct.B*, i32)*, void (%struct.A*, %struct.B*, i32)** %vtable, i32 4
   %2 = load void (%struct.A*, %struct.B*, i32)*, void (%struct.A*, %struct.B*, i32)** %vfn
-  musttail call x86_thiscallcc void %2(%struct.A* sret %agg.result, %struct.B* %this, i32 %0)
+  musttail call x86_thiscallcc void %2(%struct.A* sret(%struct.A) %agg.result, %struct.B* %this, i32 %0)
   ret void
 }
 

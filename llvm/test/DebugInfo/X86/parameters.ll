@@ -46,7 +46,7 @@
 %"struct.pr14763::foo" = type { i8 }
 
 ; Function Attrs: uwtable
-define void @_ZN7pr147634funcENS_3fooE(%"struct.pr14763::foo"* noalias sret %agg.result, %"struct.pr14763::foo"* %f) #0 !dbg !4 {
+define void @_ZN7pr147634funcENS_3fooE(%"struct.pr14763::foo"* noalias sret(%"struct.pr14763::foo") %agg.result, %"struct.pr14763::foo"* %f) #0 !dbg !4 {
 entry:
   call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %f, metadata !22, metadata !DIExpression(DW_OP_deref)), !dbg !24
   call void @_ZN7pr147633fooC1ERKS0_(%"struct.pr14763::foo"* %agg.result, %"struct.pr14763::foo"* %f), !dbg !25

@@ -3,7 +3,7 @@
 
 %struct.S = type { i32, i32 }
 
-define void @ZeroInit(%struct.S* noalias sret %agg.result) {
+define void @ZeroInit(%struct.S* noalias sret(%struct.S) %agg.result) {
 ; MIPS32-LABEL: ZeroInit:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 0
@@ -19,7 +19,7 @@ entry:
   ret void
 }
 
-define void @CallZeroInit(%struct.S* noalias sret %agg.result) {
+define void @CallZeroInit(%struct.S* noalias sret(%struct.S) %agg.result) {
 ; MIPS32-LABEL: CallZeroInit:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
@@ -33,6 +33,6 @@ define void @CallZeroInit(%struct.S* noalias sret %agg.result) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  call void @ZeroInit(%struct.S* sret %agg.result)
+  call void @ZeroInit(%struct.S* sret(%struct.S) %agg.result)
   ret void
 }

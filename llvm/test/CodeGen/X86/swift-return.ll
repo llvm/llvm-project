@@ -294,7 +294,7 @@ define void @consume_i1_ret() {
 
 declare swiftcc { i1, i1, i1, i1 } @produce_i1_ret()
 
-define swiftcc void @foo(i64* sret %agg.result, i64 %val) {
+define swiftcc void @foo(i64* sret(i64) %agg.result, i64 %val) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, (%rax)
