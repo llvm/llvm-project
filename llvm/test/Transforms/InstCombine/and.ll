@@ -1098,6 +1098,8 @@ define <2 x i8> @lowmask_add_2_splat(<2 x i8> %x, <2 x i8>* %p) {
   ret <2 x i8> %r
 }
 
+; Negative test - mask overlaps low bit of add
+
 define i8 @not_lowmask_add(i8 %x) {
 ; CHECK-LABEL: @not_lowmask_add(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -64
@@ -1110,6 +1112,8 @@ define i8 @not_lowmask_add(i8 %x) {
   %r = and i8 %a, 64 ; 0x40
   ret i8 %r
 }
+
+; Negative test - mask overlaps low bit of add
 
 define i8 @not_lowmask_add2(i8 %x) {
 ; CHECK-LABEL: @not_lowmask_add2(
