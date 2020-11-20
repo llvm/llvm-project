@@ -95,3 +95,23 @@ func @cmpi_equal_operands(%arg0: i64)
   return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9
       : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
+
+// Test case: Folding of dim(memref_reshape %v %shp, %idx) -> load %shp[%idx]
+// CHECK-LABEL: func @dim_of_memref_reshape(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>,
+//  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: memref<?xindex>
+//  CHECK-NEXT:   %[[IDX:.*]] = constant 3
+//  CHECK-NEXT:   %[[DIM:.*]] = load %[[SHP]][%[[IDX]]]
+//  CHECK-NEXT:   store
+//   CHECK-NOT:   dim
+//       CHECK:   return %[[DIM]] : index
+func @dim_of_memref_reshape(%arg0: memref<*xf32>, %arg1: memref<?xindex>)
+    -> index {
+  %c3 = constant 3 : index
+  %0 = memref_reshape %arg0(%arg1)
+      : (memref<*xf32>, memref<?xindex>) -> memref<*xf32>
+  // Update the shape to test that he load ends up in the right place.
+  store %c3, %arg1[%c3] : memref<?xindex>
+  %1 = dim %0, %c3 : memref<*xf32>
+  return %1 : index
+}
