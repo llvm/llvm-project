@@ -1846,6 +1846,25 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
   }
 
+  if (match(&I, m_And(m_OneUse(m_Shl(m_ZExt(m_Value(X)), m_Value(Y))),
+                      m_SignMask())) &&
+      match(Y, m_SpecificInt_ICMP(
+                   ICmpInst::Predicate::ICMP_EQ,
+                   APInt(Ty->getScalarSizeInBits(),
+                         Ty->getScalarSizeInBits() -
+                             X->getType()->getScalarSizeInBits())))) {
+    auto *SExt = Builder.CreateSExt(X, Ty, X->getName() + ".signext");
+    auto *SanitizedSignMask = cast<Constant>(Op1);
+    // We must be careful with the undef elements of the sign bit mask, however:
+    // the mask elt can be undef iff the shift amount for that lane was undef,
+    // otherwise we need to sanitize undef masks to zero.
+    SanitizedSignMask = Constant::replaceUndefsWith(
+        SanitizedSignMask, ConstantInt::getNullValue(Ty->getScalarType()));
+    SanitizedSignMask =
+        Constant::mergeUndefsWith(SanitizedSignMask, cast<Constant>(Y));
+    return BinaryOperator::CreateAnd(SExt, SanitizedSignMask);
+  }
+
   if (Instruction *Z = narrowMaskedBinOp(I))
     return Z;
 
