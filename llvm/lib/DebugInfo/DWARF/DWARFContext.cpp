@@ -1780,7 +1780,7 @@ public:
 
       // Symbol to [address, section index] cache mapping.
       std::map<SymbolRef, SymInfo> AddrCache;
-      bool (*Supports)(uint64_t);
+      SupportsRelocation Supports;
       RelocationResolver Resolver;
       std::tie(Supports, Resolver) = getRelocationResolver(Obj);
       for (const RelocationRef &Reloc : Section.relocations()) {

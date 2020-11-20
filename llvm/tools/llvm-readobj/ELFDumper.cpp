@@ -5849,7 +5849,7 @@ void DumpStyle<ELFT>::printStackSize(RelocationRef Reloc,
   }
 
   uint64_t Addend = Data.getAddress(&Offset);
-  uint64_t SymValue = Resolver(Reloc, RelocSymValue, Addend);
+  uint64_t SymValue = resolveRelocation(Resolver, Reloc, RelocSymValue, Addend);
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }
@@ -5947,7 +5947,8 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     // described in it.
     const Elf_Shdr *FunctionSec = unwrapOrError(
         this->FileName, Obj.getSection(StackSizesELFSec->sh_link));
-    bool (*IsSupportedFn)(uint64_t);
+
+    SupportsRelocation IsSupportedFn;
     RelocationResolver Resolver;
     std::tie(IsSupportedFn, Resolver) = getRelocationResolver(ElfObj);
     ArrayRef<uint8_t> Contents =

@@ -53,14 +53,16 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
 
   ErrorAsOutParameter ErrAsOut(Err);
   Optional<RelocAddrEntry> E = Obj->find(*Section, *Off);
-  uint64_t A = getUnsigned(Off, Size, Err);
+  uint64_t LocData = getUnsigned(Off, Size, Err);
   if (!E || (Err && *Err))
-    return A;
+    return LocData;
   if (SecNdx)
     *SecNdx = E->SectionIndex;
-  uint64_t R = E->Resolver(E->Reloc, E->SymbolValue, A);
+
+  uint64_t R =
+      object::resolveRelocation(E->Resolver, E->Reloc, E->SymbolValue, LocData);
   if (E->Reloc2)
-    R = E->Resolver(*E->Reloc2, E->SymbolValue2, R);
+    R = object::resolveRelocation(E->Resolver, *E->Reloc2, E->SymbolValue2, R);
   return R;
 }
 
