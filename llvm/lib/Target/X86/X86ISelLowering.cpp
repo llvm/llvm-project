@@ -1313,6 +1313,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SADDSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
     setOperationAction(ISD::USUBSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
     setOperationAction(ISD::SSUBSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::UADDSAT,   MVT::v8i32, Custom);
+    setOperationAction(ISD::USUBSAT,   MVT::v8i32, Custom);
+    setOperationAction(ISD::UADDSAT,   MVT::v4i64, Custom);
+    setOperationAction(ISD::USUBSAT,   MVT::v4i64, Custom);
 
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32 }) {
       setOperationAction(ISD::ABS,  VT, HasInt256 ? Legal : Custom);
@@ -26854,58 +26858,58 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
+  SDLoc DL(Op);
+
   if (VT.getScalarType() == MVT::i1) {
-    SDLoc dl(Op);
     switch (Opcode) {
     default: llvm_unreachable("Expected saturated arithmetic opcode");
     case ISD::UADDSAT:
     case ISD::SADDSAT:
       // *addsat i1 X, Y --> X | Y
-      return DAG.getNode(ISD::OR, dl, VT, X, Y);
+      return DAG.getNode(ISD::OR, DL, VT, X, Y);
     case ISD::USUBSAT:
     case ISD::SSUBSAT:
       // *subsat i1 X, Y --> X & ~Y
-      return DAG.getNode(ISD::AND, dl, VT, X, DAG.getNOT(dl, Y, VT));
+      return DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, Y, VT));
     }
   }
 
-  if (VT.is128BitVector()) {
-    // Avoid the generic expansion with min/max if we don't have pminu*/pmaxu*.
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    EVT SetCCResultType = TLI.getSetCCResultType(DAG.getDataLayout(),
-                                                 *DAG.getContext(), VT);
-    SDLoc DL(Op);
-    if (Opcode == ISD::UADDSAT && !TLI.isOperationLegal(ISD::UMIN, VT)) {
-      // uaddsat X, Y --> (X >u (X + Y)) ? -1 : X + Y
-      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, X, Y);
-      SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Add, ISD::SETUGT);
-      // TODO: Move this to DAGCombiner?
-      if (SetCCResultType == VT &&
-          DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
-        return DAG.getNode(ISD::OR, DL, VT, Cmp, Add);
-      return DAG.getSelect(DL, VT, Cmp, DAG.getAllOnesConstant(DL, VT), Add);
-    }
-    if (Opcode == ISD::USUBSAT && !TLI.isOperationLegal(ISD::UMAX, VT)) {
-      // usubsat X, Y --> (X >u Y) ? X - Y : 0
-      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
-      SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
-      // TODO: Move this to DAGCombiner?
-      if (SetCCResultType == VT &&
-          DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
-        return DAG.getNode(ISD::AND, DL, VT, Cmp, Sub);
-      return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
-    }
-    // Use default expansion.
-    return SDValue();
-  }
-
-  if (VT == MVT::v32i16 || VT == MVT::v64i8)
+  if (VT == MVT::v32i16 || VT == MVT::v64i8 ||
+      (VT.is256BitVector() && !Subtarget.hasInt256())) {
+    assert(Op.getSimpleValueType().isInteger() &&
+           "Only handle AVX vector integer operation");
     return splitVectorIntBinary(Op, DAG);
+  }
 
-  assert(Op.getSimpleValueType().is256BitVector() &&
-         Op.getSimpleValueType().isInteger() &&
-         "Only handle AVX 256-bit vector integer operation");
-  return splitVectorIntBinary(Op, DAG);
+  // Avoid the generic expansion with min/max if we don't have pminu*/pmaxu*.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT SetCCResultType =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  if (Opcode == ISD::UADDSAT && !TLI.isOperationLegal(ISD::UMIN, VT)) {
+    // uaddsat X, Y --> (X >u (X + Y)) ? -1 : X + Y
+    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, X, Y);
+    SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Add, ISD::SETUGT);
+    // TODO: Move this to DAGCombiner?
+    if (SetCCResultType == VT &&
+        DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
+      return DAG.getNode(ISD::OR, DL, VT, Cmp, Add);
+    return DAG.getSelect(DL, VT, Cmp, DAG.getAllOnesConstant(DL, VT), Add);
+  }
+
+  if (Opcode == ISD::USUBSAT && !TLI.isOperationLegal(ISD::UMAX, VT)) {
+    // usubsat X, Y --> (X >u Y) ? X - Y : 0
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
+    SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
+    // TODO: Move this to DAGCombiner?
+    if (SetCCResultType == VT &&
+        DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
+      return DAG.getNode(ISD::AND, DL, VT, Cmp, Sub);
+    return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
+  }
+
+  // Use default expansion.
+  return SDValue();
 }
 
 static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
