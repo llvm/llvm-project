@@ -1555,6 +1555,34 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+namespace {
+/// Fold dim of a memref reshape operation to a load into the reshape's shape
+/// operand.
+struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dim,
+                                PatternRewriter &rewriter) const override {
+    auto reshape = dim.memrefOrTensor().getDefiningOp<MemRefReshapeOp>();
+
+    if (!reshape)
+      return failure();
+
+    // Place the load directly after the reshape to ensure that the shape memref
+    // was not mutated.
+    rewriter.setInsertionPointAfter(reshape);
+    rewriter.replaceOpWithNewOp<LoadOp>(dim, reshape.shape(),
+                                        llvm::makeArrayRef({dim.index()}));
+    return success();
+  }
+};
+} // end anonymous namespace.
+
+void DimOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                        MLIRContext *context) {
+  results.insert<DimOfMemRefReshape>(context);
+}
+
 // ---------------------------------------------------------------------------
 // DmaStartOp
 // ---------------------------------------------------------------------------
