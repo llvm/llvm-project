@@ -17,6 +17,7 @@
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 
 using mlir::edsc::intrinsics::AffineIndexedValue;
@@ -81,6 +82,13 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 /// that no interleaved dependence would be violated (RAW, WAR or WAW).
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
+
+using FusableOpDependencesTy = llvm::MapVector<
+    Operation *,
+    SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
+FusableOpDependencesTy
+findAllFusableDependences(ArrayRef<LinalgOp> ops,
+                          const LinalgDependenceGraph &dependenceGraph);
 
 /// Fuses producer into consumer if the producer is structurally feasible and
 /// the fusion would not violate dependencies.
