@@ -105,9 +105,14 @@ struct LoggedFeatureSpec {
   Optional<std::string> LoggingName;
 };
 
-bool loadOutputSpecs(LLVMContext &Ctx, StringRef FileName,
-                     StringRef ExpectedDecisionName,
-                     std::vector<LoggedFeatureSpec> &Ret);
+/// Load the output specs. If SpecFileOverride is not empty, that path is used.
+/// Otherwise, the file is assumed to be called 'output_spec.json' and be found
+/// under ModelPath (the model directory).
+/// The first output tensor name must match ExpectedDecisionName.
+/// In case of error, the return is None and the error is logged.
+Optional<std::vector<LoggedFeatureSpec>>
+loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
+                StringRef ModelPath, StringRef SpecFileOverride = StringRef());
 
 /// Logging utility - given an ordered specification of features, and assuming
 /// a scalar reward, allow logging feature values and rewards, and then print

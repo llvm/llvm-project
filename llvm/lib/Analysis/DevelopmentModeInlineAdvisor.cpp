@@ -21,7 +21,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Path.h"
 
 #include <vector>
 
@@ -472,14 +471,10 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(LLVMContext &Ctx,
         TensorSpec::createSpec<int64_t>(TFFeedPrefix + FeatureNameMap[I], {1}));
   InputSpecs.insert(InputSpecs.end(), TrainingOnlyFeatures.begin(),
                     TrainingOnlyFeatures.end());
-  SmallVector<char, 128> OutputSpecsPath;
-  StringRef OutputSpecPath = TFOutputSpecOverride;
-  if (OutputSpecPath.empty()) {
-    llvm::sys::path::append(OutputSpecsPath, ModelPath, "output_spec.json");
-    OutputSpecPath = {OutputSpecsPath.data(), OutputSpecsPath.size()};
-  }
-
-  if (!loadOutputSpecs(Ctx, OutputSpecPath, DecisionName, OutputSpecs))
+  if (auto MaybeOutSpecs =
+          loadOutputSpecs(Ctx, DecisionName, ModelPath, TFOutputSpecOverride))
+    OutputSpecs = std::move(*MaybeOutSpecs);
+  else
     return;
 
   Evaluator = std::make_unique<TFModelEvaluator>(
