@@ -4062,13 +4062,17 @@ std::string CompilerInvocation::getModuleHash() const {
 
 void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
+  // Capture the extracted value as a lambda argument to avoid potential issues
+  // with lifetime extension of the reference.
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
     NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
-  if (((FLAGS) & options::CC1Option) &&                                        \
-      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != (DEFAULT_VALUE))) {          \
-    DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, EXTRACTOR(this->KEYPATH));   \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    [&](const auto &Extracted) {                                               \
+      if (ALWAYS_EMIT || Extracted != (DEFAULT_VALUE))                         \
+        DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, Extracted);              \
+    }(EXTRACTOR(this->KEYPATH));                                               \
   }
 
 #define OPTION_WITH_MARSHALLING_BOOLEAN(                                       \
@@ -4076,10 +4080,10 @@ void CompilerInvocation::generateCC1CommandLine(
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
     NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX, NEG_ID,          \
     NEG_SPELLING)                                                              \
-  if (((FLAGS)&options::CC1Option) &&                                          \
-      (ALWAYS_EMIT || EXTRACTOR(this->KEYPATH) != DEFAULT_VALUE)) {            \
-    DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX,                \
-                 EXTRACTOR(this->KEYPATH));                                    \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    bool Extracted = EXTRACTOR(this->KEYPATH);                                 \
+    if (ALWAYS_EMIT || Extracted != (DEFAULT_VALUE))                           \
+      DENORMALIZER(Args, SPELLING, NEG_SPELLING, SA, TABLE_INDEX, Extracted);  \
   }
 
 #include "clang/Driver/Options.inc"
