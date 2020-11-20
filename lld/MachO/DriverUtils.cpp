@@ -76,6 +76,10 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
   opt::InputArgList args = ParseArgs(vec, missingIndex, missingCount);
 
+  // Handle -fatal_warnings early since it converts missing argument warnings
+  // to errors.
+  errorHandler().fatalWarnings = args.hasArg(OPT_fatal_warnings);
+
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");
 

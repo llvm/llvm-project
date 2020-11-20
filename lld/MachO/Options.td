@@ -610,8 +610,7 @@ def no_application_extension : Flag<["-"], "no_application_extension">,
      Flags<[HelpHidden]>,
      Group<grp_rare>;
 def fatal_warnings : Flag<["-"], "fatal_warnings">,
-     HelpText<"Escalate warnings as errors">,
-     Flags<[HelpHidden]>,
+     HelpText<"Treat warnings as errors">,
      Group<grp_rare>;
 def no_eh_labels : Flag<["-"], "no_eh_labels">,
      HelpText<"In -r mode, suppress .eh labels in the __eh_frame section">,
