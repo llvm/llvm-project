@@ -509,6 +509,9 @@ void llvm::deleteConstant(Constant *C) {
   case Constant::BlockAddressVal:
     delete static_cast<BlockAddress *>(C);
     break;
+  case Constant::DSOLocalEquivalentVal:
+    delete static_cast<DSOLocalEquivalent *>(C);
+    break;
   case Constant::UndefValueVal:
     delete static_cast<UndefValue *>(C);
     break;
@@ -654,10 +657,17 @@ bool Constant::needsRelocation() const {
           return false;
 
         // Relative pointers do not need to be dynamically relocated.
-        if (auto *LHSGV = dyn_cast<GlobalValue>(LHSOp0->stripPointerCasts()))
-          if (auto *RHSGV = dyn_cast<GlobalValue>(RHSOp0->stripPointerCasts()))
+        if (auto *RHSGV =
+                dyn_cast<GlobalValue>(RHSOp0->stripInBoundsConstantOffsets())) {
+          auto *LHS = LHSOp0->stripInBoundsConstantOffsets();
+          if (auto *LHSGV = dyn_cast<GlobalValue>(LHS)) {
             if (LHSGV->isDSOLocal() && RHSGV->isDSOLocal())
               return false;
+          } else if (isa<DSOLocalEquivalent>(LHS)) {
+            if (RHSGV->isDSOLocal())
+              return false;
+          }
+        }
       }
     }
   }
@@ -1760,6 +1770,54 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
 
   // If we just want to keep the existing value, then return null.
   // Callers know that this means we shouldn't delete this value.
+  return nullptr;
+}
+
+DSOLocalEquivalent *DSOLocalEquivalent::get(GlobalValue *GV) {
+  DSOLocalEquivalent *&Equiv = GV->getContext().pImpl->DSOLocalEquivalents[GV];
+  if (!Equiv)
+    Equiv = new DSOLocalEquivalent(GV);
+
+  assert(Equiv->getGlobalValue() == GV &&
+         "DSOLocalFunction does not match the expected global value");
+  return Equiv;
+}
+
+DSOLocalEquivalent::DSOLocalEquivalent(GlobalValue *GV)
+    : Constant(GV->getType(), Value::DSOLocalEquivalentVal, &Op<0>(), 1) {
+  setOperand(0, GV);
+}
+
+/// Remove the constant from the constant table.
+void DSOLocalEquivalent::destroyConstantImpl() {
+  const GlobalValue *GV = getGlobalValue();
+  GV->getContext().pImpl->DSOLocalEquivalents.erase(GV);
+}
+
+Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
+  assert(From == getGlobalValue() && "Changing value does not match operand.");
+  assert(To->getType() == getType() && "Mismatched types");
+  assert(isa<Constant>(To) && "Can only replace the operands with a constant");
+
+  // The replacement is with another global value.
+  if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
+    DSOLocalEquivalent *&NewEquiv =
+        getContext().pImpl->DSOLocalEquivalents[ToObj];
+    if (NewEquiv)
+      return NewEquiv;
+  }
+
+  // The replacement could be a bitcast or an alias to another function. We can
+  // replace it with a bitcast to the dso_local_equivalent of that function.
+  auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
+  DSOLocalEquivalent *&NewEquiv = getContext().pImpl->DSOLocalEquivalents[Func];
+  if (NewEquiv)
+    return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
+
+  // Replace this with the new one.
+  getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
+  NewEquiv = this;
+  setOperand(0, Func);
   return nullptr;
 }
 

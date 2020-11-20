@@ -1528,6 +1528,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const BlockAddress *BA = dyn_cast<BlockAddress>(C))
       return DAG.getBlockAddress(BA, VT);
 
+    if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(C))
+      return getValue(Equiv->getGlobalValue());
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
