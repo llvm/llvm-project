@@ -691,6 +691,8 @@ bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
   const ARMSubtarget &ST = MF->getSubtarget<ARMSubtarget>();
   if (ST.hardenSlsRetBr() && isIndirectControlFlowNotComingBack(MI))
     return false;
+  if (ST.hardenSlsBlr() && isIndirectCall(MI))
+    return false;
 
   if (AFI->isThumb2Function()) {
     if (getSubtarget().restrictIT())
