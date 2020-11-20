@@ -362,8 +362,6 @@ class DataFlowSanitizer {
   ConstantInt *ShadowPtrMul;
   Constant *ArgTLS;
   Constant *RetvalTLS;
-  Constant *GetArgTLS;
-  Constant *GetRetvalTLS;
   Constant *ExternalShadowMask;
   FunctionType *DFSanUnionFnTy;
   FunctionType *DFSanUnionLoadFnTy;
