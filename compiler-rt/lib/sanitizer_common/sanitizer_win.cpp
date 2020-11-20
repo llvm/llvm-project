@@ -611,6 +611,10 @@ static uptr GetPreferredBase(const char *modname) {
   return (uptr)pe_header->ImageBase;
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wframe-larger-than="
+#endif
 void ListOfModules::init() {
   clearOrInit();
   HANDLE cur_process = GetCurrentProcess();
@@ -672,6 +676,9 @@ void ListOfModules::init() {
   }
   UnmapOrDie(hmodules, modules_buffer_size);
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 void ListOfModules::fallbackInit() { clear(); }
 
