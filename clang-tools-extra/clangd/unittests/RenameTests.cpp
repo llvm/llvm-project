@@ -17,9 +17,9 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 
 namespace clang {
 namespace clangd {
