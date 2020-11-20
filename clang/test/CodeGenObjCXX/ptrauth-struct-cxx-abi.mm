@@ -19,7 +19,7 @@ struct AddrDiscStrong1 {
 // Check that AddrDiscStrong0 is destructed in the callee.
 
 // CHECK: define void @_Z24testParamAddrDiscStrong015AddrDiscStrong0(%[[STRUCT_ADDRDISCSTRONG0]]* %[[A:.*]])
-// CHECK: call %[[STRUCT_ADDRDISCSTRONG0]]* @_ZN15AddrDiscStrong0D1Ev(%[[STRUCT_ADDRDISCSTRONG0]]* %[[A]])
+// CHECK: call %[[STRUCT_ADDRDISCSTRONG0]]* @_ZN15AddrDiscStrong0D1Ev(%[[STRUCT_ADDRDISCSTRONG0]]* nonnull dereferenceable(16) %[[A]])
 // CHECK: ret void
 
 // CHECK: define linkonce_odr %[[STRUCT_ADDRDISCSTRONG0]]* @_ZN15AddrDiscStrong0D1Ev(
