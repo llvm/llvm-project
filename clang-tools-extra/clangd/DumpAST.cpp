@@ -145,6 +145,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_ARGUMENT_KIND(TemplateExpansion);
 #undef TEMPLATE_ARGUMENT_KIND
     }
+    llvm_unreachable("Unhandled ArgKind enum");
   }
   std::string getKind(const NestedNameSpecifierLoc &NNSL) {
     assert(NNSL.getNestedNameSpecifier());
@@ -161,6 +162,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       NNS_KIND(NamespaceAlias);
 #undef NNS_KIND
     }
+    llvm_unreachable("Unhandled SpecifierKind enum");
   }
   std::string getKind(const CXXCtorInitializer *CCI) {
     if (CCI->isBaseInitializer())
@@ -185,6 +187,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_KIND(SubstTemplateTemplateParmPack);
 #undef TEMPLATE_KIND
     }
+    llvm_unreachable("Unhandled NameKind enum");
   }
   std::string getKind(const Attr *A) {
     switch (A->getKind()) {
@@ -194,6 +197,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
 #include "clang/Basic/AttrList.inc"
 #undef ATTR
     }
+    llvm_unreachable("Unhandled attr::Kind enum");
   }
   std::string getKind(const CXXBaseSpecifier &CBS) {
     // There aren't really any variants of CXXBaseSpecifier.

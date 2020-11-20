@@ -5,7 +5,8 @@ print_usage() {
   echo -e "Starts QEMU system mode emulation for the architecture.\n"
   echo -e "  --help\t\t\tDisplay this information."
   echo -e "  --arch {arm|arm64}\t\tSelects architecture QEMU system emulation."
-  echo -e "  --sve {path}\t\t\tEnables AArch64 SVE mode.\n"
+  echo -e "  --sve\t\t\t\tEnables AArch64 SVE mode."
+  echo -e "  --mte\t\t\t\tEnables AArch64 MTE mode.\n"
   echo -e "  --rootfs {path}\t\tPath of root file system image."
   echo -e "  --qemu {path}\t\t\tPath of pre-installed qemu-system-* executable."
   echo -e "  --kernel {path}\t\tPath of Linux kernel prebuilt image.\n"
@@ -48,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --kernel)   KERNEL_IMG=$2; shift;;
     --qemu)     QEMU_BIN=$2; shift;;
     --sve)      SVE=1;;
+    --mte)      MTE=1;;
     --help)     print_usage 0 ;;
     *)          invalid_arg "$1" ;;
   esac
@@ -99,6 +101,9 @@ if [[ "$ARCH" == "arm" ]]; then
   if [[ $SVE ]]; then
     echo "warning: --sve is supported by AArch64 targets only"
   fi
+  if [[ $MTE ]]; then
+    echo "warning: --mte is supported by AArch64 targets only"
+  fi
 elif [[ "$ARCH" == "arm64" ]]; then
   QEMU_MACHINE=virt
   QEMU_SVE_MAX_VQ=4
@@ -106,6 +111,9 @@ elif [[ "$ARCH" == "arm64" ]]; then
 
   if [[ $SVE ]]; then
     QEMU_CPU="max,sve-max-vq=$QEMU_SVE_MAX_VQ"
+  fi
+  if [[ $MTE ]]; then
+    QEMU_MACHINE="$QEMU_MACHINE,mte=on"
   fi
 fi
 
