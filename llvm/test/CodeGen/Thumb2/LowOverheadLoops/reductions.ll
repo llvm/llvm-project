@@ -448,12 +448,12 @@ define dso_local arm_aapcs_vfpcc i32 @two_loops_mul_add_v4i32(i8* nocapture read
 ; CHECK-NEXT:    vaddv.u32 r12, q0
 ; CHECK-NEXT:    cbz r2, .LBB6_7
 ; CHECK-NEXT:  @ %bb.4: @ %vector.ph47
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r6, lsr #2
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    vmov.32 q0[0], r12
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB6_5: @ %vector.body46
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -643,41 +643,41 @@ define i32 @wrongop(%struct.date* nocapture readonly %pd) {
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    movw r12, #47184
+; CHECK-NEXT:    movw r3, #23593
 ; CHECK-NEXT:    ldrd r2, lr, [r1, #4]
-; CHECK-NEXT:    movw r1, #23593
 ; CHECK-NEXT:    movt r12, #1310
-; CHECK-NEXT:    movt r1, #49807
-; CHECK-NEXT:    mla r1, lr, r1, r12
-; CHECK-NEXT:    movw r3, #55051
+; CHECK-NEXT:    movt r3, #49807
+; CHECK-NEXT:    mla r3, lr, r3, r12
+; CHECK-NEXT:    movw r1, #55051
 ; CHECK-NEXT:    movw r4, #23593
-; CHECK-NEXT:    movt r3, #163
+; CHECK-NEXT:    movt r1, #163
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    movt r4, #655
-; CHECK-NEXT:    ror.w r12, r1, #4
-; CHECK-NEXT:    cmp r12, r3
-; CHECK-NEXT:    cset r3, lo
-; CHECK-NEXT:    ror.w r1, r1, #2
+; CHECK-NEXT:    ror.w r12, r3, #4
+; CHECK-NEXT:    cmp r12, r1
+; CHECK-NEXT:    cset r1, lo
+; CHECK-NEXT:    ror.w r3, r3, #2
 ; CHECK-NEXT:    mov.w r12, #1
-; CHECK-NEXT:    cmp r1, r4
-; CHECK-NEXT:    csel r1, r3, r12, lo
+; CHECK-NEXT:    cmp r3, r4
+; CHECK-NEXT:    csel r3, r1, r12, lo
 ; CHECK-NEXT:    lsls.w r4, lr, #30
-; CHECK-NEXT:    csel r3, r3, r1, ne
+; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
 ; CHECK-NEXT:  .LBB8_1: @ %vector.ph
-; CHECK-NEXT:    adds r1, r2, #3
+; CHECK-NEXT:    movw r3, :lower16:days
 ; CHECK-NEXT:    movs r4, #52
-; CHECK-NEXT:    bic r1, r1, #3
-; CHECK-NEXT:    subs r1, #4
-; CHECK-NEXT:    add.w lr, r12, r1, lsr #2
-; CHECK-NEXT:    movw r1, :lower16:days
-; CHECK-NEXT:    movt r1, :upper16:days
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    mla r1, r3, r4, r1
+; CHECK-NEXT:    movt r3, :upper16:days
+; CHECK-NEXT:    mla r1, r1, r4, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    vmov.32 q0[0], r0
+; CHECK-NEXT:    adds r0, r2, #3
+; CHECK-NEXT:    bic r0, r0, #3
+; CHECK-NEXT:    subs r0, #4
+; CHECK-NEXT:    add.w lr, r12, r0, lsr #2
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB8_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2

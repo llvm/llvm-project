@@ -50,6 +50,10 @@ static cl::opt<bool> DisableLowOverheadLoops(
   "disable-arm-loloops", cl::Hidden, cl::init(false),
   cl::desc("Disable the generation of low-overhead loops"));
 
+static cl::opt<bool>
+    AllowWLSLoops("allow-arm-wlsloops", cl::Hidden, cl::init(true),
+                  cl::desc("Enable the generation of WLS loops"));
+
 extern cl::opt<TailPredication::Mode> EnableTailPredication;
 
 extern cl::opt<bool> EnableMaskedGatherScatters;
@@ -1690,7 +1694,9 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   };
 
   // Scan the instructions to see if there's any that we know will turn into a
-  // call or if this loop is already a low-overhead loop.
+  // call or if this loop is already a low-overhead loop or will become a tail
+  // predicated loop.
+  bool IsTailPredLoop = false;
   auto ScanLoop = [&](Loop *L) {
     for (auto *BB : L->getBlocks()) {
       for (auto &I : *BB) {
@@ -1699,6 +1705,13 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
           LLVM_DEBUG(dbgs() << "ARMHWLoops: Bad instruction: " << I << "\n");
           return false;
         }
+        if (auto *II = dyn_cast<IntrinsicInst>(&I))
+          IsTailPredLoop |=
+              II->getIntrinsicID() == Intrinsic::get_active_lane_mask ||
+              II->getIntrinsicID() == Intrinsic::arm_mve_vctp8 ||
+              II->getIntrinsicID() == Intrinsic::arm_mve_vctp16 ||
+              II->getIntrinsicID() == Intrinsic::arm_mve_vctp32 ||
+              II->getIntrinsicID() == Intrinsic::arm_mve_vctp64;
       }
     }
     return true;
@@ -1719,7 +1732,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   LLVMContext &C = L->getHeader()->getContext();
   HWLoopInfo.CounterInReg = true;
   HWLoopInfo.IsNestingLegal = false;
-  HWLoopInfo.PerformEntryTest = true;
+  HWLoopInfo.PerformEntryTest = AllowWLSLoops && !IsTailPredLoop;
   HWLoopInfo.CountType = Type::getInt32Ty(C);
   HWLoopInfo.LoopDecrement = ConstantInt::get(HWLoopInfo.CountType, 1);
   return true;
