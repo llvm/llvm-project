@@ -178,7 +178,7 @@ getSearchPaths(unsigned optionCode, opt::InputArgList &args,
     for (auto root : roots) {
       SmallString<261> buffer(root);
       path::append(buffer, path);
-      if (warnIfNotDirectory(optionLetter, buffer))
+      if (fs::is_directory(buffer))
         paths.push_back(saver.save(buffer.str()));
     }
   }
