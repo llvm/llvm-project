@@ -263,13 +263,18 @@ CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
   auto data = parser.GetStream(StreamType::LinuxMaps);
   if (data.empty())
     return false;
-  ParseLinuxMapRegions(llvm::toStringRef(data),
-                       [&](const lldb_private::MemoryRegionInfo &region,
-                           const lldb_private::Status &status) -> bool {
-                         if (status.Success())
-                           regions.push_back(region);
-                         return true;
-                       });
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  ParseLinuxMapRegions(
+      llvm::toStringRef(data),
+      [&regions, &log](llvm::Expected<MemoryRegionInfo> region) -> bool {
+        if (region)
+          regions.push_back(*region);
+        else
+          LLDB_LOG_ERROR(log, region.takeError(),
+                         "Reading memory region from minidump failed: {0}");
+        return true;
+      });
   return !regions.empty();
 }
 
