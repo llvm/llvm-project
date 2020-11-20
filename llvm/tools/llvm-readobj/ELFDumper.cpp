@@ -781,6 +781,12 @@ protected:
                           const Elf_Shdr &Sec, const Elf_Shdr *SymTab) = 0;
   virtual void printRelrReloc(const Elf_Relr &R) = 0;
   virtual void printDynamicReloc(const Relocation<ELFT> &R) = 0;
+  void forEachRelocationDo(
+      const Elf_Shdr &Sec, bool RawRelr,
+      llvm::function_ref<void(const Relocation<ELFT> &, unsigned,
+                              const Elf_Shdr &, const Elf_Shdr *)>
+          RelRelaFn,
+      llvm::function_ref<void(const Elf_Relr &)> RelrFn);
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void printDynamicRelocationsHelper();
   virtual void printDynamicRelocHeader(unsigned Type, StringRef Name,
@@ -4606,6 +4612,15 @@ template <class ELFT> void GNUStyle<ELFT>::printDynamicRelocations() {
   this->printDynamicRelocationsHelper();
 }
 
+template <class ELFT>
+void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
+  this->forEachRelocationDo(
+      Sec, opts::RawRelr,
+      [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
+          const Elf_Shdr *SymTab) { printReloc(R, Ndx, Sec, SymTab); },
+      [&](const Elf_Relr &R) { printRelrReloc(R); });
+}
+
 template <class ELFT> void DumpStyle<ELFT>::printDynamicRelocationsHelper() {
   const bool IsMips64EL = this->Obj.isMips64EL();
   const DynRegionInfo &DynRelaRegion = this->dumper().getDynRelaRegion();
@@ -5610,7 +5625,12 @@ void DumpStyle<ELFT>::printDependentLibsHelper(
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
+void DumpStyle<ELFT>::forEachRelocationDo(
+    const Elf_Shdr &Sec, bool RawRelr,
+    llvm::function_ref<void(const Relocation<ELFT> &, unsigned,
+                            const Elf_Shdr &, const Elf_Shdr *)>
+        RelRelaFn,
+    llvm::function_ref<void(const Elf_Relr &)> RelrFn) {
   auto Warn = [&](Error &&E,
                   const Twine &Prefix = "unable to read relocations from") {
     this->reportUniqueWarning(createError(Prefix + " " + describe(Obj, Sec) +
@@ -5636,7 +5656,7 @@ void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
   case ELF::SHT_REL:
     if (Expected<Elf_Rel_Range> RangeOrErr = Obj.rels(Sec)) {
       for (const Elf_Rel &R : *RangeOrErr)
-        printReloc(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
+        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
     } else {
       Warn(RangeOrErr.takeError());
     }
@@ -5644,7 +5664,7 @@ void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
   case ELF::SHT_RELA:
     if (Expected<Elf_Rela_Range> RangeOrErr = Obj.relas(Sec)) {
       for (const Elf_Rela &R : *RangeOrErr)
-        printReloc(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
+        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
     } else {
       Warn(RangeOrErr.takeError());
     }
@@ -5656,22 +5676,22 @@ void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
       Warn(RangeOrErr.takeError());
       break;
     }
-    if (opts::RawRelr) {
+    if (RawRelr) {
       for (const Elf_Relr &R : *RangeOrErr)
-        printRelrReloc(R);
+        RelrFn(R);
       break;
     }
 
     for (const Elf_Rel &R : Obj.decode_relrs(*RangeOrErr))
-      printReloc(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec,
-                 /*SymTab=*/nullptr);
+      RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec,
+                /*SymTab=*/nullptr);
     break;
   }
   case ELF::SHT_ANDROID_REL:
   case ELF::SHT_ANDROID_RELA:
     if (Expected<std::vector<Elf_Rela>> RelasOrErr = Obj.android_relas(Sec)) {
       for (const Elf_Rela &R : *RelasOrErr)
-        printReloc(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
+        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
     } else {
       Warn(RelasOrErr.takeError());
     }
