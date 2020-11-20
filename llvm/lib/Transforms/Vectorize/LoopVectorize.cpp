@@ -5789,12 +5789,6 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
     TransposeEnds[Interval.second].push_back(Interval.first);
 
   SmallPtrSet<Instruction *, 8> OpenIntervals;
-
-  // Get the size of the widest register.
-  unsigned MaxSafeDepDist = -1U;
-  if (Legal->getMaxSafeDepDistBytes() != -1U)
-    MaxSafeDepDist = Legal->getMaxSafeDepDistBytes() * 8;
-
   SmallVector<RegisterUsage, 8> RUs(VFs.size());
   SmallVector<SmallMapVector<unsigned, unsigned, 4>, 8> MaxUsages(VFs.size());
 
