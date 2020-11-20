@@ -374,7 +374,6 @@ define signext i32 @rori_i32_fshl(i32 signext %a) nounwind {
 }
 
 ; Similar to rori_i32_fshl, but doesn't sign extend the result.
-; FIXME: We should be using RORIW, but we need a sext_inreg.
 define void @rori_i32_fshl_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshl_nosext:
 ; RV64I:       # %bb.0:
@@ -386,25 +385,19 @@ define void @rori_i32_fshl_nosext(i32 signext %a, i32* %x) nounwind {
 ;
 ; RV64IB-LABEL: rori_i32_fshl_nosext:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    srliw a2, a0, 1
-; RV64IB-NEXT:    slli a0, a0, 31
-; RV64IB-NEXT:    or a0, a0, a2
+; RV64IB-NEXT:    roriw a0, a0, 1
 ; RV64IB-NEXT:    sw a0, 0(a1)
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: rori_i32_fshl_nosext:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    srliw a2, a0, 1
-; RV64IBB-NEXT:    slli a0, a0, 31
-; RV64IBB-NEXT:    or a0, a0, a2
+; RV64IBB-NEXT:    roriw a0, a0, 1
 ; RV64IBB-NEXT:    sw a0, 0(a1)
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: rori_i32_fshl_nosext:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    srliw a2, a0, 1
-; RV64IBP-NEXT:    slli a0, a0, 31
-; RV64IBP-NEXT:    or a0, a0, a2
+; RV64IBP-NEXT:    roriw a0, a0, 1
 ; RV64IBP-NEXT:    sw a0, 0(a1)
 ; RV64IBP-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 31)
@@ -440,7 +433,6 @@ define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
 }
 
 ; Similar to rori_i32_fshr, but doesn't sign extend the result.
-; FIXME: We should be using RORIW, but we need a sext_inreg.
 define void @rori_i32_fshr_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshr_nosext:
 ; RV64I:       # %bb.0:
@@ -452,25 +444,19 @@ define void @rori_i32_fshr_nosext(i32 signext %a, i32* %x) nounwind {
 ;
 ; RV64IB-LABEL: rori_i32_fshr_nosext:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    slli a2, a0, 1
-; RV64IB-NEXT:    srliw a0, a0, 31
-; RV64IB-NEXT:    or a0, a0, a2
+; RV64IB-NEXT:    roriw a0, a0, 31
 ; RV64IB-NEXT:    sw a0, 0(a1)
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: rori_i32_fshr_nosext:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    slli a2, a0, 1
-; RV64IBB-NEXT:    srliw a0, a0, 31
-; RV64IBB-NEXT:    or a0, a0, a2
+; RV64IBB-NEXT:    roriw a0, a0, 31
 ; RV64IBB-NEXT:    sw a0, 0(a1)
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: rori_i32_fshr_nosext:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    slli a2, a0, 1
-; RV64IBP-NEXT:    srliw a0, a0, 31
-; RV64IBP-NEXT:    or a0, a0, a2
+; RV64IBP-NEXT:    roriw a0, a0, 31
 ; RV64IBP-NEXT:    sw a0, 0(a1)
 ; RV64IBP-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
