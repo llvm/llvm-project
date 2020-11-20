@@ -2293,6 +2293,30 @@ OpFoldResult LoadOp::fold(ArrayRef<Attribute> cstOperands) {
   return OpFoldResult();
 }
 
+namespace {
+/// Fold a load on a tensor_to_memref operation into an extract_element on the
+/// corresponding tensor.
+struct LoadOfTensorToMemref : public OpRewritePattern<LoadOp> {
+  using OpRewritePattern<LoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(LoadOp load,
+                                PatternRewriter &rewriter) const override {
+    auto tensorToMemref = load.memref().getDefiningOp<TensorToMemrefOp>();
+    if (!tensorToMemref)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ExtractElementOp>(load, tensorToMemref.tensor(),
+                                                  load.indices());
+    return success();
+  }
+};
+} // end anonymous namespace.
+
+void LoadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                         MLIRContext *context) {
+  results.insert<LoadOfTensorToMemref>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // MemRefCastOp
 //===----------------------------------------------------------------------===//
