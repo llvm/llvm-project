@@ -18,6 +18,7 @@
 #define DEBUG_TYPE "format-test"
 
 using clang::tooling::ReplacementTest;
+using testing::internal::ScopedTrace;
 
 namespace clang {
 namespace format {
@@ -51,17 +52,23 @@ protected:
     return *Result;
   }
 
-  void verifyFormat(StringRef Code) {
+  void _verifyFormat(const char *File, int Line, StringRef Code) {
+    ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     EXPECT_EQ(Code.str(), format(Code)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code)));
   }
 
-  void verifyIncompleteFormat(StringRef Code) {
+  void _verifyIncompleteFormat(const char *File, int Line, StringRef Code) {
+    ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     EXPECT_EQ(Code.str(), format(test::messUp(Code), SC_ExpectIncomplete));
   }
 
   FormatStyle Style;
 };
+
+#define verifyIncompleteFormat(...)                                            \
+  _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
+#define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
 TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   auto Style = getStyle("LLVM", "a.h", "none",
@@ -1453,6 +1460,39 @@ TEST_F(FormatTestObjC, BreakLineBeforeNestedBlockParam) {
       "           callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {\n"
       "             u = v;\n"
       "           }]");
+
+  verifyFormat("[self block:^(void) {\n"
+               "  doStuff();\n"
+               "} completionHandler:^(void) {\n"
+               "  doStuff();\n"
+               "  [self block:^(void) {\n"
+               "    doStuff();\n"
+               "  } completionHandler:^(void) {\n"
+               "    doStuff();\n"
+               "  }];\n"
+               "}];");
+
+  Style.ColumnLimit = 0;
+  verifyFormat("[[SessionService sharedService] "
+               "loadWindowWithCompletionBlock:^(SessionWindow *window) {\n"
+               "  if (window) {\n"
+               "    [self windowDidLoad:window];\n"
+               "  } else {\n"
+               "    [self errorLoadingWindow];\n"
+               "  }\n"
+               "}];");
+  verifyFormat("[controller test:^{\n"
+               "  doStuff();\n"
+               "} withTimeout:5 completionHandler:^{\n"
+               "  doStuff();\n"
+               "}];");
+  verifyFormat(
+      "[self setupTextFieldSignals:@[\n"
+      "  self.documentWidthField,\n"
+      "  self.documentHeightField,\n"
+      "] solver:^(NSTextField *textField) {\n"
+      "  return [self.representedObject solveEquationForTextField:textField];\n"
+      "}];");
 }
 
 TEST_F(FormatTestObjC, IfNotUnlikely) {
