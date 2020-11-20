@@ -1575,16 +1575,14 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           !LoLoop.ToRemove.contains(VprDef)) {
         MachineInstr *VCMP = VprDef;
         // The VCMP and VPST can only be merged if the VCMP's operands will have
-        // the same values at the VPST
-        if (RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(1).getReg()) &&
+        // the same values at the VPST.
+        // If any of the instructions between the VCMP and VPST are predicated
+        // then a different code path is expected to have merged the VCMP and
+        // VPST already.
+        if (!std::any_of(++MachineBasicBlock::iterator(VCMP),
+                         MachineBasicBlock::iterator(VPST), hasVPRUse) &&
+            RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(1).getReg()) &&
             RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(2).getReg())) {
-          // If the instruction after the VCMP is predicated then a different
-          // code path is expected to have merged the VCMP and VPST already.
-          // This assertion protects against changes to that behaviour
-          assert(!std::any_of(++MachineBasicBlock::iterator(VCMP),
-                              MachineBasicBlock::iterator(VPST), hasVPRUse) &&
-                 "Instructions between the VCMP and VPST are not expected to "
-                 "be predicated");
           ReplaceVCMPWithVPT(VCMP, VPST);
           LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *VPST);
           LoLoop.ToRemove.insert(VPST);
