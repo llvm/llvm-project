@@ -274,7 +274,7 @@ define i64 @caller_small_coerced_struct() nounwind {
 
 %struct.large = type { i64, i64, i64, i64 }
 
-define i64 @callee_large_struct(%struct.large* byval align 8 %a) nounwind {
+define i64 @callee_large_struct(%struct.large* byval(%struct.large) align 8 %a) nounwind {
 ; RV64I-LABEL: callee_large_struct:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ld a1, 0(a0)
@@ -321,7 +321,7 @@ define i64 @caller_large_struct() nounwind {
   store i64 3, i64* %c
   %d = getelementptr inbounds %struct.large, %struct.large* %ls, i64 0, i32 3
   store i64 4, i64* %d
-  %2 = call i64 @callee_large_struct(%struct.large* byval align 8 %ls)
+  %2 = call i64 @callee_large_struct(%struct.large* byval(%struct.large) align 8 %ls)
   ret i64 %2
 }
 

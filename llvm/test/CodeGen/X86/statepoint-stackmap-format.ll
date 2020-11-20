@@ -103,7 +103,7 @@ define i32 @test_spadj(i32 addrspace(1)* %p) gc "statepoint-example" {
 
 declare void @use(%struct*)
 
-define void @test_fixed_arg(%struct* byval %x) gc "statepoint-example" {
+define void @test_fixed_arg(%struct* byval(%struct) %x) gc "statepoint-example" {
 ; CHECK-LABEL: test_fixed_arg
 ; CHECK: pushq %rax
 ; CHECK: leaq 16(%rsp), %rdi

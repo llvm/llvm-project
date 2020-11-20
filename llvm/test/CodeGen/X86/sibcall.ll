@@ -307,7 +307,7 @@ declare i32 @foo5(i32, i32, i32, i32, i32)
 
 %struct.t = type { i32, i32, i32, i32, i32 }
 
-define i32 @t12(i32 %x, i32 %y, %struct.t* byval align 4 %z) nounwind ssp {
+define i32 @t12(i32 %x, i32 %y, %struct.t* byval(%struct.t) align 4 %z) nounwind ssp {
 ; X86-LABEL: t12:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -342,14 +342,14 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
-  %1 = tail call i32 @foo6(i32 %x, i32 %y, %struct.t* byval align 4 %z) nounwind
+  %1 = tail call i32 @foo6(i32 %x, i32 %y, %struct.t* byval(%struct.t) align 4 %z) nounwind
   ret i32 %1
 
 bb2:
   ret i32 0
 }
 
-declare i32 @foo6(i32, i32, %struct.t* byval align 4)
+declare i32 @foo6(i32, i32, %struct.t* byval(%struct.t) align 4)
 
 ; rdar://r7717598
 %struct.ns = type { i32, i32 }
@@ -403,13 +403,13 @@ define %struct.ns* @t13(%struct.cp* %yy) nounwind ssp {
 ; X32-NEXT:    popq %rcx
 ; X32-NEXT:    retq
 entry:
-  %0 = tail call fastcc %struct.ns* @foo7(%struct.cp* byval align 4 %yy, i8 signext 0) nounwind
+  %0 = tail call fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4 %yy, i8 signext 0) nounwind
   ret %struct.ns* %0
 }
 
 ; rdar://6195379
 ; llvm can't do sibcall for this in 32-bit mode (yet).
-declare fastcc %struct.ns* @foo7(%struct.cp* byval align 4, i8 signext) nounwind ssp
+declare fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4, i8 signext) nounwind ssp
 
 %struct.__block_descriptor = type { i64, i64 }
 %struct.__block_descriptor_withcopydispose = type { i64, i64, i8*, i8* }

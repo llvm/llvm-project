@@ -61,7 +61,7 @@ entry:
     ret double %rd
 }
 
-define void @ret_large_struct(%struct.st12_t* noalias nocapture sret %agg.result, %struct.st12_t* byval nocapture readonly align 4 %r) #0 {
+define void @ret_large_struct(%struct.st12_t* noalias nocapture sret(%struct.st12_t) %agg.result, %struct.st12_t* byval(%struct.st12_t) nocapture readonly align 4 %r) #0 {
 ; CHECK-LABEL: ret_large_struct:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi

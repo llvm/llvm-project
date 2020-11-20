@@ -74,7 +74,7 @@ define void @simple_rets() {
 
 
 declare i32 @struct_on_stack(i8 %var0, i16 %var1, i32 %var2, i64 %var3, i128 %var45,
-                             i32* %var6, %myStruct* byval %struct, i32 %stacked,
+                             i32* %var6, %myStruct* byval(%myStruct) %struct, i32 %stacked,
                              double %notstacked)
 declare void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
                           float %var4, float %var5, float %var6, float %var7,
@@ -83,7 +83,7 @@ declare void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
 define void @check_stack_args() {
 ; CHECK-LABEL: check_stack_args:
   call i32 @struct_on_stack(i8 0, i16 12, i32 42, i64 99, i128 1,
-                            i32* @var32, %myStruct* byval @varstruct,
+                            i32* @var32, %myStruct* byval(%myStruct) @varstruct,
                             i32 999, double 1.0)
   ; Want to check that the final double is passed in registers and
   ; that varstruct is passed on the stack. Rather dependent on how a

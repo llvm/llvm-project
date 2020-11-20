@@ -97,13 +97,13 @@ define void @test3(%0* noalias sret %agg.result) nounwind  {
 ; PR8644
 define void @test4(i8 *%P) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[P:%.*]])
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %1
   %a = bitcast %1* %A to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 %P, i64 8, i1 false)
-  call void @test4a(i8* align 1 byval %a)
+  call void @test4a(i8* align 1 byval(i8) %a)
   ret void
 }
 
@@ -113,13 +113,13 @@ define void @test4_addrspace(i8 addrspace(1)* %P) {
 ; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
 ; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p1i8.i64(i8* align 4 [[A2]], i8 addrspace(1)* align 4 [[P:%.*]], i64 8, i1 false)
-; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[A2]])
 ; CHECK-NEXT:    ret void
 ;
   %a1 = alloca %1
   %a2 = bitcast %1* %a1 to i8*
   call void @llvm.memcpy.p0i8.p1i8.i64(i8* align 4 %a2, i8 addrspace(1)* align 4 %P, i64 8, i1 false)
-  call void @test4a(i8* align 1 byval %a2)
+  call void @test4a(i8* align 1 byval(i8) %a2)
   ret void
 }
 
@@ -129,14 +129,14 @@ define void @test4_write_between(i8 *%P) {
 ; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    store i8 0, i8* [[A2]], align 1
-; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[A2]])
 ; CHECK-NEXT:    ret void
 ;
   %a1 = alloca %1
   %a2 = bitcast %1* %a1 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a2, i8* align 4 %P, i64 8, i1 false)
   store i8 0, i8* %a2
-  call void @test4a(i8* align 1 byval %a2)
+  call void @test4a(i8* align 1 byval(i8) %a2)
   ret void
 }
 
@@ -146,14 +146,14 @@ define i8 @test4_read_between(i8 *%P) {
 ; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    [[X:%.*]] = load i8, i8* [[A2]], align 1
-; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[A2]])
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %a1 = alloca %1
   %a2 = bitcast %1* %a1 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a2, i8* align 4 %P, i64 8, i1 false)
   %x = load i8, i8* %a2
-  call void @test4a(i8* align 1 byval %a2)
+  call void @test4a(i8* align 1 byval(i8) %a2)
   ret i8 %x
 }
 
@@ -164,7 +164,7 @@ define void @test4_non_local(i8 *%P, i1 %c) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       call:
-; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[A2]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -175,14 +175,14 @@ define void @test4_non_local(i8 *%P, i1 %c) {
   br i1 %c, label %call, label %exit
 
 call:
-  call void @test4a(i8* align 1 byval %a2)
+  call void @test4a(i8* align 1 byval(i8) %a2)
   br label %exit
 
 exit:
   ret void
 }
 
-declare void @test4a(i8* align 1 byval)
+declare void @test4a(i8* align 1 byval(i8))
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
@@ -191,7 +191,7 @@ declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace
 
 @sS = external global %struct.S, align 16
 
-declare void @test5a(%struct.S* align 16 byval) nounwind ssp
+declare void @test5a(%struct.S* align 16 byval(%struct.S)) nounwind ssp
 
 
 ; rdar://8713376 - This memcpy can't be eliminated.
@@ -203,7 +203,7 @@ define i32 @test5(i32 %x) nounwind ssp {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP]], i8* align 16 bitcast (%struct.S* @sS to i8*), i64 32, i1 false)
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[Y]], i64 0, i32 1, i64 0
 ; CHECK-NEXT:    store i8 4, i8* [[A]], align 1
-; CHECK-NEXT:    call void @test5a(%struct.S* byval align 16 [[Y]])
+; CHECK-NEXT:    call void @test5a(%struct.S* byval(%struct.S) align 16 [[Y]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -212,7 +212,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %tmp, i8* align 16 bitcast (%struct.S* @sS to i8*), i64 32, i1 false)
   %a = getelementptr %struct.S, %struct.S* %y, i64 0, i32 1, i64 0
   store i8 4, i8* %a
-  call void @test5a(%struct.S* align 16 byval %y)
+  call void @test5a(%struct.S* align 16 byval(%struct.S) %y)
   ret i32 0
 }
 
@@ -230,10 +230,10 @@ define void @test6(i8 *%P) {
 ; isn't itself 8 byte aligned.
 %struct.p = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 
-define i32 @test7(%struct.p* nocapture align 8 byval %q) nounwind ssp {
+define i32 @test7(%struct.p* nocapture align 8 byval(%struct.p) %q) nounwind ssp {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @g(%struct.p* byval align 8 [[Q:%.*]]) [[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @g(%struct.p* byval(%struct.p) align 8 [[Q:%.*]]) [[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:
@@ -241,11 +241,11 @@ entry:
   %tmp = bitcast %struct.p* %agg.tmp to i8*
   %tmp1 = bitcast %struct.p* %q to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %tmp, i8* align 4 %tmp1, i64 48, i1 false)
-  %call = call i32 @g(%struct.p* align 8 byval %agg.tmp) nounwind
+  %call = call i32 @g(%struct.p* align 8 byval(%struct.p) %agg.tmp) nounwind
   ret i32 %call
 }
 
-declare i32 @g(%struct.p* align 8 byval)
+declare i32 @g(%struct.p* align 8 byval(%struct.p))
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 

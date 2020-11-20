@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.S = type { [100 x i32] }
 
 ; Safe access to a byval argument.
-define i32 @ByValSafe(%struct.S* byval nocapture readonly align 8 %zzz) norecurse nounwind readonly safestack uwtable {
+define i32 @ByValSafe(%struct.S* byval(%struct.S) nocapture readonly align 8 %zzz) norecurse nounwind readonly safestack uwtable {
 entry:
   ; CHECK-LABEL: @ByValSafe
   ; CHECK-NOT: __safestack_unsafe_stack_ptr
@@ -19,7 +19,7 @@ entry:
 
 ; Unsafe access to a byval argument.
 ; Argument is copied to the unsafe stack.
-define i32 @ByValUnsafe(%struct.S* byval nocapture readonly align 8 %zzz, i64 %idx) norecurse nounwind readonly safestack uwtable {
+define i32 @ByValUnsafe(%struct.S* byval(%struct.S) nocapture readonly align 8 %zzz, i64 %idx) norecurse nounwind readonly safestack uwtable {
 entry:
   ; CHECK-LABEL: @ByValUnsafe
   ; CHECK: %[[A:.*]] = load {{.*}} @__safestack_unsafe_stack_ptr
@@ -36,7 +36,7 @@ entry:
 ; Unsafe access to a byval argument.
 ; Argument is copied to the unsafe stack.
 ; Check that dest align of memcpy is set according to datalayout prefered alignment
-define i32 @ByValUnsafe2(%struct.S* byval nocapture readonly %zzz, i64 %idx) norecurse nounwind readonly safestack uwtable {
+define i32 @ByValUnsafe2(%struct.S* byval(%struct.S) nocapture readonly %zzz, i64 %idx) norecurse nounwind readonly safestack uwtable {
 entry:
   ; CHECK-LABEL: @ByValUnsafe
   ; CHECK: %[[A:.*]] = load {{.*}} @__safestack_unsafe_stack_ptr
@@ -51,7 +51,7 @@ entry:
 }
 
 ; Highly aligned byval argument.
-define i32 @ByValUnsafeAligned(%struct.S* byval nocapture readonly align 64 %zzz, i64 %idx) norecurse nounwind readonly safestack uwtable {
+define i32 @ByValUnsafeAligned(%struct.S* byval(%struct.S) nocapture readonly align 64 %zzz, i64 %idx) norecurse nounwind readonly safestack uwtable {
 entry:
   ; CHECK-LABEL: @ByValUnsafeAligned
   ; CHECK: %[[A:.*]] = load {{.*}} @__safestack_unsafe_stack_ptr

@@ -1683,7 +1683,7 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
   ret void
 }
 
-define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval %arg0) #0 {
+define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg0) #0 {
   ; CHECK-LABEL: name: void_func_byval_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31
@@ -1706,7 +1706,7 @@ define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval %arg0
   ret void
 }
 
-define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval %arg0, { i8, i32 } addrspace(5)* byval %arg1, i32 %arg2) #0 {
+define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg0, { i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg1, i32 %arg2) #0 {
   ; CHECK-LABEL: name: void_func_byval_struct_i8_i32_x2
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $sgpr30_sgpr31
@@ -1743,7 +1743,7 @@ define void @void_func_byval_struct_i8_i32_x2({ i8, i32 } addrspace(5)* byval %a
   ret void
 }
 
-define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval %arg0, i64 addrspace(5)* byval %arg1) #0 {
+define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval(i32) %arg0, i64 addrspace(5)* byval(i64) %arg1) #0 {
   ; CHECK-LABEL: name: void_func_byval_i32_byval_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr30_sgpr31

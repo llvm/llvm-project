@@ -292,10 +292,10 @@ define void @unsound_readonly(i8* %ignored, i8* %escaped_then_written) {
 ;{
 declare void @escape_i8(i8* %ptr)
 
-define void @byval_not_readonly_1(i8* byval %written) readonly {
+define void @byval_not_readonly_1(i8* byval(i8) %written) readonly {
 ; CHECK: Function Attrs: readonly
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readonly_1
-; CHECK-SAME: (i8* noalias nonnull byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR2]] {
+; CHECK-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR2]] {
 ; CHECK-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
 ; CHECK-NEXT:    ret void
 ;
@@ -303,16 +303,16 @@ define void @byval_not_readonly_1(i8* byval %written) readonly {
   ret void
 }
 
-define void @byval_not_readonly_2(i8* byval %written) readonly {
+define void @byval_not_readonly_2(i8* byval(i8) %written) readonly {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@byval_not_readonly_2
-; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
 ; IS__TUNIT____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@byval_not_readonly_2
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -320,10 +320,10 @@ define void @byval_not_readonly_2(i8* byval %written) readonly {
   ret void
 }
 
-define void @byval_not_readnone_1(i8* byval %written) readnone {
+define void @byval_not_readnone_1(i8* byval(i8) %written) readnone {
 ; CHECK: Function Attrs: readnone
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readnone_1
-; CHECK-SAME: (i8* noalias nonnull byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR9:#.*]] {
+; CHECK-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR9:#.*]] {
 ; CHECK-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
 ; CHECK-NEXT:    ret void
 ;
@@ -331,16 +331,16 @@ define void @byval_not_readnone_1(i8* byval %written) readnone {
   ret void
 }
 
-define void @byval_not_readnone_2(i8* byval %written) readnone {
+define void @byval_not_readnone_2(i8* byval(i8) %written) readnone {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@byval_not_readnone_2
-; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
 ; IS__TUNIT____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@byval_not_readnone_2
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -348,16 +348,16 @@ define void @byval_not_readnone_2(i8* byval %written) readnone {
   ret void
 }
 
-define void @byval_no_fnarg(i8* byval %written) {
+define void @byval_no_fnarg(i8* byval(i8) %written) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@byval_no_fnarg
-; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
 ; IS__TUNIT____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@byval_no_fnarg
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__CGSCC____-NEXT:    ret void
 ;
