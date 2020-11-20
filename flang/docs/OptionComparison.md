@@ -8,18 +8,13 @@
 
 # Compiler options comparison
 
-```eval_rst
-.. contents::
-   :local:
-```
-
 This document catalogs the options processed by F18's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to [notes on Standards conformance](#standards).
 
 **There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
 
 Note that compilers may support language features without having an option for them.  Such cases are frequently, but not always noted in this document.
 
-## Categorisation of Options
+## Categorization of Options
 
 <table>
   <tr>
@@ -1302,9 +1297,7 @@ GNU is the only compiler with options governing the use of non-standard intrinsi
 
 ### What is and is not included
 
-This document focuses on options relevant to the Fortran language.  This includes some features (such as recursion) that are only indirectly related.  Options related to the following areas are not included:
-
-
+This document focuses on options relevant to the Fortran language definition.  This includes some features (such as recursion) that are only indirectly related to the Fortran language definition.  Options related to the following areas are not included:
 
 *   Input/Output
 *   Optimization
@@ -1323,11 +1316,9 @@ This document focuses on options relevant to the Fortran language.  This include
 *   Threads or parallelization
 *   Profiling and code coverage
 
-
 ### Data sources
 
 Here's the list of compilers surveyed, hot linked to the source of data on it.  Note that this is the only mention of the Oracle and NAG compilers in this document.
-
 
 
 *   [Cray Fortran Reference Manual version 8.7](https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/compiler-command-line-options)
