@@ -23,6 +23,11 @@
 #error "Missing macro definition of HANDLE_VALUE*"
 #endif
 
+// If the LLVM_C_API macro is set, then values handled via HANDLE_*_EXCLUDE_LLVM_C_API will not be expanded in areas the HANDLE_* macro is used. If it is not set, then HANDLE_*_EXCLUDE_LLVM_C_API values are handled normally as their HANDLE_* counterparts.
+#ifndef LLVM_C_API
+#define LLVM_C_API 0
+#endif
+
 #ifndef HANDLE_MEMORY_VALUE
 #define HANDLE_MEMORY_VALUE(ValueName) HANDLE_VALUE(ValueName)
 #endif
@@ -55,6 +60,15 @@
 #define HANDLE_CONSTANT_MARKER(MarkerName, ValueName)
 #endif
 
+#ifndef HANDLE_CONSTANT_EXCLUDE_LLVM_C_API
+#define HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(ValueName) HANDLE_CONSTANT(ValueName)
+#endif
+
+#if LLVM_C_API
+#undef HANDLE_CONSTANT_EXCLUDE_LLVM_C_API
+#define HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(ValueName)
+#endif
+
 // Having constant first makes the range check for isa<Constant> faster
 // and smaller by one operation.
 
@@ -65,6 +79,7 @@ HANDLE_GLOBAL_VALUE(GlobalIFunc)
 HANDLE_GLOBAL_VALUE(GlobalVariable)
 HANDLE_CONSTANT(BlockAddress)
 HANDLE_CONSTANT(ConstantExpr)
+HANDLE_CONSTANT_EXCLUDE_LLVM_C_API(DSOLocalEquivalent)
 
 // ConstantAggregate.
 HANDLE_CONSTANT(ConstantArray)
@@ -114,3 +129,5 @@ HANDLE_INSTRUCTION(Instruction)
 #undef HANDLE_INLINE_ASM_VALUE
 #undef HANDLE_VALUE
 #undef HANDLE_CONSTANT_MARKER
+#undef HANDLE_CONSTANT_EXCLUDE_LLVM_C_API
+#undef LLVM_C_API

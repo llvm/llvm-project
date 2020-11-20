@@ -1383,6 +1383,9 @@ public:
 
   DenseMap<std::pair<const Function *, const BasicBlock *>, BlockAddress *>
     BlockAddresses;
+
+  DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
+
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 
   ConstantUniqueMap<InlineAsm> InlineAsms;
