@@ -197,6 +197,44 @@ struct TestLinalgGreedyFusion
     }
   }
 };
+
+/// Pass to test tile and fuse of sequence of operations. Intended only for
+/// testing.
+struct TestLinalgTileAndFuseSequencePass
+    : public PassWrapper<TestLinalgTileAndFuseSequencePass, FunctionPass> {
+  TestLinalgTileAndFuseSequencePass() = default;
+  TestLinalgTileAndFuseSequencePass(
+      const TestLinalgTileAndFuseSequencePass &pass){};
+
+  ListOption<int64_t> tileSizes{
+      *this, "tile-sizes", llvm::cl::desc("Tile sizes to use for ops"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect>();
+  }
+
+  void runOnFunction() override {
+    FuncOp funcOp = getOperation();
+    auto &blocks = funcOp.getBody().getBlocks();
+    if (!llvm::hasSingleElement(blocks)) {
+      return;
+    }
+    SmallVector<LinalgOp, 2> linalgOps =
+        llvm::to_vector<2>(blocks.front().getOps<LinalgOp>());
+    Aliases aliases;
+    LinalgDependenceGraph dependenceGraph(aliases, linalgOps);
+    OpBuilder builder(funcOp.getContext());
+    Optional<TiledAndFusedLinalgOps> tileAndFuseOps = tileAndFuseLinalgOps(
+        builder, linalgOps, dependenceGraph,
+        LinalgTilingOptions().setTileSizes(tileSizes).setLoopType(
+            LinalgTilingLoopType::ParallelLoops));
+    if (!tileAndFuseOps)
+      return signalPassFailure();
+    for (auto op : linalgOps)
+      op.erase();
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -211,5 +249,12 @@ void registerTestLinalgGreedyFusion() {
       "test-linalg-greedy-fusion",
       "Test Linalg fusion by applying a greedy test transformation.");
 }
+void registerTestLinalgTileAndFuseSequencePass() {
+  PassRegistration<TestLinalgTileAndFuseSequencePass>
+      testTileAndFuseSequencePass(
+          "test-linalg-tile-and-fuse",
+          "Test Linalg tiling and fusion of a sequence of Linalg operations.");
+}
+
 } // namespace test
 } // namespace mlir
