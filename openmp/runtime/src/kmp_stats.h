@@ -258,6 +258,7 @@ enum stats_state_e {
   macro(KMP_tree_release, 0, arg)                                              \
   macro(USER_resume, 0, arg)                                                   \
   macro(USER_suspend, 0, arg)                                                  \
+  macro(USER_mwait, 0, arg)                                                  \
   macro(KMP_allocate_team, 0, arg)                                             \
   macro(KMP_setup_icv_copy, 0, arg)                                            \
   macro(USER_icv_copy, 0, arg)                                                 \

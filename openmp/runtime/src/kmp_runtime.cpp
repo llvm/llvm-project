@@ -5458,7 +5458,7 @@ void __kmp_free_team(kmp_root_t *root,
           }
 #endif
           // first check if thread is sleeping
-          kmp_flag_64 fl(&th->th.th_bar[bs_forkjoin_barrier].bb.b_go, th);
+          kmp_flag_64<> fl(&th->th.th_bar[bs_forkjoin_barrier].bb.b_go, th);
           if (fl.is_sleeping())
             fl.resume(__kmp_gtid_from_thread(th));
           KMP_CPU_PAUSE();
@@ -5885,7 +5885,7 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
       /* Need release fence here to prevent seg faults for tree forkjoin barrier
        * (GEH) */
       ANNOTATE_HAPPENS_BEFORE(thread);
-      kmp_flag_64 flag(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go, thread);
+      kmp_flag_64<> flag(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go, thread);
       __kmp_release_64(&flag);
     }
 
@@ -6579,6 +6579,48 @@ static void __kmp_check_mic_type() {
 
 #endif /* KMP_MIC_SUPPORTED */
 
+#if KMP_HAVE_UMWAIT
+static void __kmp_user_level_mwait_init() {
+  struct kmp_cpuid buf;
+  __kmp_x86_cpuid(7, 0, &buf);
+  __kmp_umwait_enabled = ((buf.ecx >> 5) & 1) && __kmp_user_level_mwait;
+  KF_TRACE(30, ("__kmp_user_level_mwait_init: __kmp_umwait_enabled = %d\n",
+                __kmp_umwait_enabled));
+}
+#elif KMP_HAVE_MWAIT
+#ifndef AT_INTELPHIUSERMWAIT
+// Spurious, non-existent value that should always fail to return anything.
+// Will be replaced with the correct value when we know that.
+#define AT_INTELPHIUSERMWAIT 10000
+#endif
+// getauxval() function is available in RHEL7 and SLES12. If a system with an
+// earlier OS is used to build the RTL, we'll use the following internal
+// function when the entry is not found.
+unsigned long getauxval(unsigned long) KMP_WEAK_ATTRIBUTE_EXTERNAL;
+unsigned long getauxval(unsigned long) { return 0; }
+
+static void __kmp_user_level_mwait_init() {
+  // When getauxval() and correct value of AT_INTELPHIUSERMWAIT are available
+  // use them to find if the user-level mwait is enabled. Otherwise, forcibly
+  // set __kmp_mwait_enabled=TRUE on Intel MIC if the environment variable
+  // KMP_USER_LEVEL_MWAIT was set to TRUE.
+  if (__kmp_mic_type == mic3) {
+    unsigned long res = getauxval(AT_INTELPHIUSERMWAIT);
+    if ((res & 0x1) || __kmp_user_level_mwait) {
+      __kmp_mwait_enabled = TRUE;
+      if (__kmp_user_level_mwait) {
+        KMP_INFORM(EnvMwaitWarn);
+      }
+    } else {
+      __kmp_mwait_enabled = FALSE;
+    }
+  }
+  KF_TRACE(30, ("__kmp_user_level_mwait_init: __kmp_mic_type = %d, "
+                "__kmp_mwait_enabled = %d\n",
+                __kmp_mic_type, __kmp_mwait_enabled));
+}
+#endif /* KMP_HAVE_UMWAIT */
+
 static void __kmp_do_serial_initialize(void) {
   int i, gtid;
   int size;
@@ -6753,6 +6795,9 @@ static void __kmp_do_serial_initialize(void) {
 
   __kmp_env_initialize(NULL);
 
+#if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+  __kmp_user_level_mwait_init();
+#endif
 // Print all messages in message catalog for testing purposes.
 #ifdef KMP_DEBUG
   char const *val = __kmp_env_get("KMP_DUMP_CATALOG");
@@ -8353,7 +8398,8 @@ void __kmp_resume_if_soft_paused() {
     for (int gtid = 1; gtid < __kmp_threads_capacity; ++gtid) {
       kmp_info_t *thread = __kmp_threads[gtid];
       if (thread) { // Wake it if sleeping
-        kmp_flag_64 fl(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go, thread);
+        kmp_flag_64<> fl(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go,
+                         thread);
         if (fl.is_sleeping())
           fl.resume(gtid);
         else if (__kmp_try_suspend_mx(thread)) { // got suspend lock

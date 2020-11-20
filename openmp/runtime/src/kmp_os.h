@@ -281,6 +281,16 @@ template <> struct traits_t<unsigned long long> {
 #define __forceinline __inline
 #endif
 
+/* Check if the OS/arch can support user-level mwait */
+// All mwait code tests for UMWAIT first, so it should only fall back to ring3
+// MWAIT for KNL.
+#define KMP_HAVE_MWAIT                                                         \
+  ((KMP_ARCH_X86 || KMP_ARCH_X86_64) && (KMP_OS_LINUX || KMP_OS_WINDOWS) &&    \
+   !KMP_MIC2)
+#define KMP_HAVE_UMWAIT                                                        \
+  ((KMP_ARCH_X86 || KMP_ARCH_X86_64) && (KMP_OS_LINUX || KMP_OS_WINDOWS) &&    \
+   !KMP_MIC)
+
 #if KMP_OS_WINDOWS
 #include <windows.h>
 
