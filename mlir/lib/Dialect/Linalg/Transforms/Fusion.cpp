@@ -782,12 +782,6 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
   return fusableDependences;
 }
 
-static bool isZero(Value v) {
-  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
-    return cst.getValue() == 0;
-  return false;
-}
-
 /// Tile the fused loops in the root operation, by setting the tile sizes for
 /// all other loops to zero (those will be tiled later).
 static Optional<TiledLinalgOp> tileRootOperation(
