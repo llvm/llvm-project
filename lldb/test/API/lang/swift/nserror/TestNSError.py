@@ -32,7 +32,7 @@ class SwiftNSErrorTest(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @expectedFailureAll(bugnumber="rdar://71549869")
+    @skipIf(bugnumber="rdar://71549869")
     def test_swift_nserror_fails(self):
         """Tests that Swift displays NSError correctly"""
         self.build()
