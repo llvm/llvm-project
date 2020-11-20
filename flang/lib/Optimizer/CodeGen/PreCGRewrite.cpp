@@ -205,10 +205,9 @@ public:
 /// Convert FIR structured control flow ops to CFG ops.
 class CodeGenRewrite : public CodeGenRewriteBase<CodeGenRewrite> {
 public:
-  void runOnFunction() override final {
+  void runOn(mlir::Operation *op, mlir::Region &region) {
     auto &context = getContext();
-    mlir::OwningRewritePatternList patterns;
-    patterns.insert<EmboxConversion, ArrayCoorConversion>(&context);
+    mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
     target.addLegalDialect<FIROpsDialect, mlir::StandardOpsDialect>();
     target.addIllegalOp<ArrayCoorOp>();
@@ -216,17 +215,25 @@ public:
       return !(embox.getShape() ||
                embox.getType().cast<BoxType>().getEleTy().isa<SequenceType>());
     });
-
-    // Do the conversions.
-    if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
-                                                  std::move(patterns)))) {
+    mlir::OwningRewritePatternList patterns;
+    patterns.insert<EmboxConversion, ArrayCoorConversion>(&context);
+    if (mlir::failed(
+            mlir::applyPartialConversion(op, target, std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
                       "error in running the pre-codegen conversions");
       signalPassFailure();
     }
-
     // Erase any residual.
-    simplifyRegion(getFunction().getBody());
+    simplifyRegion(region);
+  }
+
+  void runOnOperation() override final {
+    // Call runOn on all top level regions that may contain emboxOp/arrayCoorOp.
+    auto mod = getOperation();
+    for (auto func : mod.getOps<mlir::FuncOp>())
+      runOn(func, func.getBody());
+    for (auto global : mod.getOps<fir::GlobalOp>())
+      runOn(global, global.getRegion());
   }
 
   // Clean up the region.
