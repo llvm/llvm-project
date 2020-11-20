@@ -498,6 +498,116 @@ define i64 @grev2_i64(i64 %a) nounwind {
   ret i64 %or
 }
 
+; FIXME: we should generate grevi 3 here
+define i32 @grev3_i32(i32 %a) nounwind {
+; RV32I-LABEL: grev3_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 1
+; RV32I-NEXT:    lui a2, 699051
+; RV32I-NEXT:    addi a2, a2, -1366
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    lui a2, 349525
+; RV32I-NEXT:    addi a2, a2, 1365
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 2
+; RV32I-NEXT:    lui a2, 838861
+; RV32I-NEXT:    addi a2, a2, -820
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    lui a2, 209715
+; RV32I-NEXT:    addi a2, a2, 819
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev3_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev.p a0, a0
+; RV32IB-NEXT:    rev2.n a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev3_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev.p a0, a0
+; RV32IBP-NEXT:    rev2.n a0, a0
+; RV32IBP-NEXT:    ret
+  %and1 = shl i32 %a, 1
+  %shl1 = and i32 %and1, -1431655766
+  %and1b = lshr i32 %a, 1
+  %shr1 = and i32 %and1b, 1431655765
+  %or1 = or i32 %shl1, %shr1
+  %and2 = shl i32 %or1, 2
+  %shl2 = and i32 %and2, -858993460
+  %and2b = lshr i32 %or1, 2
+  %shr2 = and i32 %and2b, 858993459
+  %or2 = or i32 %shl2, %shr2
+  ret i32 %or2
+}
+
+; FIXME: we should generate grevi 3 here
+define i64 @grev3_i64(i64 %a) nounwind {
+; RV32I-LABEL: grev3_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a2, a1, 1
+; RV32I-NEXT:    slli a3, a0, 1
+; RV32I-NEXT:    lui a4, 699051
+; RV32I-NEXT:    addi a4, a4, -1366
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    lui a4, 349525
+; RV32I-NEXT:    addi a4, a4, 1365
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a3, a0
+; RV32I-NEXT:    slli a2, a0, 2
+; RV32I-NEXT:    slli a3, a1, 2
+; RV32I-NEXT:    lui a4, 838861
+; RV32I-NEXT:    addi a4, a4, -820
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    srli a1, a1, 2
+; RV32I-NEXT:    lui a4, 209715
+; RV32I-NEXT:    addi a4, a4, 819
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev3_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev.p a1, a1
+; RV32IB-NEXT:    rev.p a0, a0
+; RV32IB-NEXT:    rev2.n a0, a0
+; RV32IB-NEXT:    rev2.n a1, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev3_i64:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev.p a1, a1
+; RV32IBP-NEXT:    rev.p a0, a0
+; RV32IBP-NEXT:    rev2.n a0, a0
+; RV32IBP-NEXT:    rev2.n a1, a1
+; RV32IBP-NEXT:    ret
+  %and1 = shl i64 %a, 1
+  %shl1 = and i64 %and1, -6148914691236517206
+  %and1b = lshr i64 %a, 1
+  %shr1 = and i64 %and1b, 6148914691236517205
+  %or1 = or i64 %shl1, %shr1
+  %and2 = shl i64 %or1, 2
+  %shl2 = and i64 %and2, -3689348814741910324
+  %and2b = lshr i64 %or1, 2
+  %shr2 = and i64 %and2b, 3689348814741910323
+  %or2 = or i64 %shl2, %shr2
+  ret i64 %or2
+}
+
 define i32 @grev4_i32(i32 %a) nounwind {
 ; RV32I-LABEL: grev4_i32:
 ; RV32I:       # %bb.0:
@@ -565,6 +675,376 @@ define i64 @grev4_i64(i64 %a) nounwind {
   %shr = and i64 %and1, 1085102592571150095
   %or = or i64 %shl, %shr
   ret i64 %or
+}
+
+; FIXME: we should generate grevi 5 here
+define i32 @grev5_i32(i32 %a) nounwind {
+; RV32I-LABEL: grev5_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 1
+; RV32I-NEXT:    lui a2, 699051
+; RV32I-NEXT:    addi a2, a2, -1366
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    lui a2, 349525
+; RV32I-NEXT:    addi a2, a2, 1365
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 4
+; RV32I-NEXT:    lui a2, 986895
+; RV32I-NEXT:    addi a2, a2, 240
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 4
+; RV32I-NEXT:    lui a2, 61681
+; RV32I-NEXT:    addi a2, a2, -241
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev5_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev.p a0, a0
+; RV32IB-NEXT:    rev4.b a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev5_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev.p a0, a0
+; RV32IBP-NEXT:    rev4.b a0, a0
+; RV32IBP-NEXT:    ret
+  %and1 = shl i32 %a, 1
+  %shl1 = and i32 %and1, -1431655766
+  %and1b = lshr i32 %a, 1
+  %shr1 = and i32 %and1b, 1431655765
+  %or1 = or i32 %shl1, %shr1
+  %and2 = shl i32 %or1, 4
+  %shl2 = and i32 %and2, -252645136
+  %and2b = lshr i32 %or1, 4
+  %shr2 = and i32 %and2b, 252645135
+  %or2 = or i32 %shl2, %shr2
+  ret i32 %or2
+}
+
+; FIXME: we should generate grevi 5 here
+define i64 @grev5_i64(i64 %a) nounwind {
+; RV32I-LABEL: grev5_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a2, a1, 1
+; RV32I-NEXT:    slli a3, a0, 1
+; RV32I-NEXT:    lui a4, 699051
+; RV32I-NEXT:    addi a4, a4, -1366
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    lui a4, 349525
+; RV32I-NEXT:    addi a4, a4, 1365
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a3, a0
+; RV32I-NEXT:    slli a2, a0, 4
+; RV32I-NEXT:    slli a3, a1, 4
+; RV32I-NEXT:    lui a4, 986895
+; RV32I-NEXT:    addi a4, a4, 240
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a0, a0, 4
+; RV32I-NEXT:    srli a1, a1, 4
+; RV32I-NEXT:    lui a4, 61681
+; RV32I-NEXT:    addi a4, a4, -241
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev5_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev.p a1, a1
+; RV32IB-NEXT:    rev.p a0, a0
+; RV32IB-NEXT:    rev4.b a0, a0
+; RV32IB-NEXT:    rev4.b a1, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev5_i64:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev.p a1, a1
+; RV32IBP-NEXT:    rev.p a0, a0
+; RV32IBP-NEXT:    rev4.b a0, a0
+; RV32IBP-NEXT:    rev4.b a1, a1
+; RV32IBP-NEXT:    ret
+  %and1 = shl i64 %a, 1
+  %shl1 = and i64 %and1, -6148914691236517206
+  %and1b = lshr i64 %a, 1
+  %shr1 = and i64 %and1b, 6148914691236517205
+  %or1 = or i64 %shl1, %shr1
+
+  %and2 = shl i64 %or1, 4
+  %shl2 = and i64 %and2, -1085102592571150096
+  %and2b = lshr i64 %or1, 4
+  %shr2 = and i64 %and2b, 1085102592571150095
+  %or2 = or i64 %shl2, %shr2
+  ret i64 %or2
+}
+
+; FIXME: we should generate grevi 6 here
+define i32 @grev6_i32(i32 %a) nounwind {
+; RV32I-LABEL: grev6_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 2
+; RV32I-NEXT:    lui a2, 838861
+; RV32I-NEXT:    addi a2, a2, -820
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    lui a2, 209715
+; RV32I-NEXT:    addi a2, a2, 819
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 4
+; RV32I-NEXT:    lui a2, 986895
+; RV32I-NEXT:    addi a2, a2, 240
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 4
+; RV32I-NEXT:    lui a2, 61681
+; RV32I-NEXT:    addi a2, a2, -241
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev6_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev2.n a0, a0
+; RV32IB-NEXT:    rev4.b a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev6_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev2.n a0, a0
+; RV32IBP-NEXT:    rev4.b a0, a0
+; RV32IBP-NEXT:    ret
+  %and1 = shl i32 %a, 2
+  %shl1 = and i32 %and1, -858993460
+  %and1b = lshr i32 %a, 2
+  %shr1 = and i32 %and1b, 858993459
+  %or1 = or i32 %shl1, %shr1
+  %and2 = shl i32 %or1, 4
+  %shl2 = and i32 %and2, -252645136
+  %and2b = lshr i32 %or1, 4
+  %shr2 = and i32 %and2b, 252645135
+  %or2 = or i32 %shl2, %shr2
+  ret i32 %or2
+}
+
+; FIXME: we should generate grevi 6 here
+define i64 @grev6_i64(i64 %a) nounwind {
+; RV32I-LABEL: grev6_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a2, a1, 2
+; RV32I-NEXT:    slli a3, a0, 2
+; RV32I-NEXT:    lui a4, 838861
+; RV32I-NEXT:    addi a4, a4, -820
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a1, a1, 2
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    lui a4, 209715
+; RV32I-NEXT:    addi a4, a4, 819
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a3, a0
+; RV32I-NEXT:    slli a2, a0, 4
+; RV32I-NEXT:    slli a3, a1, 4
+; RV32I-NEXT:    lui a4, 986895
+; RV32I-NEXT:    addi a4, a4, 240
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a0, a0, 4
+; RV32I-NEXT:    srli a1, a1, 4
+; RV32I-NEXT:    lui a4, 61681
+; RV32I-NEXT:    addi a4, a4, -241
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev6_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev2.n a1, a1
+; RV32IB-NEXT:    rev2.n a0, a0
+; RV32IB-NEXT:    rev4.b a0, a0
+; RV32IB-NEXT:    rev4.b a1, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev6_i64:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev2.n a1, a1
+; RV32IBP-NEXT:    rev2.n a0, a0
+; RV32IBP-NEXT:    rev4.b a0, a0
+; RV32IBP-NEXT:    rev4.b a1, a1
+; RV32IBP-NEXT:    ret
+  %and1 = shl i64 %a, 2
+  %shl1 = and i64 %and1, -3689348814741910324
+  %and1b = lshr i64 %a, 2
+  %shr1 = and i64 %and1b, 3689348814741910323
+  %or1 = or i64 %shl1, %shr1
+  %and2 = shl i64 %or1, 4
+  %shl2 = and i64 %and2, -1085102592571150096
+  %and2b = lshr i64 %or1, 4
+  %shr2 = and i64 %and2b, 1085102592571150095
+  %or2 = or i64 %shl2, %shr2
+  ret i64 %or2
+}
+
+; FIXME: we should generate grevi 7 here
+define i32 @grev7_i32(i32 %a) nounwind {
+; RV32I-LABEL: grev7_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 1
+; RV32I-NEXT:    lui a2, 699051
+; RV32I-NEXT:    addi a2, a2, -1366
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    lui a2, 349525
+; RV32I-NEXT:    addi a2, a2, 1365
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 2
+; RV32I-NEXT:    lui a2, 838861
+; RV32I-NEXT:    addi a2, a2, -820
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    lui a2, 209715
+; RV32I-NEXT:    addi a2, a2, 819
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    slli a1, a0, 4
+; RV32I-NEXT:    lui a2, 986895
+; RV32I-NEXT:    addi a2, a2, 240
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a0, a0, 4
+; RV32I-NEXT:    lui a2, 61681
+; RV32I-NEXT:    addi a2, a2, -241
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev7_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev.p a0, a0
+; RV32IB-NEXT:    rev2.n a0, a0
+; RV32IB-NEXT:    rev4.b a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev7_i32:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev.p a0, a0
+; RV32IBP-NEXT:    rev2.n a0, a0
+; RV32IBP-NEXT:    rev4.b a0, a0
+; RV32IBP-NEXT:    ret
+  %and1 = shl i32 %a, 1
+  %shl1 = and i32 %and1, -1431655766
+  %and1b = lshr i32 %a, 1
+  %shr1 = and i32 %and1b, 1431655765
+  %or1 = or i32 %shl1, %shr1
+  %and2 = shl i32 %or1, 2
+  %shl2 = and i32 %and2, -858993460
+  %and2b = lshr i32 %or1, 2
+  %shr2 = and i32 %and2b, 858993459
+  %or2 = or i32 %shl2, %shr2
+  %and3 = shl i32 %or2, 4
+  %shl3 = and i32 %and3, -252645136
+  %and3b = lshr i32 %or2, 4
+  %shr3 = and i32 %and3b, 252645135
+  %or3 = or i32 %shl3, %shr3
+  ret i32 %or3
+}
+
+; FIXME: we should generate grevi 7 here
+define i64 @grev7_i64(i64 %a) nounwind {
+; RV32I-LABEL: grev7_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a2, a0, 1
+; RV32I-NEXT:    slli a3, a1, 1
+; RV32I-NEXT:    lui a4, 699051
+; RV32I-NEXT:    addi a4, a4, -1366
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    lui a4, 349525
+; RV32I-NEXT:    addi a4, a4, 1365
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    slli a2, a1, 2
+; RV32I-NEXT:    slli a3, a0, 2
+; RV32I-NEXT:    lui a4, 838861
+; RV32I-NEXT:    addi a4, a4, -820
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a1, a1, 2
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    lui a4, 209715
+; RV32I-NEXT:    addi a4, a4, 819
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a3, a0
+; RV32I-NEXT:    slli a2, a0, 4
+; RV32I-NEXT:    slli a3, a1, 4
+; RV32I-NEXT:    lui a4, 986895
+; RV32I-NEXT:    addi a4, a4, 240
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    and a2, a2, a4
+; RV32I-NEXT:    srli a0, a0, 4
+; RV32I-NEXT:    srli a1, a1, 4
+; RV32I-NEXT:    lui a4, 61681
+; RV32I-NEXT:    addi a4, a4, -241
+; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    and a0, a0, a4
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: grev7_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev.p a0, a0
+; RV32IB-NEXT:    rev.p a1, a1
+; RV32IB-NEXT:    rev2.n a1, a1
+; RV32IB-NEXT:    rev2.n a0, a0
+; RV32IB-NEXT:    rev4.b a0, a0
+; RV32IB-NEXT:    rev4.b a1, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev7_i64:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    rev.p a0, a0
+; RV32IBP-NEXT:    rev.p a1, a1
+; RV32IBP-NEXT:    rev2.n a1, a1
+; RV32IBP-NEXT:    rev2.n a0, a0
+; RV32IBP-NEXT:    rev4.b a0, a0
+; RV32IBP-NEXT:    rev4.b a1, a1
+; RV32IBP-NEXT:    ret
+  %and1 = shl i64 %a, 1
+  %shl1 = and i64 %and1, -6148914691236517206
+  %and1b = lshr i64 %a, 1
+  %shr1 = and i64 %and1b, 6148914691236517205
+  %or1 = or i64 %shl1, %shr1
+  %and2 = shl i64 %or1, 2
+  %shl2 = and i64 %and2, -3689348814741910324
+  %and2b = lshr i64 %or1, 2
+  %shr2 = and i64 %and2b, 3689348814741910323
+  %or2 = or i64 %shl2, %shr2
+  %and3 = shl i64 %or2, 4
+  %shl3 = and i64 %and3, -1085102592571150096
+  %and3b = lshr i64 %or2, 4
+  %shr3 = and i64 %and3b, 1085102592571150095
+  %or3 = or i64 %shl3, %shr3
+  ret i64 %or3
 }
 
 define i32 @grev8_i32(i32 %a) nounwind {
