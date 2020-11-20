@@ -17,6 +17,12 @@ td.name:hover {
   color: blue;
   cursor: pointer;
 }
+span.mono { font-family: monospace; }
+
+.traverse_compare, .traverse_compare td, .traverse_compare th {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
 </style>
 <script type="text/javascript">
 function toggle(id) {
@@ -68,6 +74,431 @@ recordDecl(hasDescendant(
             ifStmt()))))))
 </pre>
 </p>
+
+<!-- ======================================================================= -->
+<h2 id="traverse-mode">Traverse Mode</h2>
+<!-- ======================================================================= -->
+
+<p>The default mode of operation of AST Matchers visits all nodes in the AST,
+even if they are not spelled in the source. This is
+<span class="mono">AsIs</span> mode.  This mode requires writing AST matchers
+that explicitly traverse or ignore implicit nodes, such as parentheses
+surrounding an expression or expressions with cleanups.  These implicit
+nodes are not always obvious from the syntax of the source code, and so this
+mode requires careful consideration and testing to get the desired behavior
+from an AST matcher.
+</p>
+
+<p>In addition, because template instantations are matched in the default mode,
+transformations can be accidentally made to template declarations. Finally,
+because implicit nodes are matched by default, transformations can be made on
+entirely incorrect places in the code.</p>
+
+<p>For these reasons, it is possible to ignore AST nodes which are not spelled
+in the source using the <span class="mono">IgnoreUnlessSpelledInSource</span>
+mode. This is likely to be far less error-prone for users who are not already
+very familiar with where implicit nodes appear in the AST. It is also likely
+to be less error-prone for experienced AST users, as difficult cases do not
+need to be encountered and matcher expressions adjusted for these cases.</p>
+
+<p>In clang-query, the mode can be changed with
+<pre>
+set traversal IgnoreUnlessSpelledInSource
+</pre>
+</p>
+This affects both matchers and AST dump output in results.
+
+<p>When using the C++ API such as in clang-tidy checks, the
+<span class="mono">traverse()</span> matcher is used to set the mode:
+<pre>
+Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource,
+  returnStmt(hasReturnArgument(integerLiteral(equals(0))))
+  ), this);
+</pre>
+</p>
+<p>The following table compares the <span class="mono">AsIs</span> mode with
+the <span class="mono">IgnoreUnlessSpelledInSource</span> mode:</p>
+
+<table class="traverse_compare">
+<tr>
+<th></th>
+<th><span class="mono">AsIs</span></th>
+<th><span class="mono">IgnoreUnlessSpelledInSource</span></th>
+</tr>
+<tr>
+  <td>AST dump of <span class="mono">func1</span>:
+<pre>
+struct B {
+  B(int);
+};
+
+B func1() { return 42; }
+</pre>
+
+  </td>
+  <td>
+C++98 dialect:
+<pre>
+FunctionDecl
+`-CompoundStmt
+  `-ReturnStmt
+    `-ExprWithCleanups
+      `-CXXConstructExpr
+        `-MaterializeTemporaryExpr
+          `-ImplicitCastExpr
+            `-ImplicitCastExpr
+              `-CXXConstructExpr
+                `-IntegerLiteral 'int' 42
+</pre>
+C++11, C++14 dialect:
+<pre>
+FunctionDecl
+`-CompoundStmt
+  `-ReturnStmt
+    `-ExprWithCleanups
+      `-CXXConstructExpr
+        `-MaterializeTemporaryExpr
+          `-ImplicitCastExpr
+            `-CXXConstructExpr
+              `-IntegerLiteral 'int' 42
+</pre>
+C++17, C++20 dialect:
+<pre>
+FunctionDecl
+`-CompoundStmt
+  `-ReturnStmt
+    `-ImplicitCastExpr
+      `-CXXConstructExpr
+        `-IntegerLiteral 'int' 42
+</pre>
+</td>
+  <td>
+All dialects:
+    <pre>
+FunctionDecl
+`-CompoundStmt
+  `-ReturnStmt
+    `-IntegerLiteral 'int' 42
+</pre></td>
+</tr>
+
+<tr>
+<td>Matcher for returned <span class="mono">42</span>:
+<pre>
+struct B {
+  B(int);
+};
+
+B func1() { return 42; }
+</pre>
+
+  </td>
+  <td>
+All dialects:
+<pre>
+returnStmt(hasReturnValue(
+    ignoringImplicit(
+        ignoringElidableConstructorCall(
+            ignoringImplicit(
+                cxxConstructExpr(hasArgument(0,
+                    ignoringImplicit(
+                        integerLiteral().bind("returnVal")
+                        )
+                    ))
+                )
+            )
+        )
+    ))
+</pre></td>
+  <td>
+All dialects:
+<pre>
+returnStmt(hasReturnValue(
+    integerLiteral().bind("returnVal")
+))
+</pre></td>
+</tr>
+<tr>
+<td>Match result for
+<pre>implicitCastExpr()</pre>
+given:
+<pre>
+struct B {
+  B(int);
+};
+
+B func1() { return 42; }
+</pre>
+
+</td>
+<td>
+Match found.</td>
+  <td>
+No match.</td>
+</tr>
+<tr>
+  <td>Match result for:
+<pre>
+cxxConstructorDecl(
+  isCopyConstructor()
+  ).bind("prepend_explicit")
+</pre>
+given:
+<pre>
+struct Other {};
+struct Copyable {
+  Other m_o;
+  Copyable();
+};
+</pre>
+</td>
+<td>
+Match found. Insertion produces incorrect output:
+<pre>
+struct Other {};
+struct explicit Copyable {
+  Other m_o;
+  Copyable();
+};
+</pre>
+</td>
+<td>
+No match found. Incorrect replacement not possible.
+</td>
+</tr>
+<tr>
+  <td>Replacement of <span class="mono">begin()</span>
+    with <span class="mono">cbegin()</span>:
+<pre>
+cxxMemberCallExpr(
+  on(ConstContainerExpr),
+  callee(cxxMethodDecl(hasName("begin")))
+  ).bind("replace_with_cbegin")
+</pre>
+given:
+<pre>
+void foo() {
+  const Container c;
+  c.begin();
+
+  for (auto i : c) {
+  }
+}
+</pre>
+</td>
+<td>
+2 matches found. Replacement produces incorrect output:
+<pre>
+void foo() {
+  const Container c;
+  c.cbegin();
+
+  for (auto i :.cbegin() c) {
+  }
+}
+</pre>
+</td>
+<td>
+1 match found. Replacement produces correct output:
+<pre>
+void foo() {
+  const Container c;
+  c.cbegin();
+
+  for (auto i : c) {
+  }
+}
+</pre>
+</td>
+</tr>
+<tr>
+  <td>Replacement of <span class="mono">int</span> member
+    with <span class="mono">safe_int</span>:
+<pre>
+fieldDecl(
+  hasType(asString("int"))
+  ).bind("use_safe_int")
+</pre>
+given:
+<pre>
+struct S {
+  int m_i;
+};
+
+template &lt;typename T&gt; struct TemplStruct {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+private:
+  T m_t;
+};
+
+void instantiate() { TemplStruct&lt;int&gt; ti; }
+</pre>
+</td>
+<td>
+2 matches found. Replacement produces incorrect output:
+<pre>
+struct S {
+  safe_int m_i;
+};
+
+template &lt;typename T&gt; struct TemplStruct {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+private:
+  safe_int m_t;
+};
+
+void instantiate() { TemplStruct&lt;int&gt; ti; }
+</pre>
+</td>
+<td>
+1 match found. Replacement produces correct output:
+<pre>
+struct S {
+  safe_int m_i;
+};
+
+template &lt;typename T&gt; struct TemplStruct {
+  TemplStruct() {}
+  ~TemplStruct() {}
+
+private:
+  T m_t;
+};
+
+void instantiate() { TemplStruct&lt;int&gt; ti; }
+</pre>
+</td>
+</tr>
+<tr>
+  <td>Add prefix to member initializer
+<pre>
+cxxCtorInitializer(
+  forField(fieldDecl())
+  ).bind("add_prefix")
+</pre>
+given:
+<pre>
+struct Simple {};
+
+struct Record {
+  Record() : i(42) {}
+private:
+  int i;
+  Simple s;
+};
+</pre>
+</td>
+<td>
+2 matches found. Replacement produces incorrect output:
+<pre>
+struct Simple {};
+
+struct Record {
+  m_Record() : m_i(42) {}
+private:
+  int i;
+  Simple s;
+};
+</pre>
+</td>
+<td>
+1 match found. Replacement produces correct output:
+<pre>
+struct Simple {};
+
+struct Record {
+  Record() : m_i(42) {}
+private:
+  int i;
+  Simple s;
+};
+</pre>
+</td>
+</tr>
+<tr>
+  <td>Ignored default arguments
+<pre>
+callExpr(
+  callee(functionDecl(
+    hasName("hasDefaultArg")
+    )),
+  argumentCountIs(1)
+  ).bind("add_prefix")
+</pre>
+given:
+<pre>
+void hasDefaultArg(int i, int j = 0) {}
+void callDefaultArg() { hasDefaultArg(42); }
+</pre>
+</td>
+<td>
+No match.
+</td>
+<td>
+1 match found.
+</td>
+</tr>
+<tr>
+  <td>Lambda fields
+<pre>
+fieldDecl(
+  hasType(asString("int"))
+  ).bind("make_safe")
+</pre>
+given:
+<pre>
+struct S {
+  int m_i;
+};
+
+void func() {
+  int a = 0;
+  int c = 0;
+
+  auto l = [a, b = c](int d) { int e = d; };
+  l(43);
+}
+</pre>
+</td>
+<td>
+2 matches found. Replacement produces incorrect output:
+<pre>
+struct S {
+  safe_int m_i;
+};
+
+void func() {
+  int a = 0;
+  int c = 0;
+
+  auto l = [safe_a, safe_b = c](int d) { int e = d; };
+  l(43);
+}
+</pre>
+</td>
+<td>
+1 match found. Replacement produces correct output:
+<pre>
+struct S {
+  safe_int m_i;
+};
+
+void func() {
+  int a = 0;
+  int c = 0;
+
+  auto l = [a, b = c](int d) { int e = d; };
+  l(43);
+}
+</pre>
+</td>
+
+</tr>
+</table>
 
 <!-- ======================================================================= -->
 <h2 id="decl-matchers">Node Matchers</h2>
