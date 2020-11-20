@@ -305,7 +305,9 @@ TEST(SerializationTest, CmdlTest) {
   }
 }
 
-#if LLVM_ON_UNIX // rlimit is part of POSIX
+// rlimit is part of POSIX.
+// ASan uses a lot of address space, so we can't apply strict limits.
+#if LLVM_ON_UNIX && !LLVM_ADDRESS_SANITIZER_BUILD
 class ScopedMemoryLimit {
   struct rlimit OriginalLimit;
   bool Succeeded = false;
@@ -333,7 +335,6 @@ public:
 };
 #endif
 
-#ifndef LLVM_ADDRESS_SANITIZER_BUILD
 // Test that our deserialization detects invalid array sizes without allocating.
 // If this detection fails, the test should allocate a huge array and crash.
 TEST(SerializationTest, NoCrashOnBadArraySize) {
@@ -424,7 +425,6 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
   EXPECT_THAT(llvm::toString(CorruptParsed.takeError()),
               testing::HasSubstr("bytes is implausible"));
 }
-#endif
 
 } // namespace
 } // namespace clangd
