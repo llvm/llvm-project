@@ -1686,6 +1686,45 @@ llvm::json::Value toJSON(const FoldingRange &Range);
 ///   }
 llvm::json::Value toJSON(const MemoryTree &MT);
 
+/// Payload for textDocument/ast request.
+/// This request is a clangd extension.
+struct ASTParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+
+  /// The position of the node to be dumped.
+  /// The highest-level node that entirely contains the range will be returned.
+  Range range;
+};
+bool fromJSON(const llvm::json::Value &, ASTParams &, llvm::json::Path);
+
+/// Simplified description of a clang AST node.
+/// This is clangd's internal representation of C++ code.
+struct ASTNode {
+  /// The general kind of node, such as "expression"
+  /// Corresponds to the base AST node type such as Expr.
+  std::string role;
+  /// The specific kind of node this is, such as "BinaryOperator".
+  /// This is usually a concrete node class (with Expr etc suffix dropped).
+  /// When there's no hierarchy (e.g. TemplateName), the variant (NameKind).
+  std::string kind;
+  /// Brief additional information, such as "||" for the particular operator.
+  /// The information included depends on the node kind, and may be empty.
+  std::string detail;
+  /// A one-line dump of detailed information about the node.
+  /// This includes role/kind/description information, but is rather cryptic.
+  /// It is similar to the output from `clang -Xclang -ast-dump`.
+  /// May be empty for certain types of nodes.
+  std::string arcana;
+  /// The range of the original source file covered by this node.
+  /// May be missing for implicit nodes, or those created by macro expansion.
+  llvm::Optional<Range> range;
+  /// Nodes nested within this one, such as the operands of a BinaryOperator.
+  std::vector<ASTNode> children;
+};
+llvm::json::Value toJSON(const ASTNode &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ASTNode &);
+
 } // namespace clangd
 } // namespace clang
 

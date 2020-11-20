@@ -1370,5 +1370,42 @@ llvm::json::Value toJSON(const MemoryTree &MT) {
   Out["_total"] = Total;
   return Out;
 }
+
+bool fromJSON(const llvm::json::Value &Params, ASTParams &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
+}
+
+llvm::json::Value toJSON(const ASTNode &N) {
+  llvm::json::Object Result{
+      {"role", N.role},
+      {"kind", N.kind},
+  };
+  if (!N.children.empty())
+    Result["children"] = N.children;
+  if (!N.detail.empty())
+    Result["detail"] = N.detail;
+  if (!N.arcana.empty())
+    Result["arcana"] = N.arcana;
+  if (N.range)
+    Result["range"] = *N.range;
+  return Result;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ASTNode &Root) {
+  std::function<void(const ASTNode &, unsigned)> Print = [&](const ASTNode &N,
+                                                             unsigned Level) {
+    OS.indent(2 * Level) << N.role << ": " << N.kind;
+    if (!N.detail.empty())
+      OS << " - " << N.detail;
+    OS << "\n";
+    for (const ASTNode &C : N.children)
+      Print(C, Level + 1);
+  };
+  Print(Root, 0);
+  return OS;
+}
+
 } // namespace clangd
 } // namespace clang

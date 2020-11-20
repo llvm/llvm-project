@@ -56,6 +56,7 @@ add_clang_library(clangDaemon
   ConfigYAML.cpp
   Diagnostics.cpp
   DraftStore.cpp
+  DumpAST.cpp
   ExpectedTypes.cpp
   FindSymbols.cpp
   FindTarget.cpp
