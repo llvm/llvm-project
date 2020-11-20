@@ -7,11 +7,11 @@
 %struct.ss = type { i32, i64 }
 
 ; Don't drop 'byval' on %X here.
-define internal i32 @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
+define internal i32 @f(%struct.ss* byval(%struct.ss) %b, i32* byval(i32) %X, i32 %i) nounwind {
 ;
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@f
-; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree nonnull byval align 4 dereferenceable(4) [[X:%.*]], i32 noundef [[I:%.*]]) [[ATTR0:#.*]] {
+; IS__TUNIT_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree nonnull byval(i32) align 4 dereferenceable(4) [[X:%.*]], i32 noundef [[I:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
@@ -44,7 +44,7 @@ define internal i32 @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree nonnull byval align 4 dereferenceable(4) [[X:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC_OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval(%struct.ss) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree nonnull byval(i32) align 4 dereferenceable(4) [[X:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[B]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
@@ -100,7 +100,7 @@ define i32 @test(i32* %X) {
 ; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__TUNIT_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval align 8 dereferenceable(12) [[S]], i32* nocapture nofree readonly byval align 4 [[X]], i32 noundef zeroext 0) [[ATTR0]]
+; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval(%struct.ss) align 8 dereferenceable(12) [[S]], i32* nocapture nofree readonly byval(i32) align 4 [[X]], i32 noundef zeroext 0) [[ATTR0]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[C]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -129,7 +129,7 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__CGSCC_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readnone byval align 8 dereferenceable(12) [[S]], i32* noalias nocapture nofree nonnull readnone byval align 4 dereferenceable(4) [[X]]) [[ATTR1:#.*]]
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readnone byval(%struct.ss) align 8 dereferenceable(12) [[S]], i32* noalias nocapture nofree nonnull readnone byval(i32) align 4 dereferenceable(4) [[X]]) [[ATTR1:#.*]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[C]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
@@ -156,7 +156,7 @@ entry:
   %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
   store i64 2, i64* %tmp4, align 4
 
-  %c = call i32 @f( %struct.ss* byval %S, i32* byval %X, i32 zeroext 0)
+  %c = call i32 @f(%struct.ss* byval(%struct.ss) %S, i32* byval(i32) %X, i32 zeroext 0)
 
   ret i32 %c
 }

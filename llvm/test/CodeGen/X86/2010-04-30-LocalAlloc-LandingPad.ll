@@ -14,7 +14,7 @@ target triple = "i386-apple-darwin10.0.0"
 ; CHECK: movl %[[reg]],{{.*}}(%ebp) ## 4-byte Spill
 ; CHECK: calll __Z6throwsv
 
-define i8* @_Z4test1SiS_(%struct.S* byval %s1, i32 %n, %struct.S* byval %s2) ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i8* @_Z4test1SiS_(%struct.S* byval(%struct.S) %s1, i32 %n, %struct.S* byval(%struct.S) %s2) ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
   %retval = alloca i8*, align 4                   ; <i8**> [#uses=2]
   %n.addr = alloca i32, align 4                   ; <i32*> [#uses=1]

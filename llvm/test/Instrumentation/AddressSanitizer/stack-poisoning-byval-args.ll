@@ -18,7 +18,7 @@ declare i32 @bar(%struct.A*)
 
 ; Test behavior for named argument with explicit alignment.  The memcpy and
 ; alloca alignments should match the explicit alignment of 64.
-define void @foo(%struct.A* byval align 64 %a) sanitize_address {
+define void @foo(%struct.A* byval(%struct.A) align 64 %a) sanitize_address {
 entry:
 ; CHECK-LABEL: foo
 ; CHECK: call i64 @__asan_stack_malloc
@@ -39,7 +39,7 @@ entry:
 ; minimum alignment of 4 bytes since struct.A contains i32s which have 4-byte
 ; alignment.  However, the alloca alignment will be 32 since that is the value
 ; passed via the -asan-realign-stack option, which is greater than 4.
-define void @baz(%struct.A* byval) sanitize_address {
+define void @baz(%struct.A* byval(%struct.A)) sanitize_address {
 entry:
 ; CHECK-LABEL: baz
 ; CHECK: call i64 @__asan_stack_malloc

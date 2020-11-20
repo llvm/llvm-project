@@ -28,7 +28,7 @@ define void @kernel2(float addrspace(1)* %input, float addrspace(1)* %output) {
 
 %struct.S = type { i32*, i32* }
 
-define void @ptr_in_byval_kernel(%struct.S* byval %input, i32* %output) {
+define void @ptr_in_byval_kernel(%struct.S* byval(%struct.S) %input, i32* %output) {
 ; CHECK-LABEL: .visible .entry ptr_in_byval_kernel(
 ; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_kernel_param_1]
 ; CHECK: cvta.to.global.u64 %[[optr_g:.*]], %[[optr]];
@@ -46,7 +46,7 @@ define void @ptr_in_byval_kernel(%struct.S* byval %input, i32* %output) {
 ; Regular functions lower byval arguments differently. We need to make
 ; sure that we're loading byval argument data using [symbol+offset].
 ; There's also no assumption that all pointers within are in global space.
-define void @ptr_in_byval_func(%struct.S* byval %input, i32* %output) {
+define void @ptr_in_byval_func(%struct.S* byval(%struct.S) %input, i32* %output) {
 ; CHECK-LABEL: .visible .func ptr_in_byval_func(
 ; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_func_param_1]
 ; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_func_param_0+8]

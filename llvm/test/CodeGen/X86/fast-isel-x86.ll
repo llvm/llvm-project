@@ -34,7 +34,7 @@ define x86_thiscallcc i32 @thiscallfun(i32* %this, i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT: addl $65536, %esp
 ; CHECK-NEXT: pushl %ecx
 ; CHECK-NEXT: retl
-define x86_thiscallcc void @thiscall_large(i32* %this, [65533 x i8]* byval %b) nounwind {
+define x86_thiscallcc void @thiscall_large(i32* %this, [65533 x i8]* byval([65533 x i8]) %b) nounwind {
   ret void
 }
 

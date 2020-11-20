@@ -204,9 +204,9 @@ define void @w_caller(i8* %ptr) {
 %struct.byvalTest = type { [8 x i8] }
 @byval = common global %struct.byvalTest zeroinitializer
 
-define void @byval_callee(%struct.byvalTest* byval %ptr) { ret void }
+define void @byval_callee(%struct.byvalTest* byval(%struct.byvalTest) %ptr) { ret void }
 define void @byval_caller() {
-  tail call void @byval_callee(%struct.byvalTest* byval @byval)
+  tail call void @byval_callee(%struct.byvalTest* byval(%struct.byvalTest) @byval)
   ret void
 
 ; CHECK-SCO-LABEL: bl byval_callee

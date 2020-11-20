@@ -30,7 +30,7 @@ define void @foo2(double %p0, ; --> D0
 		  double %p7, ; --> D7
 		  double %p8, ; --> Stack
 		  i32 %p9,    ; --> R0
-                  %struct_t* byval %p10) ; --> Stack+8
+                  %struct_t* byval(%struct_t) %p10) ; --> Stack+8
 {
 entry:
 ;CHECK:     push {r7, lr}
@@ -55,7 +55,7 @@ entry:
                        double 23.7, ; --> D7
                        double 23.8, ; --> Stack
                        i32 43,      ; --> R0, not Stack+8
-                       %struct_t* byval @static_val) ; --> Stack+8, not R1     
+                       %struct_t* byval(%struct_t) @static_val) ; --> Stack+8, not R1
   ret void
 }
 

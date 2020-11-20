@@ -7,7 +7,7 @@ target triple = "i386-pc-windows-msvc19.11.0"
 %class.a = type { i32, i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind optsize
-define dso_local zeroext i1 @pr41917(%class.a* byval nocapture readonly align 4 %g, %class.a* byval nocapture readonly align 4 %p2) local_unnamed_addr #0 {
+define dso_local zeroext i1 @pr41917(%class.a* byval(%class.a) nocapture readonly align 4 %g, %class.a* byval(%class.a) nocapture readonly align 4 %p2) local_unnamed_addr #0 {
 ; CHECK-LABEL: @pr41917(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @f2() #3

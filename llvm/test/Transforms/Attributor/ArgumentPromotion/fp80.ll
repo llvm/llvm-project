@@ -30,14 +30,14 @@ define void @run() {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
 entry:
-  tail call i8 @UseLongDoubleUnsafely(%union.u* byval align 16 bitcast (%struct.s* @b to %union.u*))
-  tail call x86_fp80 @UseLongDoubleSafely(%union.u* byval align 16 bitcast (%struct.s* @b to %union.u*))
+  tail call i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
+  tail call x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
   call i64 @AccessPaddingOfStruct(%struct.Foo* @a)
   call i64 @CaptureAStruct(%struct.Foo* @a)
   ret void
 }
 
-define internal i8 @UseLongDoubleUnsafely(%union.u* byval align 16 %arg) {
+define internal i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 %arg) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely
 ; IS__CGSCC____-SAME: () [[ATTR1:#.*]] {
@@ -51,7 +51,7 @@ entry:
   ret i8 %result
 }
 
-define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval align 16 %arg) {
+define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 %arg) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@UseLongDoubleSafely
 ; IS__CGSCC____-SAME: () [[ATTR1]] {
@@ -62,7 +62,7 @@ define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval align 16 %arg) {
   ret x86_fp80 %fp80
 }
 
-define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval %a) {
+define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@AccessPaddingOfStruct
 ; IS__CGSCC____-SAME: () [[ATTR1]] {
@@ -73,9 +73,9 @@ define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval %a) {
   ret i64 %v
 }
 
-define internal i64 @CaptureAStruct(%struct.Foo* byval %a) {
+define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@CaptureAStruct
-; IS__CGSCC_OPM-SAME: (%struct.Foo* noalias nofree byval [[A:%.*]])
+; IS__CGSCC_OPM-SAME: (%struct.Foo* noalias nofree byval(%struct.Foo) [[A:%.*]])
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP:%.*]]

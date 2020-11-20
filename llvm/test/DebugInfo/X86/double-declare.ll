@@ -8,7 +8,7 @@
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-define void @f(i32* byval %p, i1 %c) !dbg !5 {
+define void @f(i32* byval(i32) %p, i1 %c) !dbg !5 {
   br i1 %c, label %x, label %y
 
 x:

@@ -983,7 +983,7 @@ declare void @_ZmiI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS3
 
 declare %"struct.FixedMatrixBase<double,6,6>"* @_ZN15FixedMatrixBaseIdLi6ELi6EEmIERKS0_(%"struct.FixedMatrixBase<double,6,6>"*, %"struct.FixedMatrixBase<double,6,6>"*)
 
-declare void @_ZN13CDSVectorBaseI4Vec3N3CDS12DefaultAllocEEC2EiS2_(%"struct.CDSVectorBase<Vec3,CDS::DefaultAlloc>"*, i32, %"struct.CDS::DefaultAlloc"* byval align 4)
+declare void @_ZN13CDSVectorBaseI4Vec3N3CDS12DefaultAllocEEC2EiS2_(%"struct.CDSVectorBase<Vec3,CDS::DefaultAlloc>"*, i32, %"struct.CDS::DefaultAlloc"* byval(%"struct.CDS::DefaultAlloc") align 4)
 
 declare void @_ZN13CDSVectorBaseI4Vec3N3CDS12DefaultAllocEED2Ev(%"struct.CDSVectorBase<Vec3,CDS::DefaultAlloc>"*)
 
