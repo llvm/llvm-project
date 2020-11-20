@@ -4,7 +4,6 @@ add_clang_library(clangdRemoteMarshalling
   LINK_LIBS
   RemoteIndexProto
 
-  protobuf
   clangDaemon
   clangdSupport
 
