@@ -1,5 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 // UNSUPPORTED: linux
+// fgetln is BSD-only.
+// UNSUPPORTED: solaris
 
 #include <assert.h>
 #include <stdio.h>
