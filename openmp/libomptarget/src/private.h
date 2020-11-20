@@ -103,8 +103,8 @@ static inline void dumpTargetPointerMappings(const DeviceTy &Device) {
     fprintf(stderr, DPxMOD " " DPxMOD " %-8lu %s at %s:%d:%d\n",
             DPxPTR(HostTargetMap.HstPtrBegin),
             DPxPTR(HostTargetMap.TgtPtrBegin),
-            HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
-            info.name.c_str(), info.filename.c_str(), info.line, info.column);
+            HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin, info.getName(),
+            info.getFilename(), info.getLine(), info.getColumn());
   }
 }
 
