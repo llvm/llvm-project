@@ -5051,6 +5051,11 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
     return CharUnits::fromQuantity(16);
   } else if (Ty->isVectorType()) {
     return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16 : 8);
+  } else if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128) {
+    // IEEE 128-bit floating numbers are also stored in vector registers.
+    // And both IEEE quad-precision and IBM extended double (ppc_fp128) should
+    // be quad-word aligned.
+    return CharUnits::fromQuantity(16);
   }
 
   // For single-element float/vector structs, we consider the whole type
