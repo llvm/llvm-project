@@ -156,6 +156,15 @@ SmallVector<Value, 8> getShape(OpBuilder &builder, LinalgOp linalgOp) {
   return res;
 }
 
+SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp) {
+  SmallVector<int64_t, 8> res;
+  for (Value v : linalgOp.getShapedOperands()) {
+    auto shape = v.getType().cast<ShapedType>().getShape();
+    res.append(shape.begin(), shape.end());
+  }
+  return res;
+}
+
 Optional<SmallVector<Value, 4>> getLoopRanges(OpBuilder &builder,
                                               LinalgOp linalgOp) {
   SmallVector<Value, 8> viewSizes = getShape(builder, linalgOp);
@@ -164,6 +173,15 @@ Optional<SmallVector<Value, 4>> getLoopRanges(OpBuilder &builder,
   if (!invertedMap)
     return {};
   return applyMapToValues(builder, linalgOp.getLoc(), invertedMap, viewSizes);
+}
+
+Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp) {
+  SmallVector<int64_t, 8> viewSizes = getStaticShape(linalgOp);
+  AffineMap invertedMap =
+      inversePermutation(concatAffineMaps(linalgOp.getIndexingMaps()));
+  if (!invertedMap)
+    return {};
+  return invertedMap.compose(viewSizes);
 }
 
 /// Specialization to build an scf "for" nest.
