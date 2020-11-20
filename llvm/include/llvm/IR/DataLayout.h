@@ -123,6 +123,7 @@ private:
   unsigned AllocaAddrSpace;
   MaybeAlign StackNaturalAlign;
   unsigned ProgramAddrSpace;
+  unsigned DefaultGlobalsAddrSpace;
 
   MaybeAlign FunctionPtrAlign;
   FunctionPtrAlignType TheFunctionPtrAlignType;
@@ -219,6 +220,7 @@ public:
     FunctionPtrAlign = DL.FunctionPtrAlign;
     TheFunctionPtrAlignType = DL.TheFunctionPtrAlignType;
     ProgramAddrSpace = DL.ProgramAddrSpace;
+    DefaultGlobalsAddrSpace = DL.DefaultGlobalsAddrSpace;
     ManglingMode = DL.ManglingMode;
     LegalIntWidths = DL.LegalIntWidths;
     Alignments = DL.Alignments;
@@ -295,6 +297,9 @@ public:
   }
 
   unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
+  unsigned getDefaultGlobalsAddressSpace() const {
+    return DefaultGlobalsAddrSpace;
+  }
 
   bool hasMicrosoftFastStdCallMangling() const {
     return ManglingMode == MM_WinCOFFX86;
