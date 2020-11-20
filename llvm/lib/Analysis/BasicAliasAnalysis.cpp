@@ -1333,7 +1333,7 @@ AliasResult BasicAAResult::aliasGEP(
   // greater, we know they do not overlap.
   if (GEP1BaseOffset != 0 && DecompGEP1.VarIndices.empty()) {
     if (GEP1BaseOffset.sge(0)) {
-      if (V2Size != LocationSize::unknown()) {
+      if (V2Size.hasValue()) {
         if (GEP1BaseOffset.ult(V2Size.getValue()))
           return PartialAlias;
         return NoAlias;
@@ -1347,8 +1347,7 @@ AliasResult BasicAAResult::aliasGEP(
       // GEP1             V2
       // We need to know that V2Size is not unknown, otherwise we might have
       // stripped a gep with negative index ('gep <ptr>, -1, ...).
-      if (V1Size != LocationSize::unknown() &&
-          V2Size != LocationSize::unknown()) {
+      if (V1Size.hasValue() && V2Size.hasValue()) {
         if ((-GEP1BaseOffset).ult(V1Size.getValue()))
           return PartialAlias;
         return NoAlias;
@@ -1400,8 +1399,8 @@ AliasResult BasicAAResult::aliasGEP(
     APInt ModOffset = GEP1BaseOffset.srem(GCD);
     if (ModOffset.isNegative())
       ModOffset += GCD; // We want mod, not rem.
-    if (V1Size != LocationSize::unknown() &&
-        V2Size != LocationSize::unknown() && ModOffset.uge(V2Size.getValue()) &&
+    if (V1Size.hasValue() && V2Size.hasValue() &&
+        ModOffset.uge(V2Size.getValue()) &&
         (GCD - ModOffset).uge(V1Size.getValue()))
       return NoAlias;
 
@@ -1409,14 +1408,14 @@ AliasResult BasicAAResult::aliasGEP(
     // also non-negative and >= GEP1BaseOffset. We have the following layout:
     // [0, V2Size) ... [TotalOffset, TotalOffer+V1Size]
     // If GEP1BaseOffset >= V2Size, the accesses don't alias.
-    if (AllNonNegative && V2Size != LocationSize::unknown() &&
+    if (AllNonNegative && V2Size.hasValue() &&
         GEP1BaseOffset.uge(V2Size.getValue()))
       return NoAlias;
     // Similarly, if the variables are non-positive, then the total offset is
     // also non-positive and <= GEP1BaseOffset. We have the following layout:
     // [TotalOffset, TotalOffset+V1Size) ... [0, V2Size)
     // If -GEP1BaseOffset >= V1Size, the accesses don't alias.
-    if (AllNonPositive && V1Size != LocationSize::unknown() &&
+    if (AllNonPositive && V1Size.hasValue() &&
         (-GEP1BaseOffset).uge(V1Size.getValue()))
       return NoAlias;
 
