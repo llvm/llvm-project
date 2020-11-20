@@ -1421,6 +1421,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #endif
 
+#if __has_attribute(init_priority)
+# define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
+#else
+# define _LIBCPP_INIT_PRIORITY_MAX
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG
