@@ -37,23 +37,23 @@ define dso_local void @test_chain(i8* %A_mem, i8* %B_mem, i8* %C_mem) local_unna
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
-  %a1 = call <256 x i32> @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %A_mem, i64 64)
+  %a1 = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %A_mem, i64 64)
   %addr = getelementptr inbounds i8, i8* %A_mem, i64 1024
-  %a2 = call <256 x i32> @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %addr, i64 64)
-  %c1 = call <256 x i32> @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %C_mem, i64 64)
+  %a2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %addr, i64 64)
+  %c1 = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %C_mem, i64 64)
   %caddr = getelementptr inbounds i8, i8* %C_mem, i64 1024
-  %c2 = call <256 x i32> @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %caddr, i64 64)
+  %c2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %caddr, i64 64)
   br label %dotpd
 
 dotpd:
-  %b = call <256 x i32> @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %B_mem, i64 64)
-  %dp1 = call <256 x i32> @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, <256 x i32> %c1, <256 x i32> %a1, <256 x i32> %b)
-  call void @llvm.x86.tilestored64.internal(i16 16, i16 64, i8* nonnull %C_mem, i64 64, <256 x i32> %dp1)
-  %dp2 = call <256 x i32> @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, <256 x i32> %c2, <256 x i32> %a2, <256 x i32> %b)
-  call void @llvm.x86.tilestored64.internal(i16 16, i16 64, i8* nonnull %caddr, i64 64, <256 x i32> %dp2)
+  %b = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %B_mem, i64 64)
+  %dp1 = call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %c1, x86_amx %a1, x86_amx %b)
+  call void @llvm.x86.tilestored64.internal(i16 16, i16 64, i8* nonnull %C_mem, i64 64, x86_amx %dp1)
+  %dp2 = call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %c2, x86_amx %a2, x86_amx %b)
+  call void @llvm.x86.tilestored64.internal(i16 16, i16 64, i8* nonnull %caddr, i64 64, x86_amx %dp2)
   ret void
 }
 
-declare <256 x i32> @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
-declare <256 x i32> @llvm.x86.tdpbssd.internal(i16, i16, i16, <256 x i32>, <256 x i32>, <256 x i32>)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, <256 x i32>)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
+declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
