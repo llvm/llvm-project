@@ -92,6 +92,11 @@ function(add_lldb_library name)
       ${pass_NO_INSTALL_RPATH}
     )
 
+    if (HAVE_LIBDPU)
+      target_link_directories(${name} PUBLIC ${UPMEM_API_LIB})
+      target_link_libraries(${name} PUBLIC dpu)
+    endif()
+
     if(CLANG_LINK_CLANG_DYLIB)
       target_link_libraries(${name} PRIVATE clang-cpp)
     else()
