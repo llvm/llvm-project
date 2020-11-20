@@ -74,6 +74,9 @@ Sections:
     Type: SHT_RELA
     Link: .symtab
     Info: .text.bar
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    Link: [[SYMTABLINK=.strtab]]
 Symbols:
   - Name:    foo
     Section: .text.foo
@@ -123,3 +126,49 @@ Symbols:
 # DUP-GNU-NEXT: warning: '[[FILE]]': section with index 3, included in the group section with index 1, was also found in the group section with index 2
 # DUP-GNU-NEXT:    [    3]   .text.foo
 # DUP-GNU-NEXT:    [    6]   .rela.text.bar
+
+# RUN: yaml2obj %s -DSYMTABLINK=0xFF -o %t.symtab.o
+# RUN: llvm-readobj --elf-section-groups %t.symtab.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.symtab.o %s --check-prefix=SYMTAB-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --elf-section-groups %t.symtab.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.symtab.o %s --check-prefix=SYMTAB-GNU --implicit-check-not=warning:
+
+# SYMTAB-LLVM:      Groups {
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: invalid section index: 255
+# SYMTAB-LLVM-NEXT:   Group {
+# SYMTAB-LLVM-NEXT:     Name: .group (16)
+# SYMTAB-LLVM-NEXT:     Index: 1
+# SYMTAB-LLVM-NEXT:     Link: 7
+# SYMTAB-LLVM-NEXT:     Info: 1
+# SYMTAB-LLVM-NEXT:     Type: COMDAT (0x1)
+# SYMTAB-LLVM-NEXT:     Signature: <?>
+# SYMTAB-LLVM-NEXT:     Section(s) in group [
+# SYMTAB-LLVM-NEXT:       .text.foo (3)
+# SYMTAB-LLVM-NEXT:       .rela.text.foo (4)
+# SYMTAB-LLVM-NEXT:     ]
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT:   Group {
+# SYMTAB-LLVM-NEXT:     Name: .group1 (64)
+# SYMTAB-LLVM-NEXT:     Index: 2
+# SYMTAB-LLVM-NEXT:     Link: 7
+# SYMTAB-LLVM-NEXT:     Info: 2
+# SYMTAB-LLVM-NEXT:     Type: COMDAT (0x1)
+# SYMTAB-LLVM-NEXT:     Signature: <?>
+# SYMTAB-LLVM-NEXT:     Section(s) in group [
+# SYMTAB-LLVM-NEXT:       .text.bar (5)
+# SYMTAB-LLVM-NEXT:       .rela.text.bar (6)
+# SYMTAB-LLVM-NEXT:     ]
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT: }
+
+# SYMTAB-GNU:        warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: invalid section index: 255
+# SYMTAB-GNU-EMPTY:
+# SYMTAB-GNU-NEXT:   COMDAT group section [    1] `.group' [<?>] contains 2 sections:
+# SYMTAB-GNU-NEXT:      [Index]    Name
+# SYMTAB-GNU-NEXT:      [    3]   .text.foo
+# SYMTAB-GNU-NEXT:      [    4]   .rela.text.foo
+# SYMTAB-GNU-EMPTY:
+# SYMTAB-GNU-NEXT:   COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
+# SYMTAB-GNU-NEXT:      [Index]    Name
+# SYMTAB-GNU-NEXT:      [    5]   .text.bar
+# SYMTAB-GNU-NEXT:      [    6]   .rela.text.bar
