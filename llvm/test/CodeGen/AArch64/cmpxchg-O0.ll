@@ -1,6 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -O0 -fast-isel=0 -global-isel=false %s -o - | FileCheck -enable-var-scope %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -O0 -fast-isel=0 -global-isel=false -mattr=+outline-atomics %s -o - | FileCheck -enable-var-scope %s --check-prefix=OUTLINE-ATOMICS
 
 define { i8, i1 } @test_cmpxchg_8(i8* %addr, i8 %desired, i8 %new) nounwind {
+; OUTLINE-ATOMICS: bl __aarch64_cas1_acq_rel
 ; CHECK-LABEL: test_cmpxchg_8:
 ; CHECK:     mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
@@ -17,6 +19,7 @@ define { i8, i1 } @test_cmpxchg_8(i8* %addr, i8 %desired, i8 %new) nounwind {
 }
 
 define { i16, i1 } @test_cmpxchg_16(i16* %addr, i16 %desired, i16 %new) nounwind {
+; OUTLINE-ATOMICS: bl __aarch64_cas2_acq_rel
 ; CHECK-LABEL: test_cmpxchg_16:
 ; CHECK:     mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
@@ -33,6 +36,7 @@ define { i16, i1 } @test_cmpxchg_16(i16* %addr, i16 %desired, i16 %new) nounwind
 }
 
 define { i32, i1 } @test_cmpxchg_32(i32* %addr, i32 %desired, i32 %new) nounwind {
+; OUTLINE-ATOMICS: bl __aarch64_cas4_acq_rel
 ; CHECK-LABEL: test_cmpxchg_32:
 ; CHECK:     mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
@@ -49,6 +53,7 @@ define { i32, i1 } @test_cmpxchg_32(i32* %addr, i32 %desired, i32 %new) nounwind
 }
 
 define { i64, i1 } @test_cmpxchg_64(i64* %addr, i64 %desired, i64 %new) nounwind {
+; OUTLINE-ATOMICS: bl __aarch64_cas8_acq_rel
 ; CHECK-LABEL: test_cmpxchg_64:
 ; CHECK:     mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
@@ -65,6 +70,7 @@ define { i64, i1 } @test_cmpxchg_64(i64* %addr, i64 %desired, i64 %new) nounwind
 }
 
 define { i128, i1 } @test_cmpxchg_128(i128* %addr, i128 %desired, i128 %new) nounwind {
+; OUTLINE-ATOMICS: bl __aarch64_cas16_acq_rel
 ; CHECK-LABEL: test_cmpxchg_128:
 ; CHECK:     mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
@@ -86,6 +92,7 @@ define { i128, i1 } @test_cmpxchg_128(i128* %addr, i128 %desired, i128 %new) nou
 ; was false.
 @var128 = global i128 0
 define {i128, i1} @test_cmpxchg_128_unsplit(i128* %addr) {
+; OUTLINE-ATOMICS: bl __aarch64_cas16_acq_rel
 ; CHECK-LABEL: test_cmpxchg_128_unsplit:
 ; CHECK:     mov [[ADDR:x[0-9]+]], x0
 ; CHECK:     add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128

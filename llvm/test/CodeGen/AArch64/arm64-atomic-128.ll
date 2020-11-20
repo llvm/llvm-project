@@ -1,8 +1,10 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone -mattr=+outline-atomics | FileCheck %s -check-prefix=OUTLINE-ATOMICS
 
 @var = global i128 0
 
 define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
+; OUTLINE-ATOMICS: bl __aarch64_cas16_acq
 ; CHECK-LABEL: val_compare_and_swap:
 ; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
 ; CHECK: ldaxp   [[RESULTLO:x[0-9]+]], [[RESULTHI:x[0-9]+]], [x[[ADDR:[0-9]+]]]
