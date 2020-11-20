@@ -2377,6 +2377,14 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+``G<address space>``
+    Specifies the address space to be used by default when creating global
+    variables. If omitted, the globals address space defaults to the default
+    address space 0.
+    Note: variable declarations without an address space are always created in
+    address space 0, this property only affects the default value to be used
+    when creating globals without additional contextual information (e.g. in
+    LLVM passes).
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
