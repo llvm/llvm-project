@@ -491,6 +491,15 @@ TEST(DiagnosticsTest, Preprocessor) {
       ElementsAre(Diag(Test.range(), "use of undeclared identifier 'b'")));
 }
 
+TEST(DiagnosticsTest, IgnoreVerify) {
+  auto TU = TestTU::withCode(R"cpp(
+    int a; // expected-error {{}}
+  )cpp");
+  TU.ExtraArgs.push_back("-Xclang");
+  TU.ExtraArgs.push_back("-verify");
+  EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
 // Recursive main-file include is diagnosed, and doesn't crash.
 TEST(DiagnosticsTest, RecursivePreamble) {
   auto TU = TestTU::withCode(R"cpp(
