@@ -93,6 +93,7 @@ if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
     Attribute
     AnnotateFunctions
+    CallSuperAttr
     clang-interpreter
     PrintFunctionNames
     )
