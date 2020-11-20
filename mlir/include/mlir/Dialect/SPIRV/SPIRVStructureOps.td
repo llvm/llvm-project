@@ -373,7 +373,7 @@ def SPV_ModuleOp : SPV_Op<"module",
     implicitly capture values from the enclosing environment.
 
     This op has only one region, which only contains one block. The block
-    must be terminated via the `spv._module_end` op.
+    must be terminated via the `spv.mlir.endmodule` op.
 
     <!-- End of AutoGen section -->
 
@@ -443,7 +443,7 @@ def SPV_ModuleOp : SPV_Op<"module",
 
 // -----
 
-def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
+def SPV_ModuleEndOp : SPV_Op<"mlir.endmodule", [InModuleScope, Terminator]> {
   let summary = "The pseudo op that ends a SPIR-V module";
 
   let description = [{

@@ -787,7 +787,7 @@ Module in SPIR-V has one region that contains one block. It is defined via
 `spv.module` is converted into `ModuleOp`. This plays a role of enclosing scope
 to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
-`spv._module_end` is mapped to an equivalent terminator `ModuleTerminatorOp`.
+`spv.mlir.endmodule` is mapped to an equivalent terminator `ModuleTerminatorOp`.
 
 ## `mlir-spirv-cpu-runner`
 
