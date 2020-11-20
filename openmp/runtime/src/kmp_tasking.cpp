@@ -1876,9 +1876,10 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
     must_wait = must_wait || (thread->th.th_task_team != NULL &&
                               thread->th.th_task_team->tt.tt_found_proxy_tasks);
     if (must_wait) {
-      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *,
-                             &(taskdata->td_incomplete_child_tasks)),
-                       0U);
+      kmp_flag_32<false, false> flag(
+          RCAST(std::atomic<kmp_uint32> *,
+                &(taskdata->td_incomplete_child_tasks)),
+          0U);
       while (KMP_ATOMIC_LD_ACQ(&taskdata->td_incomplete_child_tasks) != 0) {
         flag.execute_tasks(thread, gtid, FALSE,
                            &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
@@ -1984,7 +1985,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
             thread->th.ompt_thread_info.ompt_task_yielded = 1;
 #endif
           __kmp_execute_tasks_32(
-              thread, gtid, NULL, FALSE,
+              thread, gtid, (kmp_flag_32<> *)NULL, FALSE,
               &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
               __kmp_task_stealing_constraint);
 #if OMPT_SUPPORT
@@ -2512,8 +2513,8 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     if (!taskdata->td_flags.team_serial ||
         (thread->th.th_task_team != NULL &&
          thread->th.th_task_team->tt.tt_found_proxy_tasks)) {
-      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *, &(taskgroup->count)),
-                       0U);
+      kmp_flag_32<false, false> flag(
+          RCAST(std::atomic<kmp_uint32> *, &(taskgroup->count)), 0U);
       while (KMP_ATOMIC_LD_ACQ(&taskgroup->count) != 0) {
         flag.execute_tasks(thread, gtid, FALSE,
                            &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
@@ -3021,8 +3022,9 @@ static inline int __kmp_execute_tasks_template(
   }
 }
 
+template <bool C, bool S>
 int __kmp_execute_tasks_32(
-    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_32 *flag, int final_spin,
+    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_32<C, S> *flag, int final_spin,
     int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
     kmp_int32 is_constrained) {
   return __kmp_execute_tasks_template(
@@ -3030,8 +3032,9 @@ int __kmp_execute_tasks_32(
       thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
 }
 
+template <bool C, bool S>
 int __kmp_execute_tasks_64(
-    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_64 *flag, int final_spin,
+    kmp_info_t *thread, kmp_int32 gtid, kmp_flag_64<C, S> *flag, int final_spin,
     int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
     kmp_int32 is_constrained) {
   return __kmp_execute_tasks_template(
@@ -3047,6 +3050,23 @@ int __kmp_execute_tasks_oncore(
       thread, gtid, flag, final_spin,
       thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
 }
+
+template int
+__kmp_execute_tasks_32<false, false>(kmp_info_t *, kmp_int32,
+                                     kmp_flag_32<false, false> *, int,
+                                     int *USE_ITT_BUILD_ARG(void *), kmp_int32);
+
+template int __kmp_execute_tasks_64<false, true>(kmp_info_t *, kmp_int32,
+                                                 kmp_flag_64<false, true> *,
+                                                 int,
+                                                 int *USE_ITT_BUILD_ARG(void *),
+                                                 kmp_int32);
+
+template int __kmp_execute_tasks_64<true, false>(kmp_info_t *, kmp_int32,
+                                                 kmp_flag_64<true, false> *,
+                                                 int,
+                                                 int *USE_ITT_BUILD_ARG(void *),
+                                                 kmp_int32);
 
 // __kmp_enable_tasking: Allocate task team and resume threads sleeping at the
 // next barrier so they can assist in executing enqueued tasks.
@@ -3597,9 +3617,10 @@ void __kmp_task_team_wait(
       // Worker threads may have dropped through to release phase, but could
       // still be executing tasks. Wait here for tasks to complete. To avoid
       // memory contention, only master thread checks termination condition.
-      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *,
-                             &task_team->tt.tt_unfinished_threads),
-                       0U);
+      kmp_flag_32<false, false> flag(
+          RCAST(std::atomic<kmp_uint32> *,
+                &task_team->tt.tt_unfinished_threads),
+          0U);
       flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
     }
     // Deactivate the old task team, so that the worker threads will stop
@@ -3621,7 +3642,7 @@ void __kmp_task_team_wait(
 }
 
 // __kmp_tasking_barrier:
-// This routine may only called when __kmp_tasking_mode == tskm_extra_barrier.
+// This routine is called only when __kmp_tasking_mode == tskm_extra_barrier.
 // Internal function to execute all tasks prior to a regular barrier or a join
 // barrier. It is a full barrier itself, which unfortunately turns regular
 // barriers into double barriers and join barriers into 1 1/2 barriers.
@@ -3635,7 +3656,7 @@ void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
 #if USE_ITT_BUILD
   KMP_FSYNC_SPIN_INIT(spin, NULL);
 #endif /* USE_ITT_BUILD */
-  kmp_flag_32 spin_flag(spin, 0U);
+  kmp_flag_32<false, false> spin_flag(spin, 0U);
   while (!spin_flag.execute_tasks(thread, gtid, TRUE,
                                   &flag USE_ITT_BUILD_ARG(NULL), 0)) {
 #if USE_ITT_BUILD
