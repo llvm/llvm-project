@@ -5,9 +5,9 @@ func @generalize_conv(%input : memref<1x225x225x3xf32>, %filter: memref<3x3x3x32
   return
 }
 
-// CHECK: #[[FILTER_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
-// CHECK:  #[[INPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 * 4 + d3 * 2, d2 * 5 + d4 * 3, d5)>
-// CHECK: #[[OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d6)>
+// CHECK: #[[FILTER_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d4, d3)>
+// CHECK:  #[[INPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 * 4 + d5 * 2, d2 * 5 + d6 * 3, d4)>
+// CHECK: #[[OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
 
 // CHECK: func @generalize_conv
 // CHECK-SAME:  %[[INPUT:.+]]: memref<1x225x225x3xf32>
@@ -16,7 +16,7 @@ func @generalize_conv(%input : memref<1x225x225x3xf32>, %filter: memref<3x3x3x32
 
 // CHECK: linalg.generic
 // CHECK-SAME: indexing_maps = [#[[FILTER_MAP]], #[[INPUT_MAP]], #[[OUTPUT_MAP]]]
-// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "window", "window", "reduction", "parallel"]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "window", "window"]
 // CHECK-SAME:  ins(%[[FILTER]], %[[INPUT]]
 // CHECK-SAME: outs(%[[OUTPUT]]
 
