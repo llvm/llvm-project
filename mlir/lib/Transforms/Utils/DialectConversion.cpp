@@ -988,7 +988,7 @@ void ConversionPatternRewriterImpl::undoBlockActions(
       Block *insertAfterBlock = action.originalPosition.insertAfterBlock;
       blockList.insert((insertAfterBlock
                             ? std::next(Region::iterator(insertAfterBlock))
-                            : blockList.end()),
+                            : blockList.begin()),
                        action.block);
       break;
     }
