@@ -1,5 +1,23 @@
 // RUN: tco -o - %s | FileCheck %s
 
+// Global box initialization (test must come first because llvm globals are emitted first).
+// CHECK-LABEL: @globalx = internal global { i32*, i64, i32, i8, i8, i8, i8 } { i32* null, i64 4, i32 20180515, i8 0, i8 9, i8 2, i8 0 }
+fir.global internal @globalx : !fir.box<!fir.heap<i32>> {
+  %c0 = constant 0 : index
+  %0 = fir.convert %c0 : (index) -> !fir.heap<i32>
+  %1 = fir.embox %0 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+  fir.has_value %1 : !fir.box<!fir.heap<i32>>
+}
+
+// CHECK-LABEL: @globaly = internal global { float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { float* null, i64 4, i32 20180515, i8 1, i8 25, i8 2, i8 0,{{.*}}[3 x i64] [i64 1, i64 0, i64 4]
+fir.global internal @globaly : !fir.box<!fir.heap<!fir.array<?xf32>>> {
+  %c0 = constant 0 : index
+  %0 = fir.convert %c0 : (index) -> !fir.heap<!fir.array<?xf32>>
+  %1 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %2 = fir.embox %0(%1) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?xf32>>>
+}
+
 // CHECK-LABEL: declare void @g({ float*, i64, i32, i8, i8, i8, i8 }*)
 func private @g(%b : !fir.box<f32>)
 // CHECK-LABEL: declare void @ga({ float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }*)
@@ -102,4 +120,14 @@ func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> !fir.
   // CHECK: store i64 %[[arg1]], i64* %{{.*}}, align
   %x = fir.embox %arg0(%1) typeparams %arg1 : (!fir.ref<!fir.array<7x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<7x!fir.char<1,?>>>
   return %x : !fir.box<!fir.array<7x!fir.char<1,?>>>
+}
+
+// Storing a fir.box into a fir.ref<fir.box> (modifying descriptors).
+// CHECK-LABEL: define void @b5(
+// CHECK-SAME: { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[arg0:.*]], { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[arg1:.*]])
+func @b5(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, %arg1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>) {
+  fir.store %arg1 to %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  // CHECK: %[[boxLoad:.*]] = load { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[arg1]]
+  // CHECK: store { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %[[boxLoad]], { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[arg0]]
+  return
 }

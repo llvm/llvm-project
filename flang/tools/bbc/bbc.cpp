@@ -302,7 +302,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   if (emitLLVM) {
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
-    pm.addNestedPass<mlir::FuncOp>(fir::createFirCodeGenRewritePass());
+    pm.addPass(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
     pm.addPass(fir::createFIRToLLVMPass(nameUniquer));
 
