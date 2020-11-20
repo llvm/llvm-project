@@ -1142,6 +1142,9 @@ public:
 
   bool hasGFX11ExtraVGPRs() const { return HasGFX11ExtraVGPRs; }
 
+  /// Return true if the target has the S_DELAY_ALU instruction.
+  bool hasDelayAlu() const { return GFX11Insts; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
