@@ -161,17 +161,22 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, XLenVT, Expand);
   }
 
-  if (!Subtarget.hasStdExtZbp())
+  if (Subtarget.hasStdExtZbp()) {
+    setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
+
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BSWAP, MVT::i32, Custom);
+    }
+  } else {
     setOperationAction(ISD::BSWAP, XLenVT, Expand);
+  }
 
   if (!Subtarget.hasStdExtZbb()) {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
     setOperationAction(ISD::CTPOP, XLenVT, Expand);
   }
-
-  if (Subtarget.hasStdExtZbp())
-    setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
 
   if (Subtarget.hasStdExtZbt()) {
     setOperationAction(ISD::FSHL, XLenVT, Legal);
@@ -1065,6 +1070,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // ReplaceNodeResults requires we maintain the same type for the return
     // value.
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
+    break;
+  }
+  case ISD::BSWAP:
+  case ISD::BITREVERSE: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           Subtarget.hasStdExtZbp() && "Unexpected custom legalisation");
+    SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64,
+                                 N->getOperand(0));
+    unsigned Imm = N->getOpcode() == ISD::BITREVERSE ? 31 : 24;
+    SDValue GREVIW = DAG.getNode(RISCVISD::GREVIW, DL, MVT::i64, NewOp0,
+                                 DAG.getTargetConstant(Imm, DL,
+                                                       Subtarget.getXLenVT()));
+    // ReplaceNodeResults requires we maintain the same type for the return
+    // value.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, GREVIW));
     break;
   }
   }
