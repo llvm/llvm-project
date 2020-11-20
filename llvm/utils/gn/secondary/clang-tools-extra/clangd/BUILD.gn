@@ -78,6 +78,7 @@ static_library("clangd") {
     "ConfigYAML.cpp",
     "Diagnostics.cpp",
     "DraftStore.cpp",
+    "DumpAST.cpp",
     "ExpectedTypes.cpp",
     "FS.cpp",
     "FileDistance.cpp",
