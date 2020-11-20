@@ -34,6 +34,8 @@ enum NodeType : unsigned {
 
   MEMBARRIER, // Compiler barrier only; generate a no-op.
 
+  VEC_BROADCAST,    // 0: scalar value, 1: VL
+
   CALL,            // A call instruction.
   RET_FLAG,        // Return with a flag operand.
   GLOBAL_BASE_REG, // Global base reg for PIC.
@@ -114,6 +116,8 @@ public:
   SDValue lowerToTLSGeneralDynamicModel(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
 
   /// Custom DAGCombine {

@@ -2224,3 +2224,6 @@ include "VEInstrVec.td"
 
 // The vevlintrin
 include "VEInstrIntrinsicVL.td"
+
+// Patterns and intermediate SD nodes (VEC_*).
+include "VEInstrPatternsVec.td"
