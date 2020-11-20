@@ -38,4 +38,11 @@ exitWithError(std::error_code EC, StringRef Whence = StringRef()) {
 LLVM_ATTRIBUTE_NORETURN inline void exitWithError(Error E, StringRef Whence) {
   exitWithError(errorToErrorCode(std::move(E)), Whence);
 }
+
+template <typename T, typename... Ts>
+T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+  if (EO)
+    return std::move(*EO);
+  exitWithError(EO.takeError(), std::forward<Ts>(Args)...);
+}
 #endif
