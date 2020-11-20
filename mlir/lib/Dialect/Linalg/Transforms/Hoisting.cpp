@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -78,42 +79,6 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
       changed = true;
     });
   }
-}
-
-/// Return true if we can prove that the transfer operations access disjoint
-/// memory.
-static bool isDisjoint(VectorTransferOpInterface transferA,
-                       VectorTransferOpInterface transferB) {
-  if (transferA.memref() != transferB.memref())
-    return false;
-  // For simplicity only look at transfer of same type.
-  if (transferA.getVectorType() != transferB.getVectorType())
-    return false;
-  unsigned rankOffset = transferA.getLeadingMemRefRank();
-  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    auto indexA = transferA.indices()[i].getDefiningOp<ConstantOp>();
-    auto indexB = transferB.indices()[i].getDefiningOp<ConstantOp>();
-    // If any of the indices are dynamic we cannot prove anything.
-    if (!indexA || !indexB)
-      continue;
-
-    if (i < rankOffset) {
-      // For dimension used as index if we can prove that index are different we
-      // know we are accessing disjoint slices.
-      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
-          indexB.getValue().cast<IntegerAttr>().getInt())
-        return true;
-    } else {
-      // For this dimension, we slice a part of the memref we need to make sure
-      // the intervals accessed don't overlap.
-      int64_t distance =
-          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
-                   indexB.getValue().cast<IntegerAttr>().getInt());
-      if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
-        return true;
-    }
-  }
-  return false;
 }
 
 void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
@@ -185,14 +150,14 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
           continue;
         if (auto transferWriteUse =
                 dyn_cast<vector::TransferWriteOp>(use.getOwner())) {
-          if (!isDisjoint(
+          if (!isDisjointTransferSet(
                   cast<VectorTransferOpInterface>(transferWrite.getOperation()),
                   cast<VectorTransferOpInterface>(
                       transferWriteUse.getOperation())))
             return WalkResult::advance();
         } else if (auto transferReadUse =
                        dyn_cast<vector::TransferReadOp>(use.getOwner())) {
-          if (!isDisjoint(
+          if (!isDisjointTransferSet(
                   cast<VectorTransferOpInterface>(transferWrite.getOperation()),
                   cast<VectorTransferOpInterface>(
                       transferReadUse.getOperation())))
