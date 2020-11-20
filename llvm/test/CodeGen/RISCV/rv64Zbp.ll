@@ -1377,12 +1377,12 @@ define i64 @grev32(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    rori a0, a0, 32
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    rori a0, a0, 32
 ; RV64IBP-NEXT:    ret
   %shl = shl i64 %a, 32
   %shr = lshr i64 %a, 32
@@ -1403,12 +1403,12 @@ define i64 @grev32_fshl(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32_fshl:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    rori a0, a0, 32
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32_fshl:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    rori a0, a0, 32
 ; RV64IBP-NEXT:    ret
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 32)
   ret i64 %or
@@ -1424,12 +1424,12 @@ define i64 @grev32_fshr(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32_fshr:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    rori a0, a0, 32
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32_fshr:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    rori a0, a0, 32
 ; RV64IBP-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 32)
   ret i64 %or
