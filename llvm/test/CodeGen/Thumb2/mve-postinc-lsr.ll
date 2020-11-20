@@ -574,27 +574,19 @@ define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, i8* %row_b
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r10, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r10, lr}
-; CHECK-NEXT:    add.w r7, r0, #15
 ; CHECK-NEXT:    ldr.w r12, [sp, #32]
-; CHECK-NEXT:    asrs r6, r7, #31
-; CHECK-NEXT:    add.w r7, r7, r6, lsr #28
-; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    asrs r5, r7, #4
-; CHECK-NEXT:    cmp r5, #1
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    asrgt r6, r7, #4
 ; CHECK-NEXT:    cmp r0, #1
 ; CHECK-NEXT:    blt .LBB4_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    adds r7, r2, r1
 ; CHECK-NEXT:    add.w r5, r2, r1, lsl #1
-; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
-; CHECK-NEXT:    dlstp.8 lr, r0
-; CHECK-NEXT:    add r1, r2
 ; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    adds r7, r2, r1
+; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
+; CHECK-NEXT:    add r1, r2
+; CHECK-NEXT:    dlstp.8 lr, r0
 ; CHECK-NEXT:  .LBB4_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r3], #16
@@ -735,20 +727,20 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB5_7 Depth 2
 ; CHECK-NEXT:    ldr r0, [sp, #92]
+; CHECK-NEXT:    cmp r2, r2
 ; CHECK-NEXT:    ldr.w r12, [r0, r9, lsl #2]
-; CHECK-NEXT:    subs r0, r2, r2
-; CHECK-NEXT:    ble .LBB5_3
+; CHECK-NEXT:    bge .LBB5_3
 ; CHECK-NEXT:  @ %bb.6: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
 ; CHECK-NEXT:    ldr.w r11, [sp, #88]
+; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r6, r12
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r8, r12
 ; CHECK-NEXT:    dlstp.16 lr, r11
-; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mla r3, r9, r11, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    mla r3, r9, r11, r0
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r5, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    mov r8, r12
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:  .LBB5_7: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB5_5 Depth=1
@@ -907,20 +899,20 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB6_5 Depth 2
 ; CHECK-NEXT:    ldr r0, [sp, #92]
+; CHECK-NEXT:    cmp r2, r2
 ; CHECK-NEXT:    ldr.w r12, [r0, r9, lsl #2]
-; CHECK-NEXT:    subs r0, r2, r2
-; CHECK-NEXT:    ble .LBB6_6
+; CHECK-NEXT:    bge .LBB6_6
 ; CHECK-NEXT:  @ %bb.4: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
 ; CHECK-NEXT:    ldr.w r11, [sp, #88]
+; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r6, r12
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r8, r12
 ; CHECK-NEXT:    dlstp.16 lr, r11
-; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mla r3, r9, r11, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    mla r3, r9, r11, r0
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r5, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    mov r8, r12
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:  .LBB6_5: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB6_3 Depth=1
