@@ -9255,8 +9255,7 @@ bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
   bool Seen = false;
   for (SDNode::use_iterator I = N->use_begin(), E = N->use_end(); I != E; ++I) {
     SDNode *User = *I;
-    if (llvm::any_of(Nodes,
-                     [&User](const SDNode *Node) { return User == Node; }))
+    if (llvm::is_contained(Nodes, User))
       Seen = true;
     else
       return false;
