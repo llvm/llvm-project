@@ -639,33 +639,158 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
   return OFFLOAD_SUCCESS;
 }
 
+static int targetDataContiguous(DeviceTy &Device, void *ArgsBase,
+                                void *HstPtrBegin, int64_t ArgSize,
+                                int64_t ArgType) {
+  bool IsLast, IsHostPtr;
+  void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, ArgSize, IsLast, false,
+                                            IsHostPtr, /*MustContain=*/true);
+  if (!TgtPtrBegin) {
+    DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
+    if (ArgType & OMP_TGT_MAPTYPE_PRESENT) {
+      MESSAGE("device mapping required by 'present' motion modifier does not "
+              "exist for host address " DPxMOD " (%" PRId64 " bytes)",
+              DPxPTR(HstPtrBegin), ArgSize);
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
+  }
+
+  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+      TgtPtrBegin == HstPtrBegin) {
+    DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
+       DPxPTR(HstPtrBegin));
+    return OFFLOAD_SUCCESS;
+  }
+
+  if (ArgType & OMP_TGT_MAPTYPE_FROM) {
+    DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
+       ArgSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+    int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, nullptr);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Copying data from device failed.\n");
+      return OFFLOAD_FAIL;
+    }
+
+    uintptr_t LB = (uintptr_t)HstPtrBegin;
+    uintptr_t UB = (uintptr_t)HstPtrBegin + ArgSize;
+    Device.ShadowMtx.lock();
+    for (ShadowPtrListTy::iterator IT = Device.ShadowPtrMap.begin();
+         IT != Device.ShadowPtrMap.end(); ++IT) {
+      void **ShadowHstPtrAddr = (void **)IT->first;
+      if ((uintptr_t)ShadowHstPtrAddr < LB)
+        continue;
+      if ((uintptr_t)ShadowHstPtrAddr >= UB)
+        break;
+      DP("Restoring original host pointer value " DPxMOD
+         " for host pointer " DPxMOD "\n",
+         DPxPTR(IT->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
+      *ShadowHstPtrAddr = IT->second.HstPtrVal;
+    }
+    Device.ShadowMtx.unlock();
+  }
+
+  if (ArgType & OMP_TGT_MAPTYPE_TO) {
+    DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
+       ArgSize, DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
+    int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, nullptr);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Copying data to device failed.\n");
+      return OFFLOAD_FAIL;
+    }
+
+    uintptr_t LB = (uintptr_t)HstPtrBegin;
+    uintptr_t UB = (uintptr_t)HstPtrBegin + ArgSize;
+    Device.ShadowMtx.lock();
+    for (ShadowPtrListTy::iterator IT = Device.ShadowPtrMap.begin();
+         IT != Device.ShadowPtrMap.end(); ++IT) {
+      void **ShadowHstPtrAddr = (void **)IT->first;
+      if ((uintptr_t)ShadowHstPtrAddr < LB)
+        continue;
+      if ((uintptr_t)ShadowHstPtrAddr >= UB)
+        break;
+      DP("Restoring original target pointer value " DPxMOD " for target "
+         "pointer " DPxMOD "\n",
+         DPxPTR(IT->second.TgtPtrVal), DPxPTR(IT->second.TgtPtrAddr));
+      Ret = Device.submitData(IT->second.TgtPtrAddr, &IT->second.TgtPtrVal,
+                              sizeof(void *), nullptr);
+      if (Ret != OFFLOAD_SUCCESS) {
+        REPORT("Copying data to device failed.\n");
+        Device.ShadowMtx.unlock();
+        return OFFLOAD_FAIL;
+      }
+    }
+    Device.ShadowMtx.unlock();
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+static int targetDataNonContiguous(DeviceTy &Device, void *ArgsBase,
+                                   __tgt_target_non_contig *NonContig,
+                                   uint64_t Size, int64_t ArgType,
+                                   int CurrentDim, int DimSize,
+                                   uint64_t Offset) {
+  int Ret = OFFLOAD_SUCCESS;
+  if (CurrentDim < DimSize) {
+    for (unsigned int I = 0; I < NonContig[CurrentDim].Count; ++I) {
+      uint64_t CurOffset =
+          (NonContig[CurrentDim].Offset + I) * NonContig[CurrentDim].Stride;
+      // we only need to transfer the first element for the last dimension
+      // since we've already got a contiguous piece.
+      if (CurrentDim != DimSize - 1 || I == 0) {
+        Ret = targetDataNonContiguous(Device, ArgsBase, NonContig, Size,
+                                      ArgType, CurrentDim + 1, DimSize,
+                                      Offset + CurOffset);
+        // Stop the whole process if any contiguous piece returns anything
+        // other than OFFLOAD_SUCCESS.
+        if (Ret != OFFLOAD_SUCCESS)
+          return Ret;
+      }
+    }
+  } else {
+    char *Ptr = (char *)ArgsBase + Offset;
+    DP("Transfer of non-contiguous : host ptr %lx offset %ld len %ld\n",
+       (uint64_t)Ptr, Offset, Size);
+    Ret = targetDataContiguous(Device, ArgsBase, Ptr, Size, ArgType);
+  }
+  return Ret;
+}
+
+static int getNonContigMergedDimension(__tgt_target_non_contig *NonContig,
+                                       int32_t DimSize) {
+  int RemovedDim = 0;
+  for (int I = DimSize - 1; I > 0; --I) {
+    if (NonContig[I].Count * NonContig[I].Stride == NonContig[I - 1].Stride)
+      RemovedDim++;
+  }
+  return RemovedDim;
+}
+
 /// Internal function to pass data to/from the target.
-// async_info_ptr is currently unused, added here so target_data_update has the
+// async_info_ptr is currently unused, added here so targetDataUpdate has the
 // same signature as targetDataBegin and targetDataEnd.
-int target_data_update(DeviceTy &Device, int32_t arg_num, void **args_base,
-                       void **args, int64_t *arg_sizes, int64_t *arg_types,
-                       map_var_info_t *arg_names, void **arg_mappers,
-                       __tgt_async_info *async_info_ptr) {
+int targetDataUpdate(DeviceTy &Device, int32_t ArgNum, void **ArgsBase,
+                     void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
+                     map_var_info_t *ArgNames, void **ArgMappers,
+                     __tgt_async_info *AsyncInfoPtr) {
   // process each input.
-  for (int32_t i = 0; i < arg_num; ++i) {
-    if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
-        (arg_types[i] & OMP_TGT_MAPTYPE_PRIVATE))
+  for (int32_t I = 0; I < ArgNum; ++I) {
+    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
+        (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
 
-    if (arg_mappers && arg_mappers[i]) {
-      // Instead of executing the regular path of target_data_update, call the
-      // targetDataMapper variant which will call target_data_update again
+    if (ArgMappers && ArgMappers[I]) {
+      // Instead of executing the regular path of targetDataUpdate, call the
+      // targetDataMapper variant which will call targetDataUpdate again
       // with new arguments.
-      DP("Calling targetDataMapper for the %dth argument\n", i);
+      DP("Calling targetDataMapper for the %dth argument\n", I);
 
-      int rc =
-          targetDataMapper(Device, args_base[i], args[i], arg_sizes[i],
-                           arg_types[i], arg_mappers[i], target_data_update);
+      int Ret = targetDataMapper(Device, ArgsBase[I], Args[I], ArgSizes[I],
+                                 ArgTypes[I], ArgMappers[I], targetDataUpdate);
 
-      if (rc != OFFLOAD_SUCCESS) {
-        REPORT(
-            "Call to target_data_update via targetDataMapper for custom mapper"
-            " failed.\n");
+      if (Ret != OFFLOAD_SUCCESS) {
+        REPORT("Call to targetDataUpdate via targetDataMapper for custom mapper"
+               " failed.\n");
         return OFFLOAD_FAIL;
       }
 
@@ -673,88 +798,23 @@ int target_data_update(DeviceTy &Device, int32_t arg_num, void **args_base,
       continue;
     }
 
-    void *HstPtrBegin = args[i];
-    int64_t MapSize = arg_sizes[i];
-    bool IsLast, IsHostPtr;
-    void *TgtPtrBegin = Device.getTgtPtrBegin(
-        HstPtrBegin, MapSize, IsLast, false, IsHostPtr, /*MustContain=*/true);
-    if (!TgtPtrBegin) {
-      DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
-      if (arg_types[i] & OMP_TGT_MAPTYPE_PRESENT) {
-        MESSAGE("device mapping required by 'present' motion modifier does not "
-                "exist for host address " DPxMOD " (%" PRId64 " bytes)",
-                DPxPTR(HstPtrBegin), MapSize);
-        return OFFLOAD_FAIL;
-      }
-      continue;
+    int Ret = OFFLOAD_SUCCESS;
+
+    if (ArgTypes[I] & OMP_TGT_MAPTYPE_NON_CONTIG) {
+      __tgt_target_non_contig *NonContig = (__tgt_target_non_contig *)Args[I];
+      int32_t DimSize = ArgSizes[I];
+      uint64_t Size =
+          NonContig[DimSize - 1].Count * NonContig[DimSize - 1].Stride;
+      int32_t MergedDim = getNonContigMergedDimension(NonContig, DimSize);
+      Ret = targetDataNonContiguous(
+          Device, ArgsBase[I], NonContig, Size, ArgTypes[I],
+          /*current_dim=*/0, DimSize - MergedDim, /*offset=*/0);
+    } else {
+      Ret = targetDataContiguous(Device, ArgsBase[I], Args[I], ArgSizes[I],
+                                 ArgTypes[I]);
     }
-
-    if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-        TgtPtrBegin == HstPtrBegin) {
-      DP("hst data:" DPxMOD " unified and shared, becomes a noop\n",
-         DPxPTR(HstPtrBegin));
-      continue;
-    }
-
-    if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
-      DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-          arg_sizes[i], DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-      int rt = Device.retrieveData(HstPtrBegin, TgtPtrBegin, MapSize, nullptr);
-      if (rt != OFFLOAD_SUCCESS) {
-        REPORT("Copying data from device failed.\n");
-        return OFFLOAD_FAIL;
-      }
-
-      uintptr_t lb = (uintptr_t) HstPtrBegin;
-      uintptr_t ub = (uintptr_t) HstPtrBegin + MapSize;
-      Device.ShadowMtx.lock();
-      for (ShadowPtrListTy::iterator it = Device.ShadowPtrMap.begin();
-          it != Device.ShadowPtrMap.end(); ++it) {
-        void **ShadowHstPtrAddr = (void**) it->first;
-        if ((uintptr_t) ShadowHstPtrAddr < lb)
-          continue;
-        if ((uintptr_t) ShadowHstPtrAddr >= ub)
-          break;
-        DP("Restoring original host pointer value " DPxMOD " for host pointer "
-            DPxMOD "\n", DPxPTR(it->second.HstPtrVal),
-            DPxPTR(ShadowHstPtrAddr));
-        *ShadowHstPtrAddr = it->second.HstPtrVal;
-      }
-      Device.ShadowMtx.unlock();
-    }
-
-    if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
-      DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
-          arg_sizes[i], DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
-      int rt = Device.submitData(TgtPtrBegin, HstPtrBegin, MapSize, nullptr);
-      if (rt != OFFLOAD_SUCCESS) {
-        REPORT("Copying data to device failed.\n");
-        return OFFLOAD_FAIL;
-      }
-
-      uintptr_t lb = (uintptr_t) HstPtrBegin;
-      uintptr_t ub = (uintptr_t) HstPtrBegin + MapSize;
-      Device.ShadowMtx.lock();
-      for (ShadowPtrListTy::iterator it = Device.ShadowPtrMap.begin();
-          it != Device.ShadowPtrMap.end(); ++it) {
-        void **ShadowHstPtrAddr = (void **)it->first;
-        if ((uintptr_t)ShadowHstPtrAddr < lb)
-          continue;
-        if ((uintptr_t)ShadowHstPtrAddr >= ub)
-          break;
-        DP("Restoring original target pointer value " DPxMOD " for target "
-           "pointer " DPxMOD "\n",
-           DPxPTR(it->second.TgtPtrVal), DPxPTR(it->second.TgtPtrAddr));
-        rt = Device.submitData(it->second.TgtPtrAddr, &it->second.TgtPtrVal,
-                               sizeof(void *), nullptr);
-        if (rt != OFFLOAD_SUCCESS) {
-          REPORT("Copying data to device failed.\n");
-          Device.ShadowMtx.unlock();
-          return OFFLOAD_FAIL;
-        }
-      }
-      Device.ShadowMtx.unlock();
-    }
+    if (Ret == OFFLOAD_FAIL)
+      return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
