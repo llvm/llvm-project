@@ -144,20 +144,44 @@ static Optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt, unsigned,
   return None;
 }
 
-void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
-                           const char *Spelling,
-                           CompilerInvocation::StringAllocator SA,
-                           unsigned TableIndex, unsigned Value) {
+/// The tblgen-erated code passes in a fifth parameter of an arbitrary type, but
+/// denormalizeSimpleFlags never looks at it. Avoid bloating compile-time with
+/// unnecessary template instantiations and just ignore it with a variadic
+/// argument.
+static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
+                                  const char *Spelling,
+                                  CompilerInvocation::StringAllocator, unsigned,
+                                  /*T*/...) {
   Args.push_back(Spelling);
 }
 
-template <typename T, T Value>
-static llvm::Optional<T>
-normalizeFlagToValue(OptSpecifier Opt, unsigned TableIndex, const ArgList &Args,
-                     DiagnosticsEngine &Diags) {
-  if (Args.hasArg(Opt))
-    return Value;
-  return None;
+namespace {
+template <typename T> struct FlagToValueNormalizer {
+  T Value;
+
+  Optional<T> operator()(OptSpecifier Opt, unsigned, const ArgList &Args,
+                         DiagnosticsEngine &) {
+    if (Args.hasArg(Opt))
+      return Value;
+    return None;
+  }
+};
+} // namespace
+
+template <typename T> static constexpr bool is_int_convertible() {
+  return sizeof(T) <= sizeof(uint64_t) &&
+         std::is_trivially_constructible<T, uint64_t>::value &&
+         std::is_trivially_constructible<uint64_t, T>::value;
+}
+
+template <typename T, std::enable_if_t<is_int_convertible<T>(), bool> = false>
+static FlagToValueNormalizer<uint64_t> makeFlagToValueNormalizer(T Value) {
+  return FlagToValueNormalizer<uint64_t>{Value};
+}
+
+template <typename T, std::enable_if_t<!is_int_convertible<T>(), bool> = false>
+static FlagToValueNormalizer<T> makeFlagToValueNormalizer(T Value) {
+  return FlagToValueNormalizer<T>{std::move(Value)};
 }
 
 static Optional<bool> normalizeBooleanFlag(OptSpecifier PosOpt,
@@ -1590,13 +1614,8 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
                                       ArgList &Args) {
   Opts.OutputFile = std::string(Args.getLastArgValue(OPT_dependency_file));
   Opts.Targets = Args.getAllArgValues(OPT_MT);
-  Opts.IncludeSystemHeaders = Args.hasArg(OPT_sys_header_deps);
-  Opts.IncludeModuleFiles = Args.hasArg(OPT_module_file_deps);
-  Opts.UsePhonyTargets = Args.hasArg(OPT_MP);
-  Opts.ShowHeaderIncludes = Args.hasArg(OPT_H);
   Opts.HeaderIncludeOutputFile =
       std::string(Args.getLastArgValue(OPT_header_include_file));
-  Opts.AddMissingHeaderDeps = Args.hasArg(OPT_MG);
   if (Args.hasArg(OPT_show_includes)) {
     // Writing both /showIncludes and preprocessor output to stdout
     // would produce interleaved output, so use stderr for /showIncludes.
@@ -1611,8 +1630,6 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   Opts.DOTOutputFile = std::string(Args.getLastArgValue(OPT_dependency_dot));
   Opts.ModuleDependencyOutputDir =
       std::string(Args.getLastArgValue(OPT_module_dependency_dir));
-  if (Args.hasArg(OPT_MV))
-    Opts.OutputFormat = DependencyOutputFormat::NMake;
   // Add sanitizer blacklists as extra dependencies.
   // They won't be discovered by the regular preprocessor, so
   // we let make / ninja to know about this implicit dependency.

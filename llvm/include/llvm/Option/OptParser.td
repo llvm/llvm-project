@@ -170,7 +170,7 @@ class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
 
 class MarshallingInfoBitfieldFlag<code keypath, code value>
   : MarshallingInfoFlag<keypath, "0u"> {
-  code Normalizer = "(normalizeFlagToValue<unsigned, "#value#">)";
+  code Normalizer = "makeFlagToValueNormalizer("#value#")";
   code ValueMerger = "mergeMaskValue";
   code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
 }
