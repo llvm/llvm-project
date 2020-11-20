@@ -101,7 +101,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
         spv.Branch ^header
       ^merge:
         // CHECK: loc({{".*debug.mlir"}}:85:7)
-        spv._merge
+        spv.mlir.merge
         // CHECK: loc({{".*debug.mlir"}}:85:7)
       }
       // CHECK: loc({{".*debug.mlir"}}:108:7)
@@ -114,7 +114,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Branch ^header
     ^merge:
       // CHECK: loc({{".*debug.mlir"}}:75:5)
-      spv._merge
+      spv.mlir.merge
     // CHECK: loc({{".*debug.mlir"}}:75:5)
     }
     spv.Return
@@ -138,7 +138,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Branch ^merge
     ^merge:
       // CHECK: loc({{".*debug.mlir"}}:128:5)
-      spv._merge
+      spv.mlir.merge
     // CHECK: loc({{".*debug.mlir"}}:128:5)
     }
     spv.Return
