@@ -8,13 +8,18 @@ define void @simple(i32* nocapture readonly %x, i32* nocapture readnone %y, i32*
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    ldr r1, [sp, #8]
 ; CHECK-NEXT:    mov r12, r3
-; CHECK-NEXT:    wlstp.32 lr, r1, .LBB0_2
-; CHECK-NEXT:  .LBB0_1: @ %do.body
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    add.w lr, r1, #3
+; CHECK-NEXT:    cmp.w r3, lr, lsr #2
+; CHECK-NEXT:    beq .LBB0_3
+; CHECK-NEXT:  @ %bb.1: @ %do.body.preheader
+; CHECK-NEXT:    dlstp.32 lr, r1
+; CHECK-NEXT:  .LBB0_2: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vaddva.s32 r12, q0
-; CHECK-NEXT:    letp lr, .LBB0_1
-; CHECK-NEXT:  .LBB0_2: @ %if.end
+; CHECK-NEXT:    letp lr, .LBB0_2
+; CHECK-NEXT:  .LBB0_3: @ %if.end
 ; CHECK-NEXT:    str.w r12, [r2]
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -48,52 +53,48 @@ if.end:                                           ; preds = %do.body, %entry
 define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32* nocapture %z, i32 %m, i32 %n) {
 ; CHECK-LABEL: nested:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    cbz r3, .LBB1_7
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    cbz r3, .LBB1_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    ldr.w r12, [sp, #20]
+; CHECK-NEXT:    ldr r5, [sp, #24]
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_2: @ %if.end
-; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
+; CHECK-NEXT:    b .LBB1_4
+; CHECK-NEXT:  .LBB1_2: @ in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:  .LBB1_3: @ %if.end
+; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    str.w r4, [r2, r1, lsl #2]
 ; CHECK-NEXT:    adds r1, #1
 ; CHECK-NEXT:    cmp r1, r3
-; CHECK-NEXT:    beq .LBB1_7
-; CHECK-NEXT:  .LBB1_3: @ %for.body
+; CHECK-NEXT:    beq .LBB1_8
+; CHECK-NEXT:  .LBB1_4: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB1_5 Depth 2
-; CHECK-NEXT:    add.w r5, r12, #3
-; CHECK-NEXT:    mov r4, r3
-; CHECK-NEXT:    lsr.w lr, r5, #2
-; CHECK-NEXT:    cmp.w lr, #0
+; CHECK-NEXT:    @ Child Loop BB1_6 Depth 2
+; CHECK-NEXT:    adds r7, r5, #3
+; CHECK-NEXT:    cmp.w r12, r7, lsr #2
 ; CHECK-NEXT:    beq .LBB1_2
-; CHECK-NEXT:    b .LBB1_4
-; CHECK-NEXT:  .LBB1_4: @ %do.body.preheader
-; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
-; CHECK-NEXT:    bic r6, r5, #3
-; CHECK-NEXT:    mov r7, r12
+; CHECK-NEXT:  @ %bb.5: @ %do.body.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    bic r6, r7, #3
+; CHECK-NEXT:    dlstp.32 lr, r5
+; CHECK-NEXT:    mov r7, r5
+; CHECK-NEXT:    add.w r8, r0, r6, lsl #2
 ; CHECK-NEXT:    mov r4, r3
-; CHECK-NEXT:    add.w r5, r0, r6, lsl #2
-; CHECK-NEXT:  .LBB1_5: @ %do.body
-; CHECK-NEXT:    @ Parent Loop BB1_3 Depth=1
+; CHECK-NEXT:  .LBB1_6: @ %do.body
+; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vctp.32 r7
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
-; CHECK-NEXT:    subs r7, #4
-; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddvat.s32 r4, q0
-; CHECK-NEXT:    bne .LBB1_5
-; CHECK-NEXT:    b .LBB1_6
-; CHECK-NEXT:  .LBB1_6: @ %if.end.loopexit
-; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
-; CHECK-NEXT:    sub.w r12, r12, r6
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_7: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    vaddva.s32 r4, q0
+; CHECK-NEXT:    letp lr, .LBB1_6
+; CHECK-NEXT:  @ %bb.7: @ %if.end.loopexit
+; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    subs r5, r5, r6
+; CHECK-NEXT:    mov r0, r8
+; CHECK-NEXT:    b .LBB1_3
+; CHECK-NEXT:  .LBB1_8: @ %for.cond.cleanup
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 entry:
   %cmp20.not = icmp eq i32 %m, 0
   br i1 %cmp20.not, label %for.cond.cleanup, label %for.body

@@ -387,28 +387,27 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq.w .LBB5_11
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    add.w r6, r3, r12, lsl #2
-; CHECK-NEXT:    add.w r4, r1, r12
-; CHECK-NEXT:    cmp r6, r1
-; CHECK-NEXT:    add.w r5, r0, r12
+; CHECK-NEXT:    add.w r4, r3, r12, lsl #2
+; CHECK-NEXT:    add.w r5, r1, r12
+; CHECK-NEXT:    cmp r4, r1
+; CHECK-NEXT:    add.w r6, r0, r12
 ; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r4, r3
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    cmp r6, r0
-; CHECK-NEXT:    cset r6, hi
 ; CHECK-NEXT:    cmp r5, r3
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    ands r5, r6
-; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    lsls r5, r5, #31
+; CHECK-NEXT:    cmp r4, r0
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    cmp r6, r3
+; CHECK-NEXT:    cset r6, hi
+; CHECK-NEXT:    ands r4, r6
+; CHECK-NEXT:    lsls r4, r4, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r5, r4, lr
-; CHECK-NEXT:    lslseq.w r5, r5, #31
+; CHECK-NEXT:    andeq.w r6, r5, lr
+; CHECK-NEXT:    lslseq.w r6, r6, #31
 ; CHECK-NEXT:    beq .LBB5_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    sub.w r5, r12, #1
+; CHECK-NEXT:    sub.w r6, r12, #1
 ; CHECK-NEXT:    and r9, r12, #3
-; CHECK-NEXT:    cmp r5, #3
+; CHECK-NEXT:    cmp r6, #3
 ; CHECK-NEXT:    bhs .LBB5_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
@@ -426,11 +425,12 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    letp lr, .LBB5_5
 ; CHECK-NEXT:    b .LBB5_11
 ; CHECK-NEXT:  .LBB5_6: @ %for.body.preheader.new
-; CHECK-NEXT:    bic r5, r12, #3
+; CHECK-NEXT:    bic r6, r12, #3
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    subs r6, #4
 ; CHECK-NEXT:    add.w r4, r3, #8
-; CHECK-NEXT:    subs r5, #4
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    add.w lr, r6, r5, lsr #2
+; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
 ; CHECK-NEXT:    adds r5, r0, #3
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    adds r6, r1, #1
@@ -689,28 +689,27 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq.w .LBB7_11
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    add.w r6, r3, r12, lsl #2
-; CHECK-NEXT:    add.w r4, r1, r12
-; CHECK-NEXT:    cmp r6, r1
-; CHECK-NEXT:    add.w r5, r0, r12
+; CHECK-NEXT:    add.w r4, r3, r12, lsl #2
+; CHECK-NEXT:    add.w r5, r1, r12
+; CHECK-NEXT:    cmp r4, r1
+; CHECK-NEXT:    add.w r6, r0, r12
 ; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r4, r3
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    cmp r6, r0
-; CHECK-NEXT:    cset r6, hi
 ; CHECK-NEXT:    cmp r5, r3
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    ands r5, r6
-; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    lsls r5, r5, #31
+; CHECK-NEXT:    cmp r4, r0
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    cmp r6, r3
+; CHECK-NEXT:    cset r6, hi
+; CHECK-NEXT:    ands r4, r6
+; CHECK-NEXT:    lsls r4, r4, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r5, r4, lr
-; CHECK-NEXT:    lslseq.w r5, r5, #31
+; CHECK-NEXT:    andeq.w r6, r5, lr
+; CHECK-NEXT:    lslseq.w r6, r6, #31
 ; CHECK-NEXT:    beq .LBB7_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    sub.w r5, r12, #1
+; CHECK-NEXT:    sub.w r6, r12, #1
 ; CHECK-NEXT:    and r9, r12, #3
-; CHECK-NEXT:    cmp r5, #3
+; CHECK-NEXT:    cmp r6, #3
 ; CHECK-NEXT:    bhs .LBB7_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
@@ -728,11 +727,12 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    letp lr, .LBB7_5
 ; CHECK-NEXT:    b .LBB7_11
 ; CHECK-NEXT:  .LBB7_6: @ %for.body.preheader.new
-; CHECK-NEXT:    bic r5, r12, #3
+; CHECK-NEXT:    bic r6, r12, #3
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    subs r6, #4
 ; CHECK-NEXT:    add.w r4, r3, #8
-; CHECK-NEXT:    subs r5, #4
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    add.w lr, r6, r5, lsr #2
+; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
 ; CHECK-NEXT:    adds r5, r0, #3
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    adds r6, r1, #1
@@ -991,28 +991,27 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq.w .LBB9_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
-; CHECK-NEXT:    add.w r6, r3, r12, lsl #2
-; CHECK-NEXT:    add.w r4, r1, r12, lsl #2
-; CHECK-NEXT:    cmp r6, r1
-; CHECK-NEXT:    add.w r5, r0, r12, lsl #2
+; CHECK-NEXT:    add.w r4, r3, r12, lsl #2
+; CHECK-NEXT:    add.w r5, r1, r12, lsl #2
+; CHECK-NEXT:    cmp r4, r1
+; CHECK-NEXT:    add.w r6, r0, r12, lsl #2
 ; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r4, r3
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    cmp r6, r0
-; CHECK-NEXT:    cset r6, hi
 ; CHECK-NEXT:    cmp r5, r3
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    ands r5, r6
-; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    lsls r5, r5, #31
+; CHECK-NEXT:    cmp r4, r0
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    cmp r6, r3
+; CHECK-NEXT:    cset r6, hi
+; CHECK-NEXT:    ands r4, r6
+; CHECK-NEXT:    lsls r4, r4, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r5, r4, lr
-; CHECK-NEXT:    lslseq.w r5, r5, #31
+; CHECK-NEXT:    andeq.w r6, r5, lr
+; CHECK-NEXT:    lslseq.w r6, r6, #31
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    sub.w r5, r12, #1
+; CHECK-NEXT:    sub.w r6, r12, #1
 ; CHECK-NEXT:    and r9, r12, #3
-; CHECK-NEXT:    cmp r5, #3
+; CHECK-NEXT:    cmp r6, #3
 ; CHECK-NEXT:    bhs .LBB9_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
@@ -1030,11 +1029,12 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    letp lr, .LBB9_5
 ; CHECK-NEXT:    b .LBB9_11
 ; CHECK-NEXT:  .LBB9_6: @ %for.body.preheader.new
-; CHECK-NEXT:    bic r5, r12, #3
+; CHECK-NEXT:    bic r6, r12, #3
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    subs r6, #4
 ; CHECK-NEXT:    add.w r4, r3, #8
-; CHECK-NEXT:    subs r5, #4
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    add.w lr, r6, r5, lsr #2
+; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
 ; CHECK-NEXT:    add.w r5, r0, #8
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    add.w r6, r1, #8
