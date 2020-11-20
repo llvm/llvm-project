@@ -1740,7 +1740,8 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
       /*InsertLifetimeIntrinsics=*/PTO.Coroutines));
 
   if (EnableMatrix)
-    MPM.addPass(createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass(true)));
 
   if (!LateLoopOptimizationsEPCallbacks.empty()) {
     LoopPassManager LPM(DebugLogging);
