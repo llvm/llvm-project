@@ -43,13 +43,14 @@ Sections:
 
 # INVALID-STRTAB-SIZE: error: '[[FILE]]': section [index 1] has a sh_offset (0x70) + sh_size (0xffffff) that is greater than the file size (0x218)
 
-## Check that llvm-dwarfdump reports an error during relocation resolution
-## when instead of expected SHT_RELA section it locates a section of a different type.
+## Document that llvm-dwarfdump doesn't reports errors/warnings during relocation resolution
+## when instead of SHT_RELA section we have a SHT_REL section in an object.
+## In this case it just doesn't try to read relocation addends and assumes they are 0.
 
+## Note: we don't check the output, because the intention of this test is just to check the
+## exit code and to document the fact that no warnings are reported.
 # RUN: yaml2obj %s --docnum=3 -o %t3
-# RUN: not --crash llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --check-prefix=RELA %s
-
-# RELA: LLVM ERROR: Section is not SHT_RELA
+# RUN: llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --implicit-check-not=warning: %s
 
 --- !ELF
 FileHeader:
