@@ -38,9 +38,9 @@ MyObject *objects;
 // CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 281474976710673]
 // CHECK: @main
 int main(void) {
-// CHECK: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES0]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPS0]], i32 0, i32 0), i8** null, i8** null)
+// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES0]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPS0]], i32 0, i32 0), i8** null, i8** null)
 #pragma omp target enter data map(to : objects [0:1])
-// CHECK: call void @__tgt_target_data_begin_mapper(i64 -1, i32 2, i8** %{{.+}}, i8** %{{.+}}, i64* %{{.+}}, i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPS1]], i32 0, i32 0), i8** null, i8** null)
+// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** %{{.+}}, i8** %{{.+}}, i64* %{{.+}}, i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPS1]], i32 0, i32 0), i8** null, i8** null)
 #pragma omp target enter data map(to : objects[0].arr [0:1])
 
   return 0;
