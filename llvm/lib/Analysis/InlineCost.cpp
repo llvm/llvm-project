@@ -1911,6 +1911,10 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     if (isa<DbgInfoIntrinsic>(I))
       continue;
 
+    // Skip pseudo-probes.
+    if (isa<PseudoProbeInst>(I))
+      continue;
+
     // Skip ephemeral values.
     if (EphValues.count(&*I))
       continue;

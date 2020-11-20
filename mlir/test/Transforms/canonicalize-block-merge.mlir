@@ -174,26 +174,24 @@ func @contains_regions(%cond : i1) {
   return
 }
 
-// Check that properly handles back edges and the case where a value from one
-// block is used in another.
+// Check that properly handles back edges.
 
 // CHECK-LABEL: func @mismatch_loop(
 // CHECK-SAME: %[[ARG:.*]]: i1, %[[ARG2:.*]]: i1
 func @mismatch_loop(%cond : i1, %cond2 : i1) {
+  // CHECK-NEXT: %[[LOOP_CARRY:.*]] = "foo.op"
   // CHECK: cond_br %{{.*}}, ^bb1(%[[ARG2]] : i1), ^bb2
 
+  %cond3 = "foo.op"() : () -> (i1)
   cond_br %cond, ^bb2, ^bb3
 
 ^bb1:
   // CHECK: ^bb1(%[[ARG3:.*]]: i1):
-  // CHECK-NEXT: %[[LOOP_CARRY:.*]] = "foo.op"
   // CHECK-NEXT: cond_br %[[ARG3]], ^bb1(%[[LOOP_CARRY]] : i1), ^bb2
 
-  %ignored = "foo.op"() : () -> (i1)
   cond_br %cond3, ^bb1, ^bb3
 
 ^bb2:
-  %cond3 = "foo.op"() : () -> (i1)
   cond_br %cond2, ^bb1, ^bb3
 
 ^bb3:
@@ -223,4 +221,33 @@ func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>
   // CHECK: store %{{.*}}, %{{.*}} : memref<i1>
   store %true, %arg2[] : memref<i1>
   br ^bb1
+}
+
+// Check that it is illegal to merge blocks containing an operand
+// with an external user. Incorrectly performing the optimization
+// anyways will result in print(merged, merged) rather than
+// distinct operands.
+func private @print(%arg0: i32, %arg1: i32)
+// CHECK-LABEL: @nomerge
+func @nomerge(%arg0: i32, %i: i32) {
+  %c1_i32 = constant 1 : i32
+  %icmp = cmpi "slt", %i, %arg0 : i32
+  cond_br %icmp, ^bb2, ^bb3
+
+^bb2:  // pred: ^bb1
+  %ip1 = addi %i, %c1_i32 : i32
+  br ^bb4(%ip1 : i32)
+
+^bb7:  // pred: ^bb5
+  %jp1 = addi %j, %c1_i32 : i32
+  br ^bb4(%jp1 : i32)
+
+^bb4(%j: i32):  // 2 preds: ^bb2, ^bb7
+  %jcmp = cmpi "slt", %j, %arg0 : i32
+// CHECK-NOT:  call @print(%[[arg1:.+]], %[[arg1]])
+  call @print(%j, %ip1) : (i32, i32) -> ()
+  cond_br %jcmp, ^bb7, ^bb3
+
+^bb3:  // pred: ^bb1
+  return
 }

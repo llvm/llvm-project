@@ -17,6 +17,9 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def riscv_rolw      : SDNode<"RISCVISD::ROLW", SDTIntShiftOp>;
+def riscv_rorw      : SDNode<"RISCVISD::RORW", SDTIntShiftOp>;
+
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
   let RenderMethod = "addImmOperands";
@@ -655,7 +658,6 @@ def SROIPat   : ComplexPattern<XLenVT, 2, "SelectSROI", [or]>;
 def SLLIUWPat : ComplexPattern<i64, 2, "SelectSLLIUW", [and]>;
 def SLOIWPat  : ComplexPattern<i64, 2, "SelectSLOIW", [sext_inreg]>;
 def SROIWPat  : ComplexPattern<i64, 2, "SelectSROIW", [or]>;
-def RORIWPat  : ComplexPattern<i64, 2, "SelectRORIW", [sext_inreg]>;
 
 let Predicates = [HasStdExtZbbOrZbp] in {
 def : Pat<(and GPR:$rs1, (not GPR:$rs2)), (ANDN GPR:$rs1, GPR:$rs2)>;
@@ -724,17 +726,11 @@ def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
 def : Pat<(rotr (bswap GPR:$rs1), (i32 16)), (GREVI GPR:$rs1, (i32 8))>;
-// FIXME: Is grev better than rori?
-def : Pat<(rotl GPR:$rs1, (i32 16)), (GREVI GPR:$rs1, (i32 16))>;
-def : Pat<(rotr GPR:$rs1, (i32 16)), (GREVI GPR:$rs1, (i32 16))>;
 def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i32 24))>;
 def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i32 31))>;
 } // Predicates = [HasStdExtZbp, IsRV32]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
-// FIXME: Is grev better than rori?
-def : Pat<(rotl GPR:$rs1, (i64 32)), (GREVI GPR:$rs1, (i64 32))>;
-def : Pat<(rotr GPR:$rs1, (i64 32)), (GREVI GPR:$rs1, (i64 32))>;
 def : Pat<(bswap GPR:$rs1), (GREVI GPR:$rs1, (i64 56))>;
 def : Pat<(bitreverse GPR:$rs1), (GREVI GPR:$rs1, (i64 63))>;
 } // Predicates = [HasStdExtZbp, IsRV64]
@@ -890,12 +886,14 @@ def : Pat<(not (riscv_srlw (not GPR:$rs1), GPR:$rs2)),
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
-def : Pat<(or (riscv_sllw GPR:$rs1, GPR:$rs2),
-              (riscv_srlw GPR:$rs1, (ineg GPR:$rs2))),
+def : Pat<(riscv_rolw GPR:$rs1, GPR:$rs2),
           (ROLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (riscv_sllw GPR:$rs1, (ineg GPR:$rs2)),
-              (riscv_srlw GPR:$rs1, GPR:$rs2)),
+def : Pat<(riscv_rorw GPR:$rs1, GPR:$rs2),
           (RORW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(riscv_rorw GPR:$rs1, uimm5:$rs2),
+          (RORIW GPR:$rs1, uimm5:$rs2)>;
+def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
+          (RORIW GPR:$rs1, (ImmROTL2RW uimm5:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
@@ -916,16 +914,9 @@ def : Pat<(SROIWPat GPR:$rs1, uimmlog2xlen:$shamt),
           (SROIW GPR:$rs1, uimmlog2xlen:$shamt)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
-def : Pat<(RORIWPat GPR:$rs1, uimmlog2xlen:$shamt),
-          (RORIW GPR:$rs1, uimmlog2xlen:$shamt)>;
-
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(riscv_greviw GPR:$rs1, timm:$shamt), (GREVIW GPR:$rs1, timm:$shamt)>;
 def : Pat<(riscv_gorciw GPR:$rs1, timm:$shamt), (GORCIW GPR:$rs1, timm:$shamt)>;
-
-def : Pat<(sra (bswap GPR:$rs1), (i64 32)), (GREVIW GPR:$rs1, (i64 24))>;
-def : Pat<(sra (bitreverse GPR:$rs1), (i64 32)), (GREVIW GPR:$rs1, (i64 31))>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt, IsRV64] in {

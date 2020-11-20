@@ -308,9 +308,9 @@ static void printDimAndSymbolList(Operation::operand_iterator begin,
 }
 
 /// Parses dimension and symbol list and returns true if parsing failed.
-static ParseResult parseDimAndSymbolList(OpAsmParser &parser,
-                                         SmallVectorImpl<Value> &operands,
-                                         unsigned &numDims) {
+ParseResult mlir::parseDimAndSymbolList(OpAsmParser &parser,
+                                        SmallVectorImpl<Value> &operands,
+                                        unsigned &numDims) {
   SmallVector<OpAsmParser::OperandType, 8> opInfos;
   if (parser.parseOperandList(opInfos, OpAsmParser::Delimiter::Paren))
     return failure();

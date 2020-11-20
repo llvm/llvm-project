@@ -337,6 +337,11 @@ bool isValidSymbol(Value value);
 /// for all its uses in `region`.
 bool isValidSymbol(Value value, Region *region);
 
+/// Parses dimension and symbol list and returns true if parsing failed.
+ParseResult parseDimAndSymbolList(OpAsmParser &parser,
+                                  SmallVectorImpl<Value> &operands,
+                                  unsigned &numDims);
+
 /// Modifies both `map` and `operands` in-place so as to:
 /// 1. drop duplicate operands
 /// 2. drop unused dims and symbols from map

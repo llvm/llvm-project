@@ -61,8 +61,8 @@ inline RangeSelector between(RangeSelector R1, RangeSelector R2) {
   return enclose(after(std::move(R1)), before(std::move(R2)));
 }
 
-/// Selects a node, including trailing semicolon (for non-expression
-/// statements). \p ID is the node's binding in the match result.
+/// Selects a node, including trailing semicolon, if any (for declarations and
+/// non-expression statements). \p ID is the node's binding in the match result.
 RangeSelector node(std::string ID);
 
 /// Selects a node, including trailing semicolon (always). Useful for selecting

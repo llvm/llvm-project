@@ -97,18 +97,20 @@ void BasicBlock::setParent(Function *parent) {
 
 iterator_range<filter_iterator<BasicBlock::const_iterator,
                                std::function<bool(const Instruction &)>>>
-BasicBlock::instructionsWithoutDebug() const {
-  std::function<bool(const Instruction &)> Fn = [](const Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I);
+BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) const {
+  std::function<bool(const Instruction &)> Fn = [=](const Instruction &I) {
+    return !isa<DbgInfoIntrinsic>(I) &&
+           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
   };
   return make_filter_range(*this, Fn);
 }
 
-iterator_range<filter_iterator<BasicBlock::iterator,
-                               std::function<bool(Instruction &)>>>
-BasicBlock::instructionsWithoutDebug() {
-  std::function<bool(Instruction &)> Fn = [](Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I);
+iterator_range<
+    filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
+BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) {
+  std::function<bool(Instruction &)> Fn = [=](Instruction &I) {
+    return !isa<DbgInfoIntrinsic>(I) &&
+           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
   };
   return make_filter_range(*this, Fn);
 }
@@ -218,19 +220,29 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
   return nullptr;
 }
 
-const Instruction* BasicBlock::getFirstNonPHIOrDbg() const {
-  for (const Instruction &I : *this)
-    if (!isa<PHINode>(I) && !isa<DbgInfoIntrinsic>(I))
-      return &I;
+const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
+  for (const Instruction &I : *this) {
+    if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
+      continue;
+
+    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
+      continue;
+
+    return &I;
+  }
   return nullptr;
 }
 
-const Instruction* BasicBlock::getFirstNonPHIOrDbgOrLifetime() const {
+const Instruction *
+BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
 
     if (I.isLifetimeStartOrEnd())
+      continue;
+
+    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
       continue;
 
     return &I;

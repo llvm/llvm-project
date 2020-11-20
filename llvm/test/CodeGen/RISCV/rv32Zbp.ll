@@ -1126,12 +1126,12 @@ define i32 @grev16_i32(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: grev16_i32:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev16 a0, a0
+; RV32IB-NEXT:    rori a0, a0, 16
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: grev16_i32:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev16 a0, a0
+; RV32IBP-NEXT:    rori a0, a0, 16
 ; RV32IBP-NEXT:    ret
   %shl = shl i32 %a, 16
   %shr = lshr i32 %a, 16
@@ -1152,12 +1152,12 @@ define signext i32 @grev16_i32_fshl(i32 signext %a) nounwind {
 ;
 ; RV32IB-LABEL: grev16_i32_fshl:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev16 a0, a0
+; RV32IB-NEXT:    rori a0, a0, 16
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: grev16_i32_fshl:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev16 a0, a0
+; RV32IBP-NEXT:    rori a0, a0, 16
 ; RV32IBP-NEXT:    ret
   %or = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
   ret i32 %or
@@ -1173,12 +1173,12 @@ define signext i32 @grev16_i32_fshr(i32 signext %a) nounwind {
 ;
 ; RV32IB-LABEL: grev16_i32_fshr:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev16 a0, a0
+; RV32IB-NEXT:    rori a0, a0, 16
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: grev16_i32_fshr:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev16 a0, a0
+; RV32IBP-NEXT:    rori a0, a0, 16
 ; RV32IBP-NEXT:    ret
   %or = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 16)
   ret i32 %or
@@ -1197,14 +1197,14 @@ define i64 @grev16_i64(i64 %a) nounwind {
 ;
 ; RV32IB-LABEL: grev16_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev16 a0, a0
-; RV32IB-NEXT:    rev16 a1, a1
+; RV32IB-NEXT:    rori a0, a0, 16
+; RV32IB-NEXT:    rori a1, a1, 16
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: grev16_i64:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev16 a0, a0
-; RV32IBP-NEXT:    rev16 a1, a1
+; RV32IBP-NEXT:    rori a0, a0, 16
+; RV32IBP-NEXT:    rori a1, a1, 16
 ; RV32IBP-NEXT:    ret
   %and = shl i64 %a, 16
   %shl = and i64 %and, -281470681808896

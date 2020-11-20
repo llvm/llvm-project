@@ -1377,12 +1377,12 @@ define i64 @grev32(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    rori a0, a0, 32
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    rori a0, a0, 32
 ; RV64IBP-NEXT:    ret
   %shl = shl i64 %a, 32
   %shr = lshr i64 %a, 32
@@ -1403,12 +1403,12 @@ define i64 @grev32_fshl(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32_fshl:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    rori a0, a0, 32
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32_fshl:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    rori a0, a0, 32
 ; RV64IBP-NEXT:    ret
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 32)
   ret i64 %or
@@ -1424,12 +1424,12 @@ define i64 @grev32_fshr(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: grev32_fshr:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev32 a0, a0
+; RV64IB-NEXT:    rori a0, a0, 32
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: grev32_fshr:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev32 a0, a0
+; RV64IBP-NEXT:    rori a0, a0, 32
 ; RV64IBP-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 32)
   ret i64 %or
@@ -1495,15 +1495,13 @@ define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ;
 ; RV64IB-LABEL: bswap_i32_nosext:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev8 a0, a0
-; RV64IB-NEXT:    srli a0, a0, 32
+; RV64IB-NEXT:    greviw a0, a0, 24
 ; RV64IB-NEXT:    sw a0, 0(a1)
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: bswap_i32_nosext:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev8 a0, a0
-; RV64IBP-NEXT:    srli a0, a0, 32
+; RV64IBP-NEXT:    greviw a0, a0, 24
 ; RV64IBP-NEXT:    sw a0, 0(a1)
 ; RV64IBP-NEXT:    ret
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
@@ -1756,15 +1754,13 @@ define void @bitreverse_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ;
 ; RV64IB-LABEL: bitreverse_i32_nosext:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev a0, a0
-; RV64IB-NEXT:    srli a0, a0, 32
+; RV64IB-NEXT:    greviw a0, a0, 31
 ; RV64IB-NEXT:    sw a0, 0(a1)
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: bitreverse_i32_nosext:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev a0, a0
-; RV64IBP-NEXT:    srli a0, a0, 32
+; RV64IBP-NEXT:    greviw a0, a0, 31
 ; RV64IBP-NEXT:    sw a0, 0(a1)
 ; RV64IBP-NEXT:    ret
   %1 = tail call i32 @llvm.bitreverse.i32(i32 %a)

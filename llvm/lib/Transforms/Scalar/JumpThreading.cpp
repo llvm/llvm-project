@@ -543,6 +543,10 @@ static unsigned getJumpThreadDuplicationCost(BasicBlock *BB,
     // Debugger intrinsics don't incur code size.
     if (isa<DbgInfoIntrinsic>(I)) continue;
 
+    // Pseudo-probes don't incur code size.
+    if (isa<PseudoProbeInst>(I))
+      continue;
+
     // If this is a pointer->pointer bitcast, it is free.
     if (isa<BitCastInst>(I) && I->getType()->isPointerTy())
       continue;

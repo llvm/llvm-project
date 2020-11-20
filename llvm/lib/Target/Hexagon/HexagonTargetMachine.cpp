@@ -13,6 +13,7 @@
 #include "HexagonTargetMachine.h"
 #include "Hexagon.h"
 #include "HexagonISelLowering.h"
+#include "HexagonLoopIdiomRecognition.h"
 #include "HexagonMachineScheduler.h"
 #include "HexagonTargetObjectFile.h"
 #include "HexagonTargetTransformInfo.h"
@@ -138,7 +139,7 @@ namespace llvm {
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonHardwareLoopsPass(PassRegistry&);
-  void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
+  void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
   void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
@@ -197,7 +198,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
-  initializeHexagonLoopIdiomRecognizePass(PR);
+  initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
@@ -276,6 +277,10 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
 
 void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                                         bool DebugPassManager) {
+  PB.registerLateLoopOptimizationsEPCallback(
+      [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
+        LPM.addPass(HexagonLoopIdiomRecognitionPass());
+      });
   PB.registerOptimizerLastEPCallback(
       [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
         LoopPassManager LPM(DebugPassManager);
