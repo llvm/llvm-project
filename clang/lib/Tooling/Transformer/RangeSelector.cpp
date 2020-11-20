@@ -142,7 +142,8 @@ RangeSelector transformer::node(std::string ID) {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
       return Node.takeError();
-    return Node->get<Stmt>() != nullptr && Node->get<Expr>() == nullptr
+    return (Node->get<Decl>() != nullptr ||
+            (Node->get<Stmt>() != nullptr && Node->get<Expr>() == nullptr))
                ? tooling::getExtendedRange(*Node, tok::TokenKind::semi,
                                            *Result.Context)
                : CharSourceRange::getTokenRange(Node->getSourceRange());
