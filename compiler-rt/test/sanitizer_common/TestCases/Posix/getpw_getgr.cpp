@@ -81,7 +81,7 @@ int main(int argc, const char *argv[]) {
   setgrent();
   test<group>(&getgrent);
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !(defined(__sun__) && defined(__svr4__))
   setpwent();
   test_r<passwd>(&getpwent_r);
   setgrent();
