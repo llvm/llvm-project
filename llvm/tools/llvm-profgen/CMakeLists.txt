@@ -1,0 +1,20 @@
+include_directories(
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/X86
+  ${LLVM_BINARY_DIR}/lib/Target/X86
+  )
+set(LLVM_LINK_COMPONENTS
+  AllTargetsDescs
+  AllTargetsDisassemblers
+  Core
+  MC
+  MCDisassembler
+  Object
+  Support
+  Symbolize
+  )
+
+add_llvm_tool(llvm-profgen
+  llvm-profgen.cpp
+  PerfReader.cpp
+  ProfiledBinary.cpp
+  )

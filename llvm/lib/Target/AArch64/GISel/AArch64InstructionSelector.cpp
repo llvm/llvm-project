@@ -3651,7 +3651,7 @@ bool AArch64InstructionSelector::selectExtractElt(
   (void)WideTy;
   assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
          "source register size too small!");
-  assert(NarrowTy.isScalar() && "cannot extract vector into vector!");
+  assert(!NarrowTy.isVector() && "cannot extract vector into vector!");
 
   // Need the lane index to determine the correct copy opcode.
   MachineOperand &LaneIdxOp = I.getOperand(2);
