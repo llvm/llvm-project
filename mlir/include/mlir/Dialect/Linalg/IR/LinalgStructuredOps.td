@@ -159,6 +159,10 @@ def CopyOp : LinalgStructured_Op<"copy", [
 
     Value getSource() { return input();}
     Value getTarget() { return output(); }
+
+    static std::function<void(Block &)> getRegionBuilder() {
+      return nullptr;
+    }
   }];
   let verifier = [{ return ::verify(*this); }];
 
@@ -187,6 +191,10 @@ def FillOp : LinalgStructured_Op<"fill", [
       // filling_value -> O(ivs)
       return Builder(getContext()).getAffineMapArrayAttr({
           extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)});
+    }
+
+    static std::function<void(Block &)> getRegionBuilder() {
+      return nullptr;
     }
   }];
 
@@ -260,6 +268,10 @@ class PoolingBase_Op<string mnemonic, list<OpTrait> props>
       assert(i < getNumWindowLoops());
       if (!padding().hasValue()) return 0;
       return padding().getValue().getValue<int64_t>({i, 1});
+    }
+
+    static std::function<void(Block &)> getRegionBuilder() {
+      return nullptr;
     }
   }];
 }
@@ -515,6 +527,10 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
       auto ss = symbol_source();
       return ss.hasValue() ?
         llvm::Optional<unsigned>(ss.getValue()) : llvm::None;
+    }
+
+    static std::function<void(Block &)> getRegionBuilder() {
+      return nullptr;
     }
   }];
   let printer = [{ return ::print(p, *this); }];

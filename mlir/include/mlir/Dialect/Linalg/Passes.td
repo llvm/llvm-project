@@ -112,4 +112,10 @@ def LinalgTilingToParallelLoops
   let dependentDialects = ["AffineDialect", "linalg::LinalgDialect", "scf::SCFDialect"];
 }
 
+def LinalgGeneralization : FunctionPass<"linalg-generalize-named-ops"> {
+  let summary = "Convert named ops into generic ops";
+  let constructor = "mlir::createLinalgGeneralizationPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 #endif // MLIR_DIALECT_LINALG_PASSES
