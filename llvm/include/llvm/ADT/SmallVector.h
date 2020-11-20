@@ -136,12 +136,24 @@ protected:
     this->Size = this->Capacity = 0; // FIXME: Setting Capacity to 0 is suspect.
   }
 
+  /// Return true unless Elt will be invalidated by resizing the vector to
+  /// NewSize.
+  bool isSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
+    // Past the end.
+    if (LLVM_LIKELY(Elt < this->begin() || Elt >= this->end()))
+      return true;
+
+    // Return false if Elt will be destroyed by shrinking.
+    if (NewSize <= this->size())
+      return Elt < this->begin() + NewSize;
+
+    // Return false if we need to grow.
+    return NewSize <= this->capacity();
+  }
+
   /// Check whether Elt will be invalidated by resizing the vector to NewSize.
   void assertSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
-    assert((Elt >= this->end() ||
-            (NewSize <= this->size()
-                 ? Elt < this->begin() + NewSize
-                 : (Elt < this->begin() || NewSize <= this->capacity()))) &&
+    assert(isSafeToReferenceAfterResize(Elt, NewSize) &&
            "Attempting to reference an element of the vector in an operation "
            "that invalidates it");
   }
