@@ -420,14 +420,12 @@ static void truncateCurrentFile(void) {
   fclose(File);
 }
 
-#ifndef _MSC_VER
+#if !defined(__Fuchsia__) && !defined(_WIN32)
 static void assertIsZero(int *i) {
   if (*i)
     PROF_WARN("Expected flag to be 0, but got: %d\n", *i);
 }
-#endif
 
-#if !defined(__Fuchsia__) && !defined(_WIN32)
 /* Write a partial profile to \p Filename, which is required to be backed by
  * the open file object \p File. */
 static int writeProfileWithFileObject(const char *Filename, FILE *File) {
