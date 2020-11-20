@@ -59,6 +59,7 @@ unittest("ClangdTests") {
     "DexTests.cpp",
     "DiagnosticsTests.cpp",
     "DraftStoreTests.cpp",
+    "DumpASTTests.cpp",
     "ExpectedTypeTest.cpp",
     "FSTests.cpp",
     "FileDistanceTests.cpp",
