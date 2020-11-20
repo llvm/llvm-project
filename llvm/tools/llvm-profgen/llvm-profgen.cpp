@@ -15,6 +15,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
 
 static cl::list<std::string> PerfTraceFilenames(
     "perfscript", cl::value_desc("perfscript"), cl::OneOrMore,
@@ -23,7 +24,7 @@ static cl::list<std::string> PerfTraceFilenames(
              "`script` command(the raw perf.data should be profiled with -b)"));
 
 static cl::list<std::string>
-    BinaryFilenames("binary", cl::value_desc("binary"), cl::ZeroOrMore,
+    BinaryFilenames("binary", cl::value_desc("binary"), cl::OneOrMore,
                     llvm::cl::MiscFlags::CommaSeparated,
                     cl::desc("Path of profiled binary files"));
 
@@ -38,6 +39,11 @@ int main(int argc, const char *argv[]) {
   InitLLVM X(argc, argv);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
+
+  // Initialize targets and assembly printers/parsers.
+  InitializeAllTargetInfos();
+  InitializeAllTargetMCs();
+  InitializeAllDisassemblers();
 
   // Load binaries and parse perf events and samples
   PerfReader Reader(BinaryFilenames);

@@ -18,4 +18,4 @@
 type = Tool
 name = llvm-profgen
 parent = Tools
-required_libraries = Support
+required_libraries = DebugInfoDWARF MC MCDisassembler MCParser Object all-targets Demangle Support
