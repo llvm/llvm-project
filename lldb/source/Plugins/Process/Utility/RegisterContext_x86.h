@@ -12,7 +12,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Compiler.h"
 
@@ -240,23 +239,10 @@ enum {
 
 // Generic floating-point registers
 
-LLVM_PACKED_START
-struct MMSRegComp {
-  uint64_t mantissa;
-  uint16_t sign_exp;
-};
-
 struct MMSReg {
-  union {
-    uint8_t bytes[10];
-    MMSRegComp comp;
-  };
+  uint8_t bytes[10];
   uint8_t pad[6];
 };
-LLVM_PACKED_END
-
-static_assert(sizeof(MMSRegComp) == 10, "MMSRegComp is not 10 bytes of size");
-static_assert(sizeof(MMSReg) == 16, "MMSReg is not 16 bytes of size");
 
 struct XMMReg {
   uint8_t bytes[16]; // 128-bits for each XMM register
@@ -382,10 +368,6 @@ inline void YMMToXState(const YMMReg& input, void* xmm_bytes, void* ymmh_bytes) 
   ::memcpy(xmm_bytes, input.bytes, sizeof(XMMReg));
   ::memcpy(ymmh_bytes, input.bytes + sizeof(XMMReg), sizeof(YMMHReg));
 }
-
-uint16_t AbridgedToFullTagWord(uint8_t abridged_tw, uint16_t sw,
-                               llvm::ArrayRef<MMSReg> st_regs);
-uint8_t FullToAbridgedTagWord(uint16_t tw);
 
 } // namespace lldb_private
 

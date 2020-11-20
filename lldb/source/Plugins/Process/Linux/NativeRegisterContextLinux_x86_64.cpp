@@ -530,13 +530,6 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   assert((reg_info->byte_offset - m_fctrl_offset_in_userarea) < sizeof(FPR));
   uint8_t *src = (uint8_t *)m_xstate.get() + reg_info->byte_offset -
                  m_fctrl_offset_in_userarea;
-
-  if (src == reinterpret_cast<uint8_t *>(&m_xstate->fxsave.ftag)) {
-    reg_value.SetUInt16(AbridgedToFullTagWord(
-        m_xstate->fxsave.ftag, m_xstate->fxsave.fstat, m_xstate->fxsave.stmm));
-    return error;
-  }
-
   switch (reg_info->byte_size) {
   case 1:
     reg_value.SetUInt8(*(uint8_t *)src);
@@ -646,28 +639,23 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
              sizeof(FPR));
       uint8_t *dst = (uint8_t *)m_xstate.get() + reg_info->byte_offset -
                      m_fctrl_offset_in_userarea;
-
-      if (dst == reinterpret_cast<uint8_t *>(&m_xstate->fxsave.ftag))
-        m_xstate->fxsave.ftag = FullToAbridgedTagWord(reg_value.GetAsUInt16());
-      else {
-        switch (reg_info->byte_size) {
-        case 1:
-          *(uint8_t *)dst = reg_value.GetAsUInt8();
-          break;
-        case 2:
-          *(uint16_t *)dst = reg_value.GetAsUInt16();
-          break;
-        case 4:
-          *(uint32_t *)dst = reg_value.GetAsUInt32();
-          break;
-        case 8:
-          *(uint64_t *)dst = reg_value.GetAsUInt64();
-          break;
-        default:
-          assert(false && "Unhandled data size.");
-          return Status("unhandled register data size %" PRIu32,
-                        reg_info->byte_size);
-        }
+      switch (reg_info->byte_size) {
+      case 1:
+        *(uint8_t *)dst = reg_value.GetAsUInt8();
+        break;
+      case 2:
+        *(uint16_t *)dst = reg_value.GetAsUInt16();
+        break;
+      case 4:
+        *(uint32_t *)dst = reg_value.GetAsUInt32();
+        break;
+      case 8:
+        *(uint64_t *)dst = reg_value.GetAsUInt64();
+        break;
+      default:
+        assert(false && "Unhandled data size.");
+        return Status("unhandled register data size %" PRIu32,
+                      reg_info->byte_size);
       }
     }
 
