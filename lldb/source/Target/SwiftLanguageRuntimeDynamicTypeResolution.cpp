@@ -679,10 +679,12 @@ public:
 #endif
     ConstString mangled(wrapped);
     CompilerType swift_type = m_typesystem.GetTypeFromMangledTypename(mangled);
-
+    auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(swift_type.GetTypeSystem());
+    if (!ts)
+      return nullptr;
     CompilerType clang_type;
-    bool is_imported = m_typesystem.IsImportedType(swift_type.GetOpaqueQualType(),
-                                                   &clang_type);
+    bool is_imported =
+        ts->IsImportedType(swift_type.GetOpaqueQualType(), &clang_type);
     if (!is_imported || !clang_type) {
       if (log)
         log->Printf("[LLDBTypeInfoProvider] Could not find clang debug type info for %s",
