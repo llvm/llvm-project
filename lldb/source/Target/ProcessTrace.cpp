@@ -34,7 +34,10 @@ void ProcessTrace::Terminate() {
 
 ProcessSP ProcessTrace::CreateInstance(TargetSP target_sp,
                                        ListenerSP listener_sp,
-                                       const FileSpec *crash_file) {
+                                       const FileSpec *crash_file,
+                                       bool can_connect) {
+  if (can_connect)
+    return nullptr;
   return std::make_shared<ProcessTrace>(target_sp, listener_sp);
 }
 
