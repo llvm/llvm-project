@@ -115,4 +115,7 @@ entry:
 ; CHECK-NEXT:         Name:            exportWeak1
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            exportWeak2
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
