@@ -462,16 +462,20 @@ public:
   }
 
   void resize(size_type N, const T &NV) {
+    if (N == this->size())
+      return;
+
     if (N < this->size()) {
       this->destroy_range(this->begin()+N, this->end());
       this->set_size(N);
-    } else if (N > this->size()) {
-      this->assertSafeToReferenceAfterResize(&NV, N);
-      if (this->capacity() < N)
-        this->grow(N);
-      std::uninitialized_fill(this->end(), this->begin()+N, NV);
-      this->set_size(N);
+      return;
     }
+
+    this->assertSafeToReferenceAfterResize(&NV, N);
+    if (this->capacity() < N)
+      this->grow(N);
+    std::uninitialized_fill(this->end(), this->begin() + N, NV);
+    this->set_size(N);
   }
 
   void reserve(size_type N) {
