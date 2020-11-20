@@ -1,0 +1,65 @@
+add_libc_fuzzer(
+  ldexp_differential_fuzz
+  SRCS
+    ldexp_differential_fuzz.cpp
+  HDRS
+    LdExpDiff.h
+  DEPENDS
+    libc.src.math.ldexp
+    libc.utils.FPUtil.fputil
+)
+
+add_libc_fuzzer(
+  ldexpf_differential_fuzz
+  SRCS
+    ldexpf_differential_fuzz.cpp
+  HDRS
+    LdExpDiff.h
+  DEPENDS
+    libc.src.math.ldexpf
+    libc.utils.FPUtil.fputil
+)
+
+add_libc_fuzzer(
+  ldexpl_differential_fuzz
+  SRCS
+    ldexpl_differential_fuzz.cpp
+  HDRS
+    LdExpDiff.h
+  DEPENDS
+    libc.src.math.ldexpl
+    libc.utils.FPUtil.fputil
+)
+
+add_libc_fuzzer(
+  remquo_differential_fuzz
+  SRCS
+    remquo_differential_fuzz.cpp
+  HDRS
+    RemQuoDiff.h
+  DEPENDS
+    libc.src.math.remquo
+    libc.utils.FPUtil.fputil
+)
+
+add_libc_fuzzer(
+  remquof_differential_fuzz
+  SRCS
+    remquof_differential_fuzz.cpp
+  HDRS
+    RemQuoDiff.h
+  DEPENDS
+    libc.src.math.remquof
+    libc.utils.FPUtil.fputil
+)
+
+add_libc_fuzzer(
+  remquol_differential_fuzz
+  SRCS
+    remquol_differential_fuzz.cpp
+  HDRS
+    RemQuoDiff.h
+  DEPENDS
+    libc.src.math.remquol
+    libc.utils.FPUtil.fputil
+)
