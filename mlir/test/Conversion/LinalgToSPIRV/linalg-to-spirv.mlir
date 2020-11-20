@@ -40,7 +40,7 @@ module attributes {
 // CHECK:          spv.AtomicIAdd "Device" "AcquireRelease" %[[OUTPTR]], %[[ADD]]
 // CHECK:          spv.Branch ^bb2
 // CHECK:        ^bb2:
-// CHECK:          spv._merge
+// CHECK:          spv.mlir.merge
 // CHECK:        }
 // CHECK:        spv.Return
 

@@ -39,7 +39,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.FunctionCall @f_inc(%var) : (!spv.ptr<i32, Function>) -> ()
       spv.Branch ^header
     ^merge:
-      spv._merge
+      spv.mlir.merge
     }
     spv.Return
   }
