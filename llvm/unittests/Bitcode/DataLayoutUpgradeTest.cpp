@@ -27,6 +27,10 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
                  "-f80:32-n8:16:32-S32");
   EXPECT_EQ(DL3, "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128"
                  "-n32:64-S128");
+
+  // Check that AMDGPU targets add -G1 if it's not present.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "e-p:32:32-G1");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"), "e-p:64:64-G1");
 }
 
 TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
@@ -46,6 +50,13 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
   EXPECT_EQ(DL2, "e-p:32:32");
   EXPECT_EQ(DL3, "e-m:e-i64:64-n32:64");
   EXPECT_EQ(DL4, "e-m:o-i64:64-i128:128-n32:64-S128");
+
+  // Check that AMDGPU targets don't add -G1 if there is already a -G flag.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "r600"), "e-p:32:32-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2", "r600"), "G2");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G2", "amdgcn"), "e-p:64:64-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2-e-p:64:64", "amdgcn"), "G2-e-p:64:64");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G0", "amdgcn"), "e-p:64:64-G0");
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
@@ -54,6 +65,10 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
       "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128", "");
   EXPECT_EQ(DL1, "");
   EXPECT_EQ(DL2, "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128");
+
+  // Check that AMDGPU targets add G1 if it's not present.
+  EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "G1");
+  EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"), "G1");
 }
 
 } // end namespace
