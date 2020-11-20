@@ -100,6 +100,6 @@ void FUNC4(Derived4* p) {
 // CHECK: %[[T5:[0-9]+]] = load void (%struct.Derived4*)*, void (%struct.Derived4*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%struct.Derived4*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[T6]], i64 426)
-// CHECK: call void %[[T5]](%struct.Derived4* %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%struct.Derived4* nonnull dereferenceable(8) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
   p->abc();
 }

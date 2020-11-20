@@ -21,7 +21,7 @@ namespace Test1 {
   }
 }
 
-// CHECK-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test11DD0Ev(%"struct.Test1::D"* %this)
+// CHECK-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test11DD0Ev(%"struct.Test1::D"* nonnull dereferenceable(8) %this)
 // CHECK: %[[This:.*]] = load %"struct.Test1::D"*
 // CHECK: %[[BitcastThis:.*]] = bitcast %"struct.Test1::D"* %[[This]] to i8*
 // CHECK: %[[BitcastThis2:.*]] = bitcast i8* %[[BitcastThis]] to i8**

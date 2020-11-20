@@ -52,7 +52,7 @@ void testMoveConstructor(SA a) {
 // CHECK: define void @_Z18testCopyAssignment2SA(%[[STRUCT_SA]]*
 // CHECK: call nonnull align 8 dereferenceable(16) %[[STRUCT_SA]]* @_ZN2SAaSERKS_(
 
-// CHECK: define linkonce_odr nonnull align 8 dereferenceable(16) %[[STRUCT_SA:.*]]* @_ZN2SAaSERKS_(%[[STRUCT_SA]]* %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
+// CHECK: define linkonce_odr nonnull align 8 dereferenceable(16) %[[STRUCT_SA:.*]]* @_ZN2SAaSERKS_(%[[STRUCT_SA]]* nonnull dereferenceable(16) %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
 // CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: store %[[STRUCT_SA]]* %[[THIS]], %[[STRUCT_SA]]** %[[THIS_ADDR]], align 8
@@ -77,7 +77,7 @@ void testCopyAssignment(SA a) {
 // CHECK: define void @_Z18testMoveAssignment2SA(%[[STRUCT_SA]]*
 // CHECK: call nonnull align 8 dereferenceable(16) %[[STRUCT_SA]]* @_ZN2SAaSEOS_(
 
-// CHECK: define linkonce_odr nonnull align 8 dereferenceable(16) %[[STRUCT_SA:.*]]* @_ZN2SAaSEOS_(%[[STRUCT_SA]]* %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
+// CHECK: define linkonce_odr nonnull align 8 dereferenceable(16) %[[STRUCT_SA:.*]]* @_ZN2SAaSEOS_(%[[STRUCT_SA]]* nonnull dereferenceable(16) %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
 // CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: store %[[STRUCT_SA]]* %[[THIS]], %[[STRUCT_SA]]** %[[THIS_ADDR]], align 8
@@ -129,7 +129,7 @@ void testMoveAssignment(SI a) {
   t = static_cast<SI &&>(a);
 }
 
-// CHECK: define linkonce_odr %[[STRUCT_SA:.*]]* @_ZN2SAC2ERKS_(%[[STRUCT_SA]]* %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
+// CHECK: define linkonce_odr %[[STRUCT_SA:.*]]* @_ZN2SAC2ERKS_(%[[STRUCT_SA]]* nonnull dereferenceable(16) %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
@@ -148,7 +148,7 @@ void testMoveAssignment(SI a) {
 // CHECK: %[[V8:.*]] = ptrtoint i32* %[[V2]] to i64
 // CHECK: %[[V9:.*]] = call i64 @llvm.ptrauth.resign.i64(i64 %[[V8]], i32 1, i64 %[[V4]], i32 1, i64 %[[V6]])
 
-// CHECK: define linkonce_odr %[[STRUCT_SA:.*]]* @_ZN2SAC2EOS_(%[[STRUCT_SA]]* %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
+// CHECK: define linkonce_odr %[[STRUCT_SA:.*]]* @_ZN2SAC2EOS_(%[[STRUCT_SA]]* nonnull dereferenceable(16) %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8

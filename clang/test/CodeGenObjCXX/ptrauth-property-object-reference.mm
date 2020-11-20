@@ -35,7 +35,7 @@ struct TCPPObject
 // CHECK: [[TWO:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR:%.*]], align 8
 // CHECK: [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR1:%.*]], align 8
 // CHECK: [[CALL:%.*]] = call i32 @_Z7DEFAULTv()
-// CHECK:  call %struct.TCPPObject* @_ZN10TCPPObjectC1ERKS_i(%struct.TCPPObject* [[TWO]], %struct.TCPPObject* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[THREE]], i32 [[CALL]])
+// CHECK:  call %struct.TCPPObject* @_ZN10TCPPObjectC1ERKS_i(%struct.TCPPObject* nonnull dereferenceable(256) [[TWO]], %struct.TCPPObject* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[THREE]], i32 [[CALL]])
 // CHECK:  ret void
 
 // CHECK: define internal void @"\01-[MyDocument MyProperty]"(
@@ -48,7 +48,7 @@ struct TCPPObject
 // CHECK-LABEL: define internal void @__assign_helper_atomic_property_(%struct.TCPPObject* %0, %struct.TCPPObject* %1) #
 // CHECK: [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR1:%.*]], align 8
 // CHECK: [[TWO:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR:%.*]], align 8
-// CHECK: [[CALL:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.TCPPObject* @_ZN10TCPPObjectaSERKS_(%struct.TCPPObject* [[TWO]], %struct.TCPPObject* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[THREE]])
+// CHECK: [[CALL:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.TCPPObject* @_ZN10TCPPObjectaSERKS_(%struct.TCPPObject* nonnull dereferenceable(256) [[TWO]], %struct.TCPPObject* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[THREE]])
 // CHECK:  ret void
 
 // CHECK: define internal void @"\01-[MyDocument setMyProperty:]"(
