@@ -1694,7 +1694,8 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   auto ScanLoop = [&](Loop *L) {
     for (auto *BB : L->getBlocks()) {
       for (auto &I : *BB) {
-        if (maybeLoweredToCall(I) || IsHardwareLoopIntrinsic(I)) {
+        if (maybeLoweredToCall(I) || IsHardwareLoopIntrinsic(I) ||
+            isa<InlineAsm>(I)) {
           LLVM_DEBUG(dbgs() << "ARMHWLoops: Bad instruction: " << I << "\n");
           return false;
         }
