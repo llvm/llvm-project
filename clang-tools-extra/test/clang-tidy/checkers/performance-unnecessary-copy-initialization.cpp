@@ -476,3 +476,35 @@ void negativeInvokedOnStdFunction(
   auto Copy = Orig.reference();
   Update(Copy);
 }
+
+void negativeCopiedFromReferenceToModifiedVar() {
+  ExpensiveToCopyType Orig;
+  const auto &Ref = Orig;
+  const auto NecessaryCopy = Ref;
+  Orig.nonConstMethod();
+}
+
+void positiveCopiedFromReferenceToConstVar() {
+  ExpensiveToCopyType Orig;
+  const auto &Ref = Orig;
+  const auto UnnecessaryCopy = Ref;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'UnnecessaryCopy' of
+  // CHECK-FIXES: const auto& UnnecessaryCopy = Ref;
+  Orig.constMethod();
+}
+
+void negativeCopiedFromGetterOfReferenceToModifiedVar() {
+  ExpensiveToCopyType Orig;
+  const auto &Ref = Orig.reference();
+  const auto NecessaryCopy = Ref.reference();
+  Orig.nonConstMethod();
+}
+
+void positiveCopiedFromGetterOfReferenceToConstVar() {
+  ExpensiveToCopyType Orig;
+  const auto &Ref = Orig.reference();
+  auto UnnecessaryCopy = Ref.reference();
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'UnnecessaryCopy' is
+  // CHECK-FIXES: const auto& UnnecessaryCopy = Ref.reference();
+  Orig.constMethod();
+}
