@@ -1,65 +1,50 @@
 add_libc_fuzzer(
-  ldexp_differential_fuzz
+  math_differential_fuzz
   SRCS
-    ldexp_differential_fuzz.cpp
+    math_differential_fuzz.cpp
   HDRS
-    LdExpDiff.h
+    Compare.h
+    RemQuoDiff.h
+    SingleInputSingleOutputDiff.h
+    TwoInputSingleOutputDiff.h
   DEPENDS
+    libc.src.math.ceil
+    libc.src.math.ceilf
+    libc.src.math.ceill
+    libc.src.math.fdim
+    libc.src.math.fdimf
+    libc.src.math.fdiml
+    libc.src.math.floor
+    libc.src.math.floorf
+    libc.src.math.floorl
+    libc.src.math.frexp
+    libc.src.math.frexpf
+    libc.src.math.frexpl
+    libc.src.math.hypotf
     libc.src.math.ldexp
-    libc.utils.FPUtil.fputil
-)
-
-add_libc_fuzzer(
-  ldexpf_differential_fuzz
-  SRCS
-    ldexpf_differential_fuzz.cpp
-  HDRS
-    LdExpDiff.h
-  DEPENDS
     libc.src.math.ldexpf
-    libc.utils.FPUtil.fputil
-)
-
-add_libc_fuzzer(
-  ldexpl_differential_fuzz
-  SRCS
-    ldexpl_differential_fuzz.cpp
-  HDRS
-    LdExpDiff.h
-  DEPENDS
     libc.src.math.ldexpl
-    libc.utils.FPUtil.fputil
-)
-
-add_libc_fuzzer(
-  remquo_differential_fuzz
-  SRCS
-    remquo_differential_fuzz.cpp
-  HDRS
-    RemQuoDiff.h
-  DEPENDS
+    libc.src.math.logb
+    libc.src.math.logbf
+    libc.src.math.logbl
+    libc.src.math.modf
+    libc.src.math.modff
+    libc.src.math.modfl
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.sqrtl
+    libc.src.math.remainder
+    libc.src.math.remainderf
+    libc.src.math.remainderl
     libc.src.math.remquo
-    libc.utils.FPUtil.fputil
-)
-
-add_libc_fuzzer(
-  remquof_differential_fuzz
-  SRCS
-    remquof_differential_fuzz.cpp
-  HDRS
-    RemQuoDiff.h
-  DEPENDS
     libc.src.math.remquof
-    libc.utils.FPUtil.fputil
-)
-
-add_libc_fuzzer(
-  remquol_differential_fuzz
-  SRCS
-    remquol_differential_fuzz.cpp
-  HDRS
-    RemQuoDiff.h
-  DEPENDS
     libc.src.math.remquol
+    libc.src.math.round
+    libc.src.math.roundf
+    libc.src.math.roundl
+    libc.src.math.trunc
+    libc.src.math.truncf
+    libc.src.math.truncl
     libc.utils.FPUtil.fputil
+    libc.utils.CPP.standalone_cpp
 )

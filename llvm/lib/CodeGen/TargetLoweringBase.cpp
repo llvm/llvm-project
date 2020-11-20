@@ -448,6 +448,83 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
   return UNKNOWN_LIBCALL;
 }
 
+RTLIB::Libcall RTLIB::getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order,
+                                        MVT VT) {
+  unsigned ModeN, ModelN;
+  switch (VT.SimpleTy) {
+  case MVT::i8:
+    ModeN = 0;
+    break;
+  case MVT::i16:
+    ModeN = 1;
+    break;
+  case MVT::i32:
+    ModeN = 2;
+    break;
+  case MVT::i64:
+    ModeN = 3;
+    break;
+  case MVT::i128:
+    ModeN = 4;
+    break;
+  default:
+    return UNKNOWN_LIBCALL;
+  }
+
+  switch (Order) {
+  case AtomicOrdering::Monotonic:
+    ModelN = 0;
+    break;
+  case AtomicOrdering::Acquire:
+    ModelN = 1;
+    break;
+  case AtomicOrdering::Release:
+    ModelN = 2;
+    break;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    ModelN = 3;
+    break;
+  default:
+    return UNKNOWN_LIBCALL;
+  }
+
+#define LCALLS(A, B)                                                           \
+  { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
+#define LCALL5(A)                                                              \
+  LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
+  switch (Opc) {
+  case ISD::ATOMIC_CMP_SWAP: {
+    const Libcall LC[5][4] = {LCALL5(OUTLINE_ATOMIC_CAS)};
+    return LC[ModeN][ModelN];
+  }
+  case ISD::ATOMIC_SWAP: {
+    const Libcall LC[5][4] = {LCALL5(OUTLINE_ATOMIC_SWP)};
+    return LC[ModeN][ModelN];
+  }
+  case ISD::ATOMIC_LOAD_ADD: {
+    const Libcall LC[5][4] = {LCALL5(OUTLINE_ATOMIC_LDADD)};
+    return LC[ModeN][ModelN];
+  }
+  case ISD::ATOMIC_LOAD_OR: {
+    const Libcall LC[5][4] = {LCALL5(OUTLINE_ATOMIC_LDSET)};
+    return LC[ModeN][ModelN];
+  }
+  case ISD::ATOMIC_LOAD_CLR: {
+    const Libcall LC[5][4] = {LCALL5(OUTLINE_ATOMIC_LDCLR)};
+    return LC[ModeN][ModelN];
+  }
+  case ISD::ATOMIC_LOAD_XOR: {
+    const Libcall LC[5][4] = {LCALL5(OUTLINE_ATOMIC_LDEOR)};
+    return LC[ModeN][ModelN];
+  }
+  default:
+    return UNKNOWN_LIBCALL;
+  }
+#undef LCALLS
+#undef LCALL5
+}
+
 RTLIB::Libcall RTLIB::getSYNC(unsigned Opc, MVT VT) {
 #define OP_TO_LIBCALL(Name, Enum)                                              \
   case Name:                                                                   \

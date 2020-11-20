@@ -70,7 +70,7 @@ config.substitutions.append( ('%env_tool_opts=',
 
 config.suffixes = ['.c', '.cpp']
 
-if config.host_os not in ['Linux', 'Darwin', 'NetBSD', 'FreeBSD']:
+if config.host_os not in ['Linux', 'Darwin', 'NetBSD', 'FreeBSD', 'SunOS']:
   config.unsupported = True
 
 if not config.parallelism_group:

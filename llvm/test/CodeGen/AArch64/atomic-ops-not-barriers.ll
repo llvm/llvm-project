@@ -1,6 +1,8 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -mattr=+outline-atomics < %s | FileCheck %s --check-prefix=OUTLINE-ATOMICS
 
 define i32 @foo(i32* %var, i1 %cond) {
+; OUTLINE-ATOMICS: bl __aarch64_ldadd4_relax
 ; CHECK-LABEL: foo:
   br i1 %cond, label %atomic_ver, label %simple_ver
 simple_ver:

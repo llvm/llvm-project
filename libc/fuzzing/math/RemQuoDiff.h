@@ -33,11 +33,9 @@ void RemQuoDiff(RemQuoFunc<T> func1, RemQuoFunc<T> func2, const uint8_t *data,
       __builtin_trap();
     return;
   }
-  if (isinf(remainder1)) {
-    if (isinf(remainder2) != isinf(remainder1))
-      __builtin_trap();
-    return;
-  }
+
+  if (isinf(remainder2) != isinf(remainder1))
+    __builtin_trap();
 
   // Compare only the 3 LS bits of the quotient.
   if ((q1 & 0x7) != (q2 & 0x7))
