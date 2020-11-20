@@ -59,3 +59,25 @@ func @dim_of_dynamic_tensor_from_elements(%arg0: index, %arg1: index) -> index {
   %1 = dim %0, %c3 : tensor<2x?x4x?x5xindex>
   return %1 : index
 }
+
+// Test case: Folding of comparisons with equal operands.
+// CHECK-LABEL: @cmpi_equal_operands
+//   CHECK-DAG:   %[[T:.*]] = constant true
+//   CHECK-DAG:   %[[F:.*]] = constant false
+//       CHECK:   return %[[T]], %[[T]], %[[T]], %[[T]], %[[T]],
+//  CHECK-SAME:          %[[F]], %[[F]], %[[F]], %[[F]], %[[F]]
+func @cmpi_equal_operands(%arg0: i64)
+    -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+  %0 = cmpi "eq", %arg0, %arg0 : i64
+  %1 = cmpi "sle", %arg0, %arg0 : i64
+  %2 = cmpi "sge", %arg0, %arg0 : i64
+  %3 = cmpi "ule", %arg0, %arg0 : i64
+  %4 = cmpi "uge", %arg0, %arg0 : i64
+  %5 = cmpi "ne", %arg0, %arg0 : i64
+  %6 = cmpi "slt", %arg0, %arg0 : i64
+  %7 = cmpi "sgt", %arg0, %arg0 : i64
+  %8 = cmpi "ult", %arg0, %arg0 : i64
+  %9 = cmpi "ugt", %arg0, %arg0 : i64
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9
+      : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
+}
