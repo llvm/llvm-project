@@ -6,6 +6,7 @@ add_mlir_conversion_library(MLIRLinalgToLLVM
 
   DEPENDS
   MLIRConversionPassIncGen
+  MLIRLinalgPassIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
