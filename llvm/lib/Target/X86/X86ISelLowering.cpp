@@ -29840,35 +29840,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
-/// Places new result values for the node in Results (their number
-/// and types must exactly match those of the original return values of
-/// the node), or leaves Results empty, which indicates that the node is not
-/// to be custom lowered after all.
-void X86TargetLowering::LowerOperationWrapper(SDNode *N,
-                                              SmallVectorImpl<SDValue> &Results,
-                                              SelectionDAG &DAG) const {
-  SDValue Res = LowerOperation(SDValue(N, 0), DAG);
-
-  if (!Res.getNode())
-    return;
-
-  // If the original node has one result, take the return value from
-  // LowerOperation as is. It might not be result number 0.
-  if (N->getNumValues() == 1) {
-    Results.push_back(Res);
-    return;
-  }
-
-  // If the original node has multiple results, then the return node should
-  // have the same number of results.
-  assert((N->getNumValues() == Res->getNumValues()) &&
-      "Lowering returned the wrong number of results!");
-
-  // Places new result values base on N result number.
-  for (unsigned I = 0, E = N->getNumValues(); I != E; ++I)
-    Results.push_back(Res.getValue(I));
-}
-
 /// Replace a node with an illegal result type with a new node built out of
 /// custom code.
 void X86TargetLowering::ReplaceNodeResults(SDNode *N,
