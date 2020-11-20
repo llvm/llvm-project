@@ -76,29 +76,32 @@ declaration: Namespace - root
                   type: Record - S
       )"},
       {R"cpp(
-template <typename T> int root() {
-  (void)root<unsigned>();
+namespace root {
+template <typename T> int tmpl() {
+  (void)tmpl<unsigned>();
   return T::value;
+}
 }
       )cpp",
        R"(
-declaration: FunctionTemplate - root
-  declaration: TemplateTypeParm - T
-  declaration: Function - root
-    type: FunctionProto
-      type: Builtin - int
-    statement: Compound
-      expression: CStyleCast - ToVoid
-        type: Builtin - void
-        expression: Call
-          expression: ImplicitCast - FunctionToPointerDecay
-            expression: DeclRef - root
-              template argument: Type
-                type: Builtin - unsigned int
-      statement: Return
-        expression: DependentScopeDeclRef - value
-          specifier: TypeSpec
-            type: TemplateTypeParm - T
+declaration: Namespace - root
+  declaration: FunctionTemplate - tmpl
+    declaration: TemplateTypeParm - T
+    declaration: Function - tmpl
+      type: FunctionProto
+        type: Builtin - int
+      statement: Compound
+        expression: CStyleCast - ToVoid
+          type: Builtin - void
+          expression: Call
+            expression: ImplicitCast - FunctionToPointerDecay
+              expression: DeclRef - tmpl
+                template argument: Type
+                  type: Builtin - unsigned int
+        statement: Return
+          expression: DependentScopeDeclRef - value
+            specifier: TypeSpec
+              type: TemplateTypeParm - T
       )"},
       {R"cpp(
 struct Foo { char operator+(int); };
@@ -116,10 +119,28 @@ declaration: Var - root
           type: Record - Foo
       expression: IntegerLiteral - 42
       )"},
+      {R"cpp(
+struct Bar {
+  int x;
+  int root() const {
+    return x;
+  }
+};
+      )cpp",
+       R"(
+declaration: CXXMethod - root
+  type: FunctionProto
+    type: Builtin - int
+  statement: Compound
+    statement: Return
+      expression: ImplicitCast - LValueToRValue
+        expression: Member - x
+          expression: CXXThis - const, implicit
+      )"},
   };
   for (const auto &Case : Cases) {
     ParsedAST AST = TestTU::withCode(Case.first).build();
-    auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "root")),
+    auto Node = dumpAST(DynTypedNode::create(findUnqualifiedDecl(AST, "root")),
                         AST.getTokens(), AST.getASTContext());
     EXPECT_EQ(llvm::StringRef(Case.second).trim(),
               llvm::StringRef(llvm::to_string(Node)).trim());
