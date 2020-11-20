@@ -1,6 +1,6 @@
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
 
-declare void @a(i64* byval inalloca %p)
+declare void @a(i64* byval(i64) inalloca %p)
 ; CHECK: Attributes {{.*}} are incompatible
 
 declare void @b(i64* inreg inalloca %p)

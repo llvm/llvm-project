@@ -164,7 +164,7 @@ entry:
   ret void
 }
 
-define void @arg_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [252 x i32]* byval %p) {
+define void @arg_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [252 x i32]* byval([252 x i32]) %p) {
 ; CHECK-LABEL: arg_emergency_spill:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -206,7 +206,7 @@ entry:
 
 ; We currently overestimate the amount of required stack space by 16 bytes,
 ; so this is the largest stack that doesn't require an emergency spill slot.
-define void @arg_no_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [248 x i32]* byval %p) {
+define void @arg_no_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [248 x i32]* byval([248 x i32]) %p) {
 ; CHECK-LABEL: arg_no_emergency_spill:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -235,7 +235,7 @@ entry:
   ret void
 }
 
-define void @aligned_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [31 x i32]* byval %p) {
+define void @aligned_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [31 x i32]* byval([31 x i32]) %p) {
 ; CHECK-LABEL: aligned_emergency_spill:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -286,7 +286,7 @@ entry:
 
 ; This function should have no emergency spill slot, so its stack should be
 ; smaller than @aligned_emergency_spill.
-define void @aligned_no_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [30 x i32]* byval %p) {
+define void @aligned_no_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [30 x i32]* byval([30 x i32]) %p) {
 ; CHECK-LABEL: aligned_no_emergency_spill:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -333,7 +333,7 @@ entry:
 ; so we don't generate code that requires an emergency spill slot we never
 ; allocated.  If the store gets eliminated, this testcase probably needs
 ; to be rewritten.)
-define void @aligned_out_of_range_access(i32 %n, i32 %n2, i32 %n3, i32 %n4, [30 x i32]* byval %p) {
+define void @aligned_out_of_range_access(i32 %n, i32 %n2, i32 %n3, i32 %n4, [30 x i32]* byval([30 x i32]) %p) {
 ; CHECK-LABEL: aligned_out_of_range_access:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}

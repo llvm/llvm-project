@@ -7904,8 +7904,11 @@ private:
         IsCaptureFirstInfo = false;
         FirstPointerInComplexData = false;
       } else if (FirstPointerInComplexData) {
-        BP = CGF.EmitOMPSharedLValue(I->getAssociatedExpression())
-                 .getAddress(CGF);
+        QualType Ty = Components.rbegin()
+                          ->getAssociatedDeclaration()
+                          ->getType()
+                          .getNonReferenceType();
+        BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
         FirstPointerInComplexData = false;
       }
     }

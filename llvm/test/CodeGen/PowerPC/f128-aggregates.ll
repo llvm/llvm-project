@@ -115,7 +115,7 @@ entry:
 ; Since we can only pass a max of 8 float128 value in VSX registers, ensure we
 ; store to stack if passing more.
 ; Function Attrs: norecurse nounwind readonly
-define fp128 @testStruct_03(%struct.With9fp128params* byval nocapture readonly align 16 %a) {
+define fp128 @testStruct_03(%struct.With9fp128params* byval(%struct.With9fp128params) nocapture readonly align 16 %a) {
 ; CHECK-LABEL: testStruct_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 128(r1)
@@ -409,7 +409,7 @@ entry:
 
 
 ; Function Attrs: norecurse nounwind readonly
-define fp128 @testNestedAggregate(%struct.MixedC* byval nocapture readonly align 16 %a) {
+define fp128 @testNestedAggregate(%struct.MixedC* byval(%struct.MixedC) nocapture readonly align 16 %a) {
 ; CHECK-LABEL: testNestedAggregate:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std r8, 72(r1)

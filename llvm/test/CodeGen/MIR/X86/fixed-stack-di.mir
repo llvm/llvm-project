@@ -8,7 +8,7 @@
 
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
-  define hidden void @foo(i32* byval %dstRect) {
+  define hidden void @foo(i32* byval(i32) %dstRect) {
   entry:
     call void @llvm.dbg.declare(metadata i32* %dstRect, metadata !3, metadata !DIExpression()), !dbg !5
     unreachable

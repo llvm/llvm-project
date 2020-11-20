@@ -58,7 +58,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 @llvm.used = appending global [5 x i8*] [i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([23 x i8], [23 x i8]* @"\01L_OBJC_METH_VAR_TYPE_", i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_INSTANCE_METHODS_Bitmap" to i8*), i8* bitcast ([1 x i8*]* @"\01L_OBJC_LABEL_CLASS_$" to i8*)], section "llvm.metadata"
 
 ; Function Attrs: ssp uwtable
-define internal i8* @"\01-[Bitmap initWithCopy:andInfo:andLength:]"(%0* %self, i8* %_cmd, %0* %otherBitmap, %struct.ImageInfo* byval align 8 %info, i64 %length) #0 !dbg !7 {
+define internal i8* @"\01-[Bitmap initWithCopy:andInfo:andLength:]"(%0* %self, i8* %_cmd, %0* %otherBitmap, %struct.ImageInfo* byval(%struct.ImageInfo) align 8 %info, i64 %length) #0 !dbg !7 {
 entry:
   %retval = alloca i8*, align 8
   %self.addr = alloca %0*, align 8

@@ -572,6 +572,11 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
       ID.AddInteger(cast<LifetimeSDNode>(N)->getOffset());
     }
     break;
+  case ISD::PSEUDO_PROBE:
+    ID.AddInteger(cast<PseudoProbeSDNode>(N)->getGuid());
+    ID.AddInteger(cast<PseudoProbeSDNode>(N)->getIndex());
+    ID.AddInteger(cast<PseudoProbeSDNode>(N)->getAttributes());
+    break;
   case ISD::JumpTable:
   case ISD::TargetJumpTable:
     ID.AddInteger(cast<JumpTableSDNode>(N)->getIndex());
@@ -6875,6 +6880,30 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
 
   LifetimeSDNode *N = newSDNode<LifetimeSDNode>(
       Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs, Size, Offset);
+  createOperands(N, Ops);
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
+SDValue SelectionDAG::getPseudoProbeNode(const SDLoc &Dl, SDValue Chain,
+                                         uint64_t Guid, uint64_t Index,
+                                         uint32_t Attr) {
+  const unsigned Opcode = ISD::PSEUDO_PROBE;
+  const auto VTs = getVTList(MVT::Other);
+  SDValue Ops[] = {Chain};
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, Opcode, VTs, Ops);
+  ID.AddInteger(Guid);
+  ID.AddInteger(Index);
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, Dl, IP))
+    return SDValue(E, 0);
+
+  auto *N = newSDNode<PseudoProbeSDNode>(
+      Opcode, Dl.getIROrder(), Dl.getDebugLoc(), VTs, Guid, Index, Attr);
   createOperands(N, Ops);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);

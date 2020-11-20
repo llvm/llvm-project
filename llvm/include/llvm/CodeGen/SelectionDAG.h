@@ -1205,6 +1205,12 @@ public:
   SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
                           int FrameIndex, int64_t Size, int64_t Offset = -1);
 
+  /// Creates a PseudoProbeSDNode with function GUID `Guid` and
+  /// the index of the block `Index` it is probing, as well as the attributes
+  /// `attr` of the probe.
+  SDValue getPseudoProbeNode(const SDLoc &Dl, SDValue Chain, uint64_t Guid,
+                             uint64_t Index, uint32_t Attr);
+
   /// Create a MERGE_VALUES node from the given operands.
   SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
 

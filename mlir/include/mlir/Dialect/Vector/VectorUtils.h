@@ -25,6 +25,7 @@ class OpBuilder;
 class Operation;
 class Value;
 class VectorType;
+class VectorTransferOpInterface;
 
 /// Return the number of elements of basis, `0` if empty.
 int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis);
@@ -158,6 +159,11 @@ makePermutationMap(Operation *op, ArrayRef<Value> indices,
 /// rank of the identity map must take the vector element type into account.
 AffineMap getTransferMinorIdentityMap(MemRefType memRefType,
                                       VectorType vectorType);
+
+/// Return true if we can prove that the transfer operations access disjoint
+/// memory.
+bool isDisjointTransferSet(VectorTransferOpInterface transferA,
+                           VectorTransferOpInterface transferB);
 
 namespace matcher {
 

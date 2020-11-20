@@ -12,7 +12,7 @@
 
 %struct.large = type { [4096 x i8] }
 
-declare void @foo(%struct.large* align 8 byval) nounwind
+declare void @foo(%struct.large* align 8 byval(%struct.large)) nounwind
 
 define void @test1(%struct.large* nocapture %x) nounwind {
 ; NOFAST32-LABEL: test1:
@@ -66,7 +66,7 @@ define void @test1(%struct.large* nocapture %x) nounwind {
 ; FAST-NEXT:    callq foo
 ; FAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; FAST-NEXT:    retq
-  call void @foo(%struct.large* align 8 byval %x)
+  call void @foo(%struct.large* align 8 byval(%struct.large) %x)
   ret void
 
 }
@@ -123,14 +123,14 @@ define void @test2(%struct.large* nocapture %x) nounwind minsize {
 ; FAST-NEXT:    callq foo
 ; FAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; FAST-NEXT:    retq
-  call void @foo(%struct.large* align 8 byval %x)
+  call void @foo(%struct.large* align 8 byval(%struct.large) %x)
   ret void
 
 }
 
 %struct.large_oddsize = type { [4095 x i8] }
 
-declare void @foo_oddsize(%struct.large_oddsize* align 8 byval) nounwind
+declare void @foo_oddsize(%struct.large_oddsize* align 8 byval(%struct.large_oddsize)) nounwind
 
 define void @test3(%struct.large_oddsize* nocapture %x) nounwind minsize {
 ; NOFAST32-LABEL: test3:
@@ -184,7 +184,7 @@ define void @test3(%struct.large_oddsize* nocapture %x) nounwind minsize {
 ; FAST-NEXT:    callq foo_oddsize
 ; FAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; FAST-NEXT:    retq
-  call void @foo_oddsize(%struct.large_oddsize* align 8 byval %x)
+  call void @foo_oddsize(%struct.large_oddsize* align 8 byval(%struct.large_oddsize) %x)
   ret void
 
 }

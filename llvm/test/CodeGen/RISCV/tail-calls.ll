@@ -122,14 +122,14 @@ attributes #0 = { "interrupt"="machine" }
 ; Byval parameters hand the function a pointer directly into the stack area
 ; we want to reuse during a tail call. Do not tail call optimize functions with
 ; byval parameters.
-declare i32 @callee_byval(i32** byval %a)
+declare i32 @callee_byval(i32** byval(i32*) %a)
 define i32 @caller_byval() nounwind {
 ; CHECK-LABEL: caller_byval
 ; CHECK-NOT: tail callee_byval
 ; CHECK: call callee_byval
 entry:
   %a = alloca i32*
-  %r = tail call i32 @callee_byval(i32** byval %a)
+  %r = tail call i32 @callee_byval(i32** byval(i32*) %a)
   ret i32 %r
 }
 
