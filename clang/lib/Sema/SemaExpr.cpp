@@ -17540,7 +17540,11 @@ bool Sema::tryCaptureVariable(
           if (IsTargetCap || IsOpenMPPrivateDecl == OMPC_private ||
               (IsGlobal && !IsGlobalCap)) {
             Nested = !IsTargetCap;
+            bool HasConst = DeclRefType.isConstQualified();
             DeclRefType = DeclRefType.getUnqualifiedType();
+            // Don't lose diagnostics about assignments to const.
+            if (HasConst)
+              DeclRefType.addConst();
             CaptureType = Context.getLValueReferenceType(DeclRefType);
             break;
           }
