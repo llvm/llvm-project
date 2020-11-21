@@ -12,6 +12,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/X86TargetParser.h"
@@ -23,6 +24,11 @@ using namespace llvm;
 static cl::opt<bool> ShowDisassembly("show-disassembly", cl::ReallyHidden,
                                      cl::init(false), cl::ZeroOrMore,
                                      cl::desc("Print disassembled code."));
+
+static cl::opt<bool> ShowSourceLocations("show-source-locations",
+                                         cl::ReallyHidden, cl::init(false),
+                                         cl::ZeroOrMore,
+                                         cl::desc("Print source locations."));
 
 namespace llvm {
 namespace sampleprof {
@@ -137,7 +143,15 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
     if (ShowDisassembly) {
       outs() << format("%8" PRIx64 ":", Offset);
+      size_t Start = outs().tell();
       IP->printInst(&Inst, Offset + Size, "", *STI.get(), outs());
+      if (ShowSourceLocations) {
+        unsigned Cur = outs().tell() - Start;
+        if (Cur < 40)
+          outs().indent(40 - Cur);
+        InstructionPointer Inst(this, Offset);
+        outs() << getReversedLocWithContext(symbolize(Inst));
+      }
       outs() << "\n";
     }
 
@@ -259,5 +273,40 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
     }
   }
 }
+
+void ProfiledBinary::setupSymbolizer() {
+  symbolize::LLVMSymbolizer::Options SymbolizerOpts;
+  SymbolizerOpts.PrintFunctions =
+      DILineInfoSpecifier::FunctionNameKind::LinkageName;
+  SymbolizerOpts.Demangle = false;
+  SymbolizerOpts.DefaultArch = TheTriple.getArchName().str();
+  SymbolizerOpts.UseSymbolTable = false;
+  SymbolizerOpts.RelativeAddresses = false;
+  Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
+}
+
+FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP) {
+  assert(this == IP.Binary &&
+         "Binary should only symbolize its own instruction");
+  auto Addr = object::SectionedAddress{IP.Offset + PreferredBaseAddress,
+                                       object::SectionedAddress::UndefSection};
+  DIInliningInfo InlineStack =
+      unwrapOrError(Symbolizer->symbolizeInlinedCode(Path, Addr), getName());
+
+  FrameLocationStack CallStack;
+
+  for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
+    const auto &CallerFrame = InlineStack.getFrame(I);
+    if (CallerFrame.FunctionName == "<invalid>")
+      break;
+    LineLocation Line(CallerFrame.Line - CallerFrame.StartLine,
+                      CallerFrame.Discriminator);
+    FrameLocation Callsite(CallerFrame.FunctionName, Line);
+    CallStack.push_back(Callsite);
+  }
+
+  return CallStack;
+}
+
 } // end namespace sampleprof
 } // end namespace llvm
