@@ -155,9 +155,14 @@ CudaInstallationDetector::CudaInstallationDetector(
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
         FS.getBufferForFile(InstallPath + "/version.txt");
     if (!VersionFile) {
-      // CUDA 7.0 doesn't have a version.txt, so guess that's our version if
-      // version.txt isn't present.
-      Version = CudaVersion::CUDA_70;
+      // CUDA 7.0 and CUDA 11.1+ do not have version.txt file.
+      // Use libdevice file to distinguish 7.0 from the new versions.
+      if (FS.exists(LibDevicePath + "/libdevice.10.bc")) {
+        Version = CudaVersion::LATEST;
+        DetectedVersionIsNotSupported = Version > CudaVersion::LATEST_SUPPORTED;
+      } else {
+        Version = CudaVersion::CUDA_70;
+      }
     } else {
       ParseCudaVersionFile((*VersionFile)->getBuffer());
     }
