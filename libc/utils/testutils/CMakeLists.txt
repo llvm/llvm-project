@@ -11,6 +11,4 @@ add_llvm_library(
   ExecuteFunction.h
   ${FDReaderFile}
   FDReader.h
-  LINK_COMPONENTS
-    Support
 )
