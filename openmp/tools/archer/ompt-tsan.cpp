@@ -344,6 +344,64 @@ template <typename T> struct DataPoolEntry {
   DataPoolEntry(DataPool<T> *dp) : owner(dp) {}
 };
 
+struct DependencyData;
+typedef DataPool<DependencyData> DependencyDataPool;
+template <>
+__thread DependencyDataPool *DependencyDataPool::ThreadDataPool = nullptr;
+
+/// Data structure to store additional information for task dependency.
+struct DependencyData final : DataPoolEntry<DependencyData> {
+  ompt_tsan_clockid in;
+  ompt_tsan_clockid out;
+  ompt_tsan_clockid inoutset;
+  void *GetInPtr() { return &in; }
+  void *GetOutPtr() { return &out; }
+  void *GetInoutsetPtr() { return &inoutset; }
+
+  void Reset() {}
+
+  static DependencyData *New() { return DataPoolEntry<DependencyData>::New(); }
+
+  DependencyData(DataPool<DependencyData> *dp)
+      : DataPoolEntry<DependencyData>(dp) {}
+};
+
+struct TaskDependency {
+  void *inPtr;
+  void *outPtr;
+  void *inoutsetPtr;
+  ompt_dependence_type_t type;
+  TaskDependency(DependencyData *depData, ompt_dependence_type_t type)
+      : inPtr(depData->GetInPtr()), outPtr(depData->GetOutPtr()),
+        inoutsetPtr(depData->GetInoutsetPtr()), type(type) {}
+  void AnnotateBegin() {
+    if (type == ompt_dependence_type_out ||
+        type == ompt_dependence_type_inout ||
+        type == ompt_dependence_type_mutexinoutset) {
+      TsanHappensAfter(inPtr);
+      TsanHappensAfter(outPtr);
+      TsanHappensAfter(inoutsetPtr);
+    } else if (type == ompt_dependence_type_in) {
+      TsanHappensAfter(outPtr);
+      TsanHappensAfter(inoutsetPtr);
+    } else if (type == ompt_dependence_type_inoutset) {
+      TsanHappensAfter(inPtr);
+      TsanHappensAfter(outPtr);
+    }
+  }
+  void AnnotateEnd() {
+    if (type == ompt_dependence_type_out ||
+        type == ompt_dependence_type_inout ||
+        type == ompt_dependence_type_mutexinoutset) {
+      TsanHappensBefore(outPtr);
+    } else if (type == ompt_dependence_type_in) {
+      TsanHappensBefore(inPtr);
+    } else if (type == ompt_dependence_type_inoutset) {
+      TsanHappensBefore(inoutsetPtr);
+    }
+  }
+};
+
 struct ParallelData;
 typedef DataPool<ParallelData> ParallelDataPool;
 template <>
@@ -451,10 +509,16 @@ struct TaskData final : DataPoolEntry<TaskData> {
   Taskgroup *TaskGroup{nullptr};
 
   /// Dependency information for this task.
-  ompt_dependence_t *Dependencies{nullptr};
+  TaskDependency *Dependencies{nullptr};
 
   /// Number of dependency entries.
   unsigned DependencyCount{0};
+
+  // The dependency-map stores DependencyData objects representing
+  // the dependency variables used on the sibling tasks created from
+  // this task
+  // We expect a rare need for the dependency-map, so alloc on demand
+  std::unordered_map<void *, DependencyData *> *DependencyMap{nullptr};
 
 #ifdef DEBUG
   int freed{0};
@@ -506,6 +570,14 @@ struct TaskData final : DataPoolEntry<TaskData> {
     ImplicitTask = nullptr;
     Team = nullptr;
     TaskGroup = nullptr;
+    if (DependencyMap) {
+      for (auto i : *DependencyMap)
+        i.second->Delete();
+      delete DependencyMap;
+    }
+    DependencyMap = nullptr;
+    if (Dependencies)
+      free(Dependencies);
     Dependencies = nullptr;
     DependencyCount = 0;
 #ifdef DEBUG
@@ -528,14 +600,6 @@ static inline TaskData *ToTaskData(ompt_data_t *task_data) {
   return reinterpret_cast<TaskData *>(task_data->ptr);
 }
 
-static inline void *ToInAddr(void *OutAddr) {
-  // FIXME: This will give false negatives when a second variable lays directly
-  //        behind a variable that only has a width of 1 byte.
-  //        Another approach would be to "negate" the address or to flip the
-  //        first bit...
-  return reinterpret_cast<char *>(OutAddr) + 1;
-}
-
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
 std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
 std::mutex LocksMutex;
@@ -551,13 +615,19 @@ static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
   TaskDataPool::ThreadDataPool = new TaskDataPool;
   TsanNewMemory(TaskDataPool::ThreadDataPool,
                 sizeof(TaskDataPool::ThreadDataPool));
+  DependencyDataPool::ThreadDataPool = new DependencyDataPool;
+  TsanNewMemory(DependencyDataPool::ThreadDataPool,
+                sizeof(DependencyDataPool::ThreadDataPool));
   thread_data->value = my_next_id();
 }
 
 static void ompt_tsan_thread_end(ompt_data_t *thread_data) {
+  TsanIgnoreWritesBegin();
   delete ParallelDataPool::ThreadDataPool;
   delete TaskgroupPool::ThreadDataPool;
   delete TaskDataPool::ThreadDataPool;
+  delete DependencyDataPool::ThreadDataPool;
+  TsanIgnoreWritesEnd();
 }
 
 /// OMPT event callbacks for handling parallel regions.
@@ -805,14 +875,23 @@ static void ompt_tsan_task_create(
   }
 }
 
-static void __ompt_tsan_release_task(TaskData *task) {
+static void freeTask(TaskData *task) {
   while (task != nullptr && --task->RefCount == 0) {
     TaskData *Parent = task->Parent;
-    if (task->DependencyCount > 0) {
-      delete[] task->Dependencies;
-    }
     task->Delete();
     task = Parent;
+  }
+}
+
+static void releaseDependencies(TaskData *task) {
+  for (unsigned i = 0; i < task->DependencyCount; i++) {
+    task->Dependencies[i].AnnotateEnd();
+  }
+}
+
+static void acquireDependencies(TaskData *task) {
+  for (unsigned i = 0; i < task->DependencyCount; i++) {
+    task->Dependencies[i].AnnotateBegin();
   }
 }
 
@@ -879,18 +958,9 @@ static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
     }
 
     // release dependencies
-    for (unsigned i = 0; i < FromTask->DependencyCount; i++) {
-      ompt_dependence_t *Dependency = &FromTask->Dependencies[i];
-
-      // in dependencies block following inout and out dependencies!
-      TsanHappensBefore(ToInAddr(Dependency->variable.ptr));
-      if (Dependency->dependence_type == ompt_dependence_type_out ||
-          Dependency->dependence_type == ompt_dependence_type_inout) {
-        TsanHappensBefore(Dependency->variable.ptr);
-      }
-    }
+    releaseDependencies(FromTask);
     // free the previously running task
-    __ompt_tsan_release_task(FromTask);
+    freeTask(FromTask);
   }
 
   // For late fulfill of detached task, there is no task to schedule to
@@ -919,16 +989,7 @@ static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
   // Handle dependencies on first execution of the task
   if (ToTask->execution == 0) {
     ToTask->execution++;
-    for (unsigned i = 0; i < ToTask->DependencyCount; i++) {
-      ompt_dependence_t *Dependency = &ToTask->Dependencies[i];
-
-      TsanHappensAfter(Dependency->variable.ptr);
-      // in and inout dependencies are also blocked by prior in dependencies!
-      if (Dependency->dependence_type == ompt_dependence_type_out ||
-          Dependency->dependence_type == ompt_dependence_type_inout) {
-        TsanHappensAfter(ToInAddr(Dependency->variable.ptr));
-      }
-    }
+    acquireDependencies(ToTask);
   }
   // 1. Task will begin execution after it has been created.
   // 2. Task will resume after it has been switched away.
@@ -940,9 +1001,21 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
   if (ndeps > 0) {
     // Copy the data to use it in task_switch and task_end.
     TaskData *Data = ToTaskData(task_data);
-    Data->Dependencies = new ompt_dependence_t[ndeps];
-    std::memcpy(Data->Dependencies, deps, sizeof(ompt_dependence_t) * ndeps);
+    if (!Data->Parent->DependencyMap)
+      Data->Parent->DependencyMap =
+          new std::unordered_map<void *, DependencyData *>();
+    Data->Dependencies =
+        (TaskDependency *)malloc(sizeof(TaskDependency) * ndeps);
     Data->DependencyCount = ndeps;
+    for (int i = 0; i < ndeps; i++) {
+      auto ret = Data->Parent->DependencyMap->insert(
+          std::make_pair(deps[i].variable.ptr, nullptr));
+      if (ret.second) {
+        ret.first->second = DependencyData::New();
+      }
+      new ((void *)(Data->Dependencies + i))
+          TaskDependency(ret.first->second, deps[i].dependence_type);
+    }
 
     // This callback is executed before this task is first started.
     TsanHappensBefore(Data->GetTaskPtr());
