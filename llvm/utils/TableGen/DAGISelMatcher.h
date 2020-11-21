@@ -31,7 +31,7 @@ Matcher *ConvertPatternToMatcher(const PatternToMatch &Pattern,unsigned Variant,
                                  const CodeGenDAGPatterns &CGP);
 void OptimizeMatcher(std::unique_ptr<Matcher> &Matcher,
                      const CodeGenDAGPatterns &CGP);
-void EmitMatcherTable(const Matcher *Matcher, const CodeGenDAGPatterns &CGP,
+void EmitMatcherTable(Matcher *Matcher, const CodeGenDAGPatterns &CGP,
                       raw_ostream &OS);
 
 
@@ -41,6 +41,7 @@ class Matcher {
   // The next matcher node that is executed after this one.  Null if this is the
   // last stage of a match.
   std::unique_ptr<Matcher> Next;
+  size_t Size; // Size in bytes of matcher and all its children (if any).
   virtual void anchor();
 public:
   enum KindTy {
@@ -85,7 +86,10 @@ public:
     EmitNode,             // Create a DAG node
     EmitNodeXForm,        // Run a SDNodeXForm
     CompleteMatch,        // Finish a match and update the results.
-    MorphNodeTo           // Build a node, finish a match and update results.
+    MorphNodeTo,          // Build a node, finish a match and update results.
+
+    // Highest enum value; watch out when adding more.
+    HighestKind = MorphNodeTo
   };
   const KindTy Kind;
 
@@ -94,6 +98,8 @@ protected:
 public:
   virtual ~Matcher() {}
 
+  unsigned getSize() const { return Size; }
+  void setSize(unsigned sz) { Size = sz; }
   KindTy getKind() const { return Kind; }
 
   Matcher *getNext() { return Next.get(); }
