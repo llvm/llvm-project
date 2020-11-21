@@ -6,9 +6,10 @@ Current status: Under development and not enabled by default
 
 ### Pre-requisites
 
-* [`pybind11`](https://github.com/pybind/pybind11) must be installed and able to
-  be located by CMake. Note: minimum version required: :2.6.0
 * A relatively recent Python3 installation
+* [`pybind11`](https://github.com/pybind/pybind11) must be installed and able to
+  be located by CMake (auto-detected if installed via
+  `python -m pip install pybind11`). Note: minimum version required: :2.6.0.
 
 ### CMake variables
 
