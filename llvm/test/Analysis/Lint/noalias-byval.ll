@@ -8,7 +8,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #0
 
-declare void @f1(%s* noalias nocapture sret, %s* nocapture readnone)
+declare void @f1(%s* noalias nocapture sret(%s), %s* nocapture readnone)
 
 define void @f2() {
 entry:
@@ -26,7 +26,7 @@ entry:
 ; CHECK: Unusual: noalias argument aliases another argument
 ; CHECK-NEXT: call void @f1(%s* sret(%s) %c, %s* %c)
 
-declare void @f3(%s* noalias nocapture sret, %s* byval(%s) nocapture readnone)
+declare void @f3(%s* noalias nocapture sret(%s), %s* byval(%s) nocapture readnone)
 
 define void @f4() {
 entry:

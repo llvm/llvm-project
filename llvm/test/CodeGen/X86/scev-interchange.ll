@@ -47,9 +47,9 @@ declare fastcc void @_ZN24TensorProductPolynomialsILi3EEC2IN11Polynomials10Polyn
 
 declare fastcc void @_ZN7FE_PolyI24TensorProductPolynomialsILi3EELi3EEC2EjRKS1_RK17FiniteElementDataILi3EERKSt6vectorIbSaIbEERKS9_ISB_SaISB_EE(%"struct.FE_DGPNonparametric<3>"*, i32, %"struct.PolynomialSpace<1>"* nocapture, %"struct.FiniteElementData<1>"* nocapture, %"struct.std::vector<bool,std::allocator<bool> >"* nocapture, %"struct.std::vector<std::vector<bool, std::allocator<bool> >,std::allocator<std::vector<bool, std::allocator<bool> > > >"* nocapture)
 
-declare fastcc void @_ZN11FE_Q_Helper12_GLOBAL__N_116invert_numberingERKSt6vectorIjSaIjEE(%"struct.std::vector<int,std::allocator<int> >"* noalias nocapture sret, %"struct.std::vector<int,std::allocator<int> >"* nocapture)
+declare fastcc void @_ZN11FE_Q_Helper12_GLOBAL__N_116invert_numberingERKSt6vectorIjSaIjEE(%"struct.std::vector<int,std::allocator<int> >"* noalias nocapture sret(%"struct.std::vector<int,std::allocator<int> >"), %"struct.std::vector<int,std::allocator<int> >"* nocapture)
 
-declare fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias nocapture sret, i32)
+declare fastcc void @_ZN4FE_QILi3EE14get_dpo_vectorEj(%"struct.std::vector<int,std::allocator<int> >"* noalias nocapture sret(%"struct.std::vector<int,std::allocator<int> >"), i32)
 
 define fastcc void @_ZN4FE_QILi3EEC1Ej(i32 %degree) personality i32 (...)* @__gxx_personality_v0 {
 entry:
@@ -377,6 +377,6 @@ lpad204.i:		; preds = %invcont86.i
 	unreachable
 }
 
-declare fastcc void @_ZN11Polynomials19LagrangeEquidistant23generate_complete_basisEj(%"struct.std::vector<Polynomials::Polynomial<double>,std::allocator<Polynomials::Polynomial<double> > >"* noalias nocapture sret, i32)
+declare fastcc void @_ZN11Polynomials19LagrangeEquidistant23generate_complete_basisEj(%"struct.std::vector<Polynomials::Polynomial<double>,std::allocator<Polynomials::Polynomial<double> > >"* noalias nocapture sret(%"struct.std::vector<Polynomials::Polynomial<double>,std::allocator<Polynomials::Polynomial<double> > >"), i32)
 
 declare i32 @__gxx_personality_v0(...)

@@ -38,7 +38,7 @@ entry:
 
 }
 
-declare void @ccoshl(%0* nocapture sret, x86_fp80, x86_fp80) nounwind
+declare void @ccoshl(%0* nocapture sret(%0), x86_fp80, x86_fp80) nounwind
 
 
 ; The intermediate alloca and one of the memcpy's should be eliminated, the

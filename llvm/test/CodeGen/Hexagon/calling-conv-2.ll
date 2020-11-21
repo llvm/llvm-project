@@ -9,6 +9,6 @@ entry:
   ret void
 }
 
-declare void @bar(%struct.test_struct* sret, i32) #0
+declare void @bar(%struct.test_struct* sret(%struct.test_struct), i32) #0
 
 attributes #0 = { nounwind }

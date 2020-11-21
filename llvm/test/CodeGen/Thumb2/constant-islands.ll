@@ -1376,11 +1376,11 @@ terminate.lpad:                                   ; preds = %lpad89, %lpad80, %l
   unreachable
 }
 
-declare void @_ZmlRKfRK9btVector3(%class.btVector3* noalias sret, float*, %class.btVector3*) inlinehint ssp
+declare void @_ZmlRKfRK9btVector3(%class.btVector3* noalias sret(%class.btVector3), float*, %class.btVector3*) inlinehint ssp
 
 declare %class.btRigidBody* @_ZN7RagDoll20localCreateRigidBodyEfRK11btTransformP16btCollisionShape(%class.RagDoll*, float, %class.btTransform*, %class.btCollisionShape*) ssp align 2
 
-declare void @_ZNK11btTransformmlERKS_(%class.btTransform* noalias sret, %class.btTransform*, %class.btTransform*) inlinehint ssp align 2
+declare void @_ZNK11btTransformmlERKS_(%class.btTransform* noalias sret(%class.btTransform), %class.btTransform*, %class.btTransform*) inlinehint ssp align 2
 
 declare void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3*, float, float, float) ssp align 2
 
