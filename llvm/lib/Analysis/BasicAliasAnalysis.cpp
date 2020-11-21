@@ -416,15 +416,17 @@ static unsigned getMaxPointerSize(const DataLayout &DL) {
 /// can look through. To be able to do that getUnderlyingObject and
 /// DecomposeGEPExpression must use the same search depth
 /// (MaxLookupSearchDepth).
-bool BasicAAResult::DecomposeGEPExpression(const Value *V,
-       DecomposedGEP &Decomposed, const DataLayout &DL, AssumptionCache *AC,
-       DominatorTree *DT) {
+BasicAAResult::DecomposedGEP
+BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
+                                      AssumptionCache *AC, DominatorTree *DT) {
   // Limit recursion depth to limit compile time in crazy cases.
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
 
   unsigned MaxPointerSize = getMaxPointerSize(DL);
-  Decomposed.VarIndices.clear();
+  DecomposedGEP Decomposed;
+  Decomposed.Offset = APInt(MaxPointerSize, 0);
+  Decomposed.HasCompileTimeConstantScale = true;
   do {
     // See if this is a bitcast or GEP.
     const Operator *Op = dyn_cast<Operator>(V);
@@ -437,7 +439,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         }
       }
       Decomposed.Base = V;
-      return false;
+      return Decomposed;
     }
 
     if (Op->getOpcode() == Instruction::BitCast ||
@@ -471,13 +473,13 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       }
 
       Decomposed.Base = V;
-      return false;
+      return Decomposed;
     }
 
     // Don't attempt to analyze GEPs over unsized objects.
     if (!GEPOp->getSourceElementType()->isSized()) {
       Decomposed.Base = V;
-      return false;
+      return Decomposed;
     }
 
     // Don't attempt to analyze GEPs if index scale is not a compile-time
@@ -485,7 +487,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
     if (isa<ScalableVectorType>(GEPOp->getSourceElementType())) {
       Decomposed.Base = V;
       Decomposed.HasCompileTimeConstantScale = false;
-      return false;
+      return Decomposed;
     }
 
     unsigned AS = GEPOp->getPointerAddressSpace();
@@ -599,7 +601,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
   // If the chain of expressions is too deep, just return early.
   Decomposed.Base = V;
   SearchLimitReached++;
-  return true;
+  return Decomposed;
 }
 
 /// Returns whether the given pointer value points to memory that is local to
@@ -1217,15 +1219,8 @@ AliasResult BasicAAResult::aliasGEP(
     const GEPOperator *GEP1, LocationSize V1Size, const AAMDNodes &V1AAInfo,
     const Value *V2, LocationSize V2Size, const AAMDNodes &V2AAInfo,
     const Value *UnderlyingV1, const Value *UnderlyingV2, AAQueryInfo &AAQI) {
-  DecomposedGEP DecompGEP1, DecompGEP2;
-  unsigned MaxPointerSize = getMaxPointerSize(DL);
-  DecompGEP1.Offset = APInt(MaxPointerSize, 0);
-  DecompGEP2.Offset = APInt(MaxPointerSize, 0);
-  DecompGEP1.HasCompileTimeConstantScale =
-      DecompGEP2.HasCompileTimeConstantScale = true;
-
-  DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
-  DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
+  DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
+  DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
   // Don't attempt to analyze the decomposed GEP if index scale is not a
   // compile-time constant.
