@@ -28,7 +28,7 @@ b0:
   ret void
 }
 
-declare void @f1(%s.0* sret, i32, %s.0* byval(%s.0) align 8, %s.0* byval(%s.0) align 8, i8 zeroext, i64, i32, i64, i8 zeroext, i8 zeroext, i8 zeroext, i32)
+declare void @f1(%s.0* sret(%s.0), i32, %s.0* byval(%s.0) align 8, %s.0* byval(%s.0) align 8, i8 zeroext, i64, i32, i64, i8 zeroext, i8 zeroext, i8 zeroext, i32)
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) #1

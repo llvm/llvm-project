@@ -107,7 +107,7 @@ define void @one_preallocated_one_normal() {
   ret void
 }
 
-declare void @foo_ret_p(%Foo* sret, %Foo* preallocated(%Foo))
+declare void @foo_ret_p(%Foo* sret(%Foo), %Foo* preallocated(%Foo))
 
 define void @nested_with_init() {
 ; CHECK-LABEL: _nested_with_init:

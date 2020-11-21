@@ -175,7 +175,7 @@ define void @test6_f(%struct.test6* %x) nounwind {
   call x86_thiscallcc void @test6_g(%struct.test6* sret(%struct.test6) %tmp, %struct.test6* %x)
   ret void
 }
-declare x86_thiscallcc void @test6_g(%struct.test6* sret, %struct.test6*)
+declare x86_thiscallcc void @test6_g(%struct.test6* sret(%struct.test6), %struct.test6*)
 
 ; Flipping the parameters at the IR level generates the same code.
 %struct.test7 = type { i32, i32, i32 }

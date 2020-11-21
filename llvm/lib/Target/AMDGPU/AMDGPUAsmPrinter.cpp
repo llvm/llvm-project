@@ -1029,18 +1029,26 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // Account for extra SGPRs and VGPRs reserved for debugger use.
   ProgInfo.NumSGPR += ExtraSGPRs;
 
+  const Function &F = MF.getFunction();
+
   // Ensure there are enough SGPRs and VGPRs for wave dispatch, where wave
   // dispatch registers are function args.
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
-  for (auto &Arg : MF.getFunction().args()) {
-    unsigned NumRegs = (Arg.getType()->getPrimitiveSizeInBits() + 31) / 32;
-    if (Arg.hasAttribute(Attribute::InReg))
-      WaveDispatchNumSGPR += NumRegs;
-    else
-      WaveDispatchNumVGPR += NumRegs;
+
+  if (isShader(F.getCallingConv())) {
+    // FIXME: We should be using the number of registers determined during
+    // calling convention lowering to legalize the types.
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    for (auto &Arg : F.args()) {
+      unsigned NumRegs = (DL.getTypeSizeInBits(Arg.getType()) + 31) / 32;
+      if (Arg.hasAttribute(Attribute::InReg))
+        WaveDispatchNumSGPR += NumRegs;
+      else
+        WaveDispatchNumVGPR += NumRegs;
+    }
+    ProgInfo.NumSGPR = std::max(ProgInfo.NumSGPR, WaveDispatchNumSGPR);
+    ProgInfo.NumVGPR = std::max(ProgInfo.NumVGPR, WaveDispatchNumVGPR);
   }
-  ProgInfo.NumSGPR = std::max(ProgInfo.NumSGPR, WaveDispatchNumSGPR);
-  ProgInfo.NumVGPR = std::max(ProgInfo.NumVGPR, WaveDispatchNumVGPR);
 
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.

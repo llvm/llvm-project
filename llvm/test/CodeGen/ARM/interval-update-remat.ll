@@ -155,7 +155,7 @@ declare %"class.(anonymous namespace)::basic_iostream.22.247.297.1322.2347"* @_Z
 
 declare %class.scoped_ptr.23.248.298.1323.2348* @_ZN10scoped_ptrI25Trans_NS___1_basic_stringIciiEED2Ev(%class.scoped_ptr.23.248.298.1323.2348* readonly returned) unnamed_addr align 2
 
-declare void @_Z11CmpHelperEQPcS_xx(%class.AssertionResult.24.249.299.1324.2349* sret, i8*, i8*, i64, i64)
+declare void @_Z11CmpHelperEQPcS_xx(%class.AssertionResult.24.249.299.1324.2349* sret(%class.AssertionResult.24.249.299.1324.2349), i8*, i8*, i64, i64)
 
 declare void @_ZN25Trans_NS___1_basic_stringIciiE5m_fn2Ev(%class.Trans_NS___1_basic_string.18.243.293.1318.2343*)
 

@@ -140,7 +140,9 @@ public:
     return s;
   }
 
-  /// Optimizes the iteration lattice points in the given set.
+  /// Optimizes the iteration lattice points in the given set. This
+  /// method should be called right before code generation to avoid
+  /// generating redundant loops and conditions.
   unsigned optimize(unsigned s0) {
     unsigned s = addSet();
     assert(latSets[s0].size() != 0);
@@ -148,15 +150,21 @@ public:
     for (unsigned p1 : latSets[s0]) {
       bool add = true;
       if (p0 != p1) {
+        // Is this a straightforward copy?
+        unsigned e = latPoints[p1].exp;
+        if (exp(e).kind == Kind::kTensor && exp(e).e0 == numTensors - 1)
+          continue;
+        // Is any dense index exhausted?
         llvm::BitVector tmp = latPoints[p1].bits;
         tmp ^= latPoints[p0].bits;
         if (hasAnyOf(tmp, false))
-          continue; // dense exhausted?
+          continue;
+        // Is this a direct duplication of an earlier conjunction?
         for (unsigned p2 : latSets[s]) {
           tmp = latPoints[p1].bits;
           tmp ^= latPoints[p2].bits;
           if (tmp.count() == 0) {
-            add = false; // direct dup?
+            add = false;
             break;
           }
         }

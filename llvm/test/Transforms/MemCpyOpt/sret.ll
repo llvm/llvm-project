@@ -45,6 +45,6 @@ entry:
   ret void
 }
 
-declare void @ccoshl(%0* noalias nocapture sret, %0* byval(%0)) nounwind
+declare void @ccoshl(%0* noalias nocapture sret(%0), %0* byval(%0)) nounwind
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
