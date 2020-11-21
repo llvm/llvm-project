@@ -85,7 +85,7 @@ void CompilerInstance::setDiagnostics(DiagnosticsEngine *Value) {
 }
 
 void CompilerInstance::setVerboseOutputStream(raw_ostream &Value) {
-  OwnedVerboseOutputStream.release();
+  OwnedVerboseOutputStream.reset();
   VerboseOutputStream = &Value;
 }
 
