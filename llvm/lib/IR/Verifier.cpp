@@ -1764,17 +1764,6 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          "'noinline and alwaysinline' are incompatible!",
          V);
 
-  if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
-    Assert(Attrs.getByValType() == cast<PointerType>(Ty)->getElementType(),
-           "Attribute 'byval' type does not match parameter!", V);
-  }
-
-  if (Attrs.hasAttribute(Attribute::Preallocated)) {
-    Assert(Attrs.getPreallocatedType() ==
-               cast<PointerType>(Ty)->getElementType(),
-           "Attribute 'preallocated' type does not match parameter!", V);
-  }
-
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   Assert(!AttrBuilder(Attrs).overlaps(IncompatibleAttrs),
          "Wrong types for attribute: " +
@@ -1801,6 +1790,16 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     if (Attrs.hasAttribute(Attribute::ByRef)) {
       Assert(Attrs.getByRefType() == PTy->getElementType(),
              "Attribute 'byref' type does not match parameter!", V);
+    }
+
+    if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
+      Assert(Attrs.getByValType() == PTy->getElementType(),
+             "Attribute 'byval' type does not match parameter!", V);
+    }
+
+    if (Attrs.hasAttribute(Attribute::Preallocated)) {
+      Assert(Attrs.getPreallocatedType() == PTy->getElementType(),
+             "Attribute 'preallocated' type does not match parameter!", V);
     }
   } else {
     Assert(!Attrs.hasAttribute(Attribute::ByVal),
