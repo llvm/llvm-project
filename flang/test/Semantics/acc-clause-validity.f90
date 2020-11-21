@@ -101,6 +101,21 @@ program openacc_clause_validity
   !$acc host_data
   !$acc end host_data
 
+  !$acc host_data use_device(aa)
+  !$acc end host_data
+
+  !$acc host_data use_device(aa) if(.true.)
+  !$acc end host_data
+
+  !$acc host_data use_device(aa) if(ifCondition)
+  !$acc end host_data
+
+  !$acc host_data use_device(aa, bb) if_present
+  !$acc end host_data
+
+  !$acc host_data use_device(aa, bb) if(.true.) if_present
+  !$acc end host_data
+
   !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
   !$acc set
 
