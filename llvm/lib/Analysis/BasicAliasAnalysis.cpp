@@ -1746,8 +1746,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (!Pair.second)
     return Pair.first->second;
 
-  // FIXME: This isn't aggressively handling alias(GEP, PHI) for example: if the
-  // GEP can't simplify, we don't even look at the PHI cases.
   if (const GEPOperator *GV1 = dyn_cast<GEPOperator>(V1)) {
     AliasResult Result =
         aliasGEP(GV1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O1, O2, AAQI);
