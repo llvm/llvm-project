@@ -8,14 +8,12 @@
 
 #include "ProfiledBinary.h"
 #include "ErrorHandling.h"
-#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/X86TargetParser.h"
 
 #define DEBUG_TYPE "load-binary"
 
