@@ -69,7 +69,7 @@ class PerfReader {
 
   // The parsed MMap event
   struct MMapEvent {
-    pid_t PID = 0;
+    uint64_t PID = 0;
     uint64_t BaseAddress = 0;
     uint64_t Size = 0;
     uint64_t Offset = 0;
