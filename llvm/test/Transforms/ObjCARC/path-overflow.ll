@@ -1567,7 +1567,7 @@ invoke.cont512:                                   ; preds = %invoke.cont509
   br i1 undef, label %msgSend.null-receiver, label %msgSend.call
 
 msgSend.call:                                     ; preds = %invoke.cont512
-  invoke void bitcast (void (i8*, i8*, ...)* @llvm.objc.msgSend_stret to void (%struct.CGPoint*, i8*, i8*)*)(%struct.CGPoint* sret undef, i8* undef, i8* undef)
+  invoke void bitcast (void (i8*, i8*, ...)* @llvm.objc.msgSend_stret to void (%struct.CGPoint*, i8*, i8*)*)(%struct.CGPoint* sret(%struct.CGPoint) undef, i8* undef, i8* undef)
           to label %msgSend.cont unwind label %lpad514
 
 msgSend.null-receiver:                            ; preds = %invoke.cont512

@@ -25,7 +25,7 @@ target triple = "x86_64-apple-macosx10.6.7"
 
 %class.A = type { i32, i32, i32, i32 }
 
-define void @_Z3fooi(%class.A* sret %agg.result, i32 %i) ssp !dbg !19 {
+define void @_Z3fooi(%class.A* sret(%class.A) %agg.result, i32 %i) ssp !dbg !19 {
 entry:
   %i.addr = alloca i32, align 4
   %j = alloca i32, align 4

@@ -43,7 +43,7 @@ define void @simple_args() {
 declare i32 @return_int()
 declare double @return_double()
 declare [2 x i64] @return_smallstruct()
-declare void @return_large_struct(%myStruct* sret %retval)
+declare void @return_large_struct(%myStruct* sret(%myStruct) %retval)
 
 define void @simple_rets() {
 ; CHECK-LABEL: simple_rets:
@@ -65,7 +65,7 @@ define void @simple_rets() {
 ; CHECK: add x[[VARSMALLSTRUCT:[0-9]+]], {{x[0-9]+}}, :lo12:varsmallstruct
 ; CHECK: stp x0, x1, [x[[VARSMALLSTRUCT]]]
 
-  call void @return_large_struct(%myStruct* sret @varstruct)
+  call void @return_large_struct(%myStruct* sret(%myStruct) @varstruct)
 ; CHECK: add x8, {{x[0-9]+}}, {{#?}}:lo12:varstruct
 ; CHECK: bl return_large_struct
 

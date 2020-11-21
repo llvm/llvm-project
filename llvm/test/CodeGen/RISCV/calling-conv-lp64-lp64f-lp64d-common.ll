@@ -479,7 +479,7 @@ define void @caller_large_scalar_ret() nounwind {
 
 ; Check return of >2x xlen structs
 
-define void @callee_large_struct_ret(%struct.large* noalias sret %agg.result) nounwind {
+define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) %agg.result) nounwind {
 ; RV64I-LABEL: callee_large_struct_ret:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sw zero, 4(a0)
@@ -520,7 +520,7 @@ define i64 @caller_large_struct_ret() nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
   %1 = alloca %struct.large
-  call void @callee_large_struct_ret(%struct.large* sret %1)
+  call void @callee_large_struct_ret(%struct.large* sret(%struct.large) %1)
   %2 = getelementptr inbounds %struct.large, %struct.large* %1, i64 0, i32 0
   %3 = load i64, i64* %2
   %4 = getelementptr inbounds %struct.large, %struct.large* %1, i64 0, i32 3

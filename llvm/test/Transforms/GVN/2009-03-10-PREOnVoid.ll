@@ -34,7 +34,7 @@ target triple = "i386-pc-linux-gnu"
 
 declare fastcc void @_ZNSt10_Select1stISt4pairIKPvS1_EEC1Ev() nounwind readnone
 
-define fastcc void @_ZNSt8_Rb_treeIPvSt4pairIKS0_S0_ESt10_Select1stIS3_ESt4lessIS0_ESaIS3_EE16_M_insert_uniqueERKS3_(%"struct.std::pair<std::_Rb_tree_iterator<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > >,bool>"* noalias nocapture sret %agg.result, %"struct.std::_Rb_tree<void*,std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > >,std::_Select1st<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > >,std::less<void*>,std::allocator<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > > >"* %this, %"struct.std::pair<void* const,void*>"* %__v) nounwind {
+define fastcc void @_ZNSt8_Rb_treeIPvSt4pairIKS0_S0_ESt10_Select1stIS3_ESt4lessIS0_ESaIS3_EE16_M_insert_uniqueERKS3_(%"struct.std::pair<std::_Rb_tree_iterator<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > >,bool>"* noalias nocapture sret(%"struct.std::pair<std::_Rb_tree_iterator<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > >,bool>") %agg.result, %"struct.std::_Rb_tree<void*,std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > >,std::_Select1st<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > >,std::less<void*>,std::allocator<std::pair<void* const, std::vector<ShadowInfo, std::allocator<ShadowInfo> > > > >"* %this, %"struct.std::pair<void* const,void*>"* %__v) nounwind {
 entry:
 	br i1 false, label %bb7, label %bb
 

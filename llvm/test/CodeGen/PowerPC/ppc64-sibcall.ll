@@ -87,15 +87,15 @@ entry:
 ; Struct return test
 
 ; Function Attrs: noinline nounwind
-define void @callee_sret_56(%S_56* noalias sret %agg.result) #0 { ret void }
-define void @callee_sret_32(%S_32* noalias sret %agg.result) #0 { ret void }
+define void @callee_sret_56(%S_56* noalias sret(%S_56) %agg.result) #0 { ret void }
+define void @callee_sret_32(%S_32* noalias sret(%S_32) %agg.result) #0 { ret void }
 
 ; Function Attrs: nounwind
-define void @caller_do_something_sret_32(%S_32* noalias sret %agg.result) #1 {
+define void @caller_do_something_sret_32(%S_32* noalias sret(%S_32) %agg.result) #1 {
   %1 = alloca %S_56, align 4
   %2 = bitcast %S_56* %1 to i8*
-  call void @callee_sret_56(%S_56* nonnull sret %1)
-  tail call void @callee_sret_32(%S_32* sret %agg.result)
+  call void @callee_sret_56(%S_56* nonnull sret(%S_56) %1)
+  tail call void @callee_sret_32(%S_32* sret(%S_32) %agg.result)
   ret void
 
 ; CHECK-SCO-LABEL: caller_do_something_sret_32:
@@ -107,7 +107,7 @@ define void @caller_do_something_sret_32(%S_32* noalias sret %agg.result) #1 {
 
 define void @caller_local_sret_32(%S_32* %a) #1 {
   %tmp = alloca %S_32, align 4
-  tail call void @callee_sret_32(%S_32* nonnull sret %tmp)
+  tail call void @callee_sret_32(%S_32* nonnull sret(%S_32) %tmp)
   ret void
 
 ; CHECK-SCO-LABEL: caller_local_sret_32:

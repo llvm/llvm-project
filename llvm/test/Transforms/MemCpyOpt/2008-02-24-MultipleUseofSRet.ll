@@ -8,7 +8,7 @@ target triple = "i386-pc-linux-gnu"
 
 %0 = type { x86_fp80, x86_fp80 }
 
-define internal fastcc void @initialize(%0* noalias nocapture sret %agg.result) nounwind {
+define internal fastcc void @initialize(%0* noalias nocapture sret(%0) %agg.result) nounwind {
 ; CHECK-LABEL: @initialize(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_RESULT_03:%.*]] = getelementptr [[TMP0:%.*]], %0* [[AGG_RESULT:%.*]], i32 0, i32 0
@@ -33,7 +33,7 @@ define fastcc void @badly_optimized() nounwind {
 ; CHECK-NEXT:    [[Z:%.*]] = alloca [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [[TMP0]], align 8
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0]], align 8
-; CHECK-NEXT:    call fastcc void @initialize(%0* noalias sret [[Z]])
+; CHECK-NEXT:    call fastcc void @initialize(%0* noalias sret(%0) [[Z]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %0* [[TMP]] to i8*
 ; CHECK-NEXT:    [[MEMTMP2:%.*]] = bitcast %0* [[MEMTMP]] to i8*
 ; CHECK-NEXT:    [[Z3:%.*]] = bitcast %0* [[Z]] to i8*
@@ -45,7 +45,7 @@ entry:
   %z = alloca %0
   %tmp = alloca %0
   %memtmp = alloca %0, align 8
-  call fastcc void @initialize(%0* noalias sret %memtmp)
+  call fastcc void @initialize(%0* noalias sret(%0) %memtmp)
   %tmp1 = bitcast %0* %tmp to i8*
   %memtmp2 = bitcast %0* %memtmp to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %tmp1, i8* align 8 %memtmp2, i32 24, i1 false)

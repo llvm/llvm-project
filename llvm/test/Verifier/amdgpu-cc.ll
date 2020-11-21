@@ -16,13 +16,13 @@ define amdgpu_kernel void @varargs_amdgpu_kernel(...) {
 
 ; CHECK: Calling convention does not allow sret
 ; CHECK-NEXT: void (i32*)* @sret_cc_amdgpu_kernel_as0
-define amdgpu_kernel void @sret_cc_amdgpu_kernel_as0(i32* sret %ptr) {
+define amdgpu_kernel void @sret_cc_amdgpu_kernel_as0(i32* sret(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention does not allow sret
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @sret_cc_amdgpu_kernel
-define amdgpu_kernel void @sret_cc_amdgpu_kernel(i32 addrspace(5)* sret %ptr) {
+define amdgpu_kernel void @sret_cc_amdgpu_kernel(i32 addrspace(5)* sret(i32) %ptr) {
   ret void
 }
 

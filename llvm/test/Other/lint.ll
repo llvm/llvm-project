@@ -6,7 +6,7 @@ declare fastcc void @bar()
 declare void @llvm.stackrestore(i8*)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @has_sret(i8* sret %p)
+declare void @has_sret(i8* sret(i8) %p)
 declare void @has_noaliases(i32* noalias %p, i32* %q)
 declare void @one_arg(i32)
 

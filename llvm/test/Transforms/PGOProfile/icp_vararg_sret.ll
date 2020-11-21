@@ -22,7 +22,7 @@ define void @test() {
 
   %s = alloca %struct
   %tmp = load void (i32, %struct*)*, void (i32, %struct*)** @func_ptr, align 8
-  call void %tmp(i32 1, %struct* sret %s), !prof !1
+  call void %tmp(i32 1, %struct* sret(%struct) %s), !prof !1
   ret void
 }
 

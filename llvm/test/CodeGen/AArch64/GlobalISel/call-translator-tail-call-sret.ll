@@ -2,10 +2,10 @@
 ; RUN: llc < %s -mtriple arm64-apple-darwin -global-isel -stop-after=irtranslator -verify-machineinstrs | FileCheck %s
 
 ; Check that we don't try to tail-call with a non-forwarded sret parameter.
-declare void @test_explicit_sret(i64* sret)
+declare void @test_explicit_sret(i64* sret(i64))
 
 ; Forwarded explicit sret pointer => we can tail call.
-define void @can_tail_call_forwarded_explicit_sret_ptr(i64* sret %arg) {
+define void @can_tail_call_forwarded_explicit_sret_ptr(i64* sret(i64) %arg) {
   ; CHECK-LABEL: name: can_tail_call_forwarded_explicit_sret_ptr
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x8
@@ -17,7 +17,7 @@ define void @can_tail_call_forwarded_explicit_sret_ptr(i64* sret %arg) {
 }
 
 ; Not marked as tail, so don't tail call.
-define void @test_call_explicit_sret(i64* sret %arg) {
+define void @test_call_explicit_sret(i64* sret(i64) %arg) {
   ; CHECK-LABEL: name: test_call_explicit_sret
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x8

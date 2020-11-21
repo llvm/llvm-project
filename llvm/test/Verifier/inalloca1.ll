@@ -6,7 +6,7 @@ declare void @a(i64* byval(i64) inalloca %p)
 declare void @b(i64* inreg inalloca %p)
 ; CHECK: Attributes {{.*}} are incompatible
 
-declare void @c(i64* sret inalloca %p)
+declare void @c(i64* sret(i64) inalloca %p)
 ; CHECK: Attributes {{.*}} are incompatible
 
 declare void @d(i64* nest inalloca %p)
