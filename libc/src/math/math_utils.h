@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
-#include "include/errno.h"
-#include "include/math.h"
 #include "src/__support/common.h"
 #include "src/errno/llvmlibc_errno.h"
 #include "utils/CPP/TypeTraits.h"
+#include <errno.h>
+#include <math.h>
 
 #include <stdint.h>
 
