@@ -195,6 +195,11 @@ class RegisterCommandsTestCase(TestBase):
                 ' = ',
                 new_value])
 
+    # This test relies on ftag containing the 'abridged' value.  Linux
+    # and *BSD targets have been ported to report the full value instead
+    # consistently with GDB.  They are covered by the new-style
+    # lldb/test/Shell/Register/x86*-fp-read.test.
+    @skipUnlessDarwin
     def fp_special_purpose_register_read(self):
         exe = self.getBuildArtifact("a.out")
 
