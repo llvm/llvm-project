@@ -73,6 +73,9 @@ extern "C" {
    * accessed through the pointer in x, or -1 if the whole range is good. */
   intptr_t __hwasan_test_shadow(const volatile void *x, size_t size);
 
+  /* Sets the callback function to be called during HWASan error reporting. */
+  void __hwasan_set_error_report_callback(void (*callback)(const char *));
+
   int __sanitizer_posix_memalign(void **memptr, size_t alignment, size_t size);
   void * __sanitizer_memalign(size_t alignment, size_t size);
   void * __sanitizer_aligned_alloc(size_t alignment, size_t size);
