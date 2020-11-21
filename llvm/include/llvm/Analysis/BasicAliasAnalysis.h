@@ -168,8 +168,9 @@ private:
                       const DataLayout &DL, unsigned Depth, AssumptionCache *AC,
                       DominatorTree *DT, bool &NSW, bool &NUW);
 
-  static bool DecomposeGEPExpression(const Value *V, DecomposedGEP &Decomposed,
-      const DataLayout &DL, AssumptionCache *AC, DominatorTree *DT);
+  static DecomposedGEP
+  DecomposeGEPExpression(const Value *V, const DataLayout &DL,
+                         AssumptionCache *AC, DominatorTree *DT);
 
   static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
