@@ -43,4 +43,4 @@ define void @caller() {
   ret void
 }
 
-declare void @callee(%struct.a* sret, i32, i32)
+declare void @callee(%struct.a* sret(%struct.a), i32, i32)
