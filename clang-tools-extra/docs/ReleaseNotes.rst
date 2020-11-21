@@ -57,7 +57,7 @@ The improvements are...
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- The IgnoreImplicitCastsAndParentheses traversal mode has been removed.
 
 Improvements to clang-rename
 ----------------------------
