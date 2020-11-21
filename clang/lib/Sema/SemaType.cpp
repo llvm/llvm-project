@@ -3589,10 +3589,9 @@ static void warnAboutAmbiguousFunction(Sema &S, Declarator &D,
   // Only warn if this declarator is declaring a function at block scope, and
   // doesn't have a storage class (such as 'extern') specified.
   if (!D.isFunctionDeclarator() ||
-      D.getFunctionDefinitionKind() != FDK_Declaration ||
+      D.getFunctionDefinitionKind() != FunctionDefinitionKind::Declaration ||
       !S.CurContext->isFunctionOrMethod() ||
-      D.getDeclSpec().getStorageClassSpec()
-        != DeclSpec::SCS_unspecified)
+      D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_unspecified)
     return;
 
   // Inside a condition, a direct initializer is not permitted. We allow one to
@@ -5051,7 +5050,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           !(S.getLangOpts().CPlusPlus &&
             (T->isDependentType() || T->isRecordType()))) {
         if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
-            D.getFunctionDefinitionKind() == FDK_Definition) {
+            D.getFunctionDefinitionKind() ==
+                FunctionDefinitionKind::Definition) {
           // [6.9.1/3] qualified void return is invalid on a C
           // function definition.  Apparently ok on declarations and
           // in C++ though (!)
@@ -5422,7 +5422,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   //   The empty list in a function declarator that is not part of a definition
   //   of that function specifies that no information about the number or types
   //   of the parameters is supplied.
-  if (!LangOpts.CPlusPlus && D.getFunctionDefinitionKind() == FDK_Declaration) {
+  if (!LangOpts.CPlusPlus &&
+      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration) {
     bool IsBlock = false;
     for (const DeclaratorChunk &DeclType : D.type_objects()) {
       switch (DeclType.Kind) {

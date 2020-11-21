@@ -3437,7 +3437,7 @@ void Parser::ParseBlockId(SourceLocation CaretLoc) {
 
   // Parse the block-declarator.
   Declarator DeclaratorInfo(DS, DeclaratorContext::BlockLiteral);
-  DeclaratorInfo.setFunctionDefinitionKind(FDK_Definition);
+  DeclaratorInfo.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
   ParseDeclarator(DeclaratorInfo);
 
   MaybeParseGNUAttributes(DeclaratorInfo);
@@ -3476,7 +3476,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   // Parse the return type if present.
   DeclSpec DS(AttrFactory);
   Declarator ParamInfo(DS, DeclaratorContext::BlockLiteral);
-  ParamInfo.setFunctionDefinitionKind(FDK_Definition);
+  ParamInfo.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
   // FIXME: Since the return type isn't actually parsed, it can't be used to
   // fill ParamInfo with an initial valid range, so do it manually.
   ParamInfo.SetSourceRange(SourceRange(Tok.getLocation(), Tok.getLocation()));
