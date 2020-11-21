@@ -72,7 +72,7 @@ class TestSwiftPlaygrounds(TestBase):
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.build(dictionary={
-            'ARCH_SWIFTFLAGS':
+            'TARGET_SWIFTFLAGS':
             '-target {}'.format(self.get_build_triple()),
         })
         self.do_test(True)

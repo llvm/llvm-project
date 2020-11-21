@@ -97,6 +97,18 @@ class BuilderDarwin(Builder):
 
         return "ARCH_CFLAGS=\"-target {} {}\"".format(triple, version_min)
 
+    def getSwiftTargetFlags(self, arch):
+        if not arch:
+            arch = configuration.arch
+        if not arch:
+            return ""
+        vendor, os, version, env = get_triple()
+        if not vendor or not os or not version or not env:
+            return ""
+        flags = 'TARGET_SWIFTFLAGS="-target {}-{}-{}{}{}"'.format(
+            arch, vendor, os, version, (("-"+env) if env else ""))
+        return flags
+
     def buildDsym(self,
                   sender=None,
                   architecture=None,
@@ -111,13 +123,13 @@ class BuilderDarwin(Builder):
                 "MAKE_DSYM=YES",
                 self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
+                self.getSwiftTargetFlags(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(), "all",
                 self.getCmdLine(dictionary)
             ])
-
         self.runBuildCommands(commands, sender=sender)
 
         # True signifies that we can handle building dsym.
