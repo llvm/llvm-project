@@ -1873,8 +1873,8 @@ void foo()
   auto Matcher = varDecl(hasInitializer(floatLiteral()));
 
   EXPECT_TRUE(notMatches(VarDeclCode, traverse(TK_AsIs, Matcher)));
-  EXPECT_TRUE(matches(VarDeclCode,
-                      traverse(TK_IgnoreImplicitCastsAndParentheses, Matcher)));
+  EXPECT_TRUE(
+      matches(VarDeclCode, traverse(TK_IgnoreUnlessSpelledInSource, Matcher)));
 
   auto ParentMatcher = floatLiteral(hasParent(varDecl(hasName("i"))));
 
@@ -2715,14 +2715,14 @@ void foo()
 )cpp";
 
   EXPECT_TRUE(
-      matches(Code, traverse(TK_IgnoreImplicitCastsAndParentheses,
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              callExpr(has(callExpr(traverse(
                                  TK_AsIs, callExpr(has(implicitCastExpr(
                                               has(floatLiteral())))))))))));
 
   EXPECT_TRUE(matches(
       Code,
-      traverse(TK_IgnoreImplicitCastsAndParentheses,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                traverse(TK_AsIs, implicitCastExpr(has(floatLiteral()))))));
 }
 
@@ -2738,8 +2738,7 @@ void constructImplicit() {
 }
   )cpp";
 
-  auto Matcher =
-      traverse(TK_IgnoreImplicitCastsAndParentheses, implicitCastExpr());
+  auto Matcher = traverse(TK_IgnoreUnlessSpelledInSource, implicitCastExpr());
 
   // Verfiy that it does not segfault
   EXPECT_FALSE(matches(Code, Matcher));
@@ -2766,7 +2765,7 @@ void foo()
   EXPECT_TRUE(matches(
       Code,
       functionDecl(anyOf(hasDescendant(Matcher),
-                         traverse(TK_IgnoreImplicitCastsAndParentheses,
+                         traverse(TK_IgnoreUnlessSpelledInSource,
                                   functionDecl(hasDescendant(Matcher)))))));
 }
 
