@@ -182,7 +182,7 @@ declare hidden %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* @_ZN4llvm12
 declare hidden void @_ZN4llvm16DAGTypeLegalizer10RemapValueERNS_7SDValueE(%"class.llvm::DAGTypeLegalizer.117.717.1077.2037.2157.2397.4197"*, %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"*)
 
 ; Function Attrs: nounwind uwtable
-declare hidden void @_ZNK4llvm18TargetLoweringBase17getTypeConversionERNS_11LLVMContextENS_3EVTE(%"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* noalias sret, %"class.llvm::TargetLoweringBase.50.650.1010.1970.2090.2330.4130"* readonly, %"class.llvm::LLVMContext.6.606.966.1926.2046.2286.4086"*, i32, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"*) #2 align 2
+declare hidden void @_ZNK4llvm18TargetLoweringBase17getTypeConversionERNS_11LLVMContextENS_3EVTE(%"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* noalias sret(%"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"), %"class.llvm::TargetLoweringBase.50.650.1010.1970.2090.2330.4130"* readonly, %"class.llvm::LLVMContext.6.606.966.1926.2046.2286.4086"*, i32, %"class.llvm::Type.7.607.967.1927.2047.2287.4087"*) #2 align 2
 
 attributes #0 = { noreturn nounwind }
 attributes #1 = { nounwind }

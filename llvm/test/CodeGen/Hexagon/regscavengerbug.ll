@@ -13,7 +13,7 @@ target triple = "hexagon-unknown-linux-gnu"
 %5 = type { i32 (...)** }
 %6 = type { %3, %3 }
 
-declare void @f0(%3* sret, %0*, %3*)
+declare void @f0(%3* sret(%3), %0*, %3*)
 
 ; Function Attrs: nounwind
 define void @f1(%4* %a0, %0* nocapture %a1, %0* nocapture %a2) #0 align 2 {

@@ -40,7 +40,7 @@ entry:
 ; CHECK: ret void
 }
 
-declare void @_Z3barSt7complexIfE(%"struct.std::complex"* sret, i64)
+declare void @_Z3barSt7complexIfE(%"struct.std::complex"* sret(%"struct.std::complex"), i64)
 
 define void @test1(i32 *%ptr) {
 entry:

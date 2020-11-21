@@ -403,7 +403,7 @@ entry:
 %struct.A = type { i32, i32 }
 %struct.B = type { i8 }
 declare x86_thiscallcc %struct.B* @B_ctor(%struct.B* returned, %struct.A* byval(%struct.A))
-declare void @B_func(%struct.B* sret, %struct.B*, i32)
+declare void @B_func(%struct.B* sret(%struct.B), %struct.B*, i32)
 define void @test14(%struct.A* %a) {
 entry:
   %ref.tmp = alloca %struct.B, align 1

@@ -5,7 +5,7 @@ target triple = "hexagon"
 
 %struct.0 = type { i64, i16 }
 
-declare void @foo(%struct.0* noalias nocapture sret, i8 zeroext, i32, i64) #0
+declare void @foo(%struct.0* noalias nocapture sret(%struct.0), i8 zeroext, i32, i64) #0
 
 define hidden fastcc void @fred(%struct.0* noalias nocapture %p, i8 zeroext %t, i32 %r) unnamed_addr #0 {
 entry:
