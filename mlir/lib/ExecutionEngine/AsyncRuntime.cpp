@@ -24,6 +24,8 @@
 #include <thread>
 #include <vector>
 
+#include "llvm/Support/ThreadPool.h"
+
 //===----------------------------------------------------------------------===//
 // Async runtime API.
 //===----------------------------------------------------------------------===//
@@ -229,8 +231,8 @@ mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
 
 extern "C" void mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
 #if LLVM_ENABLE_THREADS
-  std::thread thread([handle, resume]() { (*resume)(handle); });
-  thread.detach();
+  static llvm::ThreadPool *threadPool = new llvm::ThreadPool();
+  threadPool->async([handle, resume]() { (*resume)(handle); });
 #else
   (*resume)(handle);
 #endif
