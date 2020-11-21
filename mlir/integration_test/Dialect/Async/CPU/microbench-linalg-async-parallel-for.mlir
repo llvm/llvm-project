@@ -10,9 +10,10 @@
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
 // RUN: | mlir-cpu-runner                                                      \
-// RUN:  -e entry -entry-point-result=void -O3                                 \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext\
+// RUN: -e entry -entry-point-result=void -O3                                  \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext  \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext\
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext \
 // RUN: | FileCheck %s --dump-input=always
 
 // RUN:   mlir-opt %s                                                          \
@@ -21,9 +22,10 @@
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
 // RUN: | mlir-cpu-runner                                                      \
-// RUN:  -e entry -entry-point-result=void -O3                                 \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext\
+// RUN: -e entry -entry-point-result=void -O3                                  \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext  \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext\
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext \
 // RUN: | FileCheck %s --dump-input=always
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
