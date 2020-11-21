@@ -895,7 +895,12 @@ def OMP_Distribute : Directive<"distribute"> {
     VersionedClause<OMPC_DistSchedule>
   ];
 }
-def OMP_DeclareTarget : Directive<"declare target"> {}
+def OMP_DeclareTarget : Directive<"declare target"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_To>,
+    VersionedClause<OMPC_Link>
+  ];
+}
 def OMP_EndDeclareTarget : Directive<"end declare target"> {}
 def OMP_DistributeParallelFor : Directive<"distribute parallel for"> {
   let allowedClauses = [
@@ -1606,9 +1611,24 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
 def OMP_Workshare : Directive<"workshare"> {}
 def OMP_EndDo : Directive<"end do"> {}
 def OMP_EndDoSimd : Directive<"end do simd"> {}
-def OMP_EndSections : Directive<"end sections"> {}
-def OMP_EndSingle : Directive<"end single"> {}
-def OMP_EndWorkshare : Directive<"end workshare"> {}
+def OMP_EndSections : Directive<"end sections"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_EndSingle : Directive<"end single"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_CopyPrivate>
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_EndWorkshare : Directive<"end workshare"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;
 }

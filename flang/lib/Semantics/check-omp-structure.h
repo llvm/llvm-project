@@ -171,7 +171,8 @@ private:
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);
-
+  void CheckAllowedMapTypes(const parser::OmpMapType::Type &,
+      const std::list<parser::OmpMapType::Type> &);
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
 
