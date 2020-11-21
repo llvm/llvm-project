@@ -592,7 +592,7 @@ public:
 
     CallOp call = cast<CallOp>(op);
     rewriter.replaceOpWithNewOp<CallOp>(op, resultTypes, call.callee(),
-                                        call.getOperands());
+                                        operands);
 
     return success();
   }
@@ -733,7 +733,7 @@ public:
     // async API await function call.
     if (!isInCoroutine)
       rewriter.create<CallOp>(loc, TypeRange(), blockingAwaitFuncName,
-                              ValueRange(op->getOperand(0)));
+                              ValueRange(operands[0]));
 
     // Inside the coroutine we convert await operation into coroutine suspension
     // point, and resume execution asynchronously.
@@ -755,8 +755,8 @@ public:
 
       // Call async runtime API to resume a coroutine in the managed thread when
       // the async await argument becomes ready.
-      SmallVector<Value, 3> awaitAndExecuteArgs = {
-          await.getOperand(), coro.coroHandle, resumePtr.res()};
+      SmallVector<Value, 3> awaitAndExecuteArgs = {operands[0], coro.coroHandle,
+                                                   resumePtr.res()};
       builder.create<CallOp>(loc, TypeRange(), coroAwaitFuncName,
                              awaitAndExecuteArgs);
 
