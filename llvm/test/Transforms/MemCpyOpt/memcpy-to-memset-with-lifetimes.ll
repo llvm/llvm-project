@@ -5,7 +5,7 @@
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo([8 x i64]* noalias nocapture sret dereferenceable(64) %sret) {
+define void @foo([8 x i64]* noalias nocapture sret([8 x i64]) dereferenceable(64) %sret) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry-block:
 ; CHECK-NEXT:    [[SRET1:%.*]] = bitcast [8 x i64]* [[SRET:%.*]] to i8*
@@ -24,7 +24,7 @@ entry-block:
 
 }
 
-define void @bar([8 x i64]* noalias nocapture sret dereferenceable(64) %sret, [8 x i64]* noalias nocapture dereferenceable(64) %out) {
+define void @bar([8 x i64]* noalias nocapture sret([8 x i64]) dereferenceable(64) %sret, [8 x i64]* noalias nocapture dereferenceable(64) %out) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry-block:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i64], align 8

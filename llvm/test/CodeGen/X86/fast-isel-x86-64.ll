@@ -251,13 +251,13 @@ define void @test19(double* %p1) {
 define void @test20() nounwind ssp {
 entry:
   %tmp = alloca %struct.a, align 8
-  call void @test20sret(%struct.a* sret %tmp)
+  call void @test20sret(%struct.a* sret(%struct.a) %tmp)
   ret void
 ; CHECK-LABEL: test20:
 ; CHECK: movq %rsp, %rdi
 ; CHECK: callq _test20sret
 }
-declare void @test20sret(%struct.a* sret)
+declare void @test20sret(%struct.a* sret(%struct.a))
 
 ; Check that -0.0 is not materialized using xor
 define void @test21(double* %p1) {
@@ -292,7 +292,7 @@ entry:
 declare void @foo22(i32)
 
 ; PR13563
-define void @test23(i8* noalias sret %result) {
+define void @test23(i8* noalias sret(i8) %result) {
   %a = alloca i8
   %b = call i8* @foo23()
   ret void

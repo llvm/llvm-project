@@ -452,7 +452,7 @@ entry:
 ; rdar://7726868
 %struct.foo = type { [4 x i32] }
 
-define void @t15(%struct.foo* noalias sret %agg.result) nounwind  {
+define void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t15:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -482,11 +482,11 @@ define void @t15(%struct.foo* noalias sret %agg.result) nounwind  {
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @f(%struct.foo* noalias sret %agg.result) nounwind
+  tail call fastcc void @f(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
 
-declare void @f(%struct.foo* noalias sret) nounwind
+declare void @f(%struct.foo* noalias sret(%struct.foo)) nounwind
 
 define void @t16() nounwind ssp {
 ; X86-LABEL: t16:
@@ -627,7 +627,7 @@ entry:
 declare fastcc double @foo20(double) nounwind
 
 ; bug 28417
-define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret %agg.result) nounwind  {
+define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -656,11 +656,11 @@ define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret %agg.result) noun
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %agg.result) nounwind
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_alloca(%struct.foo* noalias sret %agg.result) nounwind  {
+define fastcc void @t21_sret_to_sret_alloca(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_alloca:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -697,11 +697,11 @@ define fastcc void @t21_sret_to_sret_alloca(%struct.foo* noalias sret %agg.resul
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
   %a = alloca %struct.foo, align 8
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %a) nounwind
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %a) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret %agg.result, i32 %a, i32 %b) nounwind  {
+define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -732,11 +732,11 @@ define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret %agg.re
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @f_sret(%struct.foo* noalias sret %agg.result, i32 %a, i32 %b) nounwind
+  tail call fastcc void @f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.result, %struct.foo* noalias sret %ret) nounwind  {
+define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.result, %struct.foo* noalias sret(%struct.foo) %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -768,11 +768,11 @@ define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.r
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %ret) nounwind
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret %agg.result, i32 %a, i32 %b) nounwind  {
+define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -810,12 +810,12 @@ define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret %agg.r
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @f_sret(%struct.foo* noalias sret %agg.result, i32 %b, i32 %a) nounwind
+  tail call fastcc void @f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %b, i32 %a) nounwind
   ret void
 }
 
 
-define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret %agg.result, %struct.foo* noalias %ret) nounwind  {
+define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret(%struct.foo) %agg.result, %struct.foo* noalias %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_args_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -847,11 +847,11 @@ define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret %ag
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %ret) nounwind
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret %agg.result, %struct.foo* noalias %ret) nounwind  {
+define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret(%struct.foo) %agg.result, %struct.foo* noalias %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_args_mismatch2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -883,11 +883,11 @@ define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret %a
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %ret) nounwind
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret %agg.result) nounwind  {
+define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_arg_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -923,11 +923,11 @@ define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret %agg
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
   %a = call fastcc %struct.foo* @ret_struct()
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %a) nounwind
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %a) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret %agg.result, %struct.foo* noalias %a) nounwind  {
+define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret(%struct.foo) %agg.result, %struct.foo* noalias %a) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_structs_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
@@ -979,14 +979,14 @@ define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret 
 ; X32-NEXT:    popq %rbp
 ; X32-NEXT:    retq
   %b = call fastcc %struct.foo* @ret_struct()
-  tail call fastcc void @t21_f_sret2(%struct.foo* noalias sret %a, %struct.foo* noalias %b) nounwind
+  tail call fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo) %a, %struct.foo* noalias %b) nounwind
   ret void
 }
 
 declare ccc %struct.foo* @ret_struct() nounwind
 
 
-define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret %agg.result) nounwind  {
+define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_non_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -1043,14 +1043,14 @@ define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
 ; X32-NEXT:    callq t22_f_sret
 ; X32-NEXT:    popq %rax
 ; X32-NEXT:    retq
-  tail call ccc void @t22_f_sret(%struct.foo* noalias sret %agg.result) nounwind
+  tail call ccc void @t22_f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
 
-declare fastcc void @t21_f_sret(%struct.foo* noalias sret) nounwind
-declare fastcc void @t21_f_sret2(%struct.foo* noalias sret, %struct.foo* noalias) nounwind
+declare fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
+declare fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo), %struct.foo* noalias) nounwind
 declare fastcc void @t21_f_non_sret(%struct.foo*) nounwind
 
-declare ccc void @t22_f_sret(%struct.foo* noalias sret) nounwind
+declare ccc void @t22_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
 
-declare ccc void @f_sret(%struct.foo* noalias sret, i32, i32) nounwind
+declare ccc void @f_sret(%struct.foo* noalias sret(%struct.foo), i32, i32) nounwind

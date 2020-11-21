@@ -15,7 +15,7 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 
 %class.b = type { i64 }
 
-declare void @D(%class.b* sret, %class.b* dereferenceable(32)) local_unnamed_addr
+declare void @D(%class.b* sret(%class.b), %class.b* dereferenceable(32)) local_unnamed_addr
 
 ; Function Attrs: nounwind
 define hidden fastcc void @H(%class.b* noalias nocapture readnone, [2 x i64]) unnamed_addr {
@@ -75,7 +75,7 @@ a.exit:
   unreachable
 
 ; <label>:31:
-  call void @D(%class.b* nonnull sret %3, %class.b* nonnull dereferenceable(32) undef)
+  call void @D(%class.b* nonnull sret(%class.b) %3, %class.b* nonnull dereferenceable(32) undef)
   br label %G.exit
 
 G.exit:

@@ -50,7 +50,7 @@
     call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %6) #3
     %7 = bitcast %"struct.e::f"* %tmp to i8*
     call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %7) #3
-    call void @_ZN1j1kEv(%"struct.e::f"* nonnull sret align 8 %tmp, %struct.j* nonnull %b)
+    call void @_ZN1j1kEv(%"struct.e::f"* nonnull sret(%"struct.e::f") align 8 %tmp, %struct.j* nonnull %b)
     call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %7) #3
     call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %6) #3
     call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %0) #3
@@ -67,7 +67,7 @@
   ; Function Attrs: argmemonly nounwind willreturn
   declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
 
-  declare void @_ZN1j1kEv(%"struct.e::f"* sret align 8, %struct.j*) local_unnamed_addr #2
+  declare void @_ZN1j1kEv(%"struct.e::f"* sret(%"struct.e::f") align 8, %struct.j*) local_unnamed_addr #2
 
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #3

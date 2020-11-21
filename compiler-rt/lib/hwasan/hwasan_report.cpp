@@ -43,12 +43,16 @@ class ScopedReport {
   }
 
   ~ScopedReport() {
+    void (*report_cb)(const char *);
     {
       BlockingMutexLock lock(&error_message_lock_);
-      if (fatal)
-        SetAbortMessage(error_message_.data());
+      report_cb = error_report_callback_;
       error_message_ptr_ = nullptr;
     }
+    if (report_cb)
+      report_cb(error_message_.data());
+    if (fatal)
+      SetAbortMessage(error_message_.data());
     if (common_flags()->print_module_map >= 2 ||
         (fatal && common_flags()->print_module_map))
       DumpProcessMap();
@@ -66,6 +70,12 @@ class ScopedReport {
     // overwrite old trailing '\0', keep new trailing '\0' untouched.
     internal_memcpy(&(*error_message_ptr_)[old_size - 1], msg, len);
   }
+
+  static void SetErrorReportCallback(void (*callback)(const char *)) {
+    BlockingMutexLock lock(&error_message_lock_);
+    error_report_callback_ = callback;
+  }
+
  private:
   ScopedErrorReportLock error_report_lock_;
   InternalMmapVector<char> error_message_;
@@ -73,10 +83,12 @@ class ScopedReport {
 
   static InternalMmapVector<char> *error_message_ptr_;
   static BlockingMutex error_message_lock_;
+  static void (*error_report_callback_)(const char *);
 };
 
 InternalMmapVector<char> *ScopedReport::error_message_ptr_;
 BlockingMutex ScopedReport::error_message_lock_;
+void (*ScopedReport::error_report_callback_)(const char *);
 
 // If there is an active ScopedReport, append to its error message.
 void AppendToErrorMessageBuffer(const char *buffer) {
@@ -650,3 +662,7 @@ void ReportRegisters(uptr *frame, uptr pc) {
 }
 
 }  // namespace __hwasan
+
+void __hwasan_set_error_report_callback(void (*callback)(const char *)) {
+  __hwasan::ScopedReport::SetErrorReportCallback(callback);
+}

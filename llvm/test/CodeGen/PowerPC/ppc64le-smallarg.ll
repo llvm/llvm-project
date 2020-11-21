@@ -13,7 +13,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 @gs = common global %struct.small_arg zeroinitializer, align 2
 @gf = common global float 0.000000e+00, align 4
 
-define void @callee1(%struct.small_arg* noalias nocapture sret %agg.result, %struct.large_arg* byval(%struct.large_arg) nocapture readnone %pad, %struct.small_arg* byval(%struct.small_arg) nocapture readonly %x) {
+define void @callee1(%struct.small_arg* noalias nocapture sret(%struct.small_arg) %agg.result, %struct.large_arg* byval(%struct.large_arg) nocapture readnone %pad, %struct.small_arg* byval(%struct.small_arg) nocapture readonly %x) {
 entry:
   %0 = bitcast %struct.small_arg* %x to i32*
   %1 = bitcast %struct.small_arg* %agg.result to i32*
@@ -28,7 +28,7 @@ entry:
 define void @caller1() {
 entry:
   %tmp = alloca %struct.small_arg, align 2
-  call void @test1(%struct.small_arg* sret %tmp, %struct.large_arg* byval(%struct.large_arg) @gl, %struct.small_arg* byval(%struct.small_arg) @gs)
+  call void @test1(%struct.small_arg* sret(%struct.small_arg) %tmp, %struct.large_arg* byval(%struct.large_arg) @gl, %struct.small_arg* byval(%struct.small_arg) @gs)
   ret void
 }
 ; CHECK: @caller1

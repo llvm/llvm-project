@@ -8,12 +8,12 @@
 
 #include "ILogbTest.h"
 
-#include "include/math.h"
 #include "src/math/ilogb.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 TEST_F(ILogbTest, SpecialNumbers_ilogb) {
   testSpecialNumbers<double>(&__llvm_libc::ilogb);

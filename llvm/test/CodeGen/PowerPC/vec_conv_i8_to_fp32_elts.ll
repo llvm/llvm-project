@@ -116,7 +116,7 @@ entry:
   ret <4 x float> %1
 }
 
-define void @test8elt(<8 x float>* noalias nocapture sret %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
+define void @test8elt(<8 x float>* noalias nocapture sret(<8 x float>) %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI2_0@toc@ha
@@ -178,7 +178,7 @@ entry:
   ret void
 }
 
-define void @test16elt(<16 x float>* noalias nocapture sret %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
+define void @test16elt(<16 x float>* noalias nocapture sret(<16 x float>) %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
@@ -384,7 +384,7 @@ entry:
   ret <4 x float> %1
 }
 
-define void @test8elt_signed(<8 x float>* noalias nocapture sret %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
+define void @test8elt_signed(<8 x float>* noalias nocapture sret(<8 x float>) %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI6_0@toc@ha
@@ -454,7 +454,7 @@ entry:
   ret void
 }
 
-define void @test16elt_signed(<16 x float>* noalias nocapture sret %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
+define void @test16elt_signed(<16 x float>* noalias nocapture sret(<16 x float>) %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI7_0@toc@ha

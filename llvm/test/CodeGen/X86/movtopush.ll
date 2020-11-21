@@ -415,7 +415,7 @@ entry:
   store i64 %1, i64* %agg.tmp, align 4
   %call = call x86_thiscallcc %struct.B* @B_ctor(%struct.B* %ref.tmp, %struct.A* byval(%struct.A) %tmpcast)
   %2 = getelementptr inbounds %struct.B, %struct.B* %tmp, i32 0, i32 0
-  call void @B_func(%struct.B* sret %tmp, %struct.B* %ref.tmp, i32 1)
+  call void @B_func(%struct.B* sret(%struct.B) %tmp, %struct.B* %ref.tmp, i32 1)
   ret void
 }
 

@@ -5,7 +5,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-define internal void @add({i32, i32}* %this, i32* sret %r) {
+define internal void @add({i32, i32}* %this, i32* sret(i32) %r) {
 ; CHECK-LABEL: define {{[^@]+}}@add
 ; CHECK-SAME: (i32 [[THIS_0_0_VAL:%.*]], i32 [[THIS_0_1_VAL:%.*]], i32* noalias [[R:%.*]])
 ; CHECK-NEXT:    [[AB:%.*]] = add i32 [[THIS_0_0_VAL]], [[THIS_0_1_VAL]]
@@ -35,6 +35,6 @@ define void @f() {
   %r = alloca i32
   %pair = alloca {i32, i32}
 
-  call void @add({i32, i32}* %pair, i32* sret %r)
+  call void @add({i32, i32}* %pair, i32* sret(i32) %r)
   ret void
 }

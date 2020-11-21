@@ -51,7 +51,7 @@ entry:
 
 ; Arguments > 16 bytes should be passed in X8.
 %struct.S3 = type { i32, i32, i32, i32, i32 }
-define dso_local void @"?f3"(%struct.S3* noalias sret %agg.result) {
+define dso_local void @"?f3"(%struct.S3* noalias sret(%struct.S3) %agg.result) {
 entry:
 ; CHECK-LABEL: f3
 ; CHECK: stp xzr, xzr, [x8]
@@ -73,7 +73,7 @@ entry:
 ; InReg arguments to non-instance methods must be passed in X0 and returns in
 ; X0.
 %class.B = type { i32 }
-define dso_local void @"?f4"(%class.B* inreg noalias nocapture sret %agg.result) {
+define dso_local void @"?f4"(%class.B* inreg noalias nocapture sret(%class.B) %agg.result) {
 entry:
 ; CHECK-LABEL: f4
 ; CHECK: mov w8, #1
@@ -87,7 +87,7 @@ entry:
 %class.C = type { i8 }
 %class.A = type { i8 }
 
-define dso_local void @"?inst@C"(%class.C* %this, %class.A* inreg noalias sret %agg.result) {
+define dso_local void @"?inst@C"(%class.C* %this, %class.A* inreg noalias sret(%class.A) %agg.result) {
 entry:
 ; CHECK-LABEL: inst@C
 ; CHECK: str x0, [sp, #8]

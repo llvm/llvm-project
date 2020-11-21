@@ -4,13 +4,13 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; Check that we don't try to tail-call with a non-forwarded sret parameter.
-declare void @test_explicit_sret(i1024* sret) #0
+declare void @test_explicit_sret(i1024* sret(i1024)) #0
 
 ; This is the only OK case, where we forward the explicit sret pointer.
 
 ; CHECK-LABEL: _test_tailcall_explicit_sret:
 ; CHECK-NEXT: b _test_explicit_sret
-define void @test_tailcall_explicit_sret(i1024* sret %arg) #0 {
+define void @test_tailcall_explicit_sret(i1024* sret(i1024) %arg) #0 {
   tail call void @test_explicit_sret(i1024* %arg)
   ret void
 }
@@ -19,7 +19,7 @@ define void @test_tailcall_explicit_sret(i1024* sret %arg) #0 {
 ; CHECK-NOT: mov  x8
 ; CHECK: bl _test_explicit_sret
 ; CHECK: ret
-define void @test_call_explicit_sret(i1024* sret %arg) #0 {
+define void @test_call_explicit_sret(i1024* sret(i1024) %arg) #0 {
   call void @test_explicit_sret(i1024* %arg)
   ret void
 }
@@ -82,7 +82,7 @@ define i1024 @test_tailcall_explicit_sret_alloca_returned() #0 {
 ; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
 ; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
-define void @test_indirect_tailcall_explicit_sret_nosret_arg(i1024* sret %arg, void (i1024*)* %f) #0 {
+define void @test_indirect_tailcall_explicit_sret_nosret_arg(i1024* sret(i1024) %arg, void (i1024*)* %f) #0 {
   %l = alloca i1024, align 8
   tail call void %f(i1024* %l)
   %r = load i1024, i1024* %l, align 8
@@ -97,7 +97,7 @@ define void @test_indirect_tailcall_explicit_sret_nosret_arg(i1024* sret %arg, v
 ; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
 ; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
-define void @test_indirect_tailcall_explicit_sret_(i1024* sret %arg, i1024 ()* %f) #0 {
+define void @test_indirect_tailcall_explicit_sret_(i1024* sret(i1024) %arg, i1024 ()* %f) #0 {
   %ret = tail call i1024 %f()
   store i1024 %ret, i1024* %arg, align 8
   ret void
