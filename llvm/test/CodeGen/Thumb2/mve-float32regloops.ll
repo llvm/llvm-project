@@ -1439,12 +1439,12 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrw.u32 q4, [r1, q0, uxtw #2]
 ; CHECK-NEXT:    vldrw.u32 q5, [r4, q0, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q3, [sp, #8]
 ; CHECK-NEXT:    adds r1, #8
 ; CHECK-NEXT:    vfma.f32 q5, q4, r5
+; CHECK-NEXT:    vfma.f32 q3, q5, q2
 ; CHECK-NEXT:    vstmia r7, {s20, s21}
 ; CHECK-NEXT:    adds r7, #8
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #8]
-; CHECK-NEXT:    vfma.f32 q3, q5, q2
 ; CHECK-NEXT:    vfma.f32 q3, q4, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r4]
 ; CHECK-NEXT:    le lr, .LBB17_3
