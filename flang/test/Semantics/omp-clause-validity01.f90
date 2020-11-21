@@ -62,7 +62,7 @@ use omp_lib
      a = 3.14
   enddo
   !$omp end parallel
-  
+
   !$omp task private(b) allocate(b)
   do i = 1, N
      z = 2
@@ -80,7 +80,7 @@ use omp_lib
      z = 2
   end do
   !$omp end target
- 
+
   !ERROR: ALLOCATE clause is not allowed on the TARGET DATA directive
   !$omp target data map(from: b) allocate(b)
   do i = 1, N
@@ -488,6 +488,11 @@ use omp_lib
   !$omp flush release
   !$omp flush acquire
   !$omp flush release (c)
+  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
+  !$omp flush seq_cst
+  !ERROR: RELAXED clause is not allowed on the FLUSH directive
+  !$omp flush relaxed
+
   !$omp cancel DO
   !$omp cancellation point parallel
 

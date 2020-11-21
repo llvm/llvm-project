@@ -302,18 +302,22 @@ TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
 TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(verbatim("CANCEL"_tok),
     Parser<OmpCancelType>{}, maybe("IF" >> parenthesized(scalarLogicalExpr)))))
 
-// 2.17.8 Flush construct [OpenMP 5.0]
-//        flush -> FLUSH [memory-order-clause] [(variable-name-list)]
-//        memory-order-clause -> acq_rel
+// 2.17.7 Atomtic construct/2.17.8 Flush construct [OpenMP 5.0]
+//        memory-order-clause ->
+//                               seq_cst
+//                               acq_rel
 //                               release
 //                               acquire
-TYPE_PARSER(sourced(construct<OmpFlushMemoryClause>(
-    "ACQ_REL" >> pure(llvm::omp::Clause::OMPC_acq_rel) ||
-    "RELEASE" >> pure(llvm::omp::Clause::OMPC_release) ||
-    "ACQUIRE" >> pure(llvm::omp::Clause::OMPC_acquire))))
+//                               relaxed
+TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
+    sourced("SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>()) ||
+        "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
+        "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
+        "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
+        "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>())))))
 
 TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
-    maybe(Parser<OmpFlushMemoryClause>{}),
+    maybe(Parser<OmpMemoryOrderClause>{}),
     maybe(parenthesized(Parser<OmpObjectList>{})))))
 
 // Simple Standalone Directives
