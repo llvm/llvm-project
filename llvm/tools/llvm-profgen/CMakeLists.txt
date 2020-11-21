@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   MCDisassembler
   Object
   Support
+  Symbolize
   )
 
 add_llvm_tool(llvm-profgen
