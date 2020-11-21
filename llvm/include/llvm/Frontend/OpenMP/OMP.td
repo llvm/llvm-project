@@ -200,7 +200,7 @@ def OMPC_NumTasks : Clause<"num_tasks"> {
 }
 def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
-  let flangClass = "ConstantExpr";
+  let flangClassValue = "ConstantExpr";
 }
 def OMPC_DistSchedule : Clause<"dist_schedule"> {
   let clangClass = "OMPDistScheduleClause";
