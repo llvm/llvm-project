@@ -154,7 +154,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 @__PRETTY_FUNCTION__._ZN4llvm7ErrorOrISt10unique_ptrINS_12MemoryBufferESt14default_deleteIS2_EEE10getStorageEv = private unnamed_addr constant [206 x i8] c"storage_type *llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer> > >::getStorage() [T = std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer> >]\00", align 1
 @_ZNSs4_Rep20_S_empty_rep_storageE = external global [0 x i64]
 
-declare void @_ZN4llvm12MemoryBuffer14getFileOrSTDINENS_9StringRefEl(%"class.llvm::ErrorOr"* sret, [2 x i64], i64) #1
+declare void @_ZN4llvm12MemoryBuffer14getFileOrSTDINENS_9StringRefEl(%"class.llvm::ErrorOr"* sret(%"class.llvm::ErrorOr"), [2 x i64], i64) #1
 
 declare void @_ZN4llvm16NamedRegionTimerC1ENS_9StringRefES1_b(%"struct.llvm::NamedRegionTimer"*, [2 x i64], [2 x i64], i1 zeroext) #1
 

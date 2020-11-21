@@ -53,7 +53,7 @@ declare hidden i32 @external_i32_func_i32(i32) #0
 ; Structs
 declare hidden void @external_void_func_struct_i8_i32({ i8, i32 }) #0
 declare hidden void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
-declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
+declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }), { i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
 
 declare hidden void @external_void_func_v16i8(<16 x i8>) #0
 

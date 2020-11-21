@@ -115,4 +115,4 @@ bb92:                                             ; preds = %bb2
   ret void
 }
 
-declare arm_aapcs_vfpcc void @bar(i8* noalias nocapture sret, [8 x i64]) nounwind uwtable inlinehint
+declare arm_aapcs_vfpcc void @bar(i8* noalias nocapture sret(i8), [8 x i64]) nounwind uwtable inlinehint

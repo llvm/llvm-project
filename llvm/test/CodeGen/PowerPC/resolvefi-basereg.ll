@@ -356,7 +356,7 @@ if.end:                                           ; preds = %if.then, %entry
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 
-declare void @check1998(%struct.S1998* sret, %struct.S1998* byval(%struct.S1998) align 16, %struct.S1998*, %struct.S1998* byval(%struct.S1998) align 16)
+declare void @check1998(%struct.S1998* sret(%struct.S1998), %struct.S1998* byval(%struct.S1998) align 16, %struct.S1998*, %struct.S1998* byval(%struct.S1998) align 16)
 declare void @check1998va(i32 signext, ...)
 declare void @checkx1998(%struct.S1998* byval(%struct.S1998) align 16 %arg)
 
