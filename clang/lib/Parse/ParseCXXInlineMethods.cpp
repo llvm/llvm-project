@@ -109,7 +109,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
   // or if we are about to parse function member template then consume
   // the tokens and store them for parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing &&
-      D.getFunctionDefinitionKind() == FDK_Definition &&
+      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Definition &&
       !D.getDeclSpec().hasConstexprSpecifier() &&
       !(FnD && FnD->getAsFunction() &&
         FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
