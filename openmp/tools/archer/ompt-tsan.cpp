@@ -135,59 +135,29 @@ void __attribute__((weak)) __tsan_flush_memory() {}
 #endif
 ArcherFlags *archer_flags;
 
-// The following definitions are pasted from "llvm/Support/Compiler.h" to allow
-// the code
-// to be compiled with other compilers like gcc:
-
 #ifndef TsanHappensBefore
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
 extern "C" {
 #if (defined __APPLE__ && defined __MACH__)
-static void AnnotateHappensAfter(const char *file, int line,
-                                 const volatile void *cv) {
-  void (*fptr)(const char *, int, const volatile void *);
+static void (*AnnotateHappensAfter)(const char *, int, const volatile void *);
+static void (*AnnotateHappensBefore)(const char *, int, const volatile void *);
+static void (*AnnotateIgnoreWritesBegin)(const char *, int);
+static void (*AnnotateIgnoreWritesEnd)(const char *, int);
+static void (*AnnotateNewMemory)(const char *, int, const volatile void *,
+                                 size_t);
+static void (*__tsan_func_entry)(const void *);
+static void (*__tsan_func_exit)(void);
 
-  fptr = (void (*)(const char *, int, const volatile void *))dlsym(
-      RTLD_DEFAULT, "AnnotateHappensAfter");
-  (*fptr)(file, line, cv);
-}
-static void AnnotateHappensBefore(const char *file, int line,
-                                  const volatile void *cv) {
-  void (*fptr)(const char *, int, const volatile void *);
-
-  fptr = (void (*)(const char *, int, const volatile void *))dlsym(
-      RTLD_DEFAULT, "AnnotateHappensBefore");
-  (*fptr)(file, line, cv);
-}
-static void AnnotateIgnoreWritesBegin(const char *file, int line) {
-  void (*fptr)(const char *, int);
-
-  fptr = (void (*)(const char *, int))dlsym(RTLD_DEFAULT,
-                                            "AnnotateIgnoreWritesBegin");
-  (*fptr)(file, line);
-}
-static void AnnotateIgnoreWritesEnd(const char *file, int line) {
-  void (*fptr)(const char *, int);
-
-  fptr = (void (*)(const char *, int))dlsym(RTLD_DEFAULT,
-                                            "AnnotateIgnoreWritesEnd");
-  (*fptr)(file, line);
-}
-static void AnnotateNewMemory(const char *file, int line,
-                              const volatile void *cv, size_t size) {
-  void (*fptr)(const char *, int, const volatile void *, size_t);
-
-  fptr = (void (*)(const char *, int, const volatile void *, size_t))dlsym(
-      RTLD_DEFAULT, "AnnotateNewMemory");
-  (*fptr)(file, line, cv, size);
-}
 static int RunningOnValgrind() {
   int (*fptr)();
 
   fptr = (int (*)())dlsym(RTLD_DEFAULT, "RunningOnValgrind");
-  if (fptr && fptr != RunningOnValgrind)
+  // If we found RunningOnValgrind other than this function, we assume
+  // Annotation functions present in this execution and leave runOnTsan=1
+  // otherwise we change to runOnTsan=0
+  if (!fptr || fptr == RunningOnValgrind)
     runOnTsan = 0;
   return 0;
 }
@@ -965,6 +935,26 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
     exit(1);
   }
 
+#if (defined __APPLE__ && defined __MACH__)
+#define findTsanFunction(f, fSig)                                              \
+  do {                                                                         \
+    if (NULL == (f = fSig dlsym(RTLD_DEFAULT, #f)))                            \
+      printf("Unable to find TSan function " #f ".\n");                        \
+  } while (0)
+
+  findTsanFunction(AnnotateHappensAfter,
+                   (void (*)(const char *, int, const volatile void *)));
+  findTsanFunction(AnnotateHappensBefore,
+                   (void (*)(const char *, int, const volatile void *)));
+  findTsanFunction(AnnotateIgnoreWritesBegin, (void (*)(const char *, int)));
+  findTsanFunction(AnnotateIgnoreWritesEnd, (void (*)(const char *, int)));
+  findTsanFunction(
+      AnnotateNewMemory,
+      (void (*)(const char *, int, const volatile void *, size_t)));
+  findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
+  findTsanFunction(__tsan_func_exit, (void (*)(void)));
+#endif
+
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
   SET_CALLBACK(parallel_begin);
@@ -988,6 +978,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
             "to avoid false positive reports from the OpenMP runtime!\n");
   if (archer_flags->ignore_serial)
     TsanIgnoreWritesBegin();
+
   return 1; // success
 }
 
@@ -1017,6 +1008,13 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
 
   static ompt_start_tool_result_t ompt_start_tool_result = {
       &ompt_tsan_initialize, &ompt_tsan_finalize, {0}};
+
+  // The OMPT start-up code uses dlopen with RTLD_LAZY. Therefore, we cannot
+  // rely on dlopen to fail if TSan is missing, but would get a runtime error
+  // for the first TSan call. We use RunningOnValgrind to detect whether
+  // an implementation of the Annotation interface is available in the
+  // execution or disable the tool (by returning NULL).
+
   runOnTsan = 1;
   RunningOnValgrind();
   if (!runOnTsan) // if we are not running on TSAN, give a different tool the
