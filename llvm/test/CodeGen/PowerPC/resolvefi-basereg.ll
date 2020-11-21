@@ -332,7 +332,7 @@ if.end:                                           ; preds = %if.then, %entry
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %62, i8* align 16 bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)
   %63 = bitcast %struct.S1998* %agg.tmp112 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %63, i8* align 16 bitcast (%struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 2) to i8*), i64 5168, i1 false)
-  call void @check1998(%struct.S1998* sret %agg.tmp, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp111, %struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 1), %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp112)
+  call void @check1998(%struct.S1998* sret(%struct.S1998) %agg.tmp, %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp111, %struct.S1998* getelementptr inbounds ([5 x %struct.S1998], [5 x %struct.S1998]* @a1998, i32 0, i64 1), %struct.S1998* byval(%struct.S1998) align 16 %agg.tmp112)
   call void @checkx1998(%struct.S1998* byval(%struct.S1998) align 16 %agg.tmp)
   %64 = bitcast %struct.S1998* %agg.tmp113 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %64, i8* align 16 bitcast (%struct.S1998* @s1998 to i8*), i64 5168, i1 false)

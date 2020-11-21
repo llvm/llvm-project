@@ -106,7 +106,7 @@ define [2 x i64] @return_struct() {
 ; to preserve value semantics) in x8. Strictly this only applies to
 ; structs larger than 16 bytes, but C semantics can still be provided
 ; if LLVM does it to %myStruct too. So this is the simplest check
-define void @return_large_struct(%myStruct* sret %retval) {
+define void @return_large_struct(%myStruct* sret(%myStruct) %retval) {
 ; CHECK-LABEL: return_large_struct:
     %addr0 = getelementptr %myStruct, %myStruct* %retval, i64 0, i32 0
     %addr1 = getelementptr %myStruct, %myStruct* %retval, i64 0, i32 1

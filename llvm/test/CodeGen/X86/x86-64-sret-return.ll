@@ -11,7 +11,7 @@
 ; X32ABI-LABEL: bar:
 ; X32ABI: movl %edi, %eax
 
-define void @bar(%struct.foo* noalias sret  %agg.result, %struct.foo* %d) nounwind  {
+define void @bar(%struct.foo* noalias sret(%struct.foo)  %agg.result, %struct.foo* %d) nounwind  {
 entry:
 	%d_addr = alloca %struct.foo*		; <%struct.foo**> [#uses=2]
 	%memtmp = alloca %struct.foo, align 8		; <%struct.foo*> [#uses=1]
@@ -67,7 +67,7 @@ return:		; preds = %entry
 ; X32ABI-LABEL: foo:
 ; X32ABI: movl %edi, %eax
 
-define void @foo({ i64 }* noalias nocapture sret %agg.result) nounwind {
+define void @foo({ i64 }* noalias nocapture sret({ i64 }) %agg.result) nounwind {
   store { i64 } { i64 0 }, { i64 }* %agg.result
   ret void
 }

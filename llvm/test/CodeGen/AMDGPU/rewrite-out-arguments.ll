@@ -108,11 +108,11 @@ define void @skip_store_gep(i32* %val) #0 {
   ret void
 }
 
-; CHECK-LABEL: define void @skip_sret(i32* sret %sret, i32* %out) #0 {
+; CHECK-LABEL: define void @skip_sret(i32* sret(i32) %sret, i32* %out) #0 {
 ; CHECK-NEXT: store
 ; CHECK-NEXT: store
 ; CHECK-NEXT: ret void
-define void @skip_sret(i32* sret %sret, i32* %out) #0 {
+define void @skip_sret(i32* sret(i32) %sret, i32* %out) #0 {
   store i32 1, i32* %sret
   store i32 0, i32* %out
   ret void

@@ -101,7 +101,7 @@ entry:
 }
 
 ; Function Attrs: uwtable
-define void @_ZN1B9AInstanceEv(%class.A* noalias sret %agg.result, %class.B* %this) #2 align 2 !dbg !53 {
+define void @_ZN1B9AInstanceEv(%class.A* noalias sret(%class.A) %agg.result, %class.B* %this) #2 align 2 !dbg !53 {
 entry:
   %this.addr = alloca %class.B*, align 8
   %nrvo = alloca i1
@@ -156,7 +156,7 @@ entry:
   call void @llvm.dbg.declare(metadata %class.B* %b, metadata !107, metadata !DIExpression()), !dbg !108
   call void @_ZN1BC2Ev(%class.B* %b), !dbg !108
   call void @llvm.dbg.declare(metadata i32* %return_val, metadata !109, metadata !DIExpression()), !dbg !110
-  call void @_ZN1B9AInstanceEv(%class.A* sret %temp.lvalue, %class.B* %b), !dbg !110
+  call void @_ZN1B9AInstanceEv(%class.A* sret(%class.A) %temp.lvalue, %class.B* %b), !dbg !110
   %call = invoke i32 @_ZN1A7get_intEv(%class.A* %temp.lvalue)
           to label %invoke.cont unwind label %lpad, !dbg !110
 
@@ -164,7 +164,7 @@ invoke.cont:                                      ; preds = %entry
   call void @_ZN1AD2Ev(%class.A* %temp.lvalue), !dbg !111
   store i32 %call, i32* %return_val, align 4, !dbg !111
   call void @llvm.dbg.declare(metadata %class.A* %a, metadata !113, metadata !DIExpression()), !dbg !114
-  call void @_ZN1B9AInstanceEv(%class.A* sret %a, %class.B* %b), !dbg !114
+  call void @_ZN1B9AInstanceEv(%class.A* sret(%class.A) %a, %class.B* %b), !dbg !114
   %0 = load i32, i32* %return_val, align 4, !dbg !115
   store i32 %0, i32* %retval, !dbg !115
   store i32 1, i32* %cleanup.dest.slot

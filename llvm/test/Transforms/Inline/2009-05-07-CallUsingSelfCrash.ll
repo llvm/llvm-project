@@ -4,7 +4,7 @@
 	%struct.S1 = type <{ i8, i8, i8, i8, %struct.S0 }>
 	%struct.S2 = type <{ %struct.S1, i32 }>
 
-define void @func_113(%struct.S1* noalias nocapture sret %agg.result, i8 signext %p_114) noreturn nounwind {
+define void @func_113(%struct.S1* noalias nocapture sret(%struct.S1) %agg.result, i8 signext %p_114) noreturn nounwind {
 entry:
 	unreachable
 

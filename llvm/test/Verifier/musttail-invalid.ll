@@ -53,10 +53,10 @@ define void @mismatched_inreg(i32 %a) {
   ret void
 }
 
-declare void @mismatched_sret_callee(i32* sret)
+declare void @mismatched_sret_callee(i32* sret(i32))
 define void @mismatched_sret(i32* %a) {
 ; CHECK: mismatched ABI impacting function attributes
-  musttail call void @mismatched_sret_callee(i32* sret %a)
+  musttail call void @mismatched_sret_callee(i32* sret(i32) %a)
   ret void
 }
 

@@ -28,7 +28,7 @@ entry:
 define void @caller1() {
 entry:
   %tmp = alloca %struct.small_arg, align 2
-  call void @test1(%struct.small_arg* sret %tmp, %struct.large_arg* byval(%struct.large_arg) @gl, %struct.small_arg* byval(%struct.small_arg) @gs)
+  call void @test1(%struct.small_arg* sret(%struct.small_arg) %tmp, %struct.large_arg* byval(%struct.large_arg) @gl, %struct.small_arg* byval(%struct.small_arg) @gs)
   ret void
 }
 ; CHECK: @caller1

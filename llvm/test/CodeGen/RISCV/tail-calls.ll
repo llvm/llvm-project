@@ -137,19 +137,19 @@ entry:
 %struct.A = type { i32 }
 @a = global %struct.A zeroinitializer
 
-declare void @callee_struct(%struct.A* sret %a)
+declare void @callee_struct(%struct.A* sret(%struct.A) %a)
 define void @caller_nostruct() nounwind {
 ; CHECK-LABEL: caller_nostruct
 ; CHECK-NOT: tail callee_struct
 ; CHECK: call callee_struct
 entry:
-  tail call void @callee_struct(%struct.A* sret @a)
+  tail call void @callee_struct(%struct.A* sret(%struct.A) @a)
   ret void
 }
 
 ; Do not tail call optimize if caller uses structret semantics.
 declare void @callee_nostruct()
-define void @caller_struct(%struct.A* sret %a) nounwind {
+define void @caller_struct(%struct.A* sret(%struct.A) %a) nounwind {
 ; CHECK-LABEL: caller_struct
 ; CHECK-NOT: tail callee_nostruct
 ; CHECK: call callee_nostruct

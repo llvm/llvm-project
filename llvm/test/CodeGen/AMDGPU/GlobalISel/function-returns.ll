@@ -1141,7 +1141,7 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
   ret { i8, i32 } %val
 }
 
-define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) #0 {
+define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }) %arg0) #0 {
   ; CHECK-LABEL: name: void_func_sret_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $sgpr30_sgpr31
@@ -1302,7 +1302,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ret { <3 x float>, i32 } %insert.4
 }
 
-define void @void_func_sret_max_known_zero_bits(i8 addrspace(5)* sret %arg0) #0 {
+define void @void_func_sret_max_known_zero_bits(i8 addrspace(5)* sret(i8) %arg0) #0 {
   ; CHECK-LABEL: name: void_func_sret_max_known_zero_bits
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $sgpr30_sgpr31

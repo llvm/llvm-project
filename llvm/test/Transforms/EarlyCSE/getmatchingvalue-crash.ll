@@ -54,7 +54,7 @@ b0:
   br label %b1
 
 b1:                                               ; preds = %b0
-  invoke void @f5(%s.10* nonnull sret align 8 undef, i8* nonnull undef)
+  invoke void @f5(%s.10* nonnull sret(%s.10) align 8 undef, i8* nonnull undef)
           to label %b6 unwind label %b3
 
 b2:                                               ; preds = %b2
@@ -84,7 +84,7 @@ b7:                                               ; preds = %b6
   br label %b20
 
 b8:                                               ; preds = %b6
-  invoke void @f2(%s.10* sret align 8 undef, %s.2* undef)
+  invoke void @f2(%s.10* sret(%s.10) align 8 undef, %s.2* undef)
           to label %b10 unwind label %b14
 
 b9:                                               ; No predecessors!
@@ -100,7 +100,7 @@ b11:                                              ; preds = %b10
   unreachable
 
 b12:                                              ; preds = %b10
-  invoke void @f3(%s.10* nonnull sret align 8 undef, i8* %a1, i32 %a2)
+  invoke void @f3(%s.10* nonnull sret(%s.10) align 8 undef, i8* %a1, i32 %a2)
           to label %b13 unwind label %b15
 
 b13:                                              ; preds = %b12
