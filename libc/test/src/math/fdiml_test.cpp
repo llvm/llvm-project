@@ -8,11 +8,11 @@
 
 #include "FDimTest.h"
 
-#include "include/math.h"
 #include "src/math/fdiml.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 using FDimTest = FDimTestTemplate<long double>;
 

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/math.h"
 #include "src/math/logbl.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
