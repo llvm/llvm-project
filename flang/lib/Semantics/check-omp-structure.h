@@ -185,6 +185,8 @@ private:
   void CheckDependList(const parser::DataRef &);
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
+
+  void CheckIsVarPartOfAnotherVar(const parser::OmpObjectList &objList);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
