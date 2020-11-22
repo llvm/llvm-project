@@ -26975,18 +26975,8 @@ static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
                        DAG.getNode(ISD::USUBSAT, DL, VT, N1, N0), N0);
   }
 
-  // Else, expand to a compare/select.
-  ISD::CondCode CC;
-  switch (Opcode) {
-  case ISD::SMIN: CC = ISD::CondCode::SETLT;  break;
-  case ISD::SMAX: CC = ISD::CondCode::SETGT;  break;
-  case ISD::UMIN: CC = ISD::CondCode::SETULT; break;
-  case ISD::UMAX: CC = ISD::CondCode::SETUGT; break;
-  default: llvm_unreachable("Unknown MINMAX opcode");
-  }
-
-  SDValue Cond = DAG.getSetCC(DL, VT, N0, N1, CC);
-  return DAG.getSelect(DL, VT, Cond, N0, N1);
+  // Default to expand.
+  return SDValue();
 }
 
 static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
