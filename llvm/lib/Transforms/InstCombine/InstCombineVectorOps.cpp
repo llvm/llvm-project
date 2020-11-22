@@ -2127,7 +2127,7 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
   uint64_t IdxC;
   if (match(V0, m_InsertElt(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
     // shuf (inselt X, ?, IdxC), ?, Mask --> shuf X, ?, Mask
-    if (none_of(Mask, [IdxC](int MaskElt) { return MaskElt == (int)IdxC; }))
+    if (!is_contained(Mask, (int)IdxC))
       return IC.replaceOperand(Shuf, 0, X);
   }
   if (match(V1, m_InsertElt(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
@@ -2135,7 +2135,7 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
     // accesses to the 2nd vector input of the shuffle.
     IdxC += NumElts;
     // shuf ?, (inselt X, ?, IdxC), Mask --> shuf ?, X, Mask
-    if (none_of(Mask, [IdxC](int MaskElt) { return MaskElt == (int)IdxC; }))
+    if (!is_contained(Mask, (int)IdxC))
       return IC.replaceOperand(Shuf, 1, X);
   }
 
