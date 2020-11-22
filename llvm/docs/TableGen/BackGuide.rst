@@ -336,13 +336,10 @@ The class provides the following additional functions.
 The ``CodeInit`` class is a subclass of ``TypedInit``. Its instances
 represent arbitrary-length strings produced from ``code`` literals in the
 TableGen files. It includes a data member that contains a ``StringRef`` of
-the value. It also includes a data member specifying the source code
-location of the code string.
+the value.
 
 The class provides the usual ``get()`` and ``getValue()`` functions. The
 latter function returns the ``StringRef``.
-
-The ``getLoc()`` function returns the source code location.
 
 
 ``DagInit``
