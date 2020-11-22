@@ -1,7 +1,7 @@
 include(GetLibraryName)
 
 if(LLVM_ENABLE_LIBXML2)
-  set(imported_libs LibXml2::LibXml2)
+  find_package(LibXml2 REQUIRED)
 endif()
 
 add_llvm_component_library(LLVMWindowsManifest
