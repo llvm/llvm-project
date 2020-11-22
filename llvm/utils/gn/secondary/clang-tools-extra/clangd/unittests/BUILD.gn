@@ -82,6 +82,7 @@ unittest("ClangdTests") {
     "PathMappingTests.cpp",
     "PreambleTests.cpp",
     "PrintASTTests.cpp",
+    "ProjectAwareIndexTests.cpp",
     "QualityTests.cpp",
     "RIFFTests.cpp",
     "RenameTests.cpp",
