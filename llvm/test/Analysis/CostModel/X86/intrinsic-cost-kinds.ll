@@ -177,8 +177,8 @@ define void @constrained_fadd(float %a, <16 x float> %va) {
 
 define void @fmaximum(float %a, float %b, <16 x float> %va, <16 x float> %vb) {
 ; THRU-LABEL: 'fmaximum'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 196 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'fmaximum'
@@ -192,8 +192,8 @@ define void @fmaximum(float %a, float %b, <16 x float> %va, <16 x float> %vb) {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'fmaximum'
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %s = call float @llvm.maximum.f32(float %a, float %b)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 196 for instruction: %v = call <16 x float> @llvm.maximum.v16f32(<16 x float> %va, <16 x float> %vb)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s = call float @llvm.maximum.f32(float %a, float %b)
