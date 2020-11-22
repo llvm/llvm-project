@@ -20,9 +20,10 @@
 
 #include <elf.h>
 #include <libelf.h>
+#include "elf_common.h"
 
 // Check whether an image is valid for execution on target_id
-static inline int32_t elf_check_machine(__tgt_device_image *image,
+int32_t elf_check_machine(__tgt_device_image *image,
     uint16_t target_id) {
 
   // Is the library version incompatible with the header file?
@@ -110,7 +111,7 @@ static inline int32_t elf_is_dynamic(__tgt_device_image *image) {
   return Type == ET_DYN;
 }
 
-static inline uint32_t elf_flags(__tgt_device_image *image) {
+uint32_t elf_e_flags(__tgt_device_image *image) {
 
   char *img_begin = (char *)image->ImageStart;
   char *img_end = (char *)image->ImageEnd;
