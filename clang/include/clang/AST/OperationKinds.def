@@ -77,9 +77,10 @@ CAST_OPERATION(LValueToRValueBitCast)
 CAST_OPERATION(LValueToRValue)
 
 /// CK_NoOp - A conversion which does not affect the type other than
-/// (possibly) adding qualifiers.
+/// (possibly) adding qualifiers or removing noexcept.
 ///   int    -> int
 ///   char** -> const char * const *
+///   void () noexcept -> void ()
 CAST_OPERATION(NoOp)
 
 /// CK_BaseToDerived - A conversion from a C++ class pointer/reference
