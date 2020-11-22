@@ -157,6 +157,7 @@ struct FragmentCompiler {
     compile(std::move(F.If));
     compile(std::move(F.CompileFlags));
     compile(std::move(F.Index));
+    compile(std::move(F.ClangTidy));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -261,6 +262,49 @@ struct FragmentCompiler {
             C.Style.FullyQualifiedNamespaces.begin(),
             FullyQualifiedNamespaces.begin(), FullyQualifiedNamespaces.end());
       });
+    }
+  }
+
+  void appendTidyCheckSpec(std::string &CurSpec,
+                           const Located<std::string> &Arg, bool IsPositive) {
+    StringRef Str = *Arg;
+    // Don't support negating here, its handled if the item is in the Add or
+    // Remove list.
+    if (Str.startswith("-") || Str.contains(',')) {
+      diag(Error, "Invalid clang-tidy check name", Arg.Range);
+      return;
+    }
+    CurSpec += ',';
+    if (!IsPositive)
+      CurSpec += '-';
+    CurSpec += Str;
+  }
+
+  void compile(Fragment::ClangTidyBlock &&F) {
+    std::string Checks;
+    for (auto &CheckGlob : F.Add)
+      appendTidyCheckSpec(Checks, CheckGlob, true);
+
+    for (auto &CheckGlob : F.Remove)
+      appendTidyCheckSpec(Checks, CheckGlob, false);
+
+    if (!Checks.empty())
+      Out.Apply.push_back(
+          [Checks = std::move(Checks)](const Params &, Config &C) {
+            C.ClangTidy.Checks.append(
+                Checks, C.ClangTidy.Checks.empty() ? /*skip comma*/ 1 : 0);
+          });
+    if (!F.CheckOptions.empty()) {
+      std::vector<std::pair<std::string, std::string>> CheckOptions;
+      for (auto &Opt : F.CheckOptions)
+        CheckOptions.emplace_back(std::move(*Opt.first),
+                                  std::move(*Opt.second));
+      Out.Apply.push_back(
+          [CheckOptions = std::move(CheckOptions)](const Params &, Config &C) {
+            for (auto &StringPair : CheckOptions)
+              C.ClangTidy.CheckOptions.insert_or_assign(StringPair.first,
+                                                        StringPair.second);
+          });
     }
   }
 

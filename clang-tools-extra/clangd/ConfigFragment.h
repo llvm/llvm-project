@@ -174,6 +174,29 @@ struct Fragment {
     std::vector<Located<std::string>> FullyQualifiedNamespaces;
   };
   StyleBlock Style;
+
+  /// Controls how clang-tidy will run over the code base.
+  ///
+  /// The settings are merged with any settings found in .clang-tidy
+  /// configiration files with these ones taking precedence.
+  struct ClangTidyBlock {
+    std::vector<Located<std::string>> Add;
+    /// List of checks to disable.
+    /// Takes precedence over Add. To enable all llvm checks except include
+    /// order:
+    ///   Add: llvm-*
+    ///   Remove: llvm-include-onder
+    std::vector<Located<std::string>> Remove;
+
+    /// A Key-Value pair list of options to pass to clang-tidy checks
+    /// These take precedence over options specified in clang-tidy configuration
+    /// files. Example:
+    ///   CheckOptions:
+    ///     readability-braces-around-statements.ShortStatementLines: 2
+    std::vector<std::pair<Located<std::string>, Located<std::string>>>
+        CheckOptions;
+  };
+  ClangTidyBlock ClangTidy;
 };
 
 } // namespace config
