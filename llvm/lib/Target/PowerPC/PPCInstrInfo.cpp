@@ -3231,18 +3231,64 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   return false;
 }
 
-bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
-                                 MachineInstr **ToErase) const {
+// This function tries to combine two RLWINMs. We not only perform such
+// optimization in SSA, but also after RA, since some RLWINM is generated after
+// RA.
+bool PPCInstrInfo::simplifyRotateAndMaskInstr(MachineInstr &MI,
+                                              MachineInstr *&ToErase) const {
+  bool Is64Bit = false;
+  switch (MI.getOpcode()) {
+  case PPC::RLWINM:
+  case PPC::RLWINM_rec:
+    break;
+  case PPC::RLWINM8:
+  case PPC::RLWINM8_rec:
+    Is64Bit = true;
+    break;
+  default:
+    return false;
+  }
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
-  unsigned FoldingReg = MI.getOperand(1).getReg();
-  if (!Register::isVirtualRegister(FoldingReg))
+  Register FoldingReg = MI.getOperand(1).getReg();
+  MachineInstr *SrcMI = nullptr;
+  bool CanErase = false;
+  bool OtherIntermediateUse = true;
+  if (MRI->isSSA()) {
+    if (!Register::isVirtualRegister(FoldingReg))
+      return false;
+    SrcMI = MRI->getVRegDef(FoldingReg);
+  } else {
+    SrcMI = getDefMIPostRA(FoldingReg, MI, OtherIntermediateUse);
+  }
+  if (!SrcMI)
     return false;
-  MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
-  if (SrcMI->getOpcode() != PPC::RLWINM &&
-      SrcMI->getOpcode() != PPC::RLWINM_rec &&
-      SrcMI->getOpcode() != PPC::RLWINM8 &&
-      SrcMI->getOpcode() != PPC::RLWINM8_rec)
+  // TODO: The pairs of RLWINM8(RLWINM) or RLWINM(RLWINM8) never occur before
+  // RA, but after RA. And We can fold RLWINM8(RLWINM) -> RLWINM8, or
+  // RLWINM(RLWINM8) -> RLWINM.
+  switch (SrcMI->getOpcode()) {
+  case PPC::RLWINM:
+  case PPC::RLWINM_rec:
+    if (Is64Bit)
+      return false;
+    break;
+  case PPC::RLWINM8:
+  case PPC::RLWINM8_rec:
+    if (!Is64Bit)
+      return false;
+    break;
+  default:
     return false;
+  }
+  if (MRI->isSSA()) {
+    CanErase = !SrcMI->hasImplicitDef() && MRI->hasOneNonDBGUse(FoldingReg);
+  } else {
+    CanErase = !OtherIntermediateUse && MI.getOperand(1).isKill() &&
+               !SrcMI->hasImplicitDef();
+    // In post-RA, if SrcMI also defines the register to be forwarded, we can
+    // only do the folding if SrcMI is going to be erased.
+    if (!CanErase && SrcMI->definesRegister(SrcMI->getOperand(1).getReg()))
+      return false;
+  }
   assert((MI.getOperand(2).isImm() && MI.getOperand(3).isImm() &&
           MI.getOperand(4).isImm() && SrcMI->getOperand(2).isImm() &&
           SrcMI->getOperand(3).isImm() && SrcMI->getOperand(4).isImm()) &&
@@ -3253,7 +3299,6 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   uint64_t MBMI = MI.getOperand(3).getImm();
   uint64_t MESrc = SrcMI->getOperand(4).getImm();
   uint64_t MEMI = MI.getOperand(4).getImm();
-
   assert((MEMI < 32 && MESrc < 32 && MBMI < 32 && MBSrc < 32) &&
          "Invalid PPC::RLWINM Instruction!");
   // If MBMI is bigger than MEMI, we always can not get run of ones.
@@ -3297,8 +3342,6 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
 
   // If final mask is 0, MI result should be 0 too.
   if (FinalMask.isNullValue()) {
-    bool Is64Bit =
-        (MI.getOpcode() == PPC::RLWINM8 || MI.getOpcode() == PPC::RLWINM8_rec);
     Simplified = true;
     LLVM_DEBUG(dbgs() << "Replace Instr: ");
     LLVM_DEBUG(MI.dump());
@@ -3356,12 +3399,10 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
     LLVM_DEBUG(dbgs() << "To: ");
     LLVM_DEBUG(MI.dump());
   }
-  if (Simplified & MRI->use_nodbg_empty(FoldingReg) &&
-      !SrcMI->hasImplicitDef()) {
-    // If FoldingReg has no non-debug use and it has no implicit def (it
-    // is not RLWINMO or RLWINM8o), it's safe to delete its def SrcMI.
-    // Otherwise keep it.
-    *ToErase = SrcMI;
+  if (Simplified && CanErase) {
+    // If SrcMI has no implicit def, and FoldingReg has no non-debug use or
+    // its flag is "killed", it's safe to delete SrcMI. Otherwise keep it.
+    ToErase = SrcMI;
     LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
     LLVM_DEBUG(SrcMI->dump());
   }
