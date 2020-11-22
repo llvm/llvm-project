@@ -1785,7 +1785,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // memory locations. We have already ensured that BasicAA has a MayAlias
   // cache result for these, so any recursion back into BasicAA won't loop.
   AliasResult Result = getBestAAResults().alias(Locs.first, Locs.second, AAQI);
-  return AAQI.updateResult(Locs, Result);
+  if (Result != MayAlias)
+    return AAQI.updateResult(Locs, Result);
+
+  // MayAlias is already in the cache.
+  return MayAlias;
 }
 
 /// Check whether two Values can be considered equivalent.

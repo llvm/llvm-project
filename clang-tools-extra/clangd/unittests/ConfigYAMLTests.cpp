@@ -10,6 +10,7 @@
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
 #include "Protocol.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
@@ -140,6 +141,25 @@ horrible
               ElementsAre(DiagMessage("If should be a dictionary"),
                           DiagMessage("Config should be a dictionary")));
   ASSERT_THAT(Results, IsEmpty());
+}
+
+TEST(ParseYAML, ExternalBlock) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Index:
+  External:
+    File: "foo"
+    Server: ^"bar"
+    MountPoint: "baz"
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_EQ(Results.size(), 1u);
+  ASSERT_TRUE(Results[0].Index.External);
+  EXPECT_THAT(*Results[0].Index.External.getValue()->File, Val("foo"));
+  EXPECT_THAT(*Results[0].Index.External.getValue()->MountPoint, Val("baz"));
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(*Results[0].Index.External.getValue()->Server, Val("bar"));
 }
 
 } // namespace

@@ -27,11 +27,19 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "ConfigProvider.h"
+#include "Features.inc"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
@@ -100,6 +108,27 @@ struct FragmentCompiler {
       return llvm::None;
     }
     return Result;
+  }
+
+  llvm::Optional<std::string> makeAbsolute(Located<std::string> Path,
+                                           llvm::StringLiteral Description,
+                                           llvm::sys::path::Style Style) {
+    if (llvm::sys::path::is_absolute(*Path))
+      return *Path;
+    if (FragmentDirectory.empty()) {
+      diag(Error,
+           llvm::formatv(
+               "{0} must be an absolute path, because this fragment is not "
+               "associated with any directory.",
+               Description)
+               .str(),
+           Path.Range);
+      return llvm::None;
+    }
+    llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
+    llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);
+    llvm::sys::path::native(AbsPath, Style);
+    return AbsPath.str().str();
   }
 
   // Helper with similar API to StringSwitch, for parsing enum values.
@@ -243,6 +272,59 @@ struct FragmentCompiler {
         Out.Apply.push_back(
             [Val](const Params &, Config &C) { C.Index.Background = *Val; });
     }
+    if (F.External)
+      compile(std::move(**F.External), F.External->Range);
+  }
+
+  void compile(Fragment::IndexBlock::ExternalBlock &&External,
+               llvm::SMRange BlockRange) {
+#ifndef CLANGD_ENABLE_REMOTE
+    if (External.Server) {
+      diag(Error, "Clangd isn't compiled with remote index support, ignoring "
+                  "Server." External.Server->Range);
+      External.Server.reset();
+    }
+#endif
+    // Make sure exactly one of the Sources is set.
+    unsigned SourceCount =
+        External.File.hasValue() + External.Server.hasValue();
+    if (SourceCount != 1) {
+      diag(Error, "Exactly one of File or Server must be set.", BlockRange);
+      return;
+    }
+    Config::ExternalIndexSpec Spec;
+    if (External.Server) {
+      Spec.Kind = Config::ExternalIndexSpec::Server;
+      Spec.Location = std::move(**External.Server);
+    } else if (External.File) {
+      Spec.Kind = Config::ExternalIndexSpec::File;
+      auto AbsPath = makeAbsolute(std::move(*External.File), "File",
+                                  llvm::sys::path::Style::native);
+      if (!AbsPath)
+        return;
+      Spec.Location = std::move(*AbsPath);
+    }
+    // Make sure MountPoint is an absolute path with forward slashes.
+    if (!External.MountPoint)
+      External.MountPoint.emplace(FragmentDirectory);
+    if ((**External.MountPoint).empty()) {
+      diag(Error, "A mountpoint is required.", BlockRange);
+      return;
+    }
+    auto AbsPath = makeAbsolute(std::move(*External.MountPoint), "MountPoint",
+                                llvm::sys::path::Style::posix);
+    if (!AbsPath)
+      return;
+    Spec.MountPoint = std::move(*AbsPath);
+    Out.Apply.push_back([Spec(std::move(Spec))](const Params &P, Config &C) {
+      if (!P.Path.startswith(Spec.MountPoint))
+        return;
+      C.Index.External = Spec;
+      // Disable background indexing for the files under the mountpoint.
+      // Note that this will overwrite statements in any previous fragments
+      // (including the current one).
+      C.Index.Background = Config::BackgroundPolicy::Skip;
+    });
   }
 
   void compile(Fragment::StyleBlock &&F) {
