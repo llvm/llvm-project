@@ -9,9 +9,13 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
+#include "Features.inc"
 #include "TestFS.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -20,6 +24,8 @@ namespace clang {
 namespace clangd {
 namespace config {
 namespace {
+using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
@@ -196,6 +202,104 @@ TEST_F(ConfigCompileTests, Tidy) {
             "0");
 }
 
+TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
+  Fragment::IndexBlock::ExternalBlock External;
+  External.File.emplace("");
+  External.Server.emplace("");
+  Frag.Index.External = std::move(External);
+  compileAndApply();
+  llvm::StringLiteral ExpectedDiag =
+#ifdef CLANGD_ENABLE_REMOTE
+      "Exactly one of File or Server must be set.";
+#else
+      "Clangd isn't compiled with remote index support, ignoring Server.";
+#endif
+  EXPECT_THAT(Diags.Diagnostics,
+              Contains(AllOf(DiagMessage(ExpectedDiag),
+                             DiagKind(llvm::SourceMgr::DK_Error))));
+}
+
+TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
+  Frag.Index.External.emplace(Fragment::IndexBlock::ExternalBlock{});
+  compileAndApply();
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      Contains(AllOf(DiagMessage("Exactly one of File or Server must be set."),
+                     DiagKind(llvm::SourceMgr::DK_Error))));
+}
+
+TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
+  Parm.Path = "/foo/bar/baz.h";
+  Frag.Index.Background.emplace("Build");
+  Fragment::IndexBlock::ExternalBlock External;
+  External.File.emplace("/foo");
+  External.MountPoint.emplace("/foo/bar");
+  Frag.Index.External = std::move(External);
+  compileAndApply();
+  EXPECT_EQ(Conf.Index.Background, Config::BackgroundPolicy::Skip);
+}
+
+TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
+  auto GetFrag = [](llvm::StringRef Directory,
+                    llvm::Optional<const char *> MountPoint) {
+    Fragment Frag;
+    Frag.Source.Directory = Directory.str();
+    Fragment::IndexBlock::ExternalBlock External;
+    External.File.emplace("/foo");
+    if (MountPoint)
+      External.MountPoint.emplace(*MountPoint);
+    Frag.Index.External = std::move(External);
+    return Frag;
+  };
+
+  Parm.Path = "/foo/bar.h";
+  // Non-absolute MountPoint without a directory raises an error.
+  Frag = GetFrag("", "foo");
+  compileAndApply();
+  ASSERT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(
+          AllOf(DiagMessage("MountPoint must be an absolute path, because this "
+                            "fragment is not associated with any directory."),
+                DiagKind(llvm::SourceMgr::DK_Error))));
+  ASSERT_FALSE(Conf.Index.External);
+
+  // Ok when relative.
+  Frag = GetFrag("/", "foo");
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_TRUE(Conf.Index.External);
+  EXPECT_THAT(Conf.Index.External->MountPoint, "/foo");
+
+  // None defaults to ".".
+  Frag = GetFrag("/", llvm::None);
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_TRUE(Conf.Index.External);
+  EXPECT_THAT(Conf.Index.External->MountPoint, "/");
+
+  // Without a file, external index is empty.
+  Parm.Path = "";
+  Frag = GetFrag("", "/foo");
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_FALSE(Conf.Index.External);
+
+  // File outside MountPoint, no index.
+  Parm.Path = "/bar/baz.h";
+  Frag = GetFrag("", "/foo");
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_FALSE(Conf.Index.External);
+
+  // File under MountPoint, index should be set.
+  Parm.Path = "/foo/baz.h";
+  Frag = GetFrag("", "/foo");
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_TRUE(Conf.Index.External);
+  EXPECT_THAT(Conf.Index.External->MountPoint, "/foo");
+}
 } // namespace
 } // namespace config
 } // namespace clangd
