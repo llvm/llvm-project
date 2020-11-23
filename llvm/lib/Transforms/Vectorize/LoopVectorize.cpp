@@ -2661,7 +2661,12 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
   for (unsigned op = 0, e = User.getNumOperands(); op != e; ++op) {
-    auto *NewOp = State.get(User.getOperand(op), Instance);
+    auto *Operand = dyn_cast<Instruction>(Instr->getOperand(op));
+    auto InputInstance = Instance;
+    if (!Operand || !OrigLoop->contains(Operand) ||
+        (Cost->isUniformAfterVectorization(Operand, State.VF)))
+      InputInstance.Lane = 0;
+    auto *NewOp = State.get(User.getOperand(op), InputInstance);
     Cloned->setOperand(op, NewOp);
   }
   addNewMetadata(Cloned, Instr);
@@ -5031,6 +5036,11 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // replicating region where only a single instance out of VF should be formed.
   // TODO: optimize such seldom cases if found important, see PR40816.
   auto addToWorklistIfAllowed = [&](Instruction *I) -> void {
+    if (isOutOfScope(I)) {
+      LLVM_DEBUG(dbgs() << "LV: Found not uniform due to scope: "
+                        << *I << "\n");
+      return;
+    }
     if (isScalarWithPredication(I, VF)) {
       LLVM_DEBUG(dbgs() << "LV: Found not uniform being ScalarWithPredication: "
                         << *I << "\n");
@@ -5051,15 +5061,24 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // are pointers that are treated like consecutive pointers during
   // vectorization. The pointer operands of interleaved accesses are an
   // example.
-  SmallSetVector<Instruction *, 8> ConsecutiveLikePtrs;
+  SmallSetVector<Value *, 8> ConsecutiveLikePtrs;
 
   // Holds pointer operands of instructions that are possibly non-uniform.
-  SmallPtrSet<Instruction *, 8> PossibleNonUniformPtrs;
+  SmallPtrSet<Value *, 8> PossibleNonUniformPtrs;
 
   auto isUniformDecision = [&](Instruction *I, ElementCount VF) {
     InstWidening WideningDecision = getWideningDecision(I, VF);
     assert(WideningDecision != CM_Unknown &&
            "Widening decision should be ready at this moment");
+
+    // The address of a uniform mem op is itself uniform.  We exclude stores
+    // here as there's an assumption in the current code that all uses of
+    // uniform instructions are uniform and, as noted below, uniform stores are
+    // still handled via replication (i.e. aren't uniform after vectorization).
+    if (isa<LoadInst>(I) && Legal->isUniformMemOp(*I)) {
+      assert(WideningDecision == CM_Scalarize);
+      return true;
+    }
 
     return (WideningDecision == CM_Widen ||
             WideningDecision == CM_Widen_Reverse ||
@@ -5076,9 +5095,20 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       // If there's no pointer operand, there's nothing to do.
-      auto *Ptr = dyn_cast_or_null<Instruction>(getLoadStorePointerOperand(&I));
+      auto *Ptr = getLoadStorePointerOperand(&I);
       if (!Ptr)
         continue;
+
+      // For now, avoid walking use lists in other functions.
+      // TODO: Rewrite this algorithm from uses up.
+      if (!isa<Instruction>(Ptr) && !isa<Argument>(Ptr))
+        continue;
+
+      // A uniform memory op is itself uniform.  We exclude stores here as we
+      // haven't yet added dedicated logic in the CLONE path and rely on
+      // REPLICATE + DSE for correctness.
+      if (isa<LoadInst>(I) && Legal->isUniformMemOp(I))
+        addToWorklistIfAllowed(&I);
 
       // True if all users of Ptr are memory accesses that have Ptr as their
       // pointer operand.
@@ -5105,7 +5135,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // aren't also identified as possibly non-uniform.
   for (auto *V : ConsecutiveLikePtrs)
     if (!PossibleNonUniformPtrs.count(V))
-      addToWorklistIfAllowed(V);
+      if (auto *I = dyn_cast<Instruction>(V))
+        addToWorklistIfAllowed(I);
 
   // Expand Worklist in topological order: whenever a new instruction
   // is added , its users should be already inside Worklist.  It ensures
@@ -6228,6 +6259,8 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
 unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                          ElementCount VF) {
+  assert(Legal->isUniformMemOp(*I));
+
   Type *ValTy = getMemInstValueType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
