@@ -1233,9 +1233,6 @@ AliasResult BasicAAResult::aliasGEP(
       !DecompGEP2.HasCompileTimeConstantScale)
     return MayAlias;
 
-  APInt GEP1BaseOffset = DecompGEP1.Offset;
-  APInt GEP2BaseOffset = DecompGEP2.Offset;
-
   assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
          "DecomposeGEPExpression returned a result different from "
          "getUnderlyingObject");
@@ -1260,7 +1257,7 @@ AliasResult BasicAAResult::aliasGEP(
 
     // For GEPs with identical offsets, we can preserve the size and AAInfo
     // when performing the alias check on the underlying objects.
-    if (BaseAlias == MayAlias && GEP1BaseOffset == GEP2BaseOffset &&
+    if (BaseAlias == MayAlias && DecompGEP1.Offset == DecompGEP2.Offset &&
         DecompGEP1.VarIndices == DecompGEP2.VarIndices) {
       AliasResult PreciseBaseAlias = aliasCheck(
           UnderlyingV1, V1Size, V1AAInfo, UnderlyingV2, V2Size, V2AAInfo, AAQI);
@@ -1292,7 +1289,7 @@ AliasResult BasicAAResult::aliasGEP(
 
     // Subtract the GEP2 pointer from the GEP1 pointer to find out their
     // symbolic difference.
-    GEP1BaseOffset -= GEP2BaseOffset;
+    DecompGEP1.Offset -= DecompGEP2.Offset;
     GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
 
   } else {
@@ -1324,17 +1321,17 @@ AliasResult BasicAAResult::aliasGEP(
   //
   // In the other case, if we have getelementptr <ptr>, 0, 0, 0, 0, ... and V2
   // must aliases the GEP, the end result is a must alias also.
-  if (GEP1BaseOffset == 0 && DecompGEP1.VarIndices.empty())
+  if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
     return MustAlias;
 
   // If there is a constant difference between the pointers, but the difference
   // is less than the size of the associated memory object, then we know
   // that the objects are partially overlapping.  If the difference is
   // greater, we know they do not overlap.
-  if (GEP1BaseOffset != 0 && DecompGEP1.VarIndices.empty()) {
-    if (GEP1BaseOffset.sge(0)) {
+  if (DecompGEP1.Offset != 0 && DecompGEP1.VarIndices.empty()) {
+    if (DecompGEP1.Offset.sge(0)) {
       if (V2Size.hasValue()) {
-        if (GEP1BaseOffset.ult(V2Size.getValue()))
+        if (DecompGEP1.Offset.ult(V2Size.getValue()))
           return PartialAlias;
         return NoAlias;
       }
@@ -1348,7 +1345,7 @@ AliasResult BasicAAResult::aliasGEP(
       // We need to know that V2Size is not unknown, otherwise we might have
       // stripped a gep with negative index ('gep <ptr>, -1, ...).
       if (V1Size.hasValue() && V2Size.hasValue()) {
-        if ((-GEP1BaseOffset).ult(V1Size.getValue()))
+        if ((-DecompGEP1.Offset).ult(V1Size.getValue()))
           return PartialAlias;
         return NoAlias;
       }
@@ -1357,8 +1354,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   if (!DecompGEP1.VarIndices.empty()) {
     APInt GCD;
-    bool AllNonNegative = GEP1BaseOffset.isNonNegative();
-    bool AllNonPositive = GEP1BaseOffset.isNonPositive();
+    bool AllNonNegative = DecompGEP1.Offset.isNonNegative();
+    bool AllNonPositive = DecompGEP1.Offset.isNonPositive();
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
       const APInt &Scale = DecompGEP1.VarIndices[i].Scale;
       if (i == 0)
@@ -1391,12 +1388,12 @@ AliasResult BasicAAResult::aliasGEP(
     }
 
     // We now have accesses at two offsets from the same base:
-    //  1. (...)*GCD + GEP1BaseOffset with size V1Size
+    //  1. (...)*GCD + DecompGEP1.Offset with size V1Size
     //  2. 0 with size V2Size
     // Using arithmetic modulo GCD, the accesses are at
     // [ModOffset..ModOffset+V1Size) and [0..V2Size). If the first access fits
     // into the range [V2Size..GCD), then we know they cannot overlap.
-    APInt ModOffset = GEP1BaseOffset.srem(GCD);
+    APInt ModOffset = DecompGEP1.Offset.srem(GCD);
     if (ModOffset.isNegative())
       ModOffset += GCD; // We want mod, not rem.
     if (V1Size.hasValue() && V2Size.hasValue() &&
@@ -1405,22 +1402,22 @@ AliasResult BasicAAResult::aliasGEP(
       return NoAlias;
 
     // If we know all the variables are non-negative, then the total offset is
-    // also non-negative and >= GEP1BaseOffset. We have the following layout:
+    // also non-negative and >= DecompGEP1.Offset. We have the following layout:
     // [0, V2Size) ... [TotalOffset, TotalOffer+V1Size]
-    // If GEP1BaseOffset >= V2Size, the accesses don't alias.
+    // If DecompGEP1.Offset >= V2Size, the accesses don't alias.
     if (AllNonNegative && V2Size.hasValue() &&
-        GEP1BaseOffset.uge(V2Size.getValue()))
+        DecompGEP1.Offset.uge(V2Size.getValue()))
       return NoAlias;
     // Similarly, if the variables are non-positive, then the total offset is
-    // also non-positive and <= GEP1BaseOffset. We have the following layout:
+    // also non-positive and <= DecompGEP1.Offset. We have the following layout:
     // [TotalOffset, TotalOffset+V1Size) ... [0, V2Size)
-    // If -GEP1BaseOffset >= V1Size, the accesses don't alias.
+    // If -DecompGEP1.Offset >= V1Size, the accesses don't alias.
     if (AllNonPositive && V1Size.hasValue() &&
-        (-GEP1BaseOffset).uge(V1Size.getValue()))
+        (-DecompGEP1.Offset).uge(V1Size.getValue()))
       return NoAlias;
 
     if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
-                                GEP1BaseOffset, &AC, DT))
+                                DecompGEP1.Offset, &AC, DT))
       return NoAlias;
   }
 
