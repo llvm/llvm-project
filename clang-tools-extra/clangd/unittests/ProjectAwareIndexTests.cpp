@@ -27,9 +27,9 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 
 std::unique_ptr<SymbolIndex> createIndex() {
-  std::vector<Symbol> Symbols = {symbol("1")};
-  return std::make_unique<MemIndex>(std::move(Symbols), RefSlab(),
-                                    RelationSlab());
+  SymbolSlab::Builder Builder;
+  Builder.insert(symbol("1"));
+  return MemIndex::build(std::move(Builder).build(), RefSlab(), RelationSlab());
 }
 
 TEST(ProjectAware, Test) {
