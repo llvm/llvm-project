@@ -124,6 +124,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-readobj
     llvm-symbolizer
     opt
+    split-file
     yaml2obj
     )
 
