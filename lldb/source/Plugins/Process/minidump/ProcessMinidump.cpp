@@ -200,8 +200,9 @@ const char *ProcessMinidump::GetPluginDescriptionStatic() {
 
 lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
                                                 lldb::ListenerSP listener_sp,
-                                                const FileSpec *crash_file) {
-  if (!crash_file)
+                                                const FileSpec *crash_file,
+                                                bool can_connect) {
+  if (!crash_file || can_connect)
     return nullptr;
 
   lldb::ProcessSP process_sp;

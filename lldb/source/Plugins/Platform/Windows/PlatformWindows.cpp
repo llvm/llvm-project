@@ -341,7 +341,8 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return Attach(attach_info, debugger, target, error);
   } else {
     ProcessSP process_sp = target->CreateProcess(
-        launch_info.GetListener(), launch_info.GetProcessPluginName(), nullptr);
+        launch_info.GetListener(), launch_info.GetProcessPluginName(), nullptr,
+        false);
 
     // We need to launch and attach to the process.
     launch_info.GetFlags().Set(eLaunchFlagDebug);
@@ -383,7 +384,7 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
 
   const char *plugin_name = attach_info.GetProcessPluginName();
   process_sp = target->CreateProcess(
-      attach_info.GetListenerForProcess(debugger), plugin_name, nullptr);
+      attach_info.GetListenerForProcess(debugger), plugin_name, nullptr, false);
 
   process_sp->HijackProcessEvents(attach_info.GetHijackListener());
   if (process_sp)

@@ -615,7 +615,8 @@ public:
   // used.
   const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener_sp,
                                        llvm::StringRef plugin_name,
-                                       const FileSpec *crash_file);
+                                       const FileSpec *crash_file,
+                                       bool can_connect);
 
   const lldb::ProcessSP &GetProcessSP() const;
 
