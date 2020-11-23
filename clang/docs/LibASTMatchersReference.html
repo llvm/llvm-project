@@ -5567,7 +5567,7 @@ Given
       int i = 3.0;
   }
 The matcher
-  traverse(TK_IgnoreImplicitCastsAndParentheses,
+  traverse(TK_IgnoreUnlessSpelledInSource,
     varDecl(hasInitializer(floatLiteral().bind("init")))
   )
 matches the variable declaration with "init" bound to the "3.0".

@@ -253,6 +253,10 @@ public:
   /// Retrieve ranges that can be used to fold code within the specified file.
   void foldingRanges(StringRef File, Callback<std::vector<FoldingRange>> CB);
 
+  /// Retrieve implementations for virtual method.
+  void findImplementations(PathRef File, Position Pos,
+                           Callback<std::vector<LocatedSymbol>> CB);
+
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
                       Callback<ReferencesResult> CB);

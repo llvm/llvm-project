@@ -40,10 +40,6 @@ enum TraversalKind {
   /// Will traverse all child nodes.
   TK_AsIs,
 
-  /// Will not traverse implicit casts and parentheses.
-  /// Corresponds to Expr::IgnoreParenImpCasts()
-  TK_IgnoreImplicitCastsAndParentheses,
-
   /// Ignore AST nodes not written in the source
   TK_IgnoreUnlessSpelledInSource
 };
@@ -542,8 +538,6 @@ using ASTNodeKind = ::clang::ASTNodeKind;
 using TraversalKind = ::clang::TraversalKind;
 
 constexpr TraversalKind TK_AsIs = ::clang::TK_AsIs;
-constexpr TraversalKind TK_IgnoreImplicitCastsAndParentheses =
-    ::clang::TK_IgnoreImplicitCastsAndParentheses;
 constexpr TraversalKind TK_IgnoreUnlessSpelledInSource =
     ::clang::TK_IgnoreUnlessSpelledInSource;
 } // namespace ast_type_traits

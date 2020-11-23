@@ -1873,8 +1873,8 @@ void foo()
   auto Matcher = varDecl(hasInitializer(floatLiteral()));
 
   EXPECT_TRUE(notMatches(VarDeclCode, traverse(TK_AsIs, Matcher)));
-  EXPECT_TRUE(matches(VarDeclCode,
-                      traverse(TK_IgnoreImplicitCastsAndParentheses, Matcher)));
+  EXPECT_TRUE(
+      matches(VarDeclCode, traverse(TK_IgnoreUnlessSpelledInSource, Matcher)));
 
   auto ParentMatcher = floatLiteral(hasParent(varDecl(hasName("i"))));
 
@@ -2715,14 +2715,14 @@ void foo()
 )cpp";
 
   EXPECT_TRUE(
-      matches(Code, traverse(TK_IgnoreImplicitCastsAndParentheses,
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              callExpr(has(callExpr(traverse(
                                  TK_AsIs, callExpr(has(implicitCastExpr(
                                               has(floatLiteral())))))))))));
 
   EXPECT_TRUE(matches(
       Code,
-      traverse(TK_IgnoreImplicitCastsAndParentheses,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                traverse(TK_AsIs, implicitCastExpr(has(floatLiteral()))))));
 }
 
@@ -2738,8 +2738,7 @@ void constructImplicit() {
 }
   )cpp";
 
-  auto Matcher =
-      traverse(TK_IgnoreImplicitCastsAndParentheses, implicitCastExpr());
+  auto Matcher = traverse(TK_IgnoreUnlessSpelledInSource, implicitCastExpr());
 
   // Verfiy that it does not segfault
   EXPECT_FALSE(matches(Code, Matcher));
@@ -2766,7 +2765,7 @@ void foo()
   EXPECT_TRUE(matches(
       Code,
       functionDecl(anyOf(hasDescendant(Matcher),
-                         traverse(TK_IgnoreImplicitCastsAndParentheses,
+                         traverse(TK_IgnoreUnlessSpelledInSource,
                                   functionDecl(hasDescendant(Matcher)))))));
 }
 
@@ -3368,6 +3367,38 @@ TEST(ForEach, BindsRecursiveCombinations) {
     recordDecl(hasName("C"),
                forEach(recordDecl(forEach(fieldDecl().bind("f"))))),
     std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 4)));
+}
+
+TEST(ForEach, DoesNotIgnoreImplicit) {
+  StringRef Code = R"cpp(
+void foo()
+{
+    int i = 0;
+    int b = 4;
+    i < b;
+}
+)cpp";
+  EXPECT_TRUE(matchAndVerifyResultFalse(
+      Code, binaryOperator(forEach(declRefExpr().bind("dre"))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 0)));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code,
+      binaryOperator(forEach(
+          implicitCastExpr(hasSourceExpression(declRefExpr().bind("dre"))))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 2)));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code,
+      binaryOperator(
+          forEach(expr(ignoringImplicit(declRefExpr().bind("dre"))))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 2)));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               binaryOperator(forEach(declRefExpr().bind("dre")))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 2)));
 }
 
 TEST(ForEachDescendant, BindsOneNode) {

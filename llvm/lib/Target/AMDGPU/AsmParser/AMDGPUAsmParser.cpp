@@ -1396,8 +1396,8 @@ private:
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
-  bool validateConstantBusLimitations(const MCInst &Inst);
-  bool validateEarlyClobberLimitations(const MCInst &Inst);
+  bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
+  bool validateEarlyClobberLimitations(const MCInst &Inst, const OperandVector &Operands);
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
@@ -1410,7 +1410,7 @@ private:
   bool validateOpSel(const MCInst &Inst);
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOP3Literal(const MCInst &Inst, const OperandVector &Operands);
-  bool validateMAIAccWrite(const MCInst &Inst);
+  bool validateMAIAccWrite(const MCInst &Inst, const OperandVector &Operands);
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
@@ -3062,9 +3062,12 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   }
 }
 
-bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
+bool
+AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst,
+                                                const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
+  unsigned LastSGPR = AMDGPU::NoRegister;
   unsigned ConstantBusUseCount = 0;
   unsigned NumLiterals = 0;
   unsigned LiteralSize;
@@ -3098,15 +3101,15 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
       const MCOperand &MO = Inst.getOperand(OpIdx);
       if (usesConstantBus(Inst, OpIdx)) {
         if (MO.isReg()) {
-          const unsigned Reg = mc2PseudoReg(MO.getReg());
+          LastSGPR = mc2PseudoReg(MO.getReg());
           // Pairs of registers with a partial intersections like these
           //   s0, s[0:1]
           //   flat_scratch_lo, flat_scratch
           //   flat_scratch_lo, flat_scratch_hi
           // are theoretically valid but they are disabled anyway.
           // Note that this code mimics SIInstrInfo::verifyInstruction
-          if (!SGPRsUsed.count(Reg)) {
-            SGPRsUsed.insert(Reg);
+          if (!SGPRsUsed.count(LastSGPR)) {
+            SGPRsUsed.insert(LastSGPR);
             ++ConstantBusUseCount;
           }
         } else { // Expression or a literal
@@ -3138,10 +3141,19 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
   }
   ConstantBusUseCount += NumLiterals;
 
-  return ConstantBusUseCount <= getConstantBusLimit(Opcode);
+  if (ConstantBusUseCount <= getConstantBusLimit(Opcode))
+    return true;
+
+  SMLoc LitLoc = getLitLoc(Operands);
+  SMLoc RegLoc = getRegLoc(LastSGPR, Operands);
+  SMLoc Loc = (LitLoc.getPointer() < RegLoc.getPointer()) ? RegLoc : LitLoc;
+  Error(Loc, "invalid operand (violates constant bus restrictions)");
+  return false;
 }
 
-bool AMDGPUAsmParser::validateEarlyClobberLimitations(const MCInst &Inst) {
+bool
+AMDGPUAsmParser::validateEarlyClobberLimitations(const MCInst &Inst,
+                                                 const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
 
@@ -3170,6 +3182,8 @@ bool AMDGPUAsmParser::validateEarlyClobberLimitations(const MCInst &Inst) {
     if (Src.isReg()) {
       const unsigned SrcReg = mc2PseudoReg(Src.getReg());
       if (isRegIntersect(DstReg, SrcReg, TRI)) {
+        Error(getRegLoc(SrcReg, Operands),
+          "destination must be different than all sources");
         return false;
       }
     }
@@ -3343,7 +3357,8 @@ bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst) {
   return !isSGPR(mc2PseudoReg(Reg), TRI);
 }
 
-bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst,
+                                          const OperandVector &Operands) {
 
   const unsigned Opc = Inst.getOpcode();
 
@@ -3357,10 +3372,11 @@ bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst) {
   if (!Src0.isReg())
     return true;
 
-  auto Reg = Src0.getReg();
+  auto Reg = mc2PseudoReg(Src0.getReg());
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  if (isSGPR(mc2PseudoReg(Reg), TRI)) {
-    Error(getLoc(), "source operand must be either a VGPR or an inline constant");
+  if (isSGPR(Reg, TRI)) {
+    Error(getRegLoc(Reg, Operands),
+          "source operand must be either a VGPR or an inline constant");
     return false;
   }
 
@@ -3837,14 +3853,10 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateVOP3Literal(Inst, Operands)) {
     return false;
   }
-  if (!validateConstantBusLimitations(Inst)) {
-    Error(IDLoc,
-      "invalid operand (violates constant bus restrictions)");
+  if (!validateConstantBusLimitations(Inst, Operands)) {
     return false;
   }
-  if (!validateEarlyClobberLimitations(Inst)) {
-    Error(IDLoc,
-      "destination must be different than all sources");
+  if (!validateEarlyClobberLimitations(Inst, Operands)) {
     return false;
   }
   if (!validateIntClampSupported(Inst)) {
@@ -3897,7 +3909,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateSMEMOffset(Inst, Operands)) {
     return false;
   }
-  if (!validateMAIAccWrite(Inst)) {
+  if (!validateMAIAccWrite(Inst, Operands)) {
     return false;
   }
   if (!validateDivScale(Inst)) {
