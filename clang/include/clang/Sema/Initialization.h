@@ -840,6 +840,9 @@ public:
     /// Perform a qualification conversion, producing an lvalue.
     SK_QualificationConversionLValue,
 
+    /// Perform a function reference conversion, see [dcl.init.ref]p4.
+    SK_FunctionReferenceConversion,
+
     /// Perform a conversion adding _Atomic to a type.
     SK_AtomicConversion,
 
@@ -1287,6 +1290,10 @@ public:
   /// given type.
   void AddQualificationConversionStep(QualType Ty,
                                      ExprValueKind Category);
+
+  /// Add a new step that performs a function reference conversion to the
+  /// given type.
+  void AddFunctionReferenceConversionStep(QualType Ty);
 
   /// Add a new step that performs conversion from non-atomic to atomic
   /// type.
