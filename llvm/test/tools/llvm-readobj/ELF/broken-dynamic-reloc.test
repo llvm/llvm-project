@@ -49,11 +49,16 @@ ProgramHeaders:
     LastSec:  .dynamic
 
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELASZ entry.
-# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0xFF -DTAG2=DT_RELAENT %s -o %t2
-# RUN: llvm-readobj --dyn-relocations %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=INVALID-DT-RELASZ
-# RUN: llvm-readelf --dyn-relocations %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=INVALID-DT-RELASZ
 
-# INVALID-DT-RELASZ: warning: '[[FILE]]': invalid DT_RELASZ value (0xff) or DT_RELAENT value (0x18)
+## Case A: the size of a single relocation entry is 0x18. In this case 0xFF % 0x18 != 0 and we report a warning
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0xFF -DTAG2=DT_RELAENT %s -o %t2a
+# RUN: llvm-readobj --dyn-relocations %t2a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2a --check-prefix=INVALID-DT-RELASZ1 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t2a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2a --check-prefix=INVALID-DT-RELASZ1 --implicit-check-not=warning:
+
+# INVALID-DT-RELASZ1: warning: '[[FILE]]': invalid DT_RELASZ value (0xff) or DT_RELAENT value (0x18)
 
 --- !ELF
 FileHeader:
@@ -80,19 +85,42 @@ ProgramHeaders:
     FirstSec: .relx.dyn
     LastSec:  .dynamic
 
+## Case B: the DT_RELASZ has value of 0x251, what is too large, because the relocation table goes past the EOF.
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0x251 -DTAG2=DT_RELAENT %s -o %t2b
+# RUN: llvm-readobj --dyn-relocations %t2b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2b --check-prefix=INVALID-DT-RELASZ2 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t2b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2b --check-prefix=INVALID-DT-RELASZ2 --implicit-check-not=warning:
+
+# INVALID-DT-RELASZ2: warning: '[[FILE]]': unable to read data at 0x78 of size 0x251 (DT_RELASZ value): it goes past the end of the file of size 0x2c8
+
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELAENT entry.
 # RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG2=DT_RELAENT -DTAG2VAL=0xFF %s -o %t3
-# RUN: llvm-readobj --dyn-relocations %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT
-# RUN: llvm-readelf --dyn-relocations %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT
+# RUN: llvm-readobj --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT --implicit-check-not=warning:
 
 ## INVALID-DT-RELAENT: warning: '[[FILE]]': invalid DT_RELASZ value (0x18) or DT_RELAENT value (0xff)
 
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELSZ entry.
-# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG1VAL=0xFF -DTAG2=DT_RELENT %s -o %t4
-# RUN: llvm-readobj --dyn-relocations %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=INVALID-DT-RELSZ
-# RUN: llvm-readelf --dyn-relocations %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=INVALID-DT-RELSZ
 
-## INVALID-DT-RELSZ: warning: '[[FILE]]': invalid DT_RELSZ value (0xff) or DT_RELENT value (0x18)
+## Case A: the size of a single relocation entry is 0x18. In this case 0xFF % 0x18 != 0 and we report a warning.
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG1VAL=0xFF -DTAG2=DT_RELENT %s -o %t4a
+# RUN: llvm-readobj --dyn-relocations %t4a 2>&1 | FileCheck %s -DFILE=%t4a --check-prefix=INVALID-DT-RELSZ1
+# RUN: llvm-readelf --dyn-relocations %t4a 2>&1 | FileCheck %s -DFILE=%t4a --check-prefix=INVALID-DT-RELSZ1
+
+## INVALID-DT-RELSZ1: warning: '[[FILE]]': invalid DT_RELSZ value (0xff) or DT_RELENT value (0x18)
+
+## Case B: the DT_RELSZ has value of 0x251, what is too large, because the relocation table goes past the EOF.
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG1VAL=0x251 -DTAG2=DT_RELENT %s -o %t4b
+# RUN: llvm-readobj --dyn-relocations %t4b 2>&1 | FileCheck %s -DFILE=%t4b --check-prefix=INVALID-DT-RELSZ2
+# RUN: llvm-readelf --dyn-relocations %t4b 2>&1 | FileCheck %s -DFILE=%t4b --check-prefix=INVALID-DT-RELSZ2
+
+# INVALID-DT-RELSZ2: warning: '[[FILE]]': unable to read data at 0x78 of size 0x251 (DT_RELSZ value): it goes past the end of the file of size 0x2c8
 
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELENT entry.
 # RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG2=DT_RELENT -DTAG2VAL=0xFF %s -o %t5
@@ -126,11 +154,16 @@ ProgramHeaders:
 
 ## Show we print a warning for an invalid value of DT_PLTRELSZ, which describes the total size
 ## of the relocation entries associated with the procedure linkage table.
-# RUN: yaml2obj --docnum=3 %s -o %t10
-# RUN: llvm-readobj --dyn-relocations %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=INVALID-DT-PLTRELSZ
-# RUN: llvm-readelf --dyn-relocations %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=INVALID-DT-PLTRELSZ
 
-# INVALID-DT-PLTRELSZ: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0xff){{$}}
+## Case A: the size of a single relocation entry is 0x18. In this case 0xFF % 0x18 != 0 and we report a warning.
+
+# RUN: yaml2obj --docnum=3 -DVAL=0xFF %s -o %t10a
+# RUN: llvm-readobj --dyn-relocations %t10a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10a --check-prefix=INVALID-DT-PLTRELSZ1 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t10a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10a --check-prefix=INVALID-DT-PLTRELSZ1 --implicit-check-not=warning:
+
+# INVALID-DT-PLTRELSZ1: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0xff){{$}}
 
 --- !ELF
 FileHeader:
@@ -149,7 +182,7 @@ Sections:
       - Tag:   DT_JMPREL
         Value: 0x0
       - Tag:   DT_PLTRELSZ
-        Value: 0xFF ## The valid value would be 0x18.
+        Value: [[VAL]] ## The valid value would be 0x18.
       - Tag:   DT_PLTREL
         Value: 0x7 ## DT_RELA
       - Tag:   DT_NULL
@@ -159,6 +192,22 @@ ProgramHeaders:
   - Type:     PT_LOAD
     FirstSec: .rela.plt
     LastSec:  .dynamic
+
+## Case B: the DT_PLTRELSZ (PLT size) has value of 0x269, what is too large, because PLT goes past the EOF.
+
+# RUN: yaml2obj --docnum=3 -DVAL=0x269 %s -o %t10b
+# RUN: llvm-readobj --dyn-relocations %t10b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10b --check-prefix=INVALID-DT-PLTRELSZ2-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t10b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10b --check-prefix=INVALID-DT-PLTRELSZ2-GNU --implicit-check-not=warning:
+
+# INVALID-DT-PLTRELSZ2-LLVM:      Dynamic Relocations {
+# INVALID-DT-PLTRELSZ2-LLVM-NEXT: warning: '[[FILE]]': unable to read data at 0x78 of size 0x269 (DT_PLTRELSZ value): it goes past the end of the file of size 0x2e0
+# INVALID-DT-PLTRELSZ2-LLVM-NEXT: }
+
+# INVALID-DT-PLTRELSZ2-GNU:      'PLT' relocation section at offset 0x78 contains 617 bytes:
+# INVALID-DT-PLTRELSZ2-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# INVALID-DT-PLTRELSZ2-GNU-NEXT: warning: '[[FILE]]': unable to read data at 0x78 of size 0x269 (DT_PLTRELSZ value): it goes past the end of the file of size 0x2e0
 
 ## Show we print a warning when dumping dynamic relocations if there is no dynamic symbol table.
 # RUN: yaml2obj --docnum=4 %s -o %t11
