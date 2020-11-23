@@ -292,7 +292,8 @@ struct FragmentCompiler {
       Out.Apply.push_back(
           [Checks = std::move(Checks)](const Params &, Config &C) {
             C.ClangTidy.Checks.append(
-                Checks, C.ClangTidy.Checks.empty() ? /*skip comma*/ 1 : 0);
+                Checks, C.ClangTidy.Checks.empty() ? /*skip comma*/ 1 : 0,
+                std::string::npos);
           });
     if (!F.CheckOptions.empty()) {
       std::vector<std::pair<std::string, std::string>> CheckOptions;
