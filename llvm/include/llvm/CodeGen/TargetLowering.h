@@ -4438,6 +4438,10 @@ public:
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
                                   SDValue Index) const;
 
+  /// Method for building the DAG expansion of ISD::[US][MIN|MAX]. This
+  /// method accepts integers as its arguments.
+  SDValue expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
   SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;
