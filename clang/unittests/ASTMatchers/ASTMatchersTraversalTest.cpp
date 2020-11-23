@@ -3370,6 +3370,38 @@ TEST(ForEach, BindsRecursiveCombinations) {
     std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 4)));
 }
 
+TEST(ForEach, DoesNotIgnoreImplicit) {
+  StringRef Code = R"cpp(
+void foo()
+{
+    int i = 0;
+    int b = 4;
+    i < b;
+}
+)cpp";
+  EXPECT_TRUE(matchAndVerifyResultFalse(
+      Code, binaryOperator(forEach(declRefExpr().bind("dre"))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 0)));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code,
+      binaryOperator(forEach(
+          implicitCastExpr(hasSourceExpression(declRefExpr().bind("dre"))))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 2)));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code,
+      binaryOperator(
+          forEach(expr(ignoringImplicit(declRefExpr().bind("dre"))))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 2)));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               binaryOperator(forEach(declRefExpr().bind("dre")))),
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("dre", 2)));
+}
+
 TEST(ForEachDescendant, BindsOneNode) {
   EXPECT_TRUE(matchAndVerifyResultTrue("class C { class D { int x; }; };",
                                        recordDecl(hasName("C"),
