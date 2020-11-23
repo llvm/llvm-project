@@ -1697,7 +1697,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // If the prologue didn't contain any SEH opcodes and didn't set the
     // MF.hasWinCFI() flag, assume the epilogue won't either, and skip the
     // EpilogStart - to avoid generating CFI for functions that don't need it.
-    // (And as we didn't generate any prologue at all, it would be assymetrical
+    // (And as we didn't generate any prologue at all, it would be asymmetrical
     // to the epilogue.) By the end of the function, we assert that
     // HasWinCFI is equal to MF.hasWinCFI(), to verify this assumption.
     HasWinCFI = true;
