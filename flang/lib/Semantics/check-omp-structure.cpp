@@ -372,8 +372,6 @@ CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
-CHECK_SIMPLE_CLAUSE(Private, OMPC_private)
-CHECK_SIMPLE_CLAUSE(Shared, OMPC_shared)
 CHECK_SIMPLE_CLAUSE(To, OMPC_to)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
@@ -412,6 +410,37 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_shared);
+  CheckIsVarPartOfAnotherVar(x.v);
+}
+void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_private);
+  CheckIsVarPartOfAnotherVar(x.v);
+}
+
+void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
+    const parser::OmpObjectList &objList) {
+
+  for (const auto &ompObject : objList.v) {
+    std::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (std::get_if<parser::DataRef>(&designator.u)) {
+                if ((parser::Unwrap<parser::StructureComponent>(ompObject)) ||
+                    (parser::Unwrap<parser::ArrayElement>(ompObject))) {
+                  context_.Say(GetContext().clauseSource,
+                      "A variable that is part of another variable (as an "
+                      "array or structure element)"
+                      " cannot appear in a PRIVATE or SHARED clause."_err_en_US);
+                }
+              }
+            },
+            [&](const parser::Name &name) {},
+        },
+        ompObject.u);
+  }
+}
 // Following clauses have a seperate node in parse-tree.h.
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAllocateClause, OMPC_allocate)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpDefaultClause, OMPC_default)
