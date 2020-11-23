@@ -34,13 +34,13 @@ public:
 
   ~POSIXLimboStopInfo();
 
-  lldb::StopReason GetStopReason() const;
+  lldb::StopReason GetStopReason() const override;
 
-  const char *GetDescription();
+  const char *GetDescription() override;
 
-  bool ShouldStop(lldb_private::Event *event_ptr);
+  bool ShouldStop(lldb_private::Event *event_ptr) override;
 
-  bool ShouldNotify(lldb_private::Event *event_ptr);
+  bool ShouldNotify(lldb_private::Event *event_ptr) override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -54,13 +54,13 @@ public:
 
   ~POSIXNewThreadStopInfo();
 
-  lldb::StopReason GetStopReason() const;
+  lldb::StopReason GetStopReason() const override;
 
-  const char *GetDescription();
+  const char *GetDescription() override;
 
-  bool ShouldStop(lldb_private::Event *event_ptr);
+  bool ShouldStop(lldb_private::Event *event_ptr) override;
 
-  bool ShouldNotify(lldb_private::Event *event_ptr);
+  bool ShouldNotify(lldb_private::Event *event_ptr) override;
 };
 
 #endif
