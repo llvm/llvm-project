@@ -233,6 +233,7 @@
 // AARCH64-NEXT: #define __SIZE_TYPE__ long unsigned int
 // AARCH64-NEXT: #define __SIZE_WIDTH__ 64
 // AARCH64_CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+// AARCH64_CXX: #define __STDCPP_THREADS__ 1
 // AARCH64-NEXT: #define __STDC_HOSTED__ 1
 // AARCH64-NEXT: #define __STDC_UTF_16__ 1
 // AARCH64-NEXT: #define __STDC_UTF_32__ 1

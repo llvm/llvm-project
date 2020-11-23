@@ -453,10 +453,14 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
                               const clang::TargetOptions &TargetOpts,
                               const LangOptions &LangOpts,
                               const HeaderSearchOptions &HSOpts) {
-  Options.ThreadModel =
-      llvm::StringSwitch<llvm::ThreadModel::Model>(CodeGenOpts.ThreadModel)
-          .Case("posix", llvm::ThreadModel::POSIX)
-          .Case("single", llvm::ThreadModel::Single);
+  switch (LangOpts.getThreadModel()) {
+  case LangOptions::ThreadModelKind::POSIX:
+    Options.ThreadModel = llvm::ThreadModel::POSIX;
+    break;
+  case LangOptions::ThreadModelKind::Single:
+    Options.ThreadModel = llvm::ThreadModel::Single;
+    break;
+  }
 
   // Set float ABI type.
   assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
