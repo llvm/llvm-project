@@ -23,11 +23,11 @@ namespace clangd {
 using IndexFactory = std::function<std::unique_ptr<SymbolIndex>(
     const Config::ExternalIndexSpec &, AsyncTaskRunner &)>;
 
-/// Returns an index that answers queries using external indices. IndexGenerator
-/// can be used to customize how to generate an index from an external source.
-/// The default implementation loads the index asynchronously on the
-/// AsyncTaskRunner. The index will appear empty until loaded.
-std::unique_ptr<SymbolIndex> createProjectAwareIndex(IndexFactory = nullptr);
+/// Returns an index that answers queries using external indices. IndexFactory
+/// specifies how to generate an index from an external source.
+/// IndexFactory must be injected because this code cannot depend on the remote
+/// index client.
+std::unique_ptr<SymbolIndex> createProjectAwareIndex(IndexFactory);
 } // namespace clangd
 } // namespace clang
 
