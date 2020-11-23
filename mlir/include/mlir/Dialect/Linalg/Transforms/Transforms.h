@@ -256,16 +256,6 @@ Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                    LinalgPromotionOptions options,
                                    OperationFolder *folder = nullptr);
 
-/// Creates a number of ranges equal to the number of dimensions in the `map`.
-/// The returned ranges correspond to the loop ranges, in the proper order, for
-/// which new loops will be created.
-/// The function supports only maps that are invertible and have results of type
-/// DimExpr or (DimExpr + DimExpr - SymbolExpr floordiv ConstExpr).
-/// It expects a non-inverted, concatenated map and last values in
-/// allViewSizes will be applied to the symbols in the map if it contains any.
-SmallVector<Range, 4> emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
-                                     ValueRange viewSizes);
-
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
 

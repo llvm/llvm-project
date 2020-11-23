@@ -526,14 +526,7 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op,
   auto linalgOp = cast<LinalgOp>(op);
   assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
-  auto mapsRange =
-      linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
-  auto maps = llvm::to_vector<8>(
-      llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-  SmallVector<Value, 8> sizes = getShape(builder, linalgOp);
-  AffineMap map = concatAffineMaps(maps);
-  auto loopRanges = emitLoopRanges(scope.getBuilderRef(), scope.getLocation(),
-                                   map, getShape(builder, linalgOp));
+  auto loopRanges = linalgOp.createLoopRanges(builder, op->getLoc());
   SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
       loopRanges, /*iterInitArgs*/ {}, linalgOp.iterator_types().getValue(),
@@ -667,70 +660,6 @@ mlir::createConvertLinalgToParallelLoopsPass() {
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<LowerToAffineLoops>();
-}
-
-SmallVector<Range, 4> mlir::linalg::emitLoopRanges(OpBuilder &b, Location loc,
-                                                   AffineMap map,
-                                                   ValueRange viewSizes) {
-  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
-  unsigned numSym = map.getNumSymbols();
-  assert(viewSizes.size() == numRes + numSym &&
-         "viewSizes must contain sizes of all views and values for symbols");
-  SmallVector<Range, 4> res(numDims);
-  for (unsigned idx = 0; idx < numRes; ++idx) {
-    auto result = map.getResult(idx);
-    if (auto d = result.dyn_cast<AffineDimExpr>()) {
-      if (res[d.getPosition()].offset)
-        continue;
-      res[d.getPosition()] =
-          Range{std_constant_index(0), viewSizes[idx], std_constant_index(1)};
-    }
-
-    // If the access pattern is of form (m, n)[s] -> (m + n - s floordiv 2),
-    // then the bounds are:
-    //   (s floordiv 2) <= m <= (size(m) + s floordiv 2 - s + 1).
-    // where size(n) is applied to the symbol s.
-    // This is done statically now.
-    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
-      auto lhs = binOp.getLHS().dyn_cast<AffineBinaryOpExpr>();
-      auto rhs = binOp.getRHS().dyn_cast<AffineBinaryOpExpr>();
-      if (!lhs || !rhs || binOp.getKind() != AffineExprKind::Add ||
-          lhs.getKind() != AffineExprKind::Add ||
-          rhs.getKind() != mlir::AffineExprKind::Mul)
-        continue;
-
-      auto m = lhs.getLHS().dyn_cast<AffineDimExpr>();
-      auto n = lhs.getRHS().dyn_cast<AffineDimExpr>();
-      auto fDiv = rhs.getLHS().dyn_cast<AffineBinaryOpExpr>();
-      auto minusOne = rhs.getRHS().dyn_cast<AffineConstantExpr>();
-      if (!m || !n || !fDiv || !minusOne ||
-          fDiv.getKind() != AffineExprKind::FloorDiv ||
-          fDiv.getLHS().getKind() != AffineExprKind::SymbolId ||
-          fDiv.getRHS().getKind() != AffineExprKind::Constant)
-        continue;
-
-      auto s = fDiv.getLHS().dyn_cast<AffineSymbolExpr>();
-      if (minusOne.getValue() != -1)
-        continue;
-
-      int mPos = m.getPosition();
-      AffineExpr one = getAffineConstantExpr(1, s.getContext());
-      AffineExpr sizeOfM = getAffineSymbolExpr(numSym, s.getContext());
-      // Construction of upper bound (size(m) + s floordiv 2 - s + 1).
-      AffineExpr upperOffsetExpr = sizeOfM + fDiv + one - s;
-      AffineMap fromMap = AffineMap::get(numDims, numSym + 1, fDiv);
-      AffineMap toMap = AffineMap::get(numDims, numSym + 1, upperOffsetExpr);
-      SmallVector<Value, 8> values(viewSizes.begin(),
-                                   viewSizes.begin() + numDims);
-      values.insert(values.end(), viewSizes.begin() + numRes, viewSizes.end());
-      values.push_back(viewSizes[mPos]);
-      // Construction of the lower bound (s floordiv 2).
-      Value from = applyMapToValues(b, loc, fromMap, values).front();
-      Value to = applyMapToValues(b, loc, toMap, values).front();
-      res[mPos] = Range{from, to, std_constant_index(1)};
-    }
-  }
-  return res;
 }
 
 /// Emits a loop nest with the proper body for `op`.
