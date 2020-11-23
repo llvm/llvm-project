@@ -39,6 +39,10 @@ enum NodeType : unsigned {
   CALL,            // A call instruction.
   RET_FLAG,        // Return with a flag operand.
   GLOBAL_BASE_REG, // Global base reg for PIC.
+
+  // VVP_* nodes.
+#define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,
+#include "VVPNodes.def"
 };
 }
 
@@ -119,6 +123,10 @@ public:
 
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
+
+  /// VVP Lowering {
+  SDValue lowerToVVP(SDValue Op, SelectionDAG &DAG) const;
+  /// } VVPLowering
 
   /// Custom DAGCombine {
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
