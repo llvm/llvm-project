@@ -6,7 +6,22 @@
 v_mqsad_pk_u16_u8 v[0:1], v[1:2], v9, v[4:5]
 // CHECK: error: destination must be different than all sources
 // CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[1:2], v9, v[4:5]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                          ^
+
+v_mqsad_pk_u16_u8 v[0:1], v[2:3], v0, v[4:5]
+// CHECK: error: destination must be different than all sources
+// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v0, v[4:5]
+// CHECK-NEXT:{{^}}                                  ^
+
+v_mqsad_pk_u16_u8 v[0:1], v[2:3], v1, v[4:5]
+// CHECK: error: destination must be different than all sources
+// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v1, v[4:5]
+// CHECK-NEXT:{{^}}                                  ^
+
+v_mqsad_pk_u16_u8 v[0:1], v[2:3], v9, v[0:1]
+// CHECK: error: destination must be different than all sources
+// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v9, v[0:1]
+// CHECK-NEXT:{{^}}                                      ^
 
 //==============================================================================
 // dim modifier is required on this GPU
@@ -604,17 +619,42 @@ v_pk_add_u16 v1, v2, v3 op_sel:[-1,0]
 v_ashrrev_i64 v[0:1], 0x100, s[0:1]
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_ashrrev_i64 v[0:1], 0x100, s[0:1]
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                             ^
+
+v_ashrrev_i64 v[0:1], s3, s[0:1]
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_ashrrev_i64 v[0:1], s3, s[0:1]
+// CHECK-NEXT:{{^}}                          ^
 
 v_bfe_u32 v0, s1, 0x3039, s2
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, s1, 0x3039, s2
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                          ^
+
+v_bfe_u32 v0, s1, s2, s3
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_bfe_u32 v0, s1, s2, s3
+// CHECK-NEXT:{{^}}                      ^
 
 v_div_fmas_f32 v5, s3, 0x123, v3
 // CHECK: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, 0x123, v3
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                       ^
+
+v_div_fmas_f32 v5, s3, v3, 0x123
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, v3, 0x123
+// CHECK-NEXT:{{^}}                           ^
+
+v_div_fmas_f32 v5, 0x123, v3, s3
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_div_fmas_f32 v5, 0x123, v3, s3
+// CHECK-NEXT:{{^}}                              ^
+
+v_div_fmas_f32 v5, s3, s4, v3
+// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, s4, v3
+// CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
 // invalid operand for instruction
