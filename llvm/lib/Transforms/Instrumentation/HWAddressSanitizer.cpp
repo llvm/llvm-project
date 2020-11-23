@@ -213,7 +213,6 @@ public:
   Value *getShadowNonTls(IRBuilder<> &IRB);
 
   void untagPointerOperand(Instruction *I, Value *Addr);
-  Value *shadowBase();
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   void instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                  unsigned AccessSizeIndex,
