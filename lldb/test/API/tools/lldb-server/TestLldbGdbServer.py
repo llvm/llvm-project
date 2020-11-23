@@ -433,7 +433,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             "Advanced Vector Extensions" in register_sets)
 
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
-    @expectedFailureAll(oslist=["freebsd", "netbsd"])
+    @expectedFailureAll(oslist=["netbsd"])
     @llgs_test
     def test_qRegisterInfo_contains_avx_registers_llgs(self):
         self.init_llgs_test()
