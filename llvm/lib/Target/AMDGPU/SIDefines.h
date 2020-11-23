@@ -33,7 +33,7 @@ enum : uint64_t {
   VOP2 = 1 << 8,
   VOPC = 1 << 9,
 
- // TODO: Should this be spilt into VOP3 a and b?
+  // TODO: Should this be spilt into VOP3 a and b?
   VOP3 = 1 << 10,
   VOP3P = 1 << 12,
 
