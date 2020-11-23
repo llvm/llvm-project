@@ -515,9 +515,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         if (CIdx->isZero())
           continue;
         Decomposed.Offset +=
-            (DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
-             CIdx->getValue().sextOrSelf(MaxPointerSize))
-                .sextOrTrunc(MaxPointerSize);
+            DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
+            CIdx->getValue().sextOrTrunc(MaxPointerSize);
         continue;
       }
 
