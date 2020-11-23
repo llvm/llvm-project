@@ -1734,6 +1734,9 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
 }
 
 void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
+  if (isUnevaluatedContext())
+    return;
+
   QualType ResultTy = E->getType();
 
   // Do not warn on member accesses to arrays since this returns an array
