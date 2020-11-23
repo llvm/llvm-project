@@ -11,18 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -33,6 +29,132 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+/// Fully compose map with operands and canonicalize the result.
+/// Return the `createOrFold`'ed AffineApply op.
+static Value createFoldedComposedAffineApply(OpBuilder &b, Location loc,
+                                             AffineMap map,
+                                             ValueRange operandsRef) {
+  SmallVector<Value, 4> operands(operandsRef.begin(), operandsRef.end());
+  fullyComposeAffineMapAndOperands(&map, &operands);
+  canonicalizeMapAndOperands(&map, &operands);
+  return b.createOrFold<AffineApplyOp>(loc, map, operands);
+}
+
+SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
+                                                     AffineMap map,
+                                                     ValueRange values) {
+  SmallVector<Value, 4> res;
+  res.reserve(map.getNumResults());
+  unsigned numDims = map.getNumDims(), numSym = map.getNumSymbols();
+  // For each `expr` in `map`, applies the `expr` to the values extracted from
+  // ranges. If the resulting application can be folded into a Value, the
+  // folding occurs eagerly.
+  for (auto expr : map.getResults()) {
+    AffineMap map = AffineMap::get(numDims, numSym, expr);
+    res.push_back(createFoldedComposedAffineApply(b, loc, map, values));
+  }
+  return res;
+}
+
+SmallVector<Value, 4> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
+                                                            Location loc) {
+  SmallVector<Value, 4> res;
+  SmallVector<unsigned, 4> ranks;
+  for (Value v : getShapedOperands()) {
+    ShapedType t = v.getType().template cast<ShapedType>();
+    ranks.push_back(t.getRank());
+    for (unsigned i = 0; i < t.getRank(); ++i)
+      res.push_back(b.create<DimOp>(loc, v, i));
+  }
+
+  // TODO: drop the following once symbol_source is deleted.
+  auto attr = getAttrOfType<IntegerAttr>("symbol_source");
+  if (!attr)
+    return res;
+
+  // Find the correct position for inserting values for symbols.
+  unsigned numSymb = ranks[attr.getInt()], symbolsPos = 0;
+  for (unsigned idx = 0, e = attr.getInt(); idx < e; idx++)
+    symbolsPos += ranks[idx];
+
+  // Append the end of the value list that corresponds to the
+  // values mapping to symbols. Since inside concatenated map symbols
+  // are repeated we have to repeat the sizes as well.
+
+  // Reserve is mandatory to avoid a potential undefined behavior with
+  // pushing back to smallvector from itself.
+  res.reserve(res.size() + ranks.size() * numSymb);
+  for (unsigned idx = 0, s = ranks.size(); idx < s; ++idx)
+    for (unsigned idx2 = 0; idx2 < numSymb; ++idx2)
+      res.push_back(res[symbolsPos + idx2]);
+  return res;
+}
+
+SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
+  AffineMap map = getLoopsToShapesMap();
+  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
+  // TODO: drop numSym once symbol_source is deleted.
+  unsigned numSym = map.getNumSymbols();
+  auto viewSizes = createFlatListOfOperandDims(b, loc);
+  SmallVector<Range, 4> res(numDims);
+  Value zeroVal = b.create<ConstantIndexOp>(loc, 0);
+  Value oneVal = b.create<ConstantIndexOp>(loc, 1);
+  for (unsigned idx = 0; idx < numRes; ++idx) {
+    auto result = map.getResult(idx);
+    if (auto d = result.dyn_cast<AffineDimExpr>()) {
+      if (res[d.getPosition()].offset)
+        continue;
+      res[d.getPosition()] = Range{zeroVal, viewSizes[idx], oneVal};
+    }
+
+    // TODO: drop the following once symbol_source is deleted.
+    // If the access pattern is of form (m, n)[s] -> (m + n - s floordiv 2),
+    // then the bounds are:
+    //   (s floordiv 2) <= m <= (size(m) + s floordiv 2 - s + 1).
+    // where size(n) is applied to the symbol s.
+    // This is done statically now.
+    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
+      auto lhs = binOp.getLHS().dyn_cast<AffineBinaryOpExpr>();
+      auto rhs = binOp.getRHS().dyn_cast<AffineBinaryOpExpr>();
+      if (!lhs || !rhs || binOp.getKind() != AffineExprKind::Add ||
+          lhs.getKind() != AffineExprKind::Add ||
+          rhs.getKind() != mlir::AffineExprKind::Mul)
+        continue;
+
+      auto m = lhs.getLHS().dyn_cast<AffineDimExpr>();
+      auto n = lhs.getRHS().dyn_cast<AffineDimExpr>();
+      auto fDiv = rhs.getLHS().dyn_cast<AffineBinaryOpExpr>();
+      auto minusOne = rhs.getRHS().dyn_cast<AffineConstantExpr>();
+      if (!m || !n || !fDiv || !minusOne ||
+          fDiv.getKind() != AffineExprKind::FloorDiv ||
+          !fDiv.getLHS().isa<AffineSymbolExpr>() ||
+          !fDiv.getRHS().isa<AffineConstantExpr>())
+        continue;
+
+      auto s = fDiv.getLHS().dyn_cast<AffineSymbolExpr>();
+      if (minusOne.getValue() != -1)
+        continue;
+
+      int mPos = m.getPosition();
+      AffineExpr one = getAffineConstantExpr(1, s.getContext());
+      AffineExpr sizeOfM = getAffineSymbolExpr(numSym, s.getContext());
+      // Construction of upper bound (size(m) + s floordiv 2 - s + 1).
+      AffineExpr upperOffsetExpr = sizeOfM + fDiv + one - s;
+      AffineMap fromMap = AffineMap::get(numDims, numSym + 1, fDiv);
+      AffineMap toMap = AffineMap::get(numDims, numSym + 1, upperOffsetExpr);
+      SmallVector<Value, 8> values(viewSizes.begin(),
+                                   viewSizes.begin() + numDims);
+      values.insert(values.end(), viewSizes.begin() + numRes, viewSizes.end());
+      values.push_back(viewSizes[mPos]);
+      // Construction of the lower bound (s floordiv 2).
+      Value from = applyMapToValues(b, loc, fromMap, values).front();
+      Value to = applyMapToValues(b, loc, toMap, values).front();
+      res[mPos] = Range{from, to, oneVal};
+    }
+  }
+  return res;
+}
 
 /// Forward declarations.
 template <typename NamedStructuredOpType>
@@ -504,11 +626,15 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
              << idx << " results to match view rank: " << view;
   }
 
+  // TODO: symbol_source prevents us to just write:
+  // if (!op.getShapeToLoopsMap())
+  //   return op.emitOpError("expected the shape-to-loops map to be non-null");
+  //
+  // Update when symbol_source is deleted.
   auto concatMap = concatAffineMaps(indexingMaps);
   // TODO: Bound inference for maps with symbols
   if (!concatMap.getNumSymbols() && !inversePermutation(concatMap))
-    return op.emitOpError("expected the concatenation of maps in indexing_map "
-                          "to be invertible");
+    return op.emitOpError("expected the shape-to-loops map to be non-null");
 
   if (failed(AnnotationsVerifier<GenericOpType>::verify(op)))
     return failure();

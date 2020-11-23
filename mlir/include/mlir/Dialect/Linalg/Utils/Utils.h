@@ -105,36 +105,16 @@ Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
                                               Operation *consumer,
                                               unsigned consumerIdx);
 
-/// Returns the linearized list of all shape dimensions in a `linalgOp`.
-/// Applying the inverse, concatenated loopToOperandRangeMaps to this list
-/// allows the derivation of loop ranges for any linalgOp.
-SmallVector<Value, 8> getShape(OpBuilder &builder, LinalgOp linalgOp);
-template <typename ConcreteOpTy>
-SmallVector<Value, 8> getShape(OpBuilder &builder, ConcreteOpTy linalgOp) {
-  return getShape(builder, cast<linalg::LinalgOp>(linalgOp.getOperation()));
-}
-
 /// Like `getShape`, but only returns statically-known information, without
 /// generating any new IR. For each shape dimension, returns >=0 if that
 /// dimension is statically known, or -1 otherwise.
 SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp);
-
-/// Returns the loop ranges of the `linalgOp`. Applies the inverse of the
-/// concatenated indexing maps to the result of `getShape`. Returns None if
-/// the bounds computation fails.
-Optional<SmallVector<Value, 4>> getLoopRanges(OpBuilder &builder,
-                                              LinalgOp linalgOp);
 
 /// Returns the statically-known loop ranges of the `linalgOp`. Applies the
 /// inverse of the concatenated indexing maps to the result of `getStaticShape`.
 /// Returns None if inverting the concatenated indexing map fails. Returns -1
 /// for non-statically-known loop ranges.
 Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp);
-
-/// Returns the values obtained by applying `map` to the list of values.
-SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
-                                       AffineMap map, ValueRange values);
-
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
 /// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
