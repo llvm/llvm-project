@@ -60,42 +60,17 @@ SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
 SmallVector<Value, 4> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
                                                             Location loc) {
   SmallVector<Value, 4> res;
-  SmallVector<unsigned, 4> ranks;
   for (Value v : getShapedOperands()) {
     ShapedType t = v.getType().template cast<ShapedType>();
-    ranks.push_back(t.getRank());
-    for (unsigned i = 0; i < t.getRank(); ++i)
+    for (unsigned i = 0, e = t.getRank(); i < e; ++i)
       res.push_back(b.create<DimOp>(loc, v, i));
   }
-
-  // TODO: drop the following once symbol_source is deleted.
-  auto attr = getAttrOfType<IntegerAttr>("symbol_source");
-  if (!attr)
-    return res;
-
-  // Find the correct position for inserting values for symbols.
-  unsigned numSymb = ranks[attr.getInt()], symbolsPos = 0;
-  for (unsigned idx = 0, e = attr.getInt(); idx < e; idx++)
-    symbolsPos += ranks[idx];
-
-  // Append the end of the value list that corresponds to the
-  // values mapping to symbols. Since inside concatenated map symbols
-  // are repeated we have to repeat the sizes as well.
-
-  // Reserve is mandatory to avoid a potential undefined behavior with
-  // pushing back to smallvector from itself.
-  res.reserve(res.size() + ranks.size() * numSymb);
-  for (unsigned idx = 0, s = ranks.size(); idx < s; ++idx)
-    for (unsigned idx2 = 0; idx2 < numSymb; ++idx2)
-      res.push_back(res[symbolsPos + idx2]);
   return res;
 }
 
 SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
   AffineMap map = getLoopsToShapesMap();
   unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
-  // TODO: drop numSym once symbol_source is deleted.
-  unsigned numSym = map.getNumSymbols();
   auto viewSizes = createFlatListOfOperandDims(b, loc);
   SmallVector<Range, 4> res(numDims);
   Value zeroVal = b.create<ConstantIndexOp>(loc, 0);
@@ -106,51 +81,6 @@ SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
       if (res[d.getPosition()].offset)
         continue;
       res[d.getPosition()] = Range{zeroVal, viewSizes[idx], oneVal};
-    }
-
-    // TODO: drop the following once symbol_source is deleted.
-    // If the access pattern is of form (m, n)[s] -> (m + n - s floordiv 2),
-    // then the bounds are:
-    //   (s floordiv 2) <= m <= (size(m) + s floordiv 2 - s + 1).
-    // where size(n) is applied to the symbol s.
-    // This is done statically now.
-    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
-      auto lhs = binOp.getLHS().dyn_cast<AffineBinaryOpExpr>();
-      auto rhs = binOp.getRHS().dyn_cast<AffineBinaryOpExpr>();
-      if (!lhs || !rhs || binOp.getKind() != AffineExprKind::Add ||
-          lhs.getKind() != AffineExprKind::Add ||
-          rhs.getKind() != mlir::AffineExprKind::Mul)
-        continue;
-
-      auto m = lhs.getLHS().dyn_cast<AffineDimExpr>();
-      auto n = lhs.getRHS().dyn_cast<AffineDimExpr>();
-      auto fDiv = rhs.getLHS().dyn_cast<AffineBinaryOpExpr>();
-      auto minusOne = rhs.getRHS().dyn_cast<AffineConstantExpr>();
-      if (!m || !n || !fDiv || !minusOne ||
-          fDiv.getKind() != AffineExprKind::FloorDiv ||
-          !fDiv.getLHS().isa<AffineSymbolExpr>() ||
-          !fDiv.getRHS().isa<AffineConstantExpr>())
-        continue;
-
-      auto s = fDiv.getLHS().dyn_cast<AffineSymbolExpr>();
-      if (minusOne.getValue() != -1)
-        continue;
-
-      int mPos = m.getPosition();
-      AffineExpr one = getAffineConstantExpr(1, s.getContext());
-      AffineExpr sizeOfM = getAffineSymbolExpr(numSym, s.getContext());
-      // Construction of upper bound (size(m) + s floordiv 2 - s + 1).
-      AffineExpr upperOffsetExpr = sizeOfM + fDiv + one - s;
-      AffineMap fromMap = AffineMap::get(numDims, numSym + 1, fDiv);
-      AffineMap toMap = AffineMap::get(numDims, numSym + 1, upperOffsetExpr);
-      SmallVector<Value, 8> values(viewSizes.begin(),
-                                   viewSizes.begin() + numDims);
-      values.insert(values.end(), viewSizes.begin() + numRes, viewSizes.end());
-      values.push_back(viewSizes[mPos]);
-      // Construction of the lower bound (s floordiv 2).
-      Value from = applyMapToValues(b, loc, fromMap, values).front();
-      Value to = applyMapToValues(b, loc, toMap, values).front();
-      res[mPos] = Range{from, to, oneVal};
     }
   }
   return res;
@@ -224,14 +154,14 @@ void GenericOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
     ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
-    StringRef doc, StringRef libraryCall, IntegerAttr symbolSource,
+    StringRef doc, StringRef libraryCall,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, resultTensorTypes, inputs, outputBuffers, initTensors,
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
-        ArrayAttr(), symbolSource);
+        ArrayAttr());
   if (!bodyBuild)
     return;
 
@@ -250,10 +180,9 @@ void GenericOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps,
     ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
-    IntegerAttr symbolSource,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, TypeRange{}, inputs, outputBuffers, ValueRange{},
-        indexingMaps, iteratorTypes, doc, libraryCall, symbolSource, bodyBuild);
+        indexingMaps, iteratorTypes, doc, libraryCall, bodyBuild);
 }
 
 void GenericOp::build(
@@ -263,8 +192,7 @@ void GenericOp::build(
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, inputs, outputBuffers, indexingMaps, iteratorTypes,
         /*doc=*/"",
-        /*libraryCall=*/"",
-        /*symbolSource=*/IntegerAttr(), bodyBuild);
+        /*libraryCall=*/"", bodyBuild);
 }
 
 void GenericOp::build(
@@ -275,15 +203,13 @@ void GenericOp::build(
   build(builder, result, resultTensorTypes, inputs, outputBuffers, initTensors,
         indexingMaps, iteratorTypes,
         /*doc=*/"",
-        /*libraryCall=*/"",
-        /*symbolSource=*/IntegerAttr(), bodyBuild);
+        /*libraryCall=*/"", bodyBuild);
 }
-
 void IndexedGenericOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
     ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
-    StringRef doc, StringRef libraryCall, IntegerAttr symbolSource,
+    StringRef doc, StringRef libraryCall,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
         bodyBuild) {
   build(builder, result, resultTensorTypes, inputs, outputBuffers, initTensors,
@@ -291,7 +217,7 @@ void IndexedGenericOp::build(
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
-        ArrayAttr(), symbolSource);
+        ArrayAttr());
   if (!bodyBuild)
     return;
 
@@ -313,11 +239,10 @@ void IndexedGenericOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps,
     ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
-    IntegerAttr symbolSource,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
         bodyBuild) {
   build(builder, result, TypeRange{}, inputs, outputBuffers, ValueRange{},
-        indexingMaps, iteratorTypes, doc, libraryCall, symbolSource, bodyBuild);
+        indexingMaps, iteratorTypes, doc, libraryCall, bodyBuild);
 }
 
 void IndexedGenericOp::build(
@@ -327,9 +252,7 @@ void IndexedGenericOp::build(
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
         bodyBuild) {
   build(builder, result, inputs, outputBuffers, indexingMaps, iteratorTypes,
-        /*doc=*/"",
-        /*libraryCall=*/"",
-        /*symbolSource=*/IntegerAttr(), bodyBuild);
+        /*doc=*/"", /*libraryCall=*/"", bodyBuild);
 }
 
 void IndexedGenericOp::build(
@@ -341,8 +264,7 @@ void IndexedGenericOp::build(
   build(builder, result, resultTensorTypes, inputs, outputBuffers, initTensors,
         indexingMaps, iteratorTypes,
         /*doc=*/"",
-        /*libraryCall=*/"",
-        /*symbolSource=*/IntegerAttr(), bodyBuild);
+        /*libraryCall=*/"", bodyBuild);
 }
 
 template <typename GenericOpType>
@@ -588,16 +510,6 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   if (failed(BlockArgsVerifier<GenericOpType>::verify(op, region.front())))
     return failure();
 
-  auto symbolSourceAttr =
-      op.template getAttrOfType<IntegerAttr>("symbol_source");
-  int64_t expectedNumSymbols = 0;
-  if (symbolSourceAttr) {
-    unsigned index = symbolSourceAttr.getInt();
-    if (index >= op.getNumOperands())
-      return op.emitOpError("symbol_source index out of range");
-    expectedNumSymbols = op.getShapedType(index).getRank();
-  }
-
   if (op.indexing_maps().size() != op.getNumInputsAndOutputs())
     return op.emitOpError("expected the number of indexing_map (")
            << op.indexing_maps().size()
@@ -612,9 +524,8 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
     indexingMaps.push_back(m); // Save reference to map for further checks.
     auto view = op.getShapedType(idx);
 
-    if (m.getNumSymbols() != expectedNumSymbols)
-      return op.emitOpError("expected the number of symbols in indexing_map #")
-             << idx << " to match rank of operand `symbol_source`";
+    if (m.getNumSymbols() != 0)
+      return op.emitOpError("unexpected symbols in indexing_map #") << idx;
 
     if (m.getNumDims() != nLoops)
       return op.emitOpError("expected indexing_map #")
@@ -626,14 +537,7 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
              << idx << " results to match view rank: " << view;
   }
 
-  // TODO: symbol_source prevents us to just write:
-  // if (!op.getShapeToLoopsMap())
-  //   return op.emitOpError("expected the shape-to-loops map to be non-null");
-  //
-  // Update when symbol_source is deleted.
-  auto concatMap = concatAffineMaps(indexingMaps);
-  // TODO: Bound inference for maps with symbols
-  if (!concatMap.getNumSymbols() && !inversePermutation(concatMap))
+  if (!op.getShapesToLoopsMap())
     return op.emitOpError("expected the shape-to-loops map to be non-null");
 
   if (failed(AnnotationsVerifier<GenericOpType>::verify(op)))

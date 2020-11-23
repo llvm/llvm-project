@@ -227,8 +227,7 @@ fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
                                      consumer.iterator_types(),
                                      /*doc=*/nullptr,
                                      /*library_call=*/nullptr,
-                                     /*sparse=*/nullptr,
-                                     /*symbol_source=*/nullptr)
+                                     /*sparse=*/nullptr)
                   .getOperation();
   } else {
     fusedOp =
@@ -242,8 +241,7 @@ fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
                                       consumer.iterator_types(),
                                       /*doc=*/nullptr,
                                       /*library_call=*/nullptr,
-                                      /*sparse=*/nullptr,
-                                      /*symbol_source=*/nullptr)
+                                      /*sparse=*/nullptr)
             .getOperation();
   }
 
@@ -820,8 +818,7 @@ struct FoldConsumerReshapeOpByLinearization
         producer.iterator_types(),
         /*doc=*/nullptr,
         /*library_call=*/nullptr,
-        /*sparse=*/nullptr,
-        /*symbol_source=*/nullptr);
+        /*sparse=*/nullptr);
     auto &fusedRegion = fusedOp.getOperation()->getRegion(0);
     rewriter.cloneRegionBefore(producer.getOperation()->getRegion(0),
                                fusedRegion, fusedRegion.begin());
@@ -904,8 +901,7 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
           linalgOp.iterator_types(),
           /*doc=*/nullptr,
           /*library_call=*/nullptr,
-          /*sparse=*/nullptr,
-          /*symbol_source=*/nullptr);
+          /*sparse=*/nullptr);
 
       // Map the block argument corresponding to the replaced argument with the
       // scalar constant.
