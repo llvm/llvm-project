@@ -26,6 +26,7 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include <string>
 #include <vector>
 
@@ -70,6 +71,14 @@ struct Config {
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
   } Style;
+
+  /// Configures what clang-tidy checks to run and options to use with them.
+  struct {
+    // A comma-seperated list of globs to specify which clang-tidy checks to
+    // run.
+    std::string Checks;
+    llvm::StringMap<std::string> CheckOptions;
+  } ClangTidy;
 };
 
 } // namespace clangd
