@@ -279,8 +279,8 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load 1)
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY2]], 0, 0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 0
     ; CHECK: $noreg = PATCHABLE_RET [[UBFMWri]]
     %2:gpr(p0) = COPY $x0
     %0:fpr(s1) = G_LOAD %2(p0) :: (load 1)
@@ -544,7 +544,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FNMADDSrrr:%[0-9]+]]:fpr32 = FNMADDSrrr [[COPY2]], [[COPY1]], [[COPY]]
+    ; CHECK: [[FNMADDSrrr:%[0-9]+]]:fpr32 = FNMADDSrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FNMADDSrrr]]
     %5:fpr(s32) = COPY $s2
     %4:fpr(s32) = COPY $s1
@@ -581,7 +581,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FNMADDDrrr:%[0-9]+]]:fpr64 = FNMADDDrrr [[COPY2]], [[COPY1]], [[COPY]]
+    ; CHECK: [[FNMADDDrrr:%[0-9]+]]:fpr64 = FNMADDDrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FNMADDDrrr]]
     %5:fpr(s64) = COPY $d2
     %4:fpr(s64) = COPY $d1
@@ -1083,7 +1083,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FMLSv2f32_:%[0-9]+]]:fpr64 = FMLSv2f32 [[COPY1]], [[COPY]], [[COPY2]]
+    ; CHECK: [[FMLSv2f32_:%[0-9]+]]:fpr64 = FMLSv2f32 [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FMLSv2f32_]]
     %4:fpr(<2 x s32>) = COPY $d2
     %3:fpr(<2 x s32>) = COPY $d1
@@ -1118,7 +1118,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FMLSv4f32_:%[0-9]+]]:fpr128 = FMLSv4f32 [[COPY1]], [[COPY]], [[COPY2]]
+    ; CHECK: [[FMLSv4f32_:%[0-9]+]]:fpr128 = FMLSv4f32 [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FMLSv4f32_]]
     %4:fpr(<4 x s32>) = COPY $q2
     %3:fpr(<4 x s32>) = COPY $q1
@@ -1153,7 +1153,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FMLSv2f64_:%[0-9]+]]:fpr128 = FMLSv2f64 [[COPY1]], [[COPY]], [[COPY2]]
+    ; CHECK: [[FMLSv2f64_:%[0-9]+]]:fpr128 = FMLSv2f64 [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FMLSv2f64_]]
     %4:fpr(<2 x s64>) = COPY $q2
     %3:fpr(<2 x s64>) = COPY $q1
