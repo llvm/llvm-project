@@ -3104,6 +3104,13 @@ private:
   void ParseOMPDeclareVariantClauses(DeclGroupPtrTy Ptr, CachedTokens &Toks,
                                      SourceLocation Loc);
 
+  /// Parse 'omp [begin] assume[s]' directive.
+  void ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
+                                   SourceLocation Loc);
+
+  /// Parse 'omp end assumes' directive.
+  void ParseOpenMPEndAssumesDirective(SourceLocation Loc);
+
   /// Parse clauses for '#pragma omp declare target'.
   DeclGroupPtrTy ParseOMPDeclareTargetClauses();
   /// Parse '#pragma omp end declare target'.
