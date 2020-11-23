@@ -63,6 +63,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
+
 void my_terminate() {
   std::_Exit(0); // Use _Exit to prevent cleanup from taking place.
 }
@@ -118,7 +120,7 @@ int main(int argc, char **argv) {
   try {
     mut.lock();
     assert(pred == false);
-    std::thread(signal_me).detach();
+    support::make_test_thread(signal_me).detach();
     switch (id) {
       case 1: cv.wait(mut); break;
       case 2: cv.wait(mut, pred_function); break;
