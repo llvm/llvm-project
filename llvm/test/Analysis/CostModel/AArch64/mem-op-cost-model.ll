@@ -86,3 +86,27 @@ define <8 x i64> @load_512(<8 x i64>* %ptr) {
   %out = load <8 x i64>, <8 x i64>* %ptr
   ret <8 x i64> %out
 }
+
+define <4 x i8> @gather_load_4xi8(<4 x i8*> %ptrs) {
+; CHECK:         gather_load_4xi8
+; CHECK-NEON:    Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8
+; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8
+; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8
+; CHECK-SVE-512: Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8
+;
+  %lv = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+  ret <4 x i8> %lv
+}
+declare <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32 immarg, <4 x i1>, <4 x i8>)
+
+define <4 x i32> @gather_load_4xi32(<4 x i32*> %ptrs) {
+; CHECK:         gather_load_4xi32
+; CHECK-NEON:    Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32
+; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32
+; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32
+; CHECK-SVE-512: Cost Model: Found an estimated cost of 1 for instruction:   %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32
+;
+  %lv = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %lv
+}
+declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32 immarg, <4 x i1>, <4 x i32>)
