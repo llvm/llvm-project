@@ -43,8 +43,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cgscc-passmgr"
 
-static cl::opt<unsigned>
-MaxIterations("max-cg-scc-iterations", cl::ReallyHidden, cl::init(4));
+cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
+                                      cl::init(4));
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 
@@ -539,12 +539,12 @@ bool CGPassManager::runOnModule(Module &M) {
                  << '\n');
       DevirtualizedCall = false;
       Changed |= RunAllPassesOnSCC(CurSCC, CG, DevirtualizedCall);
-    } while (Iteration++ < MaxIterations && DevirtualizedCall);
+    } while (Iteration++ < MaxDevirtIterations && DevirtualizedCall);
 
     if (DevirtualizedCall)
       LLVM_DEBUG(dbgs() << "  CGSCCPASSMGR: Stopped iteration after "
                         << Iteration
-                        << " times, due to -max-cg-scc-iterations\n");
+                        << " times, due to -max-devirt-iterations\n");
 
     MaxSCCIterations.updateMax(Iteration);
   }
