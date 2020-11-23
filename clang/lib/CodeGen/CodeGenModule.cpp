@@ -420,6 +420,13 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
     if (GV.hasAppendingLinkage() || GV.hasLocalLinkage())
       continue;
 
+    // Reset DSO locality before setting the visibility. This removes
+    // any effects that visibility options and annotations may have
+    // had on the DSO locality. Setting the visibility will implicitly set
+    // appropriate globals to DSO Local; however, this will be pessimistic
+    // w.r.t. to the normal compiler IRGen.
+    GV.setDSOLocal(false);
+
     if (GV.isDeclarationForLinker()) {
       GV.setVisibility(GV.getDLLStorageClass() ==
                                llvm::GlobalValue::DLLImportStorageClass
