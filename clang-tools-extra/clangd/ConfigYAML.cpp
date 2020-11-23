@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "ConfigFragment.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
@@ -111,6 +110,22 @@ private:
     DictParser Dict("Index", this);
     Dict.handle("Background",
                 [&](Node &N) { F.Background = scalarValue(N, "Background"); });
+    Dict.handle("External", [&](Node &N) {
+      Fragment::IndexBlock::ExternalBlock External;
+      parse(External, N);
+      F.External.emplace(std::move(External));
+      F.External->Range = N.getSourceRange();
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::IndexBlock::ExternalBlock &F, Node &N) {
+    DictParser Dict("External", this);
+    Dict.handle("File", [&](Node &N) { F.File = scalarValue(N, "File"); });
+    Dict.handle("Server",
+                [&](Node &N) { F.Server = scalarValue(N, "Server"); });
+    Dict.handle("MountPoint",
+                [&](Node &N) { F.MountPoint = scalarValue(N, "MountPoint"); });
     Dict.parse(N);
   }
 
