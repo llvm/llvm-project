@@ -3581,19 +3581,6 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
   printFields(OS, "Section header string table index:", Str);
 }
 
-template <class ELFT>
-static StringRef tryGetSectionName(const ELFFile<ELFT> &Obj,
-                                   const typename ELFT::Shdr &Sec,
-                                   DumpStyle<ELFT> &Dump) {
-  if (Expected<StringRef> SecNameOrErr = Obj.getSectionName(Sec))
-    return *SecNameOrErr;
-  else
-    Dump.reportUniqueWarning(createError("unable to get the name of the " +
-                                         describe(Obj, Sec) + ": " +
-                                         toString(SecNameOrErr.takeError())));
-  return "<?>";
-}
-
 template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
   auto GetSignature = [&](const Elf_Sym &Sym, unsigned SymNdx,
                           const Elf_Shdr &Symtab) -> StringRef {
@@ -3655,7 +3642,7 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
                                       toString(ContentsOrErr.takeError())));
     }
 
-    Ret.push_back({tryGetSectionName(Obj, Sec, *this),
+    Ret.push_back({getPrintableSectionName(Sec),
                    maybeDemangle(Signature),
                    Sec.sh_name,
                    I - 1,
@@ -3670,7 +3657,7 @@ template <class ELFT> std::vector<GroupSection> DumpStyle<ELFT>::getGroups() {
     std::vector<GroupMember> &GM = Ret.back().Members;
     for (uint32_t Ndx : Data.slice(1)) {
       if (Expected<const Elf_Shdr *> SecOrErr = Obj.getSection(Ndx)) {
-        GM.push_back({tryGetSectionName(Obj, **SecOrErr, *this), Ndx});
+        GM.push_back({getPrintableSectionName(**SecOrErr), Ndx});
       } else {
         reportUniqueWarning(
             createError("unable to get the section with index " + Twine(Ndx) +
