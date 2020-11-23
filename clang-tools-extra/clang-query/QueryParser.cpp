@@ -134,8 +134,6 @@ QueryRef QueryParser::parseSetTraversalKind(
   unsigned Value =
       LexOrCompleteWord<unsigned>(this, ValStr)
           .Case("AsIs", ast_type_traits::TK_AsIs)
-          .Case("IgnoreImplicitCastsAndParentheses",
-                ast_type_traits::TK_IgnoreImplicitCastsAndParentheses)
           .Case("IgnoreUnlessSpelledInSource",
                 ast_type_traits::TK_IgnoreUnlessSpelledInSource)
           .Default(~0u);
