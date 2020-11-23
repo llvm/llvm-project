@@ -1,14 +1,16 @@
-// RUN:   mlir-opt %s -async-ref-counting                                      \
-// RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-linalg-to-llvm                                  \
-// RUN:               -convert-std-to-llvm                                     \
-// RUN: | mlir-cpu-runner                                                      \
-// RUN:     -e main -entry-point-result=void -O0                               \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext    \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
-// RUN: | FileCheck %s
+// RUN: true
+// TODO: re-enable when not flaky.
+// _UN:   mlir-opt %s -async-ref-counting                                      \
+// _UN:               -convert-async-to-llvm                                   \
+// _UN:               -convert-linalg-to-loops                                 \
+// _UN:               -convert-linalg-to-llvm                                  \
+// _UN:               -convert-std-to-llvm                                     \
+// _UN: | mlir-cpu-runner                                                      \
+// _UN:     -e main -entry-point-result=void -O0                               \
+// _UN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
+// _UN:     -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext    \
+// _UN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
+// _UN: | FileCheck %s
 
 func @main() {
   %i0 = constant 0 : index
