@@ -794,7 +794,7 @@ namespace {
     void emitUnversionedInfo(raw_ostream &out, const ObjCMethodInfo &info) {
       uint8_t payload = 0;
       payload = (payload << 1) | info.DesignatedInit;
-      payload = (payload << 1) | info.Required;
+      payload = (payload << 1) | info.RequiredInit;
       endian::Writer writer(out, little);
       writer.write<uint8_t>(payload);
 
