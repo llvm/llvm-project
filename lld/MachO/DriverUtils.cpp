@@ -75,8 +75,14 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(args);
 
-  for (opt::Arg *arg : args.filtered(OPT_UNKNOWN))
-    error("unknown argument: " + arg->getSpelling());
+  for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
+    std::string nearest;
+    if (findNearest(arg->getAsString(args), nearest) > 1)
+      error("unknown argument '" + arg->getAsString(args) + "'");
+    else
+      error("unknown argument '" + arg->getAsString(args) +
+            "', did you mean '" + nearest + "'");
+  }
   return args;
 }
 
