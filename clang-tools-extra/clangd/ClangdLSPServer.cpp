@@ -604,6 +604,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              }},
             {"declarationProvider", true},
             {"definitionProvider", true},
+            {"implementationProvider", true},
             {"documentHighlightProvider", true},
             {"documentLinkProvider",
              llvm::json::Object{
@@ -1291,6 +1292,22 @@ void ClangdLSPServer::onReference(const ReferenceParams &Params,
                          });
 }
 
+void ClangdLSPServer::onGoToImplementation(
+    const TextDocumentPositionParams &Params,
+    Callback<std::vector<Location>> Reply) {
+  Server->findImplementations(
+      Params.textDocument.uri.file(), Params.position,
+      [Reply = std::move(Reply)](
+          llvm::Expected<std::vector<LocatedSymbol>> Overrides) mutable {
+        if (!Overrides)
+          return Reply(Overrides.takeError());
+        std::vector<Location> Impls;
+        for (const LocatedSymbol &Sym : *Overrides)
+          Impls.push_back(Sym.PreferredDeclaration);
+        return Reply(std::move(Impls));
+      });
+}
+
 void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
                                    Callback<std::vector<SymbolDetails>> Reply) {
   Server->symbolInfo(Params.textDocument.uri.file(), Params.position,
@@ -1431,6 +1448,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   MsgHandler->bind("textDocument/signatureHelp", &ClangdLSPServer::onSignatureHelp);
   MsgHandler->bind("textDocument/definition", &ClangdLSPServer::onGoToDefinition);
   MsgHandler->bind("textDocument/declaration", &ClangdLSPServer::onGoToDeclaration);
+  MsgHandler->bind("textDocument/implementation", &ClangdLSPServer::onGoToImplementation);
   MsgHandler->bind("textDocument/references", &ClangdLSPServer::onReference);
   MsgHandler->bind("textDocument/switchSourceHeader", &ClangdLSPServer::onSwitchSourceHeader);
   MsgHandler->bind("textDocument/prepareRename", &ClangdLSPServer::onPrepareRename);
